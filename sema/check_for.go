@@ -90,6 +90,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	checker.Elaboration.SetForStatementType(statement, ForStatementTypes{
 		IndexVariableType: indexType,
 		ValueVariableType: loopVariableType,
+		ContainerType:     valueType,
 	})
 
 	// The body of the loop will maybe be evaluated.
@@ -141,7 +142,7 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 		// Case (a): Element type is a container type.
 		// Then the loop-var must also be a reference type.
 		if referencedIterableElementType.ContainFieldsOrElements() {
-			return checker.getReferenceType(referencedIterableElementType, false, UnauthorizedAccess)
+			return checker.getReferenceType(referencedIterableElementType, UnauthorizedAccess)
 		}
 
 		// Case (b): Element type is a primitive type.

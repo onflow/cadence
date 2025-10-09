@@ -332,7 +332,7 @@ func (e *Encoder) encodeTypeAndValue(value cadence.Value, tids ccfTypeIDByCadenc
 	return e.encodeInlineTypeAndValue(value, tids)
 }
 
-// encodeTypeAndValueWithNoTag encodes inline type and value as
+// encodeInlineTypeAndValue encodes inline type and value as
 // language=CDDL
 // inline-type-and-value = [
 //
@@ -423,8 +423,7 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 //	/ dict-value
 //	/ composite-value
 //	/ path-value
-//	/ path-capability-value
-//	/ id-capability-value
+//	/ capability-value
 //	/ inclusiverange-value
 //	/ function-value
 //	/ type-value
@@ -602,8 +601,14 @@ func (e *Encoder) encodeValue(
 	case cadence.Fix64:
 		return e.encodeFix64(v)
 
+	case cadence.Fix128:
+		return e.encodeFix128(v)
+
 	case cadence.UFix64:
 		return e.encodeUFix64(v)
+
+	case cadence.UFix128:
+		return e.encodeUFix128(v)
 
 	case cadence.Array:
 		return e.encodeArray(v, tids)
@@ -866,6 +871,34 @@ func (e *Encoder) encodeFix64(v cadence.Fix64) error {
 	return e.enc.EncodeInt64(int64(v))
 }
 
+// encodeFix128 encodes cadence.Fix128 as
+// language=CDDL
+// fix128-value = [
+//
+//	hi: uint64,
+//	low: uint64,
+//
+// ]
+func (e *Encoder) encodeFix128(v cadence.Fix128) error {
+	// Encode array head with length 2.
+	err := e.enc.EncodeRawBytes([]byte{
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// element 0: high-bits as CBOR uint64.
+	err = e.enc.EncodeUint64(uint64(v.Hi))
+	if err != nil {
+		return err
+	}
+
+	// element 1: low-bits as CBOR uint64.
+	return e.enc.EncodeUint64(uint64(v.Lo))
+}
+
 // encodeUFix64 encodes cadence.UFix64 as
 // language=CDDL
 // ufix64-value = uint .le 18446744073709551615
@@ -894,6 +927,34 @@ func (e *Encoder) encodeArray(v cadence.Array, tids ccfTypeIDByCadenceType) erro
 	}
 
 	return nil
+}
+
+// encodeUFix128 encodes cadence.UFix128 as
+// language=CDDL
+// ufix128-value = [
+//
+//	hi: uint64,
+//	low: uint64,
+//
+// ]
+func (e *Encoder) encodeUFix128(v cadence.UFix128) error {
+	// Encode array head with length 2.
+	err := e.enc.EncodeRawBytes([]byte{
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// element 0: high-bits as CBOR uint64.
+	err = e.enc.EncodeUint64(uint64(v.Hi))
+	if err != nil {
+		return err
+	}
+
+	// element 1: low-bits as CBOR uint64.
+	return e.enc.EncodeUint64(uint64(v.Lo))
 }
 
 // encodeDictionary encodes cadence.Dictionary as
@@ -1030,7 +1091,13 @@ func encodeAndSortKeyValuePairs(
 
 // encodeInclusiveRange encodes cadence.InclusiveRange as
 // language=CDDL
-// inclusiverange-value = [3*3 (key: value, value: value)]
+// inclusiverange-value = [
+//
+//	start: value,
+//	stop: value,
+//	step: value,
+//
+// ]
 func (e *Encoder) encodeInclusiveRange(v *cadence.InclusiveRange, tids ccfTypeIDByCadenceType) error {
 	staticElementType := v.InclusiveRangeType.ElementType
 
@@ -1240,7 +1307,7 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 
 // encodeCapability encodes cadence.Capability as
 // language=CDDL
-// id-capability-value = [
+// capability-value = [
 //
 //	address: address-value,
 //	id: uint64-value
@@ -1569,8 +1636,7 @@ func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited c
 //
 //	; cbor-tag-intersection-type-value
 //	#6.191([
-//	  type: type-value / nil,
-//	  types: [* type-value]
+//	  types: [+ type-value]
 //	])
 func (e *Encoder) encodeIntersectionTypeValue(typ *cadence.IntersectionType, visited ccfTypeIDByCadenceType) error {
 	rawTagNum := []byte{0xd8, CBORTagIntersectionTypeValue}

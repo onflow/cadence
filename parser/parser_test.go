@@ -33,8 +33,17 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
+
+func (p *parser) mustToken(tokenType lexer.TokenType, string string) (lexer.Token, error) {
+	t := p.current
+	if !p.isToken(t, tokenType, string) {
+		return lexer.Token{}, p.newSyntaxError("expected token %s with string value %s", tokenType, string)
+	}
+	p.next()
+	return t, nil
+}
 
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
@@ -80,28 +89,77 @@ func (*testTokenStream) Reclaim() {
 	// NO-OP
 }
 
+func checkErrorsPrintable(errs []error, code string) {
+	if len(errs) == 0 {
+		return
+	}
+	err := Error{
+		Code:   []byte(code),
+		Errors: errs,
+	}
+	_ = err.Error()
+}
+
 func testParseStatements(s string) ([]ast.Statement, []error) {
-	return ParseStatements(nil, []byte(s), Config{})
+	return testParseStatementsWithConfig(s, Config{})
+}
+
+func testParseStatementsWithConfig(s string, config Config) ([]ast.Statement, []error) {
+	statements, errs := ParseStatements(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return statements, errs
 }
 
 func testParseDeclarations(s string) ([]ast.Declaration, []error) {
-	return ParseDeclarations(nil, []byte(s), Config{})
+	return testParseDeclarationsWithConfig(s, Config{})
+}
+
+func testParseDeclarationsWithConfig(s string, config Config) ([]ast.Declaration, []error) {
+	declarations, errs := ParseDeclarations(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return declarations, errs
 }
 
 func testParseProgram(s string) (*ast.Program, error) {
-	return ParseProgram(nil, []byte(s), Config{})
+	return testParseProgramWithConfig(s, Config{})
+}
+
+func testParseProgramWithConfig(s string, config Config) (*ast.Program, error) {
+	program, err := ParseProgram(nil, []byte(s), config)
+	if err != nil {
+		_ = err.Error()
+	}
+	return program, err
 }
 
 func testParseExpression(s string) (ast.Expression, []error) {
-	return ParseExpression(nil, []byte(s), Config{})
+	return testParseExpressionWithConfig(s, Config{})
+}
+
+func testParseExpressionWithConfig(s string, config Config) (ast.Expression, []error) {
+	expression, errs := ParseExpression(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return expression, errs
 }
 
 func testParseArgumentList(s string) (ast.Arguments, []error) {
-	return ParseArgumentList(nil, []byte(s), Config{})
+	return testParseArgumentListWithConfig(s, Config{})
+}
+
+func testParseArgumentListWithConfig(s string, config Config) (ast.Arguments, []error) {
+	arguments, errs := ParseArgumentList(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return arguments, errs
 }
 
 func testParseType(s string) (ast.Type, []error) {
-	return ParseType(nil, []byte(s), Config{})
+	return testParseTypeWithConfig(s, Config{})
+}
+
+func testParseTypeWithConfig(s string, config Config) (ast.Type, []error) {
+	ty, errs := ParseType(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return ty, errs
 }
 
 func TestParseInvalid(t *testing.T) {
@@ -240,7 +298,7 @@ func TestParseBuffering(t *testing.T) {
 			Config{},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier with string value c",
@@ -483,7 +541,7 @@ func TestParseBuffering(t *testing.T) {
 			Config{},
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier with string value d",
@@ -511,11 +569,13 @@ func TestParseBuffering(t *testing.T) {
           }
         `
 		_, err := testParseProgram(code)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 398, Line: 9, Column: 94},
+					Message:       "expected token identifier",
+					Pos:           ast.Position{Offset: 398, Line: 9, Column: 94},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			err.(Error).Errors,
@@ -536,7 +596,7 @@ func TestParseBuffering(t *testing.T) {
         `
 		_, err := testParseProgram(code)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&RestrictedTypeError{
 					Range: ast.Range{
@@ -588,7 +648,29 @@ func TestParseBuffering(t *testing.T) {
             }`
 
 		_, err := testParseProgram(src)
-		assert.NoError(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingEndOfParenthesizedTypeError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 283, Line: 9, Column: 36},
+							EndPos:   ast.Position{Offset: 283, Line: 9, Column: 36},
+						},
+						Type: lexer.TokenGreater,
+					},
+				},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 289, Line: 9, Column: 42},
+							EndPos:   ast.Position{Offset: 289, Line: 9, Column: 42},
+						},
+						Type: lexer.TokenParenClose,
+					},
+				},
+			},
+			err.(Error).Errors,
+		)
 	})
 
 }
@@ -705,11 +787,13 @@ func TestParseArgumentList(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseArgumentList(`xyz`)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "expected token `(`",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -724,7 +808,7 @@ func TestParseArgumentList(t *testing.T) {
 
 		var expected ast.Arguments
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			expected,
 			result,
 		)
@@ -737,9 +821,9 @@ func TestParseArgumentList(t *testing.T) {
 		_, errs := ParseArgumentList(gauge, []byte(`(1, b: true)`), Config{})
 		require.Len(t, errs, 1)
 
-		require.IsType(t, errors.MemoryError{}, errs[0])
+		require.IsType(t, errors.MemoryMeteringError{}, errs[0])
 
-		fatalError, _ := errs[0].(errors.MemoryError)
+		fatalError, _ := errs[0].(errors.MemoryMeteringError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
@@ -750,7 +834,7 @@ func TestParseArgumentList(t *testing.T) {
 		result, errs := testParseArgumentList(`(1, b: true)`)
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			ast.Arguments{
 				{
 					Label:         "",
@@ -835,15 +919,13 @@ func TestParseBufferedErrors(t *testing.T) {
 	// there is another error (missing closing parenthesis after).
 
 	_, errs := testParseExpression("a<b,>(")
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message: "missing type annotation after comma",
-				Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+			&MissingTypeAnnotationAfterCommaError{
+				Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 			},
-			&SyntaxError{
-				Message: "missing ')' at end of invocation argument list",
-				Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+			&MissingClosingParenInArgumentListError{
+				Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 			},
 		},
 		errs,
@@ -856,7 +938,7 @@ func TestParseInvalidSingleQuoteImport(t *testing.T) {
 
 	_, err := testParseProgram(`import 'X'`)
 
-	require.EqualError(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n")
+	require.ErrorContains(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''")
 }
 
 func TestParseExpressionDepthLimit(t *testing.T) {
@@ -874,7 +956,7 @@ func TestParseExpressionDepthLimit(t *testing.T) {
 	_, err := testParseProgram(code)
 	require.Error(t, err)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			ExpressionDepthLimitReachedError{
 				Pos: ast.Position{
@@ -910,7 +992,7 @@ func TestParseTypeDepthLimit(t *testing.T) {
 	_, err := testParseProgram(code)
 	require.Error(t, err)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]error{
 			TypeDepthLimitReachedError{
 				Pos: ast.Position{
@@ -934,11 +1016,11 @@ func TestParseLocalReplayLimit(t *testing.T) {
 	}
 	builder.WriteString(">()")
 
-	code := []byte(builder.String())
-	_, err := ParseProgram(nil, code, Config{})
-	utils.AssertEqualWithDiff(t,
+	code := builder.String()
+	_, err := testParseProgram(code)
+	AssertEqualWithDiff(t,
 		Error{
-			Code: code,
+			Code: []byte(code),
 			Errors: []error{
 				&SyntaxError{
 					Message: fmt.Sprintf(
@@ -969,12 +1051,24 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 		}
 	}
 
-	code := []byte(builder.String())
-	_, err := ParseProgram(nil, code, Config{})
-	utils.AssertEqualWithDiff(t,
+	code := builder.String()
+	_, err := testParseProgram(code)
+	AssertEqualWithDiff(t,
 		Error{
-			Code: code,
+			Code: []byte(code),
 			Errors: []error{
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
 				&SyntaxError{
 					Message: fmt.Sprintf(
 						"program too ambiguous, global replay limit of %d tokens exceeded",

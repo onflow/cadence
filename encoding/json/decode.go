@@ -230,8 +230,12 @@ func (d *Decoder) DecodeJSON(v any) cadence.Value {
 		return d.decodeWord256(valueJSON)
 	case fix64TypeStr:
 		return d.decodeFix64(valueJSON)
+	case fix128TypeStr:
+		return d.decodeFix128(valueJSON)
 	case ufix64TypeStr:
 		return d.decodeUFix64(valueJSON)
+	case ufix128TypeStr:
+		return d.decodeUFix128(valueJSON)
 	case arrayTypeStr:
 		return d.decodeArray(valueJSON)
 	case dictionaryTypeStr:
@@ -650,12 +654,32 @@ func (d *Decoder) decodeFix64(valueJSON any) cadence.Fix64 {
 	return v
 }
 
+func (d *Decoder) decodeFix128(valueJSON any) cadence.Fix128 {
+	v, err := cadence.NewFix128FromString(d.gauge, func() (string, error) {
+		return toString(valueJSON), nil
+	})
+	if err != nil {
+		panic(errors.NewDefaultUserError("invalid Fix128: %w", err))
+	}
+	return v
+}
+
 func (d *Decoder) decodeUFix64(valueJSON any) cadence.UFix64 {
 	v, err := cadence.NewMeteredUFix64(d.gauge, func() (string, error) {
 		return toString(valueJSON), nil
 	})
 	if err != nil {
 		panic(errors.NewDefaultUserError("invalid UFix64: %w", err))
+	}
+	return v
+}
+
+func (d *Decoder) decodeUFix128(valueJSON any) cadence.UFix128 {
+	v, err := cadence.NewUFix128FromString(d.gauge, func() (string, error) {
+		return toString(valueJSON), nil
+	})
+	if err != nil {
+		panic(errors.NewDefaultUserError("invalid UFix128: %w", err))
 	}
 	return v
 }
@@ -1033,7 +1057,7 @@ func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
 	if functionPurity == "view" {
 		return cadence.FunctionPurityView
 	}
-	return cadence.FunctionPurityUnspecified
+	return cadence.FunctionPurityImpure
 }
 
 func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, returnValue any, purity any, results typeDecodingResults) cadence.Type {

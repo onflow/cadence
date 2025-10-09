@@ -41,24 +41,24 @@ var _ EquatableValue = NilValue{}
 var _ MemberAccessibleValue = NilValue{}
 var _ OptionalValue = NilValue{}
 
-func (NilValue) isValue() {}
+func (NilValue) IsValue() {}
 
-func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitNilValue(interpreter, v)
+func (v NilValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitNilValue(context, v)
 }
 
-func (NilValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (NilValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (NilValue) StaticType(interpreter *Interpreter) StaticType {
+func (NilValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewOptionalStaticType(
-		interpreter,
-		NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeNever),
+		context,
+		NewPrimitiveStaticType(context, PrimitiveStaticTypeNever),
 	)
 }
 
-func (NilValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (NilValue) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -66,7 +66,7 @@ func (NilValue) isOptionalValue() {}
 
 func (NilValue) forEach(_ func(Value)) {}
 
-func (v NilValue) fmap(_ *Interpreter, _ func(Value) Value) OptionalValue {
+func (v NilValue) fmap(_ common.MemoryGauge, _ func(Value) Value) OptionalValue {
 	return v
 }
 
@@ -74,7 +74,7 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {}
+func (v NilValue) Destroy(_ ResourceDestructionContext) {}
 
 func (NilValue) String() string {
 	return format.Nil
@@ -84,21 +84,33 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v NilValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.NilValueStringMemoryUsage)
+func (v NilValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
+	common.UseMemory(context, common.NilValueStringMemoryUsage)
 	return v.String()
 }
 
 // nilValueMapFunction is created only once per interpreter.
 // Hence, no need to meter, as it's a constant.
-var nilValueMapFunction = NewUnmeteredStaticHostFunctionValue(
-	sema.OptionalTypeMapFunctionType(sema.NeverType),
-	func(invocation Invocation) Value {
+var nilValueMapFunction = NewUnmeteredStaticHostFunctionValueFromNativeFunction(
+	sema.OptionalTypeMapFunctionType(NilOptionalValue.InnerValueType(nil)),
+	func(
+		_ NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ Value,
+		_ []Value,
+	) Value {
 		return Nil
 	},
 )
 
-func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v NilValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
+}
+
+func (v NilValue) GetMethod(_ MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		return nilValueMapFunction
@@ -107,25 +119,24 @@ func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value 
 	return nil
 }
 
-func (NilValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (NilValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Nil has no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (NilValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (NilValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Nil has no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v NilValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v NilValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v NilValue) Equal(_ ValueComparisonContext, other Value) bool {
 	_, ok := other.(NilValue)
 	return ok
 }
@@ -142,13 +153,12 @@ func (NilValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (NilValue) IsResourceKinded(_ *Interpreter) bool {
+func (NilValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v NilValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -156,16 +166,16 @@ func (v NilValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v NilValue) Clone(_ *Interpreter) Value {
+func (v NilValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (NilValue) DeepRemove(_ *Interpreter, _ bool) {
+func (NilValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -181,6 +191,10 @@ func (NilValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (NilValue) isInvalidatedResource(_ *Interpreter) bool {
+func (NilValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 	return false
+}
+
+func (v NilValue) InnerValueType(_ ValueStaticTypeContext) sema.Type {
+	return sema.NeverType
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // CharacterValue
@@ -76,21 +77,21 @@ var _ ComparableValue = CharacterValue{}
 var _ HashableValue = CharacterValue{}
 var _ MemberAccessibleValue = CharacterValue{}
 
-func (CharacterValue) isValue() {}
+func (CharacterValue) IsValue() {}
 
-func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitCharacterValue(interpreter, v)
+func (v CharacterValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitCharacterValue(context, v)
 }
 
-func (CharacterValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (CharacterValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (CharacterValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeCharacter)
+func (CharacterValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeCharacter)
 }
 
-func (CharacterValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (CharacterValue) IsImportable(_ ValueImportableContext) bool {
 	return sema.CharacterType.Importable
 }
 
@@ -102,13 +103,16 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v CharacterValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v CharacterValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	l := format.FormattedStringLength(v.Str)
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(l))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
-func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v CharacterValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
@@ -116,7 +120,7 @@ func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool
 	return v.Str == otherChar.Str
 }
 
-func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -124,7 +128,7 @@ func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRa
 	return v.Str < otherChar.Str
 }
 
-func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -132,7 +136,7 @@ func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ Locat
 	return v.Str <= otherChar.Str
 }
 
-func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -140,7 +144,7 @@ func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ Locatio
 	return v.Str > otherChar.Str
 }
 
-func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -148,7 +152,7 @@ func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ Lo
 	return v.Str >= otherChar.Str
 }
 
-func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v CharacterValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	s := []byte(v.Str)
 	length := 1 + len(s)
 	var buffer []byte
@@ -164,8 +168,7 @@ func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byt
 }
 
 func (v CharacterValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -179,13 +182,12 @@ func (CharacterValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (CharacterValue) IsResourceKinded(_ *Interpreter) bool {
+func (CharacterValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v CharacterValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -193,21 +195,21 @@ func (v CharacterValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v CharacterValue) Clone(_ *Interpreter) Value {
+func (v CharacterValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (CharacterValue) DeepRemove(_ *Interpreter, _ bool) {
+func (CharacterValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
 func (v CharacterValue) ByteSize() uint32 {
-	return cborTagSize + getBytesCBORSize([]byte(v.Str))
+	return values.CBORTagSize + values.GetBytesCBORSize([]byte(v.Str))
 }
 
 func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -218,41 +220,63 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v CharacterValue) GetMember(context MemberAccessibleContext, name string) Value {
+	switch name {
+	case sema.CharacterTypeUtf8FieldName:
+		common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
+		return ByteSliceToByteArrayValue(context, []byte(v.Str))
+	}
+
+	return context.GetMethod(v, name)
+}
+
+var NativeCharacterValueToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		character := AssertValueOfType[CharacterValue](receiver)
+		return CharacterValueToString(context, character)
+	},
+)
+
+func (v CharacterValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v CharacterValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-
-				memoryUsage := common.NewStringMemoryUsage(len(v.Str))
-
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					func() string {
-						return v.Str
-					},
-				)
-			},
+			NativeCharacterValueToStringFunction,
 		)
-
-	case sema.CharacterTypeUtf8FieldName:
-		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v.Str)))
-		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 	}
+
 	return nil
 }
 
-func (CharacterValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func CharacterValueToString(
+	memoryGauge common.MemoryGauge,
+	v CharacterValue,
+) *StringValue {
+	memoryUsage := common.NewStringMemoryUsage(len(v.Str))
+
+	return NewStringValue(
+		memoryGauge,
+		memoryUsage,
+		func() string {
+			return v.Str
+		},
+	)
+}
+
+func (CharacterValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Characters have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (CharacterValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Characters have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

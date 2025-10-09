@@ -22,12 +22,13 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
-type interpreterTransactionExecutorPreparation struct {
+type transactionExecutorPreparation struct {
 	codesAndPrograms CodesAndPrograms
 	environment      Environment
 	preprocessErr    error
@@ -37,27 +38,29 @@ type interpreterTransactionExecutorPreparation struct {
 	preprocessOnce   sync.Once
 }
 
-type interpreterTransactionExecutorExecution struct {
+type transactionExecutorExecution struct {
 	executeErr  error
-	interpret   InterpretFunc
+	interpret   interpretFunc
 	executeOnce sync.Once
 }
 
-type interpreterTransactionExecutor struct {
+type transactionExecutor struct {
 	context Context
-	interpreterTransactionExecutorExecution
-	runtime *interpreterRuntime
+	transactionExecutorExecution
+	runtime Runtime
 	script  Script
-	interpreterTransactionExecutorPreparation
+	transactionExecutorPreparation
+	vm               *vm.VM
+	authorizerValues func(context interpreter.AccountCreationContext) []interpreter.Value
 }
 
-func newInterpreterTransactionExecutor(
-	runtime *interpreterRuntime,
+func newTransactionExecutor(
+	runtime Runtime,
 	script Script,
 	context Context,
 ) Executor {
 
-	return &interpreterTransactionExecutor{
+	return &transactionExecutor{
 		runtime: runtime,
 		script:  script,
 		context: context,
@@ -66,7 +69,7 @@ func newInterpreterTransactionExecutor(
 
 // Transaction's preprocessing which could be done in parallel with other
 // transactions / scripts.
-func (executor *interpreterTransactionExecutor) Preprocess() error {
+func (executor *transactionExecutor) Preprocess() error {
 	executor.preprocessOnce.Do(func() {
 		executor.preprocessErr = executor.preprocess()
 	})
@@ -74,7 +77,7 @@ func (executor *interpreterTransactionExecutor) Preprocess() error {
 	return executor.preprocessErr
 }
 
-func (executor *interpreterTransactionExecutor) Execute() error {
+func (executor *transactionExecutor) Execute() error {
 	executor.executeOnce.Do(func() {
 		executor.executeErr = executor.execute()
 	})
@@ -82,11 +85,11 @@ func (executor *interpreterTransactionExecutor) Execute() error {
 	return executor.executeErr
 }
 
-func (executor *interpreterTransactionExecutor) Result() (cadence.Value, error) {
+func (executor *transactionExecutor) Result() (cadence.Value, error) {
 	return nil, executor.Execute()
 }
 
-func (executor *interpreterTransactionExecutor) preprocess() (err error) {
+func (executor *transactionExecutor) preprocess() (err error) {
 	context := executor.context
 	location := context.Location
 	script := executor.script
@@ -94,9 +97,7 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
-	interpreterRuntime := executor.runtime
-
-	defer interpreterRuntime.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
@@ -106,18 +107,30 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
-	storage := NewStorage(runtimeInterface, runtimeInterface)
+	config := executor.runtime.Config()
+
+	storage := NewStorage(
+		runtimeInterface,
+		context.MemoryGauge,
+		StorageConfig{},
+	)
 	executor.storage = storage
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseInterpreterEnvironment(interpreterRuntime.defaultConfig)
+		if context.UseVM {
+			environment = NewBaseVMEnvironment(config)
+		} else {
+			environment = NewBaseInterpreterEnvironment(config)
+		}
 	}
+
 	environment.Configure(
 		runtimeInterface,
 		codesAndPrograms,
 		storage,
-		context.CoverageReport,
+		context.MemoryGauge,
+		context.ComputationGauge,
 	)
 	executor.environment = environment
 
@@ -143,10 +156,7 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 	transactionType := transactions[0]
 	executor.transactionType = transactionType
 
-	var authorizerAddresses []Address
-	errors.WrapPanic(func() {
-		authorizerAddresses, err = runtimeInterface.GetSigningAccounts()
-	})
+	authorizerAddresses, err := runtimeInterface.GetSigningAccounts()
 	if err != nil {
 		return newError(err, location, codesAndPrograms)
 	}
@@ -176,64 +186,49 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 		return newError(err, location, codesAndPrograms)
 	}
 
-	// gather authorizers
+	executor.authorizerValues = func(context interpreter.AccountCreationContext) []interpreter.Value {
+		return authorizerValues(
+			executor.environment,
+			context,
+			authorizerAddresses,
+			prepareParameters,
+		)
+	}
 
-	executor.interpret = executor.transactionExecutionFunction(
-		func(inter *interpreter.Interpreter) []interpreter.Value {
-			return executor.authorizerValues(
-				inter,
-				authorizerAddresses,
-				prepareParameters,
-			)
-		},
-	)
+	switch environment := environment.(type) {
+	case *InterpreterEnvironment:
+		if context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the VM, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+
+		executor.interpret = executor.transactionExecutionFunction()
+
+	case *vmEnvironment:
+		if !context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the interpreter, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+
+		var program *Program
+		program, err = environment.loadProgram(location)
+		if err != nil {
+			return newError(err, location, codesAndPrograms)
+		}
+		executor.vm = environment.newVM(location, program.compiledProgram.program)
+
+	default:
+		return errors.NewUnexpectedError("transactions can only be executed with the interpreter")
+	}
 
 	return nil
 }
 
-func (executor *interpreterTransactionExecutor) authorizerValues(
-	inter *interpreter.Interpreter,
-	addresses []Address,
-	parameters []sema.Parameter,
-) []interpreter.Value {
-
-	// gather authorizers
-
-	authorizerValues := make([]interpreter.Value, 0, len(addresses))
-
-	for i, address := range addresses {
-		parameter := parameters[i]
-
-		addressValue := interpreter.NewAddressValue(inter, address)
-
-		accountValue := executor.environment.NewAccountValue(inter, addressValue)
-
-		referenceType, ok := parameter.TypeAnnotation.Type.(*sema.ReferenceType)
-		if !ok || referenceType.Type != sema.AccountType {
-			panic(errors.NewUnreachableError())
-		}
-
-		authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
-			inter,
-			referenceType.Authorization,
-		)
-
-		accountReferenceValue := interpreter.NewEphemeralReferenceValue(
-			inter,
-			authorization,
-			accountValue,
-			sema.AccountType,
-			// okay to pass an empty range here because the account value is never a reference, so this can't fail
-			interpreter.EmptyLocationRange,
-		)
-
-		authorizerValues = append(authorizerValues, accountReferenceValue)
-	}
-
-	return authorizerValues
-}
-
-func (executor *interpreterTransactionExecutor) execute() (err error) {
+func (executor *transactionExecutor) execute() (err error) {
 	err = executor.Preprocess()
 	if err != nil {
 		return err
@@ -243,9 +238,8 @@ func (executor *interpreterTransactionExecutor) execute() (err error) {
 	context := executor.context
 	location := context.Location
 	codesAndPrograms := executor.codesAndPrograms
-	interpreterRuntime := executor.runtime
 
-	defer interpreterRuntime.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
@@ -253,27 +247,89 @@ func (executor *interpreterTransactionExecutor) execute() (err error) {
 		codesAndPrograms,
 	)
 
+	switch environment := environment.(type) {
+	case *InterpreterEnvironment:
+		err = executor.executeWithInterpreter(environment)
+
+	case *vmEnvironment:
+		err = executor.executeWithVM()
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
+	}
+	if err != nil {
+		return newError(err, location, codesAndPrograms)
+	}
+	return nil
+}
+
+func (executor *transactionExecutor) executeWithInterpreter(
+	environment *InterpreterEnvironment,
+) error {
 	_, inter, err := environment.Interpret(
-		location,
+		executor.context.Location,
 		executor.program,
 		executor.interpret,
 	)
 	if err != nil {
-		return newError(err, location, codesAndPrograms)
+		return err
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.CommitStorage(inter)
+	err = environment.commitStorage(inter)
 	if err != nil {
-		return newError(err, location, codesAndPrograms)
+		return err
 	}
 
 	return nil
 }
 
-func (executor *interpreterTransactionExecutor) transactionExecutionFunction(
-	authorizerValues func(*interpreter.Interpreter) []interpreter.Value,
-) InterpretFunc {
+func (executor *transactionExecutor) executeWithVM() (err error) {
+
+	context := executor.vm.Context()
+	codesAndPrograms := executor.codesAndPrograms
+
+	// Recover internal panics and return them as an error.
+	// For example, the argument validation might attempt to
+	// load contract code for non-existing types
+
+	defer Recover(
+		func(internalErr Error) {
+			err = internalErr
+		},
+		executor.context.Location,
+		codesAndPrograms,
+	)
+
+	environment := executor.environment
+
+	arguments, err := importValidatedArguments(
+		context,
+		environment,
+		executor.script.Arguments,
+		executor.transactionType.Parameters,
+	)
+	if err != nil {
+		return err
+	}
+
+	signers := executor.authorizerValues(context)
+
+	err = executor.vm.InvokeTransaction(arguments, signers...)
+	if err != nil {
+		return err
+	}
+
+	// Write back all stored values, which were actually just cached, back into storage
+	err = environment.commitStorage(context)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (executor *transactionExecutor) transactionExecutionFunction() interpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
 		// Recover internal panics and return them as an error.
@@ -284,10 +340,9 @@ func (executor *interpreterTransactionExecutor) transactionExecutionFunction(
 			err = internalErr
 		})
 
-		values, err := validateArgumentParams(
+		arguments, err := importValidatedArguments(
 			inter,
 			executor.environment,
-			interpreter.EmptyLocationRange,
 			executor.script.Arguments,
 			executor.transactionType.Parameters,
 		)
@@ -295,8 +350,10 @@ func (executor *interpreterTransactionExecutor) transactionExecutionFunction(
 			return nil, err
 		}
 
-		values = append(values, authorizerValues(inter)...)
-		err = inter.InvokeTransaction(0, values...)
+		signers := executor.authorizerValues(inter)
+
+		err = inter.InvokeTransaction(arguments, signers...)
+
 		return nil, err
 	}
 }

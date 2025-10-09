@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestCapabilityStaticType_Equal(t *testing.T) {
@@ -163,9 +163,9 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 			(&ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeString,
 			}).Equal(
-				(&CapabilityStaticType{
+				&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
-				}),
+				},
 			),
 		)
 	})
@@ -182,12 +182,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		require.True(t,
 			NewCompositeStaticTypeComputeTypeID(
 				nil,
-				utils.TestLocation,
+				TestLocation,
 				"X",
 			).Equal(
 				NewCompositeStaticTypeComputeTypeID(
 					nil,
-					utils.TestLocation,
+					TestLocation,
 					"X",
 				),
 			),
@@ -201,12 +201,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		require.False(t,
 			NewCompositeStaticTypeComputeTypeID(
 				nil,
-				utils.TestLocation,
+				TestLocation,
 				"X",
 			).Equal(
 				NewCompositeStaticTypeComputeTypeID(
 					nil,
-					utils.TestLocation,
+					TestLocation,
 					"Y",
 				),
 			),
@@ -333,8 +333,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X").
-				Equal(NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X")),
+			NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X")),
 		)
 	})
 
@@ -343,8 +343,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X").
-				Equal(NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y")),
+			NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y")),
 		)
 	})
 
@@ -749,14 +749,14 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.True(t,
 			(&IntersectionStaticType{
 				Types: []*InterfaceStaticType{
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []*InterfaceStaticType{
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
 					},
 				},
 			),
@@ -785,13 +785,13 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.False(t,
 			(&IntersectionStaticType{
 				Types: []*InterfaceStaticType{
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []*InterfaceStaticType{
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
 					},
 				},
 			),
@@ -805,14 +805,14 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.True(t,
 			(&IntersectionStaticType{
 				Types: []*InterfaceStaticType{
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []*InterfaceStaticType{
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
 					},
 				},
 			),
@@ -826,14 +826,14 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.True(t,
 			(&IntersectionStaticType{
 				Types: []*InterfaceStaticType{
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []*InterfaceStaticType{
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
 					},
 				},
 			),
@@ -847,14 +847,14 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.False(t,
 			(&IntersectionStaticType{
 				Types: []*InterfaceStaticType{
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []*InterfaceStaticType{
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Z"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Z"),
 					},
 				},
 			),
@@ -868,13 +868,13 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.False(t,
 			(&IntersectionStaticType{
 				Types: []*InterfaceStaticType{
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []*InterfaceStaticType{
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
 					},
 				},
 			),
@@ -888,14 +888,14 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.False(t,
 			(&IntersectionStaticType{
 				Types: []*InterfaceStaticType{
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []*InterfaceStaticType{
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Z"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Z"),
 					},
 				},
 			),
@@ -909,8 +909,8 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.False(t,
 			(&IntersectionStaticType{
 				Types: []*InterfaceStaticType{
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
-					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "Y"),
 				},
 			}).Equal(
 				&ReferenceStaticType{
@@ -1196,11 +1196,21 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType:   sema.Fix64Type,
 			staticType: PrimitiveStaticTypeFix64,
 		},
+		{
+			name:       "Fix128",
+			semaType:   sema.Fix128Type,
+			staticType: PrimitiveStaticTypeFix128,
+		},
 
 		{
 			name:       "UFix64",
 			semaType:   sema.UFix64Type,
 			staticType: PrimitiveStaticTypeUFix64,
+		},
+		{
+			name:       "UFix128",
+			semaType:   sema.UFix128Type,
+			staticType: PrimitiveStaticTypeUFix128,
 		},
 
 		{
@@ -1695,9 +1705,8 @@ func TestStaticTypeConversion(t *testing.T) {
 			}
 
 			convertedSemaType, err := ConvertStaticToSemaType(
-				nil,
-				test.staticType,
 				handler,
+				test.staticType,
 			)
 			require.NoError(t, err)
 			require.Equal(t,
@@ -1732,7 +1741,7 @@ type staticTypeConversionHandler struct {
 	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error)
 }
 
-var _ StaticTypeConversionHandler = staticTypeConversionHandler{}
+var _ TypeConverter = staticTypeConversionHandler{}
 
 func (s staticTypeConversionHandler) GetInterfaceType(
 	location common.Location,
@@ -1756,6 +1765,15 @@ func (s staticTypeConversionHandler) GetEntitlementType(typeID TypeID) (*sema.En
 
 func (s staticTypeConversionHandler) GetEntitlementMapType(typeID TypeID) (*sema.EntitlementMapType, error) {
 	return s.getEntitlementMapType(typeID)
+}
+
+func (s staticTypeConversionHandler) MeterMemory(_ common.MemoryUsage) error {
+	// NO-OP
+	return nil
+}
+
+func (s staticTypeConversionHandler) SemaTypeFromStaticType(staticType StaticType) sema.Type {
+	return MustConvertStaticToSemaType(staticType, s)
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {

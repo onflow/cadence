@@ -252,10 +252,6 @@ func (t *VariableSizedStaticType) Copy() atree.TypeInfo {
 	return t
 }
 
-func (t *VariableSizedStaticType) Identifier() string {
-	return string(t.ID())
-}
-
 func (*VariableSizedStaticType) isStaticType() {}
 
 func (*VariableSizedStaticType) elementSize() uint {
@@ -382,10 +378,6 @@ func (t *ConstantSizedStaticType) Copy() atree.TypeInfo {
 	return t
 }
 
-func (t *ConstantSizedStaticType) Identifier() string {
-	return string(t.ID())
-}
-
 func (*ConstantSizedStaticType) isStaticType() {}
 
 func (*ConstantSizedStaticType) elementSize() uint {
@@ -462,10 +454,6 @@ func (*DictionaryStaticType) IsComposite() bool {
 func (t *DictionaryStaticType) Copy() atree.TypeInfo {
 	// DictionaryStaticType is never mutated, return a shallow copy
 	return t
-}
-
-func (t *DictionaryStaticType) Identifier() string {
-	return string(t.ID())
 }
 
 func (*DictionaryStaticType) isStaticType() {}
@@ -640,8 +628,12 @@ outer:
 }
 
 func (t *IntersectionStaticType) ID() TypeID {
-	var interfaceTypeIDs []TypeID
 	typeCount := len(t.Types)
+	if typeCount == 1 {
+		return sema.FormatIntersectionTypeIDWithSingleInterface(t.Types[0].ID())
+	}
+
+	var interfaceTypeIDs []TypeID
 	if typeCount > 0 {
 		interfaceTypeIDs = make([]TypeID, 0, typeCount)
 		for _, ty := range t.Types {
@@ -685,7 +677,7 @@ func (Unauthorized) String() string {
 	return "Unauthorized"
 }
 
-func (a Unauthorized) MeteredString(_ common.MemoryGauge) string {
+func (t Unauthorized) MeteredString(_ common.MemoryGauge) string {
 	return "Unauthorized"
 }
 
@@ -1068,6 +1060,9 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 	case *sema.FunctionType:
 		return NewFunctionStaticType(memoryGauge, t)
+
+	case *sema.TransactionType:
+		return ConvertSemaTransactionToStaticTransactionType(memoryGauge, t)
 	}
 
 	return nil
@@ -1177,14 +1172,22 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(
 	)
 }
 
-func ConvertStaticAuthorizationToSemaAccess(
+func ConvertSemaTransactionToStaticTransactionType(
 	memoryGauge common.MemoryGauge,
+	t *sema.TransactionType,
+) *CompositeStaticType {
+	return NewCompositeStaticType(
+		memoryGauge,
+		t.Location,
+		t.QualifiedString(),
+		t.ID(),
+	)
+}
+
+func ConvertStaticAuthorizationToSemaAccess(
 	auth Authorization,
 	handler StaticAuthorizationConversionHandler,
-) (
-	sema.Access,
-	error,
-) {
+) (sema.Access, error) {
 
 	switch auth := auth.(type) {
 	case Unauthorized:
@@ -1231,20 +1234,19 @@ type StaticTypeConversionHandler interface {
 }
 
 func ConvertStaticToSemaType(
-	memoryGauge common.MemoryGauge,
+	context TypeConverter,
 	typ StaticType,
-	handler StaticTypeConversionHandler,
 ) (_ sema.Type, err error) {
 	switch t := typ.(type) {
 	case *CompositeStaticType:
-		return handler.GetCompositeType(
+		return context.GetCompositeType(
 			t.Location,
 			t.QualifiedIdentifier,
 			t.TypeID,
 		)
 
 	case *InterfaceStaticType:
-		return handler.GetInterfaceType(
+		return context.GetInterfaceType(
 			t.Location,
 			t.QualifiedIdentifier,
 			t.TypeID,
@@ -1252,90 +1254,83 @@ func ConvertStaticToSemaType(
 
 	case *VariableSizedStaticType:
 		ty, err := ConvertStaticToSemaType(
-			memoryGauge,
+			context,
 			t.Type,
-			handler,
 		)
 		if err != nil {
 			return nil, err
 		}
-		return sema.NewVariableSizedType(memoryGauge, ty), nil
+		return sema.NewVariableSizedType(context, ty), nil
 
 	case *ConstantSizedStaticType:
 		ty, err := ConvertStaticToSemaType(
-			memoryGauge,
+			context,
 			t.Type,
-			handler,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		return sema.NewConstantSizedType(
-			memoryGauge,
+			context,
 			ty,
 			t.Size,
 		), nil
 
 	case *DictionaryStaticType:
 		keyType, err := ConvertStaticToSemaType(
-			memoryGauge,
+			context,
 			t.KeyType,
-			handler,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		valueType, err := ConvertStaticToSemaType(
-			memoryGauge,
+			context,
 			t.ValueType,
-			handler,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		return sema.NewDictionaryType(
-			memoryGauge,
+			context,
 			keyType,
 			valueType,
 		), nil
 
 	case InclusiveRangeStaticType:
 		elementType, err := ConvertStaticToSemaType(
-			memoryGauge,
+			context,
 			t.ElementType,
-			handler,
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		return sema.NewInclusiveRangeType(
-			memoryGauge,
+			context,
 			elementType,
 		), nil
 
 	case *OptionalStaticType:
 		ty, err := ConvertStaticToSemaType(
-			memoryGauge,
+			context,
 			t.Type,
-			handler,
 		)
 		if err != nil {
 			return nil, err
 		}
-		return sema.NewOptionalType(memoryGauge, ty), err
+		return sema.NewOptionalType(context, ty), err
 
 	case *IntersectionStaticType:
 		var convertedLegacyType sema.Type
 		legacyType := t.LegacyType
 		if legacyType != nil {
 			convertedLegacyType, err = ConvertStaticToSemaType(
-				memoryGauge,
+				context,
 				legacyType,
-				handler,
 			)
 			if err != nil {
 				return nil, err
@@ -1349,7 +1344,7 @@ func ConvertStaticToSemaType(
 			intersectedTypes = make([]*sema.InterfaceType, typeCount)
 
 			for i, typ := range t.Types {
-				intersectedTypes[i], err = handler.GetInterfaceType(
+				intersectedTypes[i], err = context.GetInterfaceType(
 					typ.Location,
 					typ.QualifiedIdentifier,
 					typ.TypeID,
@@ -1361,47 +1356,41 @@ func ConvertStaticToSemaType(
 		}
 
 		return sema.NewIntersectionType(
-			memoryGauge,
+			context,
 			convertedLegacyType,
 			intersectedTypes,
 		), nil
 
 	case *ReferenceStaticType:
 		ty, err := ConvertStaticToSemaType(
-			memoryGauge,
+			context,
 			t.ReferencedType,
-			handler,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		access, err := ConvertStaticAuthorizationToSemaAccess(
-			memoryGauge,
-			t.Authorization,
-			handler,
-		)
+		access, err := ConvertStaticAuthorizationToSemaAccess(t.Authorization, context)
 
 		if err != nil {
 			return nil, err
 		}
 
-		return sema.NewReferenceType(memoryGauge, access, ty), nil
+		return sema.NewReferenceType(context, access, ty), nil
 
 	case *CapabilityStaticType:
 		var borrowType sema.Type
 		if t.BorrowType != nil {
 			borrowType, err = ConvertStaticToSemaType(
-				memoryGauge,
+				context,
 				t.BorrowType,
-				handler,
 			)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		return sema.NewCapabilityType(memoryGauge, borrowType), nil
+		return sema.NewCapabilityType(context, borrowType), nil
 
 	case FunctionStaticType:
 		return t.Type, nil

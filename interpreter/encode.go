@@ -21,223 +21,13 @@ package interpreter
 import (
 	"bytes"
 	"fmt"
-	"math"
-	"math/big"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-)
-
-const cborTagSize = 2
-
-var bigOne = big.NewInt(1)
-
-func getBigIntCBORSize(v *big.Int) uint32 {
-	sign := v.Sign()
-	if sign < 0 {
-		v = new(big.Int).Abs(v)
-		v.Sub(v, bigOne)
-	}
-
-	// tag number + bytes
-	return 1 + getBytesCBORSize(v.Bytes())
-}
-
-func getIntCBORSize(v int64) uint32 {
-	if v < 0 {
-		return getUintCBORSize(uint64(-v - 1))
-	}
-	return getUintCBORSize(uint64(v))
-}
-
-func getUintCBORSize(v uint64) uint32 {
-	if v <= 23 {
-		return 1
-	}
-	if v <= math.MaxUint8 {
-		return 2
-	}
-	if v <= math.MaxUint16 {
-		return 3
-	}
-	if v <= math.MaxUint32 {
-		return 5
-	}
-	return 9
-}
-
-func getBytesCBORSize(b []byte) uint32 {
-	length := len(b)
-	if length == 0 {
-		return 1
-	}
-	return getUintCBORSize(uint64(length)) + uint32(length)
-}
-
-// Cadence needs to encode different kinds of objects in CBOR, for instance,
-// dictionaries, structs, resources, etc.
-//
-// However, CBOR only provides one native map type, and no support
-// for directly representing e.g. structs or resources.
-//
-// To be able to encode/decode such semantically different values,
-// we define custom CBOR tags.
-
-// !!! *WARNING* !!!
-//
-// Only add new fields to encoded structs by
-// appending new fields with the next highest key.
-//
-// DO *NOT* REPLACE EXISTING FIELDS!
-
-const CBORTagBase = 128
-
-// !!! *WARNING* !!!
-//
-// Only add new types by:
-// - replacing existing placeholders (`_`) with new types
-// - appending new types
-//
-// Only remove types by:
-// - replace existing types with a placeholder `_`
-//
-// DO *NOT* REPLACE EXISTING TYPES!
-// DO *NOT* ADD NEW TYPES IN BETWEEN!
-
-const (
-	CBORTagVoidValue = CBORTagBase + iota
-	_                // DO *NOT* REPLACE. Previously used for dictionary values
-	CBORTagSomeValue
-	CBORTagAddressValue
-	CBORTagCompositeValue
-	CBORTagTypeValue
-	_ // DO *NOT* REPLACE. Previously used for array values
-	CBORTagStringValue
-	CBORTagCharacterValue
-	CBORTagSomeValueWithNestedLevels
-	_
-	_
-	_
-	_
-	_
-	_
-	_
-	_
-	_
-	_
-	_
-	_
-	_
-	_
-
-	// Int*
-	CBORTagIntValue
-	CBORTagInt8Value
-	CBORTagInt16Value
-	CBORTagInt32Value
-	CBORTagInt64Value
-	CBORTagInt128Value
-	CBORTagInt256Value
-	_
-
-	// UInt*
-	CBORTagUIntValue
-	CBORTagUInt8Value
-	CBORTagUInt16Value
-	CBORTagUInt32Value
-	CBORTagUInt64Value
-	CBORTagUInt128Value
-	CBORTagUInt256Value
-	_
-
-	// Word*
-	_
-	CBORTagWord8Value
-	CBORTagWord16Value
-	CBORTagWord32Value
-	CBORTagWord64Value
-	CBORTagWord128Value
-	CBORTagWord256Value
-	_
-
-	// Fix*
-	_
-	_ // future: Fix8
-	_ // future: Fix16
-	_ // future: Fix32
-	CBORTagFix64Value
-	_ // future: Fix128
-	_ // future: Fix256
-	_
-
-	// UFix*
-	_
-	_ // future: UFix8
-	_ // future: UFix16
-	_ // future: UFix32
-	CBORTagUFix64Value
-	_ // future: UFix128
-	_ // future: UFix256
-	_
-
-	// Locations
-	CBORTagAddressLocation
-	CBORTagStringLocation
-	CBORTagIdentifierLocation
-	CBORTagTransactionLocation
-	CBORTagScriptLocation
-	_
-	_
-	_
-
-	// Storage
-
-	CBORTagPathValue
-	// Deprecated: CBORTagPathCapabilityValue
-	CBORTagPathCapabilityValue
-	_ // DO NOT REPLACE! used to be used for storage references
-	// Deprecated: CBORTagPathLinkValue
-	CBORTagPathLinkValue
-	CBORTagPublishedValue
-	// Deprecated: CBORTagAccountLinkValue
-	CBORTagAccountLinkValue
-	CBORTagStorageCapabilityControllerValue
-	CBORTagAccountCapabilityControllerValue
-	CBORTagCapabilityValue
-	_
-	_
-	_
-
-	// Static Types
-	CBORTagPrimitiveStaticType
-	CBORTagCompositeStaticType
-	CBORTagInterfaceStaticType
-	CBORTagVariableSizedStaticType
-	CBORTagConstantSizedStaticType
-	CBORTagDictionaryStaticType
-	CBORTagOptionalStaticType
-	CBORTagReferenceStaticType
-	CBORTagIntersectionStaticType
-	CBORTagCapabilityStaticType
-	CBORTagUnauthorizedStaticAuthorization
-	CBORTagEntitlementMapStaticAuthorization
-	CBORTagEntitlementSetStaticAuthorization
-	CBORTagInaccessibleStaticAuthorization
-
-	_
-	_
-	_
-	_
-
-	CBORTagInclusiveRangeStaticType
-
-	// !!! *WARNING* !!!
-	// ADD NEW TYPES *BEFORE* THIS WARNING.
-	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
-	CBORTag_Count
+	"github.com/onflow/cadence/values"
 )
 
 // CBOREncMode
@@ -269,8 +59,8 @@ func init() {
 	// This allows Atree and Cadence more flexibility in case we need to revisit the
 	// allocation of adjacent unused ranges for Atree and Cadence.
 
-	minCBORTagNum := uint64(CBORTagBase)
-	maxCBORTagNum := uint64(CBORTag_Count) - 1
+	minCBORTagNum := uint64(values.CBORTagBase)
+	maxCBORTagNum := uint64(values.CBORTag_Count) - 1
 
 	tagNumOK, err := atree.IsCBORTagNumberRangeAvailable(minCBORTagNum, maxCBORTagNum)
 	if err != nil {
@@ -294,17 +84,11 @@ func (v NilValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeNil()
 }
 
-// Encode encodes the value as a CBOR bool
-func (v BoolValue) Encode(e *atree.Encoder) error {
-	// NOTE: when updating, also update BoolValue.ByteSize
-	return e.CBOR.EncodeBool(bool(v))
-}
-
 // Encode encodes the value as a CBOR string
 func (v CharacterValue) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagCharacterValue,
+		0xd8, values.CBORTagCharacterValue,
 	})
 	if err != nil {
 		return err
@@ -316,7 +100,7 @@ func (v CharacterValue) Encode(e *atree.Encoder) error {
 func (v *StringValue) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagStringValue,
+		0xd8, values.CBORTagStringValue,
 	})
 	if err != nil {
 		return err
@@ -342,7 +126,7 @@ func (v Uint64AtreeValue) Encode(e *atree.Encoder) error {
 //	}
 var cborVoidValue = []byte{
 	// tag
-	0xd8, CBORTagVoidValue,
+	0xd8, values.CBORTagVoidValue,
 	// null
 	0xf6,
 }
@@ -356,23 +140,6 @@ func (VoidValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeRawBytes(cborVoidValue)
 }
 
-// Encode encodes the value as
-//
-//	cbor.Tag{
-//			Number:  CBORTagIntValue,
-//			Content: *big.Int(v.BigInt),
-//	}
-func (v IntValue) Encode(e *atree.Encoder) error {
-	err := e.CBOR.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, CBORTagIntValue,
-	})
-	if err != nil {
-		return err
-	}
-	return e.CBOR.EncodeBigInt(v.BigInt)
-}
-
 // Encode encodes Int8Value as
 //
 //	cbor.Tag{
@@ -382,7 +149,7 @@ func (v IntValue) Encode(e *atree.Encoder) error {
 func (v Int8Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagInt8Value,
+		0xd8, values.CBORTagInt8Value,
 	})
 	if err != nil {
 		return err
@@ -399,7 +166,7 @@ func (v Int8Value) Encode(e *atree.Encoder) error {
 func (v Int16Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagInt16Value,
+		0xd8, values.CBORTagInt16Value,
 	})
 	if err != nil {
 		return err
@@ -416,7 +183,7 @@ func (v Int16Value) Encode(e *atree.Encoder) error {
 func (v Int32Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagInt32Value,
+		0xd8, values.CBORTagInt32Value,
 	})
 	if err != nil {
 		return err
@@ -433,7 +200,7 @@ func (v Int32Value) Encode(e *atree.Encoder) error {
 func (v Int64Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagInt64Value,
+		0xd8, values.CBORTagInt64Value,
 	})
 	if err != nil {
 		return err
@@ -450,7 +217,7 @@ func (v Int64Value) Encode(e *atree.Encoder) error {
 func (v Int128Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagInt128Value,
+		0xd8, values.CBORTagInt128Value,
 	})
 	if err != nil {
 		return err
@@ -467,7 +234,7 @@ func (v Int128Value) Encode(e *atree.Encoder) error {
 func (v Int256Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagInt256Value,
+		0xd8, values.CBORTagInt256Value,
 	})
 	if err != nil {
 		return err
@@ -484,7 +251,7 @@ func (v Int256Value) Encode(e *atree.Encoder) error {
 func (v UIntValue) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUIntValue,
+		0xd8, values.CBORTagUIntValue,
 	})
 	if err != nil {
 		return err
@@ -501,7 +268,7 @@ func (v UIntValue) Encode(e *atree.Encoder) error {
 func (v UInt8Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUInt8Value,
+		0xd8, values.CBORTagUInt8Value,
 	})
 	if err != nil {
 		return err
@@ -518,7 +285,7 @@ func (v UInt8Value) Encode(e *atree.Encoder) error {
 func (v UInt16Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUInt16Value,
+		0xd8, values.CBORTagUInt16Value,
 	})
 	if err != nil {
 		return err
@@ -535,7 +302,7 @@ func (v UInt16Value) Encode(e *atree.Encoder) error {
 func (v UInt32Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUInt32Value,
+		0xd8, values.CBORTagUInt32Value,
 	})
 	if err != nil {
 		return err
@@ -552,7 +319,7 @@ func (v UInt32Value) Encode(e *atree.Encoder) error {
 func (v UInt64Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUInt64Value,
+		0xd8, values.CBORTagUInt64Value,
 	})
 	if err != nil {
 		return err
@@ -569,7 +336,7 @@ func (v UInt64Value) Encode(e *atree.Encoder) error {
 func (v UInt128Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUInt128Value,
+		0xd8, values.CBORTagUInt128Value,
 	})
 	if err != nil {
 		return err
@@ -586,7 +353,7 @@ func (v UInt128Value) Encode(e *atree.Encoder) error {
 func (v UInt256Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUInt256Value,
+		0xd8, values.CBORTagUInt256Value,
 	})
 	if err != nil {
 		return err
@@ -603,7 +370,7 @@ func (v UInt256Value) Encode(e *atree.Encoder) error {
 func (v Word8Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagWord8Value,
+		0xd8, values.CBORTagWord8Value,
 	})
 	if err != nil {
 		return err
@@ -620,7 +387,7 @@ func (v Word8Value) Encode(e *atree.Encoder) error {
 func (v Word16Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagWord16Value,
+		0xd8, values.CBORTagWord16Value,
 	})
 	if err != nil {
 		return err
@@ -637,7 +404,7 @@ func (v Word16Value) Encode(e *atree.Encoder) error {
 func (v Word32Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagWord32Value,
+		0xd8, values.CBORTagWord32Value,
 	})
 	if err != nil {
 		return err
@@ -654,7 +421,7 @@ func (v Word32Value) Encode(e *atree.Encoder) error {
 func (v Word64Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagWord64Value,
+		0xd8, values.CBORTagWord64Value,
 	})
 	if err != nil {
 		return err
@@ -671,7 +438,7 @@ func (v Word64Value) Encode(e *atree.Encoder) error {
 func (v Word128Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagWord128Value,
+		0xd8, values.CBORTagWord128Value,
 	})
 	if err != nil {
 		return err
@@ -688,7 +455,7 @@ func (v Word128Value) Encode(e *atree.Encoder) error {
 func (v Word256Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagWord256Value,
+		0xd8, values.CBORTagWord256Value,
 	})
 	if err != nil {
 		return err
@@ -705,7 +472,7 @@ func (v Word256Value) Encode(e *atree.Encoder) error {
 func (v Fix64Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagFix64Value,
+		0xd8, values.CBORTagFix64Value,
 	})
 	if err != nil {
 		return err
@@ -713,21 +480,76 @@ func (v Fix64Value) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeInt64(int64(v))
 }
 
-// Encode encodes UFix64Value as
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// !!! *WARNING* !!!
+	//
+	// encodedFix128ValueLength is used to verify encoded fix128-parts length during decoding.
+	encodedFix128ValueLength = 2
+)
+
+// Encode encodes Fix128Value as
 //
 //	cbor.Tag{
-//			Number:  CBORTagUFix64Value,
-//			Content: uint64(v),
+//			Number:  CBORTagFix128Value,
+//			Content: []any {
+//			    int64(hi),
+//			    int64(lo),
+//			}
 //	}
-func (v UFix64Value) Encode(e *atree.Encoder) error {
+func (v Fix128Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUFix64Value,
+		0xd8, values.CBORTagFix128Value,
+		// array, 2 items follow
+		0x82,
 	})
 	if err != nil {
 		return err
 	}
-	return e.CBOR.EncodeUint64(uint64(v))
+
+	err = e.CBOR.EncodeUint64(uint64(v.Hi))
+	if err != nil {
+		return err
+	}
+
+	return e.CBOR.EncodeUint64(uint64(v.Lo))
+}
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// !!! *WARNING* !!!
+	//
+	// encodedUFix128ValueLength is used to verify encoded ufix128-parts length during decoding.
+	encodedUFix128ValueLength = 2
+)
+
+// Encode encodes UFix128Value as
+//
+//	cbor.Tag{
+//			Number:  CBORTagUFix128Value,
+//			Content: []any {
+//			    int64(hi),
+//			    int64(lo),
+//			}
+//	}
+func (v UFix128Value) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, values.CBORTagUFix128Value,
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = e.CBOR.EncodeUint64(uint64(v.Hi))
+	if err != nil {
+		return err
+	}
+
+	return e.CBOR.EncodeUint64(uint64(v.Lo))
 }
 
 var _ atree.ContainerStorable = &SomeStorable{}
@@ -750,7 +572,7 @@ func (s SomeStorable) encode(e *atree.Encoder) error {
 	// NOTE: when updating, also update SomeStorable.ByteSize
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagSomeValue,
+		0xd8, values.CBORTagSomeValue,
 	})
 	if err != nil {
 		return err
@@ -777,7 +599,7 @@ func (s SomeStorable) encodeMultipleNestedLevels(
 	// NOTE: when updating, also update SomeStorable.ByteSize
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagSomeValueWithNestedLevels,
+		0xd8, values.CBORTagSomeValueWithNestedLevels,
 		// array of 2 elements
 		0x82,
 	})
@@ -802,7 +624,7 @@ func (s SomeStorable) encodeMultipleNestedLevels(
 func (v AddressValue) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagAddressValue,
+		0xd8, values.CBORTagAddressValue,
 	})
 	if err != nil {
 		return err
@@ -835,7 +657,7 @@ func (v PathValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagPathValue,
+		0xd8, values.CBORTagPathValue,
 		// array, 2 items follow
 		0x82,
 	})
@@ -880,7 +702,7 @@ func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagCapabilityValue,
+		0xd8, values.CBORTagCapabilityValue,
 		// array, 3 items follow
 		0x83,
 	})
@@ -916,7 +738,7 @@ const (
 	encodedAddressLocationLength = 2
 )
 
-func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
+func EncodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 	if l == nil {
 		return e.EncodeNil()
 	}
@@ -931,7 +753,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		// }
 		err := e.EncodeRawBytes([]byte{
 			// tag number
-			0xd8, CBORTagStringLocation,
+			0xd8, values.CBORTagStringLocation,
 		})
 		if err != nil {
 			return err
@@ -947,7 +769,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		// }
 		err := e.EncodeRawBytes([]byte{
 			// tag number
-			0xd8, CBORTagIdentifierLocation,
+			0xd8, values.CBORTagIdentifierLocation,
 		})
 		if err != nil {
 			return err
@@ -967,7 +789,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		// Encode tag number and array head
 		err := e.EncodeRawBytes([]byte{
 			// tag number
-			0xd8, CBORTagAddressLocation,
+			0xd8, values.CBORTagAddressLocation,
 			// array, 2 items follow
 			0x82,
 		})
@@ -993,7 +815,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		// Encode tag number and array head
 		err := e.EncodeRawBytes([]byte{
 			// tag number
-			0xd8, CBORTagTransactionLocation,
+			0xd8, values.CBORTagTransactionLocation,
 		})
 		if err != nil {
 			return err
@@ -1010,7 +832,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		// Encode tag number and array head
 		err := e.EncodeRawBytes([]byte{
 			// tag number
-			0xd8, CBORTagScriptLocation,
+			0xd8, values.CBORTagScriptLocation,
 		})
 		if err != nil {
 			return err
@@ -1048,7 +870,7 @@ func (v *PublishedValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagPublishedValue,
+		0xd8, values.CBORTagPublishedValue,
 		// array, 2 items follow
 		0x82,
 	})
@@ -1087,7 +909,7 @@ func (v TypeValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagTypeValue,
+		0xd8, values.CBORTagTypeValue,
 		// array, 1 item follow
 		0x81,
 	})
@@ -1130,7 +952,7 @@ func (v *StorageCapabilityControllerValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagStorageCapabilityControllerValue,
+		0xd8, values.CBORTagStorageCapabilityControllerValue,
 		// array, 3 items follow
 		0x83,
 	})
@@ -1179,7 +1001,7 @@ func (v *AccountCapabilityControllerValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagAccountCapabilityControllerValue,
+		0xd8, values.CBORTagAccountCapabilityControllerValue,
 		// array, 2 items follow
 		0x82,
 	})
@@ -1223,7 +1045,7 @@ func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {
 func (t PrimitiveStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagPrimitiveStaticType,
+		0xd8, values.CBORTagPrimitiveStaticType,
 	})
 	if err != nil {
 		return err
@@ -1240,7 +1062,7 @@ func (t PrimitiveStaticType) Encode(e *cbor.StreamEncoder) error {
 func (t *OptionalStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagOptionalStaticType,
+		0xd8, values.CBORTagOptionalStaticType,
 	})
 	if err != nil {
 		return err
@@ -1274,7 +1096,7 @@ func (t *CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagCompositeStaticType,
+		0xd8, values.CBORTagCompositeStaticType,
 		// array, 2 items follow
 		0x82,
 	})
@@ -1283,7 +1105,7 @@ func (t *CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
 	}
 
 	// Encode location at array index encodedCompositeStaticTypeLocationFieldKey
-	err = encodeLocation(e, t.Location)
+	err = EncodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
@@ -1317,7 +1139,7 @@ func (t *InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagInterfaceStaticType,
+		0xd8, values.CBORTagInterfaceStaticType,
 		// array, 2 items follow
 		0x82,
 	})
@@ -1326,7 +1148,7 @@ func (t *InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 	}
 
 	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKey
-	err = encodeLocation(e, t.Location)
+	err = EncodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
@@ -1344,7 +1166,7 @@ func (t *InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 func (t *VariableSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagVariableSizedStaticType,
+		0xd8, values.CBORTagVariableSizedStaticType,
 	})
 	if err != nil {
 		return err
@@ -1377,7 +1199,7 @@ func (t *ConstantSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagConstantSizedStaticType,
+		0xd8, values.CBORTagConstantSizedStaticType,
 		// array, 2 items follow
 		0x82,
 	})
@@ -1396,7 +1218,7 @@ func (t *ConstantSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 func (t Unauthorized) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUnauthorizedStaticAuthorization,
+		0xd8, values.CBORTagUnauthorizedStaticAuthorization,
 	})
 	if err != nil {
 		return err
@@ -1407,7 +1229,7 @@ func (t Unauthorized) Encode(e *cbor.StreamEncoder) error {
 func (t Inaccessible) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagInaccessibleStaticAuthorization,
+		0xd8, values.CBORTagInaccessibleStaticAuthorization,
 	})
 	if err != nil {
 		return err
@@ -1418,7 +1240,7 @@ func (t Inaccessible) Encode(e *cbor.StreamEncoder) error {
 func (a EntitlementMapAuthorization) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagEntitlementMapStaticAuthorization,
+		0xd8, values.CBORTagEntitlementMapStaticAuthorization,
 	})
 	if err != nil {
 		return err
@@ -1441,7 +1263,7 @@ const (
 func (a EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagEntitlementSetStaticAuthorization,
+		0xd8, values.CBORTagEntitlementSetStaticAuthorization,
 		// array, 2 items follow
 		0x82,
 	})
@@ -1489,7 +1311,7 @@ func (t *ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagReferenceStaticType,
+		0xd8, values.CBORTagReferenceStaticType,
 		// array, 2 items follow
 		0x82,
 	})
@@ -1530,7 +1352,7 @@ func (t *DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagDictionaryStaticType,
+		0xd8, values.CBORTagDictionaryStaticType,
 		// array, 2 items follow
 		0x82,
 	})
@@ -1556,7 +1378,7 @@ func (t InclusiveRangeStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagInclusiveRangeStaticType,
+		0xd8, values.CBORTagInclusiveRangeStaticType,
 	})
 	if err != nil {
 		return err
@@ -1590,7 +1412,7 @@ func (t *IntersectionStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagIntersectionStaticType,
+		0xd8, values.CBORTagIntersectionStaticType,
 		// array, 2 items follow
 		0x82,
 	})
@@ -1636,7 +1458,7 @@ func (t *IntersectionStaticType) Encode(e *cbor.StreamEncoder) error {
 func (t *CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagCapabilityStaticType,
+		0xd8, values.CBORTagCapabilityStaticType,
 	})
 	if err != nil {
 		return err
@@ -1649,16 +1471,16 @@ func (t *CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 }
 
 func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
-	return NonStorableStaticTypeError{
+	return &NonStorableStaticTypeError{
 		Type: t.Type,
 	}
 }
 
-// compositeTypeInfo
-type compositeTypeInfo struct {
-	location            common.Location
-	qualifiedIdentifier string
-	kind                common.CompositeKind
+// CompositeTypeInfo
+type CompositeTypeInfo struct {
+	Location            common.Location
+	QualifiedIdentifier string
+	Kind                common.CompositeKind
 }
 
 func NewCompositeTypeInfo(
@@ -1666,37 +1488,33 @@ func NewCompositeTypeInfo(
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
-) compositeTypeInfo {
+) CompositeTypeInfo {
 	common.UseMemory(memoryGauge, common.CompositeTypeInfoMemoryUsage)
 
-	return compositeTypeInfo{
-		location:            location,
-		qualifiedIdentifier: qualifiedIdentifier,
-		kind:                kind,
+	return CompositeTypeInfo{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+		Kind:                kind,
 	}
 }
 
-var _ atree.TypeInfo = compositeTypeInfo{}
+var _ atree.TypeInfo = CompositeTypeInfo{}
 
 const encodedCompositeTypeInfoLength = 3
 
-func (c compositeTypeInfo) IsComposite() bool {
+func (c CompositeTypeInfo) IsComposite() bool {
 	return true
 }
 
-func (c compositeTypeInfo) Identifier() string {
-	return string(c.location.TypeID(nil, c.qualifiedIdentifier))
-}
-
-func (c compositeTypeInfo) Copy() atree.TypeInfo {
+func (c CompositeTypeInfo) Copy() atree.TypeInfo {
 	// Return c as is because c is a value type.
 	return c
 }
 
-func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
+func (c CompositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagCompositeValue,
+		0xd8, values.CBORTagCompositeValue,
 		// array, 3 items follow
 		0x83,
 	})
@@ -1704,17 +1522,17 @@ func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 
-	err = encodeLocation(e, c.location)
+	err = EncodeLocation(e, c.Location)
 	if err != nil {
 		return err
 	}
 
-	err = e.EncodeString(c.qualifiedIdentifier)
+	err = e.EncodeString(c.QualifiedIdentifier)
 	if err != nil {
 		return err
 	}
 
-	err = e.EncodeUint64(uint64(c.kind))
+	err = e.EncodeUint64(uint64(c.Kind))
 	if err != nil {
 		return err
 	}
@@ -1722,12 +1540,12 @@ func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 	return nil
 }
 
-func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
-	other, ok := o.(compositeTypeInfo)
+func (c CompositeTypeInfo) Equal(o atree.TypeInfo) bool {
+	other, ok := o.(CompositeTypeInfo)
 	return ok &&
-		c.location == other.location &&
-		c.qualifiedIdentifier == other.qualifiedIdentifier &&
-		c.kind == other.kind
+		c.Location == other.Location &&
+		c.QualifiedIdentifier == other.QualifiedIdentifier &&
+		c.Kind == other.Kind
 }
 
 // EmptyTypeInfo
@@ -1739,10 +1557,6 @@ func (e EmptyTypeInfo) Encode(encoder *cbor.StreamEncoder) error {
 
 func (e EmptyTypeInfo) IsComposite() bool {
 	return false
-}
-
-func (e EmptyTypeInfo) Identifier() string {
-	return ""
 }
 
 func (e EmptyTypeInfo) Copy() atree.TypeInfo {

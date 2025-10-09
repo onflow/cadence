@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=TransferOperation
+//go:generate stringer -type=TransferOperation
 
 type TransferOperation uint
 
@@ -33,6 +33,7 @@ const (
 	TransferOperationCopy
 	TransferOperationMove
 	TransferOperationMoveForced
+	TransferOperationInternalNoTransfer // internal use only
 )
 
 func TransferOperationCount() int {
@@ -47,6 +48,8 @@ func (k TransferOperation) Operator() string {
 		return "<-"
 	case TransferOperationMoveForced:
 		return "<-!"
+	case TransferOperationInternalNoTransfer:
+		return "$noTransfer"
 	}
 
 	panic(errors.NewUnreachableError())

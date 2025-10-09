@@ -23,8 +23,9 @@ import (
 )
 
 type Config struct {
-	MemoryGauge common.MemoryGauge
-	Storage     Storage
+	MemoryGauge      common.MemoryGauge
+	ComputationGauge common.ComputationGauge
+	Storage          Storage
 	// ImportLocationHandler is used to handle imports of locations
 	ImportLocationHandler ImportLocationHandlerFunc
 	// OnInvokedFunctionReturn is triggered when an invoked function returned
@@ -33,8 +34,6 @@ type Config struct {
 	OnRecordTrace OnRecordTraceFunc
 	// OnResourceOwnerChange is triggered when the owner of a resource changes
 	OnResourceOwnerChange OnResourceOwnerChangeFunc
-	// OnMeterComputation is triggered when a computation is about to happen
-	OnMeterComputation OnMeterComputationFunc
 	// InjectedCompositeFieldsHandler is used to initialize new composite values' fields
 	InjectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	// ContractValueHandler is used to handle imports of values
@@ -59,9 +58,6 @@ type Config struct {
 	OnStatement OnStatementFunc
 	// OnLoopIteration is triggered when a loop iteration is about to be executed
 	OnLoopIteration OnLoopIterationFunc
-	// TracingEnabled determines if tracing is enabled.
-	// Tracing reports certain operations, e.g. composite value transfers
-	TracingEnabled bool
 	// AtreeStorageValidationEnabled determines if the validation of atree storage is enabled
 	AtreeStorageValidationEnabled bool
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled
@@ -70,10 +66,6 @@ type Config struct {
 	CapabilityCheckHandler CapabilityCheckHandlerFunc
 	// CapabilityBorrowHandler is used to borrow ID capabilities
 	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
-	// LegacyContractUpgradeEnabled specifies whether to fall back to the old parser when attempting a contract upgrade
-	LegacyContractUpgradeEnabled bool
-	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
-	ContractUpdateTypeRemovalEnabled bool
 	// ValidateAccountCapabilitiesGetHandler is used to handle when a capability of an account is got.
 	ValidateAccountCapabilitiesGetHandler ValidateAccountCapabilitiesGetHandlerFunc
 	// ValidateAccountCapabilitiesPublishHandler is used to handle when a capability of an account is got.

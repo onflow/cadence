@@ -12,11 +12,12 @@ func _() {
 	_ = x[TransferOperationCopy-1]
 	_ = x[TransferOperationMove-2]
 	_ = x[TransferOperationMoveForced-3]
+	_ = x[TransferOperationInternalNoTransfer-4]
 }
 
-const _TransferOperation_name = "TransferOperationUnknownTransferOperationCopyTransferOperationMoveTransferOperationMoveForced"
+const _TransferOperation_name = "TransferOperationUnknownTransferOperationCopyTransferOperationMoveTransferOperationMoveForcedTransferOperationInternalNoTransfer"
 
-var _TransferOperation_index = [...]uint8{0, 24, 45, 66, 93}
+var _TransferOperation_index = [...]uint8{0, 24, 45, 66, 93, 128}
 
 func (i TransferOperation) String() string {
 	if i >= TransferOperation(len(_TransferOperation_index)-1) {

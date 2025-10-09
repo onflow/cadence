@@ -24,9 +24,9 @@ import { Data, TreeView } from "./tree";
 import { createRoot } from 'react-dom/client';
 
 const defaultCode = `
-pub contract C {
-    pub resource R {}
-    pub fun createR(): @R {
+access(all) contract C {
+    access(all) resource R {}
+    access(all) fun createR(): @R {
         return <- create R()
     }
 }

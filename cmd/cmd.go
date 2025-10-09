@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -120,7 +119,6 @@ func DefaultCheckerConfig(
 				Elaboration: importedChecker.Elaboration,
 			}, nil
 		},
-		AttachmentsEnabled: true,
 	}
 }
 
@@ -171,7 +169,7 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	program, must := PrepareProgramFromFile(location, codes)
 
-	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(
+	standardLibraryValues := stdlib.InterpreterDefaultScriptStandardLibraryValues(
 		&StandardLibraryHandler{},
 	)
 
@@ -234,8 +232,8 @@ type StandardLibraryHandler struct {
 
 var _ stdlib.StandardLibraryHandler = &StandardLibraryHandler{}
 
-func (*StandardLibraryHandler) ProgramLog(message string, locationRange interpreter.LocationRange) error {
-	fmt.Printf("LOG @ %s: %s\n", formatLocationRange(locationRange), message)
+func (*StandardLibraryHandler) ProgramLog(message string) error {
+	fmt.Printf("LOG: %s\n", message)
 	return nil
 }
 
@@ -263,7 +261,7 @@ func (*StandardLibraryHandler) GetAccountAvailableBalance(_ common.Address) (uin
 	return 0, goerrors.New("accounts are not supported in this environment")
 }
 
-func (*StandardLibraryHandler) CommitStorageTemporarily(_ *interpreter.Interpreter) error {
+func (*StandardLibraryHandler) CommitStorageTemporarily(_ interpreter.ValueTransferContext) error {
 	// NO-OP
 	return nil
 }
@@ -319,8 +317,7 @@ func (*StandardLibraryHandler) GetAccountContractCode(_ common.AddressLocation) 
 }
 
 func (*StandardLibraryHandler) EmitEvent(
-	_ *interpreter.Interpreter,
-	_ interpreter.LocationRange,
+	_ interpreter.ValueExportContext,
 	_ *sema.CompositeType,
 	_ []interpreter.Value,
 ) {
@@ -369,7 +366,7 @@ func (h *StandardLibraryHandler) ContractUpdateRecorded(_ common.AddressLocation
 	return false
 }
 
-func (*StandardLibraryHandler) InterpretContract(
+func (*StandardLibraryHandler) LoadContractValue(
 	_ common.AddressLocation,
 	_ *interpreter.Program,
 	_ string,
@@ -407,16 +404,22 @@ func (*StandardLibraryHandler) BLSAggregateSignatures(_ [][]byte) ([]byte, error
 
 func (h *StandardLibraryHandler) NewOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
 	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		event *interpreter.CompositeValue,
-		_ *sema.CompositeType,
+		_ interpreter.ValueExportContext,
+		eventType *sema.CompositeType,
+		eventFields []interpreter.Value,
 	) error {
 		fmt.Printf(
-			"EVENT @ %s: %s\n",
-			formatLocationRange(locationRange),
-			event.String(),
+			"EVENT: %s(",
+			eventType.ID(),
 		)
+		for i, field := range eventFields {
+			if i > 0 {
+				fmt.Print(", ")
+			}
+			fmt.Print(field)
+		}
+		fmt.Println(")")
+
 		return nil
 	}
 }
@@ -436,30 +439,10 @@ func (h *StandardLibraryHandler) IsContractBeingAdded(common.AddressLocation) bo
 
 func (h *StandardLibraryHandler) ExportValue(
 	_ interpreter.Value,
-	_ *interpreter.Interpreter,
-	_ interpreter.LocationRange,
+	_ interpreter.ValueExportContext,
 ) (
 	cadence.Value,
 	error,
 ) {
-	return nil, goerrors.New("exporting values is not supported in this environment")
-}
-
-func formatLocationRange(locationRange interpreter.LocationRange) string {
-	var builder strings.Builder
-	if locationRange.Location != nil {
-		_, _ = fmt.Fprintf(
-			&builder,
-			"%s:",
-			locationRange.Location,
-		)
-	}
-	startPosition := locationRange.StartPosition()
-	_, _ = fmt.Fprintf(
-		&builder,
-		"%d:%d",
-		startPosition.Line,
-		startPosition.Column,
-	)
-	return builder.String()
+	return nil, goerrors.New("exporting values is not available in this environment")
 }

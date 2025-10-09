@@ -28,7 +28,7 @@ import (
 	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestMain(m *testing.M) {
@@ -67,7 +67,7 @@ func testLex(t *testing.T, input string, expected []token) {
 	require.NoError(t, err)
 
 	withTokens(tokenStream, func(actualTokens []Token) {
-		utils.AssertEqualWithDiff(t, expectedTokens, actualTokens)
+		AssertEqualWithDiff(t, expectedTokens, actualTokens)
 
 		require.Len(t, actualTokens, len(expectedTokens))
 		for i, expectedToken := range expected {
@@ -1017,6 +1017,448 @@ func TestLexString(t *testing.T) {
 		)
 	})
 
+	t.Run("valid, string template", func(t *testing.T) {
+		testLex(t,
+			`"\(abc).length"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `\(`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+					Source: `abc`,
+				},
+				{
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Source: `)`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					Source: `.length"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("valid, not a string template", func(t *testing.T) {
+		testLex(t,
+			`"(1.00)"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Source: `"(1.00)"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("invalid, number string template", func(t *testing.T) {
+		testLex(t,
+			`"\(7)"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `\(`,
+				},
+				{
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					Source: `7`,
+				},
+				{
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					Source: `)`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("invalid identifier string template", func(t *testing.T) {
+		testLex(t,
+			`"\(a+2)"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `\(`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					Source: `a`,
+				},
+				{
+					Token: Token{
+						Type: TokenPlus,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					Source: `+`,
+				},
+				{
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+					Source: `2`,
+				},
+				{
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Source: `)`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("valid, multi string template", func(t *testing.T) {
+		testLex(t,
+			`"\(a)\(b)"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `\(`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					Source: `a`,
+				},
+				{
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					Source: `)`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 4},
+						},
+					},
+					Source: ``,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 6},
+						},
+					},
+					Source: `\(`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 7},
+						},
+					},
+					Source: `b`,
+				},
+				{
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 8},
+						},
+					},
+					Source: `)`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 10, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 9},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 11, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 10},
+						},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("valid, nested brackets", func(t *testing.T) {
+		testLex(t,
+			`"\((a))"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `\(`,
+				},
+				{
+					Token: Token{
+						Type: TokenParenOpen,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					Source: `(`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					Source: `a`,
+				},
+				{
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+					Source: `)`,
+				},
+				{
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Source: `)`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+				},
+			},
+		)
+	})
+
 	t.Run("invalid, empty, not terminated at line end", func(t *testing.T) {
 		testLex(t,
 			"\"\n",
@@ -1362,6 +1804,44 @@ func TestLexBlockComment(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("empty", func(t *testing.T) {
+		testLex(t,
+			`/**/`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenBlockCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Source: "/*",
+				},
+				{
+					Token: Token{
+						Type: TokenBlockCommentEnd,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					Source: "*/",
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+			},
+		)
+	})
+
 }
 
 func TestLexIntegerLiterals(t *testing.T) {
@@ -1372,17 +1852,6 @@ func TestLexIntegerLiterals(t *testing.T) {
 		testLex(t,
 			`0b`,
 			[]token{
-				{
-					Token: Token{
-						Type:         TokenError,
-						SpaceOrError: errors.New("missing digits"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "b",
-				},
 				{
 					Token: Token{
 						Type: TokenBinaryIntegerLiteral,
@@ -1545,17 +2014,6 @@ func TestLexIntegerLiterals(t *testing.T) {
 		testLex(t,
 			`0o`,
 			[]token{
-				{
-					Token: Token{
-						Type:         TokenError,
-						SpaceOrError: errors.New("missing digits"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "o",
-				},
 				{
 					Token: Token{
 						Type: TokenOctalIntegerLiteral,
@@ -1772,17 +2230,6 @@ func TestLexIntegerLiterals(t *testing.T) {
 		testLex(t,
 			`0x`,
 			[]token{
-				{
-					Token: Token{
-						Type:         TokenError,
-						SpaceOrError: errors.New("missing digits"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "x",
-				},
 				{
 					Token: Token{
 						Type: TokenHexadecimalIntegerLiteral,
@@ -2039,17 +2486,6 @@ func TestLexIntegerLiterals(t *testing.T) {
 		testLex(t,
 			"0z123",
 			[]token{
-				{
-					Token: Token{
-						Type:         TokenError,
-						SpaceOrError: errors.New("invalid number literal prefix: 'z'"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "z",
-				},
 				{
 					Token: Token{
 						Type: TokenUnknownBaseIntegerLiteral,
@@ -2652,4 +3088,21 @@ func TestLimit(t *testing.T) {
 
 	_, err := Lex([]byte(code), nil)
 	require.ErrorAs(t, err, &TokenLimitReachedError{})
+}
+
+func TestLexInvalidRune(t *testing.T) {
+
+	t.Parallel()
+
+	code := `"\(FFFF\`
+
+	tokens, err := Lex([]byte(code), nil)
+	require.NoError(t, err)
+
+	for {
+		token := tokens.Next()
+		if token.Type == TokenEOF {
+			break
+		}
+	}
 }

@@ -35,11 +35,11 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/rs/zerolog"
 
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/interpreter"
 
+	"github.com/onflow/cadence/common"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
 )
 
 func main() {
@@ -184,7 +184,7 @@ func NewAccountStorageMapKeysHandler(
 		}
 
 		var keys []string
-		storageMap := storage.GetStorageMap(address, storageMapDomain, false)
+		storageMap := storage.GetDomainStorageMap(address, storageMapDomain, false)
 		if storageMap == nil {
 			keys = make([]string, 0)
 		} else {
@@ -225,7 +225,7 @@ func NewAccountStorageMapValueHandler(
 			return
 		}
 
-		storageMap := storage.GetStorageMap(address, storageMapDomain, false)
+		storageMap := storage.GetDomainStorageMap(address, storageMapDomain, false)
 		if storageMap == nil {
 			http.Error(w, "storage map does not exist", http.StatusNotFound)
 			return

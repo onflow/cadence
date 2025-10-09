@@ -19,14 +19,15 @@
 package common
 
 import (
+	"bytes"
 	"encoding/hex"
 	goErrors "errors"
 	"fmt"
 	"strings"
 )
 
-var AddressOverflowError = goErrors.New("address too large")
-var InvalidHexAddressError = goErrors.New("invalid hex string for address")
+var ErrAddressOverflow = goErrors.New("address too large")
+var ErrInvalidHexAddress = goErrors.New("invalid hex string for address")
 
 const AddressLength = 8
 
@@ -51,7 +52,7 @@ func MustBytesToAddress(b []byte) Address {
 // If the address is too large, then the function returns an error.
 func BytesToAddress(b []byte) (Address, error) {
 	if len(b) > AddressLength {
-		return Address{}, AddressOverflowError
+		return Address{}, ErrAddressOverflow
 	}
 	var a Address
 	a.SetBytes(b)
@@ -112,11 +113,15 @@ func (a Address) HexWithPrefix() string {
 	return fmt.Sprintf("0x%x", [AddressLength]byte(a))
 }
 
-// HexToAddress converts a hex string to an Address after
+func (a Address) Compare(other Address) int {
+	return bytes.Compare(a[:], other[:])
+}
+
+// HexToAddressAssertPrefix converts a hex string to an Address after
 // ensuring that the hex string starts with the prefix 0x.
 func HexToAddressAssertPrefix(h string) (Address, error) {
 	if !strings.HasPrefix(h, "0x") {
-		return Address{}, InvalidHexAddressError
+		return Address{}, ErrInvalidHexAddress
 	}
 
 	return HexToAddress(h)
@@ -130,7 +135,7 @@ func HexToAddress(h string) (Address, error) {
 	}
 	b, err := hex.DecodeString(trimmed)
 	if err != nil {
-		return Address{}, InvalidHexAddressError
+		return Address{}, ErrInvalidHexAddress
 	}
 	return BytesToAddress(b)
 }

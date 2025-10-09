@@ -23,14 +23,20 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/flow-go/model/flow"
 )
 
 func TestCyclicImport(t *testing.T) {
 
+	t.Parallel()
+
 	var output bytes.Buffer
 	var input bytes.Buffer
 
-	checker := NewContractChecker(&output)
+	chain := flow.Testnet.Chain()
+
+	checker := NewContractChecker(chain, &output)
 
 	input.Write([]byte(`location,code
 A.0000000000000001.Foo,"import Bar from 0x0000000000000001
@@ -48,4 +54,31 @@ access(all) contract Foo {}"
 	assert.Contains(t, outputStr, "Foo:16(1:16):*sema.ImportedProgramError")
 	assert.Contains(t, outputStr, "Bar:16(1:16):*sema.ImportedProgramError")
 	assert.Contains(t, outputStr, "Baz:16(1:16):*sema.ImportedProgramError")
+}
+
+func TestCryptoImport(t *testing.T) {
+
+	t.Parallel()
+
+	var output bytes.Buffer
+	var input bytes.Buffer
+
+	chainID := flow.Testnet
+
+	checker := NewContractChecker(chainID.Chain(), &output)
+
+	contractsCSV := `location,code
+A.0000000000000001.Foo,"import Crypto
+access(all) contract Foo {}"
+A.0000000000000001.Bar,"import Crypto
+access(all) contract Bar {}"
+`
+
+	input.Write([]byte(contractsCSV))
+
+	checker.CheckCSV(&input)
+
+	outputStr := output.String()
+
+	assert.Empty(t, outputStr)
 }

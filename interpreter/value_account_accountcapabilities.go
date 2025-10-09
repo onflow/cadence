@@ -41,34 +41,61 @@ func NewAccountAccountCapabilitiesValue(
 	issueWithTypeFunction BoundFunctionGenerator,
 ) *SimpleCompositeValue {
 
+	var accountCapabilities *SimpleCompositeValue
+
+	methods := map[string]FunctionValue{}
+
+	computeLazyStoredMethod := func(name string) FunctionValue {
+		switch name {
+		case sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:
+			return getControllerFunction(accountCapabilities)
+		case sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:
+			return getControllersFunction(accountCapabilities)
+		case sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName:
+			return forEachControllerFunction(accountCapabilities)
+		case sema.Account_AccountCapabilitiesTypeIssueFunctionName:
+			return issueFunction(accountCapabilities)
+		case sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName:
+			return issueWithTypeFunction(accountCapabilities)
+		}
+
+		return nil
+	}
+
+	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
+		}
+
+		return method
+	}
+
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountAccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountAccountCapabilitiesStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.AccountCapabilities(%s)", addressStr)
 		}
 		return str
 	}
 
-	accountCapabilities := NewSimpleCompositeValue(
+	accountCapabilities = NewSimpleCompositeValue(
 		gauge,
 		account_AccountCapabilitiesTypeID,
 		account_AccountCapabilitiesStaticType,
 		account_AccountCapabilitiesFieldNames,
+		// No fields, only methods.
 		nil,
 		nil,
+		methodGetter,
 		nil,
 		stringer,
-	)
-
-	accountCapabilities.Fields = map[string]Value{
-		sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:     getControllerFunction(accountCapabilities),
-		sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:    getControllersFunction(accountCapabilities),
-		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction(accountCapabilities),
-		sema.Account_AccountCapabilitiesTypeIssueFunctionName:             issueFunction(accountCapabilities),
-		sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction(accountCapabilities),
-	}
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return accountCapabilities
 }

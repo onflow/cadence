@@ -53,6 +53,4 @@ type Config struct {
 	AllowNativeDeclarations bool
 	// AllowStaticDeclarations determines if declarations may be static
 	AllowStaticDeclarations bool
-	// AttachmentsEnabled determines if attachments are enabled
-	AttachmentsEnabled bool
 }

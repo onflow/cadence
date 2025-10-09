@@ -291,6 +291,8 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 	if IsSameTypeKind(expectedType, FixedPointType) {
 		actualType = expectedType
 	} else if expression.Negative {
+		// Ideally, if the type is not provided, assuming the type with the largest range (`Fix128`) seems sensible.
+		// However, to maintain backward compatibility, keep inferring the type as `Fix64`.
 		actualType = Fix64Type
 	} else {
 		actualType = UFix64Type
@@ -385,7 +387,7 @@ func (checker *Checker) visitIndexExpression(
 		returnReference := false
 		if shouldReturnReference(valueIndexedType, elementType, isAssignment) {
 			// For index expressions, element are un-authorized.
-			elementType = checker.getReferenceType(elementType, false, UnauthorizedAccess)
+			elementType = checker.getReferenceType(elementType, UnauthorizedAccess)
 
 			// Store the result in elaboration, so the interpreter can re-use this.
 			returnReference = true
@@ -417,20 +419,7 @@ func (checker *Checker) visitIndexExpression(
 			return InvalidType
 		}
 
-		elementType := checker.checkTypeIndexingExpression(typeIndexedType, indexExpression)
-		if elementType == InvalidType {
-			checker.report(
-				&InvalidTypeIndexingError{
-					BaseType:           typeIndexedType,
-					IndexingExpression: indexExpression.IndexingExpression,
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						indexExpression.IndexingExpression,
-					),
-				},
-			)
-		}
-		return elementType
+		return checker.checkTypeIndexingExpression(typeIndexedType, indexExpression)
 	}
 
 	reportNonIndexable(targetType)
@@ -444,25 +433,35 @@ func (checker *Checker) checkTypeIndexingExpression(
 
 	targetExpression := indexExpression.TargetExpression
 
-	if !checker.Config.AttachmentsEnabled {
-		checker.report(&AttachmentsNotEnabledError{
-			Range: ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
-		})
+	reportInvalid := func() {
+		checker.report(
+			&InvalidTypeIndexingError{
+				BaseType:           targetType,
+				IndexingExpression: indexExpression.IndexingExpression,
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					indexExpression.IndexingExpression,
+				),
+			},
+		)
 	}
 
 	expressionType := ast.ExpressionAsType(indexExpression.IndexingExpression)
 	if expressionType == nil {
+		reportInvalid()
 		return InvalidType
 	}
 
 	nominalTypeExpression, isNominalType := expressionType.(*ast.NominalType)
 	if !isNominalType {
+		reportInvalid()
 		return InvalidType
 	}
 
 	nominalType := checker.convertNominalType(nominalTypeExpression)
 
 	if !targetType.IsValidIndexingType(nominalType) {
+		reportInvalid()
 		return InvalidType
 	}
 

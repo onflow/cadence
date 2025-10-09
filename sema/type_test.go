@@ -649,9 +649,10 @@ func TestCommonSuperType(t *testing.T) {
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
+				computedSuperType := LeastCommonSuperType(test.types...)
 				assert.True(
 					t,
-					test.expectedSuperType.Equal(LeastCommonSuperType(test.types...)),
+					test.expectedSuperType.Equal(computedSuperType),
 				)
 			})
 		}
@@ -722,8 +723,42 @@ func TestCommonSuperType(t *testing.T) {
 				name: "heterogeneous fixed-point types",
 				types: []Type{
 					Fix64Type,
+					Fix128Type,
 					UFix64Type,
+					UFix128Type,
 					FixedPointType,
+				},
+				expectedSuperType: FixedPointType,
+			},
+			{
+				name: "homogenous fix128 types",
+				types: []Type{
+					Fix128Type,
+					Fix128Type,
+				},
+				expectedSuperType: Fix128Type,
+			},
+			{
+				name: "homogenous ufix128 types",
+				types: []Type{
+					UFix128Type,
+					UFix128Type,
+				},
+				expectedSuperType: UFix128Type,
+			},
+			{
+				name: "heterogeneous signed fixed-point types",
+				types: []Type{
+					Fix64Type,
+					Fix128Type,
+				},
+				expectedSuperType: SignedFixedPointType,
+			},
+			{
+				name: "heterogeneous unsigned fixed-point types",
+				types: []Type{
+					UFix64Type,
+					UFix128Type,
 				},
 				expectedSuperType: FixedPointType,
 			},
@@ -1979,7 +2014,7 @@ func TestIsPrimitive(t *testing.T) {
 
 		for _, ty := range []Type{
 			&GenericType{TypeParameter: &TypeParameter{Name: "T"}},
-			&TransactionType{},
+			&TransactionType{Location: common.NewTransactionLocation(nil, []byte{42})},
 		} {
 			tests = append(tests, testCase{
 				expectedIsPrimitive: false,
@@ -2378,6 +2413,10 @@ func TestTypeInclusions(t *testing.T) {
 					return
 				}
 
+				if _, ok := typ.(*InterfaceType); ok {
+					return
+				}
+
 				if typ.IsResourceType() {
 					return
 				}
@@ -2439,168 +2478,6 @@ func BenchmarkSuperTypeInference(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			LeastCommonSuperType(types...)
 		}
-	})
-}
-
-func TestMapType(t *testing.T) {
-
-	t.Parallel()
-
-	mapFn := func(ty Type) Type {
-		switch typ := ty.(type) {
-		case *SimpleType:
-			return BoolType
-		case *NumericType:
-			return StringType
-		case *CompositeType:
-			return &InterfaceType{Identifier: typ.Identifier}
-		case *IntersectionType:
-			var interfaces []*InterfaceType
-			for _, i := range typ.Types {
-				interfaces = append(interfaces, &InterfaceType{Identifier: i.Identifier + "f"})
-			}
-			return NewIntersectionType(nil, nil, interfaces)
-		}
-		return ty
-	}
-
-	t.Run("map optional", func(t *testing.T) {
-		t.Parallel()
-		original := NewOptionalType(nil, StringType)
-		mapped := NewOptionalType(nil, BoolType)
-
-		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
-	})
-
-	t.Run("map variable array", func(t *testing.T) {
-		t.Parallel()
-		original := NewVariableSizedType(nil, StringType)
-		mapped := NewVariableSizedType(nil, BoolType)
-
-		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
-	})
-
-	t.Run("map constant sized array", func(t *testing.T) {
-		t.Parallel()
-		original := NewConstantSizedType(nil, StringType, 7)
-		mapped := NewConstantSizedType(nil, BoolType, 7)
-
-		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
-	})
-
-	t.Run("map reference type", func(t *testing.T) {
-		t.Parallel()
-		mapType := NewEntitlementMapAccess(&EntitlementMapType{Identifier: "X"})
-		original := NewReferenceType(nil, mapType, StringType)
-		mapped := NewReferenceType(nil, mapType, BoolType)
-
-		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
-	})
-
-	t.Run("map dictionary type", func(t *testing.T) {
-		t.Parallel()
-		original := NewDictionaryType(nil, StringType, Int128Type)
-		mapped := NewDictionaryType(nil, BoolType, StringType)
-
-		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
-	})
-
-	t.Run("map capability type", func(t *testing.T) {
-		t.Parallel()
-		original := NewCapabilityType(nil, StringType)
-		mapped := NewCapabilityType(nil, BoolType)
-
-		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
-	})
-
-	t.Run("map intersection type", func(t *testing.T) {
-		t.Parallel()
-
-		original := NewIntersectionType(
-			nil,
-			nil,
-			[]*InterfaceType{
-				{Identifier: "foo"},
-				{Identifier: "bar"},
-			},
-		)
-		mapped := NewIntersectionType(
-			nil,
-			nil,
-			[]*InterfaceType{
-				{Identifier: "foof"},
-				{Identifier: "barf"},
-			},
-		)
-
-		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
-	})
-
-	t.Run("map function type", func(t *testing.T) {
-		t.Parallel()
-		originalTypeParam := &TypeParameter{
-			TypeBound: Int64Type,
-			Name:      "X",
-			Optional:  true,
-		}
-		original := NewSimpleFunctionType(
-			FunctionPurityView,
-			[]Parameter{
-				{
-					TypeAnnotation: NewTypeAnnotation(
-						&GenericType{
-							TypeParameter: originalTypeParam,
-						},
-					),
-					Label:      "X",
-					Identifier: "Y",
-				},
-				{
-					TypeAnnotation: NewTypeAnnotation(&CompositeType{Identifier: "foo"}),
-					Label:          "A",
-					Identifier:     "B",
-				},
-			},
-			NewTypeAnnotation(Int128Type),
-		)
-		original.TypeParameters = []*TypeParameter{originalTypeParam}
-
-		mappedTypeParam := &TypeParameter{
-			TypeBound: StringType,
-			Name:      "X",
-			Optional:  true,
-		}
-		mapped := NewSimpleFunctionType(
-			FunctionPurityView,
-			[]Parameter{
-				{
-					TypeAnnotation: NewTypeAnnotation(
-						&GenericType{
-							TypeParameter: mappedTypeParam,
-						},
-					),
-					Label:      "X",
-					Identifier: "Y",
-				},
-				{
-					TypeAnnotation: NewTypeAnnotation(&InterfaceType{Identifier: "foo"}),
-					Label:          "A",
-					Identifier:     "B",
-				},
-			},
-			NewTypeAnnotation(StringType),
-		)
-		mapped.TypeParameters = []*TypeParameter{mappedTypeParam}
-
-		output := original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn)
-
-		require.IsType(t, &FunctionType{}, output)
-
-		outputFunction := output.(*FunctionType)
-
-		require.Equal(t, mapped, outputFunction)
-		require.IsType(t, &GenericType{}, outputFunction.Parameters[0].TypeAnnotation.Type)
-		require.True(t, outputFunction.Parameters[0].TypeAnnotation.Type.(*GenericType).TypeParameter == outputFunction.TypeParameters[0])
 	})
 }
 

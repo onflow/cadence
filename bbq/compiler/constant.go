@@ -1,0 +1,86 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package compiler
+
+import (
+	"github.com/onflow/cadence/bbq/constant"
+	"github.com/onflow/cadence/common"
+)
+
+type Constant[T any] struct {
+	index uint16
+	data  T
+	kind  constant.Kind
+}
+
+type DecodedConstant = Constant[constant.ConstantData]
+
+func NewDecodedConstant(
+	gauge common.MemoryGauge,
+	index uint16,
+	kind constant.Kind,
+	data constant.ConstantData,
+) *DecodedConstant {
+	common.UseMemory(gauge, common.CompilerConstantMemoryUsage)
+	return &DecodedConstant{
+		index: index,
+		kind:  kind,
+		data:  data,
+	}
+}
+
+type constantUniqueKey interface {
+	isConstantKey()
+}
+
+type stringConstantKey struct {
+	constantKind constant.Kind
+	content      string
+}
+
+var _ constantUniqueKey = stringConstantKey{}
+
+func (stringConstantKey) isConstantKey() {}
+
+type integerConstantKey struct {
+	constantKind constant.Kind
+	literal      string
+}
+
+var _ constantUniqueKey = integerConstantKey{}
+
+func (integerConstantKey) isConstantKey() {}
+
+type fixedpointConstantKey struct {
+	constantKind    constant.Kind
+	positiveLiteral string
+	isNegative      bool
+}
+
+var _ constantUniqueKey = fixedpointConstantKey{}
+
+func (fixedpointConstantKey) isConstantKey() {}
+
+type addressConstantKey struct {
+	content common.Address
+}
+
+var _ constantUniqueKey = addressConstantKey{}
+
+func (addressConstantKey) isConstantKey() {}

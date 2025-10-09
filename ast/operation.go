@@ -21,10 +21,12 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=Operation
+//go:generate stringer -type=Operation
 
 type Operation uint
 
@@ -110,6 +112,8 @@ func (s Operation) Symbol() string {
 		return "<<"
 	case OperationBitwiseRightShift:
 		return ">>"
+	case OperationUnknown:
+		return ""
 	}
 
 	panic(errors.NewUnreachableError())
@@ -161,4 +165,8 @@ func (s Operation) Category() string {
 
 func (s Operation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
+}
+
+func (s Operation) Doc() prettier.Doc {
+	return prettier.Text(s.Symbol())
 }

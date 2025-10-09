@@ -117,7 +117,6 @@ type Checker struct {
 	errors                             []error
 	functionActivations                *FunctionActivations
 	purityCheckScopes                  []PurityCheckScope
-	entitlementMappingInScope          *EntitlementMapType
 	inCondition                        bool
 	inInterface                        bool
 	allowSelfResourceFieldInvalidation bool
@@ -346,8 +345,10 @@ func (checker *Checker) report(err error) {
 
 func (checker *Checker) CheckProgram(program *ast.Program) {
 
+	// Declare imports
+	allImported := map[Imported]struct{}{}
 	for _, declaration := range program.ImportDeclarations() {
-		checker.declareImportDeclaration(declaration)
+		checker.declareImportDeclaration(declaration, allImported)
 	}
 
 	// Declare interface and composite types
@@ -513,7 +514,6 @@ func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.Functi
 	functionType := checker.functionType(
 		declaration.IsNative(),
 		declaration.Purity,
-		UnauthorizedAccess,
 		declaration.TypeParameterList,
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
@@ -886,12 +886,12 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	case *ast.InstantiationType:
 		return checker.convertInstantiationType(t)
 
-	case nil:
-		// The AST might contain "holes" if parsing failed
+	default:
+		checker.report(&UnconvertibleTypeError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
+		})
 		return InvalidType
 	}
-
-	panic(&astTypeConversionError{invalidASTType: t})
 }
 
 func CheckIntersectionType(
@@ -1051,30 +1051,26 @@ func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
 
 func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 
-	var access Access = UnauthorizedAccess
-	var ty Type
+	access := UnauthorizedAccess
 
 	if t.Authorization != nil {
 		switch auth := t.Authorization.(type) {
 		case ast.EntitlementSet:
 			access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: auth})
-		case *ast.MappedAccess:
-			access = checker.accessFromAstAccess(auth)
-		}
 
-		if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
-			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
-			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
-				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
-					Map:   mapAccess.Type,
-				})
-				access = UnauthorizedAccess
-			}
+		case *ast.MappedAccess:
+			access = UnauthorizedAccess
+
+			checker.report(&InvalidMappingAuthorizationError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, auth),
+			})
+
+		default:
+			panic(errors.NewUnexpectedError("unsupported reference type authorization: %T", auth))
 		}
 	}
 
-	ty = checker.ConvertType(t.Type)
+	ty := checker.ConvertType(t.Type)
 
 	return &ReferenceType{
 		Authorization: access,
@@ -1287,19 +1283,10 @@ func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation
 func (checker *Checker) functionType(
 	isNative bool,
 	purity ast.FunctionPurity,
-	access Access,
 	typeParameterList *ast.TypeParameterList,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
-
-	oldMappedAccess := checker.entitlementMappingInScope
-	if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
-		checker.entitlementMappingInScope = mapAccess.Type
-	} else {
-		checker.entitlementMappingInScope = nil
-	}
-	defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
 
 	// Convert type parameters (if any)
 
@@ -1465,7 +1452,6 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 }
 
 func (checker *Checker) enterValueScope() {
-	//fmt.Printf("ENTER: %d\n", checker.valueActivations.Depth())
 	checker.valueActivations.Enter()
 }
 
@@ -1849,9 +1835,9 @@ func (checker *Checker) checkDeclarationAccessModifier(
 	case PrimitiveAccess:
 		checker.checkPrimitiveAccess(access, isConstant, declarationKind, startPos)
 	case *EntitlementMapAccess:
-		checker.checkEntitlementMapAccess(access, declarationKind, declarationType, containerKind, startPos)
+		checker.checkEntitlementMapAccess(declarationType, containerKind, startPos)
 	case EntitlementSetAccess:
-		checker.checkEntitlementSetAccess(declarationType, containerKind, startPos)
+		checker.checkEntitlementSetAccess(containerKind, startPos)
 	}
 }
 
@@ -1926,76 +1912,56 @@ func (checker *Checker) checkPrimitiveAccess(
 }
 
 func (checker *Checker) checkEntitlementMapAccess(
-	access *EntitlementMapAccess,
-	declarationKind common.DeclarationKind,
 	declarationType Type,
 	containerKind *common.CompositeKind,
 	startPos ast.Position,
 ) {
-	// mapped entitlements may only be used in structs, resources and attachments
+	// Mapping access may only be used inside of structs and resources.
 	if containerKind == nil ||
 		(*containerKind != common.CompositeKindResource &&
-			*containerKind != common.CompositeKindStructure &&
-			*containerKind != common.CompositeKindAttachment) {
+			*containerKind != common.CompositeKindStructure) {
+
 		checker.report(
-			&InvalidMappedEntitlementMemberError{
+			&InvalidMappingAccessError{
 				Pos: startPos,
 			},
 		)
 		return
 	}
 
-	// due to potential security issues, entitlement mappings are disabled on attachments for now
-	if *containerKind == common.CompositeKindAttachment {
+	if !isValidMappingAccessMemberType(declarationType) {
 		checker.report(
-			&InvalidAttachmentMappedEntitlementMemberError{
+			&InvalidMappingAccessMemberTypeError{
 				Pos: startPos,
 			},
 		)
-		return
 	}
+}
 
-	// mapped entitlement fields must be one of:
-	// 1) An [optional] reference that is authorized to the same mapped entitlement.
-	// 2) A function that return an [optional] reference authorized to the same mapped entitlement.
-	// 3) A container - So if the parent is a reference, entitlements can be granted to the resulting field reference.
+func isValidMappingAccessMemberType(ty Type) bool {
 
-	entitledType := declarationType
+	// Forbid potential reference values, statically or dynamically,
+	// to prevent reference-to-reference when the field is accessed
+	// on a reference value.
 
-	if functionType, isFunction := declarationType.(*FunctionType); isFunction {
-		if declarationKind == common.DeclarationKindFunction {
-			entitledType = functionType.ReturnTypeAnnotation.Type
-		}
-	}
-
-	switch ty := entitledType.(type) {
+	switch declarationType := ty.(type) {
 	case *ReferenceType:
-		if ty.Authorization.Equal(access) {
-			return
-		}
-	case *OptionalType:
-		switch optionalType := ty.Type.(type) {
-		case *ReferenceType:
-			if optionalType.Authorization.Equal(access) {
-				return
-			}
-		}
-	default:
-		// Also allow entitlement mappings for container-typed fields
-		if declarationType.ContainFieldsOrElements() {
-			return
-		}
-	}
+		return false
 
-	checker.report(
-		&InvalidMappedEntitlementMemberError{
-			Pos: startPos,
-		},
-	)
+	case *OptionalType:
+		return isValidMappingAccessMemberType(declarationType.Type)
+
+	default:
+		switch ty {
+		case AnyStructType, AnyType:
+			return false
+		}
+
+		return true
+	}
 }
 
 func (checker *Checker) checkEntitlementSetAccess(
-	declarationType Type,
 	containerKind *common.CompositeKind,
 	startPos ast.Position,
 ) {
@@ -2009,29 +1975,6 @@ func (checker *Checker) checkEntitlementSetAccess(
 			},
 		)
 		return
-	}
-
-	// when using entitlement set access, it is not permitted for the value to be declared with a mapped entitlement
-	switch ty := declarationType.(type) {
-	case *ReferenceType:
-		if _, isMap := ty.Authorization.(*EntitlementMapAccess); isMap {
-			checker.report(
-				&InvalidMappedEntitlementMemberError{
-					Pos: startPos,
-				},
-			)
-		}
-	case *OptionalType:
-		switch optionalType := ty.Type.(type) {
-		case *ReferenceType:
-			if _, isMap := optionalType.Authorization.(*EntitlementMapAccess); isMap {
-				checker.report(
-					&InvalidMappedEntitlementMemberError{
-						Pos: startPos,
-					},
-				)
-			}
-		}
 	}
 }
 
@@ -2131,6 +2074,7 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 					} else {
 						checker.report(
 							&InvalidNonEntitlementAccessError{
+								Type:  nominalType,
 								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
 							},
 						)
@@ -2313,6 +2257,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	case TypeAnnotationStateInvalidResourceAnnotation:
 		checker.report(
 			&InvalidResourceAnnotationError{
+				Type:  typeAnnotation.Type,
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
@@ -2611,6 +2556,8 @@ func (checker *Checker) visitExpressionWithForceType(
 
 	actualType = ast.AcceptExpression[Type](expr, checker)
 
+	checker.checkErrorsForInvalidExpressionTypes(actualType, expectedType)
+
 	if checker.Config.ExtendedElaborationEnabled {
 		checker.Elaboration.SetExpressionTypes(
 			expr,
@@ -2643,6 +2590,20 @@ func (checker *Checker) visitExpressionWithForceType(
 	}
 
 	return actualType, actualType
+}
+
+func (checker *Checker) checkErrorsForInvalidExpressionTypes(actualType Type, expectedType Type) {
+	// Defensive check: If an invalid type was produced,
+	// then also an error should have been reported for the invalid program.
+	//
+	// Check for errors first, which is cheap,
+	// before checking for an invalid type, which is more expensive.
+
+	if len(checker.errors) == 0 &&
+		(actualType.IsInvalidType() || (expectedType != nil && expectedType.IsInvalidType())) {
+
+		panic(errors.NewUnexpectedError("invalid type produced without error"))
+	}
 }
 
 func (checker *Checker) expressionRange(expression ast.Expression) ast.Range {

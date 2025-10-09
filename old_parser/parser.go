@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/old_parser/lexer"
 )
 
 // expressionDepthLimit is the limit of how deeply nested an expression can get
@@ -91,11 +91,7 @@ func Parse[T any](
 	config Config,
 ) (result T, errors []error) {
 	// create a lexer, which turns the input string into tokens
-	tokens, err := lexer.Lex(input, memoryGauge)
-	if err != nil {
-		errors = append(errors, err)
-		return
-	}
+	tokens := lexer.Lex(input, memoryGauge)
 	defer tokens.Reclaim()
 
 	return ParseTokenStream(
@@ -243,10 +239,10 @@ func (p *parser) next() {
 			}
 			parseError, ok := err.(ParseError)
 			if !ok {
-				parseError = NewSyntaxError(
-					token.StartPos,
-					err.Error(),
-				)
+				parseError = &SyntaxError{
+					Pos:     token.StartPos,
+					Message: err.Error(),
+				}
 			}
 			p.report(parseError)
 			continue
@@ -642,10 +638,7 @@ func ParseArgumentList(
 }
 
 func ParseProgram(memoryGauge common.MemoryGauge, code []byte, config Config) (program *ast.Program, err error) {
-	tokens, err := lexer.Lex(code, memoryGauge)
-	if err != nil {
-		return
-	}
+	tokens := lexer.Lex(code, memoryGauge)
 	defer tokens.Reclaim()
 
 	return ParseProgramFromTokenStream(memoryGauge, tokens, config)

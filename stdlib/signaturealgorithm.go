@@ -19,6 +19,8 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -44,21 +46,67 @@ func NewSignatureAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.Memb
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 }
 
-var signatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
+var signatureAlgorithmLookupType = cryptoAlgorithmEnumLookupType(
 	sema.SignatureAlgorithmType,
+	sema.SignatureAlgorithms,
+)
+
+var interpreterSignatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = interpreterCryptoAlgorithmEnumValueAndCaseValues(
+	signatureAlgorithmLookupType,
 	sema.SignatureAlgorithms,
 	NewSignatureAlgorithmCase,
 )
 
-var SignatureAlgorithmConstructor = StandardLibraryValue{
-	Name: sema.SignatureAlgorithmTypeName,
-	Type: cryptoAlgorithmEnumConstructorType(
-		sema.SignatureAlgorithmType,
-		sema.SignatureAlgorithms,
-	),
-	Value: signatureAlgorithmConstructorValue,
+// these functions are left as is, since there are differences in the implementations between interpreter and vm
+var InterpreterSignatureAlgorithmConstructor = StandardLibraryValue{
+	Name:  sema.SignatureAlgorithmTypeName,
+	Type:  signatureAlgorithmLookupType,
+	Value: interpreterSignatureAlgorithmConstructorValue,
 	Kind:  common.DeclarationKindEnum,
 }
+
+var vmSignatureAlgorithmConstructorValue = vm.NewNativeFunctionValue(
+	sema.SignatureAlgorithmTypeName,
+	signatureAlgorithmLookupType,
+	func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		rawValue := args[0].(interpreter.UInt8Value)
+
+		caseValue, ok := SignatureAlgorithmCaseValues[rawValue]
+		if !ok {
+			return interpreter.Nil
+		}
+
+		return interpreter.NewSomeValueNonCopying(context, caseValue)
+	},
+)
+
+var VMSignatureAlgorithmConstructor = StandardLibraryValue{
+	Name:  sema.SignatureAlgorithmTypeName,
+	Type:  signatureAlgorithmLookupType,
+	Value: vmSignatureAlgorithmConstructorValue,
+	Kind:  common.DeclarationKindEnum,
+}
+
+var VMSignatureAlgorithmCaseValues = func() []VMValue {
+	values := make([]VMValue, len(sema.SignatureAlgorithms))
+	for i, signatureAlgorithm := range sema.SignatureAlgorithms {
+		rawValue := interpreter.UInt8Value(signatureAlgorithm.RawValue())
+		values[i] = VMValue{
+			Name: commons.TypeQualifiedName(
+				sema.SignatureAlgorithmType,
+				signatureAlgorithm.Name(),
+			),
+			Value: SignatureAlgorithmCaseValues[rawValue],
+		}
+	}
+	return values
+}()

@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // Word16Value
@@ -58,21 +59,32 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 	return Word16Value(value)
 }
 
-func (Word16Value) isValue() {}
-
-func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord16Value(interpreter, v)
+func NewWord16ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewWord16Value(
+		gauge,
+		func() uint16 {
+			bytes := padWithZeroes(b, 2)
+			val := binary.BigEndian.Uint16(bytes)
+			return val
+		},
+	)
 }
 
-func (Word16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Word16Value) IsValue() {}
+
+func (v Word16Value) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitWord16Value(context, v)
+}
+
+func (Word16Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (Word16Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord16)
+func (Word16Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord16)
 }
 
-func (Word16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word16Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -84,31 +96,33 @@ func (v Word16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word16Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v Word16Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
 }
 
-func (v Word16Value) ToInt(_ LocationRange) int {
+func (v Word16Value) ToInt() int {
 	return int(v)
 }
-func (v Word16Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v Word16Value) Negate(NumberValueArithmeticContext) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Plus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -116,21 +130,20 @@ func (v Word16Value) Plus(interpreter *Interpreter, other NumberValue, locationR
 		return uint16(v + o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) SaturatingPlus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word16Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Minus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -138,45 +151,41 @@ func (v Word16Value) Minus(interpreter *Interpreter, other NumberValue, location
 		return uint16(v - o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) SaturatingMinus(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word16Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Mod(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{
-			LocationRange: locationRange,
-		})
+		panic(&DivisionByZeroError{})
 	}
 
 	valueGetter := func() uint16 {
 		return uint16(v % o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Mul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -184,98 +193,91 @@ func (v Word16Value) Mul(interpreter *Interpreter, other NumberValue, locationRa
 		return uint16(v * o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) SaturatingMul(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word16Value) SaturatingMul(NumberValueArithmeticContext, NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word16Value) Div(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{
-			LocationRange: locationRange,
-		})
+		panic(&DivisionByZeroError{})
 	}
 
 	valueGetter := func() uint16 {
 		return uint16(v / o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
+func (v Word16Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
-	return AsBoolValue(v < o)
+	return v < o
 }
 
-func (v Word16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
-	return AsBoolValue(v <= o)
+	return v <= o
 }
 
-func (v Word16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
-	return AsBoolValue(v > o)
+	return v > o
 }
 
-func (v Word16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
-	return AsBoolValue(v >= o)
+	return v >= o
 }
 
-func (v Word16Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v Word16Value) Equal(_ ValueComparisonContext, other Value) bool {
 	otherWord16, ok := other.(Word16Value)
 	if !ok {
 		return false
@@ -286,29 +288,28 @@ func (v Word16Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord16 (1 byte)
 // - uint16 value encoded in big-endian (2 bytes)
-func (v Word16Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v Word16Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
 	return scratch[:3]
 }
 
-func ConvertWord16(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Word16Value {
+func ConvertWord16(memoryGauge common.MemoryGauge, value Value) Word16Value {
 	return NewWord16Value(
 		memoryGauge,
 		func() uint16 {
-			return ConvertWord[uint16](memoryGauge, value, locationRange)
+			return ConvertWord[uint16](memoryGauge, value)
 		},
 	)
 }
 
-func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -316,17 +317,16 @@ func (v Word16Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, loc
 		return uint16(v | o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -334,17 +334,16 @@ func (v Word16Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, lo
 		return uint16(v ^ o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -352,17 +351,16 @@ func (v Word16Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, lo
 		return uint16(v & o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -370,17 +368,16 @@ func (v Word16Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerVal
 		return uint16(v << o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word16Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -388,19 +385,23 @@ func (v Word16Value) BitwiseRightShift(interpreter *Interpreter, other IntegerVa
 		return uint16(v >> o)
 	}
 
-	return NewWord16Value(interpreter, valueGetter)
+	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Word16Type, locationRange)
+func (v Word16Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (Word16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v Word16Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.Word16Type)
+}
+
+func (Word16Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Word16Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -412,8 +413,7 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word16Value) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -431,13 +431,12 @@ func (Word16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word16Value) IsResourceKinded(_ *Interpreter) bool {
+func (Word16Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v Word16Value) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -445,21 +444,21 @@ func (v Word16Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v Word16Value) Clone(_ *Interpreter) Value {
+func (v Word16Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (Word16Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Word16Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
 func (v Word16Value) ByteSize() uint32 {
-	return cborTagSize + getUintCBORSize(uint64(v))
+	return values.CBORTagSize + values.GetUintCBORSize(uint64(v))
 }
 
 func (v Word16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

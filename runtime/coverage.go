@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // LocationCoverage records coverage information for a location.
@@ -50,21 +51,18 @@ func (c *LocationCoverage) AddLineHit(line int) {
 // statements percentage. It is defined as the ratio of covered
 // lines over the total statements for a given location.
 func (c *LocationCoverage) Percentage() string {
-	coveredLines := c.CoveredLines()
 	// The ground truth of which statements are interpreted/executed
-	// is the `interpreterEnvironment.newOnStatementHandler()` function.
+	// is the `InterpreterEnvironment.newOnStatementHandler()` function.
 	// This means that every call of `CoverageReport.AddLineHit()` from
 	// that callback, should be respected. The `CoverageReport.InspectProgram()`
 	// may have failed, for whatever reason, to find a specific line.
 	// This is a good insight to solidify its implementation and debug
 	// the inspection failure. Ideally, this condition will never be true,
 	// except for tests. We just leave it here, as a fail-safe mechanism.
-	if coveredLines > c.Statements {
-		// We saturate the percentage at 100%, when the inspector
-		// fails to correctly count all statements for a given
-		// location.
-		coveredLines = c.Statements
-	}
+	// We saturate the percentage at 100%, when the inspector
+	// fails to correctly count all statements for a given
+	// location.
+	coveredLines := min(c.CoveredLines(), c.Statements)
 
 	percentage := 100 * float64(coveredLines) / float64(c.Statements)
 	return fmt.Sprintf("%0.1f%%", percentage)
@@ -568,4 +566,17 @@ func (r *CoverageReport) sourcePathForLocation(location common.Location) string 
 	}
 
 	return locationSource
+}
+
+func (r *CoverageReport) newOnStatementHandler() interpreter.OnStatementFunc {
+	return func(inter *interpreter.Interpreter, statement ast.Statement) {
+		location := inter.Location
+		if !r.IsLocationInspected(location) {
+			program := inter.Program.Program
+			r.InspectProgram(location, program)
+		}
+
+		line := statement.StartPosition().Line
+		r.AddLineHit(location, line)
+	}
 }

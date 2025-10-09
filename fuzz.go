@@ -23,7 +23,7 @@ import (
 
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func Fuzz(data []byte) int {
@@ -40,7 +40,7 @@ func Fuzz(data []byte) int {
 
 	checker, err := sema.NewChecker(
 		program,
-		utils.TestLocation,
+		TestLocation,
 		nil,
 		&sema.Config{
 			AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,

@@ -29,23 +29,22 @@ import (
 
 func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) StatementResult {
 
-	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations(declaration)
+	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationResolvedLocations(declaration)
+	aliases := interpreter.Program.Elaboration.ImportDeclarationAliases(declaration)
 
 	for _, resolvedLocation := range resolvedLocations {
-		interpreter.importResolvedLocation(resolvedLocation)
+		interpreter.importResolvedLocation(resolvedLocation, aliases)
 	}
 
 	return nil
 }
 
-func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
-	config := interpreter.SharedState.Config
-
+func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation, aliases map[string]string) {
 	// tracing
-	if config.TracingEnabled {
+	if TracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			interpreter.reportImportTrace(
+			interpreter.ReportImportTrace(
 				resolvedLocation.Location.String(),
 				time.Since(startTime),
 			)
@@ -62,7 +61,14 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	if identifierLength > 0 {
 		variables = make(map[string]Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
-			variables[identifier.Identifier] =
+			name := identifier.Identifier
+			alias, ok := aliases[name]
+			if ok {
+				name = alias
+			}
+
+			// map alias to original
+			variables[name] =
 				subInterpreter.Globals.Get(identifier.Identifier)
 		}
 	} else {
@@ -100,7 +106,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 			}
 
 			staticType := compositeValue.StaticType(interpreter)
-			semaType, err := interpreter.ConvertStaticToSemaType(staticType)
+			semaType, err := ConvertStaticToSemaType(interpreter, staticType)
 			if err != nil {
 				panic(err)
 			}
@@ -110,9 +116,6 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 				UnauthorizedAccess,
 				compositeValue,
 				semaType,
-				LocationRange{
-					Location: interpreter.Location,
-				},
 			)
 		}
 

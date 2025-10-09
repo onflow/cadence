@@ -19,13 +19,17 @@
 package parser
 
 import (
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
 )
 
 func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 	var depth int
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		switch p.current.Type {
 		case lexer.TokenBlockCommentStart:
 			p.next()
@@ -45,20 +49,20 @@ func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 			}
 
 		case lexer.TokenEOF:
-			p.reportSyntaxError(
-				"missing comment end %s",
-				lexer.TokenBlockCommentEnd,
-			)
+			p.report(&MissingCommentEndError{
+				Pos: p.current.StartPos,
+			})
 			ok = false
 			return
 
 		default:
-			p.reportSyntaxError(
-				"unexpected token %s in block comment",
-				p.current.Type,
-			)
+			p.report(&UnexpectedTokenInBlockCommentError{
+				GotToken: p.current,
+			})
 			ok = false
 			return
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }

@@ -45,16 +45,14 @@ var _ ReferenceValue = &EphemeralReferenceValue{}
 var _ IterableValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
-	interpreter *Interpreter,
+	referenceTracker ReferenceTracker,
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
-	locationRange LocationRange,
 ) *EphemeralReferenceValue {
 	if reference, isReference := value.(ReferenceValue); isReference {
-		panic(NestedReferenceError{
-			Value:         reference,
-			LocationRange: locationRange,
+		panic(&NestedReferenceError{
+			Value: reference,
 		})
 	}
 
@@ -64,29 +62,28 @@ func NewUnmeteredEphemeralReferenceValue(
 		BorrowedType:  borrowedType,
 	}
 
-	interpreter.maybeTrackReferencedResourceKindedValue(ref)
+	referenceTracker.MaybeTrackReferencedResourceKindedValue(ref)
 
 	return ref
 }
 
 func NewEphemeralReferenceValue(
-	interpreter *Interpreter,
+	context ReferenceCreationContext,
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
-	locationRange LocationRange,
 ) *EphemeralReferenceValue {
-	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
-	return NewUnmeteredEphemeralReferenceValue(interpreter, authorization, value, borrowedType, locationRange)
+	common.UseMemory(context, common.EphemeralReferenceValueMemoryUsage)
+	return NewUnmeteredEphemeralReferenceValue(context, authorization, value, borrowedType)
 }
 
-func (*EphemeralReferenceValue) isValue() {}
+func (*EphemeralReferenceValue) IsValue() {}
 
-func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitEphemeralReferenceValue(interpreter, v)
+func (v *EphemeralReferenceValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitEphemeralReferenceValue(context, v)
 }
 
-func (*EphemeralReferenceValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (*EphemeralReferenceValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -96,26 +93,29 @@ func (v *EphemeralReferenceValue) String() string {
 }
 
 func (v *EphemeralReferenceValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences)
 }
 
-func (v *EphemeralReferenceValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *EphemeralReferenceValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 	if _, ok := seenReferences[v]; ok {
-		common.UseMemory(interpreter, common.SeenReferenceStringMemoryUsage)
+		common.UseMemory(context, common.SeenReferenceStringMemoryUsage)
 		return "..."
 	}
 
 	seenReferences[v] = struct{}{}
 	defer delete(seenReferences, v)
 
-	return v.Value.MeteredString(interpreter, seenReferences, locationRange)
+	return v.Value.MeteredString(context, seenReferences)
 }
 
-func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
+func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewReferenceStaticType(
-		inter,
+		context,
 		v.Authorization,
-		v.Value.StaticType(inter),
+		v.Value.StaticType(context),
 	)
 }
 
@@ -123,125 +123,91 @@ func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*EphemeralReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*EphemeralReferenceValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
-func (v *EphemeralReferenceValue) ReferencedValue(
-	_ *Interpreter,
-	_ LocationRange,
-	_ bool,
-) *Value {
+func (v *EphemeralReferenceValue) ReferencedValue(_ ValueStaticTypeContext, _ bool) *Value {
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) GetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-) Value {
-	return interpreter.getMember(v.Value, locationRange, name)
+func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
+	var result Value
+
+	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
+		result = memberAccessibleValue.GetMember(context, name)
+	}
+
+	if result == nil {
+		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
+		result = context.GetMethod(v, name)
+	}
+
+	return result
 }
 
-func (v *EphemeralReferenceValue) RemoveMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	identifier string,
-) Value {
+func (v *EphemeralReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	return getBuiltinFunctionMember(context, v.Value, name)
+}
+
+func (v *EphemeralReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {
 	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
+		return memberAccessibleValue.RemoveMember(context, name)
 	}
 
 	return nil
 }
 
-func (v *EphemeralReferenceValue) SetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-	value Value,
-) bool {
-	return interpreter.setMember(v.Value, locationRange, name, value)
+func (v *EphemeralReferenceValue) SetMember(context ValueTransferContext, name string, value Value) bool {
+	return setMember(context, v.Value, name, value)
 }
 
-func (v *EphemeralReferenceValue) GetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
+func (v *EphemeralReferenceValue) GetKey(context ValueComparisonContext, key Value) Value {
 	return v.Value.(ValueIndexableValue).
-		GetKey(interpreter, locationRange, key)
+		GetKey(context, key)
 }
 
-func (v *EphemeralReferenceValue) SetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-	value Value,
-) {
+func (v *EphemeralReferenceValue) SetKey(context ContainerMutationContext, key Value, value Value) {
 	v.Value.(ValueIndexableValue).
-		SetKey(interpreter, locationRange, key, value)
+		SetKey(context, key, value)
 }
 
-func (v *EphemeralReferenceValue) InsertKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-	value Value,
-) {
+func (v *EphemeralReferenceValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
 	v.Value.(ValueIndexableValue).
-		InsertKey(interpreter, locationRange, key, value)
+		InsertKey(context, key, value)
 }
 
-func (v *EphemeralReferenceValue) RemoveKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
+func (v *EphemeralReferenceValue) RemoveKey(context ContainerMutationContext, key Value) Value {
 	return v.Value.(ValueIndexableValue).
-		RemoveKey(interpreter, locationRange, key)
+		RemoveKey(context, key)
 }
 
-func (v *EphemeralReferenceValue) GetTypeKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key sema.Type,
-) Value {
+func (v *EphemeralReferenceValue) GetTypeKey(context MemberAccessibleContext, key sema.Type) Value {
 	self := v.Value
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
 		return selfComposite.getTypeKey(
-			interpreter,
-			locationRange,
+			context,
 			key,
-			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
 		)
 	}
 
 	return self.(TypeIndexableValue).
-		GetTypeKey(interpreter, locationRange, key)
+		GetTypeKey(context, key)
 }
 
-func (v *EphemeralReferenceValue) SetTypeKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key sema.Type,
-	value Value,
-) {
+func (v *EphemeralReferenceValue) SetTypeKey(context ValueTransferContext, key sema.Type, value Value) {
 	v.Value.(TypeIndexableValue).
-		SetTypeKey(interpreter, locationRange, key, value)
+		SetTypeKey(context, key, value)
 }
 
-func (v *EphemeralReferenceValue) RemoveTypeKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key sema.Type,
-) Value {
+func (v *EphemeralReferenceValue) RemoveTypeKey(context ValueTransferContext, key sema.Type) Value {
 	return v.Value.(TypeIndexableValue).
-		RemoveTypeKey(interpreter, locationRange, key)
+		RemoveTypeKey(context, key)
 }
 
-func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok ||
 		v.Value != otherReference.Value ||
@@ -258,15 +224,14 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ LocationRange, other V
 }
 
 func (v *EphemeralReferenceValue) ConformsToStaticType(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueStaticTypeConformanceContext,
 	results TypeConformanceResults,
 ) bool {
 	self := v.Value
 
-	staticType := v.Value.StaticType(interpreter)
+	staticType := v.Value.StaticType(context)
 
-	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+	if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
 		return false
 	}
 
@@ -283,11 +248,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	// doesn't depend on this. It depends on the rest of values of the object tree.
 	results[entry] = true
 
-	result := self.ConformsToStaticType(
-		interpreter,
-		locationRange,
-		results,
-	)
+	result := self.ConformsToStaticType(context, results)
 
 	results[entry] = result
 
@@ -306,13 +267,12 @@ func (*EphemeralReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*EphemeralReferenceValue) IsResourceKinded(_ *Interpreter) bool {
+func (*EphemeralReferenceValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v *EphemeralReferenceValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -320,43 +280,75 @@ func (v *EphemeralReferenceValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v *EphemeralReferenceValue) Clone(inter *Interpreter) Value {
-	return NewUnmeteredEphemeralReferenceValue(inter, v.Authorization, v.Value, v.BorrowedType, EmptyLocationRange)
+func (v *EphemeralReferenceValue) Clone(context ValueCloneContext) Value {
+	return NewUnmeteredEphemeralReferenceValue(
+		context,
+		v.Authorization,
+		v.Value,
+		v.BorrowedType,
+	)
 }
 
-func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*EphemeralReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
 func (*EphemeralReferenceValue) isReference() {}
 
-func (v *EphemeralReferenceValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
-	// Not used for now
-	panic(errors.NewUnreachableError())
-}
-
 func (v *EphemeralReferenceValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
 	_ bool,
-	locationRange LocationRange,
 ) {
 	forEachReference(
-		interpreter,
+		context,
 		v,
 		v.Value,
 		elementType,
 		function,
-		locationRange,
 	)
 }
 
 func (v *EphemeralReferenceValue) BorrowType() sema.Type {
 	return v.BorrowedType
+}
+
+func (v *EphemeralReferenceValue) Iterator(context ValueStaticTypeContext) ValueIterator {
+	referencedIterable, ok := v.Value.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return &ReferenceValueIterator{
+		reference: v,
+		iterator:  referencedIterable.Iterator(context),
+	}
+}
+
+type ReferenceValueIterator struct {
+	reference Value
+	iterator  ValueIterator
+}
+
+var _ ValueIterator = &ReferenceValueIterator{}
+
+func (i *ReferenceValueIterator) Next(context ValueIteratorContext) Value {
+	// Iterator implicitly captures the reference.
+	// Therefore, check whether the reference is valid, everytime the iterator is used.
+	CheckInvalidatedResourceOrResourceReference(i.reference, context)
+	return i.iterator.Next(context)
+}
+
+func (i *ReferenceValueIterator) HasNext() bool {
+	return i.iterator.HasNext()
+}
+
+func (i *ReferenceValueIterator) ValueID() (atree.ValueID, bool) {
+	return i.iterator.ValueID()
 }

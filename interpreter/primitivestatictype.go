@@ -25,9 +25,10 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=PrimitiveStaticType -trimprefix=PrimitiveStaticType
+//go:generate stringer -type=PrimitiveStaticType -trimprefix=PrimitiveStaticType
 
 // PrimitiveStaticType
 
@@ -146,7 +147,7 @@ const (
 	_ // future: Fix16
 	_ // future: Fix32
 	PrimitiveStaticTypeFix64
-	_ // future: Fix128
+	PrimitiveStaticTypeFix128
 	_ // future: Fix256
 	_
 
@@ -156,7 +157,7 @@ const (
 	_ // future: UFix16
 	_ // future: UFix32
 	PrimitiveStaticTypeUFix64
-	_ // future: UFix128
+	PrimitiveStaticTypeUFix128
 	_ // future: UFix256
 	_
 
@@ -274,13 +275,13 @@ func (t PrimitiveStaticType) elementSize() uint {
 		return uint(len(cborVoidValue))
 
 	case PrimitiveStaticTypeNever:
-		return cborTagSize + 1
+		return values.CBORTagSize + 1
 
 	case PrimitiveStaticTypeBool:
-		return cborTagSize + 1
+		return values.CBORTagSize + 1
 
 	case PrimitiveStaticTypeAddress:
-		return cborTagSize + 8 // address length is 8 bytes
+		return values.CBORTagSize + 8 // address length is 8 bytes
 
 	case PrimitiveStaticTypeString,
 		PrimitiveStaticTypeCharacter,
@@ -290,7 +291,7 @@ func (t PrimitiveStaticType) elementSize() uint {
 
 	case PrimitiveStaticTypeFixedPoint,
 		PrimitiveStaticTypeSignedFixedPoint:
-		return cborTagSize + 8
+		return values.CBORTagSize + 8
 
 	// values of these types may wrap big.Int
 	case PrimitiveStaticTypeInt,
@@ -311,24 +312,28 @@ func (t PrimitiveStaticType) elementSize() uint {
 	case PrimitiveStaticTypeInt8,
 		PrimitiveStaticTypeUInt8,
 		PrimitiveStaticTypeWord8:
-		return cborTagSize + 2
+		return values.CBORTagSize + 2
 
 	case PrimitiveStaticTypeInt16,
 		PrimitiveStaticTypeUInt16,
 		PrimitiveStaticTypeWord16:
-		return cborTagSize + 3
+		return values.CBORTagSize + 3
 
 	case PrimitiveStaticTypeInt32,
 		PrimitiveStaticTypeUInt32,
 		PrimitiveStaticTypeWord32:
-		return cborTagSize + 5
+		return values.CBORTagSize + 5
 
 	case PrimitiveStaticTypeInt64,
 		PrimitiveStaticTypeUInt64,
 		PrimitiveStaticTypeWord64,
 		PrimitiveStaticTypeFix64,
 		PrimitiveStaticTypeUFix64:
-		return cborTagSize + 9
+		return values.CBORTagSize + 9
+
+	case PrimitiveStaticTypeFix128,
+		PrimitiveStaticTypeUFix128:
+		return values.CBORTagSize + 17
 
 	case PrimitiveStaticTypePath,
 		PrimitiveStaticTypeCapability,
@@ -572,10 +577,14 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 	// Fix*
 	case PrimitiveStaticTypeFix64:
 		return sema.Fix64Type
+	case PrimitiveStaticTypeFix128:
+		return sema.Fix128Type
 
 	// UFix*
 	case PrimitiveStaticTypeUFix64:
 		return sema.UFix64Type
+	case PrimitiveStaticTypeUFix128:
+		return sema.UFix128Type
 
 	// Storage
 
@@ -818,10 +827,14 @@ func ConvertSemaToPrimitiveStaticType(
 	// Fix*
 	case sema.Fix64Type:
 		typ = PrimitiveStaticTypeFix64
+	case sema.Fix128Type:
+		typ = PrimitiveStaticTypeFix128
 
 	// UFix*
 	case sema.UFix64Type:
 		typ = PrimitiveStaticTypeUFix64
+	case sema.UFix128Type:
+		typ = PrimitiveStaticTypeUFix128
 
 	case sema.PathType:
 		typ = PrimitiveStaticTypePath

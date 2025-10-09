@@ -21,6 +21,7 @@ package interpreter
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -28,31 +29,49 @@ type ReferenceValue interface {
 	Value
 	AuthorizedValue
 	isReference()
-	ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value
+	ReferencedValue(context ValueStaticTypeContext, errorOnFailedDereference bool) *Value
 	BorrowType() sema.Type
 }
 
 func DereferenceValue(
-	inter *Interpreter,
-	locationRange LocationRange,
-	referenceValue ReferenceValue,
+	context ValueTransferContext,
+	value Value,
 ) Value {
-	referencedValue := *referenceValue.ReferencedValue(inter, locationRange, true)
-
-	// Defensive check: ensure that the referenced value is not a resource
-	if referencedValue.IsResourceKinded(inter) {
-		panic(ResourceReferenceDereferenceError{
-			LocationRange: locationRange,
-		})
+	if _, ok := value.(NilValue); ok {
+		return Nil
 	}
 
-	return referencedValue.Transfer(
-		inter,
-		locationRange,
+	var isOptional bool
+
+	if someValue, ok := value.(*SomeValue); ok {
+		isOptional = true
+		value = someValue.InnerValue()
+	}
+
+	referenceValue, ok := value.(ReferenceValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	referencedValue := *referenceValue.ReferencedValue(context, true)
+
+	// Defensive check: ensure that the referenced value is not a resource
+	if referencedValue.IsResourceKinded(context) {
+		panic(&ResourceReferenceDereferenceError{})
+	}
+
+	transferredDereferencedValue := referencedValue.Transfer(
+		context,
 		atree.Address{},
 		false,
 		nil,
 		nil,
 		false,
 	)
+
+	if isOptional {
+		return NewSomeValueNonCopying(context, transferredDereferencedValue)
+	} else {
+		return transferredDereferencedValue
+	}
 }

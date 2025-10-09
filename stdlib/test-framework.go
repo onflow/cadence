@@ -37,7 +37,7 @@ type TestFramework interface {
 
 type Blockchain interface {
 	RunScript(
-		inter *interpreter.Interpreter,
+		context TestFrameworkScriptExecutionContext,
 		code string, arguments []interpreter.Value,
 	) *ScriptResult
 
@@ -46,7 +46,7 @@ type Blockchain interface {
 	GetAccount(interpreter.AddressValue) (*Account, error)
 
 	AddTransaction(
-		inter *interpreter.Interpreter,
+		context TestFrameworkAddTransactionContext,
 		code string,
 		authorizers []common.Address,
 		signers []*Account,
@@ -58,7 +58,7 @@ type Blockchain interface {
 	CommitBlock() error
 
 	DeployContract(
-		inter *interpreter.Interpreter,
+		context TestFrameworkContractDeploymentContext,
 		name string,
 		path string,
 		arguments []interpreter.Value,
@@ -69,7 +69,7 @@ type Blockchain interface {
 	ServiceAccount() (*Account, error)
 
 	Events(
-		inter *interpreter.Interpreter,
+		context TestFrameworkEventsContext,
 		eventType interpreter.StaticType,
 	) interpreter.Value
 
@@ -95,3 +95,30 @@ type Account struct {
 	PublicKey *PublicKey
 	Address   common.Address
 }
+
+type TestFrameworkScriptExecutionContext interface {
+	interpreter.ValueExportContext
+}
+
+var _ TestFrameworkScriptExecutionContext = &interpreter.Interpreter{}
+
+type TestFrameworkAddTransactionContext interface {
+	interpreter.ValueExportContext
+}
+
+var _ TestFrameworkAddTransactionContext = &interpreter.Interpreter{}
+
+type TestFrameworkContractDeploymentContext interface {
+	interpreter.ValueExportContext
+}
+
+var _ TestFrameworkContractDeploymentContext = &interpreter.Interpreter{}
+
+type TestFrameworkEventsContext interface {
+	common.MemoryGauge
+	interpreter.ArrayCreationContext
+	interpreter.ArrayCreationContext
+	interpreter.MemberAccessibleContext
+}
+
+var _ TestFrameworkEventsContext = &interpreter.Interpreter{}

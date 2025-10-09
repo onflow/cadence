@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/values"
 )
 
 type StringAtreeValue string
@@ -38,7 +39,7 @@ func (v StringAtreeValue) Storable(
 	atree.Storable,
 	error,
 ) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func NewStringAtreeValue(gauge common.MemoryGauge, s string) StringAtreeValue {
@@ -47,7 +48,7 @@ func NewStringAtreeValue(gauge common.MemoryGauge, s string) StringAtreeValue {
 }
 
 func (v StringAtreeValue) ByteSize() uint32 {
-	return getBytesCBORSize([]byte(v))
+	return values.GetBytesCBORSize([]byte(v))
 }
 
 func (v StringAtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

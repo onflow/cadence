@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"math/big"
+	"math/bits"
 
 	"github.com/onflow/atree"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // UInt128Value
@@ -36,9 +38,9 @@ type UInt128Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt128ValueFromUint64(interpreter *Interpreter, value uint64) UInt128Value {
+func NewUInt128ValueFromUint64(memoryGauge common.MemoryGauge, value uint64) UInt128Value {
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		memoryGauge,
 		func() *big.Int {
 			return new(big.Int).SetUint64(value)
 		},
@@ -63,6 +65,15 @@ func NewUnmeteredUInt128ValueFromBigInt(value *big.Int) UInt128Value {
 	}
 }
 
+func NewUInt128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewUInt128ValueFromBigInt(
+		gauge,
+		func() *big.Int {
+			return values.BigEndianBytesToUnsignedBigInt(b)
+		},
+	)
+}
+
 var _ Value = UInt128Value{}
 var _ atree.Storable = UInt128Value{}
 var _ NumberValue = UInt128Value{}
@@ -72,29 +83,27 @@ var _ ComparableValue = UInt128Value{}
 var _ HashableValue = UInt128Value{}
 var _ MemberAccessibleValue = UInt128Value{}
 
-func (UInt128Value) isValue() {}
+func (UInt128Value) IsValue() {}
 
-func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitUInt128Value(interpreter, v)
+func (v UInt128Value) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitUInt128Value(context, v)
 }
 
-func (UInt128Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (UInt128Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (UInt128Value) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt128)
+func (UInt128Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUInt128)
 }
 
-func (UInt128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (UInt128Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
-func (v UInt128Value) ToInt(locationRange LocationRange) int {
+func (v UInt128Value) ToInt() int {
 	if !v.BigInt.IsInt64() {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+		panic(&OverflowError{})
 	}
 	return int(v.BigInt.Int64())
 }
@@ -116,33 +125,35 @@ func (v UInt128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt128Value) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v UInt128Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
 }
 
-func (v UInt128Value) Negate(*Interpreter, LocationRange) NumberValue {
+func (v UInt128Value) Negate(NumberValueArithmeticContext) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Plus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			sum := new(big.Int)
 			sum.Add(v.BigInt, o.BigInt)
@@ -157,28 +168,25 @@ func (v UInt128Value) Plus(interpreter *Interpreter, other NumberValue, location
 			//  }
 			//
 			if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
+				panic(&OverflowError{})
 			}
 			return sum
 		},
 	)
 }
 
-func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			sum := new(big.Int)
 			sum.Add(v.BigInt, o.BigInt)
@@ -200,19 +208,18 @@ func (v UInt128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue
 	)
 }
 
-func (v UInt128Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Minus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			diff := new(big.Int)
 			diff.Sub(v.BigInt, o.BigInt)
@@ -227,28 +234,25 @@ func (v UInt128Value) Minus(interpreter *Interpreter, other NumberValue, locatio
 			//   }
 			//
 			if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
+				panic(&UnderflowError{})
 			}
 			return diff
 		},
 	)
 }
 
-func (v UInt128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			diff := new(big.Int)
 			diff.Sub(v.BigInt, o.BigInt)
@@ -270,70 +274,63 @@ func (v UInt128Value) SaturatingMinus(interpreter *Interpreter, other NumberValu
 	)
 }
 
-func (v UInt128Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Mod(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{
-					LocationRange: locationRange,
-				})
+				panic(&DivisionByZeroError{})
 			}
 			return res.Rem(v.BigInt, o.BigInt)
 		},
 	)
 }
 
-func (v UInt128Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Mul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
 			if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
+				panic(&OverflowError{})
 			}
 			return res
 		},
 	)
 }
 
-func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			res.Mul(v.BigInt, o.BigInt)
@@ -345,109 +342,101 @@ func (v UInt128Value) SaturatingMul(interpreter *Interpreter, other NumberValue,
 	)
 }
 
-func (v UInt128Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) Div(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(DivisionByZeroError{
-					LocationRange: locationRange,
-				})
+				panic(&DivisionByZeroError{})
 			}
-			return res.Div(v.BigInt, o.BigInt)
+			return res.Quo(v.BigInt, o.BigInt)
 		},
 	)
 
 }
 
-func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UInt128Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	defer func() {
 		r := recover()
-		if _, ok := r.(InvalidOperandsError); ok {
-			panic(InvalidOperandsError{
-				FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:      v.StaticType(interpreter),
-				RightType:     other.StaticType(interpreter),
-				LocationRange: locationRange,
+		if _, ok := r.(*InvalidOperandsError); ok {
+			panic(&InvalidOperandsError{
+				FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+				LeftType:     v.StaticType(context),
+				RightType:    other.StaticType(context),
 			})
 		}
 	}()
 
-	return v.Div(interpreter, other, locationRange)
+	return v.Div(context, other)
 }
 
-func (v UInt128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == -1)
+	return cmp == -1
 }
 
-func (v UInt128Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp <= 0)
+	return cmp <= 0
 }
 
-func (v UInt128Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp == 1)
+	return cmp == 1
 }
 
-func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	cmp := v.BigInt.Cmp(o.BigInt)
-	return AsBoolValue(cmp >= 0)
+	return cmp >= 0
 }
 
-func (v UInt128Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v UInt128Value) Equal(_ ValueComparisonContext, other Value) bool {
 	otherInt, ok := other.(UInt128Value)
 	if !ok {
 		return false
@@ -459,8 +448,8 @@ func (v UInt128Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeUInt128 (1 byte)
 // - big int encoded in big endian (n bytes)
-func (v UInt128Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
-	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
+func (v UInt128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
 	var buffer []byte
@@ -475,7 +464,7 @@ func (v UInt128Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte)
 	return buffer
 }
 
-func ConvertUInt128(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+func ConvertUInt128(memoryGauge common.MemoryGauge, value Value) Value {
 	return NewUInt128ValueFromBigInt(
 		memoryGauge,
 		func() *big.Int {
@@ -487,20 +476,16 @@ func ConvertUInt128(memoryGauge common.MemoryGauge, value Value, locationRange L
 				v = value.ToBigInt(memoryGauge)
 
 			case NumberValue:
-				v = big.NewInt(int64(value.ToInt(locationRange)))
+				v = big.NewInt(int64(value.ToInt()))
 
 			default:
 				panic(errors.NewUnreachableError())
 			}
 
 			if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
+				panic(&OverflowError{})
 			} else if v.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
+				panic(&UnderflowError{})
 			}
 
 			return v
@@ -508,19 +493,18 @@ func ConvertUInt128(memoryGauge common.MemoryGauge, value Value, locationRange L
 	)
 }
 
-func (v UInt128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			return res.Or(v.BigInt, o.BigInt)
@@ -528,19 +512,18 @@ func (v UInt128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, lo
 	)
 }
 
-func (v UInt128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			return res.Xor(v.BigInt, o.BigInt)
@@ -548,19 +531,18 @@ func (v UInt128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, l
 	)
 }
 
-func (v UInt128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
 			return res.And(v.BigInt, o.BigInt)
@@ -569,87 +551,88 @@ func (v UInt128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, l
 
 }
 
-func (v UInt128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(&NegativeShiftError{})
+	}
+	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
+		return NewUInt128ValueFromUint64(context, 0)
+	}
+
+	// The maximum shift value at this point is 127, which may lead to an
+	// additional allocation of up to 128 bits. Add usage for possible
+	// intermediate value.
+	common.UseMemory(context, Uint128MemoryUsage)
+
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
-			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			res = res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+			return truncate(res, 128/bits.UintSize)
 		},
 	)
 }
 
-func (v UInt128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v UInt128Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
-		panic(InvalidOperandsError{
-			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(interpreter),
-			RightType:     other.StaticType(interpreter),
-			LocationRange: locationRange,
+		panic(&InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
+	if o.BigInt.Sign() < 0 {
+		panic(&NegativeShiftError{})
+	}
+	if !o.BigInt.IsUint64() {
+		return NewUInt128ValueFromUint64(context, 0)
+	}
+
 	return NewUInt128ValueFromBigInt(
-		interpreter,
+		context,
 		func() *big.Int {
 			res := new(big.Int)
-			if o.BigInt.Sign() < 0 {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
-			}
-			if !o.BigInt.IsUint64() {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
-			}
 			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 		},
 	)
 }
 
-func (v UInt128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.UInt128Type, locationRange)
+func (v UInt128Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (UInt128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v UInt128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.UInt128Type)
+}
+
+func (UInt128Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (UInt128Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v UInt128Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt128TypeSize)
+	return values.UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt128TypeSize)
 }
 
 func (v UInt128Value) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -667,13 +650,12 @@ func (UInt128Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (UInt128Value) IsResourceKinded(_ *Interpreter) bool {
+func (UInt128Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v UInt128Value) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -681,21 +663,21 @@ func (v UInt128Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v UInt128Value) Clone(_ *Interpreter) Value {
+func (v UInt128Value) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredUInt128ValueFromBigInt(v.BigInt)
 }
 
-func (UInt128Value) DeepRemove(_ *Interpreter, _ bool) {
+func (UInt128Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
 func (v UInt128Value) ByteSize() uint32 {
-	return cborTagSize + getBigIntCBORSize(v.BigInt)
+	return values.CBORTagSize + values.GetBigIntCBORSize(v.BigInt)
 }
 
 func (v UInt128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

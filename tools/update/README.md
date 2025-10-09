@@ -12,17 +12,31 @@ The tool automatically detects versions and supports multiple modules per repo.
 npm i -g typescript ts-node
 ```
 
+### Authentication
+
+The tool requires a GitHub token to access the GitHub API. It will automatically try to find a token from several sources (in order):
+
+1. **Environment variables**: `GH_TOKEN` or `GITHUB_TOKEN`
+2. **GitHub CLI**: `gh auth token` (if `gh` is installed and authenticated)
+3. **macOS Keychain**: github.com password (macOS only)
+
+#### Setup Options
+
+**Option 1: Environment variable**
+```sh
+GH_TOKEN=<your_github_token> ts-node main.ts update --version <version>
+```
+
+**Option 2: GitHub CLI**
+```sh
+gh auth login  # one-time setup
+ts-node main.ts update --version <version>
+```
+
 ### Run
 
 ```sh
-GH_TOKEN=<github_token> ts-node main.ts update --version <version>
-```
-
-If the github CLI (`gh`) is installed and configured, the auth token can also be retrieved from the github CLI,
-instead of manually providing.
-
-```sh
-GH_TOKEN=`gh auth token` ts-node main.ts update --version <version>
+ts-node main.ts update --version <version>
 ```
 
 The `update` command use HTTPS to connect to github by default. To use SSH instead, use `--useSSH true` as arguments in
@@ -42,7 +56,7 @@ Then, updating the remaining of downstream dependencies can be done by providing
 to the update command. The `--versions` flag would take a comma separated set of repos.
 
 ```sh
-GH_TOKEN=<github_token> ts-node main.ts update --version v0.30.0 --versions onflow/flow-go-sdk@v0.31.0,onflow/flow-go@v0.26.0
+ts-node main.ts update --version v0.30.0 --versions onflow/flow-go-sdk@v0.31.0,onflow/flow-go@v0.26.0
 ```
 
 Above will update the rest of the dependencies to:
@@ -55,7 +69,7 @@ Instead of the version, it is also possible to provide a commit,
 in Go's expected format, i.e. the first 12 characters of the commit hash.
 
 ```sh
-GH_TOKEN=`gh auth token` ts-node main.ts update --version v0.30.0 --versions onflow/flow-go@<commit>
+ts-node main.ts update --version v0.30.0 --versions onflow/flow-go@<commit>
 ```
 
 #### Configuring dependencies
@@ -85,7 +99,7 @@ Start the process of updating all downstream dependencies by invoking the `updat
 The Cadence version needs to be provided using the `--version` flag.
 
 ```shell
-$ GH_TOKEN=`gh auth token` ts-node main.ts update \
+ts-node main.ts update \
     --version v1.0.0-M8
 ```
 
@@ -165,7 +179,7 @@ In this example, the next version is `v1.0.0-M5`.
 Use the `release` subcommand to create a new tag:
 
 ```shell
-$ GH_TOKEN=`gh auth token` ts-node main.ts release --repo onflow/flow-go-sdk --version v1.0.0-M5
+ts-node main.ts release --repo onflow/flow-go-sdk --version v1.0.0-M5
 ```
 
 <details>
@@ -199,7 +213,7 @@ Once the GitHub release has been published, re-run the `update` subcommand. The 
 Versions are specified using the `--versions` flag, comma-separated.
 
 ```shell
-GH_TOKEN=`gh auth token` ts-node main.ts update \
+ts-node main.ts update \
     --version v1.0.0-M8
 ```
 
@@ -267,7 +281,7 @@ Checking repo onflow/cadence-tools ...
   For example, to `flow-emulator` depends on `flow-go`, and it can be updated using:
 
   ```shell
-  $ GH_TOKEN=`gh auth token` ts-node main.ts update \
+  ts-node main.ts update \
       --version v1.0.0-M8 \
       --versions onflow/flow-go@3677206d445c
   ```
@@ -279,7 +293,7 @@ Checking repo onflow/cadence-tools ...
   For example, to release module `lint` in repo `cadence-tools`:
 
   ```shell
-  $ GH_TOKEN=`gh auth token` ts-node main.ts release \
+  ts-node main.ts release \
       -r onflow/cadence-tools \
       --mod lint \
       --version v1.0.0-M5

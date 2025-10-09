@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/old_parser/lexer"
 )
 
 const exprBindingPowerGap = 10
@@ -574,7 +574,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 				defer func() {
 					err := recover()
 					// MemoryError should abort parsing
-					_, ok := err.(errors.MemoryError)
+					_, ok := err.(errors.MemoryMeteringError)
 					if ok {
 						panic(err)
 					}

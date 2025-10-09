@@ -30,7 +30,7 @@ type Element interface {
 
 type StatementDeclarationVisitor[T any] interface {
 	VisitVariableDeclaration(*VariableDeclaration) T
-	VisitFunctionDeclaration(*FunctionDeclaration) T
+	VisitFunctionDeclaration(declaration *FunctionDeclaration, isStatement bool) T
 	VisitSpecialFunctionDeclaration(*SpecialFunctionDeclaration) T
 	VisitCompositeDeclaration(*CompositeDeclaration) T
 	VisitAttachmentDeclaration(*AttachmentDeclaration) T
@@ -68,7 +68,7 @@ func AcceptDeclaration[T any](declaration Declaration, visitor DeclarationVisito
 		return visitor.VisitVariableDeclaration(declaration.(*VariableDeclaration))
 
 	case ElementTypeFunctionDeclaration:
-		return visitor.VisitFunctionDeclaration(declaration.(*FunctionDeclaration))
+		return visitor.VisitFunctionDeclaration(declaration.(*FunctionDeclaration), false)
 
 	case ElementTypeSpecialFunctionDeclaration:
 		return visitor.VisitSpecialFunctionDeclaration(declaration.(*SpecialFunctionDeclaration))
@@ -151,7 +151,7 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 		return visitor.VisitVariableDeclaration(statement.(*VariableDeclaration))
 
 	case ElementTypeFunctionDeclaration:
-		return visitor.VisitFunctionDeclaration(statement.(*FunctionDeclaration))
+		return visitor.VisitFunctionDeclaration(statement.(*FunctionDeclaration), true)
 
 	case ElementTypeSpecialFunctionDeclaration:
 		return visitor.VisitSpecialFunctionDeclaration(statement.(*SpecialFunctionDeclaration))
@@ -183,6 +183,7 @@ type ExpressionVisitor[T any] interface {
 	VisitNilExpression(*NilExpression) T
 	VisitBoolExpression(*BoolExpression) T
 	VisitStringExpression(*StringExpression) T
+	VisitStringTemplateExpression(*StringTemplateExpression) T
 	VisitIntegerExpression(*IntegerExpression) T
 	VisitFixedPointExpression(*FixedPointExpression) T
 	VisitDictionaryExpression(*DictionaryExpression) T
@@ -218,6 +219,9 @@ func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]
 
 	case ElementTypeStringExpression:
 		return visitor.VisitStringExpression(expression.(*StringExpression))
+
+	case ElementTypeStringTemplateExpression:
+		return visitor.VisitStringTemplateExpression(expression.(*StringTemplateExpression))
 
 	case ElementTypeIntegerExpression:
 		return visitor.VisitIntegerExpression(expression.(*IntegerExpression))

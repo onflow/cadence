@@ -22,49 +22,52 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/bbq/vm"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
-type interpreterScriptExecutorPreparation struct {
+type scriptExecutorPreparation struct {
 	environment            Environment
 	preprocessErr          error
 	codesAndPrograms       CodesAndPrograms
 	functionEntryPointType *sema.FunctionType
 	program                *interpreter.Program
 	storage                *Storage
-	interpret              InterpretFunc
+	interpret              interpretFunc
 	preprocessOnce         sync.Once
 }
 
-type interpreterScriptExecutorExecution struct {
+type scriptExecutorExecution struct {
 	executeErr  error
 	result      cadence.Value
 	executeOnce sync.Once
 }
 
-type interpreterScriptExecutor struct {
+type scriptExecutor struct {
 	context Context
-	interpreterScriptExecutorExecution
-	runtime *interpreterRuntime
-	interpreterScriptExecutorPreparation
+	scriptExecutorExecution
+	runtime Runtime
+	scriptExecutorPreparation
 	script Script
+	vm     *vm.VM
 }
 
-func newInterpreterScriptExecutor(
-	runtime *interpreterRuntime,
+func newScriptExecutor(
+	runtime Runtime,
 	script Script,
 	context Context,
-) *interpreterScriptExecutor {
+) *scriptExecutor {
 
-	return &interpreterScriptExecutor{
+	return &scriptExecutor{
 		runtime: runtime,
 		script:  script,
 		context: context,
 	}
 }
 
-func (executor *interpreterScriptExecutor) Preprocess() error {
+func (executor *scriptExecutor) Preprocess() error {
 	executor.preprocessOnce.Do(func() {
 		executor.preprocessErr = executor.preprocess()
 	})
@@ -72,7 +75,7 @@ func (executor *interpreterScriptExecutor) Preprocess() error {
 	return executor.preprocessErr
 }
 
-func (executor *interpreterScriptExecutor) Execute() error {
+func (executor *scriptExecutor) Execute() error {
 	executor.executeOnce.Do(func() {
 		executor.result, executor.executeErr = executor.execute()
 	})
@@ -80,14 +83,14 @@ func (executor *interpreterScriptExecutor) Execute() error {
 	return executor.executeErr
 }
 
-func (executor *interpreterScriptExecutor) Result() (cadence.Value, error) {
+func (executor *scriptExecutor) Result() (cadence.Value, error) {
 	// Note: Execute's error is saved into executor.executeErr and return in
 	// the next line.
 	_ = executor.Execute()
 	return executor.result, executor.executeErr
 }
 
-func (executor *interpreterScriptExecutor) preprocess() (err error) {
+func (executor *scriptExecutor) preprocess() (err error) {
 	context := executor.context
 	location := context.Location
 	script := executor.script
@@ -95,9 +98,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
-	interpreterRuntime := executor.runtime
-
-	defer interpreterRuntime.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
@@ -107,18 +108,30 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
-	storage := NewStorage(runtimeInterface, runtimeInterface)
+	config := executor.runtime.Config()
+
+	storage := NewStorage(
+		runtimeInterface,
+		context.MemoryGauge,
+		StorageConfig{},
+	)
 	executor.storage = storage
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewScriptInterpreterEnvironment(interpreterRuntime.defaultConfig)
+		if context.UseVM {
+			environment = NewScriptVMEnvironment(config)
+		} else {
+			environment = NewScriptInterpreterEnvironment(config)
+		}
 	}
+
 	environment.Configure(
 		runtimeInterface,
 		codesAndPrograms,
 		storage,
-		context.CoverageReport,
+		context.MemoryGauge,
+		context.ComputationGauge,
 	)
 	executor.environment = environment
 
@@ -160,12 +173,39 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 		return newError(err, location, codesAndPrograms)
 	}
 
-	executor.interpret = executor.scriptExecutionFunction()
+	switch environment := environment.(type) {
+	case *InterpreterEnvironment:
+		if context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the VM, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+
+		executor.interpret = executor.scriptExecutionFunction()
+
+	case *vmEnvironment:
+		if !context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the interpreter, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+		var program *Program
+		program, err = environment.loadProgram(location)
+		if err != nil {
+			return newError(err, location, codesAndPrograms)
+		}
+		executor.vm = environment.newVM(location, program.compiledProgram.program)
+
+	default:
+		return errors.NewUnexpectedError("scripts can only be executed with the interpreter")
+	}
 
 	return nil
 }
 
-func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err error) {
+func (executor *scriptExecutor) execute() (val cadence.Value, err error) {
 	err = executor.Preprocess()
 	if err != nil {
 		return nil, err
@@ -175,9 +215,8 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	context := executor.context
 	location := context.Location
 	codesAndPrograms := executor.codesAndPrograms
-	interpreterRuntime := executor.runtime
 
-	defer interpreterRuntime.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
@@ -185,40 +224,82 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 		codesAndPrograms,
 	)
 
+	var result cadence.Value
+
+	switch environment := environment.(type) {
+	case *InterpreterEnvironment:
+		result, err = executor.executeWithInterpreter(environment)
+
+	case *vmEnvironment:
+		result, err = executor.executeWithVM(environment)
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
+	}
+
+	if err != nil {
+		return nil, newError(err, executor.context.Location, codesAndPrograms)
+	}
+	return result, nil
+}
+
+func (executor *scriptExecutor) executeWithInterpreter(
+	environment *InterpreterEnvironment,
+) (val cadence.Value, err error) {
+
 	value, inter, err := environment.Interpret(
-		location,
+		executor.context.Location,
 		executor.program,
 		executor.interpret,
 	)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
-	// Export before committing storage
-
-	exportableValue := newExportableValue(value, inter)
-	result, err := exportValue(
-		exportableValue,
-		interpreter.EmptyLocationRange,
-	)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	// Write back all stored values, which were actually just cached, back into storage.
-
-	// Even though this function is `ExecuteScript`, that doesn't imply the changes
-	// to storage will be actually persisted
-
-	err = environment.CommitStorage(inter)
-	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
-	}
-
-	return result, nil
+	return ExportValue(value, inter)
 }
 
-func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFunc {
+func (executor *scriptExecutor) executeWithVM(
+	environment *vmEnvironment,
+) (val cadence.Value, err error) {
+
+	context := executor.vm.Context()
+	codesAndPrograms := executor.codesAndPrograms
+
+	// Recover internal panics and return them as an error.
+	// For example, the argument validation might attempt to
+	// load contract code for non-existing types
+
+	defer Recover(
+		func(internalErr Error) {
+			err = internalErr
+		},
+		executor.context.Location,
+		codesAndPrograms,
+	)
+
+	values, err := importValidatedArguments(
+		context,
+		executor.environment,
+		executor.script.Arguments,
+		executor.functionEntryPointType.Parameters,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	value, err := executor.vm.InvokeExternally(
+		sema.FunctionEntryPointName,
+		values...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return ExportValue(value, context)
+}
+
+func (executor *scriptExecutor) scriptExecutionFunction() interpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
 		// Recover internal panics and return them as an error.
@@ -229,10 +310,9 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 			err = internalErr
 		})
 
-		values, err := validateArgumentParams(
+		values, err := importValidatedArguments(
 			inter,
 			executor.environment,
-			interpreter.EmptyLocationRange,
 			executor.script.Arguments,
 			executor.functionEntryPointType.Parameters,
 		)

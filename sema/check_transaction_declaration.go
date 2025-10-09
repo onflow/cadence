@@ -70,6 +70,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	}
 
 	checker.visitWithPostConditions(
+		declaration,
 		declaration.PostConditions,
 		VoidType,
 		nil,
@@ -184,6 +185,8 @@ func (checker *Checker) visitTransactionPrepareFunction(
 
 	prepareFunctionType := transactionType.PrepareFunctionType()
 
+	checker.Elaboration.SetFunctionDeclarationFunctionType(prepareFunction.FunctionDeclaration, prepareFunctionType)
+
 	checker.checkFunction(
 		prepareFunction.FunctionDeclaration.ParameterList,
 		nil,
@@ -234,6 +237,8 @@ func (checker *Checker) visitTransactionExecuteFunction(
 
 	executeFunctionType := transactionType.ExecuteFunctionType()
 
+	checker.Elaboration.SetFunctionDeclarationFunctionType(executeFunction.FunctionDeclaration, executeFunctionType)
+
 	checker.checkFunction(
 		&ast.ParameterList{},
 		nil,
@@ -247,7 +252,9 @@ func (checker *Checker) visitTransactionExecuteFunction(
 }
 
 func (checker *Checker) declareTransactionDeclaration(declaration *ast.TransactionDeclaration) {
-	transactionType := &TransactionType{}
+	transactionType := &TransactionType{
+		Location: checker.Location,
+	}
 
 	if declaration.ParameterList != nil {
 		transactionType.Parameters = checker.parameters(declaration.ParameterList)

@@ -29,13 +29,14 @@ import (
 // SimpleCompositeValue
 
 type SimpleCompositeValue struct {
-	staticType      StaticType
-	Fields          map[string]Value
-	ComputeField    func(name string, interpreter *Interpreter, locationRange LocationRange) Value
-	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
+	staticType           StaticType
+	Fields               map[string]Value
+	ComputeField         func(name string, context MemberAccessibleContext) Value
+	FunctionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue
+	fieldFormatters      map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
-	stringer func(*Interpreter, SeenReferences, LocationRange) string
+	stringer func(ValueStringContext, SeenReferences) string
 	TypeID   sema.TypeID
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames []string
@@ -43,6 +44,11 @@ type SimpleCompositeValue struct {
 	// This is used for distinguishing between transaction values and other composite values.
 	// TODO: maybe cleanup if there is an alternative/better way.
 	isTransaction bool
+
+	// privateFields is a property bag to carry internal data
+	// that are not visible to cadence users.
+	// TODO: any better way to pass down information?
+	privateFields map[string]Value
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -54,29 +60,31 @@ func NewSimpleCompositeValue(
 	staticType StaticType,
 	fieldNames []string,
 	fields map[string]Value,
-	computeField func(name string, interpreter *Interpreter, locationRange LocationRange) Value,
+	computeField func(name string, context MemberAccessibleContext) Value,
+	functionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
-	stringer func(*Interpreter, SeenReferences, LocationRange) string,
+	stringer func(ValueStringContext, SeenReferences) string,
 ) *SimpleCompositeValue {
 
 	common.UseMemory(gauge, common.SimpleCompositeValueBaseMemoryUsage)
 	common.UseMemory(gauge, common.NewSimpleCompositeMemoryUsage(len(fields)))
 
 	return &SimpleCompositeValue{
-		TypeID:          typeID,
-		staticType:      staticType,
-		FieldNames:      fieldNames,
-		Fields:          fields,
-		ComputeField:    computeField,
-		fieldFormatters: fieldFormatters,
-		stringer:        stringer,
+		TypeID:               typeID,
+		staticType:           staticType,
+		FieldNames:           fieldNames,
+		Fields:               fields,
+		ComputeField:         computeField,
+		FunctionMemberGetter: functionMemberGetter,
+		fieldFormatters:      fieldFormatters,
+		stringer:             stringer,
 	}
 }
 
-func (*SimpleCompositeValue) isValue() {}
+func (*SimpleCompositeValue) IsValue() {}
 
-func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitSimpleCompositeValue(interpreter, v)
+func (v *SimpleCompositeValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitSimpleCompositeValue(context, v)
 }
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
@@ -94,7 +102,7 @@ func (v *SimpleCompositeValue) ForEachField(
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
-func (v *SimpleCompositeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *SimpleCompositeValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	v.ForEachField(func(_ string, fieldValue Value) (resume bool) {
 		walkChild(fieldValue)
 
@@ -103,14 +111,14 @@ func (v *SimpleCompositeValue) Walk(_ *Interpreter, walkChild func(Value), _ Loc
 	})
 }
 
-func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
+func (v *SimpleCompositeValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.staticType
 }
 
-func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool {
 	// Check type is importable
-	staticType := v.StaticType(inter)
-	semaType := inter.MustConvertStaticToSemaType(staticType)
+	staticType := v.StaticType(context)
+	semaType := MustConvertStaticToSemaType(staticType, context)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
@@ -118,7 +126,7 @@ func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange Lo
 	// Check all field values are importable
 	importable := true
 	v.ForEachField(func(_ string, value Value) (resume bool) {
-		if !value.IsImportable(inter, locationRange) {
+		if !value.IsImportable(context) {
 			importable = false
 			// stop iteration
 			return false
@@ -131,12 +139,7 @@ func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange Lo
 	return importable
 }
 
-func (v *SimpleCompositeValue) GetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-) Value {
-
+func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string) Value {
 	value, ok := v.Fields[name]
 	if ok {
 		return value
@@ -144,19 +147,30 @@ func (v *SimpleCompositeValue) GetMember(
 
 	computeField := v.ComputeField
 	if computeField != nil {
-		return computeField(name, interpreter, locationRange)
+		value = computeField(name, context)
+		if value != nil {
+			return value
+		}
 	}
 
-	return nil
+	return context.GetMethod(v, name)
 }
 
-func (v *SimpleCompositeValue) RemoveMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *SimpleCompositeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	if v.FunctionMemberGetter == nil {
+		return nil
+	}
+
+	return v.FunctionMemberGetter(name, context)
+}
+
+func (v *SimpleCompositeValue) RemoveMember(_ ValueTransferContext, name string) Value {
 	value := v.Fields[name]
 	delete(v.Fields, name)
 	return value
 }
 
-func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ LocationRange, name string, value Value) bool {
+func (v *SimpleCompositeValue) SetMember(_ ValueTransferContext, name string, value Value) bool {
 	_, hasField := v.Fields[name]
 	v.Fields[name] = value
 	return hasField
@@ -167,13 +181,16 @@ func (v *SimpleCompositeValue) String() string {
 }
 
 func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences)
 }
 
-func (v *SimpleCompositeValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *SimpleCompositeValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 
 	if v.stringer != nil {
-		return v.stringer(interpreter, seenReferences, locationRange)
+		return v.stringer(context, seenReferences)
 	}
 
 	var fields []struct {
@@ -189,11 +206,11 @@ func (v *SimpleCompositeValue) MeteredString(interpreter *Interpreter, seenRefer
 		var value string
 		if v.fieldFormatters != nil {
 			if fieldFormatter, ok := v.fieldFormatters[fieldName]; ok {
-				value = fieldFormatter(interpreter, fieldValue, seenReferences)
+				value = fieldFormatter(context, fieldValue, seenReferences)
 			}
 		}
 		if value == "" {
-			value = fieldValue.MeteredString(interpreter, seenReferences, locationRange)
+			value = fieldValue.MeteredString(context, seenReferences)
 		}
 
 		fields = append(fields, struct {
@@ -219,14 +236,13 @@ func (v *SimpleCompositeValue) MeteredString(interpreter *Interpreter, seenRefer
 	// Value of each field is metered separately.
 	strLen = strLen + len(typeId) + len(fields)*4
 
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(strLen))
 
 	return format.Composite(typeId, fields)
 }
 
 func (v *SimpleCompositeValue) ConformsToStaticType(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueStaticTypeConformanceContext,
 	results TypeConformanceResults,
 ) bool {
 
@@ -235,11 +251,7 @@ func (v *SimpleCompositeValue) ConformsToStaticType(
 		if !ok {
 			continue
 		}
-		if !value.ConformsToStaticType(
-			interpreter,
-			locationRange,
-			results,
-		) {
+		if !value.ConformsToStaticType(context, results) {
 			return false
 		}
 	}
@@ -255,13 +267,12 @@ func (*SimpleCompositeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *SimpleCompositeValue) IsResourceKinded(_ *Interpreter) bool {
+func (v *SimpleCompositeValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v *SimpleCompositeValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	transferContext ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -270,11 +281,11 @@ func (v *SimpleCompositeValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(transferContext, storable)
 	}
 
 	if v.isTransaction {
-		panic(NonTransferableValueError{
+		panic(&NonTransferableValueError{
 			Value: v,
 		})
 	}
@@ -282,14 +293,14 @@ func (v *SimpleCompositeValue) Transfer(
 	return v
 }
 
-func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
+func (v *SimpleCompositeValue) Clone(context ValueCloneContext) Value {
 
 	clonedFields := make(map[string]Value, len(v.Fields))
 
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
 
-		clonedFields[fieldName] = fieldValue.Clone(interpreter)
+		clonedFields[fieldName] = fieldValue.Clone(context)
 	}
 
 	return &SimpleCompositeValue{
@@ -303,6 +314,22 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *SimpleCompositeValue) DeepRemove(_ *Interpreter, _ bool) {
+func (v *SimpleCompositeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
+}
+
+func (v *SimpleCompositeValue) WithPrivateField(key string, value Value) *SimpleCompositeValue {
+	if v.privateFields == nil {
+		v.privateFields = make(map[string]Value)
+	}
+
+	v.privateFields[key] = value
+	return v
+}
+
+func (v *SimpleCompositeValue) PrivateField(key string) Value {
+	if v.privateFields == nil {
+		return nil
+	}
+	return v.privateFields[key]
 }

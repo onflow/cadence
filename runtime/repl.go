@@ -55,7 +55,7 @@ func NewREPL() (*REPL, error) {
 	codes := map[Location][]byte{}
 
 	standardLibraryHandler := &cmd.StandardLibraryHandler{}
-	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(standardLibraryHandler)
+	standardLibraryValues := stdlib.InterpreterDefaultScriptStandardLibraryValues(standardLibraryHandler)
 
 	checkerConfig := cmd.DefaultCheckerConfig(checkers, codes, standardLibraryValues)
 	checkerConfig.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
@@ -385,13 +385,7 @@ func (r *REPL) GetGlobal(name string) interpreter.Value {
 }
 
 func (r *REPL) ExportValue(value interpreter.Value) (cadence.Value, error) {
-	return ExportValue(
-		value, r.inter,
-		interpreter.LocationRange{
-			Location: r.checker.Location,
-			// TODO: hasPosition
-		},
-	)
+	return ExportValue(value, r.inter)
 }
 
 func (r *REPL) onResult(result interpreter.ExpressionResult) {

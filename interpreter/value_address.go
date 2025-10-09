@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // AddressValue
@@ -66,13 +67,13 @@ func NewAddressValueFromConstructor(
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }
 
-func ConvertAddress(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) AddressValue {
+func ConvertAddress(memoryGauge common.MemoryGauge, value Value) AddressValue {
 	if address, ok := value.(AddressValue); ok {
 		return address
 	}
 
 	converter := func() (result common.Address) {
-		uint64Value := ConvertUInt64(memoryGauge, value, locationRange)
+		uint64Value := ConvertUInt64(memoryGauge, value)
 
 		binary.BigEndian.PutUint64(
 			result[:common.AddressLength],
@@ -91,21 +92,21 @@ var _ EquatableValue = AddressValue{}
 var _ HashableValue = AddressValue{}
 var _ MemberAccessibleValue = AddressValue{}
 
-func (AddressValue) isValue() {}
+func (AddressValue) IsValue() {}
 
-func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitAddressValue(interpreter, v)
+func (v AddressValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitAddressValue(context, v)
 }
 
-func (AddressValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (AddressValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (AddressValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeAddress)
+func (AddressValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeAddress)
 }
 
-func (AddressValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (AddressValue) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -117,12 +118,15 @@ func (v AddressValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v AddressValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.AddressValueStringMemoryUsage)
+func (v AddressValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
+	common.UseMemory(context, common.AddressValueStringMemoryUsage)
 	return v.String()
 }
 
-func (v AddressValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v AddressValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherAddress, ok := other.(AddressValue)
 	if !ok {
 		return false
@@ -133,7 +137,7 @@ func (v AddressValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeAddress (1 byte)
 // - address (8 bytes)
-func (v AddressValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v AddressValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	length := 1 + len(v)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -155,61 +159,60 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v AddressValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
+}
+
+func (v AddressValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-				locationRange := invocation.LocationRange
-
-				memoryUsage := common.NewStringMemoryUsage(
-					safeMul(common.AddressLength, 2, locationRange),
-				)
-
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					func() string {
-						return v.String()
-					},
-				)
-			},
+			NativeAddressToStringFunction,
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.AddressTypeToBytesFunctionType,
-			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-				address := common.Address(v)
-				return ByteSliceToByteArrayValue(interpreter, address[:])
-			},
+			NativeAddressToBytesFunction,
 		)
 	}
 
 	return nil
 }
 
-func (AddressValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func AddressValueToStringFunction(
+	invocationContext InvocationContext,
+	v AddressValue,
+) Value {
+	memoryUsage := common.NewStringMemoryUsage(
+		safeMul(common.AddressLength, 2),
+	)
+
+	return NewStringValue(
+		invocationContext,
+		memoryUsage,
+		v.String,
+	)
+}
+
+func (AddressValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Addresses have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (AddressValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Addresses have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v AddressValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -227,13 +230,12 @@ func (AddressValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (AddressValue) IsResourceKinded(_ *Interpreter) bool {
+func (AddressValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v AddressValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	transferContext ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -241,21 +243,21 @@ func (v AddressValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(transferContext, storable)
 	}
 	return v
 }
 
-func (v AddressValue) Clone(_ *Interpreter) Value {
+func (v AddressValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (AddressValue) DeepRemove(_ *Interpreter, _ bool) {
+func (AddressValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
 func (v AddressValue) ByteSize() uint32 {
-	return cborTagSize + getBytesCBORSize(v.ToAddress().Bytes())
+	return values.CBORTagSize + values.GetBytesCBORSize(v.ToAddress().Bytes())
 }
 
 func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -266,33 +268,45 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func AddressFromBytes(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	inter := invocation.Interpreter
-
-	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+func AddressValueFromByteArray(context ContainerMutationContext, byteArray *ArrayValue) AddressValue {
+	bytes, err := ByteArrayValueToByteSlice(context, byteArray)
 	if err != nil {
 		panic(err)
 	}
 
-	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
+	return NewAddressValue(context, common.MustBytesToAddress(bytes))
 }
 
-func AddressFromString(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	addr, err := common.HexToAddressAssertPrefix(argument.Str)
+func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value {
+	addr, err := common.HexToAddressAssertPrefix(string.Str)
 	if err != nil {
 		return Nil
 	}
 
-	inter := invocation.Interpreter
-	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
+	return NewSomeValueNonCopying(gauge, NewAddressValue(gauge, addr))
 }
+
+// Native address functions
+var NativeAddressToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		address := AssertValueOfType[AddressValue](receiver)
+		return AddressValueToStringFunction(context, address)
+	},
+)
+
+var NativeAddressToBytesFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		address := common.Address(AssertValueOfType[AddressValue](receiver))
+		return ByteSliceToByteArrayValue(context, address[:])
+	},
+)

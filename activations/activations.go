@@ -70,8 +70,8 @@ func (a *Activation[T]) Find(name string) (_ T) {
 	return
 }
 
-// FunctionValues returns all values in the current function activation.
-func (a *Activation[T]) FunctionValues() map[string]T {
+// ValuesInFunction returns all values in the current function activation.
+func (a *Activation[T]) ValuesInFunction() map[string]T {
 
 	values := make(map[string]T)
 
@@ -97,6 +97,11 @@ func (a *Activation[T]) FunctionValues() map[string]T {
 	return values
 }
 
+// ValuesInCurrentLevel returns all values in the current activation level.
+func (a *Activation[T]) ValuesInCurrentLevel() map[string]T {
+	return a.entries
+}
+
 // Set sets the given name-value pair in the activation.
 func (a *Activation[T]) Set(name string, value T) {
 	if a.entries == nil {
@@ -105,6 +110,19 @@ func (a *Activation[T]) Set(name string, value T) {
 	}
 
 	a.entries[name] = value
+}
+
+func (a *Activation[T]) Clone() *Activation[T] {
+	clone := NewActivation[T](a.MemoryGauge, a.Parent)
+
+	if a.entries != nil {
+		clone.entries = make(map[string]T, len(a.entries))
+		for name, value := range a.entries { //nolint:maprange
+			clone.entries[name] = value
+		}
+	}
+
+	return clone
 }
 
 // Activations is a stack of activation records.

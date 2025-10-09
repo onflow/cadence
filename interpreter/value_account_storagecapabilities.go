@@ -41,34 +41,61 @@ func NewAccountStorageCapabilitiesValue(
 	issueWithTypeFunction BoundFunctionGenerator,
 ) Value {
 
+	var storageCapabilities *SimpleCompositeValue
+
+	methods := map[string]FunctionValue{}
+
+	computeLazyStoredMethod := func(name string) FunctionValue {
+		switch name {
+		case sema.Account_StorageCapabilitiesTypeGetControllerFunctionName:
+			return getControllerFunction(storageCapabilities)
+		case sema.Account_StorageCapabilitiesTypeGetControllersFunctionName:
+			return getControllersFunction(storageCapabilities)
+		case sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName:
+			return forEachControllerFunction(storageCapabilities)
+		case sema.Account_StorageCapabilitiesTypeIssueFunctionName:
+			return issueFunction(storageCapabilities)
+		case sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName:
+			return issueWithTypeFunction(storageCapabilities)
+		}
+
+		return nil
+	}
+
+	methodsGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
+		}
+
+		return method
+	}
+
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountStorageCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountStorageCapabilitiesStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.StorageCapabilities(%s)", addressStr)
 		}
 		return str
 	}
 
-	storageCapabilities := NewSimpleCompositeValue(
+	storageCapabilities = NewSimpleCompositeValue(
 		gauge,
 		account_StorageCapabilitiesTypeID,
 		account_StorageCapabilitiesStaticType,
 		account_StorageCapabilitiesFieldNames,
+		// No fields, only methods.
 		nil,
 		nil,
+		methodsGetter,
 		nil,
 		stringer,
-	)
-
-	storageCapabilities.Fields = map[string]Value{
-		sema.Account_StorageCapabilitiesTypeGetControllerFunctionName:     getControllerFunction(storageCapabilities),
-		sema.Account_StorageCapabilitiesTypeGetControllersFunctionName:    getControllersFunction(storageCapabilities),
-		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction(storageCapabilities),
-		sema.Account_StorageCapabilitiesTypeIssueFunctionName:             issueFunction(storageCapabilities),
-		sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction(storageCapabilities),
-	}
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return storageCapabilities
 }

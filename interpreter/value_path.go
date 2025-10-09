@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // PathValue
@@ -55,30 +56,30 @@ var _ EquatableValue = PathValue{}
 var _ HashableValue = PathValue{}
 var _ MemberAccessibleValue = PathValue{}
 
-func (PathValue) isValue() {}
+func (PathValue) IsValue() {}
 
-func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitPathValue(interpreter, v)
+func (v PathValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitPathValue(context, v)
 }
 
-func (PathValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (PathValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (v PathValue) StaticType(interpreter *Interpreter) StaticType {
+func (v PathValue) StaticType(context ValueStaticTypeContext) StaticType {
 	switch v.Domain {
 	case common.PathDomainStorage:
-		return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeStoragePath)
+		return NewPrimitiveStaticType(context, PrimitiveStaticTypeStoragePath)
 	case common.PathDomainPublic:
-		return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypePublicPath)
+		return NewPrimitiveStaticType(context, PrimitiveStaticTypePublicPath)
 	case common.PathDomainPrivate:
-		return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypePrivatePath)
+		return NewPrimitiveStaticType(context, PrimitiveStaticTypePrivatePath)
 	default:
 		panic(errors.NewUnreachableError())
 	}
 }
 
-func (v PathValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (v PathValue) IsImportable(_ ValueImportableContext) bool {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return sema.StoragePathType.Importable
@@ -102,62 +103,83 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v PathValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (v PathValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	// len(domain) + len(identifier) + '/' x2
 	strLen := len(v.Domain.Identifier()) + len(v.Identifier) + 2
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(strLen))
 	return v.String()
 }
 
-func (v PathValue) GetMember(inter *Interpreter, locationRange LocationRange, name string) Value {
+func (v PathValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
+}
+
+var NativePathValueToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		path := AssertValueOfType[PathValue](receiver)
+		return PathValueToStringFunction(context, path)
+	},
+)
+
+func (v PathValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			inter,
+			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v PathValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-
-				domainLength := len(v.Domain.Identifier())
-				identifierLength := len(v.Identifier)
-
-				memoryUsage := common.NewStringMemoryUsage(
-					safeAdd(domainLength, identifierLength, locationRange),
-				)
-
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					v.String,
-				)
-			},
+			NativePathValueToStringFunction,
 		)
 	}
 
 	return nil
 }
 
-func (PathValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func PathValueToStringFunction(
+	memoryGauge common.MemoryGauge,
+	v PathValue,
+) Value {
+	domainLength := len(v.Domain.Identifier())
+	identifierLength := len(v.Identifier)
+
+	memoryUsage := common.NewStringMemoryUsage(
+		safeAdd(domainLength, identifierLength),
+	)
+
+	return NewStringValue(
+		memoryGauge,
+		memoryUsage,
+		v.String,
+	)
+}
+
+func (PathValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Paths have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (PathValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (PathValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Paths have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v PathValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v PathValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v PathValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherPath, ok := other.(PathValue)
 	if !ok {
 		return false
@@ -171,7 +193,7 @@ func (v PathValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 // - HashInputTypePath (1 byte)
 // - domain (1 byte)
 // - identifier (n bytes)
-func (v PathValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v PathValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	length := 1 + 1 + len(v.Identifier)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -190,7 +212,7 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func newPathFromStringValue(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
+func newPathFromStringValue(gauge common.MemoryGauge, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
 		return Nil
@@ -199,9 +221,9 @@ func newPathFromStringValue(interpreter *Interpreter, domain common.PathDomain, 
 	// NOTE: any identifier is allowed, it does not have to match the syntax for path literals
 
 	return NewSomeValueNonCopying(
-		interpreter,
+		gauge,
 		NewPathValue(
-			interpreter,
+			gauge,
 			domain,
 			stringValue.Str,
 		),
@@ -213,7 +235,7 @@ func (v PathValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(
+	return values.MaybeLargeImmutableStorable(
 		v,
 		storage,
 		address,
@@ -225,13 +247,12 @@ func (PathValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (PathValue) IsResourceKinded(_ *Interpreter) bool {
+func (PathValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v PathValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -239,22 +260,25 @@ func (v PathValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v PathValue) Clone(_ *Interpreter) Value {
+func (v PathValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (PathValue) DeepRemove(_ *Interpreter, _ bool) {
+func (PathValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
 func (v PathValue) ByteSize() uint32 {
 	// tag number (2 bytes) + array head (1 byte) + domain (CBOR uint) + identifier (CBOR string)
-	return cborTagSize + 1 + getUintCBORSize(uint64(v.Domain)) + getBytesCBORSize([]byte(v.Identifier))
+	return values.CBORTagSize +
+		1 +
+		values.GetUintCBORSize(uint64(v.Domain)) +
+		values.GetBytesCBORSize([]byte(v.Identifier))
 }
 
 func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

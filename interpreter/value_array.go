@@ -41,40 +41,8 @@ type ArrayValue struct {
 	isDestroyed      bool
 }
 
-type ArrayValueIterator struct {
-	atreeIterator atree.ArrayIterator
-}
-
-func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
-	arrayIterator, err := v.array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	return ArrayValueIterator{
-		atreeIterator: arrayIterator,
-	}
-}
-
-var _ ValueIterator = ArrayValueIterator{}
-
-func (i ArrayValueIterator) Next(interpreter *Interpreter, _ LocationRange) Value {
-	atreeValue, err := i.atreeIterator.Next()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
-	if atreeValue == nil {
-		return nil
-	}
-
-	// atree.Array iterator returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(interpreter, atreeValue)
-}
-
 func NewArrayValue(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ArrayCreationContext,
 	arrayType ArrayStaticType,
 	address common.Address,
 	values ...Value,
@@ -84,7 +52,7 @@ func NewArrayValue(
 	count := len(values)
 
 	return NewArrayValueWithIterator(
-		interpreter,
+		context,
 		arrayType,
 		address,
 		uint64(count),
@@ -98,8 +66,7 @@ func NewArrayValue(
 			index++
 
 			value = value.Transfer(
-				interpreter,
-				locationRange,
+				context,
 				atree.Address(address),
 				true,
 				nil,
@@ -113,19 +80,23 @@ func NewArrayValue(
 }
 
 func NewArrayValueWithIterator(
-	interpreter *Interpreter,
+	context ArrayCreationContext,
 	arrayType ArrayStaticType,
 	address common.Address,
 	countOverestimate uint64,
 	values func() Value,
 ) *ArrayValue {
-	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
-
-	config := interpreter.SharedState.Config
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindCreateArrayValue,
+			Intensity: 1,
+		},
+	)
 
 	var v *ArrayValue
 
-	if config.TracingEnabled {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -135,20 +106,49 @@ func NewArrayValueWithIterator(
 				return
 			}
 
-			typeInfo := v.Type.String()
-			count := v.Count()
+			valueID := v.ValueID().String()
+			var typeID string
+			if v.Type != nil {
+				typeID = string(v.Type.ID())
+			}
 
-			interpreter.reportArrayValueConstructTrace(
-				typeInfo,
-				count,
+			context.ReportArrayValueConstructTrace(
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
 	}
 
-	constructor := func() *atree.Array {
-		array, err := atree.NewArrayFromBatchData(
-			config.Storage,
+	constructor := func() (array *atree.Array) {
+
+		if TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				// NOTE: in defer, as array is only initialized at the end of the function,
+				// if there was no error during construction
+				if array == nil {
+					return
+				}
+
+				valueID := array.ValueID().String()
+				var typeID string
+				if arrayType != nil {
+					typeID = string(arrayType.ID())
+				}
+
+				context.ReportAtreeNewArrayFromBatchDataTrace(
+					valueID,
+					typeID,
+					time.Since(startTime),
+				)
+			}()
+		}
+
+		var err error
+		array, err = atree.NewArrayFromBatchData(
+			context.Storage(),
 			atree.Address(address),
 			arrayType,
 			func() (atree.Value, error) {
@@ -161,7 +161,7 @@ func NewArrayValueWithIterator(
 		return array
 	}
 	// must assign to v here for tracing to work properly
-	v = newArrayValueFromConstructor(interpreter, arrayType, countOverestimate, constructor)
+	v = newArrayValueFromConstructor(context, arrayType, countOverestimate, constructor)
 	return v
 }
 
@@ -213,81 +213,78 @@ func newArrayValueFromAtreeArray(
 
 var _ Value = &ArrayValue{}
 var _ atree.Value = &ArrayValue{}
+var _ atree.WrapperValue = &ArrayValue{}
 var _ EquatableValue = &ArrayValue{}
 var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
+var _ atreeContainerBackedValue = &ArrayValue{}
 
-func (*ArrayValue) isValue() {}
+func (*ArrayValue) IsValue() {}
 
-func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitArrayValue(interpreter, v)
+func (*ArrayValue) isAtreeContainerBackedValue() {}
+
+func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor) {
+	descend := visitor.VisitArrayValue(context, v)
 	if !descend {
 		return
 	}
 
 	v.Walk(
-		interpreter,
+		context,
 		func(element Value) {
-			element.Accept(interpreter, visitor, locationRange)
+			element.Accept(context, visitor)
 		},
-		locationRange,
 	)
 }
 
 func (v *ArrayValue) Iterate(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	f func(element Value) (resume bool),
 	transferElements bool,
-	locationRange LocationRange,
 ) {
 	v.iterate(
-		interpreter,
+		context,
 		v.array.Iterate,
 		f,
 		transferElements,
-		locationRange,
 	)
 }
 
 // IterateReadOnlyLoaded iterates over all LOADED elements of the array.
 // DO NOT perform storage mutations in the callback!
 func (v *ArrayValue) IterateReadOnlyLoaded(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	f func(element Value) (resume bool),
-	locationRange LocationRange,
 ) {
 	const transferElements = false
 
 	v.iterate(
-		interpreter,
+		context,
 		v.array.IterateReadOnlyLoadedValues,
 		f,
 		transferElements,
-		locationRange,
 	)
 }
 
 func (v *ArrayValue) iterate(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
 	transferElements bool,
-	locationRange LocationRange,
 ) {
 	iterate := func() {
 		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
-			elementValue := MustConvertStoredValue(interpreter, element)
-			interpreter.checkInvalidatedResourceOrResourceReference(elementValue, locationRange)
+			elementValue := MustConvertStoredValue(context, element)
+			CheckInvalidatedResourceOrResourceReference(elementValue, context)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
 				elementValue = elementValue.Transfer(
-					interpreter,
-					locationRange,
+					context,
 					atree.Address{},
 					false,
 					nil,
@@ -305,36 +302,45 @@ func (v *ArrayValue) iterate(
 		}
 	}
 
-	interpreter.withMutationPrevention(v.ValueID(), iterate)
+	context.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
-func (v *ArrayValue) Walk(
-	interpreter *Interpreter,
-	walkChild func(Value),
-	locationRange LocationRange,
-) {
+func (v *ArrayValue) Iterator(_ ValueStaticTypeContext) ValueIterator {
+	valueID := v.array.ValueID()
+
+	arrayIterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return &ArrayIterator{
+		valueID:       valueID,
+		atreeIterator: arrayIterator,
+	}
+}
+
+func (v *ArrayValue) Walk(context ValueWalkContext, walkChild func(Value)) {
 	v.Iterate(
-		interpreter,
+		context,
 		func(element Value) (resume bool) {
 			walkChild(element)
 			return true
 		},
 		false,
-		locationRange,
 	)
 }
 
-func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
+func (v *ArrayValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	// TODO meter
 	return v.Type
 }
 
-func (v *ArrayValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+func (v *ArrayValue) IsImportable(context ValueImportableContext) bool {
 	importable := true
 	v.Iterate(
-		inter,
+		context,
 		func(element Value) (resume bool) {
-			if !element.IsImportable(inter, locationRange) {
+			if !element.IsImportable(context) {
 				importable = false
 				// stop iteration
 				return false
@@ -344,36 +350,39 @@ func (v *ArrayValue) IsImportable(inter *Interpreter, locationRange LocationRang
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return importable
 }
 
-func (v *ArrayValue) isInvalidatedResource(interpreter *Interpreter) bool {
-	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter))
+func (v *ArrayValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(context))
 }
 
-func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
-	return v.array == nil && v.IsResourceKinded(interpreter)
+func (v *ArrayValue) IsStaleResource(context ValueStaticTypeContext) bool {
+	return v.array == nil && v.IsResourceKinded(context)
 }
 
-func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *ArrayValue) Destroy(context ResourceDestructionContext) {
 
-	interpreter.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindDestroyArrayValue,
+			Intensity: 1,
+		},
+	)
 
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+	if TracingEnabled {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
-			interpreter.reportArrayValueDestroyTrace(
-				typeInfo,
-				count,
+			context.ReportArrayValueDestroyTrace(
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -381,23 +390,21 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	valueID := v.ValueID()
 
-	interpreter.withResourceDestruction(
+	context.WithResourceDestruction(
 		valueID,
-		locationRange,
 		func() {
 			v.Walk(
-				interpreter,
+				context,
 				func(element Value) {
-					maybeDestroy(interpreter, locationRange, element)
+					maybeDestroy(context, element)
 				},
-				locationRange,
 			)
 		},
 	)
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v, locationRange)
+	InvalidateReferencedResources(context, v)
 
 	v.array = nil
 }
@@ -406,7 +413,7 @@ func (v *ArrayValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRange, other *ArrayValue) Value {
+func (v *ArrayValue) Concat(context ValueTransferContext, other *ArrayValue) Value {
 
 	first := true
 
@@ -425,14 +432,17 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 	elementType := v.Type.ElementType()
 
 	return NewArrayValueWithIterator(
-		interpreter,
+		context,
 		v.Type,
 		common.ZeroAddress,
 		v.array.Count()+other.array.Count(),
 		func() Value {
 
 			// Meter computation for iterating the two arrays.
-			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			var value Value
 
@@ -445,7 +455,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 				if atreeValue == nil {
 					first = false
 				} else {
-					value = MustConvertStoredValue(interpreter, atreeValue)
+					value = MustConvertStoredValue(context, atreeValue)
 				}
 			}
 
@@ -456,9 +466,9 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 				}
 
 				if atreeValue != nil {
-					value = MustConvertStoredValue(interpreter, atreeValue)
+					value = MustConvertStoredValue(context, atreeValue)
 
-					interpreter.checkContainerMutation(elementType, value, locationRange)
+					checkContainerMutation(context, elementType, value)
 				}
 			}
 
@@ -467,8 +477,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 			}
 
 			return value.Transfer(
-				interpreter,
-				locationRange,
+				context,
 				atree.Address{},
 				false,
 				nil,
@@ -479,72 +488,68 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 	)
 }
 
-func (v *ArrayValue) GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	index := key.(NumberValue).ToInt(locationRange)
-	return v.Get(interpreter, locationRange, index)
+func (v *ArrayValue) GetKey(context ValueComparisonContext, key Value) Value {
+	index := key.(NumberValue).ToInt()
+	return v.Get(context, index)
 }
 
-func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationRange LocationRange) {
+func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int) {
 	var indexOutOfBoundsError *atree.IndexOutOfBoundsError
 	if goerrors.As(err, &indexOutOfBoundsError) {
-		panic(ArrayIndexOutOfBoundsError{
-			Index:         index,
-			Size:          v.Count(),
-			LocationRange: locationRange,
+		panic(&ArrayIndexOutOfBoundsError{
+			Index: index,
+			Size:  v.Count(),
 		})
 	}
 }
 
-func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+func (v *ArrayValue) Get(gauge common.MemoryGauge, index int) Value {
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
-			Index:         index,
-			Size:          v.Count(),
-			LocationRange: locationRange,
+		panic(&ArrayIndexOutOfBoundsError{
+			Index: index,
+			Size:  v.Count(),
 		})
 	}
 
 	storedValue, err := v.array.Get(uint64(index))
 	if err != nil {
-		v.handleIndexOutOfBoundsError(err, index, locationRange)
+		v.handleIndexOutOfBoundsError(err, index)
 
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(interpreter, storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
-func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	index := key.(NumberValue).ToInt(locationRange)
-	v.Set(interpreter, locationRange, index, value)
+func (v *ArrayValue) SetKey(context ContainerMutationContext, key Value, value Value) {
+	index := key.(NumberValue).ToInt()
+	v.Set(context, index, value)
 }
 
-func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+func (v *ArrayValue) Set(context ContainerMutationContext, index int, element Value) {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID())
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
-			Index:         index,
-			Size:          v.Count(),
-			LocationRange: locationRange,
+		panic(&ArrayIndexOutOfBoundsError{
+			Index: index,
+			Size:  v.Count(),
 		})
 	}
 
-	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+	checkContainerMutation(context, v.Type.ElementType(), element)
 
-	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
+	common.UseMemory(context, common.AtreeArrayElementOverhead)
 
 	element = element.Transfer(
-		interpreter,
-		locationRange,
+		context,
 		v.array.Address(),
 		true,
 		nil,
@@ -556,19 +561,19 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 
 	existingStorable, err := v.array.Set(uint64(index), element)
 	if err != nil {
-		v.handleIndexOutOfBoundsError(err, index, locationRange)
+		v.handleIndexOutOfBoundsError(err, index)
 
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.array)
-	interpreter.maybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.array)
+	context.MaybeValidateAtreeStorage()
 
-	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
-	interpreter.checkResourceLoss(existingValue, locationRange)
-	existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
+	existingValue := StoredValue(context, existingStorable, context.Storage())
+	CheckResourceLoss(context, existingValue)
+	existingValue.DeepRemove(context, true) // existingValue is standalone because it was overwritten in parent container.
 
-	interpreter.RemoveReferencedSlab(existingStorable)
+	RemoveReferencedSlab(context, existingStorable)
 }
 
 func (v *ArrayValue) String() string {
@@ -576,41 +581,43 @@ func (v *ArrayValue) String() string {
 }
 
 func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences)
 }
 
-func (v *ArrayValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *ArrayValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 	// if n > 0:
 	// len = open-bracket + close-bracket + ((n-1) comma+space)
 	//     = 2 + 2n - 2
 	//     = 2n
 	// Always +2 to include empty array case (over estimate).
 	// Each elements' string value is metered individually.
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(v.Count()*2+2))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(v.Count()*2+2))
 
 	values := make([]string, v.Count())
 
 	i := 0
 
 	v.Iterate(
-		interpreter,
+		context,
 		func(value Value) (resume bool) {
 			// ok to not meter anything created as part of this iteration, since we will discard the result
 			// upon creating the string
-			values[i] = value.MeteredString(interpreter, seenReferences, locationRange)
+			values[i] = value.MeteredString(context, seenReferences)
 			i++
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return format.Array(values)
 }
 
-func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRange, element Value) {
+func (v *ArrayValue) Append(context ValueTransferContext, element Value) {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID())
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
@@ -618,15 +625,14 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 		v.elementSize,
 		true,
 	)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
-	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
+	common.UseMemory(context, dataSlabs)
+	common.UseMemory(context, metaDataSlabs)
+	common.UseMemory(context, common.AtreeArrayElementOverhead)
 
-	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+	checkContainerMutation(context, v.Type.ElementType(), element)
 
 	element = element.Transfer(
-		interpreter,
-		locationRange,
+		context,
 		v.array.Address(),
 		true,
 		nil,
@@ -641,41 +647,38 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.array)
-	interpreter.maybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.array)
+	context.MaybeValidateAtreeStorage()
 }
 
-func (v *ArrayValue) AppendAll(interpreter *Interpreter, locationRange LocationRange, other *ArrayValue) {
+func (v *ArrayValue) AppendAll(context ValueTransferContext, other *ArrayValue) {
 	other.Walk(
-		interpreter,
+		context,
 		func(value Value) {
-			v.Append(interpreter, locationRange, value)
+			v.Append(context, value)
 		},
-		locationRange,
 	)
 }
 
-func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	index := key.(NumberValue).ToInt(locationRange)
-	v.Insert(interpreter, locationRange, index, value)
+func (v *ArrayValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
+	index := key.(NumberValue).ToInt()
+	v.Insert(context, index, value)
 }
 
 func (v *ArrayValue) InsertWithoutTransfer(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ContainerMutationContext,
 	index int,
 	element Value,
 ) {
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID())
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
-			Index:         index,
-			Size:          v.Count(),
-			LocationRange: locationRange,
+		panic(&ArrayIndexOutOfBoundsError{
+			Index: index,
+			Size:  v.Count(),
 		})
 	}
 
@@ -685,21 +688,21 @@ func (v *ArrayValue) InsertWithoutTransfer(
 		v.elementSize,
 		true,
 	)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
-	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
+	common.UseMemory(context, dataSlabs)
+	common.UseMemory(context, metaDataSlabs)
+	common.UseMemory(context, common.AtreeArrayElementOverhead)
 
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
-		v.handleIndexOutOfBoundsError(err, index, locationRange)
+		v.handleIndexOutOfBoundsError(err, index)
 
 		panic(errors.NewExternalError(err))
 	}
-	interpreter.maybeValidateAtreeValue(v.array)
-	interpreter.maybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.array)
+	context.MaybeValidateAtreeStorage()
 }
 
-func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+func (v *ArrayValue) Insert(context ContainerMutationContext, index int, element Value) {
 
 	address := v.array.Address()
 
@@ -708,8 +711,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 	}
 
 	element = element.Transfer(
-		interpreter,
-		locationRange,
+		context,
 		address,
 		true,
 		nil,
@@ -717,61 +719,57 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 		true, // standalone element doesn't have a parent container yet.
 	)
 
-	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+	checkContainerMutation(context, v.Type.ElementType(), element)
 
 	v.InsertWithoutTransfer(
-		interpreter,
-		locationRange,
+		context,
 		index,
 		element,
 	)
 }
 
-func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	index := key.(NumberValue).ToInt(locationRange)
-	return v.Remove(interpreter, locationRange, index)
+func (v *ArrayValue) RemoveKey(context ContainerMutationContext, key Value) Value {
+	index := key.(NumberValue).ToInt()
+	return v.Remove(context, index)
 }
 
 func (v *ArrayValue) RemoveWithoutTransfer(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ContainerMutationContext,
 	index int,
 ) atree.Storable {
 
-	interpreter.validateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID())
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
-			Index:         index,
-			Size:          v.Count(),
-			LocationRange: locationRange,
+		panic(&ArrayIndexOutOfBoundsError{
+			Index: index,
+			Size:  v.Count(),
 		})
 	}
 
 	storable, err := v.array.Remove(uint64(index))
 	if err != nil {
-		v.handleIndexOutOfBoundsError(err, index, locationRange)
+		v.handleIndexOutOfBoundsError(err, index)
 
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.array)
-	interpreter.maybeValidateAtreeStorage()
+	context.MaybeValidateAtreeValue(v.array)
+	context.MaybeValidateAtreeStorage()
 
 	return storable
 }
 
-func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
-	storable := v.RemoveWithoutTransfer(interpreter, locationRange, index)
+func (v *ArrayValue) Remove(context ContainerMutationContext, index int) Value {
+	storable := v.RemoveWithoutTransfer(context, index)
 
-	value := StoredValue(interpreter, storable, interpreter.Storage())
+	value := StoredValue(context, storable, context.Storage())
 
 	return value.Transfer(
-		interpreter,
-		locationRange,
+		context,
 		atree.Address{},
 		true,
 		storable,
@@ -780,15 +778,15 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 	)
 }
 
-func (v *ArrayValue) RemoveFirst(interpreter *Interpreter, locationRange LocationRange) Value {
-	return v.Remove(interpreter, locationRange, 0)
+func (v *ArrayValue) RemoveFirst(context ContainerMutationContext) Value {
+	return v.Remove(context, 0)
 }
 
-func (v *ArrayValue) RemoveLast(interpreter *Interpreter, locationRange LocationRange) Value {
-	return v.Remove(interpreter, locationRange, v.Count()-1)
+func (v *ArrayValue) RemoveLast(context ContainerMutationContext) Value {
+	return v.Remove(context, v.Count()-1)
 }
 
-func (v *ArrayValue) FirstIndex(interpreter *Interpreter, locationRange LocationRange, needleValue Value) OptionalValue {
+func (v *ArrayValue) FirstIndex(interpreter ContainerMutationContext, needleValue Value) OptionalValue {
 
 	needleEquatable, ok := needleValue.(EquatableValue)
 	if !ok {
@@ -800,7 +798,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, locationRange Location
 	v.Iterate(
 		interpreter,
 		func(element Value) (resume bool) {
-			if needleEquatable.Equal(interpreter, locationRange, element) {
+			if needleEquatable.Equal(interpreter, element) {
 				result = true
 				// stop iteration
 				return false
@@ -810,7 +808,6 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, locationRange Location
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	if result {
@@ -821,8 +818,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, locationRange Location
 }
 
 func (v *ArrayValue) Contains(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ContainerMutationContext,
 	needleValue Value,
 ) BoolValue {
 
@@ -833,9 +829,9 @@ func (v *ArrayValue) Contains(
 
 	var result bool
 	v.Iterate(
-		interpreter,
+		context,
 		func(element Value) (resume bool) {
-			if needleEquatable.Equal(interpreter, locationRange, element) {
+			if needleEquatable.Equal(context, element) {
 				result = true
 				// stop iteration
 				return false
@@ -844,338 +840,184 @@ func (v *ArrayValue) Contains(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
-	return AsBoolValue(result)
+	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case "length":
-		return NewIntValueFromInt64(interpreter, int64(v.Count()))
+		return NewIntValueFromInt64(context, int64(v.Count()))
+	}
 
-	case "append":
+	return context.GetMethod(v, name)
+}
+
+func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	switch name {
+	case sema.ArrayTypeAppendFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayAppendFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				v.Append(
-					invocation.Interpreter,
-					invocation.LocationRange,
-					invocation.Arguments[0],
-				)
-				return Void
-			},
+			NativeArrayAppendFunction,
 		)
 
-	case "appendAll":
+	case sema.ArrayTypeAppendAllFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayAppendAllFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				v.AppendAll(
-					invocation.Interpreter,
-					invocation.LocationRange,
-					otherArray,
-				)
-				return Void
-			},
+			NativeArrayAppendAllFunction,
 		)
 
-	case "concat":
+	case sema.ArrayTypeConcatFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayConcatFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				return v.Concat(
-					invocation.Interpreter,
-					invocation.LocationRange,
-					otherArray,
-				)
-			},
+			NativeArrayConcatFunction,
 		)
 
-	case "insert":
+	case sema.ArrayTypeInsertFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayInsertFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				inter := invocation.Interpreter
-				locationRange := invocation.LocationRange
-
-				indexValue, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				index := indexValue.ToInt(locationRange)
-
-				element := invocation.Arguments[1]
-
-				v.Insert(
-					inter,
-					locationRange,
-					index,
-					element,
-				)
-				return Void
-			},
+			NativeArrayInsertFunction,
 		)
 
-	case "remove":
+	case sema.ArrayTypeRemoveFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayRemoveFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				inter := invocation.Interpreter
-				locationRange := invocation.LocationRange
-
-				indexValue, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				index := indexValue.ToInt(locationRange)
-
-				return v.Remove(
-					inter,
-					locationRange,
-					index,
-				)
-			},
+			NativeArrayRemoveFunction,
 		)
 
-	case "removeFirst":
+	case sema.ArrayTypeRemoveFirstFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayRemoveFirstFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.RemoveFirst(
-					invocation.Interpreter,
-					invocation.LocationRange,
-				)
-			},
+			NativeArrayRemoveFirstFunction,
 		)
 
-	case "removeLast":
+	case sema.ArrayTypeRemoveLastFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayRemoveLastFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.RemoveLast(
-					invocation.Interpreter,
-					invocation.LocationRange,
-				)
-			},
+			NativeArrayRemoveLastFunction,
 		)
 
-	case "firstIndex":
+	case sema.ArrayTypeFirstIndexFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayFirstIndexFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.FirstIndex(
-					invocation.Interpreter,
-					invocation.LocationRange,
-					invocation.Arguments[0],
-				)
-			},
+			NativeArrayFirstIndexFunction,
 		)
 
-	case "contains":
+	case sema.ArrayTypeContainsFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayContainsFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.Contains(
-					invocation.Interpreter,
-					invocation.LocationRange,
-					invocation.Arguments[0],
-				)
-			},
+			NativeArrayContainsFunction,
 		)
 
-	case "slice":
+	case sema.ArrayTypeSliceFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArraySliceFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				from, ok := invocation.Arguments[0].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				to, ok := invocation.Arguments[1].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Slice(
-					invocation.Interpreter,
-					from,
-					to,
-					invocation.LocationRange,
-				)
-			},
+			NativeArraySliceFunction,
 		)
 
 	case sema.ArrayTypeReverseFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayReverseFunctionType(
-				v.SemaType(interpreter),
+				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.Reverse(
-					invocation.Interpreter,
-					invocation.LocationRange,
-				)
-			},
+			NativeArrayReverseFunction,
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayFilterFunctionType(
-				interpreter,
-				v.SemaType(interpreter).ElementType(false),
+				context,
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-
-				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Filter(
-					interpreter,
-					invocation.LocationRange,
-					funcArgument,
-				)
-			},
+			NativeArrayFilterFunction,
 		)
 
 	case sema.ArrayTypeMapFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayMapFunctionType(
-				interpreter,
-				v.SemaType(interpreter),
+				context,
+				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-
-				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Map(
-					interpreter,
-					invocation.LocationRange,
-					funcArgument,
-				)
-			},
+			NativeArrayMapFunction,
 		)
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayToVariableSizedFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-
-				return v.ToVariableSized(
-					interpreter,
-					invocation.LocationRange,
-				)
-			},
+			NativeArrayToVariableSizedFunction,
 		)
 
 	case sema.ArrayTypeToConstantSizedFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ArrayToConstantSizedFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-
-				ty := typeParameterPair.Value
-
-				constantSizedArrayType, ok := ty.(*sema.ConstantSizedType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.ToConstantSized(
-					interpreter,
-					invocation.LocationRange,
-					constantSizedArrayType.Size,
-				)
-			},
+			NativeArrayToConstantSizedFunction,
 		)
 	}
 
 	return nil
 }
 
-func (v *ArrayValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
+func (v *ArrayValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
+func (v *ArrayValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -1185,30 +1027,27 @@ func (v *ArrayValue) Count() int {
 }
 
 func (v *ArrayValue) ConformsToStaticType(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueStaticTypeConformanceContext,
 	results TypeConformanceResults,
 ) bool {
-	config := interpreter.SharedState.Config
 
-	count := v.Count()
-
-	if config.TracingEnabled {
+	if TracingEnabled {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
-			interpreter.reportArrayValueConformsToStaticTypeTrace(
-				typeInfo,
-				count,
+			context.ReportArrayValueConformsToStaticTypeTrace(
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
 	}
 
 	var elementType StaticType
-	switch staticType := v.StaticType(interpreter).(type) {
+	switch staticType := v.StaticType(context).(type) {
 	case *ConstantSizedStaticType:
 		elementType = staticType.ElementType()
 		if v.Count() != int(staticType.Size) {
@@ -1223,20 +1062,16 @@ func (v *ArrayValue) ConformsToStaticType(
 	var elementMismatch bool
 
 	v.Iterate(
-		interpreter,
+		context,
 		func(element Value) (resume bool) {
 
-			if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
+			if !IsSubType(context, element.StaticType(context), elementType) {
 				elementMismatch = true
 				// stop iteration
 				return false
 			}
 
-			if !element.ConformsToStaticType(
-				interpreter,
-				locationRange,
-				results,
-			) {
+			if !element.ConformsToStaticType(context, results) {
 				elementMismatch = true
 				// stop iteration
 				return false
@@ -1246,13 +1081,12 @@ func (v *ArrayValue) ConformsToStaticType(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return !elementMismatch
 }
 
-func (v *ArrayValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *ArrayValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherArray, ok := other.(*ArrayValue)
 	if !ok {
 		return false
@@ -1275,11 +1109,11 @@ func (v *ArrayValue) Equal(interpreter *Interpreter, locationRange LocationRange
 	}
 
 	for i := 0; i < count; i++ {
-		value := v.Get(interpreter, locationRange, i)
-		otherValue := otherArray.Get(interpreter, locationRange, i)
+		value := v.Get(context, i)
+		otherValue := otherArray.Get(context, i)
 
 		equatableValue, ok := value.(EquatableValue)
-		if !ok || !equatableValue.Equal(interpreter, locationRange, otherValue) {
+		if !ok || !equatableValue.Equal(context, otherValue) {
 			return false
 		}
 	}
@@ -1292,14 +1126,21 @@ func (v *ArrayValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
+	// NOTE: Need to change ArrayValue.UnwrapAtreeValue()
+	// if ArrayValue is stored with wrapping.
 	return v.array.Storable(storage, address, maxInlineSize)
+}
+
+func (v *ArrayValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// Wrapper size is 0 because ArrayValue is stored as
+	// atree.Array without any physical wrapping (see ArrayValue.Storable()).
+	return v.array, 0
 }
 
 func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
 
 func (v *ArrayValue) Transfer(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueTransferContext,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -1307,23 +1148,24 @@ func (v *ArrayValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
-	config := interpreter.SharedState.Config
-
-	interpreter.ReportComputation(
-		common.ComputationKindTransferArrayValue,
-		uint(v.Count()),
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindTransferArrayValue,
+			Intensity: uint64(v.Count()),
+		},
 	)
 
-	if config.TracingEnabled {
+	if TracingEnabled {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
-			interpreter.reportArrayValueTransferTrace(
-				typeInfo,
-				count,
+			context.ReportArrayValueTransferTrace(
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1334,9 +1176,7 @@ func (v *ArrayValue) Transfer(
 	if preventTransfer == nil {
 		preventTransfer = map[atree.ValueID]struct{}{}
 	} else if _, ok := preventTransfer[currentValueID]; ok {
-		panic(RecursiveTransferError{
-			LocationRange: locationRange,
-		})
+		panic(&RecursiveTransferError{})
 	}
 	preventTransfer[currentValueID] = struct{}{}
 	defer delete(preventTransfer, currentValueID)
@@ -1344,7 +1184,7 @@ func (v *ArrayValue) Transfer(
 	array := v.array
 
 	needsStoreTo := v.NeedsStoreTo(address)
-	isResourceKinded := v.IsResourceKinded(interpreter)
+	isResourceKinded := v.IsResourceKinded(context)
 
 	if needsStoreTo || !isResourceKinded {
 
@@ -1359,53 +1199,72 @@ func (v *ArrayValue) Transfer(
 			v.array.Count(),
 			v.elementSize,
 		)
-		common.UseMemory(interpreter, elementUsage)
-		common.UseMemory(interpreter, dataSlabs)
-		common.UseMemory(interpreter, metaDataSlabs)
+		common.UseMemory(context, elementUsage)
+		common.UseMemory(context, dataSlabs)
+		common.UseMemory(context, metaDataSlabs)
 
-		array, err = atree.NewArrayFromBatchData(
-			config.Storage,
-			address,
-			v.array.Type(),
-			func() (atree.Value, error) {
-				value, err := iterator.Next()
-				if err != nil {
-					return nil, err
-				}
-				if value == nil {
-					return nil, nil
-				}
+		func() {
 
-				element := MustConvertStoredValue(interpreter, value).
-					Transfer(
-						interpreter,
-						locationRange,
-						address,
-						remove,
-						nil,
-						preventTransfer,
-						false, // value has a parent container because it is from iterator.
+			if TracingEnabled {
+				startTime := time.Now()
+
+				defer func() {
+					valueID := array.ValueID().String()
+					typeID := string(v.Type.ID())
+
+					context.ReportAtreeNewArrayFromBatchDataTrace(
+						valueID,
+						typeID,
+						time.Since(startTime),
 					)
+				}()
+			}
 
-				return element, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
+			array, err = atree.NewArrayFromBatchData(
+				context.Storage(),
+				address,
+				v.array.Type(),
+				func() (atree.Value, error) {
+					value, err := iterator.Next()
+					if err != nil {
+						return nil, err
+					}
+					if value == nil {
+						return nil, nil
+					}
+
+					element := MustConvertStoredValue(context, value).
+						Transfer(
+							context,
+							address,
+							remove,
+							nil,
+							preventTransfer,
+							false, // value has a parent container because it is from iterator.
+						)
+
+					return element, nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+		}()
 
 		if remove {
-			err = v.array.PopIterate(interpreter.RemoveReferencedSlab)
+			err = v.array.PopIterate(func(storable atree.Storable) {
+				RemoveReferencedSlab(context, storable)
+			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 
-			interpreter.maybeValidateAtreeValue(v.array)
+			context.MaybeValidateAtreeValue(v.array)
 			if hasNoParentContainer {
-				interpreter.maybeValidateAtreeStorage()
+				context.MaybeValidateAtreeStorage()
 			}
 
-			interpreter.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, storable)
 		}
 	}
 
@@ -1419,13 +1278,13 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v, locationRange)
+		InvalidateReferencedResources(context, v)
 
 		v.array = nil
 	}
 
 	res := newArrayValueFromAtreeArray(
-		interpreter,
+		context,
 		v.Type,
 		v.elementSize,
 		array,
@@ -1438,11 +1297,9 @@ func (v *ArrayValue) Transfer(
 	return res
 }
 
-func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
-	config := interpreter.SharedState.Config
-
+func (v *ArrayValue) Clone(context ValueCloneContext) Value {
 	array := newArrayValueFromConstructor(
-		interpreter,
+		context,
 		v.Type,
 		v.array.Count(),
 		func() *atree.Array {
@@ -1452,7 +1309,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 			}
 
 			array, err := atree.NewArrayFromBatchData(
-				config.Storage,
+				context.Storage(),
 				v.StorageAddress(),
 				v.array.Type(),
 				func() (atree.Value, error) {
@@ -1464,8 +1321,8 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 						return nil, nil
 					}
 
-					element := MustConvertStoredValue(interpreter, value).
-						Clone(interpreter)
+					element := MustConvertStoredValue(context, value).
+						Clone(context)
 
 					return element, nil
 				},
@@ -1485,19 +1342,17 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	return array
 }
 
-func (v *ArrayValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
-	config := interpreter.SharedState.Config
-
-	if config.TracingEnabled {
+func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
+	if TracingEnabled {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
-			interpreter.reportArrayValueDeepRemoveTrace(
-				typeInfo,
-				count,
+			context.ReportArrayValueDeepRemoveTrace(
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1508,17 +1363,17 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer b
 	storage := v.array.Storage
 
 	err := v.array.PopIterate(func(storable atree.Storable) {
-		value := StoredValue(interpreter, storable, storage)
-		value.DeepRemove(interpreter, false) // existingValue is an element of v.array because it is from PopIterate() callback.
-		interpreter.RemoveReferencedSlab(storable)
+		value := StoredValue(context, storable, storage)
+		value.DeepRemove(context, false) // existingValue is an element of v.array because it is from PopIterate() callback.
+		RemoveReferencedSlab(context, storable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	interpreter.maybeValidateAtreeValue(v.array)
+	context.MaybeValidateAtreeValue(v.array)
 	if hasNoParentContainer {
-		interpreter.maybeValidateAtreeStorage()
+		context.MaybeValidateAtreeStorage()
 	}
 }
 
@@ -1538,10 +1393,10 @@ func (v *ArrayValue) GetOwner() common.Address {
 	return common.Address(v.StorageAddress())
 }
 
-func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
+func (v *ArrayValue) SemaType(typeConverter TypeConverter) sema.ArrayType {
 	if v.semaType == nil {
 		// this function will panic already if this conversion fails
-		v.semaType, _ = interpreter.MustConvertStaticToSemaType(v.Type).(sema.ArrayType)
+		v.semaType, _ = MustConvertStaticToSemaType(v.Type, typeConverter).(sema.ArrayType)
 	}
 	return v.semaType
 }
@@ -1550,32 +1405,30 @@ func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
 	return address != v.StorageAddress()
 }
 
-func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *ArrayValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	if v.isResourceKinded == nil {
-		isResourceKinded := v.SemaType(interpreter).IsResourceType()
+		isResourceKinded := v.SemaType(context).IsResourceType()
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded
 }
 
 func (v *ArrayValue) Slice(
-	interpreter *Interpreter,
+	context ArrayCreationContext,
 	from IntValue,
 	to IntValue,
-	locationRange LocationRange,
 ) Value {
-	fromIndex := from.ToInt(locationRange)
-	toIndex := to.ToInt(locationRange)
+	fromIndex := from.ToInt()
+	toIndex := to.ToInt()
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.RangeIterator function will check the upper bound and report an atree.SliceOutOfBoundsError
 
 	if fromIndex < 0 || toIndex < 0 {
-		panic(ArraySliceIndicesError{
-			FromIndex:     fromIndex,
-			UpToIndex:     toIndex,
-			Size:          v.Count(),
-			LocationRange: locationRange,
+		panic(&ArraySliceIndicesError{
+			FromIndex: fromIndex,
+			UpToIndex: toIndex,
+			Size:      v.Count(),
 		})
 	}
 
@@ -1585,20 +1438,18 @@ func (v *ArrayValue) Slice(
 
 		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
 		if goerrors.As(err, &sliceOutOfBoundsError) {
-			panic(ArraySliceIndicesError{
-				FromIndex:     fromIndex,
-				UpToIndex:     toIndex,
-				Size:          v.Count(),
-				LocationRange: locationRange,
+			panic(&ArraySliceIndicesError{
+				FromIndex: fromIndex,
+				UpToIndex: toIndex,
+				Size:      v.Count(),
 			})
 		}
 
 		var invalidSliceIndexError *atree.InvalidSliceIndexError
 		if goerrors.As(err, &invalidSliceIndexError) {
-			panic(InvalidSliceIndexError{
-				FromIndex:     fromIndex,
-				UpToIndex:     toIndex,
-				LocationRange: locationRange,
+			panic(&InvalidSliceIndexError{
+				FromIndex: fromIndex,
+				UpToIndex: toIndex,
 			})
 		}
 
@@ -1606,14 +1457,14 @@ func (v *ArrayValue) Slice(
 	}
 
 	return NewArrayValueWithIterator(
-		interpreter,
-		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
+		context,
+		NewVariableSizedStaticType(context, v.Type.ElementType()),
 		common.ZeroAddress,
 		uint64(toIndex-fromIndex),
 		func() Value {
 
 			// Meter computation for iterating the array.
-			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(context, common.LoopComputationUsage)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1622,7 +1473,7 @@ func (v *ArrayValue) Slice(
 
 			var value Value
 			if atreeValue != nil {
-				value = MustConvertStoredValue(interpreter, atreeValue)
+				value = MustConvertStoredValue(context, atreeValue)
 			}
 
 			if value == nil {
@@ -1630,8 +1481,7 @@ func (v *ArrayValue) Slice(
 			}
 
 			return value.Transfer(
-				interpreter,
-				locationRange,
+				context,
 				atree.Address{},
 				false,
 				nil,
@@ -1643,14 +1493,13 @@ func (v *ArrayValue) Slice(
 }
 
 func (v *ArrayValue) Reverse(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ArrayCreationContext,
 ) Value {
 	count := v.Count()
 	index := count - 1
 
 	return NewArrayValueWithIterator(
-		interpreter,
+		context,
 		v.Type,
 		common.ZeroAddress,
 		uint64(count),
@@ -1660,14 +1509,16 @@ func (v *ArrayValue) Reverse(
 			}
 
 			// Meter computation for iterating the array.
-			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
-			value := v.Get(interpreter, locationRange, index)
+			value := v.Get(context, index)
 			index--
 
 			return value.Transfer(
-				interpreter,
-				locationRange,
+				context,
 				atree.Address{},
 				false,
 				nil,
@@ -1679,16 +1530,15 @@ func (v *ArrayValue) Reverse(
 }
 
 func (v *ArrayValue) Filter(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context InvocationContext,
 	procedure FunctionValue,
 ) Value {
 
-	elementType := v.semaType.ElementType(false)
+	elementType := v.SemaType(context).ElementType(false)
 
 	argumentTypes := []sema.Type{elementType}
 
-	procedureFunctionType := procedure.FunctionType()
+	procedureFunctionType := procedure.FunctionType(context)
 	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 
@@ -1699,8 +1549,8 @@ func (v *ArrayValue) Filter(
 	}
 
 	return NewArrayValueWithIterator(
-		interpreter,
-		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
+		context,
+		NewVariableSizedStaticType(context, v.Type.ElementType()),
 		common.ZeroAddress,
 		uint64(v.Count()), // worst case estimation.
 		func() Value {
@@ -1709,7 +1559,10 @@ func (v *ArrayValue) Filter(
 
 			for {
 				// Meter computation for iterating the array.
-				interpreter.ReportComputation(common.ComputationKindLoop, 1)
+				common.UseComputation(
+					context,
+					common.LoopComputationUsage,
+				)
 
 				atreeValue, err := iterator.Next()
 				if err != nil {
@@ -1721,20 +1574,19 @@ func (v *ArrayValue) Filter(
 					return nil
 				}
 
-				value = MustConvertStoredValue(interpreter, atreeValue)
+				value = MustConvertStoredValue(context, atreeValue)
 				if value == nil {
 					return nil
 				}
 
-				result := interpreter.invokeFunctionValue(
+				result := invokeFunctionValue(
+					context,
 					procedure,
 					[]Value{value},
-					nil,
 					argumentTypes,
 					parameterTypes,
 					returnType,
 					nil,
-					locationRange,
 				)
 
 				shouldInclude, ok := result.(BoolValue)
@@ -1749,8 +1601,7 @@ func (v *ArrayValue) Filter(
 			}
 
 			return value.Transfer(
-				interpreter,
-				locationRange,
+				context,
 				atree.Address{},
 				false,
 				nil,
@@ -1762,31 +1613,30 @@ func (v *ArrayValue) Filter(
 }
 
 func (v *ArrayValue) Map(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context InvocationContext,
 	procedure FunctionValue,
 ) Value {
 
-	elementType := v.semaType.ElementType(false)
+	elementType := v.SemaType(context).ElementType(false)
 
 	argumentTypes := []sema.Type{elementType}
 
-	procedureFunctionType := procedure.FunctionType()
+	procedureFunctionType := procedure.FunctionType(context)
 	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 
-	returnStaticType := ConvertSemaToStaticType(interpreter, returnType)
+	returnStaticType := ConvertSemaToStaticType(context, returnType)
 
 	var returnArrayStaticType ArrayStaticType
 	switch v.Type.(type) {
 	case *VariableSizedStaticType:
 		returnArrayStaticType = NewVariableSizedStaticType(
-			interpreter,
+			context,
 			returnStaticType,
 		)
 	case *ConstantSizedStaticType:
 		returnArrayStaticType = NewConstantSizedStaticType(
-			interpreter,
+			context,
 			returnStaticType,
 			int64(v.Count()),
 		)
@@ -1801,14 +1651,17 @@ func (v *ArrayValue) Map(
 	}
 
 	return NewArrayValueWithIterator(
-		interpreter,
+		context,
 		returnArrayStaticType,
 		common.ZeroAddress,
 		uint64(v.Count()),
 		func() Value {
 
 			// Meter computation for iterating the array.
-			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1819,22 +1672,20 @@ func (v *ArrayValue) Map(
 				return nil
 			}
 
-			value := MustConvertStoredValue(interpreter, atreeValue)
+			value := MustConvertStoredValue(context, atreeValue)
 
-			result := interpreter.invokeFunctionValue(
+			result := invokeFunctionValue(
+				context,
 				procedure,
 				[]Value{value},
-				nil,
 				argumentTypes,
 				parameterTypes,
 				returnType,
 				nil,
-				locationRange,
 			)
 
 			return result.Transfer(
-				interpreter,
-				locationRange,
+				context,
 				atree.Address{},
 				false,
 				nil,
@@ -1846,18 +1697,16 @@ func (v *ArrayValue) Map(
 }
 
 func (v *ArrayValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
-	locationRange LocationRange,
 ) {
-	v.Iterate(interpreter, function, transferElements, locationRange)
+	v.Iterate(context, function, transferElements)
 }
 
 func (v *ArrayValue) ToVariableSized(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ArrayCreationContext,
 ) Value {
 
 	// Convert the constant-sized array type to a variable-sized array type.
@@ -1868,7 +1717,7 @@ func (v *ArrayValue) ToVariableSized(
 	}
 
 	variableSizedType := NewVariableSizedStaticType(
-		interpreter,
+		context,
 		constantSizedType.Type,
 	)
 
@@ -1881,14 +1730,17 @@ func (v *ArrayValue) ToVariableSized(
 	}
 
 	return NewArrayValueWithIterator(
-		interpreter,
+		context,
 		variableSizedType,
 		common.ZeroAddress,
 		uint64(v.Count()),
 		func() Value {
 
 			// Meter computation for iterating the array.
-			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1899,11 +1751,10 @@ func (v *ArrayValue) ToVariableSized(
 				return nil
 			}
 
-			value := MustConvertStoredValue(interpreter, atreeValue)
+			value := MustConvertStoredValue(context, atreeValue)
 
 			return value.Transfer(
-				interpreter,
-				locationRange,
+				context,
 				atree.Address{},
 				false,
 				nil,
@@ -1915,8 +1766,7 @@ func (v *ArrayValue) ToVariableSized(
 }
 
 func (v *ArrayValue) ToConstantSized(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ArrayCreationContext,
 	expectedConstantSizedArraySize int64,
 ) OptionalValue {
 
@@ -1936,7 +1786,7 @@ func (v *ArrayValue) ToConstantSized(
 	}
 
 	constantSizedType := NewConstantSizedStaticType(
-		interpreter,
+		context,
 		variableSizedType.Type,
 		expectedConstantSizedArraySize,
 	)
@@ -1950,14 +1800,17 @@ func (v *ArrayValue) ToConstantSized(
 	}
 
 	constantSizedArray := NewArrayValueWithIterator(
-		interpreter,
+		context,
 		constantSizedType,
 		common.ZeroAddress,
 		uint64(count),
 		func() Value {
 
 			// Meter computation for iterating the array.
-			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1968,11 +1821,10 @@ func (v *ArrayValue) ToConstantSized(
 				return nil
 			}
 
-			value := MustConvertStoredValue(interpreter, atreeValue)
+			value := MustConvertStoredValue(context, atreeValue)
 
 			return value.Transfer(
-				interpreter,
-				locationRange,
+				context,
 				atree.Address{},
 				false,
 				nil,
@@ -1984,7 +1836,7 @@ func (v *ArrayValue) ToConstantSized(
 
 	// Return the constant-sized array as an optional value.
 
-	return NewSomeValueNonCopying(interpreter, constantSizedArray)
+	return NewSomeValueNonCopying(context, constantSizedArray)
 }
 
 func (v *ArrayValue) SetType(staticType ArrayStaticType) {
@@ -1994,3 +1846,275 @@ func (v *ArrayValue) SetType(staticType ArrayStaticType) {
 		panic(errors.NewExternalError(err))
 	}
 }
+
+func (v *ArrayValue) Inlined() bool {
+	return v.array.Inlined()
+}
+
+// Array iterator
+
+type ArrayIterator struct {
+	valueID       atree.ValueID
+	atreeIterator atree.ArrayIterator
+	next          atree.Value
+}
+
+var _ ValueIterator = &ArrayIterator{}
+
+func (i *ArrayIterator) HasNext() bool {
+	if i.next != nil {
+		return true
+	}
+
+	var err error
+	i.next, err = i.atreeIterator.Next()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return i.next != nil
+}
+
+func (i *ArrayIterator) Next(context ValueIteratorContext) Value {
+	var atreeValue atree.Value
+	if i.next != nil {
+		// If there's already a `next` (i.e: `hasNext()` was called before this)
+		// then use that.
+		atreeValue = i.next
+
+		// Clear the cached `next`.
+		i.next = nil
+	} else {
+		var err error
+		atreeValue, err = i.atreeIterator.Next()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	if atreeValue == nil {
+		return nil
+	}
+
+	// atree.Array iterator returns low-level atree.Value,
+	// convert to high-level interpreter.Value
+	return MustConvertStoredValue(context, atreeValue)
+}
+
+func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
+	return i.valueID, true
+}
+
+// define all native functions for array type
+var NativeArrayAppendFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		element := args[0]
+
+		thisArray.Append(context, element)
+		return Void
+	},
+)
+
+var NativeArrayAppendAllFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		otherArray := AssertValueOfType[*ArrayValue](args[0])
+
+		thisArray.AppendAll(context, otherArray)
+		return Void
+	},
+)
+
+var NativeArrayConcatFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		otherArray := AssertValueOfType[*ArrayValue](args[0])
+
+		return thisArray.Concat(context, otherArray)
+	},
+)
+
+var NativeArrayInsertFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		index := AssertValueOfType[NumberValue](args[0])
+		element := args[1]
+
+		thisArray.Insert(context, index.ToInt(), element)
+		return Void
+	},
+)
+
+var NativeArrayRemoveFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		index := AssertValueOfType[NumberValue](args[0])
+
+		return thisArray.Remove(context, index.ToInt())
+	},
+)
+
+var NativeArrayContainsFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		element := args[0]
+
+		return thisArray.Contains(context, element)
+	},
+)
+
+var NativeArraySliceFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		fromValue := AssertValueOfType[IntValue](args[0])
+		toValue := AssertValueOfType[IntValue](args[1])
+
+		return thisArray.Slice(context, fromValue, toValue)
+	},
+)
+
+var NativeArrayReverseFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		return thisArray.Reverse(context)
+	},
+)
+
+var NativeArrayFilterFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		funcValue := AssertValueOfType[FunctionValue](args[0])
+
+		return thisArray.Filter(context, funcValue)
+	},
+)
+
+var NativeArrayMapFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		funcValue := AssertValueOfType[FunctionValue](args[0])
+
+		return thisArray.Map(context, funcValue)
+	},
+)
+
+var NativeArrayToVariableSizedFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.ToVariableSized(context)
+	},
+)
+
+var NativeArrayToConstantSizedFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		typeArguments TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		constantSizedArrayType, ok := typeArguments.NextStatic().(*ConstantSizedStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return thisArray.ToConstantSized(context, constantSizedArrayType.Size)
+	},
+)
+
+var NativeArrayFirstIndexFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		element := args[0]
+
+		return thisArray.FirstIndex(context, element)
+	},
+)
+
+var NativeArrayRemoveFirstFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.RemoveFirst(context)
+	},
+)
+
+var NativeArrayRemoveLastFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.RemoveLast(context)
+	},
+)

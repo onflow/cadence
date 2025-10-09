@@ -18,7 +18,7 @@
 
 package ast
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=ElementType
+//go:generate stringer -type=ElementType
 
 type ElementType uint64
 
@@ -85,4 +85,5 @@ const (
 	ElementTypeForceExpression
 	ElementTypePathExpression
 	ElementTypeAttachExpression
+	ElementTypeStringTemplateExpression
 )

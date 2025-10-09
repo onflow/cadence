@@ -31,7 +31,7 @@ func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
 
 }
 
-func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
+func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
 	checker.visitFunctionDeclaration(
 		declaration,
 		functionDeclarationOptions{
@@ -46,7 +46,7 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 }
 
 func (checker *Checker) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) struct{} {
-	return checker.VisitFunctionDeclaration(declaration.FunctionDeclaration)
+	return checker.VisitFunctionDeclaration(declaration.FunctionDeclaration, false)
 }
 
 type functionDeclarationOptions struct {
@@ -104,7 +104,6 @@ func (checker *Checker) visitFunctionDeclaration(
 		functionType = checker.functionType(
 			declaration.IsNative(),
 			declaration.Purity,
-			access,
 			declaration.TypeParameterList,
 			declaration.ParameterList,
 			declaration.ReturnTypeAnnotation,
@@ -210,24 +209,14 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				func() {
-					oldMappedAccess := checker.entitlementMappingInScope
-					if mappedAccess, isMappedAccess := access.(*EntitlementMapAccess); isMappedAccess {
-						checker.entitlementMappingInScope = mappedAccess.Type
-					} else {
-						checker.entitlementMappingInScope = nil
-					}
-					defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
-
-					checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
-						checker.visitFunctionBlock(
-							functionBlock,
-							functionType.ReturnTypeAnnotation.Type,
-							returnTypeAnnotation,
-							checkResourceLoss,
-						)
-					})
-				}()
+				checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
+					checker.visitFunctionBlock(
+						functionBlock,
+						functionType.ReturnTypeAnnotation.Type,
+						returnTypeAnnotation,
+						checkResourceLoss,
+					)
+				})
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
@@ -359,6 +348,7 @@ func (checker *Checker) declareParameters(
 }
 
 func (checker *Checker) visitWithPostConditions(
+	enclosingElement ast.Element,
 	postConditions *ast.Conditions,
 	returnType Type,
 	returnTypePos ast.HasPosition,
@@ -435,6 +425,8 @@ func (checker *Checker) visitWithPostConditions(
 				//
 				// Here, the `result` value in the `post` block will have type `auth(E, X, Y) &R`.
 
+				// TODO: check how mapping is handled
+
 				if entitlementSupportingType, ok := innerType.(EntitlementSupportingType); ok {
 					supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
 					auth = supportedEntitlements.Access()
@@ -454,6 +446,8 @@ func (checker *Checker) visitWithPostConditions(
 			} else {
 				resultType = returnType
 			}
+
+			checker.Elaboration.SetResultVariableType(enclosingElement, resultType)
 
 			checker.declareResultVariable(
 				resultType,
@@ -480,6 +474,7 @@ func (checker *Checker) visitFunctionBlock(
 	}
 
 	checker.visitWithPostConditions(
+		functionBlock,
 		functionBlock.PostConditions,
 		returnType,
 		returnTypePos,
@@ -542,7 +537,6 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 	functionType := checker.functionType(
 		false,
 		expression.Purity,
-		UnauthorizedAccess,
 		nil,
 		expression.ParameterList,
 		expression.ReturnTypeAnnotation,

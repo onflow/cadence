@@ -25,44 +25,68 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func (interpreter *Interpreter) InvokeFunctionValue(
+func InvokeFunctionValue(
+	context InvocationContext,
 	function FunctionValue,
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	returnType sema.Type,
-	invocationPosition ast.HasPosition,
 ) (
 	value Value,
 	err error,
 ) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.RecoverErrors(func(internalErr error) {
+	defer context.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	return interpreter.invokeFunctionValue(
+	return invokeFunctionValue(
+		context,
 		function,
 		arguments,
-		nil,
 		argumentTypes,
 		parameterTypes,
 		returnType,
 		nil,
-		invocationPosition,
 	), nil
 }
 
-func (interpreter *Interpreter) invokeFunctionValue(
+func invokeFunctionValue(
+	context InvocationContext,
 	function FunctionValue,
 	arguments []Value,
-	expressions []ast.Expression,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	returnType sema.Type,
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
-	invocationPosition ast.HasPosition,
+	typeArguments *sema.TypeParameterTypeOrderedMap,
+) Value {
+	return invokeFunctionValueWithEval(
+		context,
+		function,
+		arguments,
+		func(argument Value) Value {
+			return argument
+		},
+		nil, // no implicit argument
+		argumentTypes,
+		parameterTypes,
+		returnType,
+		typeArguments,
+	)
+}
+
+func invokeFunctionValueWithEval[T any](
+	context InvocationContext,
+	function FunctionValue,
+	arguments []T,
+	evaluate func(T) Value,
+	implicitArgumentValue Value,
+	argumentTypes []sema.Type,
+	parameterTypes []sema.Type,
+	returnType sema.Type,
+	typeArguments *sema.TypeParameterTypeOrderedMap,
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
@@ -76,30 +100,19 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		for i, argument := range arguments {
 			argumentType := argumentTypes[i]
 
-			var locationPos ast.HasPosition
-			if i < len(expressions) {
-				locationPos = expressions[i]
-			} else {
-				locationPos = invocationPosition
-			}
-
-			locationRange := LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: locationPos,
-			}
+			argumentValue := evaluate(argument)
 
 			if i < parameterTypeCount {
 				parameterType := parameterTypes[i]
-				transferredArguments[i] = interpreter.transferAndConvert(
-					argument,
+				transferredArguments[i] = TransferIfNotResourceAndConvert(
+					context,
+					argumentValue,
 					argumentType,
 					parameterType,
-					locationRange,
 				)
 			} else {
-				transferredArguments[i] = argument.Transfer(
-					interpreter,
-					locationRange,
+				transferredArguments[i] = argumentValue.Transfer(
+					context,
 					atree.Address{},
 					false,
 					nil,
@@ -110,25 +123,34 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		}
 	}
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: invocationPosition,
+	// add the implicit argument to the end of the argument list, if it exists
+	if implicitArgumentValue != nil {
+		transferredImplicitArgument := implicitArgumentValue.Transfer(
+			context,
+			atree.Address{},
+			false,
+			nil,
+			nil,
+			true, // argument is standalone.
+		)
+		transferredArguments = append(transferredArguments, transferredImplicitArgument)
+		argumentType := MustSemaTypeOfValue(implicitArgumentValue, context)
+		argumentTypes = append(argumentTypes, argumentType)
 	}
 
 	invocation := NewInvocation(
-		interpreter,
-		nil,
+		context,
 		nil,
 		nil,
 		transferredArguments,
 		argumentTypes,
-		typeParameterTypes,
-		locationRange,
+		typeArguments,
+		context.LocationRange(),
 	)
 
-	resultValue := function.invoke(invocation)
+	resultValue := function.Invoke(invocation)
 
-	functionReturnType := function.FunctionType().ReturnTypeAnnotation.Type
+	functionReturnType := function.FunctionType(context).ReturnTypeAnnotation.Type
 
 	// Only convert and box.
 	// No need to transfer, since transfer would happen later, when the return value gets assigned.
@@ -149,8 +171,8 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	//
 	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
 
-	return interpreter.ConvertAndBox(
-		locationRange,
+	return ConvertAndBox(
+		context,
 		resultValue,
 		functionReturnType,
 		returnType,
@@ -172,27 +194,19 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
-		interpreter.declareSelfVariable(*invocation.Self, invocation.LocationRange)
+		interpreter.declareSelfVariable(*invocation.Self)
 	}
 	if invocation.Base != nil {
 		interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
 	}
-	if invocation.BoundAuthorization != nil {
-		oldInvocationValue := interpreter.SharedState.currentEntitlementMappedValue
-		interpreter.SharedState.currentEntitlementMappedValue = invocation.BoundAuthorization
-		defer func() {
-			interpreter.SharedState.currentEntitlementMappedValue = oldInvocationValue
-		}()
-	}
 
-	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments, invocation.LocationRange)
+	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)
 }
 
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function *InterpretedFunctionValue,
 	arguments []Value,
-	declarationLocationRange LocationRange,
 ) Value {
 	defer func() {
 		// Only unwind the call stack if there was no error
@@ -215,7 +229,6 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		},
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,
-		declarationLocationRange,
 	)
 }
 

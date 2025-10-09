@@ -1,0 +1,1181 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package interpreter_test
+
+import (
+	"fmt"
+	"math/big"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/vm"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	"github.com/onflow/cadence/test_utils/sema_utils"
+)
+
+func TestInterpretToString(t *testing.T) {
+
+	t.Parallel()
+
+	for _, ty := range sema.AllIntegerTypes {
+
+		t.Run(ty.String(), func(t *testing.T) {
+
+			inter := parseCheckAndPrepare(t,
+				fmt.Sprintf(
+					`
+                      let x: %s = 42
+                      let y = x.toString()
+                    `,
+					ty,
+				),
+			)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredStringValue("42"),
+				inter.GetGlobal("y"),
+			)
+		})
+	}
+
+	t.Run("Address", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          let x: Address = 0x42
+          let y = x.toString()
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("0x0000000000000042"),
+			inter.GetGlobal("y"),
+		)
+	})
+
+	for _, ty := range sema.AllFixedPointTypes {
+
+		t.Run(ty.String(), func(t *testing.T) {
+
+			var expected interpreter.Value
+
+			isSigned := sema.IsSubType(ty, sema.SignedFixedPointType)
+
+			literal := "12.34"
+			var expectedStr string
+
+			switch ty {
+			case sema.Fix128Type, sema.UFix128Type:
+				expectedStr = "12.340000000000000000000000"
+			default:
+				expectedStr = "12.34000000"
+			}
+
+			if isSigned {
+				literal = "-" + literal
+				expectedStr = "-" + expectedStr
+			}
+
+			expected = interpreter.NewUnmeteredStringValue(expectedStr)
+
+			inter := parseCheckAndPrepare(t,
+				fmt.Sprintf(
+					`
+                      let x: %s = %s
+                      let y = x.toString()
+                    `,
+					ty,
+					literal,
+				),
+			)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				expected,
+				inter.GetGlobal("y"),
+			)
+		})
+	}
+}
+
+func TestInterpretToBytes(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Address", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          let x: Address = 0x123456
+          let y = x.toBytes()
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeUInt8,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x0),
+				interpreter.NewUnmeteredUInt8Value(0x12),
+				interpreter.NewUnmeteredUInt8Value(0x34),
+				interpreter.NewUnmeteredUInt8Value(0x56),
+			),
+			inter.GetGlobal("y"),
+		)
+	})
+}
+
+func TestInterpretAddressFromBytes(t *testing.T) {
+
+	t.Parallel()
+
+	runValidCase := func(t *testing.T, expected []byte, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Address {
+                      let a = Address.fromBytes(%[1]s)
+                      let f = Address.fromBytes
+                      let b = f(%[1]s)
+                      if a != b {
+                          return 0x0
+                      }
+                      return b
+                  }
+                `,
+				innerCode,
+			)
+
+			inter := parseCheckAndPrepare(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			addressVal, ok := res.(interpreter.AddressValue)
+			require.True(t, ok)
+
+			require.Equal(t, expected, addressVal.ToAddress().Bytes())
+		})
+	}
+
+	runValidRoundTripCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Bool {
+                    let address: Address = %s;
+                    return address == Address.fromBytes(address.toBytes());
+                  }
+                `,
+				innerCode,
+			)
+
+			inter := parseCheckAndPrepare(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.True(t, bool(boolVal))
+		})
+	}
+
+	runInvalidCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Address {
+                      return Address.fromBytes(%s)
+                  }
+                `,
+				innerCode,
+			)
+
+			inter := parseCheckAndPrepare(t, code)
+			_, err := inter.Invoke("test")
+
+			RequireError(t, err)
+			require.ErrorIs(t, err, common.ErrAddressOverflow)
+		})
+	}
+
+	runValidCase(t, []byte{}, "[]")
+	runValidCase(t, []byte{1}, "[1]")
+	runValidCase(t, []byte{12, 34, 56}, "[12, 34, 56]")
+	runValidCase(t, []byte{67, 97, 100, 101, 110, 99, 101, 33}, "[67, 97, 100, 101, 110, 99, 101, 33]")
+
+	runValidRoundTripCase(t, "0x0")
+	runValidRoundTripCase(t, "0x01")
+	runValidRoundTripCase(t, "0x436164656E636521")
+	runValidRoundTripCase(t, "0x46716465AE633188")
+
+	runInvalidCase(t, "[12, 34, 56, 11, 22, 33, 44, 55, 66, 77, 88, 99, 111]")
+}
+
+func TestInterpretAddressFromString(t *testing.T) {
+
+	t.Parallel()
+
+	runValidCase := func(t *testing.T, expected string, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Address? {
+                      let a = Address.fromString(%[1]s)
+                      let f = Address.fromString
+                      let b = f(%[1]s)
+                      if a != b {
+                          return nil
+                      }
+                      return b
+                  }
+                `,
+				innerCode,
+			)
+
+			inter := parseCheckAndPrepare(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			addressOpt, ok := res.(*interpreter.SomeValue)
+			require.True(t, ok)
+
+			innerValue := addressOpt.InnerValue()
+			addressVal, ok := innerValue.(interpreter.AddressValue)
+			require.True(t, ok)
+			require.Equal(t, expected, addressVal.ToAddress().HexWithPrefix())
+		})
+	}
+
+	runValidRoundTripCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Bool {
+                    let address: Address? = %s;
+                    return address == Address.fromString(address!.toString());
+                  }
+                `,
+				innerCode,
+			)
+
+			inter := parseCheckAndPrepare(t, code)
+			res, err := inter.Invoke("test")
+
+			require.NoError(t, err)
+
+			boolVal, ok := res.(interpreter.BoolValue)
+			require.True(t, ok)
+
+			require.True(t, bool(boolVal))
+		})
+	}
+
+	runInvalidCase := func(t *testing.T, innerCode string) {
+		t.Run(innerCode, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                  fun test(): Address? {
+                      return Address.fromString(%s)
+                  }
+                `,
+				innerCode,
+			)
+
+			inter := parseCheckAndPrepare(t, code)
+			res, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			_, ok := res.(interpreter.NilValue)
+			require.True(t, ok)
+		})
+	}
+
+	// Note: output of HexWithPrefix() lowercases the 'E'.
+	runValidCase(t, "0x436164656e636521", "\"0x436164656E636521\"")
+	runValidCase(t, "0x0000000000000000", "\"0x0\"")
+	runValidCase(t, "0x0000000000000001", "\"0x01\"")
+
+	runValidRoundTripCase(t, "0x0")
+	runValidRoundTripCase(t, "0x01")
+	runValidRoundTripCase(t, "0x46716465AE633188")
+
+	runInvalidCase(t, "\"436164656E636521\"")
+	runInvalidCase(t, "\"ZZZ\"")
+	runInvalidCase(t, "\"0xZZZ\"")
+	runInvalidCase(t, "\"0x436164656E63652146757265766572\"")
+}
+
+func TestInterpretToBigEndianBytes(t *testing.T) {
+
+	t.Parallel()
+
+	typeTests := map[string]map[string][]byte{
+		// Int*
+		"Int": {
+			"0":                  {0},
+			"42":                 {42},
+			"127":                {127},
+			"128":                {0, 128},
+			"200":                {0, 200},
+			"-1":                 {255},
+			"-200":               {255, 56},
+			"-10000000000000000": {220, 121, 13, 144, 63, 0, 0},
+		},
+		"Int8": {
+			"0":    {0},
+			"42":   {42},
+			"127":  {127},
+			"99":   {99},
+			"-1":   {255},
+			"-127": {129},
+			"-128": {128},
+			"-99":  {157},
+		},
+		"Int16": {
+			"0":      {0, 0},
+			"42":     {0, 42},
+			"32767":  {127, 255},
+			"10000":  {39, 16},
+			"-1":     {255, 255},
+			"-10000": {216, 240},
+			"-32767": {128, 1},
+			"-32768": {128, 0},
+		},
+		"Int32": {
+			"0":           {0, 0, 0, 0},
+			"42":          {0, 0, 0, 42},
+			"10000":       {0, 0, 39, 16},
+			"2147483647":  {127, 255, 255, 255},
+			"-1":          {255, 255, 255, 255},
+			"-10000":      {255, 255, 216, 240},
+			"-2147483647": {128, 0, 0, 1},
+			"-2147483648": {128, 0, 0, 0},
+		},
+		"Int64": {
+			"0":                    {0, 0, 0, 0, 0, 0, 0, 0},
+			"42":                   {0, 0, 0, 0, 0, 0, 0, 42},
+			"10000":                {0, 0, 0, 0, 0, 0, 39, 16},
+			"9223372036854775807":  {127, 255, 255, 255, 255, 255, 255, 255},
+			"-1":                   {255, 255, 255, 255, 255, 255, 255, 255},
+			"-10000":               {255, 255, 255, 255, 255, 255, 216, 240},
+			"-9223372036854775807": {128, 0, 0, 0, 0, 0, 0, 1},
+			"-9223372036854775808": {128, 0, 0, 0, 0, 0, 0, 0},
+		},
+		"Int128": {
+			"0":                  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42":                 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			"127":                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			"128":                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			"200":                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			"10000":              {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 16},
+			"-1":                 {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"-200":               {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 56},
+			"-10000":             {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 216, 240},
+			"-10000000000000000": {255, 255, 255, 255, 255, 255, 255, 255, 255, 220, 121, 13, 144, 63, 0, 0},
+			"-170141183460469231731687303715884105728": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"170141183460469231731687303715884105727":  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"Int256": {
+			"0":                  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42":                 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			"127":                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			"128":                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			"200":                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			"10000":              {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 16},
+			"-1":                 {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"-200":               {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 56},
+			"-10000000000000000": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 220, 121, 13, 144, 63, 0, 0},
+			"-57896044618658097711785492504343953926634992332820282019728792003956564819968": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"57896044618658097711785492504343953926634992332820282019728792003956564819967":  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		// UInt*
+		"UInt": {
+			"0":   {0},
+			"42":  {42},
+			"127": {127},
+			"128": {128},
+			"200": {200},
+		},
+		"UInt8": {
+			"0":   {0},
+			"42":  {42},
+			"99":  {99},
+			"127": {127},
+			"128": {128},
+			"255": {255},
+		},
+		"UInt16": {
+			"0":     {0, 0},
+			"42":    {0, 42},
+			"10000": {39, 16},
+			"32767": {127, 255},
+			"32768": {128, 0},
+			"65535": {255, 255},
+		},
+		"UInt32": {
+			"0":          {0, 0, 0, 0},
+			"42":         {0, 0, 0, 42},
+			"10000":      {0, 0, 39, 16},
+			"2147483647": {127, 255, 255, 255},
+			"2147483648": {128, 0, 0, 0},
+			"4294967295": {255, 255, 255, 255},
+		},
+		"UInt64": {
+			"0":                    {0, 0, 0, 0, 0, 0, 0, 0},
+			"42":                   {0, 0, 0, 0, 0, 0, 0, 42},
+			"10000":                {0, 0, 0, 0, 0, 0, 39, 16},
+			"9223372036854775807":  {127, 255, 255, 255, 255, 255, 255, 255},
+			"9223372036854775808":  {128, 0, 0, 0, 0, 0, 0, 0},
+			"18446744073709551615": {255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"UInt128": {
+			"0":     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42":    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			"127":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			"128":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			"200":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			"10000": {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 16},
+			"170141183460469231731687303715884105727": {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"170141183460469231731687303715884105728": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"340282366920938463463374607431768211455": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"UInt256": {
+			"0":     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42":    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			"127":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			"128":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			"200":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			"10000": {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 16},
+			"115792089237316195423570985008687907853269984665640564039457584007913129639935": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		// Word*
+		"Word8": {
+			"0":   {0},
+			"42":  {42},
+			"127": {127},
+			"128": {128},
+			"255": {255},
+		},
+		"Word16": {
+			"0":     {0, 0},
+			"42":    {0, 42},
+			"32767": {127, 255},
+			"32768": {128, 0},
+			"65535": {255, 255},
+		},
+		"Word32": {
+			"0":          {0, 0, 0, 0},
+			"42":         {0, 0, 0, 42},
+			"2147483647": {127, 255, 255, 255},
+			"2147483648": {128, 0, 0, 0},
+			"4294967295": {255, 255, 255, 255},
+		},
+		"Word64": {
+			"0":                    {0, 0, 0, 0, 0, 0, 0, 0},
+			"42":                   {0, 0, 0, 0, 0, 0, 0, 42},
+			"9223372036854775807":  {127, 255, 255, 255, 255, 255, 255, 255},
+			"9223372036854775808":  {128, 0, 0, 0, 0, 0, 0, 0},
+			"18446744073709551615": {255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"Word128": {
+			"0":     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42":    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			"127":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			"128":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			"200":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			"10000": {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 16},
+			"170141183460469231731687303715884105727": {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"170141183460469231731687303715884105728": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"340282366920938463463374607431768211455": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"Word256": {
+			"0":     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42":    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			"127":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			"128":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			"200":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			"10000": {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 16},
+			"115792089237316195423570985008687907853269984665640564039457584007913129639935": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		// Fix*
+		"Fix64": {
+			"0.0":   {0, 0, 0, 0, 0, 0, 0, 0},
+			"42.0":  {0, 0, 0, 0, 250, 86, 234, 0},
+			"42.24": {0, 0, 0, 0, 251, 197, 32, 0},
+			"-1.0":  {255, 255, 255, 255, 250, 10, 31, 0},
+		},
+		"Fix128": {
+			"0.0":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42.0":  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			"42.24": {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			"-1.0":  {255, 255, 255, 255, 255, 255, 44, 61, 228, 49, 51, 18, 95, 0, 0, 0},
+			"170141183460469.231731687303715884105727":  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"-170141183460469.231731687303715884105728": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		// UFix*
+		"UFix64": {
+			"0.0":   {0, 0, 0, 0, 0, 0, 0, 0},
+			"42.0":  {0, 0, 0, 0, 250, 86, 234, 0},
+			"42.24": {0, 0, 0, 0, 251, 197, 32, 0},
+		},
+		"UFix128": {
+			"0.0":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42.0":  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			"42.24": {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			"340282366920938.463463374607431768211455": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+	}
+
+	sizes := map[string]uint{
+		"Int8":    sema.Int8TypeSize,
+		"UInt8":   sema.UInt8TypeSize,
+		"Word8":   sema.Word8TypeSize,
+		"Int16":   sema.Int16TypeSize,
+		"UInt16":  sema.UInt16TypeSize,
+		"Word16":  sema.Word16TypeSize,
+		"Int32":   sema.Int32TypeSize,
+		"UInt32":  sema.UInt32TypeSize,
+		"Word32":  sema.Word32TypeSize,
+		"Int64":   sema.Int64TypeSize,
+		"UInt64":  sema.UInt64TypeSize,
+		"Fix64":   sema.Fix64TypeSize,
+		"Fix128":  sema.Fix128TypeSize,
+		"UFix64":  sema.UFix64TypeSize,
+		"UFix128": sema.UFix128TypeSize,
+		"Word64":  sema.Word64TypeSize,
+		"Int128":  sema.Int128TypeSize,
+		"UInt128": sema.UInt128TypeSize,
+		"Int256":  sema.Int256TypeSize,
+		"UInt256": sema.UInt256TypeSize,
+	}
+	// Ensure the test cases are complete
+
+	for _, integerType := range sema.AllNumberTypes {
+		switch integerType {
+		case sema.NumberType, sema.SignedNumberType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
+			sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+		}
+
+		if _, ok := typeTests[integerType.String()]; !ok {
+			panic(fmt.Sprintf("broken test: missing %s", integerType))
+		}
+	}
+
+	for ty, tests := range typeTests {
+
+		size, hasSize := sizes[ty]
+
+		for value, expected := range tests {
+
+			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
+
+				inter := parseCheckAndPrepare(t,
+					fmt.Sprintf(
+						`
+                          let value: %s = %s
+                          let result = value.toBigEndianBytes()
+                        `,
+						ty,
+						value,
+					),
+				)
+
+				result := inter.GetGlobal("result")
+
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.ByteSliceToByteArrayValue(inter, expected),
+					result,
+				)
+
+				// ensure that .toBigEndianBytes() is the same size as the source type, if it's fixed-width
+				if hasSize {
+					arrayVal := result.(*interpreter.ArrayValue)
+					arraySize := uint(arrayVal.Count())
+					assert.Equalf(t, size, arraySize, "Expected %s.toBigEndianBytes() to return %d bytes, got %d", ty, size, arraySize)
+				}
+			})
+		}
+	}
+}
+
+func TestInterpretFromBigEndianBytes(t *testing.T) {
+
+	t.Parallel()
+
+	validTestsWithRoundtrip := map[string]map[string]interpreter.Value{
+		// Int*
+		"Int": {
+			"[0]":                           interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(0)),
+			"[42]":                          interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(42)),
+			"[127]":                         interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(127)),
+			"[0, 128]":                      interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(128)),
+			"[0, 200]":                      interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(200)),
+			"[255]":                         interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(-1)),
+			"[255, 56]":                     interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(-200)),
+			"[220, 121, 13, 144, 63, 0, 0]": interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(-10000000000000000)),
+		},
+		"Int8": {
+			"[0]":   interpreter.NewUnmeteredInt8Value(0),
+			"[42]":  interpreter.NewUnmeteredInt8Value(42),
+			"[127]": interpreter.NewUnmeteredInt8Value(127),
+			"[255]": interpreter.NewUnmeteredInt8Value(-1),
+			"[129]": interpreter.NewUnmeteredInt8Value(-127),
+			"[128]": interpreter.NewUnmeteredInt8Value(-128),
+		},
+		"Int16": {
+			"[0, 0]":     interpreter.NewUnmeteredInt16Value(0),
+			"[42]":       interpreter.NewUnmeteredInt16Value(42),
+			"[0, 42]":    interpreter.NewUnmeteredInt16Value(42),
+			"[127, 255]": interpreter.NewUnmeteredInt16Value(32767),
+			"[255, 255]": interpreter.NewUnmeteredInt16Value(-1),
+			"[128, 1]":   interpreter.NewUnmeteredInt16Value(-32767),
+			"[128, 0]":   interpreter.NewUnmeteredInt16Value(-32768),
+		},
+		"Int32": {
+			"[0, 0, 0, 0]":         interpreter.NewUnmeteredInt32Value(0),
+			"[42]":                 interpreter.NewUnmeteredInt32Value(42),
+			"[0, 0, 0, 42]":        interpreter.NewUnmeteredInt32Value(42),
+			"[127, 255, 255, 255]": interpreter.NewUnmeteredInt32Value(2147483647),
+			"[255, 255, 255, 255]": interpreter.NewUnmeteredInt32Value(-1),
+			"[128, 0, 0, 1]":       interpreter.NewUnmeteredInt32Value(-2147483647),
+			"[128, 0, 0, 0]":       interpreter.NewUnmeteredInt32Value(-2147483648),
+		},
+		"Int64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":  interpreter.NewUnmeteredInt64Value(0),
+			"[42]":                      interpreter.NewUnmeteredInt64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 42]": interpreter.NewUnmeteredInt64Value(42),
+			"[127, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredInt64Value(9223372036854775807),
+			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredInt64Value(-1),
+			"[128, 0, 0, 0, 0, 0, 0, 1]":               interpreter.NewUnmeteredInt64Value(-9223372036854775807),
+			"[128, 0, 0, 0, 0, 0, 0, 0]":               interpreter.NewUnmeteredInt64Value(-9223372036854775808),
+		},
+		"Int128": {
+			"[0]":                           interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(0)),
+			"[42]":                          interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(42)),
+			"[127]":                         interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(127)),
+			"[0, 128]":                      interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(128)),
+			"[0, 200]":                      interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(200)),
+			"[255]":                         interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(-1)),
+			"[255, 56]":                     interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(-200)),
+			"[220, 121, 13, 144, 63, 0, 0]": interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(-10000000000000000)),
+		},
+		"Int256": {
+			"[0]":                           interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(0)),
+			"[42]":                          interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(42)),
+			"[127]":                         interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(127)),
+			"[0, 128]":                      interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(128)),
+			"[0, 200]":                      interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(200)),
+			"[255]":                         interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(-1)),
+			"[255, 56]":                     interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(-200)),
+			"[220, 121, 13, 144, 63, 0, 0]": interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(-10000000000000000)),
+		},
+		// UInt*
+		"UInt": {
+			"[0]":   interpreter.NewUnmeteredUIntValueFromUint64(0),
+			"[42]":  interpreter.NewUnmeteredUIntValueFromUint64(42),
+			"[127]": interpreter.NewUnmeteredUIntValueFromUint64(127),
+			"[128]": interpreter.NewUnmeteredUIntValueFromUint64(128),
+			"[200]": interpreter.NewUnmeteredUIntValueFromUint64(200),
+		},
+		"UInt8": {
+			"[0]":   interpreter.NewUnmeteredUInt8Value(0),
+			"[42]":  interpreter.NewUnmeteredUInt8Value(42),
+			"[127]": interpreter.NewUnmeteredUInt8Value(127),
+			"[128]": interpreter.NewUnmeteredUInt8Value(128),
+			"[255]": interpreter.NewUnmeteredUInt8Value(255),
+		},
+		"UInt16": {
+			"[0, 0]":     interpreter.NewUnmeteredUInt16Value(0),
+			"[42]":       interpreter.NewUnmeteredUInt16Value(42),
+			"[0, 42]":    interpreter.NewUnmeteredUInt16Value(42),
+			"[127, 255]": interpreter.NewUnmeteredUInt16Value(32767),
+			"[128, 0]":   interpreter.NewUnmeteredUInt16Value(32768),
+			"[255, 255]": interpreter.NewUnmeteredUInt16Value(65535),
+		},
+		"UInt32": {
+			"[0, 0, 0, 0]":         interpreter.NewUnmeteredUInt32Value(0),
+			"[42]":                 interpreter.NewUnmeteredUInt32Value(42),
+			"[0, 0, 0, 42]":        interpreter.NewUnmeteredUInt32Value(42),
+			"[127, 255, 255, 255]": interpreter.NewUnmeteredUInt32Value(2147483647),
+			"[128, 0, 0, 0]":       interpreter.NewUnmeteredUInt32Value(2147483648),
+			"[255, 255, 255, 255]": interpreter.NewUnmeteredUInt32Value(4294967295),
+		},
+		"UInt64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":  interpreter.NewUnmeteredUInt64Value(0),
+			"[42]":                      interpreter.NewUnmeteredUInt64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 42]": interpreter.NewUnmeteredUInt64Value(42),
+			"[127, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt64Value(9223372036854775807),
+			"[128, 0, 0, 0, 0, 0, 0, 0]":               interpreter.NewUnmeteredUInt64Value(9223372036854775808),
+			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt64Value(18446744073709551615),
+		},
+		"UInt128": {
+			"[0]":   interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
+		},
+		"UInt256": {
+			"[0]":   interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
+		},
+		// Word*
+		"Word8": {
+			"[0]":   interpreter.NewUnmeteredWord8Value(0),
+			"[42]":  interpreter.NewUnmeteredWord8Value(42),
+			"[127]": interpreter.NewUnmeteredWord8Value(127),
+			"[128]": interpreter.NewUnmeteredWord8Value(128),
+			"[255]": interpreter.NewUnmeteredWord8Value(255),
+		},
+		"Word16": {
+			"[0, 0]":     interpreter.NewUnmeteredWord16Value(0),
+			"[42]":       interpreter.NewUnmeteredWord16Value(42),
+			"[0, 42]":    interpreter.NewUnmeteredWord16Value(42),
+			"[127, 255]": interpreter.NewUnmeteredWord16Value(32767),
+			"[128, 0]":   interpreter.NewUnmeteredWord16Value(32768),
+			"[255, 255]": interpreter.NewUnmeteredWord16Value(65535),
+		},
+		"Word32": {
+			"[0, 0, 0, 0]":         interpreter.NewUnmeteredWord32Value(0),
+			"[42]":                 interpreter.NewUnmeteredWord32Value(42),
+			"[0, 0, 0, 42]":        interpreter.NewUnmeteredWord32Value(42),
+			"[127, 255, 255, 255]": interpreter.NewUnmeteredWord32Value(2147483647),
+			"[128, 0, 0, 0]":       interpreter.NewUnmeteredWord32Value(2147483648),
+			"[255, 255, 255, 255]": interpreter.NewUnmeteredWord32Value(4294967295),
+		},
+		"Word64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":  interpreter.NewUnmeteredWord64Value(0),
+			"[42]":                      interpreter.NewUnmeteredWord64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 42]": interpreter.NewUnmeteredWord64Value(42),
+			"[127, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord64Value(9223372036854775807),
+			"[128, 0, 0, 0, 0, 0, 0, 0]":               interpreter.NewUnmeteredWord64Value(9223372036854775808),
+			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord64Value(18446744073709551615),
+		},
+		"Word128": {
+			"[0]":   interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
+		},
+		"Word256": {
+			"[0]":   interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
+		},
+		// Fix*
+		"Fix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":             interpreter.NewUnmeteredFix64Value(0),
+			"[250, 86, 234, 0]":                    interpreter.NewUnmeteredFix64Value(42 * sema.Fix64Factor), // 42.0 with padding
+			"[0, 0, 0, 0, 250, 86, 234, 0]":        interpreter.NewUnmeteredFix64Value(42 * sema.Fix64Factor), // 42.0
+			"[0, 0, 0, 0, 251, 197, 32, 0]":        interpreter.NewUnmeteredFix64Value(4224_000_000),          // 42.24
+			"[255, 255, 255, 255, 250, 10, 31, 0]": interpreter.NewUnmeteredFix64Value(-1 * sema.Fix64Factor), // -1.0
+		},
+		"Fix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]":                                 interpreter.NewUnmeteredFix128ValueWithInteger(0),
+			"[34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                                 interpreter.NewUnmeteredFix128ValueWithInteger(42),               // 42.0 with padding
+			"[0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                  interpreter.NewUnmeteredFix128ValueWithInteger(42),               // 42.0
+			"[0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0]":                     interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(4224, 22), // 42.24
+			"[255, 255, 255, 255, 255, 255, 44, 61, 228, 49, 51, 18, 95, 0, 0, 0]":             interpreter.NewUnmeteredFix128ValueWithInteger(-1),               // -1.0
+			"[127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+			"[128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]":                               interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+		},
+
+		// UFix*
+		"UFix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":      interpreter.NewUnmeteredUFix64Value(0),
+			"[250, 86, 234, 0]":             interpreter.NewUnmeteredUFix64Value(42 * sema.Fix64Factor), // 42.0 with padding
+			"[0, 0, 0, 0, 250, 86, 234, 0]": interpreter.NewUnmeteredUFix64Value(42 * sema.Fix64Factor), // 42.0
+			"[0, 0, 0, 0, 251, 197, 32, 0]": interpreter.NewUnmeteredUFix64Value(4224_000_000),          // 42.24
+		},
+		"UFix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]":                                 interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+			"[34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                                 interpreter.NewUnmeteredUFix128ValueWithInteger(42),               // 42.0 with padding
+			"[0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                  interpreter.NewUnmeteredUFix128ValueWithInteger(42),               // 42.0
+			"[0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0]":                     interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(4224, 22), // 42.24
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+		},
+	}
+
+	invalidTests := map[string][]string{
+		// Int*
+		"Int": {}, // No overflow
+		"Int8": {
+			"[0, 0]",
+			"[0, 22]",
+		},
+		"Int16": {
+			"[0, 0, 0]",
+			"[0, 22, 0]",
+		},
+		"Int32": {
+			"[0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0]",
+		},
+		"Int64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Int128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Int256": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// UInt*
+		"UInt": {}, // No overflow
+		"UInt8": {
+			"[0, 0]",
+			"[0, 22]",
+		},
+		"UInt16": {
+			"[0, 0, 0]",
+			"[0, 22, 0]",
+		},
+		"UInt32": {
+			"[0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0]",
+		},
+		"UInt64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"UInt128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"UInt256": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// Word*
+		"Word8": {
+			"[0, 0]",
+			"[0, 22]",
+		},
+		"Word16": {
+			"[0, 0, 0]",
+			"[0, 22, 0]",
+		},
+		"Word32": {
+			"[0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0]",
+		},
+		"Word64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Word128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Word256": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// Fix*
+		"Fix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Fix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// UFix*
+		"UFix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"UFix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+	}
+
+	// Ensure the test cases are complete
+
+	for _, integerType := range sema.AllNumberTypes {
+		switch integerType {
+		case sema.NumberType, sema.SignedNumberType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
+			sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+		}
+
+		if _, ok := validTestsWithRoundtrip[integerType.String()]; !ok {
+			panic(fmt.Sprintf("broken test for valid cases: missing %s", integerType))
+		}
+
+		if _, ok := invalidTests[integerType.String()]; !ok {
+			panic(fmt.Sprintf("broken test for invalid cases: missing %s", integerType))
+		}
+	}
+
+	for ty, tests := range validTestsWithRoundtrip {
+		for value, expected := range tests {
+			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
+				inter := parseCheckAndPrepare(t,
+					fmt.Sprintf(
+						`
+                          let resultOpt: %s? = %s.fromBigEndianBytes(%s)
+                          let result: %s = resultOpt!
+                          let roundTripEqual = result == %s.fromBigEndianBytes(result.toBigEndianBytes())!
+                        `,
+						ty,
+						ty,
+						value,
+						ty,
+						ty,
+					),
+				)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					expected,
+					inter.GetGlobal("result"),
+				)
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.TrueValue,
+					inter.GetGlobal("roundTripEqual"),
+				)
+			})
+
+			t.Run(fmt.Sprintf("%s: %s, as bound function", ty, value), func(t *testing.T) {
+				inter := parseCheckAndPrepare(t,
+					fmt.Sprintf(
+						`
+                          let from = %s.fromBigEndianBytes
+                          let resultOpt: %s? = from(%s)
+                          let result: %s = resultOpt!
+                          let roundTripEqual = result == from(result.toBigEndianBytes())!
+                        `,
+						ty,
+						ty,
+						value,
+						ty,
+					),
+				)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					expected,
+					inter.GetGlobal("result"),
+				)
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.TrueValue,
+					inter.GetGlobal("roundTripEqual"),
+				)
+			})
+		}
+	}
+
+	for ty, tests := range invalidTests {
+		for _, value := range tests {
+			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
+				inter := parseCheckAndPrepare(t,
+					fmt.Sprintf(
+						`
+                          let result: %s? = %s.fromBigEndianBytes(%s)
+                        `,
+						ty,
+						ty,
+						value,
+					),
+				)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.NilValue{},
+					inter.GetGlobal("result"),
+				)
+			})
+		}
+	}
+}
+
+func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
+
+	t.Parallel()
+
+	typeParameter := &sema.TypeParameter{
+		Name:      "T",
+		TypeBound: nil,
+	}
+
+	typeParameter2 := &sema.TypeParameter{
+		Name:      "T2",
+		TypeBound: nil,
+	}
+
+	nativeFunctionType := &sema.FunctionType{
+		Purity: sema.FunctionPurityView,
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+			typeParameter2,
+		},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "first",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "second",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter2,
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	}
+
+	nativeFunction := func(
+		_ interpreter.NativeFunctionContext,
+		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		_ []interpreter.Value,
+	) interpreter.Value {
+		typeValue := typeArguments.NextStatic()
+		require.Equal(t, interpreter.PrimitiveStaticTypeInt, typeValue)
+
+		typeValue2 := typeArguments.NextStatic()
+		require.Equal(t, interpreter.PrimitiveStaticTypeBool, typeValue2)
+
+		typeValue3 := typeArguments.NextStatic()
+		require.Equal(t, nil, typeValue3)
+
+		return interpreter.Void
+	}
+
+	var function interpreter.Value
+	if *compile {
+		function = vm.NewNativeFunctionValue(
+			"nativeFunction",
+			nativeFunctionType,
+			nativeFunction,
+		)
+	} else {
+		function = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
+			nativeFunctionType,
+			nativeFunction,
+		)
+	}
+
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name:  "nativeFunction",
+		Type:  nativeFunctionType,
+		Value: function,
+		Kind:  common.DeclarationKindConstant,
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+		fun test() {
+			nativeFunction(0, false)
+		}
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &sema_utils.ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+}

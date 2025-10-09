@@ -29,122 +29,116 @@ import (
 
 var account_StorageTypeID = sema.Account_StorageType.ID()
 var account_StorageStaticType StaticType = PrimitiveStaticTypeAccount_Storage
+var account_StorageFieldNames []string = nil
 
 // NewAccountStorageValue constructs an Account.Storage value.
 func NewAccountStorageValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
+	storageUsedGet func(context MemberAccessibleContext) UInt64Value,
+	storageCapacityGet func(context MemberAccessibleContext) UInt64Value,
 ) Value {
 
+	var storageValue *SimpleCompositeValue
+
+	methods := map[string]FunctionValue{}
+
+	computeLazyStoredMethod := func(name string, context MemberAccessibleContext) FunctionValue {
+		switch name {
+		case sema.Account_StorageTypeForEachPublicFunctionName:
+			return newStorageIterationFunction(
+				context,
+				storageValue,
+				sema.Account_StorageTypeForEachPublicFunctionType,
+				address,
+				common.PathDomainPublic,
+				sema.PublicPathType,
+			)
+
+		case sema.Account_StorageTypeForEachStoredFunctionName:
+			return newStorageIterationFunction(
+				context,
+				storageValue,
+				sema.Account_StorageTypeForEachStoredFunctionType,
+				address,
+				common.PathDomainStorage,
+				sema.StoragePathType,
+			)
+
+		case sema.Account_StorageTypeTypeFunctionName:
+			return authAccountStorageTypeFunction(context, storageValue, address)
+
+		case sema.Account_StorageTypeLoadFunctionName:
+			return authAccountStorageLoadFunction(context, storageValue, address)
+
+		case sema.Account_StorageTypeCopyFunctionName:
+			return authAccountStorageCopyFunction(context, storageValue, address)
+
+		case sema.Account_StorageTypeSaveFunctionName:
+			return authAccountStorageSaveFunction(context, storageValue, address)
+
+		case sema.Account_StorageTypeBorrowFunctionName:
+			return authAccountStorageBorrowFunction(context, storageValue, address)
+
+		case sema.Account_StorageTypeCheckFunctionName:
+			return authAccountStorageCheckFunction(context, storageValue, address)
+		}
+
+		return nil
+	}
+
+	computeField := func(name string, context MemberAccessibleContext) Value {
+		switch name {
+		case sema.Account_StorageTypePublicPathsFieldName:
+			return publicAccountPaths(context, address)
+
+		case sema.Account_StorageTypeStoragePathsFieldName:
+			return storageAccountPaths(context, address)
+
+		case sema.Account_StorageTypeUsedFieldName:
+			return storageUsedGet(context)
+
+		case sema.Account_StorageTypeCapacityFieldName:
+			return storageCapacityGet(context)
+		}
+
+		return nil
+	}
+
+	methodsGetter := func(name string, context MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name, context)
+			if method != nil {
+				methods[name] = method
+			}
+		}
+
+		return method
+	}
+
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountStorageStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountStorageStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.Storage(%s)", addressStr)
 		}
 		return str
 	}
 
-	storageValue := NewSimpleCompositeValue(
+	storageValue = NewSimpleCompositeValue(
 		gauge,
 		account_StorageTypeID,
 		account_StorageStaticType,
+		account_StorageFieldNames,
+		// No fields, only computed fields, and methods.
 		nil,
-		nil,
-		nil,
+		computeField,
+		methodsGetter,
 		nil,
 		stringer,
-	)
-
-	var forEachStoredFunction FunctionValue
-	var forEachPublicFunction FunctionValue
-	var typeFunction FunctionValue
-	var loadFunction FunctionValue
-	var copyFunction FunctionValue
-	var saveFunction FunctionValue
-	var borrowFunction FunctionValue
-	var checkFunction FunctionValue
-
-	storageValue.ComputeField = func(name string, inter *Interpreter, locationRange LocationRange) Value {
-		switch name {
-		case sema.Account_StorageTypePublicPathsFieldName:
-			return inter.publicAccountPaths(address, locationRange)
-
-		case sema.Account_StorageTypeStoragePathsFieldName:
-			return inter.storageAccountPaths(address, locationRange)
-
-		case sema.Account_StorageTypeForEachPublicFunctionName:
-			if forEachPublicFunction == nil {
-				forEachPublicFunction = inter.newStorageIterationFunction(
-					storageValue,
-					sema.Account_StorageTypeForEachPublicFunctionType,
-					address,
-					common.PathDomainPublic,
-					sema.PublicPathType,
-				)
-			}
-			return forEachPublicFunction
-
-		case sema.Account_StorageTypeForEachStoredFunctionName:
-			if forEachStoredFunction == nil {
-				forEachStoredFunction = inter.newStorageIterationFunction(
-					storageValue,
-					sema.Account_StorageTypeForEachStoredFunctionType,
-					address,
-					common.PathDomainStorage,
-					sema.StoragePathType,
-				)
-			}
-			return forEachStoredFunction
-
-		case sema.Account_StorageTypeUsedFieldName:
-			return storageUsedGet(inter)
-
-		case sema.Account_StorageTypeCapacityFieldName:
-			return storageCapacityGet(inter)
-
-		case sema.Account_StorageTypeTypeFunctionName:
-			if typeFunction == nil {
-				typeFunction = inter.authAccountTypeFunction(storageValue, address)
-			}
-			return typeFunction
-
-		case sema.Account_StorageTypeLoadFunctionName:
-			if loadFunction == nil {
-				loadFunction = inter.authAccountLoadFunction(storageValue, address)
-			}
-			return loadFunction
-
-		case sema.Account_StorageTypeCopyFunctionName:
-			if copyFunction == nil {
-				copyFunction = inter.authAccountCopyFunction(storageValue, address)
-			}
-			return copyFunction
-
-		case sema.Account_StorageTypeSaveFunctionName:
-			if saveFunction == nil {
-				saveFunction = inter.authAccountSaveFunction(storageValue, address)
-			}
-			return saveFunction
-
-		case sema.Account_StorageTypeBorrowFunctionName:
-			if borrowFunction == nil {
-				borrowFunction = inter.authAccountBorrowFunction(storageValue, address)
-			}
-			return borrowFunction
-
-		case sema.Account_StorageTypeCheckFunctionName:
-			if checkFunction == nil {
-				checkFunction = inter.authAccountCheckFunction(storageValue, address)
-			}
-			return checkFunction
-		}
-
-		return nil
-	}
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return storageValue
 }

@@ -18,11 +18,17 @@
 
 package interpreter
 
+import (
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
+)
+
 // OptionalValue
 
 type OptionalValue interface {
 	Value
 	isOptionalValue()
 	forEach(f func(Value))
-	fmap(inter *Interpreter, f func(Value) Value) OptionalValue
+	fmap(memoryGauge common.MemoryGauge, f func(Value) Value) OptionalValue
+	InnerValueType(context ValueStaticTypeContext) sema.Type
 }

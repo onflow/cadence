@@ -26,8 +26,13 @@ import (
 
 func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statements []ast.Statement, err error) {
 	sawSemicolon := false
-	for {
+
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
+
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			sawSemicolon = true
@@ -57,10 +62,9 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 					previousLine := previousStatement.EndPosition(p.memoryGauge).Line
 					currentStartPos := statement.StartPosition()
 					if previousLine == currentStartPos.Line {
-						p.report(NewSyntaxError(
-							currentStartPos,
-							"statements on the same line must be separated with a semicolon",
-						))
+						p.report(&StatementSeparationError{
+							Pos: currentStartPos,
+						})
 					}
 				}
 			}
@@ -68,6 +72,8 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 			sawSemicolon = false
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func parseStatement(p *parser) (ast.Statement, error) {
@@ -300,8 +306,12 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 	var ifStatements []*ast.IfStatement
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		startPos := p.current.StartPos
+
 		p.nextSemanticToken()
 
 		var variableDeclaration *ast.VariableDeclaration
@@ -309,9 +319,18 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		if p.current.Type == lexer.TokenIdentifier {
 			switch string(p.currentTokenSource()) {
-			case KeywordLet, KeywordVar:
+			case KeywordLet:
+				const isLet = true
 				variableDeclaration, err =
-					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
+					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, isLet, "")
+				if err != nil {
+					return nil, err
+				}
+
+			case KeywordVar:
+				const isLet = false
+				variableDeclaration, err =
+					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, isLet, "")
 				if err != nil {
 					return nil, err
 				}
@@ -338,7 +357,9 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		p.skipSpaceAndComments()
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordElse) {
+			// Skip the `else` keyword
 			p.nextSemanticToken()
+
 			if p.isToken(p.current, lexer.TokenIdentifier, KeywordIf) {
 				parseNested = true
 			} else {
@@ -418,17 +439,15 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 	startPos := p.current.StartPos
 	p.nextSemanticToken()
 
-	if p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
-		p.reportSyntaxError(
-			"expected identifier, got keyword %q",
-			KeywordIn,
-		)
-		p.next()
-	}
-
 	firstValue, err := p.mustIdentifier()
 	if err != nil {
 		return nil, err
+	}
+
+	if firstValue.Identifier == KeywordIn {
+		p.report(&InvalidInKeywordAsIdentifierError{
+			Pos: p.current.StartPos,
+		})
 	}
 
 	p.skipSpaceAndComments()
@@ -438,6 +457,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 
 	if p.current.Is(lexer.TokenComma) {
 		p.nextSemanticToken()
+
 		index = &firstValue
 		identifier, err = p.mustIdentifier()
 		if err != nil {
@@ -449,15 +469,14 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		identifier = firstValue
 	}
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
-		p.reportSyntaxError(
-			"expected keyword %q, got %s",
-			KeywordIn,
-			p.current.Type,
-		)
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
+		// Skip the `in` keyword
+		p.nextSemanticToken()
+	} else {
+		p.report(&MissingInKeywordInForStatementError{
+			GotToken: p.current,
+		})
 	}
-
-	p.next()
 
 	expression, err := parseExpression(p, lowestBindingPower)
 	if err != nil {
@@ -479,20 +498,58 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 	), nil
 }
 
+func parseBraces[T any](
+	p *parser,
+	description string,
+	f func() (T, error),
+) (
+	result T,
+	startToken lexer.Token,
+	endToken lexer.Token,
+	err error,
+) {
+	startToken = p.current
+
+	if p.current.Is(lexer.TokenBraceOpen) {
+		p.next()
+	} else {
+		p.report(&MissingOpeningBraceError{
+			Description: description,
+			GotToken:    p.current,
+		})
+	}
+
+	result, err = f()
+	if err != nil {
+		return
+	}
+
+	p.skipSpaceAndComments()
+
+	endToken = p.current
+
+	if p.current.Is(lexer.TokenBraceClose) {
+		p.next()
+	} else {
+		p.report(&MissingClosingBraceError{
+			Description: description,
+			GotToken:    p.current,
+		})
+	}
+
+	return
+}
+
 func parseBlock(p *parser) (*ast.Block, error) {
-	startToken, err := p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
-
-	statements, err := parseStatements(p, func(token lexer.Token) bool {
-		return token.Type == lexer.TokenBraceClose
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	statements, startToken, endToken, err := parseBraces(
+		p,
+		"block",
+		func() ([]ast.Statement, error) {
+			return parseStatements(p, func(token lexer.Token) bool {
+				return token.Type == lexer.TokenBraceClose
+			})
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -511,45 +568,52 @@ func parseBlock(p *parser) (*ast.Block, error) {
 func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	p.skipSpaceAndComments()
 
-	startToken, err := p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
+	type bracesResult struct {
+		preConditions  *ast.Conditions
+		postConditions *ast.Conditions
+		statements     []ast.Statement
 	}
 
-	p.skipSpaceAndComments()
+	res, startToken, endToken, err := parseBraces(
+		p,
+		"function block",
+		func() (res bracesResult, err error) {
 
-	var preConditions *ast.Conditions
-	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
-		prePos := p.current.StartPos
-		// Skip the `pre` keyword
-		p.next()
-		preConditions, err = parseConditions(p, prePos)
-		if err != nil {
-			return nil, err
-		}
-	}
+			p.skipSpaceAndComments()
 
-	p.skipSpaceAndComments()
+			if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
+				prePos := p.current.StartPos
 
-	var postConditions *ast.Conditions
-	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPost) {
-		startPos := p.current.StartPos
-		// Skip the `post` keyword
-		p.next()
-		postConditions, err = parseConditions(p, startPos)
-		if err != nil {
-			return nil, err
-		}
-	}
+				// Skip the `pre` keyword
+				p.nextSemanticToken()
 
-	statements, err := parseStatements(p, func(token lexer.Token) bool {
-		return token.Type == lexer.TokenBraceClose
-	})
-	if err != nil {
-		return nil, err
-	}
+				res.preConditions, err = parseConditions(p, prePos)
+				if err != nil {
+					return
+				}
+			}
 
-	endToken, err := p.mustOne(lexer.TokenBraceClose)
+			p.skipSpaceAndComments()
+
+			if p.isToken(p.current, lexer.TokenIdentifier, KeywordPost) {
+				startPos := p.current.StartPos
+
+				// Skip the `post` keyword
+				p.nextSemanticToken()
+
+				res.postConditions, err = parseConditions(p, startPos)
+				if err != nil {
+					return
+				}
+			}
+
+			res.statements, err = parseStatements(p, func(token lexer.Token) bool {
+				return token.Type == lexer.TokenBraceClose
+			})
+
+			return
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -558,15 +622,15 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 		p.memoryGauge,
 		ast.NewBlock(
 			p.memoryGauge,
-			statements,
+			res.statements,
 			ast.NewRange(
 				p.memoryGauge,
 				startToken.StartPos,
 				endToken.EndPos,
 			),
 		),
-		preConditions,
-		postConditions,
+		res.preConditions,
+		res.postConditions,
 	), nil
 }
 
@@ -574,47 +638,52 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 func parseConditions(p *parser, startPos ast.Position) (*ast.Conditions, error) {
 
 	p.skipSpaceAndComments()
-	_, err := p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
 
-	var conditions []ast.Condition
+	conditions, _, endToken, err := parseBraces(
+		p,
+		"conditions",
+		func() (conditions []ast.Condition, err error) {
 
-	var done bool
-	for !done {
-		p.skipSpaceAndComments()
-		switch p.current.Type {
-		case lexer.TokenSemicolon:
-			p.next()
-			continue
+			var done bool
+			progress := p.newProgress()
 
-		case lexer.TokenBraceClose, lexer.TokenEOF:
-			done = true
+			for !done && p.checkProgress(&progress) {
 
-		default:
-			var condition ast.Condition
-			condition, err = parseCondition(p)
-			if err != nil || condition == nil {
-				return nil, err
+				p.skipSpaceAndComments()
+
+				switch p.current.Type {
+				case lexer.TokenSemicolon:
+					p.next()
+					continue
+
+				case lexer.TokenBraceClose, lexer.TokenEOF:
+					done = true
+
+				default:
+					var condition ast.Condition
+					condition, err = parseCondition(p)
+					if err != nil || condition == nil {
+						return nil, err
+					}
+
+					conditions = append(conditions, condition)
+				}
 			}
 
-			conditions = append(conditions, condition)
-		}
-	}
-
-	p.skipSpaceAndComments()
-
-	endPos := p.current.StartPos
-
-	_, err = p.mustOne(lexer.TokenBraceClose)
+			return
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ast.Conditions{
 		Conditions: conditions,
-		Range:      ast.NewRange(p.memoryGauge, startPos, endPos),
+		Range: ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endToken.EndPos,
+		),
 	}, nil
 }
 
@@ -682,17 +751,13 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 		return nil, err
 	}
 
-	_, err = p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
-
-	cases, err := parseSwitchCases(p)
-	if err != nil {
-		return nil, err
-	}
-
-	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	cases, _, endToken, err := parseBraces(
+		p,
+		"switch cases",
+		func() ([]*ast.SwitchCase, error) {
+			return parseSwitchCases(p)
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -714,17 +779,10 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 //	switchCases : switchCase*
 func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 
-	reportUnexpected := func() {
-		p.reportSyntaxError(
-			"unexpected token: got %s, expected %q or %q",
-			p.current.Type,
-			KeywordCase,
-			KeywordDefault,
-		)
-		p.next()
-	}
+	progress := p.newProgress()
 
-	for {
+	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
@@ -734,17 +792,22 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 			switch string(p.currentTokenSource()) {
 			case KeywordCase:
 				switchCase, err = parseSwitchCase(p, true)
+				if err != nil {
+					return
+				}
 
 			case KeywordDefault:
 				switchCase, err = parseSwitchCase(p, false)
+				if err != nil {
+					return
+				}
 
 			default:
-				reportUnexpected()
+				p.report(&ExpectedCaseOrDefaultError{
+					GotToken: p.current,
+				})
+				p.next()
 				continue
-			}
-
-			if err != nil {
-				return
 			}
 
 			cases = append(cases, switchCase)
@@ -753,9 +816,14 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 			return
 
 		default:
-			reportUnexpected()
+			p.report(&ExpectedCaseOrDefaultError{
+				GotToken: p.current,
+			})
+			p.next()
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 // parseSwitchCase parses a switch case (hasExpression == true)
@@ -784,15 +852,13 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
 	colonPos := p.current.StartPos
 
-	if !p.current.Is(lexer.TokenColon) {
-		p.reportSyntaxError(
-			"expected %s, got %s",
-			lexer.TokenColon,
-			p.current.Type,
-		)
+	if p.current.Is(lexer.TokenColon) {
+		p.next()
+	} else {
+		p.report(&MissingColonInSwitchCaseError{
+			GotToken: p.current,
+		})
 	}
-
-	p.next()
 
 	statements, err := parseStatements(p, func(token lexer.Token) bool {
 		switch token.Type {
@@ -822,15 +888,16 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 		endPos = statements[lastStatementIndex].EndPosition(p.memoryGauge)
 	}
 
-	return &ast.SwitchCase{
-		Expression: expression,
-		Statements: statements,
-		Range: ast.NewRange(
+	return ast.NewSwitchCase(
+		p.memoryGauge,
+		expression,
+		statements,
+		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			endPos,
 		),
-	}, nil
+	), nil
 }
 
 func parseRemoveStatement(
@@ -841,29 +908,28 @@ func parseRemoveStatement(
 	p.next()
 	p.skipSpaceAndComments()
 
-	attachment, err := parseType(p, lowestBindingPower)
+	ty, err := parseType(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
 	}
-	attachmentNominalType, ok := attachment.(*ast.NominalType)
 
+	attachmentNominalType, ok := ty.(*ast.NominalType)
 	if !ok {
-		p.reportSyntaxError(
-			"expected attachment nominal type, got %s",
-			attachment,
-		)
+		p.report(&InvalidAttachmentRemovalTypeError{
+			Range: ast.NewRangeFromPositioned(p.memoryGauge, ty),
+		})
 	}
 
 	p.skipSpaceAndComments()
 
-	// check and skip `from` keyword
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFrom) {
-		p.reportSyntaxError(
-			"expected from keyword, got %s",
-			p.current.Type,
-		)
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordFrom) {
+		// Skip the `from` keyword
+		p.nextSemanticToken()
+	} else {
+		p.report(&MissingFromKeywordInRemoveStatementError{
+			GotToken: p.current,
+		})
 	}
-	p.nextSemanticToken()
 
 	attached, err := parseExpression(p, lowestBindingPower)
 	if err != nil {

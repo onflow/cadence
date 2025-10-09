@@ -94,7 +94,14 @@ func (d *VariableDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 	if d.SecondValue != nil {
 		return d.SecondValue.EndPosition(memoryGauge)
 	}
-	return d.Value.EndPosition(memoryGauge)
+
+	// Some variable declarations may not have a value.
+	// e.g: Desugared variable declarations.
+	if d.Value != nil {
+		return d.Value.EndPosition(memoryGauge)
+	}
+
+	return d.Identifier.EndPosition(memoryGauge)
 }
 
 func (*VariableDeclaration) isIfStatementTest() {}
@@ -151,7 +158,11 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 		)
 	}
 
-	valueDoc := d.Value.Doc()
+	// Transfer and value might be nil.
+	// For example, a desugared `result` variable is uninitialized at first.
+
+	transferDoc := docOrEmpty(d.Transfer)
+	valueDoc := docOrEmpty(d.Value)
 
 	var valuesDoc prettier.Doc
 
@@ -163,7 +174,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 				Doc: identifierTypeDoc,
 			},
 			prettier.Space,
-			d.Transfer.Doc(),
+			transferDoc,
 			prettier.Group{
 				Doc: prettier.Indent{
 					Doc: prettier.Concat{
@@ -174,6 +185,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 			},
 		}
 	} else {
+		secondTransferDoc := docOrEmpty(d.SecondTransfer)
 		secondValueDoc := d.SecondValue.Doc()
 
 		// Put transfers at start of value lines,
@@ -187,11 +199,11 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 				Doc: prettier.Indent{
 					Doc: prettier.Concat{
 						prettier.Line{},
-						d.Transfer.Doc(),
+						transferDoc,
 						prettier.Space,
 						valueDoc,
 						prettier.Line{},
-						d.SecondTransfer.Doc(),
+						secondTransferDoc,
 						prettier.Space,
 						secondValueDoc,
 					},
@@ -205,7 +217,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			prettier.Text(d.Access.Keyword()),
+			docOrEmpty(d.Access),
 			prettier.HardLine{},
 		)
 	}

@@ -25,37 +25,34 @@ import (
 
 // Invocation
 type Invocation struct {
-	LocationRange      LocationRange
-	Self               *Value
-	Base               *EphemeralReferenceValue
-	BoundAuthorization Authorization
-	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
-	Interpreter        *Interpreter
-	Arguments          []Value
-	ArgumentTypes      []sema.Type
+	LocationRange     LocationRange
+	Self              *Value
+	Base              *EphemeralReferenceValue
+	TypeArguments     *sema.TypeParameterTypeOrderedMap
+	InvocationContext InvocationContext
+	Arguments         []Value
+	ArgumentTypes     []sema.Type
 }
 
 func NewInvocation(
-	interpreter *Interpreter,
+	invocationContext InvocationContext,
 	self *Value,
 	base *EphemeralReferenceValue,
-	boundAuth Authorization,
 	arguments []Value,
 	argumentTypes []sema.Type,
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
+	typeArguments *sema.TypeParameterTypeOrderedMap,
 	locationRange LocationRange,
 ) Invocation {
-	common.UseMemory(interpreter, common.InvocationMemoryUsage)
+	common.UseMemory(invocationContext, common.InvocationMemoryUsage)
 
 	return Invocation{
-		Self:               self,
-		Base:               base,
-		BoundAuthorization: boundAuth,
-		Arguments:          arguments,
-		ArgumentTypes:      argumentTypes,
-		TypeParameterTypes: typeParameterTypes,
-		LocationRange:      locationRange,
-		Interpreter:        interpreter,
+		Self:              self,
+		Base:              base,
+		Arguments:         arguments,
+		ArgumentTypes:     argumentTypes,
+		TypeArguments:     typeArguments,
+		LocationRange:     locationRange,
+		InvocationContext: invocationContext,
 	}
 }
 

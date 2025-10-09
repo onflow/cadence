@@ -29,16 +29,10 @@ type Config struct {
 	StackDepthLimit uint64
 	// AtreeValidationEnabled configures if atree validation is enabled
 	AtreeValidationEnabled bool
-	// TracingEnabled configures if tracing is enabled
-	TracingEnabled bool
 	// ResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled
 	ResourceOwnerChangeHandlerEnabled bool
 	// CoverageReport enables and collects coverage reporting metrics
 	CoverageReport *CoverageReport
-	// AttachmentsEnabled specifies if attachments are enabled
-	AttachmentsEnabled bool
-	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
-	LegacyContractUpgradeEnabled bool
-	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
-	ContractUpdateTypeRemovalEnabled bool
+	// ComputationProfile enables and collects computation profiling metrics
+	ComputationProfile *ComputationProfile
 }

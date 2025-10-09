@@ -1,0 +1,952 @@
+# $schema: ./gen/instructions.schema.json
+
+- name: "unknown"
+  description: An unknown instruction.
+
+# Local instructions
+
+- name: "getLocal"
+  description:
+    Pushes the value of the local at the given index onto the stack.
+  operands:
+    - name: "local"
+      type: "localIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "setLocal"
+  description:
+    Pops a value off the stack and then sets the local at the given index to that value.
+  operands:
+    - name: "local"
+      type: "localIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
+# Upvalue instructions
+
+- name: "getUpvalue"
+  description:
+    Pushes the value of the upvalue at the given index onto the stack.
+  operands:
+    - name: "upvalue"
+      type: "upvalueIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "setUpvalue"
+  description:
+    Pops a value off the stack and then sets the upvalue at the given index to that value.
+  operands:
+    - name: "upvalue"
+      type: "upvalueIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
+- name: "closeUpvalue"
+  description:
+    Closes the upvalue for the local at the given index.
+  operands:
+    - name: "local"
+      type: "localIndex"
+
+# Global instructions
+
+- name: "getGlobal"
+  description:
+    Pushes the value of the global at the given index onto the stack.
+  operands:
+    - name: "global"
+      type: "globalIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "setGlobal"
+  description:
+    Pops a value off the stack and then sets the global at the given index to that value.
+  operands:
+    - name: "global"
+      type: "globalIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
+# Field instructions
+
+- name: "getField"
+  description:
+    Pops a value off the stack, the target,
+    and then pushes the value of the field at the given index onto the stack.
+  operands:
+    - name: "fieldName"
+      type: "constantIndex"
+    - name: "accessedType"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "removeField"
+  description:
+    Pops a value off the stack, the target.
+    Remove the value of the given field from the target, and pushes it onto the stack.
+  operands:
+    - name: "fieldName"
+      type: "constantIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "setField"
+  description:
+    Pops two values off the stack, the target and the value,
+    and then sets the field at the given index of the target to the value.
+  operands:
+    - name: "fieldName"
+      type: "constantIndex"
+    - name: "accessedType"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+      - name: "value"
+        type: "value"
+
+# Index instructions
+
+- name: "getIndex"
+  description:
+    Pops two values off the stack, the array and the index,
+    and then pushes the value at the given index of the array onto the stack.
+  valueEffects:
+    pop:
+      - name: "array"
+        type: "array"
+      - name: "index"
+        type: "integer"
+    push:
+      - name: "value"
+        type: "value"
+
+
+- name: "removeIndex"
+  description:
+    Pops two values off the stack, the array and the index.
+    Removes the value at the given index from the array and pushes it onto the stack.
+  valueEffects:
+    pop:
+      - name: "array"
+        type: "array"
+      - name: "index"
+        type: "integer"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "setIndex"
+  description:
+    Pops three values off the stack, the array, the index, and the value,
+    and then sets the value at the given index of the array to the value.
+  valueEffects:
+    pop:
+      - name: "array"
+        type: "array"
+      - name: "index"
+        type: "integer"
+      - name: "value"
+        type: "value"
+
+# Value instantiation instructions
+
+- name: "void"
+  description: Pushes the void value onto the stack.
+  valueEffects:
+    push:
+      - name: "value"
+        type: "void"
+
+- name: "true"
+  description: Pushes the boolean value `true` onto the stack.
+  valueEffects:
+    push:
+      - name: "value"
+        type: "bool"
+
+- name: "false"
+  description: Pushes the boolean value `false` onto the stack.
+  valueEffects:
+    push:
+      - name: "value"
+        type: "bool"
+
+- name: "nil"
+  description: Pushes the value `nil` onto the stack.
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "newSimpleComposite"
+  description:
+    Creates a new instance of a simple composite value of given kind and type, at address 0x0,
+    and then pushes it onto the stack.
+  operands:
+    - name: "kind"
+      type: "compositeKind"
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "newComposite"
+  description:
+    Creates a new instance of the given composite kind and type, at address 0x0,
+    and then pushes it onto the stack.
+  operands:
+    - name: "kind"
+      type: "compositeKind"
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "newCompositeAt"
+  description:
+    Creates a new instance of the given composite kind and type, at the given address,
+    and then pushes it onto the stack.
+  operands:
+    - name: "kind"
+      type: "compositeKind"
+    - name: "type"
+      type: "typeIndex"
+    - name: "address"
+      type: "constantIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "newPath"
+  description: Creates a new path with the given domain and identifier and then pushes it onto the stack.
+  operands:
+    - name: "domain"
+      type: "pathDomain"
+    - name: "identifier"
+      type: "constantIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "path"
+
+- name: "newArray"
+  description:
+    Pops the given number of elements off the stack, creates a new array with the given type, size, and elements,
+    and then pushes it onto the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+    - name: "size"
+      type: "size"
+    - name: "isResource"
+      type: "bool"
+  valueEffects:
+    pop:
+      - name: "elements"
+        type: "value"
+        # The number of elements taken from the stack is equal to the size operand of the opcode.
+        count: "size"
+    push:
+      - name: "array"
+        type: "array"
+
+- name: "newDictionary"
+  description:
+    Pops the given number of entries off the stack (twice the number of the given size),
+    creates a new dictionary with the given type, size, and entries,
+    and then pushes it onto the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+    - name: "size"
+      type: "size"
+    - name: "isResource"
+      type: "bool"
+  valueEffects:
+    pop:
+      - name: "entries"
+        type: "value"
+        # The number of elements taken from the stack is equal to the size operand of the opcode, multiplied by 2.
+        count: "size * 2"
+    push:
+      - name: "dictionary"
+        type: "dictionary"
+
+
+- name: "newRef"
+  description:
+    Pops a value off the stack, creates a new reference with the given type,
+    and then pushes it onto the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+    - name: "isImplicit"
+      type: "bool"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "reference"
+        type: "reference"
+
+- name: "getConstant"
+  description: Pushes the constant at the given index onto the stack.
+  operands:
+    - name: "constant"
+      type: "constantIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "newClosure"
+  description: Creates a new closure with the function at the given index and pushes it onto the stack.
+  operands:
+    - name: "function"
+      type: "functionIndex"
+    - name: "upvalues"
+      type: "upvalues"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+# Invocation instructions
+
+- name: "invoke"
+  description:
+    Pops the function and arguments off the stack, invokes the function with the arguments,
+    and then pushes the result back on to the stack.
+  operands:
+    - name: "typeArgs"
+      type: "typeIndices"
+    - name: "argCount"
+      type: "size"
+  valueEffects:
+    pop:
+      - name: "arguments"
+        # TODO: count
+      - name: "function"
+        type: "function"
+    push:
+      - name: "result"
+        type: "value"
+  controlEffects:
+    - call:
+
+- name: "getMethod"
+  description:
+    Pops a value off the stack, the receiver,
+    and then pushes the value of the function at the given index onto the stack.
+  operands:
+    - name: "method"
+      type: globalIndex
+  valueEffects:
+    pop:
+      - name: "receiver"
+        type: "value"
+    push:
+      - name: "method"
+        type: "function"
+
+# Value stack instructions
+
+- name: "dup"
+  description:
+    Pops a value off the stack, duplicates it, and then pushes the original and the copy back on to the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "original"
+        type: "value"
+      - name: "duplicate"
+        type: "value"
+
+- name: "drop"
+  description:
+    Pops a value off the stack and discards it.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
+# Resource stack instructions
+
+- name: "destroy"
+  description:
+    Pops a resource off the stack and then destroys it.
+  valueEffects:
+    pop:
+      - name: "resource"
+        type: "resource"
+
+# Optional instructions
+
+- name: "unwrap"
+  description:
+    Pops a value off the stack.
+    If the value is an optional, pushes the optional's inner value back on to the stack.
+    Panics if the value is `nil`.
+    If the value is not an option, pushes the value back on to the stack.
+  valueEffects:
+    pop:
+      - name: "optional"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "wrap"
+  description:
+    Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "optional"
+        type: "value"
+
+# Conversion instructions
+
+- name: "transfer"
+  description:
+    Pops a value off the stack, calls transfer, and then pushes it back on to the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "transferAndConvert"
+  description:
+    Pops a value off the stack, transfer and converts it to the given type, and then pushes it back on to the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "convert"
+  description:
+    Pops a value off the stack, converts it to the given type, and then pushes it back on to the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "simpleCast"
+  description:
+    Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "failableCast"
+  description:
+    Pops a value off the stack and casts it to the given type.
+    If the value is a subtype of the given type, then casted value is pushed back on to the stack.
+    If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "optional"
+
+- name: "forceCast"
+  description:
+    Pops a value off the stack, force-casts it to the given type, and then pushes it back on to the stack.
+    Panics if the value is not a subtype of the given type.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: deref
+  description:
+    Pops an (optional) reference off the stack, dereferences it,
+    and then pushes the value back on to the stack.
+  valueEffects:
+    pop:
+      - name: reference
+        type: value
+    push:
+      - name: value
+        type: value
+
+# Control flow instructions
+
+- name: "jump"
+  description:
+    Unconditionally jumps to the given instruction.
+  operands:
+    - name: "target"
+      type: "offset"
+  controlEffects:
+    - jump: "target"
+
+- name: "jumpIfFalse"
+  description:
+    Pops a value off the stack. If it is `false`, jumps to the target instruction.
+  operands:
+    - name: "target"
+      type: "offset"
+  controlEffects:
+    - jump: "target"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
+- name: "jumpIfTrue"
+  description:
+    Pops a value off the stack. If it is `true`, jumps to the target instruction.
+  operands:
+    - name: "target"
+      type: "offset"
+  controlEffects:
+    - jump: "target"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
+- name: "jumpIfNil"
+  description:
+    Pops a value off the stack. If it is `nil`, jumps to the target instruction.
+  operands:
+    - name: "target"
+      type: "offset"
+  controlEffects:
+    - jump: "target"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+
+- name: "return"
+  description: Returns from the current function, without a value.
+  controlEffects:
+    - return:
+
+- name: "returnValue"
+  description:
+    Pops a value off the stack and then returns from the current function with that value.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+  controlEffects:
+    - return: "value"
+
+# Comparison instructions
+
+- name: "equal"
+  description:
+    Pops two values off the stack, checks if the first value is equal to the second,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "value"
+      - name: "right"
+        type: "value"
+    push:
+      - name: "result"
+        type: "bool"
+
+- name: "notEqual"
+  description:
+    Pops two values off the stack, checks if the first value is not equal to the second,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "value"
+      - name: "right"
+        type: "value"
+    push:
+      - name: "result"
+        type: "bool"
+
+# Logical instructions
+
+- name: "not"
+  description:
+    Pops a boolean value off the stack, negates it,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "bool"
+    push:
+      - name: "result"
+        type: "bool"
+
+# Arithmetic instructions
+
+- name: "add"
+  description:
+    Pops two number values off the stack, adds them together,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "number"
+      - name: "right"
+        type: "number"
+    push:
+      - name: "result"
+        type: "number"
+
+- name: "subtract"
+  description:
+    Pops two number values off the stack, subtracts the second from the first,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "number"
+      - name: "right"
+        type: "number"
+    push:
+      - name: "result"
+        type: "number"
+
+- name: "multiply"
+  description:
+    Pops two number values off the stack, multiplies them together,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "number"
+      - name: "right"
+        type: "number"
+    push:
+      - name: "result"
+        type: "number"
+
+- name: "divide"
+  description:
+    Pops two number values off the stack, divides the first by the second,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "number"
+      - name: "right"
+        type: "number"
+    push:
+      - name: "result"
+        type: "number"
+
+- name: "mod"
+  description:
+    Pops two number values off the stack, calculates the modulus of the first by the second,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "number"
+      - name: "right"
+        type: "number"
+    push:
+      - name: "result"
+        type: "number"
+
+- name: negate
+  description:
+    Pops a number value off the stack, negates it,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: value
+        type: number
+    push:
+      - name: result
+        type: number
+
+# Integer comparison instructions
+
+- name: "less"
+  description:
+    Pops two values off the stack, checks if the first value is less than the second,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "number"
+      - name: "right"
+        type: "number"
+    push:
+      - name: "result"
+        type: "bool"
+
+- name: "lessOrEqual"
+  description:
+    Pops two values off the stack, checks if the first value is less than or equal to the second,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "number"
+      - name: "right"
+        type: "number"
+    push:
+      - name: "result"
+        type: "bool"
+
+- name: "greater"
+  description:
+    Pops two values off the stack, checks if the first value is greater than the second,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "number"
+      - name: "right"
+        type: "number"
+    push:
+      - name: "result"
+        type: "bool"
+
+- name: "greaterOrEqual"
+  description:
+    Pops two values off the stack, checks if the first value is greater than or equal to the second,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "number"
+      - name: "right"
+        type: "number"
+    push:
+      - name: "result"
+        type: "bool"
+
+# Bitwise instructions
+
+- name: "bitwiseOr"
+  description:
+    Pops two integer values off the stack, performs a bitwise OR operation on them,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+
+- name: "bitwiseXor"
+  description:
+    Pops two integer values off the stack, performs a bitwise XOR operation on them,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+- name: "bitwiseAnd"
+  description:
+    Pops two integer values off the stack, performs a bitwise AND operation on them,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+- name: "bitwiseLeftShift"
+  description:
+    Pops two integer values off the stack, performs a bitwise left shift operation on them,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+- name: "bitwiseRightShift"
+  description:
+      Pops two integer values off the stack, performs a bitwise right shift operation on them,
+      and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "integer"
+      - name: "right"
+        type: "integer"
+    push:
+      - name: "result"
+        type: "integer"
+
+  # Iterator
+
+- name: "iterator"
+  description:
+    Pops an iterable value from the stack, get an iterator to it, and push the iterator back onto the stack.
+  valueEffects:
+    pop:
+      - name: "iterable"
+        type: "value"
+    push:
+      - name: "iterator"
+        type: "iterator"
+
+- name: "iteratorHasNext"
+  description:
+    Pops a value-iterator from the stack, calls `hasNext()` method on it, and push the result back onto the stack.
+  valueEffects:
+    pop:
+      - name: "iterator"
+        type: "iterator"
+    push:
+      - name: "hasNext"
+        type: "bool"
+
+
+- name: "iteratorNext"
+  description:
+    Pops a value-iterator from the stack, calls `next()` method on it, and push the result back onto the stack.
+  valueEffects:
+    pop:
+      - name: "iterator"
+        type: "iterator"
+    push:
+      - name: "next"
+        type: "value"
+
+- name: "iteratorEnd"
+  description:
+    Pops a value-iterator from the stack end invalidates it.
+    The iterator may no longer be used after this instruction.
+  valueEffects:
+    pop:
+      - name: "iterator"
+        type: "iterator"
+
+# Other
+
+- name: "emitEvent"
+  description:
+    Pops arguments of the stack and then emits an event with the given type with them.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+    - name: "argCount"
+      type: "size"
+  valueEffects:
+    pop:
+      - name: "arguments"
+        # TODO: count
+
+- name: "loop"
+  description:
+    Indicates the start of a loop.
+
+- name: "statement"
+  description:
+    Indicates the start of a statement.
+
+- name: "templateString"
+  description:
+    Represents a string template with an array of values (strings) and an array of expressions, pops both off the stack.
+  operands:
+    - name: "exprSize"
+      type: "size"
+  valueEffects:
+    pop:
+      - name: "values"
+        type: "string"
+        count: "exprSize + 1"
+      - name: "exprs"
+        type: "value"
+        count: "exprSize"
+    push:
+      - name: "string"
+        type: "string"

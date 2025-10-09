@@ -48,6 +48,10 @@ type StringExtractor interface {
 	ExtractString(extractor *ExpressionExtractor, expression *StringExpression) ExpressionExtraction
 }
 
+type StringTemplateExtractor interface {
+	ExtractStringTemplate(extractor *ExpressionExtractor, expression *StringTemplateExpression) ExpressionExtraction
+}
+
 type ArrayExtractor interface {
 	ExtractArray(extractor *ExpressionExtractor, expression *ArrayExpression) ExpressionExtraction
 }
@@ -117,31 +121,32 @@ type AttachExtractor interface {
 }
 
 type ExpressionExtractor struct {
-	IndexExtractor       IndexExtractor
-	ForceExtractor       ForceExtractor
-	BoolExtractor        BoolExtractor
-	NilExtractor         NilExtractor
-	IntExtractor         IntExtractor
-	FixedPointExtractor  FixedPointExtractor
-	StringExtractor      StringExtractor
-	ArrayExtractor       ArrayExtractor
-	DictionaryExtractor  DictionaryExtractor
-	IdentifierExtractor  IdentifierExtractor
-	AttachExtractor      AttachExtractor
-	MemoryGauge          common.MemoryGauge
-	VoidExtractor        VoidExtractor
-	UnaryExtractor       UnaryExtractor
-	ConditionalExtractor ConditionalExtractor
-	InvocationExtractor  InvocationExtractor
-	BinaryExtractor      BinaryExtractor
-	FunctionExtractor    FunctionExtractor
-	CastingExtractor     CastingExtractor
-	CreateExtractor      CreateExtractor
-	DestroyExtractor     DestroyExtractor
-	ReferenceExtractor   ReferenceExtractor
-	MemberExtractor      MemberExtractor
-	PathExtractor        PathExtractor
-	nextIdentifier       int
+	IndexExtractor          IndexExtractor
+	ForceExtractor          ForceExtractor
+	BoolExtractor           BoolExtractor
+	NilExtractor            NilExtractor
+	IntExtractor            IntExtractor
+	FixedPointExtractor     FixedPointExtractor
+	StringExtractor         StringExtractor
+	StringTemplateExtractor StringTemplateExtractor
+	ArrayExtractor          ArrayExtractor
+	DictionaryExtractor     DictionaryExtractor
+	IdentifierExtractor     IdentifierExtractor
+	AttachExtractor         AttachExtractor
+	MemoryGauge             common.MemoryGauge
+	VoidExtractor           VoidExtractor
+	UnaryExtractor          UnaryExtractor
+	ConditionalExtractor    ConditionalExtractor
+	InvocationExtractor     InvocationExtractor
+	BinaryExtractor         BinaryExtractor
+	FunctionExtractor       FunctionExtractor
+	CastingExtractor        CastingExtractor
+	CreateExtractor         CreateExtractor
+	DestroyExtractor        DestroyExtractor
+	ReferenceExtractor      ReferenceExtractor
+	MemberExtractor         MemberExtractor
+	PathExtractor           PathExtractor
+	nextIdentifier          int
 }
 
 var _ ExpressionVisitor[ExpressionExtraction] = &ExpressionExtractor{}
@@ -269,6 +274,35 @@ func (extractor *ExpressionExtractor) VisitStringExpression(expression *StringEx
 
 func (extractor *ExpressionExtractor) ExtractString(expression *StringExpression) ExpressionExtraction {
 	return rewriteExpressionAsIs(expression)
+}
+
+func (extractor *ExpressionExtractor) VisitStringTemplateExpression(expression *StringTemplateExpression) ExpressionExtraction {
+
+	// delegate to child extractor, if any,
+	// or call default implementation
+
+	if extractor.StringTemplateExtractor != nil {
+		return extractor.StringTemplateExtractor.ExtractStringTemplate(extractor, expression)
+	}
+	return extractor.ExtractStringTemplate(expression)
+}
+
+func (extractor *ExpressionExtractor) ExtractStringTemplate(expression *StringTemplateExpression) ExpressionExtraction {
+
+	// copy the expression
+	newExpression := *expression
+
+	// rewrite all value expressions
+
+	rewrittenExpressions, extractedExpressions :=
+		extractor.VisitExpressions(expression.Expressions)
+
+	newExpression.Expressions = rewrittenExpressions
+
+	return ExpressionExtraction{
+		RewrittenExpression:  &newExpression,
+		ExtractedExpressions: extractedExpressions,
+	}
 }
 
 func (extractor *ExpressionExtractor) VisitArrayExpression(expression *ArrayExpression) ExpressionExtraction {

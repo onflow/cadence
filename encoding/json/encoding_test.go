@@ -28,14 +28,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/tests/checker"
-
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type encodeTest struct {
@@ -711,6 +711,38 @@ func TestEncodeFix64(t *testing.T) {
 	}...)
 }
 
+func TestEncodeFix128(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(0, 24)),
+			// language=json
+			`{"type":"Fix128","value":"0.000000000000000000000000"}`,
+		},
+		{
+			"789.00123010",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(78_900_123_010, 24-8)),
+			// language=json
+			`{"type":"Fix128","value":"789.001230100000000000000000"}`,
+		},
+		{
+			"1234.056",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(123_405_600_000, 24-8)),
+			// language=json
+			`{"type":"Fix128","value":"1234.056000000000000000000000"}`,
+		},
+		{
+			"-12345.006789",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(-1_234_500_678_900, 24-8)),
+			// language=json
+			`{"type":"Fix128","value":"-12345.006789000000000000000000"}`,
+		},
+	}...)
+}
+
 func TestEncodeUFix64(t *testing.T) {
 
 	t.Parallel()
@@ -733,6 +765,32 @@ func TestEncodeUFix64(t *testing.T) {
 			cadence.UFix64(123_405_600_000),
 			// language=json
 			`{"type":"UFix64","value":"1234.05600000"}`,
+		},
+	}...)
+}
+
+func TestEncodeUFix128(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.UFix128(fixedpoint.Fix128FromIntAndScale(0, 24)),
+			// language=json
+			`{"type":"UFix128","value":"0.000000000000000000000000"}`,
+		},
+		{
+			"789.00123010",
+			cadence.UFix128(fixedpoint.Fix128FromIntAndScale(78_900_123_010, 24-8)),
+			// language=json
+			`{"type":"UFix128","value":"789.001230100000000000000000"}`,
+		},
+		{
+			"1234.056",
+			cadence.UFix128(fixedpoint.Fix128FromIntAndScale(123_405_600_000, 24-8)),
+			// language=json
+			`{"type":"UFix128","value":"1234.056000000000000000000000"}`,
 		},
 	}...)
 }
@@ -1123,7 +1181,7 @@ func TestEncodeDictionary(t *testing.T) {
 }
 
 func exportFromScript(t *testing.T, code string) cadence.Value {
-	checker, err := checker.ParseAndCheck(t, code)
+	checker, err := ParseAndCheck(t, code)
 	require.NoError(t, err)
 
 	var uuid uint64 = 0
@@ -1149,7 +1207,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 	result, err := inter.Invoke("main")
 	require.NoError(t, err)
 
-	exported, err := runtime.ExportValue(result, inter, interpreter.EmptyLocationRange)
+	exported, err := runtime.ExportValue(result, inter)
 	require.NoError(t, err)
 
 	return exported
@@ -1337,7 +1395,7 @@ func TestEncodeStruct(t *testing.T) {
 	t.Parallel()
 
 	simpleStructType := cadence.NewStructType(
-		utils.TestLocation,
+		TestLocation,
 		"FooStruct",
 		[]cadence.Field{
 			{
@@ -1390,7 +1448,7 @@ func TestEncodeStruct(t *testing.T) {
 	fooResourceType := newFooResourceType()
 
 	resourceStructType := cadence.NewStructType(
-		utils.TestLocation,
+		TestLocation,
 		"FooStruct",
 		[]cadence.Field{
 			{
@@ -1499,7 +1557,7 @@ func TestEncodeEvent(t *testing.T) {
 	t.Parallel()
 
 	simpleEventType := cadence.NewEventType(
-		utils.TestLocation,
+		TestLocation,
 		"FooEvent",
 		[]cadence.Field{
 			{
@@ -1552,7 +1610,7 @@ func TestEncodeEvent(t *testing.T) {
 	fooResourceType := newFooResourceType()
 
 	resourceEventType := cadence.NewEventType(
-		utils.TestLocation,
+		TestLocation,
 		"FooEvent",
 		[]cadence.Field{
 			{
@@ -1625,7 +1683,7 @@ func TestEncodeContract(t *testing.T) {
 	t.Parallel()
 
 	simpleContractType := cadence.NewContractType(
-		utils.TestLocation,
+		TestLocation,
 		"FooContract",
 		[]cadence.Field{
 			{
@@ -1678,7 +1736,7 @@ func TestEncodeContract(t *testing.T) {
 	fooResourceType := newFooResourceType()
 
 	resourceContractType := cadence.NewContractType(
-		utils.TestLocation,
+		TestLocation,
 		"FooContract",
 		[]cadence.Field{
 			{
@@ -1916,7 +1974,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewStructType(
-					utils.TestLocation,
+					TestLocation,
 					"S",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -1977,7 +2035,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewResourceType(
-					utils.TestLocation,
+					TestLocation,
 					"R",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2038,7 +2096,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewContractType(
-					utils.TestLocation,
+					TestLocation,
 					"C",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2099,7 +2157,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewStructInterfaceType(
-					utils.TestLocation,
+					TestLocation,
 					"S",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2160,7 +2218,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewResourceInterfaceType(
-					utils.TestLocation,
+					TestLocation,
 					"R",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2221,7 +2279,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewContractInterfaceType(
-					utils.TestLocation,
+					TestLocation,
 					"C",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2282,7 +2340,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewEventType(
-					utils.TestLocation,
+					TestLocation,
 					"E",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -2341,7 +2399,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewEnumType(
-					utils.TestLocation,
+					TestLocation,
 					"E",
 					cadence.StringType,
 					[]cadence.Field{
@@ -2592,7 +2650,7 @@ func TestEncodeType(t *testing.T) {
                   "staticType": {
                     "kind": "Function",
 					"purity": "",
-                    "typeID": "fun<T>(String):Int",
+                    "typeID": "fun<T:AnyStruct>(String):Int",
                     "return": {
                       "kind": "Int"
                     },
@@ -3317,7 +3375,7 @@ func TestExportRecursiveType(t *testing.T) {
 		},
 	}
 	ty := cadence.NewResourceType(
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		fields,
 		nil,
@@ -3368,7 +3426,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			},
 		}
 		ty := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			fields,
 			[][]cadence.Parameter{},
@@ -3415,14 +3473,14 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 		t.Parallel()
 
 		fooTy := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			[]cadence.Field{},
 			[][]cadence.Parameter{},
 		)
 
 		barTy := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Bar",
 			[]cadence.Field{
 				{
@@ -3638,7 +3696,7 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, opti
 
 func newFooResourceType() *cadence.ResourceType {
 	return cadence.NewResourceType(
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		[]cadence.Field{
 			{

@@ -22,11 +22,13 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=PrimitiveAccess
+//go:generate stringer -type=PrimitiveAccess
 
 type Access interface {
 	isAccess()
@@ -34,6 +36,7 @@ type Access interface {
 	Description() string
 	String() string
 	MarshalJSON() ([]byte, error)
+	Doc() prettier.Doc
 }
 
 type Separator uint8
@@ -143,6 +146,10 @@ func (e EntitlementAccess) Keyword() string {
 	return sb.String()
 }
 
+func (e EntitlementAccess) Doc() prettier.Doc {
+	return prettier.Text(e.Keyword())
+}
+
 func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.String())
 }
@@ -171,37 +178,41 @@ func NewMappedAccess(
 	}
 }
 
-func (t *MappedAccess) StartPosition() Position {
-	return t.StartPos
+func (a *MappedAccess) StartPosition() Position {
+	return a.StartPos
 }
 
-func (t *MappedAccess) EndPosition(memoryGauge common.MemoryGauge) Position {
-	return t.EntitlementMap.EndPosition(memoryGauge)
+func (a *MappedAccess) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return a.EntitlementMap.EndPosition(memoryGauge)
 }
 
-func (e *MappedAccess) String() string {
+func (a *MappedAccess) String() string {
 	var str strings.Builder
 	str.WriteString("mapping ")
-	str.WriteString(e.EntitlementMap.String())
+	str.WriteString(a.EntitlementMap.String())
 	return str.String()
 }
 
-func (e *MappedAccess) Keyword() string {
+func (a *MappedAccess) Keyword() string {
 	var str strings.Builder
 	str.WriteString("access(")
-	str.WriteString(e.String())
+	str.WriteString(a.String())
 	str.WriteString(")")
 	return str.String()
 }
 
-func (e *MappedAccess) MarshalJSON() ([]byte, error) {
+func (a *MappedAccess) Doc() prettier.Doc {
+	return prettier.Text(a.Keyword())
+}
+
+func (a *MappedAccess) MarshalJSON() ([]byte, error) {
 	type Alias MappedAccess
 	return json.Marshal(&struct {
 		*Alias
 		Range
 	}{
-		Range: NewUnmeteredRangeFromPositioned(e),
-		Alias: (*Alias)(e),
+		Range: NewUnmeteredRangeFromPositioned(a),
+		Alias: (*Alias)(a),
 	})
 }
 
@@ -287,4 +298,8 @@ func (a PrimitiveAccess) Description() string {
 
 func (a PrimitiveAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
+}
+
+func (a PrimitiveAccess) Doc() prettier.Doc {
+	return prettier.Text(a.Keyword())
 }

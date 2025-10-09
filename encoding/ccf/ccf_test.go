@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/ccf"
@@ -38,9 +40,9 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/checker"
-	"github.com/onflow/cadence/tests/runtime_utils"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 var deterministicEncMode, _ = ccf.EncOptions{
@@ -100,7 +102,7 @@ func TestEncodeOptional(t *testing.T) {
 
 	newStructType := func() *cadence.StructType {
 		return cadence.NewStructType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			[]cadence.Field{
 				{
@@ -122,7 +124,7 @@ func TestEncodeOptional(t *testing.T) {
 
 	newStructTypeWithOptionalAbstractField := func() *cadence.StructType {
 		return cadence.NewStructType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			[]cadence.Field{
 				{
@@ -807,7 +809,7 @@ func TestEncodeOptional(t *testing.T) {
 			val: func() cadence.Value {
 				structTypeWithOptionalAbstractField := newStructTypeWithOptionalAbstractField()
 				simpleStructType := cadence.NewStructType(
-					utils.TestLocation,
+					TestLocation,
 					"FooStruct",
 					[]cadence.Field{
 						{
@@ -2784,6 +2786,129 @@ func TestEncodeFix64(t *testing.T) {
 	}...)
 }
 
+func TestEncodeFix128(t *testing.T) {
+
+	t.Parallel()
+
+	newFix128Value := func(s string) cadence.Fix128 {
+		v, err := cadence.NewUnmeteredFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			name:        "Zero",
+			val:         newFix128Value("0.0"),
+			expectedVal: cadence.Fix128(fix.NewFix128(0, 0)),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Fix128","value":"0.000000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [0, 0]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Fix128 type ID (99)
+				0x18, 0x63,
+				// array, 2 elements follow
+				0x82,
+				// hi-bits
+				0x0,
+				// low-bits
+				0x0,
+			},
+		},
+		{
+			name: "789.00123010",
+			val:  newFix128Value("789.00123010"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Fix128","value":"789.001230100000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(99), [42771842, 7164858704389603328]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Fix128 type ID (99)
+				0x18, 0x63,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (42771842)
+				0x1a, 0x02, 0x8c, 0xa5, 0x82, 0x1b,
+				// low-bits (7164858704389603328)
+				0x63, 0x6E, 0xB1, 0x07, 0xD5, 0x02, 0x00, 0x00,
+			},
+		},
+		{
+			name: "1234.056",
+			val:  newFix128Value("1234.056"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Fix128","value":"1234.056000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [66898309, 14913059639741382656]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Fix128 type ID (99)
+				0x18, 0x63,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (66898309)
+				0x1a, 0x03, 0xfc, 0xc9, 0x85,
+				// low-bits (14913059639741382656)
+				0x1b, 0xCE, 0xF5, 0xD4, 0xBA, 0xC5, 0x00, 0x00, 0x00,
+			},
+		},
+		{
+			name: "-12345.006789",
+			val:  newFix128Value("-12345.006789"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Fix128","value":"-12345.006789000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [18446744073040327457, 16508690484690944])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Fix128 type ID (99)
+				0x18, 0x63,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (18446744073040327457)
+				0x1b, 0xff, 0xff, 0xff, 0xff, 0xd8, 0x1c, 0x73, 0x21,
+				// low-bits (16508690484690944)
+				0x1b, 0x00, 0x3a, 0xa6, 0x91, 0x08, 0x0c, 0x00, 0x00,
+			},
+		},
+	}...)
+}
+
 func TestEncodeUFix64(t *testing.T) {
 
 	t.Parallel()
@@ -2856,6 +2981,102 @@ func TestEncodeUFix64(t *testing.T) {
 				0x17,
 				// 123405600000
 				0x1b, 0x00, 0x00, 0x00, 0x1c, 0xbb, 0x8c, 0x05, 0x00,
+			},
+		},
+	}...)
+}
+
+func TestEncodeUFix128(t *testing.T) {
+
+	t.Parallel()
+
+	newUFix128Value := func(s string) cadence.UFix128 {
+		v, err := cadence.NewUnmeteredUFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			name:        "Zero",
+			val:         newUFix128Value("0.0"),
+			expectedVal: cadence.UFix128(fix.NewUFix128(0, 0)),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"UFix128","value":"0.000000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [0, 0]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix128 type ID (101)
+				0x18, 0x65,
+				// array, 2 elements follow
+				0x82,
+				// hi-bits
+				0x0,
+				// low-bits
+				0x0,
+			},
+		},
+		{
+			name: "789.00123010",
+			val:  newUFix128Value("789.00123010"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"UFix128","value":"789.001230100000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(99), [42771842, 7164858704389603328]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix128 type ID (101)
+				0x18, 0x65,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (42771842)
+				0x1a, 0x02, 0x8c, 0xa5, 0x82, 0x1b,
+				// low-bits (7164858704389603328)
+				0x63, 0x6E, 0xB1, 0x07, 0xD5, 0x02, 0x00, 0x00,
+			},
+		},
+		{
+			name: "1234.056",
+			val:  newUFix128Value("1234.056"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"UFix128","value":"1234.056000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [66898309, 14913059639741382656]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix128 type ID (101)
+				0x18, 0x65,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (66898309)
+				0x1a, 0x03, 0xfc, 0xc9, 0x85,
+				// low-bits (14913059639741382656)
+				0x1b, 0xCE, 0xF5, 0xD4, 0xBA, 0xC5, 0x00, 0x00, 0x00,
 			},
 		},
 	}...)
@@ -3576,7 +3797,7 @@ func TestEncodeArray(t *testing.T) {
 		name: "Resource Interface Array",
 		val: func() cadence.Value {
 			resourceInterfaceType := cadence.NewResourceInterfaceType(
-				utils.TestLocation,
+				TestLocation,
 				"Bar",
 				nil,
 				nil,
@@ -3930,13 +4151,13 @@ func TestEncodeArray(t *testing.T) {
 		name: "Struct Interface Array",
 		val: func() cadence.Value {
 			structInterfaceType := cadence.NewStructInterfaceType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStructInterface",
 				nil,
 				nil,
 			)
 			structType := cadence.NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStruct",
 				[]cadence.Field{
 					{
@@ -4075,13 +4296,13 @@ func TestEncodeArray(t *testing.T) {
 		name: "Contract Interface Array",
 		val: func() cadence.Value {
 			contractInterfaceType := cadence.NewContractInterfaceType(
-				utils.TestLocation,
+				TestLocation,
 				"FooContractInterface",
 				nil,
 				nil,
 			)
 			contractType := cadence.NewContractType(
-				utils.TestLocation,
+				TestLocation,
 				"FooContract",
 				[]cadence.Field{
 					{
@@ -4949,7 +5170,7 @@ func TestEncodeSortedDictionary(t *testing.T) {
 }
 
 func exportFromScript(t *testing.T, code string) cadence.Value {
-	checker, err := checker.ParseAndCheck(t, code)
+	checker, err := ParseAndCheck(t, code)
 	require.NoError(t, err)
 
 	var uuid uint64
@@ -4975,7 +5196,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 	result, err := inter.Invoke("main")
 	require.NoError(t, err)
 
-	exported, err := runtime.ExportValue(result, inter, interpreter.EmptyLocationRange)
+	exported, err := runtime.ExportValue(result, inter)
 	require.NoError(t, err)
 
 	return exported
@@ -5414,7 +5635,7 @@ func TestEncodeStruct(t *testing.T) {
 		name: "no field",
 		val: func() cadence.Value {
 			noFieldStructType := cadence.NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStruct",
 				[]cadence.Field{},
 				nil,
@@ -5473,7 +5694,7 @@ func TestEncodeStruct(t *testing.T) {
 		name: "Simple",
 		val: func() cadence.Value {
 			simpleStructType := cadence.NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStruct",
 				[]cadence.Field{
 					{
@@ -5824,7 +6045,7 @@ func TestEncodeEvent(t *testing.T) {
 		name: "Simple",
 		val: func() cadence.Value {
 			simpleEventType := cadence.NewEventType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEvent",
 				[]cadence.Field{
 					{
@@ -5928,7 +6149,7 @@ func TestEncodeEvent(t *testing.T) {
 		name: "abstract event",
 		val: func() cadence.Value {
 			abstractEventType := cadence.NewEventType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEvent",
 				[]cadence.Field{
 					{
@@ -5943,7 +6164,7 @@ func TestEncodeEvent(t *testing.T) {
 				nil,
 			)
 			simpleStructType := cadence.NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStruct",
 				[]cadence.Field{
 					{
@@ -6090,7 +6311,7 @@ func TestEncodeEvent(t *testing.T) {
 		val: func() cadence.Value {
 			fooResourceType := newFooResourceType()
 			resourceEventType := cadence.NewEventType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEvent",
 				[]cadence.Field{
 					{
@@ -6238,7 +6459,7 @@ func TestEncodeEvent(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actualCBOR, err := ccf.EventsEncMode.Encode(tc.val)
 			require.NoError(t, err)
-			utils.AssertEqualWithDiff(t, tc.expected, actualCBOR)
+			AssertEqualWithDiff(t, tc.expected, actualCBOR)
 
 			decodedVal, err := ccf.EventsDecMode.Decode(nil, actualCBOR)
 			require.NoError(t, err)
@@ -6259,7 +6480,7 @@ func TestEncodeContract(t *testing.T) {
 		name: "Simple",
 		val: func() cadence.Value {
 			simpleContractType := cadence.NewContractType(
-				utils.TestLocation,
+				TestLocation,
 				"FooContract",
 				[]cadence.Field{
 					{
@@ -6363,7 +6584,7 @@ func TestEncodeContract(t *testing.T) {
 		name: "abstract contract",
 		val: func() cadence.Value {
 			simpleStructType := cadence.NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStruct",
 				[]cadence.Field{
 					{
@@ -6374,7 +6595,7 @@ func TestEncodeContract(t *testing.T) {
 				nil,
 			)
 			abstractContractType := cadence.NewContractType(
-				utils.TestLocation,
+				TestLocation,
 				"FooContract",
 				[]cadence.Field{
 					{
@@ -6525,7 +6746,7 @@ func TestEncodeContract(t *testing.T) {
 		val: func() cadence.Value {
 			fooResourceType := newFooResourceType()
 			resourceContractType := cadence.NewContractType(
-				utils.TestLocation,
+				TestLocation,
 				"FooContract",
 				[]cadence.Field{
 					{
@@ -6677,7 +6898,7 @@ func TestEncodeEnum(t *testing.T) {
 		name: "Simple",
 		val: func() cadence.Value {
 			simpleEnumType := cadence.NewEnumType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEnum",
 				nil,
 				[]cadence.Field{
@@ -6764,7 +6985,7 @@ func TestEncodeAttachment(t *testing.T) {
 		name: "no field",
 		val: func() cadence.Value {
 			attachmentType := cadence.NewAttachmentType(
-				utils.TestLocation,
+				TestLocation,
 				"FooAttachment",
 				nil,
 				[]cadence.Field{},
@@ -6825,7 +7046,7 @@ func TestEncodeAttachment(t *testing.T) {
 		name: "simple",
 		val: func() cadence.Value {
 			attachmentType := cadence.NewAttachmentType(
-				utils.TestLocation,
+				TestLocation,
 				"FooAttachment",
 				nil,
 				[]cadence.Field{
@@ -6906,7 +7127,7 @@ func TestEncodeAttachment(t *testing.T) {
 		name: "struct field",
 		val: func() cadence.Value {
 			structType := cadence.NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStruct",
 				[]cadence.Field{
 					{
@@ -6917,7 +7138,7 @@ func TestEncodeAttachment(t *testing.T) {
 				nil,
 			)
 			attachmentType := cadence.NewAttachmentType(
-				utils.TestLocation,
+				TestLocation,
 				"FooAttachment",
 				nil,
 				[]cadence.Field{
@@ -7508,7 +7729,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 
 	newSimpleStructType := func() *cadence.StructType {
 		return cadence.NewStructType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			[]cadence.Field{
 				{
@@ -7744,7 +7965,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			cadence.NewReferenceType(
 				cadence.NewEntitlementMapAuthorization(
 					nil,
-					common.TypeID("foo"),
+					"foo",
 				),
 				cadence.StringType,
 			),
@@ -8504,7 +8725,9 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		ccf.SimpleTypeWord128:                          cadence.Word128Type,
 		ccf.SimpleTypeWord256:                          cadence.Word256Type,
 		ccf.SimpleTypeFix64:                            cadence.Fix64Type,
+		ccf.SimpleTypeFix128:                           cadence.Fix128Type,
 		ccf.SimpleTypeUFix64:                           cadence.UFix64Type,
+		ccf.SimpleTypeUFix128:                          cadence.UFix128Type,
 		ccf.SimpleTypeBlock:                            cadence.BlockType,
 		ccf.SimpleTypePath:                             cadence.PathType,
 		ccf.SimpleTypeCapabilityPath:                   cadence.CapabilityPathType,
@@ -8840,7 +9063,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewStructType(
-					utils.TestLocation,
+					TestLocation,
 					"S",
 					[]cadence.Field{},
 					[][]cadence.Parameter{},
@@ -8889,7 +9112,7 @@ func TestEncodeType(t *testing.T) {
 
 		val := cadence.TypeValue{
 			StaticType: cadence.NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"S",
 				[]cadence.Field{
 					{Identifier: "foo", Type: cadence.IntType},
@@ -8993,7 +9216,7 @@ func TestEncodeType(t *testing.T) {
 		// Encode value without sorting of composite fields.
 		actualCBOR, err := ccf.Encode(val)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+		AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
 		// Decode value without enforcing sorting of composite fields.
 		decodedVal, err := ccf.Decode(nil, actualCBOR)
@@ -9012,7 +9235,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewStructType(
-					utils.TestLocation,
+					TestLocation,
 					"S",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -9113,7 +9336,7 @@ func TestEncodeType(t *testing.T) {
 			},
 			cadence.TypeValue{
 				StaticType: cadence.NewStructType(
-					utils.TestLocation,
+					TestLocation,
 					"S",
 					[]cadence.Field{
 						{Identifier: "bar", Type: cadence.IntType},
@@ -9134,21 +9357,21 @@ func TestEncodeType(t *testing.T) {
 		t.Parallel()
 
 		fooTy := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			[]cadence.Field{},
 			[][]cadence.Parameter{},
 		)
 
 		fooTy2 := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo2",
 			[]cadence.Field{},
 			[][]cadence.Parameter{},
 		)
 
 		barTy := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Bar",
 			[]cadence.Field{
 				{
@@ -9274,7 +9497,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewResourceType(
-					utils.TestLocation,
+					TestLocation,
 					"R",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -9372,7 +9595,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewContractType(
-					utils.TestLocation,
+					TestLocation,
 					"C",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -9470,7 +9693,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewStructInterfaceType(
-					utils.TestLocation,
+					TestLocation,
 					"S",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -9568,7 +9791,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewResourceInterfaceType(
-					utils.TestLocation,
+					TestLocation,
 					"R",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -9666,7 +9889,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewContractInterfaceType(
-					utils.TestLocation,
+					TestLocation,
 					"C",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -9764,7 +9987,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewEventType(
-					utils.TestLocation,
+					TestLocation,
 					"E",
 					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
@@ -9860,7 +10083,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewEnumType(
-					utils.TestLocation,
+					TestLocation,
 					"E",
 					cadence.StringType,
 					[]cadence.Field{
@@ -9961,7 +10184,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewAttachmentType(
-					utils.TestLocation,
+					TestLocation,
 					"A",
 					cadence.StringType,
 					[]cadence.Field{
@@ -10059,7 +10282,7 @@ func TestEncodeType(t *testing.T) {
 		t.Parallel()
 
 		baseType := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"FooBase",
 			[]cadence.Field{
 				{Identifier: "bar", Type: cadence.StringType},
@@ -10071,7 +10294,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: cadence.NewAttachmentType(
-					utils.TestLocation,
+					TestLocation,
 					"A",
 					baseType,
 					[]cadence.Field{
@@ -11050,7 +11273,7 @@ func TestEncodeCapability(t *testing.T) {
 		t.Parallel()
 
 		simpleStructType := cadence.NewStructType(
-			utils.TestLocation,
+			TestLocation,
 			"FooStruct",
 			[]cadence.Field{
 				{
@@ -11722,7 +11945,7 @@ func TestExportRecursiveType(t *testing.T) {
 		},
 	}
 	ty := cadence.NewResourceType(
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		fields,
 		nil,
@@ -11815,7 +12038,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			},
 		}
 		ty := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			fields,
 			[][]cadence.Parameter{},
@@ -12061,21 +12284,21 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 		t.Parallel()
 
 		fooTy := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo",
 			[]cadence.Field{},
 			[][]cadence.Parameter{},
 		)
 
 		fooTy2 := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Foo2",
 			[]cadence.Field{},
 			[][]cadence.Parameter{},
 		)
 
 		barTy := cadence.NewResourceType(
-			utils.TestLocation,
+			TestLocation,
 			"Bar",
 			[]cadence.Field{
 				{
@@ -12729,7 +12952,7 @@ func testEncode(t *testing.T, val cadence.Value, expectedCBOR []byte) (actualCBO
 	actualCBOR, err := deterministicEncMode.Encode(val)
 	require.NoError(t, err)
 
-	utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+	AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 	return actualCBOR
 }
 
@@ -12748,7 +12971,7 @@ func testDecode(t *testing.T, actualCBOR []byte, expectedVal cadence.Value) {
 // TODO: make resource (illegal nesting)
 func newResourceStructType() *cadence.StructType {
 	return cadence.NewStructType(
-		utils.TestLocation,
+		TestLocation,
 		"FooStruct",
 		[]cadence.Field{
 			{
@@ -12766,7 +12989,7 @@ func newResourceStructType() *cadence.StructType {
 
 func newFooResourceType() *cadence.ResourceType {
 	return cadence.NewResourceType(
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		[]cadence.Field{
 			{
@@ -12780,7 +13003,7 @@ func newFooResourceType() *cadence.ResourceType {
 
 func newFoooResourceTypeWithAbstractField() *cadence.ResourceType {
 	return cadence.NewResourceType(
-		utils.TestLocation,
+		TestLocation,
 		"Fooo",
 		[]cadence.Field{
 			{
@@ -13187,7 +13410,7 @@ func TestExportFunctionValue(t *testing.T) {
 		},
 	}
 	ty := cadence.NewResourceType(
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		fields,
 		nil,
@@ -14038,7 +14261,7 @@ func TestDeployedEvents(t *testing.T) {
 			// Encode Cadence value to CCF
 			actualCBOR, err := ccf.EventsEncMode.Encode(tc.event)
 			require.NoError(t, err)
-			utils.AssertEqualWithDiff(t, tc.expectedCBOR, actualCBOR)
+			AssertEqualWithDiff(t, tc.expectedCBOR, actualCBOR)
 
 			// Decode CCF to Cadence value
 			decodedEvent, err := ccf.EventsDecMode.Decode(nil, actualCBOR)
@@ -15912,7 +16135,7 @@ func TestSortEntitlementSet(t *testing.T) {
 		// Encode value without sorting.
 		actualCBOR, err := ccf.Encode(val)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+		AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
 		// Decode value without enforcing sorting.
 		decodedVal, err := ccf.Decode(nil, actualCBOR)
@@ -16010,7 +16233,7 @@ func TestSortEntitlementSet(t *testing.T) {
 		// Encode value with sorted entitlement types.
 		actualCBOR, err := sortEntitlementTypesEncMode.Encode(val)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+		AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
 		// Decode value enforcing sorting of composite fields.
 		decodedVal, err := enforceSortedEntitlementTypesDecMode.Decode(nil, actualCBOR)
@@ -16079,7 +16302,7 @@ func TestSortEntitlementSet(t *testing.T) {
 		// Encode value without sorting.
 		actualCBOR, err := ccf.Encode(val)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+		AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
 		// Decode value without enforcing sorting.
 		decodedVal, err := ccf.Decode(nil, actualCBOR)
@@ -16156,7 +16379,7 @@ func TestSortEntitlementSet(t *testing.T) {
 		// Encode value with sorting.
 		actualCBOR, err := sortEntitlementTypesEncMode.Encode(val)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+		AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
 		// Decode value without enforcing sorting.
 		decodedVal, err := ccf.Decode(nil, actualCBOR)
@@ -16404,7 +16627,7 @@ func TestSortOptions(t *testing.T) {
 		// Encode value without sorting.
 		actualCBOR, err := ccf.Encode(val)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+		AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
 		// Decode value without enforcing sorting.
 		decodedVal, err := ccf.Decode(nil, actualCBOR)
@@ -16593,7 +16816,7 @@ func TestSortOptions(t *testing.T) {
 		// Encode value with sorted composite fields.
 		actualCBOR, err := sortFieldsEncMode.Encode(val)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+		AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
 		// Decode value enforcing sorting of composite fields.
 		decodedVal, err := enforceSortedFieldsDecMode.Decode(nil, actualCBOR)
@@ -16782,7 +17005,7 @@ func TestSortOptions(t *testing.T) {
 		// Encode value with sorted Intersection types.
 		actualCBOR, err := sortIntersectionTypesEncMode.Encode(val)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+		AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
 		// Decode value enforcing sorting of Intersection types.
 		decodedVal, err := enforceSortedIntersectionTypesDecMode.Decode(nil, actualCBOR)
@@ -16971,7 +17194,7 @@ func TestSortOptions(t *testing.T) {
 		// Encode value with sorted composite fields and Intersection types.
 		actualCBOR, err := deterministicEncMode.Encode(val)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+		AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
 		// Decode value enforcing sorting of composite fields and Intersection types.
 		decodedVal, err := deterministicDecMode.Decode(nil, actualCBOR)
@@ -17074,7 +17297,7 @@ func TestDecodeFunctionTypeBackwardCompatibility(t *testing.T) {
 			TypeParameters: []cadence.TypeParameter{},
 			Parameters:     []cadence.Parameter{},
 			ReturnType:     cadence.VoidType,
-			Purity:         cadence.FunctionPurityUnspecified,
+			Purity:         cadence.FunctionPurityImpure,
 		},
 	}
 
@@ -17111,7 +17334,7 @@ func TestDecodeFunctionTypeBackwardCompatibility(t *testing.T) {
 	testDecode(t, data, val)
 }
 
-func TestEncodeEventWithAttachement(t *testing.T) {
+func TestEncodeEventWithAttachment(t *testing.T) {
 	script := `
 		access(all) struct S {
 			access(all) let x: Int 
@@ -17146,11 +17369,11 @@ func TestEncodeEventWithAttachement(t *testing.T) {
 }
 
 func exportEventFromScript(t *testing.T, script string) cadence.Event {
-	rt := runtime_utils.NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var events []cadence.Event
 
-	inter := &runtime_utils.TestRuntimeInterface{
+	inter := &TestRuntimeInterface{
 		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil

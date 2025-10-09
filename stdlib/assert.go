@@ -28,6 +28,8 @@ import (
 
 // AssertFunction
 
+const AssertFunctionName = "assert"
+
 const assertFunctionDocString = `
 Terminates the program if the given condition is false, and reports a message which explains how the condition is false.
 Use this function for internal sanity checks.
@@ -35,7 +37,7 @@ Use this function for internal sanity checks.
 The message argument is optional.
 `
 
-var assertFunctionType = &sema.FunctionType{
+var AssertFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
@@ -53,33 +55,47 @@ var assertFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
-var AssertFunction = NewStandardLibraryStaticFunction(
-	"assert",
-	assertFunctionType,
-	assertFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		result, ok := invocation.Arguments[0].(interpreter.BoolValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
+var NativeAssertFunction = interpreter.NativeFunction(
+	func(
+		_ interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		result := interpreter.AssertValueOfType[interpreter.BoolValue](args[0])
+		var message string
+		if len(args) > 1 {
+			messageValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
+			message = messageValue.Str
 		}
-
-		if !result {
-			var message string
-			if len(invocation.Arguments) > 1 {
-				messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				message = messageValue.Str
-			}
-			panic(AssertionError{
-				Message:       message,
-				LocationRange: invocation.LocationRange,
-			})
-		}
-		return interpreter.Void
+		return Assert(result, message)
 	},
 )
+
+var InterpreterAssertFunction = NewNativeStandardLibraryStaticFunction(
+	AssertFunctionName,
+	AssertFunctionType,
+	assertFunctionDocString,
+	NativeAssertFunction,
+	false,
+)
+
+var VMAssertFunction = NewNativeStandardLibraryStaticFunction(
+	AssertFunctionName,
+	AssertFunctionType,
+	assertFunctionDocString,
+	NativeAssertFunction,
+	true,
+)
+
+func Assert(result interpreter.BoolValue, message string) interpreter.Value {
+	if !result {
+		panic(&AssertionError{
+			Message: message,
+		})
+	}
+	return interpreter.Void
+}
 
 // AssertionError
 
@@ -88,14 +104,19 @@ type AssertionError struct {
 	Message string
 }
 
-var _ errors.UserError = AssertionError{}
+var _ errors.UserError = &AssertionError{}
+var _ interpreter.HasLocationRange = &AssertionError{}
 
-func (AssertionError) IsUserError() {}
+func (*AssertionError) IsUserError() {}
 
-func (e AssertionError) Error() string {
+func (e *AssertionError) Error() string {
 	const message = "assertion failed"
 	if e.Message == "" {
 		return message
 	}
 	return fmt.Sprintf("%s: %s", message, e.Message)
+}
+
+func (e *AssertionError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }

@@ -143,6 +143,9 @@ var StringType = &SimpleType{
 		},
 		IndexingType: IntegerType,
 	},
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
 }
 
 var StringTypeAnnotation = NewTypeAnnotation(StringType)
@@ -417,6 +420,8 @@ var StringFunctionType = func() *FunctionType {
 		nil,
 		StringTypeAnnotation,
 	)
+
+	functionType.TypeFunctionType = StringType
 
 	addMember := func(member *Member) {
 		if functionType.Members == nil {

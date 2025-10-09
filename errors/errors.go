@@ -30,6 +30,10 @@ func NewUnreachableError() InternalError {
 	return NewUnexpectedError("unreachable")
 }
 
+const InternalErrorMessagePrefix = "internal error:"
+
+const ErrorPrompt = "\nWas this error unhelpful?\nConsider suggesting an improvement here: https://github.com/onflow/cadence/issues.\n"
+
 // InternalError is an implementation error, e.g: an unreachable code path (UnreachableError).
 // A program should never throw an InternalError in an ideal world.
 //
@@ -71,8 +75,8 @@ type ExternalNonError struct {
 	Recovered any
 }
 
-func NewExternalNonError(recovered error) ExternalError {
-	return ExternalError{
+func NewExternalNonError(recovered any) ExternalNonError {
+	return ExternalNonError{
 		Recovered: recovered,
 	}
 }
@@ -108,12 +112,6 @@ type HasPrefix interface {
 	Prefix() string
 }
 
-// MemoryError indicates a memory limit has reached and should end
-// the Cadence parsing, checking, or interpretation.
-type MemoryError struct {
-	Err error
-}
-
 // SuggestedFix
 
 type HasSuggestedFixes[T any] interface {
@@ -125,16 +123,50 @@ type SuggestedFix[T any] struct {
 	TextEdits []T
 }
 
-var _ UserError = MemoryError{}
+// HasDocumentationLink provides structured documentation links for LSP integration
+type HasDocumentationLink interface {
+	DocumentationLink() string
+}
 
-func (MemoryError) IsUserError() {}
+// HasMigrationNote provides structured migration notes for LSP integration
+type HasMigrationNote interface {
+	MigrationNote() string
+}
 
-func (e MemoryError) Unwrap() error {
+// MemoryMeteringError indicates a memory limit has reached and should end
+// the Cadence parsing, checking, or interpretation.
+type MemoryMeteringError struct {
+	Err error
+}
+
+var _ UserError = MemoryMeteringError{}
+
+func (MemoryMeteringError) IsUserError() {}
+
+func (e MemoryMeteringError) Unwrap() error {
 	return e.Err
 }
 
-func (e MemoryError) Error() string {
+func (e MemoryMeteringError) Error() string {
 	return fmt.Sprintf("memory error: %s", e.Err.Error())
+}
+
+// ComputationMeteringError indicates a memory limit has reached and should end
+// the Cadence parsing, checking, or interpretation.
+type ComputationMeteringError struct {
+	Err error
+}
+
+var _ UserError = ComputationMeteringError{}
+
+func (ComputationMeteringError) IsUserError() {}
+
+func (e ComputationMeteringError) Unwrap() error {
+	return e.Err
+}
+
+func (e ComputationMeteringError) Error() string {
+	return fmt.Sprintf("computation error: %s", e.Err.Error())
 }
 
 // UnexpectedError is the default implementation of InternalError interface.
@@ -174,9 +206,18 @@ func (e UnexpectedError) Unwrap() error {
 func (e UnexpectedError) Error() string {
 	message := e.Err.Error()
 	if len(e.Stack) == 0 {
-		return fmt.Sprintf("unexpected error: %s", message)
+		return fmt.Sprintf(
+			"%s unexpected: %s",
+			InternalErrorMessagePrefix,
+			message,
+		)
 	} else {
-		return fmt.Sprintf("unexpected error: %s\n%s", message, e.Stack)
+		return fmt.Sprintf(
+			"%s unexpected: %s\n%s",
+			InternalErrorMessagePrefix,
+			message,
+			e.Stack,
+		)
 	}
 }
 

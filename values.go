@@ -25,12 +25,15 @@ import (
 	"unicode/utf8"
 	"unsafe"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // Value
@@ -362,7 +365,7 @@ func (v Int) Big() *big.Int {
 }
 
 func (v Int) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+	return values.SignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v Int) String() string {
@@ -572,7 +575,7 @@ func (v Int128) Big() *big.Int {
 }
 
 func (v Int128) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int128TypeSize)
+	return values.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int128TypeSize)
 }
 
 func (v Int128) String() string {
@@ -636,7 +639,7 @@ func (v Int256) Big() *big.Int {
 }
 
 func (v Int256) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int256TypeSize)
+	return values.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int256TypeSize)
 }
 
 func (v Int256) String() string {
@@ -653,7 +656,7 @@ var _ Value = UInt{}
 
 func NewUInt(i uint) UInt {
 	return UInt{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -695,7 +698,7 @@ func (v UInt) Big() *big.Int {
 }
 
 func (v UInt) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return values.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v UInt) String() string {
@@ -860,7 +863,7 @@ var UInt128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewUInt128(i uint) UInt128 {
 	return UInt128{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -905,7 +908,7 @@ func (v UInt128) Big() *big.Int {
 }
 
 func (v UInt128) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt128TypeSize)
+	return values.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt128TypeSize)
 }
 
 func (v UInt128) String() string {
@@ -924,7 +927,7 @@ var UInt256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewUInt256(i uint) UInt256 {
 	return UInt256{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -969,7 +972,7 @@ func (v UInt256) Big() *big.Int {
 }
 
 func (v UInt256) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt256TypeSize)
+	return values.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt256TypeSize)
 }
 
 func (v UInt256) String() string {
@@ -1134,7 +1137,7 @@ var Word128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewWord128(i uint) Word128 {
 	return Word128{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -1179,7 +1182,7 @@ func (v Word128) Big() *big.Int {
 }
 
 func (v Word128) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return values.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v Word128) String() string {
@@ -1198,7 +1201,7 @@ var Word256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewWord256(i uint) Word256 {
 	return Word256{
-		Value: big.NewInt(int64(i)),
+		Value: (&big.Int{}).SetUint64(uint64(i)),
 	}
 }
 
@@ -1243,7 +1246,7 @@ func (v Word256) Big() *big.Int {
 }
 
 func (v Word256) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return values.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
 func (v Word256) String() string {
@@ -1311,6 +1314,82 @@ func (v Fix64) ToBigEndianBytes() []byte {
 
 func (v Fix64) String() string {
 	return format.Fix64(int64(v))
+}
+
+// Fix128
+
+type Fix128 fix.Fix128
+
+var _ Value = Fix128{}
+
+var Fix128MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Fix128{})))
+var fix128MinExceededError = errors.NewDefaultUserError("value exceeds min of Fix128")
+var fix128MaxExceededError = errors.NewDefaultUserError("value exceeds max of Fix128")
+
+func NewFix128(v fix.Fix128) (Fix128, error) {
+	if v.Lt(fixedpoint.Fix128TypeMin) {
+		return Fix128{}, fix128MinExceededError
+	}
+	if v.Gt(fixedpoint.Fix128TypeMax) {
+		return Fix128{}, fix128MaxExceededError
+	}
+
+	return Fix128(v), nil
+}
+
+func NewFix128FromString(gauge common.MemoryGauge, constructor func() (string, error)) (Fix128, error) {
+	common.UseMemory(gauge, Fix128MemoryUsage)
+	value, err := constructor()
+	if err != nil {
+		return Fix128{}, err
+	}
+	return NewUnmeteredFix128FromString(value)
+}
+
+func NewUnmeteredFix128FromString(s string) (Fix128, error) {
+	v, err := fixedpoint.ParseFix128(s)
+	if err != nil {
+		return Fix128{}, err
+	}
+
+	fix128Value := fixedpoint.Fix128FromBigInt(v)
+
+	return Fix128(fix128Value), nil
+}
+
+func NewFix128FromParts(negative bool, integer int, fraction uint) (Fix128, error) {
+	v, err := fixedpoint.NewFix128(
+		negative,
+		new(big.Int).SetInt64(int64(integer)),
+		new(big.Int).SetInt64(int64(fraction)),
+		fixedpoint.Fix128Scale,
+	)
+	if err != nil {
+		return Fix128{}, err
+	}
+
+	fix128Value := fixedpoint.Fix128FromBigInt(v)
+
+	return Fix128(fix128Value), nil
+}
+
+func (Fix128) isValue() {}
+
+func (Fix128) Type() Type {
+	return Fix128Type
+}
+
+func (v Fix128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Fix128) ToBigEndianBytes() []byte {
+	fix128 := fix.Fix128(v)
+	return fixedpoint.Fix128ToBigEndianBytes(fix128)
+}
+
+func (v Fix128) String() string {
+	return format.Fix128(fix.Fix128(v))
 }
 
 // UFix64
@@ -1381,6 +1460,81 @@ func (v UFix64) ToBigEndianBytes() []byte {
 
 func (v UFix64) String() string {
 	return format.UFix64(uint64(v))
+}
+
+// UFix128
+
+type UFix128 fix.UFix128
+
+var _ Value = UFix128{}
+
+var UFix128MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UFix128{})))
+var ufix128MinExceededError = errors.NewDefaultUserError("value exceeds min of UFix128")
+var ufix128MaxExceededError = errors.NewDefaultUserError("value exceeds max of UFix128")
+
+func NewUFix128(v fix.UFix128) (UFix128, error) {
+	if v.Lt(fixedpoint.UFix128TypeMin) {
+		return UFix128{}, ufix128MinExceededError
+	}
+	if v.Gt(fixedpoint.UFix128TypeMax) {
+		return UFix128{}, ufix128MaxExceededError
+	}
+
+	return UFix128(v), nil
+}
+
+func NewUFix128FromString(gauge common.MemoryGauge, constructor func() (string, error)) (UFix128, error) {
+	common.UseMemory(gauge, UFix128MemoryUsage)
+	value, err := constructor()
+	if err != nil {
+		return UFix128{}, err
+	}
+	return NewUnmeteredUFix128FromString(value)
+}
+
+func NewUnmeteredUFix128FromString(s string) (UFix128, error) {
+	v, err := fixedpoint.ParseUFix128(s)
+	if err != nil {
+		return UFix128{}, err
+	}
+
+	UFix128Value := fixedpoint.UFix128FromBigInt(v)
+
+	return UFix128(UFix128Value), nil
+}
+
+func NewUFix128FromParts(integer int, fraction uint) (UFix128, error) {
+	v, err := fixedpoint.NewUFix128(
+		new(big.Int).SetInt64(int64(integer)),
+		new(big.Int).SetInt64(int64(fraction)),
+		fixedpoint.UFix128Scale,
+	)
+	if err != nil {
+		return UFix128{}, err
+	}
+
+	UFix128Value := fixedpoint.UFix128FromBigInt(v)
+
+	return UFix128(UFix128Value), nil
+}
+
+func (UFix128) isValue() {}
+
+func (UFix128) Type() Type {
+	return UFix128Type
+}
+
+func (v UFix128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v UFix128) ToBigEndianBytes() []byte {
+	ufix128 := fix.UFix128(v)
+	return fixedpoint.UFix128ToBigEndianBytes(ufix128)
+}
+
+func (v UFix128) String() string {
+	return format.UFix128(fix.UFix128(v))
 }
 
 // Array

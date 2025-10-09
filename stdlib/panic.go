@@ -31,19 +31,26 @@ type PanicError struct {
 	Message string
 }
 
-var _ errors.UserError = PanicError{}
+var _ errors.UserError = &PanicError{}
+var _ interpreter.HasLocationRange = &PanicError{}
 
-func (PanicError) IsUserError() {}
+func (*PanicError) IsUserError() {}
 
-func (e PanicError) Error() string {
+func (e *PanicError) Error() string {
 	return fmt.Sprintf("panic: %s", e.Message)
+}
+
+func (e *PanicError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 const panicFunctionDocString = `
 Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.
 `
 
-var panicFunctionType = sema.NewSimpleFunctionType(
+const PanicFunctionName = "panic"
+
+var PanicFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]sema.Parameter{
 		{
@@ -55,20 +62,40 @@ var panicFunctionType = sema.NewSimpleFunctionType(
 	sema.NeverTypeAnnotation,
 )
 
-var PanicFunction = NewStandardLibraryStaticFunction(
-	"panic",
-	panicFunctionType,
-	panicFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		messageValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		message := messageValue.Str
-
-		panic(PanicError{
-			Message:       message,
-			LocationRange: invocation.LocationRange,
-		})
+var NativePanicFunction = interpreter.NativeFunction(
+	func(
+		_ interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		message := args[0]
+		return PanicWithError(message)
 	},
 )
+
+var InterpreterPanicFunction = NewNativeStandardLibraryStaticFunction(
+	PanicFunctionName,
+	PanicFunctionType,
+	panicFunctionDocString,
+	NativePanicFunction,
+	false,
+)
+
+var VMPanicFunction = NewNativeStandardLibraryStaticFunction(
+	PanicFunctionName,
+	PanicFunctionType,
+	panicFunctionDocString,
+	NativePanicFunction,
+	true,
+)
+
+func PanicWithError(message interpreter.Value) interpreter.Value {
+	messageValue, ok := message.(*interpreter.StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	panic(&PanicError{
+		Message: messageValue.Str,
+	})
+}

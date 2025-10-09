@@ -19,6 +19,9 @@
 package interpreter
 
 import (
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
@@ -35,45 +38,70 @@ type InclusiveRangeIterator struct {
 
 var _ ValueIterator = &InclusiveRangeIterator{}
 
+type InclusiveRangeIteratorContext interface {
+	common.MemoryGauge
+	NumberValueArithmeticContext
+}
+
 func NewInclusiveRangeIterator(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context InclusiveRangeIteratorContext,
 	v *CompositeValue,
 	typ InclusiveRangeStaticType,
 ) *InclusiveRangeIterator {
-	startValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStartFieldName)
+	startValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeStartFieldName)
 
 	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
-	endValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeEndFieldName)
+	endValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeEndFieldName)
 
-	stepValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStepFieldName)
-	stepNegative := stepValue.Less(interpreter, zeroValue, locationRange)
+	stepValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeStepFieldName)
+	stepNegative := stepValue.Less(context, zeroValue)
 
-	return &InclusiveRangeIterator{
+	i := &InclusiveRangeIterator{
 		rangeValue:   v,
-		next:         startValue,
 		stepNegative: bool(stepNegative),
 		step:         stepValue,
 		end:          endValue,
 	}
+	i.next = i.validate(startValue, context)
+
+	return i
 }
 
-func (i *InclusiveRangeIterator) Next(interpreter *Interpreter, locationRange LocationRange) Value {
+func (i *InclusiveRangeIterator) Next(context ValueIteratorContext) Value {
 	valueToReturn := i.next
-
-	// Ensure that valueToReturn is within the bounds.
-	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, locationRange)) {
-		return nil
-	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, locationRange)) {
+	if valueToReturn == nil {
 		return nil
 	}
 
 	// Update the next value.
-	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, locationRange).(IntegerValue)
+	nextValueToReturn, ok := valueToReturn.Plus(context, i.step).(IntegerValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	i.next = nextValueToReturn
+	i.next = i.validate(nextValueToReturn, context)
+
 	return valueToReturn
+}
+
+func (i *InclusiveRangeIterator) validate(
+	element IntegerValue,
+	context ValueIteratorContext,
+) IntegerValue {
+	// Ensure that element is within the bounds.
+	if i.stepNegative && bool(element.Less(context, i.end)) {
+		return nil
+	} else if !i.stepNegative && bool(element.Greater(context, i.end)) {
+		return nil
+	}
+
+	return element
+}
+
+func (i *InclusiveRangeIterator) HasNext() bool {
+	return i.next != nil
+}
+
+func (*InclusiveRangeIterator) ValueID() (atree.ValueID, bool) {
+	return atree.ValueID{}, false
 }

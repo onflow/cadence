@@ -23,19 +23,22 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
-type interpreterContractFunctionExecutor struct {
+type contractFunctionExecutor struct {
 	context          Context
 	environment      Environment
 	result           cadence.Value
 	executeErr       error
 	preprocessErr    error
 	codesAndPrograms CodesAndPrograms
-	runtime          *interpreterRuntime
+	runtime          Runtime
 	storage          *Storage
 	contractLocation common.AddressLocation
 	functionName     string
@@ -43,17 +46,18 @@ type interpreterContractFunctionExecutor struct {
 	argumentTypes    []sema.Type
 	executeOnce      sync.Once
 	preprocessOnce   sync.Once
+	vm               *vm.VM
 }
 
-func newInterpreterContractFunctionExecutor(
-	runtime *interpreterRuntime,
+func newContractFunctionExecutor(
+	runtime Runtime,
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []cadence.Value,
 	argumentTypes []sema.Type,
 	context Context,
-) *interpreterContractFunctionExecutor {
-	return &interpreterContractFunctionExecutor{
+) *contractFunctionExecutor {
+	return &contractFunctionExecutor{
 		runtime:          runtime,
 		contractLocation: contractLocation,
 		functionName:     functionName,
@@ -63,7 +67,7 @@ func newInterpreterContractFunctionExecutor(
 	}
 }
 
-func (executor *interpreterContractFunctionExecutor) Preprocess() error {
+func (executor *contractFunctionExecutor) Preprocess() error {
 	executor.preprocessOnce.Do(func() {
 		executor.preprocessErr = executor.preprocess()
 	})
@@ -71,7 +75,7 @@ func (executor *interpreterContractFunctionExecutor) Preprocess() error {
 	return executor.preprocessErr
 }
 
-func (executor *interpreterContractFunctionExecutor) Execute() error {
+func (executor *contractFunctionExecutor) Execute() error {
 	executor.executeOnce.Do(func() {
 		executor.result, executor.executeErr = executor.execute()
 	})
@@ -79,23 +83,21 @@ func (executor *interpreterContractFunctionExecutor) Execute() error {
 	return executor.executeErr
 }
 
-func (executor *interpreterContractFunctionExecutor) Result() (cadence.Value, error) {
+func (executor *contractFunctionExecutor) Result() (cadence.Value, error) {
 	// Note: Execute's error is saved into executor.executeErr and return in
 	// the next line.
 	_ = executor.Execute()
 	return executor.result, executor.executeErr
 }
 
-func (executor *interpreterContractFunctionExecutor) preprocess() (err error) {
+func (executor *contractFunctionExecutor) preprocess() (err error) {
 	context := executor.context
 	location := context.Location
 
 	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
-	interpreterRuntime := executor.runtime
-
-	defer interpreterRuntime.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
@@ -105,43 +107,104 @@ func (executor *interpreterContractFunctionExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
-	storage := NewStorage(runtimeInterface, runtimeInterface)
+	config := executor.runtime.Config()
+
+	storage := NewStorage(
+		runtimeInterface,
+		context.MemoryGauge,
+		StorageConfig{},
+	)
 	executor.storage = storage
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewBaseInterpreterEnvironment(interpreterRuntime.defaultConfig)
+		if context.UseVM {
+			environment = NewBaseVMEnvironment(config)
+		} else {
+			environment = NewBaseInterpreterEnvironment(config)
+		}
 	}
+
 	environment.Configure(
 		runtimeInterface,
 		codesAndPrograms,
 		storage,
-		context.CoverageReport,
+		context.MemoryGauge,
+		context.ComputationGauge,
 	)
 	executor.environment = environment
+
+	switch environment := environment.(type) {
+	case *InterpreterEnvironment:
+		if context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the VM, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+
+		// NO-OP
+
+	case *vmEnvironment:
+		if !context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the interpreter, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+		contractLocation := executor.contractLocation
+		program := environment.importProgram(contractLocation)
+		executor.vm = environment.newVM(contractLocation, program)
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
+	}
 
 	return nil
 }
 
-func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Value, err error) {
+func (executor *contractFunctionExecutor) execute() (val cadence.Value, err error) {
 	err = executor.Preprocess()
 	if err != nil {
 		return nil, err
 	}
 
 	environment := executor.environment
-	context := executor.context
-	location := context.Location
 	codesAndPrograms := executor.codesAndPrograms
-	interpreterRuntime := executor.runtime
 
-	defer interpreterRuntime.Recover(
+	defer Recover(
 		func(internalErr Error) {
 			err = internalErr
 		},
-		location,
+		executor.context.Location,
 		codesAndPrograms,
 	)
+
+	switch environment := environment.(type) {
+	case *InterpreterEnvironment:
+		value, err := executor.executeWithInterpreter(environment)
+		if err != nil {
+			return nil, newError(err, executor.context.Location, codesAndPrograms)
+		}
+		return value, nil
+
+	case *vmEnvironment:
+		value, err := executor.executeWithVM(environment)
+		if err != nil {
+			return nil, newError(err, executor.context.Location, codesAndPrograms)
+		}
+		return value, nil
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
+	}
+}
+
+func (executor *contractFunctionExecutor) executeWithInterpreter(
+	environment *InterpreterEnvironment,
+) (val cadence.Value, err error) {
+
+	location := executor.context.Location
 
 	// create interpreter
 	_, inter, err := environment.Interpret(
@@ -150,34 +213,25 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		nil,
 	)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(executor.contractLocation)
 
-	interpreterArguments := make([]interpreter.Value, len(executor.arguments))
+	arguments := make([]interpreter.Value, 0, len(executor.arguments))
 
-	locationRange := interpreter.LocationRange{
-		Location:    location,
-		HasPosition: ast.EmptyRange,
-	}
-
-	for i, argumentType := range executor.argumentTypes {
-		interpreterArguments[i], err = executor.convertArgument(
-			inter,
-			executor.arguments[i],
-			argumentType,
-			locationRange,
-		)
-		if err != nil {
-			return nil, newError(err, location, codesAndPrograms)
-		}
-	}
-
-	contractValue, err := inter.GetContractComposite(executor.contractLocation)
+	arguments, err = executor.appendArguments(inter, arguments)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
+	}
+
+	contractValue := inter.GetContractComposite(executor.contractLocation)
+	if contractValue == nil {
+		return nil, interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         executor.contractLocation.Name,
+		}
 	}
 
 	var self interpreter.Value = contractValue
@@ -187,55 +241,109 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		inter,
 		&self,
 		nil,
-		nil,
-		interpreterArguments,
+		arguments,
 		executor.argumentTypes,
 		nil,
 		interpreter.LocationRange{
-			Location:    context.Location,
+			Location:    location,
 			HasPosition: ast.EmptyRange,
 		},
 	)
 
-	contractMember := contractValue.GetMember(
-		inter,
-		invocation.LocationRange,
-		executor.functionName,
-	)
+	contractMember := contractValue.GetMember(inter, executor.functionName)
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)
 	if !ok {
 		err := interpreter.NotInvokableError{
 			Value: contractFunction,
 		}
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
-	value, err := inter.InvokeFunction(contractFunction, invocation)
+	value, err := interpreter.InvokeFunction(inter, contractFunction, invocation)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.CommitStorage(inter)
+	err = environment.commitStorage(inter)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
+	exportedValue, err = ExportValue(value, inter)
 	if err != nil {
-		return nil, newError(err, location, codesAndPrograms)
+		return nil, err
 	}
 
 	return exportedValue, nil
 }
 
-func (executor *interpreterContractFunctionExecutor) convertArgument(
-	inter *interpreter.Interpreter,
+func (executor *contractFunctionExecutor) executeWithVM(
+	environment *vmEnvironment,
+) (val cadence.Value, err error) {
+
+	contractLocation := executor.contractLocation
+
+	context := executor.vm.Context()
+
+	contractValue := loadContractValue(
+		context,
+		contractLocation,
+		environment.storage,
+	)
+	if contractValue == nil {
+		return nil, interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         executor.contractLocation.Name,
+		}
+	}
+
+	// receiver + arguments
+	arguments := make([]interpreter.Value, 0, len(executor.arguments))
+
+	arguments, err = executor.appendArguments(context, arguments)
+	if err != nil {
+		return nil, err
+	}
+
+	staticType := contractValue.StaticType(context)
+	semaType := context.SemaTypeFromStaticType(staticType)
+	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
+
+	value, err := executor.vm.InvokeMethodExternally(
+		qualifiedFuncName,
+		contractValue,
+		arguments...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write back all stored values, which were actually just cached, back into storage
+	err = environment.commitStorage(context)
+	if err != nil {
+		return nil, err
+	}
+
+	var exportedValue cadence.Value
+	exportedValue, err = ExportValue(value, context)
+	if err != nil {
+		return nil, err
+	}
+
+	return exportedValue, nil
+}
+
+type ArgumentConversionContext interface {
+	interpreter.AccountCreationContext
+}
+
+func (executor *contractFunctionExecutor) convertArgument(
+	context ArgumentConversionContext,
 	argument cadence.Value,
 	argumentType sema.Type,
-	locationRange interpreter.LocationRange,
 ) (interpreter.Value, error) {
 	environment := executor.environment
 
@@ -243,26 +351,16 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 	// if it is the expected argument type,
 	// so there is no need for the caller to construct the value
 
-	if addressValue, ok := argument.(cadence.Address); ok {
+	if address, ok := argument.(cadence.Address); ok {
 
 		if referenceType, ok := argumentType.(*sema.ReferenceType); ok &&
 			referenceType.Type == sema.AccountType {
 
-			address := interpreter.NewAddressValue(inter, common.Address(addressValue))
-
-			accountValue := environment.NewAccountValue(inter, address)
-
-			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
-				inter,
+			accountReferenceValue := newAccountReferenceValueFromAddress(
+				context,
+				common.Address(address),
+				environment,
 				referenceType.Authorization,
-			)
-
-			accountReferenceValue := interpreter.NewEphemeralReferenceValue(
-				inter,
-				authorization,
-				accountValue,
-				sema.AccountType,
-				locationRange,
 			)
 
 			return accountReferenceValue, nil
@@ -270,11 +368,32 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 	}
 
 	return ImportValue(
-		inter,
-		locationRange,
+		context,
 		environment,
 		environment.ResolveLocation,
 		argument,
 		argumentType,
 	)
+}
+
+func (executor *contractFunctionExecutor) appendArguments(
+	context ArgumentConversionContext,
+	arguments []interpreter.Value,
+) (
+	[]interpreter.Value,
+	error,
+) {
+	for i, argumentType := range executor.argumentTypes {
+		argument, err := executor.convertArgument(
+			context,
+			executor.arguments[i],
+			argumentType,
+		)
+		if err != nil {
+			return nil, err
+		}
+		arguments = append(arguments, argument)
+	}
+
+	return arguments, nil
 }

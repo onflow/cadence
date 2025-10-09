@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/values"
 )
 
 // TODO: remove once migrated
@@ -47,19 +48,19 @@ var _ atree.Value = PathLinkValue{}
 var _ EquatableValue = PathLinkValue{}
 var _ LinkValue = PathLinkValue{}
 
-func (PathLinkValue) isValue() {}
+func (PathLinkValue) IsValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v PathLinkValue) Accept(_ ValueVisitContext, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (v PathLinkValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) StaticType(interpreter *Interpreter) StaticType {
+func (v PathLinkValue) StaticType(context ValueStaticTypeContext) StaticType {
 	// When iterating over public/private paths,
 	// the values at these paths are PathLinkValues,
 	// placed there by the `link` function.
@@ -67,10 +68,10 @@ func (v PathLinkValue) StaticType(interpreter *Interpreter) StaticType {
 	// These are loaded as links, however,
 	// for the purposes of checking their type,
 	// we treat them as capabilities
-	return NewCapabilityStaticType(interpreter, v.Type)
+	return NewCapabilityStaticType(context, v.Type)
 }
 
-func (PathLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (PathLinkValue) IsImportable(_ ValueImportableContext) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -86,25 +87,27 @@ func (v PathLinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v PathLinkValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v PathLinkValue) MeteredString(
+	_ ValueStringContext,
+	_ SeenReferences,
+) string {
 	panic(errors.NewUnreachableError())
 }
 
 func (v PathLinkValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v PathLinkValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherLink, ok := other.(PathLinkValue)
 	if !ok {
 		return false
 	}
 
-	return otherLink.TargetPath.Equal(interpreter, locationRange, v.TargetPath) &&
+	return otherLink.TargetPath.Equal(context, v.TargetPath) &&
 		otherLink.Type.Equal(v.Type)
 }
 
@@ -113,20 +116,19 @@ func (PathLinkValue) IsStorable() bool {
 }
 
 func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (PathLinkValue) NeedsStoreTo(_ atree.Address) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (PathLinkValue) IsResourceKinded(_ *Interpreter) bool {
+func (PathLinkValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	panic(errors.NewUnreachableError())
 }
 
 func (v PathLinkValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -134,19 +136,19 @@ func (v PathLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v PathLinkValue) Clone(inter *Interpreter) Value {
+func (v PathLinkValue) Clone(context ValueCloneContext) Value {
 	return PathLinkValue{
 		Type:       v.Type,
-		TargetPath: v.TargetPath.Clone(inter).(PathValue),
+		TargetPath: v.TargetPath.Clone(context).(PathValue),
 	}
 }
 
-func (PathLinkValue) DeepRemove(_ *Interpreter, _ bool) {
+func (PathLinkValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -172,19 +174,19 @@ var _ atree.Value = AccountLinkValue{}
 var _ EquatableValue = AccountLinkValue{}
 var _ LinkValue = AccountLinkValue{}
 
-func (AccountLinkValue) isValue() {}
+func (AccountLinkValue) IsValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v AccountLinkValue) Accept(_ ValueVisitContext, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (AccountLinkValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
+func (v AccountLinkValue) StaticType(context ValueStaticTypeContext) StaticType {
 	// When iterating over public/private paths,
 	// the values at these paths are AccountLinkValues,
 	// placed there by the `linkAccount` function.
@@ -193,16 +195,16 @@ func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
 	// for the purposes of checking their type,
 	// we treat them as capabilities
 	return NewCapabilityStaticType(
-		interpreter,
+		context,
 		NewReferenceStaticType(
-			interpreter,
+			context,
 			FullyEntitledAccountAccess,
 			PrimitiveStaticTypeAccount,
 		),
 	)
 }
 
-func (AccountLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (AccountLinkValue) IsImportable(_ ValueImportableContext) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -214,19 +216,21 @@ func (v AccountLinkValue) RecursiveString(_ SeenReferences) string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v AccountLinkValue) MeteredString(
+	_ ValueStringContext,
+	_ SeenReferences,
+) string {
 	panic(errors.NewUnreachableError())
 }
 
 func (v AccountLinkValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v AccountLinkValue) Equal(_ ValueComparisonContext, other Value) bool {
 	_, ok := other.(AccountLinkValue)
 	return ok
 }
@@ -236,20 +240,19 @@ func (AccountLinkValue) IsStorable() bool {
 }
 
 func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (AccountLinkValue) NeedsStoreTo(_ atree.Address) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) IsResourceKinded(_ *Interpreter) bool {
+func (AccountLinkValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	panic(errors.NewUnreachableError())
 }
 
 func (v AccountLinkValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -257,16 +260,16 @@ func (v AccountLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (AccountLinkValue) Clone(_ *Interpreter) Value {
+func (AccountLinkValue) Clone(_ ValueCloneContext) Value {
 	return AccountLinkValue{}
 }
 
-func (AccountLinkValue) DeepRemove(_ *Interpreter, _ bool) {
+func (AccountLinkValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -307,7 +310,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagPathLinkValue,
+		0xd8, values.CBORTagPathLinkValue, //nolint:staticcheck
 		// array, 2 items follow
 		0x82,
 	})
@@ -331,7 +334,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 //	}
 var cborAccountLinkValue = []byte{
 	// tag
-	0xd8, CBORTagAccountLinkValue,
+	0xd8, values.CBORTagAccountLinkValue, //nolint:staticcheck
 	// null
 	0xf6,
 }

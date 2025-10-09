@@ -433,19 +433,6 @@ func init() {
 		},
 	})
 
-	defineExpr(literalExpr{
-		tokenType: lexer.TokenString,
-		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal := p.tokenSource(token)
-			parsedString := parseStringLiteral(p, literal)
-			return ast.NewStringExpression(
-				p.memoryGauge,
-				parsedString,
-				token.Range,
-			), nil
-		},
-	})
-
 	defineExpr(prefixExpr{
 		tokenType:    lexer.TokenMinus,
 		bindingPower: exprLeftBindingPowerUnaryPrefix,
@@ -510,6 +497,7 @@ func init() {
 	defineNestedExpression()
 	defineInvocationExpression()
 	defineArrayExpression()
+	defineStringExpression()
 	defineDictionaryExpression()
 	defineIndexExpression()
 	definePathExpression()
@@ -519,7 +507,9 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
-		return nil, NewSyntaxError(token.StartPos, "unexpected end of program")
+		return nil, UnexpectedEOFError{
+			Pos: token.StartPos,
+		}
 	})
 }
 
@@ -581,7 +571,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 				defer func() {
 					err := recover()
 					// MemoryError should abort parsing
-					_, ok := err.(errors.MemoryError)
+					_, ok := err.(errors.MemoryMeteringError)
 					if ok {
 						panic(err)
 					}
@@ -592,12 +582,16 @@ func defineLessThanOrTypeArgumentsExpression() {
 					return err
 				}
 
-				_, err = p.mustOne(lexer.TokenGreater)
-				if err != nil {
-					return err
+				if p.current.Is(lexer.TokenGreater) {
+					p.next()
+				} else {
+					p.report(&MissingClosingGreaterInTypeArgumentsError{
+						Pos: p.current.StartPos,
+					})
 				}
 
 				p.skipSpaceAndComments()
+
 				parenOpenToken, err := p.mustOne(lexer.TokenParenOpen)
 				if err != nil {
 					return err
@@ -835,8 +829,9 @@ func defineIdentifierExpression() {
 				p.skipSpaceAndComments()
 
 				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
-					// skip the `fun` keyword
+					// Skip the `fun` keyword
 					p.nextSemanticToken()
+
 					return parseFunctionExpression(p, token, ast.FunctionPurityView)
 				}
 
@@ -967,15 +962,14 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 	p.skipSpaceAndComments()
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordTo) {
-		return nil, p.syntaxError(
-			"expected 'to', got %s",
-			p.current.Type,
-		)
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordTo) {
+		// Skip the `to` keyword
+		p.nextSemanticToken()
+	} else {
+		p.report(&MissingToKeywordInAttachExpressionError{
+			GotToken: p.current,
+		})
 	}
-
-	// consume the `to` token
-	p.nextSemanticToken()
 
 	base, err := parseExpression(p, lowestBindingPower)
 	if err != nil {
@@ -1014,18 +1008,22 @@ func defineInvocationExpression() {
 }
 
 func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos ast.Position, err error) {
-	atEnd := false
 	expectArgument := true
-	for !atEnd {
+
+	var atEnd bool
+
+	progress := p.newProgress()
+
+	for !atEnd && p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectArgument {
-				return nil, ast.EmptyPosition, p.syntaxError(
-					"expected argument or end of argument list, got %s",
-					p.current.Type,
-				)
+				return nil, ast.EmptyPosition, &UnexpectedCommaInArgumentListError{
+					Pos: p.current.StartPos,
+				}
 			}
 			// Skip the comma
 			p.next()
@@ -1040,16 +1038,15 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		case lexer.TokenEOF:
 			return nil,
 				ast.EmptyPosition,
-				p.syntaxError("missing ')' at end of invocation argument list")
+				&MissingClosingParenInArgumentListError{
+					Pos: p.current.StartPos,
+				}
 
 		default:
 			if !expectArgument {
-				return nil,
-					ast.EmptyPosition,
-					p.syntaxError(
-						"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
-						p.current.Type,
-					)
+				return nil, ast.EmptyPosition, &MissingCommaInArgumentListError{
+					GotToken: p.current,
+				}
 			}
 
 			argument, err := parseArgument(p)
@@ -1089,10 +1086,10 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 
 		identifier, ok := expr.(*ast.IdentifierExpression)
 		if !ok {
-			return nil, p.syntaxError(
-				"expected identifier for label, got %s",
-				expr,
-			)
+			expressionRange := ast.NewRangeFromPositioned(p.memoryGauge, expr)
+			return nil, &InvalidExpressionAsLabelError{
+				Range: expressionRange,
+			}
 		}
 		label = identifier.Identifier.Identifier
 		labelStartPos = expr.StartPosition()
@@ -1125,12 +1122,14 @@ func defineNestedExpression() {
 			p.skipSpaceAndComments()
 
 			// special case: parse a Void literal `()`
-			if p.current.Type == lexer.TokenParenClose {
-				// skip the closing parenthesis
+			if p.current.Is(lexer.TokenParenClose) {
 				p.next()
 
-				voidExpr := ast.NewVoidExpression(p.memoryGauge, startToken.StartPos, p.current.EndPos)
-				return voidExpr, nil
+				return ast.NewVoidExpression(
+					p.memoryGauge,
+					startToken.StartPos,
+					p.current.EndPos,
+				), nil
 			}
 
 			expression, err := parseExpression(p, lowestBindingPower)
@@ -1138,8 +1137,131 @@ func defineNestedExpression() {
 				return nil, err
 			}
 
-			_, err = p.mustOne(lexer.TokenParenClose)
-			return expression, err
+			if p.current.Is(lexer.TokenParenClose) {
+				p.next()
+			} else {
+				p.report(&MissingEndOfParenthesizedExpressionError{
+					GotToken: p.current,
+				})
+			}
+
+			return expression, nil
+		},
+	)
+}
+
+func defineStringExpression() {
+	setExprNullDenotation(
+		lexer.TokenString,
+		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			var literals []string
+			var values []ast.Expression
+			curToken := startToken
+			endToken := startToken
+
+			// check for start " of string literal
+			literal := p.tokenSource(curToken)
+			length := len(literal)
+			if length == 0 {
+				p.reportSyntaxError("invalid end of string literal: missing `\"`")
+				return ast.NewStringExpression(
+					p.memoryGauge,
+					"",
+					startToken.Range,
+				), nil
+			}
+
+			if length >= 1 {
+				first := literal[0]
+				if first != '"' {
+					p.reportSyntaxError("invalid start of string literal: expected `\"`, got %#q", first)
+				}
+			}
+
+			// flag for ending " check
+			missingEnd := true
+
+			progress := p.newProgress()
+
+			for curToken.Is(lexer.TokenString) &&
+				p.checkProgress(&progress) {
+
+				literal = p.tokenSource(curToken)
+
+				// remove quotation marks if they exist
+				if curToken == startToken {
+					literal = literal[1:]
+				}
+
+				length = len(literal)
+				if length >= 1 && literal[length-1] == '"' {
+					literal = literal[:length-1]
+					missingEnd = false
+				}
+
+				parsedString := parseStringLiteralContent(p, literal)
+				literals = append(literals, parsedString)
+				endToken = curToken
+
+				// parser already points to next token
+				curToken = p.current
+
+				if curToken.Is(lexer.TokenStringTemplate) {
+					// If the next token is a string template,
+					// then we need to parse the expression inside the template
+
+					// advance to the expression
+					p.next()
+					value, err := parseExpression(p, lowestBindingPower)
+
+					// consider invalid expression first
+					if err != nil {
+						return nil, err
+					}
+
+					_, err = p.mustOne(lexer.TokenParenClose)
+					if err != nil {
+						return nil, err
+					}
+
+					values = append(values, value)
+
+					// parser already points to next token
+					curToken = p.current
+
+					// safely call next because this should always be a string
+					p.next()
+
+					missingEnd = true
+				} else {
+					// If the next token is not a string template,
+					// then we are done with parsing the string literal
+					break
+				}
+			}
+
+			// check for end " of string literal
+			if missingEnd {
+				p.reportSyntaxError("invalid end of string literal: missing `\"`")
+			}
+
+			if len(values) == 0 {
+				return ast.NewStringExpression(
+					p.memoryGauge,
+					literals[0], // must exist
+					startToken.Range,
+				), nil
+			} else {
+				return ast.NewStringTemplateExpression(
+					p.memoryGauge,
+					literals,
+					values,
+					ast.NewRange(p.memoryGauge,
+						startToken.StartPos,
+						endToken.EndPos),
+				), nil
+			}
+
 		},
 	)
 }
@@ -1151,8 +1273,14 @@ func defineArrayExpression() {
 			p.skipSpaceAndComments()
 
 			var values []ast.Expression
-			for !p.current.Is(lexer.TokenBracketClose) {
+
+			progress := p.newProgress()
+
+			for !p.current.Is(lexer.TokenBracketClose) &&
+				p.checkProgress(&progress) {
+
 				p.skipSpaceAndComments()
+
 				if len(values) > 0 {
 					if !p.current.Is(lexer.TokenComma) {
 						break
@@ -1167,9 +1295,13 @@ func defineArrayExpression() {
 				values = append(values, value)
 			}
 
-			endToken, err := p.mustOne(lexer.TokenBracketClose)
-			if err != nil {
-				return nil, err
+			endToken := p.current
+			if p.current.Is(lexer.TokenBracketClose) {
+				p.next()
+			} else {
+				p.report(&MissingClosingBracketInArrayExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			return ast.NewArrayExpression(
@@ -1192,8 +1324,14 @@ func defineDictionaryExpression() {
 			p.skipSpaceAndComments()
 
 			var entries []ast.DictionaryEntry
-			for !p.current.Is(lexer.TokenBraceClose) {
+
+			progress := p.newProgress()
+
+			for !p.current.Is(lexer.TokenBraceClose) &&
+				p.checkProgress(&progress) {
+
 				p.skipSpaceAndComments()
+
 				if len(entries) > 0 {
 					if !p.current.Is(lexer.TokenComma) {
 						break
@@ -1206,9 +1344,12 @@ func defineDictionaryExpression() {
 					return nil, err
 				}
 
-				_, err = p.mustOne(lexer.TokenColon)
-				if err != nil {
-					return nil, err
+				if p.current.Is(lexer.TokenColon) {
+					p.next()
+				} else {
+					p.report(&MissingColonInDictionaryEntryError{
+						GotToken: p.current,
+					})
 				}
 
 				value, err := parseExpression(p, lowestBindingPower)
@@ -1223,9 +1364,13 @@ func defineDictionaryExpression() {
 				))
 			}
 
-			endToken, err := p.mustOne(lexer.TokenBraceClose)
-			if err != nil {
-				return nil, err
+			endToken := p.current
+			if p.current.Is(lexer.TokenBraceClose) {
+				p.next()
+			} else {
+				p.report(&MissingClosingBraceInDictionaryExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			return ast.NewDictionaryExpression(
@@ -1251,9 +1396,13 @@ func defineIndexExpression() {
 				return nil, err
 			}
 
-			endToken, err := p.mustOne(lexer.TokenBracketClose)
-			if err != nil {
-				return nil, err
+			endToken := p.current
+			if p.current.Is(lexer.TokenBracketClose) {
+				p.next()
+			} else {
+				p.report(&MissingClosingBracketInIndexExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			return ast.NewIndexExpression(
@@ -1281,9 +1430,12 @@ func defineConditionalExpression() {
 				return nil, err
 			}
 
-			_, err = p.mustOne(lexer.TokenColon)
-			if err != nil {
-				return nil, err
+			if p.current.Is(lexer.TokenColon) {
+				p.next()
+			} else {
+				p.report(&MissingColonInConditionalExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			elseExpression, err := parseExpression(p, lowestBindingPower)
@@ -1310,9 +1462,12 @@ func definePathExpression() {
 				return nil, err
 			}
 
-			_, err = p.mustOne(lexer.TokenSlash)
-			if err != nil {
-				return nil, err
+			if p.current.Is(lexer.TokenSlash) {
+				p.next()
+			} else {
+				p.report(&MissingSlashInPathExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			identifier, err := p.mustIdentifier()
@@ -1369,13 +1524,12 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 	// We parse it anyway and report an error
 
 	if p.current.Is(lexer.TokenSpace) {
-		errorPos := p.current.StartPos
+		whitespaceToken := p.current
 		p.skipSpaceAndComments()
-		p.report(NewSyntaxError(
-			errorPos,
-			"invalid whitespace after %s",
-			lexer.TokenDot,
-		))
+		p.report(&WhitespaceAfterMemberAccessError{
+			OperatorTokenType: token.Type,
+			WhitespaceRange:   whitespaceToken.Range,
+		})
 	}
 
 	// If there is an identifier, use it.
@@ -1386,10 +1540,9 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 		identifier = p.tokenToIdentifier(p.current)
 		p.next()
 	} else {
-		p.reportSyntaxError(
-			"expected member name, got %s",
-			p.current.Type,
-		)
+		p.report(&MemberAccessMissingNameError{
+			GotToken: p.current,
+		})
 	}
 
 	return ast.NewMemberExpression(
@@ -1447,7 +1600,10 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 		return nil, err
 	}
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		// Automatically skip any trivia between the left and right expression.
 		// However, do not automatically skip newlines:
 		// Some left denotations do not support newlines before them,
@@ -1544,10 +1700,11 @@ func exprLeftBindingPower(p *parser) (int, error) {
 }
 
 func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, error) {
-	tokenType := token.Type
-	nullDenotation := exprNullDenotations[tokenType]
+	nullDenotation := exprNullDenotations[token.Type]
 	if nullDenotation == nil {
-		return nil, p.syntaxError("unexpected token in expression: %s", tokenType)
+		return nil, &UnexpectedExpressionStartError{
+			GotToken: token,
+		}
 	}
 	return nullDenotation(p, token)
 }
@@ -1555,7 +1712,9 @@ func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, erro
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 	leftDenotation := exprLeftDenotations[token.Type]
 	if leftDenotation == nil {
-		return nil, p.syntaxError("unexpected token in expression: %s", token.Type)
+		return nil, &UnexpectedTokenInExpressionError{
+			GotToken: token,
+		}
 	}
 	return leftDenotation(p, token, left)
 }
@@ -1564,14 +1723,14 @@ func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) 
 func parseStringLiteral(p *parser, literal []byte) (result string) {
 	length := len(literal)
 	if length == 0 {
-		p.reportSyntaxError("missing start of string literal: expected '\"'")
+		p.reportSyntaxError("missing start of string literal: expected `\"`")
 		return
 	}
 
 	if length >= 1 {
 		first := literal[0]
 		if first != '"' {
-			p.reportSyntaxError("invalid start of string literal: expected '\"', got %q", first)
+			p.reportSyntaxError("invalid start of string literal: expected `\"`, got %#q", first)
 		}
 	}
 
@@ -1592,7 +1751,7 @@ func parseStringLiteral(p *parser, literal []byte) (result string) {
 	result = parseStringLiteralContent(p, literal[1:endOffset])
 
 	if missingEnd {
-		p.reportSyntaxError("invalid end of string literal: missing '\"'")
+		p.reportSyntaxError("invalid end of string literal: missing `\"`")
 	}
 
 	return
@@ -1659,13 +1818,13 @@ func parseStringLiteralContent(p *parser, s []byte) (result string) {
 		case 'u':
 			if atEnd {
 				p.reportSyntaxError(
-					"incomplete Unicode escape sequence: missing character '{' after escape character",
+					"incomplete Unicode escape sequence: missing character `{` after escape character",
 				)
 				return
 			}
 			advance()
 			if r != '{' {
-				p.reportSyntaxError("invalid Unicode escape sequence: expected '{', got %q", r)
+				p.reportSyntaxError("invalid Unicode escape sequence: expected `{`, got %#q", string(r))
 				continue
 			}
 
@@ -1681,7 +1840,7 @@ func parseStringLiteralContent(p *parser, s []byte) (result string) {
 				parsed := parseHex(r)
 
 				if parsed < 0 {
-					p.reportSyntaxError("invalid Unicode escape sequence: expected hex digit, got %q", r)
+					p.reportSyntaxError("invalid Unicode escape sequence: expected hex digit, got %#q", string(r))
 					valid = false
 				} else {
 					r2 = r2<<4 | parsed
@@ -1701,15 +1860,15 @@ func parseStringLiteralContent(p *parser, s []byte) (result string) {
 				break
 			case lexer.EOF:
 				p.reportSyntaxError(
-					"incomplete Unicode escape sequence: missing character '}' after escape character",
+					"incomplete Unicode escape sequence: missing character `}` after escape character",
 				)
 			default:
-				p.reportSyntaxError("incomplete Unicode escape sequence: expected '}', got %q", r)
+				p.reportSyntaxError("incomplete Unicode escape sequence: expected `}`, got %#q", string(r))
 			}
 
 		default:
 			// TODO: include index/column in error
-			p.reportSyntaxError("invalid escape character: %q", r)
+			p.reportSyntaxError("invalid escape character: %#q", string(r))
 			// skip invalid escape character, don't write to result
 		}
 	}

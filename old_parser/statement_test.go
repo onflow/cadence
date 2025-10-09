@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestParseReplInput(t *testing.T) {
@@ -63,7 +63,7 @@ func TestParseReturnStatement(t *testing.T) {
 		result, errs := testParseStatements("return")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ReturnStatement{
 					Range: ast.Range{
@@ -83,7 +83,7 @@ func TestParseReturnStatement(t *testing.T) {
 		result, errs := testParseStatements("return 1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ReturnStatement{
 					Expression: &ast.IntegerExpression{
@@ -112,7 +112,7 @@ func TestParseReturnStatement(t *testing.T) {
 		result, errs := testParseStatements("return \n1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ReturnStatement{
 					Range: ast.Range{
@@ -143,7 +143,7 @@ func TestParseReturnStatement(t *testing.T) {
 		result, errs := testParseStatements("return ;\n1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ReturnStatement{
 					Range: ast.Range{
@@ -179,7 +179,7 @@ func TestParseIfStatement(t *testing.T) {
 		result, errs := testParseStatements("if true { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.IfStatement{
 					Test: &ast.BoolExpression{
@@ -210,7 +210,7 @@ func TestParseIfStatement(t *testing.T) {
 		result, errs := testParseStatements("if true { 1 ; 2 }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.IfStatement{
 					Test: &ast.BoolExpression{
@@ -264,7 +264,7 @@ func TestParseIfStatement(t *testing.T) {
 		result, errs := testParseStatements("if true { 1 \n 2 }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.IfStatement{
 					Test: &ast.BoolExpression{
@@ -318,7 +318,7 @@ func TestParseIfStatement(t *testing.T) {
 		result, errs := testParseStatements("if true { 1 } else { 2 }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.IfStatement{
 					Test: &ast.BoolExpression{
@@ -380,7 +380,7 @@ func TestParseIfStatement(t *testing.T) {
 		result, errs := testParseStatements("if true{1}else if true {2} else{3}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.IfStatement{
 					Test: &ast.BoolExpression{
@@ -514,7 +514,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		expected.Test.(*ast.VariableDeclaration).ParentIfStatement = expected
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				expected,
 			},
@@ -564,7 +564,7 @@ func TestParseIfStatement(t *testing.T) {
 
 		expected.Test.(*ast.VariableDeclaration).ParentIfStatement = expected
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				expected,
 			},
@@ -585,7 +585,7 @@ func TestParseWhileStatement(t *testing.T) {
 		result, errs := testParseStatements("while true { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.WhileStatement{
 					Test: &ast.BoolExpression{
@@ -621,7 +621,7 @@ func TestParseAssignmentStatement(t *testing.T) {
 		result, errs := testParseStatements("x=1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.AssignmentStatement{
 					Target: &ast.IdentifierExpression{
@@ -656,7 +656,7 @@ func TestParseAssignmentStatement(t *testing.T) {
 		result, errs := testParseStatements(" x = 1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.AssignmentStatement{
 					Target: &ast.IdentifierExpression{
@@ -691,7 +691,7 @@ func TestParseAssignmentStatement(t *testing.T) {
 		result, errs := testParseStatements(" x <- 1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.AssignmentStatement{
 					Target: &ast.IdentifierExpression{
@@ -726,7 +726,7 @@ func TestParseAssignmentStatement(t *testing.T) {
 		result, errs := testParseStatements(" x <-! 1")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.AssignmentStatement{
 					Target: &ast.IdentifierExpression{
@@ -766,7 +766,7 @@ func TestParseSwapStatement(t *testing.T) {
 		result, errs := testParseStatements(" x <-> y")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.SwapStatement{
 					Left: &ast.IdentifierExpression{
@@ -799,7 +799,7 @@ func TestParseForStatement(t *testing.T) {
 		result, errs := testParseStatements("for x in y { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ForStatement{
 					Identifier: ast.Identifier{
@@ -838,7 +838,7 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 		result, errs := testParseStatements("for i, x in y { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ForStatement{
 					Identifier: ast.Identifier{
@@ -874,7 +874,7 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseStatements("for i x in y { }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected keyword \"in\", got identifier",
@@ -894,7 +894,7 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseStatements("for in y { }")
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected identifier, got keyword \"in\"",
@@ -921,7 +921,7 @@ func TestParseEmit(t *testing.T) {
 		result, errs := testParseStatements("emit T()")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.EmitStatement{
 					InvocationExpression: &ast.InvocationExpression{
@@ -953,7 +953,7 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 		result, errs := testParseStatements("fun foo() {}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.FunctionDeclaration{
 					Access: ast.AccessNotSpecified,
@@ -989,7 +989,7 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 		result, errs := testParseStatements("fun () {}")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ExpressionStatement{
 					Expression: &ast.FunctionExpression{
@@ -1027,7 +1027,7 @@ func TestParseStatements(t *testing.T) {
 		result, errs := testParseStatements("a + b < c\nd")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ExpressionStatement{
 					Expression: &ast.BinaryExpression{
@@ -1073,7 +1073,7 @@ func TestParseStatements(t *testing.T) {
 		t.Parallel()
 
 		result, errs := testParseStatements(`assert true`)
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "statements on the same line must be separated with a semicolon",
@@ -1083,7 +1083,7 @@ func TestParseStatements(t *testing.T) {
 			errs,
 		)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ExpressionStatement{
 					Expression: &ast.IdentifierExpression{
@@ -1119,7 +1119,7 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		result, errs := testParseStatements("remove A from b")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.RemoveStatement{
 					Attachment: &ast.NominalType{
@@ -1148,7 +1148,7 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		result, errs := testParseStatements("remove Foo.E from b")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.RemoveStatement{
 					Attachment: &ast.NominalType{
@@ -1182,7 +1182,7 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		_, errs := testParseStatements("remove A")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected from keyword, got EOF",
@@ -1203,7 +1203,7 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		_, errs := testParseStatements("remove A from")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "unexpected end of program",
@@ -1220,7 +1220,7 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		_, errs := testParseStatements("remove [A] from e")
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected attachment nominal type, got [A]",
@@ -1238,7 +1238,7 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		result, errs := testParseStatements("remove A from foo()")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.RemoveStatement{
 					Attachment: &ast.NominalType{
@@ -1276,7 +1276,7 @@ func TestParseSwitchStatement(t *testing.T) {
 		result, errs := testParseStatements("switch true { }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.SwitchStatement{
 					Expression: &ast.BoolExpression{
@@ -1304,7 +1304,7 @@ func TestParseSwitchStatement(t *testing.T) {
 		result, errs := testParseStatements("switch x { case 1 :\n a\nb default : c\nd  }")
 		require.Empty(t, errs)
 
-		utils.AssertEqualWithDiff(t,
+		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.SwitchStatement{
 					Expression: &ast.IdentifierExpression{
@@ -1402,7 +1402,7 @@ func TestParseIfStatementInFunctionDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -1604,7 +1604,7 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 
 	ifStatement.Test = ifTestVariableDeclaration
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -1650,7 +1650,7 @@ func TestParseIfStatementNoElse(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -1722,7 +1722,7 @@ func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -1802,7 +1802,7 @@ func TestParseForStatementInFunctionDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -1864,7 +1864,7 @@ func TestParseAssignment(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -1928,7 +1928,7 @@ func TestParseAccessAssignment(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -1957,13 +1957,13 @@ func TestParseAccessAssignment(t *testing.T) {
 															Pos:        ast.Position{Offset: 31, Line: 3, Column: 12},
 														},
 													},
-													AccessPos: ast.Position{Offset: 32, Line: 3, Column: 13},
+													AccessEndPos: ast.Position{Offset: 32, Line: 3, Column: 13},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 33, Line: 3, Column: 14},
 													},
 												},
-												AccessPos: ast.Position{Offset: 36, Line: 3, Column: 17},
+												AccessEndPos: ast.Position{Offset: 36, Line: 3, Column: 17},
 												Identifier: ast.Identifier{
 													Identifier: "bar",
 													Pos:        ast.Position{Offset: 37, Line: 3, Column: 18},
@@ -1997,7 +1997,7 @@ func TestParseAccessAssignment(t *testing.T) {
 											EndPos:   ast.Position{Offset: 45, Line: 3, Column: 26},
 										},
 									},
-									AccessPos: ast.Position{Offset: 46, Line: 3, Column: 27},
+									AccessEndPos: ast.Position{Offset: 46, Line: 3, Column: 27},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 47, Line: 3, Column: 28},
@@ -2041,7 +2041,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -2070,13 +2070,13 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 															Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
 														},
 													},
-													AccessPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+													AccessEndPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
 													},
 												},
-												AccessPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+												AccessEndPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 												Identifier: ast.Identifier{
 													Identifier: "bar",
 													Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},
@@ -2110,7 +2110,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 											EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
 										},
 									},
-									AccessPos: ast.Position{Offset: 34, Line: 2, Column: 33},
+									AccessEndPos: ast.Position{Offset: 34, Line: 2, Column: 33},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 35, Line: 2, Column: 34},
@@ -2143,7 +2143,7 @@ func TestParseMoveStatement(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -2205,7 +2205,7 @@ func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpre
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -2308,7 +2308,7 @@ func TestParseExpressionStatementAfterReturnStatement(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -2369,7 +2369,7 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
 
-	utils.AssertEqualWithDiff(t,
+	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
 				Access: ast.AccessNotSpecified,
@@ -2415,7 +2415,7 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 											Pos:        ast.Position{Offset: 41, Line: 3, Column: 21},
 										},
 									},
-									AccessPos: ast.Position{Offset: 44, Line: 3, Column: 24},
+									AccessEndPos: ast.Position{Offset: 44, Line: 3, Column: 24},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 45, Line: 3, Column: 25},

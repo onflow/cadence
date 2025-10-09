@@ -1,60 +1,90 @@
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    - govet
-    - gosimple
+    - asciicheck
+    - bidichk
     - errcheck
-    - staticcheck
+    - forbidigo
+    - gocritic
+    - govet
     - ineffassign
-    - typecheck
-    - misspell
     - maprange
+    - misspell
+    - nilerr
+    - staticcheck
+    - unconvert
     - unkeyed
     - unused
-    - exportloopref
-    - gocritic
-    - gofmt
-    - goimports
-    - unconvert
-    - nilerr
-    - forbidigo
-    - bidichk
-    - asciicheck
-
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: ^maps.Keys.*(# has indeterminate order\.)?$
+        - pattern: ^maps.Values.*(# has indeterminate order\.)?$
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+        - singleCaseSwitch
+        - unslice
+        - commentFormatting
+        - exitAfterDefer
+    staticcheck:
+      dot-import-whitelist:
+        - github.com/onflow/cadence/bbq/test_utils
+        - github.com/onflow/cadence/test_utils/common_utils
+        - github.com/onflow/cadence/test_utils/sema_utils
+        - github.com/onflow/cadence/test_utils/runtime_utils
+      checks:
+        - all
+        - '-S1016' # should convert ... (type ...) to ... instead of using struct literal
+        - '-ST1003' # should not use underscores in Go names
+        - '-ST1005' # error strings should not be capitalized. reports false positives for acronyms
+        - '-QF1001' # could apply De Morgan's law
+        - '-QF1008' # could remove embedded field "..." from selector
+    custom:
+      constructorcheck:
+        path: tools/constructorcheck/constructorcheck.so
+        description: reports range statements over maps
+        original-url: github.com/onflow/cadence/tools/constructorcheck
+      maprange:
+        path: tools/maprange/maprange.so
+        description: reports for-range statements over maps
+        original-url: github.com/onflow/cadence/tools/maprange
+      unkeyed:
+        path: tools/unkeyed/unkeyed.so
+        description: reports unkeyed composite literals
+        original-url: github.com/onflow/cadence/tools/unkeyed
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - constructorcheck
+          - maprange
+          - unkeyed
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - maprange
-        - unkeyed
-        - constructorcheck
   max-issues-per-linter: 0
   max-same-issues: 0
-
-linters-settings:
-  gocritic:
-    disabled-checks:
-      - ifElseChain        # style
-      - singleCaseSwitch   # style
-      - unslice            # false positives
-      - commentFormatting  # does not detect commented out code
-      - exitAfterDefer
-  goimports:
-    local-prefixes: github.com/onflow/cadence
-  forbidigo:
-    forbid:
-      - '^maps.Keys.*(# has indeterminate order\.)?$'
-      - '^maps.Values.*(# has indeterminate order\.)?$'
-  custom:
-    maprange:
-      path: tools/maprange/maprange.so
-      description: reports for-range statements over maps
-      original-url: github.com/onflow/cadence/tools/maprange
-    unkeyed:
-      path: tools/unkeyed/unkeyed.so
-      description: reports unkeyed composite literals
-      original-url: github.com/onflow/cadence/tools/unkeyed
-    constructorcheck:
-      path: tools/constructorcheck/constructorcheck.so
-      description: reports range statements over maps
-      original-url: github.com/onflow/cadence/tools/constructorcheck
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/onflow/cadence
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

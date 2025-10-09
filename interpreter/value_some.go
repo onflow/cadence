@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // SomeValue
@@ -51,38 +52,63 @@ var _ Value = &SomeValue{}
 var _ EquatableValue = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
 var _ OptionalValue = &SomeValue{}
+var _ atree.Value = &SomeValue{}
+var _ atree.WrapperValue = &SomeValue{}
 
-func (*SomeValue) isValue() {}
+// UnwrapAtreeValue returns non-SomeValue and wrapper size.
+func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+	// NOTE:
+	// - non-SomeValue is the same as non-SomeValue in SomeValue.Storable()
+	// - non-SomeValue wrapper size is the same as encoded wrapper size in SomeStorable.ByteSize().
 
-func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
-	descend := visitor.VisitSomeValue(interpreter, v)
+	// Unwrap SomeValue(s)
+	nonSomeValue, nestedLevels := v.nonSomeValue()
+
+	// Get SomeValue(s) wrapper size
+	someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
+
+	// Unwrap nonSomeValue if needed
+	switch nonSomeValue := nonSomeValue.(type) {
+	case atree.WrapperValue:
+		unwrappedValue, wrapperSize := nonSomeValue.UnwrapAtreeValue()
+		return unwrappedValue, wrapperSize + uint64(someStorableEncodedPrefixSize)
+
+	default:
+		return nonSomeValue, uint64(someStorableEncodedPrefixSize)
+	}
+}
+
+func (*SomeValue) IsValue() {}
+
+func (v *SomeValue) Accept(context ValueVisitContext, visitor Visitor) {
+	descend := visitor.VisitSomeValue(context, v)
 	if !descend {
 		return
 	}
-	v.value.Accept(interpreter, visitor, locationRange)
+	v.value.Accept(context, visitor)
 }
 
-func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *SomeValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	walkChild(v.value)
 }
 
-func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
+func (v *SomeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	if v.isDestroyed {
 		return nil
 	}
 
-	innerType := v.value.StaticType(inter)
+	innerType := v.value.StaticType(context)
 	if innerType == nil {
 		return nil
 	}
 	return NewOptionalStaticType(
-		inter,
+		context,
 		innerType,
 	)
 }
 
-func (v *SomeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
-	return v.value.IsImportable(inter, locationRange)
+func (v *SomeValue) IsImportable(context ValueImportableContext) bool {
+	return v.value.IsImportable(context)
 }
 
 func (*SomeValue) isOptionalValue() {}
@@ -91,18 +117,18 @@ func (v *SomeValue) forEach(f func(Value)) {
 	f(v.value)
 }
 
-func (v *SomeValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
+func (v *SomeValue) fmap(memoryGauge common.MemoryGauge, f func(Value) Value) OptionalValue {
 	newValue := f(v.value)
-	return NewSomeValueNonCopying(inter, newValue)
+	return NewSomeValueNonCopying(memoryGauge, newValue)
 }
 
 func (v *SomeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
-	innerValue := v.InnerValue(interpreter, locationRange)
-	maybeDestroy(interpreter, locationRange, innerValue)
+func (v *SomeValue) Destroy(context ResourceDestructionContext) {
+	innerValue := v.InnerValue()
+	maybeDestroy(context, innerValue)
 
 	v.isDestroyed = true
 	v.value = nil
@@ -116,68 +142,77 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.value.RecursiveString(seenReferences)
 }
 
-func (v *SomeValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
-	return v.value.MeteredString(interpreter, seenReferences, locationRange)
+func (v *SomeValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
+	return v.value.MeteredString(context, seenReferences)
 }
 
-func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *SomeValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
+}
+
+func (v *SomeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
-		innerValueType := interpreter.MustConvertStaticToSemaType(
-			v.value.StaticType(interpreter),
-		)
+		innerValueType := v.InnerValueType(context)
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.OptionalTypeMapFunctionType(
 				innerValueType,
 			),
-			func(v *SomeValue, invocation Invocation) Value {
-				inter := invocation.Interpreter
-				locationRange := invocation.LocationRange
-
-				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				transformFunctionType := transformFunction.FunctionType()
-				parameterTypes := transformFunctionType.ParameterTypes()
-				returnType := transformFunctionType.ReturnTypeAnnotation.Type
-
-				return v.fmap(
-					inter,
-					func(v Value) Value {
-						return inter.invokeFunctionValue(
-							transformFunction,
-							[]Value{v},
-							nil,
-							[]sema.Type{innerValueType},
-							parameterTypes,
-							returnType,
-							invocation.TypeParameterTypes,
-							locationRange,
-						)
-					},
-				)
-			},
+			NativeOptionalMapFunction,
 		)
 	}
 
 	return nil
 }
 
-func (v *SomeValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
+func OptionalValueMapFunction(
+	invocationContext InvocationContext,
+	optionalValue OptionalValue,
+	transformFunctionType *sema.FunctionType,
+	transformFunction FunctionValue,
+	innerValueType sema.Type,
+) Value {
+	parameterTypes := transformFunctionType.ParameterTypes()
+	returnType := transformFunctionType.ReturnTypeAnnotation.Type
+
+	return optionalValue.fmap(
+		invocationContext,
+		func(v Value) Value {
+			return invokeFunctionValue(
+				invocationContext,
+				transformFunction,
+				[]Value{v},
+				[]sema.Type{innerValueType},
+				parameterTypes,
+				returnType,
+				nil,
+			)
+		},
+	)
+}
+
+func (v *SomeValue) InnerValueType(context ValueStaticTypeContext) sema.Type {
+	return MustConvertStaticToSemaType(
+		v.value.StaticType(context),
+		context,
+	)
+}
+
+func (v *SomeValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
+func (v *SomeValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
 func (v *SomeValue) ConformsToStaticType(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueStaticTypeConformanceContext,
 	results TypeConformanceResults,
 ) bool {
 
@@ -185,29 +220,25 @@ func (v *SomeValue) ConformsToStaticType(
 	// SomeValue.StaticType builds type from inner value (if available),
 	// so no need to check it
 
-	innerValue := v.InnerValue(interpreter, locationRange)
+	innerValue := v.InnerValue()
 
-	return innerValue.ConformsToStaticType(
-		interpreter,
-		locationRange,
-		results,
-	)
+	return innerValue.ConformsToStaticType(context, results)
 }
 
-func (v *SomeValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *SomeValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherSome, ok := other.(*SomeValue)
 	if !ok {
 		return false
 	}
 
-	innerValue := v.InnerValue(interpreter, locationRange)
+	innerValue := v.InnerValue()
 
 	equatableValue, ok := innerValue.(EquatableValue)
 	if !ok {
 		return false
 	}
 
-	return equatableValue.Equal(interpreter, locationRange, otherSome.value)
+	return equatableValue.Equal(context, otherSome.value)
 }
 
 func (v *SomeValue) Storable(
@@ -225,9 +256,18 @@ func (v *SomeValue) Storable(
 	// The above applies to both immutable non-SomeValue (such as StringValue),
 	// and mutable non-SomeValue (such as ArrayValue).
 
-	if v.valueStorable == nil {
+	// NOTE:
+	// - If SomeValue's inner value is a value with atree.Array or atree.OrderedMap,
+	//   we MUST NOT cache SomeStorable because we need to call nonSomeValue.Storable()
+	//   to trigger container inlining or un-inlining.
+	// - Otherwise, we need to cache SomeStorable because nonSomeValue.Storable() can
+	//   create registers in storage, such as large string.
 
-		nonSomeValue, nestedLevels := v.nonSomeValue()
+	nonSomeValue, nestedLevels := v.nonSomeValue()
+
+	_, isContainerValue := nonSomeValue.(atreeContainerBackedValue)
+
+	if v.valueStorable == nil || isContainerValue {
 
 		someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
 
@@ -287,18 +327,17 @@ func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
 	return v.value.NeedsStoreTo(address)
 }
 
-func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
+func (v *SomeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 	// If the inner value is `nil`, then this is an invalidated resource.
 	if v.value == nil {
 		return true
 	}
 
-	return v.value.IsResourceKinded(interpreter)
+	return v.value.IsResourceKinded(context)
 }
 
 func (v *SomeValue) Transfer(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueTransferContext,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -308,13 +347,12 @@ func (v *SomeValue) Transfer(
 	innerValue := v.value
 
 	needsStoreTo := v.NeedsStoreTo(address)
-	isResourceKinded := v.IsResourceKinded(interpreter)
+	isResourceKinded := v.IsResourceKinded(context)
 
 	if needsStoreTo || !isResourceKinded {
 
 		innerValue = v.value.Transfer(
-			interpreter,
-			locationRange,
+			context,
 			address,
 			remove,
 			nil,
@@ -323,8 +361,8 @@ func (v *SomeValue) Transfer(
 		)
 
 		if remove {
-			interpreter.RemoveReferencedSlab(v.valueStorable)
-			interpreter.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, v.valueStorable)
+			RemoveReferencedSlab(context, storable)
 		}
 	}
 
@@ -341,35 +379,35 @@ func (v *SomeValue) Transfer(
 		// we don't need to invalidate referenced resources if this resource was moved
 		// to storage, as the earlier transfer will have done this already
 		if !needsStoreTo {
-			interpreter.invalidateReferencedResources(v.value, locationRange)
+			InvalidateReferencedResources(context, v.value)
 		}
 		v.value = nil
 	}
 
-	res := NewSomeValueNonCopying(interpreter, innerValue)
+	res := NewSomeValueNonCopying(context, innerValue)
 	res.valueStorable = nil
 	res.isDestroyed = v.isDestroyed
 
 	return res
 }
 
-func (v *SomeValue) Clone(interpreter *Interpreter) Value {
-	innerValue := v.value.Clone(interpreter)
+func (v *SomeValue) Clone(context ValueCloneContext) Value {
+	innerValue := v.value.Clone(context)
 	return NewUnmeteredSomeValueNonCopying(innerValue)
 }
 
-func (v *SomeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
-	v.value.DeepRemove(interpreter, hasNoParentContainer)
+func (v *SomeValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
+	v.value.DeepRemove(context, hasNoParentContainer)
 	if v.valueStorable != nil {
-		interpreter.RemoveReferencedSlab(v.valueStorable)
+		RemoveReferencedSlab(context, v.valueStorable)
 	}
 }
 
-func (v *SomeValue) InnerValue(_ *Interpreter, _ LocationRange) Value {
+func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(interpreter *Interpreter) bool {
+func (v *SomeValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 	return v.value == nil || v.IsDestroyed()
 }
 
@@ -379,6 +417,31 @@ type SomeStorable struct {
 }
 
 var _ atree.ContainerStorable = SomeStorable{}
+var _ atree.WrapperStorable = SomeStorable{}
+
+func (s SomeStorable) UnwrapAtreeStorable() atree.Storable {
+	storable := s.Storable
+
+	switch storable := storable.(type) {
+	case atree.WrapperStorable:
+		return storable.UnwrapAtreeStorable()
+
+	default:
+		return storable
+	}
+}
+
+// WrapAtreeStorable() wraps storable as innermost wrapped value and
+// returns new wrapped storable.
+func (s SomeStorable) WrapAtreeStorable(storable atree.Storable) atree.Storable {
+	_, nestedLevels := s.nonSomeStorable()
+
+	newStorable := SomeStorable{Storable: storable}
+	for i := 1; i < int(nestedLevels); i++ {
+		newStorable = SomeStorable{Storable: newStorable}
+	}
+	return newStorable
+}
 
 func (s SomeStorable) HasPointer() bool {
 	switch cs := s.Storable.(type) {
@@ -391,9 +454,11 @@ func (s SomeStorable) HasPointer() bool {
 
 func getSomeStorableEncodedPrefixSize(nestedLevels uint64) uint32 {
 	if nestedLevels == 1 {
-		return cborTagSize
+		return values.CBORTagSize
 	}
-	return cborTagSize + someStorableWithMultipleNestedlevelsArraySize + getUintCBORSize(nestedLevels)
+	return values.CBORTagSize +
+		someStorableWithMultipleNestedlevelsArraySize +
+		values.GetUintCBORSize(nestedLevels)
 }
 
 func (s SomeStorable) ByteSize() uint32 {
@@ -437,3 +502,27 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 		s.Storable,
 	}
 }
+
+// Native some functions
+
+var NativeOptionalMapFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		optionalValue := AssertValueOfType[OptionalValue](receiver)
+		innerValueType := optionalValue.InnerValueType(context)
+
+		transformFunction := AssertValueOfType[FunctionValue](args[0])
+		transformFunctionType := transformFunction.FunctionType(context)
+		return OptionalValueMapFunction(
+			context,
+			optionalValue,
+			transformFunctionType,
+			transformFunction,
+			innerValueType,
+		)
+	},
+)

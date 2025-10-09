@@ -24,10 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/tests/utils"
-
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func TestFunctionStaticType(t *testing.T) {
@@ -67,7 +66,7 @@ func TestFunctionStaticType(t *testing.T) {
 
 		inter.SharedState.Config.CompositeTypeHandler = func(location common.Location, typeID TypeID) *sema.CompositeType {
 			return &sema.CompositeType{
-				Location:   utils.TestLocation,
+				Location:   TestLocation,
 				Identifier: "foo",
 				Kind:       common.CompositeKindStructure,
 			}
@@ -91,8 +90,7 @@ func TestFunctionStaticType(t *testing.T) {
 
 		var compositeValue Value = NewCompositeValue(
 			inter,
-			EmptyLocationRange,
-			utils.TestLocation,
+			TestLocation,
 			"foo",
 			common.CompositeKindStructure,
 			[]CompositeField{},
@@ -103,7 +101,6 @@ func TestFunctionStaticType(t *testing.T) {
 			inter,
 			hostFunctionValue,
 			&compositeValue,
-			nil,
 			nil,
 		)
 

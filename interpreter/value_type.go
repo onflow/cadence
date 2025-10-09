@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 // TypeValue
@@ -55,21 +56,21 @@ func NewTypeValue(
 	return NewUnmeteredTypeValue(staticType)
 }
 
-func (TypeValue) isValue() {}
+func (TypeValue) IsValue() {}
 
-func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitTypeValue(interpreter, v)
+func (v TypeValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitTypeValue(context, v)
 }
 
-func (TypeValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (TypeValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (TypeValue) StaticType(interpreter *Interpreter) StaticType {
-	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeMetaType)
+func (TypeValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeMetaType)
 }
 
-func (TypeValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (TypeValue) IsImportable(_ ValueImportableContext) bool {
 	return sema.MetaType.Importable
 }
 
@@ -87,18 +88,21 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v TypeValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.TypeValueStringMemoryUsage)
+func (v TypeValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
+	common.UseMemory(context, common.TypeValueStringMemoryUsage)
 
 	var typeString string
 	if v.Type != nil {
-		typeString = v.Type.MeteredString(interpreter)
+		typeString = v.Type.MeteredString(context)
 	}
 
 	return format.TypeValue(typeString)
 }
 
-func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v TypeValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherTypeValue, ok := other.(TypeValue)
 	if !ok {
 		return false
@@ -116,7 +120,7 @@ func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v TypeValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
@@ -125,37 +129,9 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			typeID = string(staticType.ID())
 		}
 		memoryUsage := common.NewStringMemoryUsage(len(typeID))
-		return NewStringValue(interpreter, memoryUsage, func() string {
+		return NewStringValue(context, memoryUsage, func() string {
 			return typeID
 		})
-
-	case sema.MetaTypeIsSubtypeFunctionName:
-		return NewBoundHostFunctionValue(
-			interpreter,
-			v,
-			sema.MetaTypeIsSubtypeFunctionType,
-			func(v TypeValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-
-				staticType := v.Type
-				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				otherStaticType := otherTypeValue.Type
-
-				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
-				if staticType == nil || otherStaticType == nil {
-					return FalseValue
-				}
-
-				result := sema.IsSubType(
-					interpreter.MustConvertStaticToSemaType(staticType),
-					interpreter.MustConvertStaticToSemaType(otherStaticType),
-				)
-				return AsBoolValue(result)
-			},
-		)
 
 	case sema.MetaTypeIsRecoveredFieldName:
 		staticType := v.Type
@@ -163,17 +139,12 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			return FalseValue
 		}
 
-		location, _, err := common.DecodeTypeID(interpreter, string(staticType.ID()))
+		location, _, err := common.DecodeTypeID(context, string(staticType.ID()))
 		if err != nil || location == nil {
 			return FalseValue
 		}
 
-		elaboration := interpreter.getElaboration(location)
-		if elaboration == nil {
-			return FalseValue
-		}
-
-		return AsBoolValue(elaboration.IsRecovered)
+		return BoolValue(context.IsTypeInfoRecovered(location))
 
 	case sema.MetaTypeAddressFieldName:
 		staticType := v.Type
@@ -200,11 +171,11 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		}
 
 		addressValue := NewAddressValue(
-			interpreter,
+			context,
 			addressLocation.Address,
 		)
 		return NewSomeValueNonCopying(
-			interpreter,
+			context,
 			addressValue,
 		)
 
@@ -241,37 +212,69 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			}
 
 			contractNameValue := NewStringValue(
-				interpreter,
+				context,
 				common.NewStringMemoryUsage(contractNameLength),
 				func() string {
 					return qualifiedIdentifier[0:contractNameLength]
 				},
 			)
 
-			return NewSomeValueNonCopying(interpreter, contractNameValue)
+			return NewSomeValueNonCopying(context, contractNameValue)
 
 		default:
 			return Nil
 		}
+	}
 
+	return context.GetMethod(v, name)
+}
+
+func (v TypeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	switch name {
+	case sema.MetaTypeIsSubtypeFunctionName:
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			sema.MetaTypeIsSubtypeFunctionType,
+			NativeMetaTypeIsSubtypeFunction,
+		)
 	}
 
 	return nil
 }
 
-func (TypeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func MetaTypeIsSubType(
+	invocationContext InvocationContext,
+	typeValue TypeValue,
+	otherTypeValue TypeValue,
+) Value {
+	staticType := typeValue.Type
+	otherStaticType := otherTypeValue.Type
+
+	// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
+	if staticType == nil || otherStaticType == nil {
+		return FalseValue
+	}
+
+	result := sema.IsSubType(
+		MustConvertStaticToSemaType(staticType, invocationContext),
+		MustConvertStaticToSemaType(otherStaticType, invocationContext),
+	)
+	return BoolValue(result)
+}
+
+func (TypeValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Types have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (TypeValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Types have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v TypeValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -282,7 +285,7 @@ func (v TypeValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(
+	return values.MaybeLargeImmutableStorable(
 		v,
 		storage,
 		address,
@@ -294,13 +297,12 @@ func (TypeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (TypeValue) IsResourceKinded(_ *Interpreter) bool {
+func (TypeValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v TypeValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -308,16 +310,16 @@ func (v TypeValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v TypeValue) Clone(_ *Interpreter) Value {
+func (v TypeValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (TypeValue) DeepRemove(_ *Interpreter, _ bool) {
+func (TypeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -336,7 +338,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // HashInput returns a byte slice containing:
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
-func (v TypeValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v TypeValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)
@@ -351,3 +353,18 @@ func (v TypeValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []
 	copy(buf[1:], typeID)
 	return buf
 }
+
+// Native type functions
+
+var NativeMetaTypeIsSubtypeFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		typeValue := AssertValueOfType[TypeValue](receiver)
+		otherTypeValue := AssertValueOfType[TypeValue](args[0])
+		return MetaTypeIsSubType(context, typeValue, otherTypeValue)
+	},
+)

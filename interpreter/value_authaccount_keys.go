@@ -29,6 +29,7 @@ import (
 
 var account_KeysTypeID = sema.Account_KeysType.ID()
 var account_KeysStaticType StaticType = PrimitiveStaticTypeAccount_Keys
+var account_KeysFieldNames []string = nil
 
 // NewAccountKeysValue constructs an Account.Keys value.
 func NewAccountKeysValue(
@@ -41,7 +42,26 @@ func NewAccountKeysValue(
 	getKeysCount AccountKeysCountGetter,
 ) Value {
 
-	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+	var accountKeys *SimpleCompositeValue
+
+	methods := map[string]FunctionValue{}
+
+	computeLazyStoredMethod := func(name string) FunctionValue {
+		switch name {
+		case sema.Account_KeysTypeAddFunctionName:
+			return addFunction(accountKeys)
+		case sema.Account_KeysTypeGetFunctionName:
+			return getFunction(accountKeys)
+		case sema.Account_KeysTypeRevokeFunctionName:
+			return revokeFunction(accountKeys)
+		case sema.Account_KeysTypeForEachFunctionName:
+			return forEachFunction(accountKeys)
+		}
+
+		return nil
+	}
+
+	computeField := func(name string, _ MemberAccessibleContext) Value {
 		switch name {
 		case sema.Account_KeysTypeCountFieldName:
 			return getKeysCount()
@@ -49,33 +69,40 @@ func NewAccountKeysValue(
 		return nil
 	}
 
+	methodsGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
+		}
+
+		return method
+	}
+
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountKeysStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.Keys(%s)", addressStr)
 		}
 		return str
 	}
 
-	accountKeys := NewSimpleCompositeValue(
+	accountKeys = NewSimpleCompositeValue(
 		gauge,
 		account_KeysTypeID,
 		account_KeysStaticType,
-		nil,
+		account_KeysFieldNames,
+		// No fields, only computed fields, and methods.
 		nil,
 		computeField,
+		methodsGetter,
 		nil,
 		stringer,
-	)
-
-	accountKeys.Fields = map[string]Value{
-		sema.Account_KeysTypeAddFunctionName:     addFunction(accountKeys),
-		sema.Account_KeysTypeGetFunctionName:     getFunction(accountKeys),
-		sema.Account_KeysTypeRevokeFunctionName:  revokeFunction(accountKeys),
-		sema.Account_KeysTypeForEachFunctionName: forEachFunction(accountKeys),
-	}
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return accountKeys
 }

@@ -19,17 +19,51 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
-// NewStandardLibraryStaticFunction should only be used for creating static functions.
-func NewStandardLibraryStaticFunction(
+func NewNativeStandardLibraryStaticFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,
-	function interpreter.HostFunction,
+	function interpreter.NativeFunction,
+	isVM bool,
+) StandardLibraryValue {
+	parameters := functionType.Parameters
+
+	argumentLabels := make([]string, len(parameters))
+
+	for i, parameter := range parameters {
+		argumentLabels[i] = parameter.EffectiveArgumentLabel()
+	}
+
+	var functionValue interpreter.Value
+	if isVM {
+		functionValue = vm.NewNativeFunctionValue(name, functionType, function)
+	} else {
+		functionValue = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(functionType, function)
+	}
+
+	return StandardLibraryValue{
+		Name:           name,
+		Type:           functionType,
+		DocString:      docString,
+		Value:          functionValue,
+		ArgumentLabels: argumentLabels,
+		Kind:           common.DeclarationKindFunction,
+	}
+}
+
+// These functions are helpers for testing.
+// NewInterpreterStandardLibraryStaticFunction should only be used for creating static functions.
+func NewInterpreterStandardLibraryStaticFunction(
+	name string,
+	functionType *sema.FunctionType,
+	docString string,
+	function interpreter.NativeFunction,
 ) StandardLibraryValue {
 
 	parameters := functionType.Parameters
@@ -40,7 +74,35 @@ func NewStandardLibraryStaticFunction(
 		argumentLabels[i] = parameter.EffectiveArgumentLabel()
 	}
 
-	functionValue := interpreter.NewUnmeteredStaticHostFunctionValue(functionType, function)
+	functionValue := interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(functionType, function)
+
+	return StandardLibraryValue{
+		Name:           name,
+		Type:           functionType,
+		DocString:      docString,
+		Value:          functionValue,
+		ArgumentLabels: argumentLabels,
+		Kind:           common.DeclarationKindFunction,
+	}
+}
+
+// NewVMStandardLibraryStaticFunction should only be used for creating static functions.
+func NewVMStandardLibraryStaticFunction(
+	name string,
+	functionType *sema.FunctionType,
+	docString string,
+	function interpreter.NativeFunction,
+) StandardLibraryValue {
+
+	parameters := functionType.Parameters
+
+	argumentLabels := make([]string, len(parameters))
+
+	for i, parameter := range parameters {
+		argumentLabels[i] = parameter.EffectiveArgumentLabel()
+	}
+
+	functionValue := vm.NewNativeFunctionValue(name, functionType, function)
 
 	return StandardLibraryValue{
 		Name:           name,

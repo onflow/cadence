@@ -31,7 +31,7 @@ var account_ContractsTypeID = sema.Account_ContractsType.ID()
 var account_ContractsStaticType StaticType = PrimitiveStaticTypeAccount_Contracts // unmetered
 var account_ContractsFieldNames []string = nil
 
-type ContractNamesGetter func(interpreter *Interpreter, locationRange LocationRange) *ArrayValue
+type ContractNamesGetter func(context MemberAccessibleContext) *ArrayValue
 
 func NewAccountContractsValue(
 	gauge common.MemoryGauge,
@@ -45,47 +45,72 @@ func NewAccountContractsValue(
 	namesGetter ContractNamesGetter,
 ) Value {
 
-	computeField := func(
-		name string,
-		interpreter *Interpreter,
-		locationRange LocationRange,
-	) Value {
+	var accountContracts *SimpleCompositeValue
+
+	methods := map[string]FunctionValue{}
+
+	computeLazyStoredMethod := func(name string) FunctionValue {
 		switch name {
-		case sema.Account_ContractsTypeNamesFieldName:
-			return namesGetter(interpreter, locationRange)
+		case sema.Account_ContractsTypeAddFunctionName:
+			return addFunction(accountContracts)
+		case sema.Account_ContractsTypeGetFunctionName:
+			return getFunction(accountContracts)
+		case sema.Account_ContractsTypeBorrowFunctionName:
+			return borrowFunction(accountContracts)
+		case sema.Account_ContractsTypeRemoveFunctionName:
+			return removeFunction(accountContracts)
+		case sema.Account_ContractsTypeUpdateFunctionName:
+			return updateFunction(accountContracts)
+		case sema.Account_ContractsTypeTryUpdateFunctionName:
+			return tryUpdateFunction(accountContracts)
 		}
+
 		return nil
 	}
 
+	computeField := func(name string, context MemberAccessibleContext) Value {
+		switch name {
+		case sema.Account_ContractsTypeNamesFieldName:
+			return namesGetter(context)
+		}
+
+		return nil
+	}
+
+	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
+		}
+
+		return method
+	}
+
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountContractsStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountContractsStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.Contracts(%s)", addressStr)
 		}
 		return str
 	}
 
-	accountContracts := NewSimpleCompositeValue(
+	accountContracts = NewSimpleCompositeValue(
 		gauge,
 		account_ContractsTypeID,
 		account_ContractsStaticType,
 		account_ContractsFieldNames,
+		// No fields, only computed fields, and methods.
 		nil,
 		computeField,
+		methodGetter,
 		nil,
 		stringer,
-	)
-
-	accountContracts.Fields = map[string]Value{
-		sema.Account_ContractsTypeAddFunctionName:       addFunction(accountContracts),
-		sema.Account_ContractsTypeGetFunctionName:       getFunction(accountContracts),
-		sema.Account_ContractsTypeBorrowFunctionName:    borrowFunction(accountContracts),
-		sema.Account_ContractsTypeRemoveFunctionName:    removeFunction(accountContracts),
-		sema.Account_ContractsTypeUpdateFunctionName:    updateFunction(accountContracts),
-		sema.Account_ContractsTypeTryUpdateFunctionName: tryUpdateFunction(accountContracts),
-	}
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return accountContracts
 }

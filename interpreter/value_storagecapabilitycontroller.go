@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 type CapabilityControllerValue interface {
@@ -32,10 +33,9 @@ type CapabilityControllerValue interface {
 	isCapabilityControllerValue()
 	CapabilityControllerBorrowType() *ReferenceStaticType
 	ReferenceValue(
-		interpreter *Interpreter,
+		context ValueCapabilityControllerReferenceValueContext,
 		capabilityAddress common.Address,
 		resultBorrowType *sema.ReferenceType,
-		locationRange LocationRange,
 	) ReferenceValue
 	ControllerCapabilityID() UInt64Value
 }
@@ -61,11 +61,11 @@ type StorageCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetCapability func(inter *Interpreter) *IDCapabilityValue
-	GetTag        func(inter *Interpreter) *StringValue
-	SetTag        func(inter *Interpreter, tag *StringValue)
-	Delete        func(inter *Interpreter, locationRange LocationRange)
-	SetTarget     func(inter *Interpreter, locationRange LocationRange, target PathValue)
+	GetCapability func(common.MemoryGauge) *IDCapabilityValue
+	GetTag        func(storageReader StorageReader) *StringValue
+	SetTag        func(storageWriter StorageWriter, tag *StringValue)
+	Delete        func(context CapabilityControllerContext)
+	SetTarget     func(context CapabilityControllerContext, target PathValue)
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
@@ -101,7 +101,7 @@ var _ EquatableValue = &StorageCapabilityControllerValue{}
 var _ CapabilityControllerValue = &StorageCapabilityControllerValue{}
 var _ MemberAccessibleValue = &StorageCapabilityControllerValue{}
 
-func (*StorageCapabilityControllerValue) isValue() {}
+func (*StorageCapabilityControllerValue) IsValue() {}
 
 func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
 
@@ -109,20 +109,20 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
+func (v *StorageCapabilityControllerValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitStorageCapabilityControllerValue(context, v)
 }
 
-func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *StorageCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	walkChild(v.TargetPath)
 	walkChild(v.CapabilityID)
 }
 
-func (v *StorageCapabilityControllerValue) StaticType(_ *Interpreter) StaticType {
+func (v *StorageCapabilityControllerValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return PrimitiveStaticTypeStorageCapabilityController
 }
 
-func (*StorageCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*StorageCapabilityControllerValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -139,40 +139,34 @@ func (v *StorageCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 }
 
 func (v *StorageCapabilityControllerValue) MeteredString(
-	interpreter *Interpreter,
+	context ValueStringContext,
 	seenReferences SeenReferences,
-	locationRange LocationRange,
 ) string {
-	common.UseMemory(interpreter, common.StorageCapabilityControllerValueStringMemoryUsage)
+	common.UseMemory(context, common.StorageCapabilityControllerValueStringMemoryUsage)
 
 	return format.StorageCapabilityController(
-		v.BorrowType.MeteredString(interpreter),
-		v.CapabilityID.MeteredString(interpreter, seenReferences, locationRange),
-		v.TargetPath.MeteredString(interpreter, seenReferences, locationRange),
+		v.BorrowType.MeteredString(context),
+		v.CapabilityID.MeteredString(context, seenReferences),
+		v.TargetPath.MeteredString(context, seenReferences),
 	)
 }
 
 func (v *StorageCapabilityControllerValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v *StorageCapabilityControllerValue) Equal(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	other Value,
-) bool {
+func (v *StorageCapabilityControllerValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherController, ok := other.(*StorageCapabilityControllerValue)
 	if !ok {
 		return false
 	}
 
-	return otherController.TargetPath.Equal(interpreter, locationRange, v.TargetPath) &&
+	return otherController.TargetPath.Equal(context, v.TargetPath) &&
 		otherController.BorrowType.Equal(v.BorrowType) &&
-		otherController.CapabilityID.Equal(interpreter, locationRange, v.CapabilityID)
+		otherController.CapabilityID.Equal(context, v.CapabilityID)
 }
 
 func (*StorageCapabilityControllerValue) IsStorable() bool {
@@ -187,20 +181,19 @@ func (v *StorageCapabilityControllerValue) Storable(
 	atree.Storable,
 	error,
 ) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (*StorageCapabilityControllerValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StorageCapabilityControllerValue) IsResourceKinded(_ *Interpreter) bool {
+func (*StorageCapabilityControllerValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v *StorageCapabilityControllerValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -208,20 +201,20 @@ func (v *StorageCapabilityControllerValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v *StorageCapabilityControllerValue) Clone(interpreter *Interpreter) Value {
+func (v *StorageCapabilityControllerValue) Clone(context ValueCloneContext) Value {
 	return &StorageCapabilityControllerValue{
-		TargetPath:   v.TargetPath.Clone(interpreter).(PathValue),
+		TargetPath:   v.TargetPath.Clone(context).(PathValue),
 		BorrowType:   v.BorrowType,
 		CapabilityID: v.CapabilityID,
 	}
 }
 
-func (v *StorageCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
+func (v *StorageCapabilityControllerValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -240,76 +233,86 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) (result Value) {
+func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
 			result = typedResult.FunctionValue
-		case FunctionValue:
+		case BoundFunctionValue,
+			*HostFunctionValue,
+			*InterpretedFunctionValue:
 			panic(errors.NewUnexpectedError("functions need to check deletion. Use newHostFunctionValue"))
 		}
 	}()
 
 	// NOTE: check if controller is already deleted
-	v.checkDeleted()
+	v.CheckDeleted()
 
 	switch name {
 	case sema.StorageCapabilityControllerTypeTagFieldName:
-		return v.GetTag(inter)
-
-	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
-		if v.setTagFunction == nil {
-			v.setTagFunction = v.newSetTagFunction(inter)
-		}
-		return v.setTagFunction
+		return v.GetTag(context)
 
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
 
 	case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
-		return NewTypeValue(inter, v.BorrowType)
+		return NewTypeValue(context, v.BorrowType)
 
 	case sema.StorageCapabilityControllerTypeCapabilityFieldName:
-		return v.GetCapability(inter)
+		return v.GetCapability(context)
+
+		// NOTE: when adding new functions, ensure CheckDeleted is called,
+		// by e.g. using StorageCapabilityControllerValue.newHostFunction
+	}
+
+	return context.GetMethod(v, name)
+}
+
+func (v *StorageCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	switch name {
+	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(context)
+		}
+		return v.setTagFunction
 
 	case sema.StorageCapabilityControllerTypeDeleteFunctionName:
 		if v.deleteFunction == nil {
-			v.deleteFunction = v.newDeleteFunction(inter)
+			v.deleteFunction = v.newDeleteFunction(context)
 		}
 		return v.deleteFunction
 
 	case sema.StorageCapabilityControllerTypeTargetFunctionName:
 		if v.targetFunction == nil {
-			v.targetFunction = v.newTargetFunction(inter)
+			v.targetFunction = v.newTargetFunction(context)
 		}
 		return v.targetFunction
 
 	case sema.StorageCapabilityControllerTypeRetargetFunctionName:
 		if v.retargetFunction == nil {
-			v.retargetFunction = v.newRetargetFunction(inter)
+			v.retargetFunction = v.newRetargetFunction(context)
 		}
 		return v.retargetFunction
 
-		// NOTE: when adding new functions, ensure checkDeleted is called,
+		// NOTE: when adding new functions, ensure CheckDeleted is called,
 		// by e.g. using StorageCapabilityControllerValue.newHostFunction
 	}
 
 	return nil
 }
 
-func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*StorageCapabilityControllerValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Storage capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *StorageCapabilityControllerValue) SetMember(
-	inter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	identifier string,
 	value Value,
 ) bool {
 	// NOTE: check if controller is already deleted
-	v.checkDeleted()
+	v.CheckDeleted()
 
 	switch identifier {
 	case sema.StorageCapabilityControllerTypeTagFieldName:
@@ -317,7 +320,7 @@ func (v *StorageCapabilityControllerValue) SetMember(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		v.SetTag(inter, stringValue)
+		v.SetTag(context, stringValue)
 		return true
 	}
 
@@ -328,18 +331,13 @@ func (v *StorageCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 	return v.CapabilityID
 }
 
-func (v *StorageCapabilityControllerValue) ReferenceValue(
-	interpreter *Interpreter,
-	capabilityAddress common.Address,
-	resultBorrowType *sema.ReferenceType,
-	_ LocationRange,
-) ReferenceValue {
+func (v *StorageCapabilityControllerValue) ReferenceValue(context ValueCapabilityControllerReferenceValueContext, capabilityAddress common.Address, resultBorrowType *sema.ReferenceType) ReferenceValue {
 	authorization := ConvertSemaAccessToStaticAuthorization(
-		interpreter,
+		context,
 		resultBorrowType.Authorization,
 	)
 	return NewStorageReferenceValue(
-		interpreter,
+		context,
 		authorization,
 		capabilityAddress,
 		v.TargetPath,
@@ -347,107 +345,151 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 	)
 }
 
-// checkDeleted checks if the controller is deleted,
+// CheckDeleted checks if the controller is deleted,
 // and panics if it is.
-func (v *StorageCapabilityControllerValue) checkDeleted() {
+func (v *StorageCapabilityControllerValue) CheckDeleted() {
 	if v.deleted {
 		panic(errors.NewDefaultUserError("controller is deleted"))
 	}
 }
 
-func (v *StorageCapabilityControllerValue) newHostFunctionValue(
-	inter *Interpreter,
+func NewNativeDeletionCheckedStorageCapabilityControllerFunction(
+	f NativeFunction,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		typeArguments TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+		controller.CheckDeleted()
+
+		return f(
+			context,
+			typeArguments,
+			receiver,
+			args,
+		)
+	}
+}
+
+func (v *StorageCapabilityControllerValue) newNativeHostFunctionValue(
+	context FunctionCreationContext,
 	funcType *sema.FunctionType,
-	f func(invocation Invocation) Value,
+	f NativeFunction,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
 		FunctionValue: NewBoundHostFunctionValue(
-			inter,
+			context,
 			v,
 			funcType,
-			func(v *StorageCapabilityControllerValue, invocation Invocation) Value {
-				// NOTE: check if controller is already deleted
-				v.checkDeleted()
-
-				return f(invocation)
-			},
+			NewNativeDeletionCheckedStorageCapabilityControllerFunction(f),
 		),
 	}
 }
 
+var NativeStorageCapabilityControllerDeleteFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+		controller.Delete(context)
+		controller.deleted = true
+
+		return Void
+	},
+)
+
 func (v *StorageCapabilityControllerValue) newDeleteFunction(
-	inter *Interpreter,
+	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
-		inter,
+	return v.newNativeHostFunctionValue(
+		context,
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
-		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			v.Delete(inter, locationRange)
-
-			v.deleted = true
-
-			return Void
-		},
+		NativeStorageCapabilityControllerDeleteFunction,
 	)
 }
+
+var NativeStorageCapabilityControllerTargetFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+		return controller.TargetPath
+	},
+)
 
 func (v *StorageCapabilityControllerValue) newTargetFunction(
-	inter *Interpreter,
+	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
-		inter,
+	return v.newNativeHostFunctionValue(
+		context,
 		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation Invocation) Value {
-			return v.TargetPath
-		},
+		NativeStorageCapabilityControllerTargetFunction,
 	)
 }
+
+var NativeStorageCapabilityControllerRetargetFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+
+		newTargetPathValue := AssertValueOfType[PathValue](args[0])
+		if newTargetPathValue.Domain != common.PathDomainStorage {
+			panic(errors.NewUnreachableError())
+		}
+
+		controller.SetTarget(context, newTargetPathValue)
+		controller.TargetPath = newTargetPathValue
+
+		return Void
+	},
+)
 
 func (v *StorageCapabilityControllerValue) newRetargetFunction(
-	inter *Interpreter,
+	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
-		inter,
+	return v.newNativeHostFunctionValue(
+		context,
 		sema.StorageCapabilityControllerTypeRetargetFunctionType,
-		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// Get path argument
-
-			newTargetPathValue, ok := invocation.Arguments[0].(PathValue)
-			if !ok || newTargetPathValue.Domain != common.PathDomainStorage {
-				panic(errors.NewUnreachableError())
-			}
-
-			v.SetTarget(inter, locationRange, newTargetPathValue)
-			v.TargetPath = newTargetPathValue
-
-			return Void
-		},
+		NativeStorageCapabilityControllerRetargetFunction,
 	)
 }
 
+var NativeStorageCapabilityControllerSetTagFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+
+		newTagValue := AssertValueOfType[*StringValue](args[0])
+
+		controller.SetTag(context, newTagValue)
+
+		return Void
+	},
+)
+
 func (v *StorageCapabilityControllerValue) newSetTagFunction(
-	inter *Interpreter,
+	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
-		inter,
+	return v.newNativeHostFunctionValue(
+		context,
 		sema.StorageCapabilityControllerTypeSetTagFunctionType,
-		func(invocation Invocation) Value {
-			inter := invocation.Interpreter
-
-			newTagValue, ok := invocation.Arguments[0].(*StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			v.SetTag(inter, newTagValue)
-
-			return Void
-		},
+		NativeStorageCapabilityControllerSetTagFunction,
 	)
 }

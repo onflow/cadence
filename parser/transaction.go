@@ -21,6 +21,7 @@ package parser
 import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
 )
 
@@ -59,10 +60,8 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	}
 
 	p.skipSpaceAndComments()
-	_, err = p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
+
+	parseDeclarationOpeningBrace(p, common.DeclarationKindTransaction)
 
 	// Fields
 
@@ -77,6 +76,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var execute *ast.SpecialFunctionDeclaration
 
 	p.skipSpaceAndComments()
+
 	if p.current.Is(lexer.TokenIdentifier) {
 
 		keyword := p.currentTokenSource()
@@ -109,12 +109,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			}
 
 		default:
-			return nil, p.syntaxError(
-				"unexpected identifier, expected keyword %q or %q, got %q",
-				KeywordPrepare,
-				KeywordExecute,
-				keyword,
-			)
+			return nil, &ExpectedPrepareOrExecuteError{
+				GotIdentifier: string(keyword),
+				Pos:           p.current.StartPos,
+			}
 		}
 	}
 
@@ -124,10 +122,13 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	if execute == nil {
 		p.skipSpaceAndComments()
+
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 			preStartPos := p.current.StartPos
+
 			// Skip the `pre` keyword
-			p.next()
+			p.nextSemanticToken()
+
 			preConditions, err = parseConditions(p, preStartPos)
 			if err != nil {
 				return nil, err
@@ -142,18 +143,24 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var endPos ast.Position
 
 	sawPost := false
-	atEnd := false
-	for !atEnd {
+
+	var atEnd bool
+	progress := p.newProgress()
+
+	for !atEnd && p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
-
+			// Not possible to encounter a second prepare block at this point
 			keyword := p.currentTokenSource()
 			switch string(keyword) {
 			case KeywordExecute:
 				if execute != nil {
-					return nil, p.syntaxError("unexpected second %q block", KeywordExecute)
+					return nil, &DuplicateExecuteBlockError{
+						Pos: p.current.StartPos,
+					}
 				}
 
 				execute, err = parseTransactionExecute(p)
@@ -163,7 +170,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 			case KeywordPost:
 				if sawPost {
-					return nil, p.syntaxError("unexpected second post-conditions")
+					return nil, &DuplicatePostConditionsError{
+						Pos: p.current.StartPos,
+					}
 				}
 				postStartPos := p.current.StartPos
 				// Skip the `post` keyword
@@ -175,12 +184,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				sawPost = true
 
 			default:
-				return nil, p.syntaxError(
-					"unexpected identifier, expected keyword %q or %q, got %q",
-					KeywordExecute,
-					KeywordPost,
-					keyword,
-				)
+				return nil, &ExpectedExecuteOrPostError{
+					GotIdentifier: string(keyword),
+					Pos:           p.current.StartPos,
+				}
 			}
 
 		case lexer.TokenBraceClose:
@@ -190,7 +197,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			atEnd = true
 
 		default:
-			return nil, p.syntaxError("unexpected token: %s", p.current.Type)
+			return nil, &UnexpectedTokenAtEndError{
+				Token: p.current,
+			}
 		}
 	}
 
@@ -212,7 +221,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 }
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err error) {
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
 			parseDocStrings: true,
@@ -253,6 +265,8 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 			return
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error) {

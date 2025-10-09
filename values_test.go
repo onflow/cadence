@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 	"unicode/utf8"
@@ -29,7 +30,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 type valueTestCase struct {
@@ -44,9 +45,11 @@ type valueTestCase struct {
 func newValueTestCases() map[string]valueTestCase {
 	ufix64, _ := NewUFix64("64.01")
 	fix64, _ := NewFix64("-32.11")
+	fix128, _ := NewUnmeteredFix128FromString("-32.11")
+	ufix128, _ := NewUnmeteredUFix128FromString("32.11")
 
 	testFunctionType := NewFunctionType(
-		FunctionPurityUnspecified,
+		FunctionPurityImpure,
 		nil,
 		[]Parameter{
 			{
@@ -58,8 +61,8 @@ func newValueTestCases() map[string]valueTestCase {
 
 	return map[string]valueTestCase{
 		"UInt": {
-			value:        NewUInt(10),
-			string:       "10",
+			value:        NewUInt(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: UIntType,
 		},
 		"UInt8": {
@@ -83,13 +86,13 @@ func newValueTestCases() map[string]valueTestCase {
 			expectedType: UInt64Type,
 		},
 		"UInt128": {
-			value:        NewUInt128(128),
-			string:       "128",
+			value:        NewUInt128(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: UInt128Type,
 		},
 		"UInt256": {
-			value:        NewUInt256(256),
-			string:       "256",
+			value:        NewUInt256(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: UInt256Type,
 		},
 		"Int": {
@@ -148,13 +151,13 @@ func newValueTestCases() map[string]valueTestCase {
 			expectedType: Word64Type,
 		},
 		"Word128": {
-			value:        NewWord128(128),
-			string:       "128",
+			value:        NewWord128(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: Word128Type,
 		},
 		"Word256": {
-			value:        NewWord256(256),
-			string:       "256",
+			value:        NewWord256(math.MaxUint64),
+			string:       "18446744073709551615",
 			expectedType: Word256Type,
 		},
 		"UFix64": {
@@ -166,6 +169,16 @@ func newValueTestCases() map[string]valueTestCase {
 			value:        fix64,
 			string:       "-32.11000000",
 			expectedType: Fix64Type,
+		},
+		"Fix128": {
+			value:        fix128,
+			string:       "-32.110000000000000000000000",
+			expectedType: Fix128Type,
+		},
+		"UFix128": {
+			value:        ufix128,
+			string:       "32.110000000000000000000000",
+			expectedType: UFix128Type,
 		},
 		"Void": {
 			value:        NewVoid(),
@@ -242,7 +255,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"struct": {
 			value: NewStruct([]Value{String("bar")}),
 			exampleType: NewStructType(
-				utils.TestLocation,
+				TestLocation,
 				"FooStruct",
 				[]Field{
 					{
@@ -260,7 +273,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"resource": {
 			value: NewResource([]Value{NewInt(1)}),
 			exampleType: NewResourceType(
-				utils.TestLocation,
+				TestLocation,
 				"FooResource",
 				[]Field{
 					{
@@ -283,7 +296,7 @@ func newValueTestCases() map[string]valueTestCase {
 				},
 			),
 			exampleType: NewEventType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEvent",
 				[]Field{
 					{
@@ -305,7 +318,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"contract": {
 			value: NewContract([]Value{String("bar")}),
 			exampleType: NewContractType(
-				utils.TestLocation,
+				TestLocation,
 				"FooContract",
 				[]Field{
 					{
@@ -323,7 +336,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"enum": {
 			value: NewEnum([]Value{UInt8(1)}),
 			exampleType: NewEnumType(
-				utils.TestLocation,
+				TestLocation,
 				"FooEnum",
 				nil,
 				[]Field{
@@ -342,7 +355,7 @@ func newValueTestCases() map[string]valueTestCase {
 		"attachment": {
 			value: NewAttachment([]Value{NewInt(1)}),
 			exampleType: NewAttachmentType(
-				utils.TestLocation,
+				TestLocation,
 				"FooAttachment",
 				nil,
 				[]Field{
@@ -472,6 +485,18 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 
 	word256LargeValueTestCase, _ := NewWord256FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
 	word256MaxValue, _ := NewWord256FromBig(sema.Word256TypeMaxIntBig)
+
+	newFix128 := func(s string) Fix128 {
+		v, err := NewUnmeteredFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
+
+	newUFix128 := func(s string) UFix128 {
+		v, err := NewUnmeteredUFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
 
 	typeTests := map[string]map[NumberValue][]byte{
 		// Int*
@@ -661,26 +686,40 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 			Fix64(42_24000000): {0, 0, 0, 0, 251, 197, 32, 0},
 			Fix64(-1_00000000): {255, 255, 255, 255, 250, 10, 31, 0},
 		},
+		"Fix128": {
+			newFix128("0.0"):   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			newFix128("42.0"):  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			newFix128("42.24"): {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			newFix128("-1.0"):  {255, 255, 255, 255, 255, 255, 44, 61, 228, 49, 51, 18, 95, 0, 0, 0},
+			newFix128("170141183460469.231731687303715884105727"):  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			newFix128("-170141183460469.231731687303715884105728"): {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
 		// UFix*
 		"UFix64": {
 			Fix64(0):           {0, 0, 0, 0, 0, 0, 0, 0},
 			Fix64(42_00000000): {0, 0, 0, 0, 250, 86, 234, 0},
 			Fix64(42_24000000): {0, 0, 0, 0, 251, 197, 32, 0},
 		},
+		"UFix128": {
+			newUFix128("0.0"):   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			newUFix128("42.0"):  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			newUFix128("42.24"): {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			newUFix128("340282366920938.463463374607431768211455"): {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
 	}
 
 	// Ensure the test cases are complete
 
-	for _, integerType := range sema.AllNumberTypes {
-		switch integerType {
+	for _, numberType := range sema.AllNumberTypes {
+		switch numberType {
 		case sema.NumberType, sema.SignedNumberType,
 			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
-		if _, ok := typeTests[integerType.String()]; !ok {
-			panic(fmt.Sprintf("broken test: missing %s", integerType))
+		if _, ok := typeTests[numberType.String()]; !ok {
+			panic(fmt.Sprintf("broken test: missing %s", numberType))
 		}
 	}
 
@@ -960,7 +999,7 @@ func TestEvent_GetFieldByName(t *testing.T) {
 	assert.Nil(t, SearchFieldByName(simpleEvent, "a"))
 
 	simpleEventWithType := simpleEvent.WithType(NewEventType(
-		utils.TestLocation,
+		TestLocation,
 		"SimpleEvent",
 		[]Field{
 			{

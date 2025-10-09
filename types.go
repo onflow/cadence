@@ -167,7 +167,9 @@ var Word128Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord128)
 var Word256Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord256)
 
 var Fix64Type = PrimitiveType(interpreter.PrimitiveStaticTypeFix64)
+var Fix128Type = PrimitiveType(interpreter.PrimitiveStaticTypeFix128)
 var UFix64Type = PrimitiveType(interpreter.PrimitiveStaticTypeUFix64)
+var UFix128Type = PrimitiveType(interpreter.PrimitiveStaticTypeUFix128)
 
 var PathType = PrimitiveType(interpreter.PrimitiveStaticTypePath)
 var CapabilityPathType = PrimitiveType(interpreter.PrimitiveStaticTypeCapabilityPath)
@@ -774,6 +776,16 @@ func NewTypeParameter(
 		Name:      name,
 		TypeBound: typeBound,
 	}
+}
+
+func (p TypeParameter) IDPart() string {
+	var b strings.Builder
+	b.WriteString(p.Name)
+	if p.TypeBound != nil {
+		b.WriteByte(':')
+		b.WriteString(p.TypeBound.ID())
+	}
+	return b.String()
 }
 
 // CompositeType
@@ -1465,7 +1477,7 @@ func (t *ContractInterfaceType) Equal(other Type) bool {
 type FunctionPurity int
 
 const (
-	FunctionPurityUnspecified FunctionPurity = iota
+	FunctionPurityImpure FunctionPurity = iota
 	FunctionPurityView
 
 	// DO NOT add item after maxFunctionPurity
@@ -1474,7 +1486,7 @@ const (
 
 func NewFunctionaryPurity(rawPurity int) (FunctionPurity, error) {
 	if rawPurity < 0 || rawPurity >= int(maxFunctionPurity) {
-		return FunctionPurityUnspecified, fmt.Errorf("failed to convert %d to FunctionPurity", rawPurity)
+		return FunctionPurityImpure, fmt.Errorf("failed to convert %d to FunctionPurity", rawPurity)
 	}
 	return FunctionPurity(rawPurity), nil
 }
@@ -1525,7 +1537,7 @@ func (t *FunctionType) ID() string {
 	if typeParameterCount > 0 {
 		typeParameters = make([]string, typeParameterCount)
 		for i, typeParameter := range t.TypeParameters {
-			typeParameters[i] = typeParameter.Name
+			typeParameters[i] = typeParameter.IDPart()
 		}
 	}
 
@@ -1650,9 +1662,9 @@ func NewEntitlementSetAuthorization(
 
 func (*EntitlementSetAuthorization) isAuthorization() {}
 
-func (e *EntitlementSetAuthorization) ID() string {
-	entitlementTypeIDs := make([]string, 0, len(e.Entitlements))
-	for _, typeID := range e.Entitlements {
+func (a *EntitlementSetAuthorization) ID() string {
+	entitlementTypeIDs := make([]string, 0, len(a.Entitlements))
+	for _, typeID := range a.Entitlements {
 		entitlementTypeIDs = append(
 			entitlementTypeIDs,
 			string(typeID),
@@ -1660,41 +1672,41 @@ func (e *EntitlementSetAuthorization) ID() string {
 	}
 
 	// FormatEntitlementSetTypeID sorts
-	return sema.FormatEntitlementSetTypeID(entitlementTypeIDs, e.Kind)
+	return sema.FormatEntitlementSetTypeID(entitlementTypeIDs, a.Kind)
 }
 
-func (e *EntitlementSetAuthorization) Equal(auth Authorization) bool {
+func (a *EntitlementSetAuthorization) Equal(auth Authorization) bool {
 	switch auth := auth.(type) {
 	case *EntitlementSetAuthorization:
-		if len(e.Entitlements) != len(auth.Entitlements) {
+		if len(a.Entitlements) != len(auth.Entitlements) {
 			return false
 		}
 
 		// sets are equivalent if they contain the same elements, regardless of order
 		otherEntitlementSet := auth.getEntitlementSet()
 
-		for _, entitlement := range e.Entitlements {
+		for _, entitlement := range a.Entitlements {
 			if _, exist := otherEntitlementSet[entitlement]; !exist {
 				return false
 			}
 		}
-		return e.Kind == auth.Kind
+		return a.Kind == auth.Kind
 	}
 	return false
 }
 
-func (t *EntitlementSetAuthorization) initializeEntitlementSet() {
-	t.entitlementSetOnce.Do(func() {
-		t.entitlementSet = make(map[common.TypeID]struct{}, len(t.Entitlements))
-		for _, e := range t.Entitlements {
-			t.entitlementSet[e] = struct{}{}
+func (a *EntitlementSetAuthorization) initializeEntitlementSet() {
+	a.entitlementSetOnce.Do(func() {
+		a.entitlementSet = make(map[common.TypeID]struct{}, len(a.Entitlements))
+		for _, e := range a.Entitlements {
+			a.entitlementSet[e] = struct{}{}
 		}
 	})
 }
 
-func (t *EntitlementSetAuthorization) getEntitlementSet() map[common.TypeID]struct{} {
-	t.initializeEntitlementSet()
-	return t.entitlementSet
+func (a *EntitlementSetAuthorization) getEntitlementSet() map[common.TypeID]struct{} {
+	a.initializeEntitlementSet()
+	return a.entitlementSet
 }
 
 type EntitlementMapAuthorization struct {
@@ -1712,16 +1724,16 @@ func NewEntitlementMapAuthorization(gauge common.MemoryGauge, id common.TypeID) 
 
 func (EntitlementMapAuthorization) isAuthorization() {}
 
-func (e EntitlementMapAuthorization) ID() string {
-	return string(e.TypeID)
+func (a EntitlementMapAuthorization) ID() string {
+	return string(a.TypeID)
 }
 
-func (e EntitlementMapAuthorization) Equal(other Authorization) bool {
+func (a EntitlementMapAuthorization) Equal(other Authorization) bool {
 	auth, ok := other.(EntitlementMapAuthorization)
 	if !ok {
 		return false
 	}
-	return e.TypeID == auth.TypeID
+	return a.TypeID == auth.TypeID
 }
 
 // ReferenceType

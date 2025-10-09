@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"bytes"
+	"cmp"
 	"io"
 	"math"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/values"
 
 	"github.com/onflow/cadence/common"
 )
@@ -82,8 +84,8 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 				value,
 			), nil
 
-		case compositeTypeInfo:
-			return newCompositeValueFromAtreeMap(
+		case CompositeTypeInfo:
+			return NewCompositeValueFromAtreeMap(
 				gauge,
 				staticType,
 				value,
@@ -93,11 +95,50 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 			return nil, errors.NewUnexpectedError("invalid ordered map type info: %T", staticType)
 		}
 
+	case values.BoolValue:
+		return BoolValue(value), nil
+
+	case values.IntValue:
+		return IntValue{IntValue: value}, nil
+
+	case values.UFix64Value:
+		return UFix64Value{UFix64Value: value}, nil
+
 	case Value:
 		return value, nil
 
 	default:
 		return nil, errors.NewUnexpectedError("cannot convert stored value: %T", value)
+	}
+}
+
+type StorageDomainKey struct {
+	Domain  common.StorageDomain
+	Address common.Address
+}
+
+func (k StorageDomainKey) Compare(o StorageDomainKey) int {
+	switch bytes.Compare(k.Address[:], o.Address[:]) {
+	case -1:
+		return -1
+	case 0:
+		return cmp.Compare(k.Domain, o.Domain)
+	case 1:
+		return 1
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func NewStorageDomainKey(
+	memoryGauge common.MemoryGauge,
+	address common.Address,
+	domain common.StorageDomain,
+) StorageDomainKey {
+	common.UseMemory(memoryGauge, common.StorageKeyMemoryUsage)
+	return StorageDomainKey{
+		Address: address,
+		Domain:  domain,
 	}
 }
 
@@ -130,8 +171,8 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 // InMemoryStorage
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	StorageMaps map[StorageKey]*StorageMap
-	memoryGauge common.MemoryGauge
+	DomainStorageMaps map[StorageDomainKey]*DomainStorageMap
+	memoryGauge       common.MemoryGauge
 }
 
 var _ Storage = InMemoryStorage{}
@@ -157,26 +198,27 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 	)
 
 	return InMemoryStorage{
-		BasicSlabStorage: slabStorage,
-		StorageMaps:      make(map[StorageKey]*StorageMap),
-		memoryGauge:      memoryGauge,
+		BasicSlabStorage:  slabStorage,
+		DomainStorageMaps: make(map[StorageDomainKey]*DomainStorageMap),
+		memoryGauge:       memoryGauge,
 	}
 }
 
-func (i InMemoryStorage) GetStorageMap(
+func (i InMemoryStorage) GetDomainStorageMap(
+	_ StorageMutationTracker,
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 	createIfNotExists bool,
 ) (
-	storageMap *StorageMap,
+	domainStorageMap *DomainStorageMap,
 ) {
-	key := NewStorageKey(i.memoryGauge, address, domain)
-	storageMap = i.StorageMaps[key]
-	if storageMap == nil && createIfNotExists {
-		storageMap = NewStorageMap(i.memoryGauge, i, atree.Address(address))
-		i.StorageMaps[key] = storageMap
+	key := NewStorageDomainKey(i.memoryGauge, address, domain)
+	domainStorageMap = i.DomainStorageMaps[key]
+	if domainStorageMap == nil && createIfNotExists {
+		domainStorageMap = NewDomainStorageMap(i.memoryGauge, i, atree.Address(address))
+		i.DomainStorageMaps[key] = domainStorageMap
 	}
-	return storageMap
+	return domainStorageMap
 }
 
 func (i InMemoryStorage) CheckHealth() error {
@@ -227,24 +269,4 @@ func StorableSize(storable atree.Storable) (uint32, error) {
 	}
 
 	return uint32(size), nil
-}
-
-// maybeLargeImmutableStorable either returns the given immutable atree.Storable
-// if it can be stored inline inside its parent container,
-// or else stores it in a separate slab and returns an atree.SlabIDStorable.
-func maybeLargeImmutableStorable(
-	storable atree.Storable,
-	storage atree.SlabStorage,
-	address atree.Address,
-	maxInlineSize uint64,
-) (
-	atree.Storable,
-	error,
-) {
-
-	if uint64(storable.ByteSize()) < maxInlineSize {
-		return storable, nil
-	}
-
-	return atree.NewStorableSlab(storage, address, storable)
 }

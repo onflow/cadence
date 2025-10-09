@@ -41,6 +41,15 @@ repos:
         - onflow/flow-go-sdk
         - onflow/flow-go
 
+- repo: onflow/rosetta
+  needsRelease: true
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+
 - repo: onflow/cadence-tools
   needsRelease: true
   prefixPRTitle: true
@@ -83,8 +92,6 @@ repos:
       deps:
         - onflow/cadence
         - onflow/flow-go-sdk
-        - onflow/flow-go
-        - onflow/flowkit/v2
 
 - repo: onflow/flow-evm-gateway
   needsRelease: false
@@ -113,6 +120,6 @@ repos:
         - onflow/cadence-tools/test
         - onflow/cadence-tools/lint
         - onflow/cadence-tools/languageserver
-        - onflow/flixkit-go
+        - onflow/flixkit-go/v2
         - onflow/flowkit/v2
         - onflow/flow-evm-gateway

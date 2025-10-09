@@ -25,32 +25,8 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func emitEventValue(
-	inter *interpreter.Interpreter,
-	locationRange interpreter.LocationRange,
-	eventType *sema.CompositeType,
-	event *interpreter.CompositeValue,
-	emitEvent func(cadence.Event) error,
-) {
-	fields := make([]interpreter.Value, len(eventType.ConstructorParameters))
-
-	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(inter, locationRange, parameter.Identifier)
-		fields[i] = value
-	}
-
-	EmitEventFields(
-		inter,
-		locationRange,
-		eventType,
-		fields,
-		emitEvent,
-	)
-}
-
 func EmitEventFields(
-	inter *interpreter.Interpreter,
-	locationRange interpreter.LocationRange,
+	context interpreter.ValueExportContext,
 	eventType *sema.CompositeType,
 	eventFields []interpreter.Value,
 	emitEvent func(cadence.Event) error,
@@ -67,30 +43,22 @@ func EmitEventFields(
 		))
 	}
 
-	exportableEventFields := make([]exportableValue, len(eventFields))
-	for i, field := range eventFields {
-		exportableEventFields[i] = newExportableValue(field, inter)
-	}
-
 	eventValue := exportableEvent{
 		Type:   eventType,
-		Fields: exportableEventFields,
+		Fields: eventFields,
 	}
 
 	exportedEvent, err := exportEvent(
-		inter,
+		context,
 		eventValue,
-		locationRange,
 		seenReferences{},
 	)
 	if err != nil {
 		panic(err)
 	}
 
-	errors.WrapPanic(func() {
-		err = emitEvent(exportedEvent)
-	})
+	err = emitEvent(exportedEvent)
 	if err != nil {
-		panic(interpreter.WrappedExternalError(err))
+		panic(err)
 	}
 }

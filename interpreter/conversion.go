@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRange LocationRange) ([]byte, error) {
+func ByteArrayValueToByteSlice(context ContainerMutationContext, value Value) ([]byte, error) {
 	array, ok := value.(*ArrayValue)
 	if !ok {
 		return nil, errors.NewDefaultUserError("value is not an array")
@@ -39,10 +39,10 @@ func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRa
 
 		var err error
 		array.Iterate(
-			interpreter,
+			context,
 			func(element Value) (resume bool) {
 				var b byte
-				b, err = ByteValueToByte(interpreter, element, locationRange)
+				b, err = ByteValueToByte(context, element)
 				if err != nil {
 					return false
 				}
@@ -52,7 +52,6 @@ func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRa
 				return true
 			},
 			false,
-			locationRange,
 		)
 		if err != nil {
 			return nil, err
@@ -61,7 +60,7 @@ func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRa
 	return result, nil
 }
 
-func ByteValueToByte(memoryGauge common.MemoryGauge, element Value, locationRange LocationRange) (byte, error) {
+func ByteValueToByte(memoryGauge common.MemoryGauge, element Value) (byte, error) {
 	var b byte
 
 	switch element := element.(type) {
@@ -80,7 +79,7 @@ func ByteValueToByte(memoryGauge common.MemoryGauge, element Value, locationRang
 		b = byte(integer)
 
 	case NumberValue:
-		integer := element.ToInt(locationRange)
+		integer := element.ToInt()
 
 		if integer < 0 || integer > math.MaxUint8 {
 			return 0, errors.NewDefaultUserError("value is not in byte range (0-255)")
@@ -95,9 +94,9 @@ func ByteValueToByte(memoryGauge common.MemoryGauge, element Value, locationRang
 	return b, nil
 }
 
-func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
+func ByteSliceToByteArrayValue(context ArrayCreationContext, buf []byte) *ArrayValue {
 
-	common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(buf)))
+	common.UseMemory(context, common.NewBytesMemoryUsage(len(buf)))
 
 	var values []Value
 
@@ -110,17 +109,16 @@ func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue
 	}
 
 	return NewArrayValue(
-		interpreter,
-		EmptyLocationRange,
+		context,
 		ByteArrayStaticType,
 		common.ZeroAddress,
 		values...,
 	)
 }
 
-func ByteSliceToConstantSizedByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
+func ByteSliceToConstantSizedByteArrayValue(context ArrayCreationContext, buf []byte) *ArrayValue {
 
-	common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(buf)))
+	common.UseMemory(context, common.NewBytesMemoryUsage(len(buf)))
 
 	var values []Value
 
@@ -133,14 +131,13 @@ func ByteSliceToConstantSizedByteArrayValue(interpreter *Interpreter, buf []byte
 	}
 
 	constantSizedByteArrayStaticType := NewConstantSizedStaticType(
-		interpreter,
+		context,
 		PrimitiveStaticTypeUInt8,
 		int64(len(buf)),
 	)
 
 	return NewArrayValue(
-		interpreter,
-		EmptyLocationRange,
+		context,
 		constantSizedByteArrayStaticType,
 		common.ZeroAddress,
 		values...,

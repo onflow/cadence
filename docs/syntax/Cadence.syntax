@@ -1,0 +1,1504 @@
+
+%scanner
+
+*
+<spaceToken>:
+        whitespace
+    ;
+
+whitespace:
+        1*whitespaceItem
+    ;
+
+whitespaceItem:
+        singleLineComment
+    |   multipleLineComment
+    |   whitespaceCharacter
+    |   lineBreak
+    ;
+
+whitespaceCharacter:
+        // \t, \v, \f, <space>
+        U+0009,U+000B-U+000C,U+0020
+    ;
+
+lineBreak:
+        "\r" "\n"
+    |   "\r"
+    |   "\n" ;
+
+singleLineComment:
+        "/" "/" *1singleLineCommentText lineBreak
+    ;
+
+singleLineCommentText:
+        1*singleLineCommentTextItem
+    ;
+
+singleLineCommentTextItem:
+        ~"\n\r" ;
+
+multipleLineComment:
+        multipleLineCommentStart *1multipleLineCommentText multipleLineCommentEnd
+    ;
+
+multipleLineCommentStart:
+        "/" "*" ;
+
+multipleLineCommentEnd:
+        "*" "/" ;
+
+multipleLineCommentText:
+        1*multipleLineCommentTextItem
+    ;
+
+multipleLineCommentTextItem:
+        multipleLineCommentTextCharacter
+    |   multipleLineComment
+    ;
+
+multipleLineCommentTextCharacter:
+        ~multipleLineCommentStartOrEnd
+    ;
+
+multipleLineCommentStartOrEnd:
+        multipleLineCommentStart
+    |   multipleLineCommentEnd
+    ;
+
+<identifierToken>:
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz" *identifierFollower
+    ;
+
+identifierFollower:
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+    ;
+
+<fixedPointToken>:
+        "0123456789" *"0123456789_" "." "0123456789" *"0123456789_"
+    ;
+
+<decimalToken>:
+        "0"
+    |   "123456789" *"0123456789_" ;
+
+<binaryToken>:
+        "0" "b" 1*"01_" ;
+
+<octalToken>:
+        "0" "o" 1*"01234567_" ;
+
+<hexadecimalToken>:
+        "0" "x" 1*"0123456789ABCDEFabcdef_" ;
+
+<invalidNumberToken>:
+        "0" "acdefghijklmnpqrstuvwyzABCDEFGHIJKLMNOPQRSTUVWXYZ" "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
+    ;
+
+<stringToken>:
+        "\"" *quotedTextItem "\"" ;
+
+quotedTextItem:
+        quotedTextItemCharacter
+    |   escapedCharacter
+    ;
+
+quotedTextItemCharacter:
+        ~nonquotedTextItemCharacter
+    ;
+
+nonquotedTextItemCharacter:
+        "\"\r\n\\" ;
+
+escapedCharacter:
+        escapedUnicodeScalar
+    |   escapedCharacter
+    ;
+
+escapedUnicodeScalar:
+        "\\" "u" "{" 1*8unicodeScalarDigit "}" ;
+
+unicodeScalarDigit:
+        "0123456789abcdefABCDEF" ;
+
+escapedCharacter:
+        "\\" "0\\tnr\"'" ;
+
+%parser
+
+*
+program:
+        // EBNF: ( declaration ( declarationSeparator declaration )* )? EOF
+        *declaration( declarationSeparator ) $
+    ;
+
+access:
+        accessAccount      // ast.Access { ast.Access.PrimitiveAccess( allAcc ) }
+    |   accessAll          // ast.Access
+    |   accessContract     // ast.Access
+    |   accessMapping      // ast.Access
+    |   accessSelf         // ast.Access
+    |   accessEntitlement  // ast.Access
+    |   accessPub          // error: `pub` and `pub(set)` are no longer valid access keywords
+    |   accessPriv         // error: `priv` is no longer a valid access keyword
+    |   accessNotSpecified // ast.AccessNotSpecified
+    ;
+
+accessAccount:
+        accessKeyword "(" accountKeyword ")"    // ast.AccessAccount
+    ;
+
+accessAll:
+        accessKeyword "(" allKeyword ")"        // ast.AccessAll
+    ;
+
+accessContract:
+        accessKeyword "(" contractKeyword ")"   // ast.AccessContract
+    ;
+
+accessMapping:
+        accessKeyword "(" mappingKeyword nominalType ")"  // ast.MappedAccess
+    ;
+
+accessSelf:
+        accessKeyword "(" selfKeyword ")"       // ast.AccessSelf
+    ;
+
+accessEntitlement:
+        accessKeyword "(" entitlementList ")"   // ast.EntitlementAccess
+    ;
+
+accessPub:
+        pubKeyword *1accessPubSet   // error: `pub` is no longer a valid access keyword
+    ;
+
+accessPubSet:
+        // error: `pub(set)` is no longer a valid access keyword
+        "(" setKeyword ")"
+    ;
+
+accessPriv:
+        // error: `priv` is no longer a valid access keyword
+        privKeyword 
+    ;
+
+argument:
+        argumentLabeled    // ast.Argument
+    |   argumentUnlabeled  // ast.Argument
+    ;
+
+argumentLabeled:
+        nonReservedIdentifier ":" expression // ast.Argument
+    ;
+
+argumentUnlabeled:
+        expression // ast.UnlabeledArgument
+    ;
+
+entitlementList:
+        accessAccessValueEntitlementDisjunction // ast.EntitlementAccess
+    |   accessAccessValueEntitlementConjunction // ast.EntitlementAccess
+    ;
+
+accessAccessValueEntitlementConjunction:
+        1*nominalType( "," )       // ast.ConjunctiveEntitlementSet ast.EntitlementSet
+    ;
+
+accessAccessValueEntitlementDisjunction:
+        2*nominalType( "|" )       // ast.DisjunctiveEntitlementSet ast.EntitlementSet
+    ;
+
+accessNotSpecified:
+        // ast.AccessNotSpecified
+    ;
+
+attachmentDeclaration:
+        access attachmentKeyword nonReservedIdentifier forKeyword nominalType conformances "{" membersAndNestedDeclarations "}" // ast.NewIdentifier ast.NewAttachmentDeclaration
+        /* { ast.AttachmentDeclaration(
+                access: access,
+                identifier: identifier,
+                baseType: baseType,
+                conformances: conformances,
+                members: members )  } */
+    ;
+
+declarationSeparator:
+        semicolon
+    |   empty
+    ;
+
+empty:
+    ;
+
+semicolon:
+        ";"
+    ;
+
+declaration:
+        pragmaDeclaration               // ast.PragmaDeclaration
+    |   variableDeclaration             // ast.VariableDeclaration
+    |   functionDeclaration             // ast.FunctionDeclaration
+    |   importDeclaration               // ast.ImportDeclaration
+    |   eventDeclaration                // ast.CompositeDeclaration
+    |   structCompositeDeclaration      // ast.CompositeDeclaration
+    |   resourceCompositeDeclaration    // ast.CompositeDeclaration
+    |   contractCompositeDeclaration    // ast.CompositeDeclaration
+    |   enumCompositeDeclaration        // ast.CompositeDeclaration
+    |   structInterfaceDeclaration      // ast.InterfaceDeclaration
+    |   resourceInterfaceDeclaration    // ast.InterfaceDeclaration
+    |   contractInterfaceDeclaration    // ast.InterfaceDeclaration
+    |   enumInterfaceDeclaration        // ast.InterfaceDeclaration
+    |   entitlementDeclaration          // ast.EntitlementDeclaration
+    |   entitlementMappingDeclaration   // ast.EntitlementMappingDeclaration
+    |   attachmentDeclaration           // ast.AttachmentDeclaration
+    |   transactionDeclaration          // ast.TransactionDeclaration
+    ;
+
+transactionDeclaration:
+        transactionKeyword *1parameterList "{" fields *1prepareFunctionDeclaration *1preConditions *1executeOrPostConditions "}" // ast.TransactionDeclaration
+    ;
+
+executeOrPostConditions:
+        executeOrPostConditionsExecute                  // ast.SpecialFunctionDeclaration
+    |   executeOrPostConditionsExecutePostConditions    // ast.SpecialFunctionDeclaration ast.Conditions
+    |   executeOrPostConditionsPostConditions           // ast.Conditions
+    |   executeOrPostConditionsPostConditionsExecute    // ast.Conditions ast.SpecialFunctionDeclaration
+    ;
+
+executeOrPostConditionsExecute:
+        execute // ast.SpecialFunctionDeclaration
+    ;
+
+executeOrPostConditionsExecutePostConditions:
+        execute postConditions // ast.SpecialFunctionDeclaration ast.Conditions
+    ;
+
+executeOrPostConditionsPostConditions:
+        postConditions // ast.Conditions
+    ;
+
+executeOrPostConditionsPostConditionsExecute:
+        postConditions execute // ast.Conditions ast.SpecialFunctionDeclaration
+    ;
+
+execute:
+        identifier block // ast.FunctionBlock ast.FunctionDeclaration ast.SpecialFunctionDeclaration
+    ;
+
+importDeclaration:
+        importKeyword *1importNamesFrom location // ast.ImportDeclaration
+    ;
+
+importNamesFrom:
+        1*importName fromKeyword
+    ;
+
+importName:
+        identifier
+    ;
+
+location:
+        stringLocation      // ast.StringLocation
+    |   identifierLocation  // ast.IdentifierLocation
+    |   addressLocation     // ast.AddressLocation
+    ;
+
+stringLocation:
+        stringExpression    // ast.StringLocation
+    ;
+
+identifierLocation:
+        identifier          // ast.IdentifierLocation
+    ;
+
+addressLocation:
+        positiveHexadecimalExpression   // ast.AddressLocation
+    ;
+
+conformances:
+        conformancesTypes // [ast.NominalType]
+    |   empty
+    ;
+
+conformancesTypes:
+        ":" 1*nominalType( "," ) // [ast.NominalType]
+    ;
+
+field:
+        letField            // ast.FieldDeclaration
+    |   varField            // ast.FieldDeclaration
+    |   unspecifiedField    // ast.FieldDeclaration
+    ;
+
+letField:
+        access letKeyword nonReservedIdentifier ":" typeAnnotation // ast.FieldDeclaration
+    ;
+
+varField:
+        access varKeyword nonReservedIdentifier ":" typeAnnotation // ast.FieldDeclaration
+    ;
+
+unspecifiedField:
+        access nonReservedIdentifier ":" typeAnnotation // ast.FieldDeclaration
+    ;
+
+fields:
+        *fieldsEntry // [ast.FieldDeclaration]
+    ;
+
+fieldsEntry:
+        field declarationSeparator // ast.FieldDeclaration
+    ;
+
+structCompositeDeclaration:
+        access structKeyword nonReservedIdentifier conformances "{" membersAndNestedDeclarations "}" // ast.CompositeDeclaration
+    ;
+
+resourceCompositeDeclaration:
+        access resourceKeyword nonReservedIdentifier conformances "{" membersAndNestedDeclarations "}" // ast.CompositeDeclaration
+    ;
+
+contractCompositeDeclaration:
+        access contractKeyword nonReservedIdentifier conformances "{" membersAndNestedDeclarations "}" // ast.CompositeDeclaration
+    ;
+
+enumCompositeDeclaration:
+        access enumKeyword nonReservedIdentifier conformances "{" *semicolonEnumerationDeclarationCase "}" // ast.CompositeDeclaration
+    ;
+
+structInterfaceDeclaration:
+        access structKeyword interfaceKeyword nonReservedIdentifier conformances "{" membersAndNestedDeclarations "}" // ast.InterfaceDeclaration
+    ;
+
+resourceInterfaceDeclaration:
+        access resourceKeyword interfaceKeyword nonReservedIdentifier conformances "{" membersAndNestedDeclarations "}" // ast.InterfaceDeclaration
+    ;
+
+contractInterfaceDeclaration:
+        access contractKeyword interfaceKeyword nonReservedIdentifier conformances "{" membersAndNestedDeclarations "}" // ast.InterfaceDeclaration
+    ;
+
+enumInterfaceDeclaration:
+        access enumKeyword interfaceKeyword nonReservedIdentifier conformances "{" *semicolonEnumerationDeclarationCase "}" // ast.InterfaceDeclaration
+    ;
+
+membersAndNestedDeclarations:
+        *membersAndNestedDeclarationsEntry // ast.Members
+    ;
+
+membersAndNestedDeclarationsEntry:
+        memberOrNestedDeclaration declarationSeparator // ast.Declaration
+    ;
+
+memberOrNestedDeclaration:
+        field
+    |   initFunctionDeclaration         // ast.SpecialFunctionDeclaration
+    |   destroyFunctionDeclaration      // error: removed in Cadence 1.0
+    |   prepareFunctionDeclaration      // ast.SpecialFunctionDeclaration
+    |   functionDeclaration             // ast.FunctionDeclaration
+    |   structCompositeDeclaration      // ast.CompositeDeclaration
+    |   resourceCompositeDeclaration    // ast.CompositeDeclaration
+    |   contractCompositeDeclaration    // ast.CompositeDeclaration
+    |   enumCompositeDeclaration        // ast.CompositeDeclaration
+    |   structInterfaceDeclaration      // ast.InterfaceDeclaration
+    |   resourceInterfaceDeclaration    // ast.InterfaceDeclaration
+    |   contractInterfaceDeclaration    // ast.InterfaceDeclaration
+    |   enumInterfaceDeclaration        // ast.InterfaceDeclaration
+    |   eventDeclaration                // ast.CompositeDeclaration
+    |   pragmaDeclaration               // ast.PragmaDeclaration
+    |   entitlementDeclaration          // ast.EntitlementDeclaration
+    |   entitlementMappingDeclaration   // ast.EntitlementMappingDeclaration
+    |   attachmentDeclaration           // ast.AttachmentDeclaration
+    ;
+
+initFunctionDeclaration:
+        accessOrView initKeyword parameterList *1functionBlock // ast.SpecialFunctionDeclaration
+    ;
+
+destroyFunctionDeclaration:
+        accessOrView destroyKeyword parameterList *1functionBlock // error: removed in Cadence 1.0
+    ;
+
+prepareFunctionDeclaration:
+        accessOrView prepareKeyword parameterList *1functionBlock // ast.SpecialFunctionDeclaration
+    ;
+
+functionDeclaration:
+        accessOrView funKeyword nonReservedIdentifier parameterList *1functionDeclarationTypeAnnotation *1functionBlock // ast.FunctionDeclaration
+    ;
+
+accessOrView:
+        accessView
+    |   viewAccess
+    |   access
+    ;
+
+accessView:
+        access viewKeyword
+    ;
+
+viewAccess:
+        viewKeyword access
+    ;
+
+functionDeclarationTypeAnnotation:
+        ":" typeAnnotation // ast.TypeAnnotation
+    ;
+
+eventDeclaration:
+        access eventKeyword nonReservedIdentifier parameterList // ast.SpecialFunctionDeclaration ast.FunctionDeclaration ast.Members ast.CompositeDeclaration
+    ;
+
+comma:
+        ","
+    ;
+
+pragmaDeclaration:
+        "#" expression // ast.PragmaDeclaration
+    ;
+
+entitlementDeclaration:
+        access entitlementKeyword nonReservedIdentifier // ast.EntitlementDeclaration
+    ;
+
+entitlementMappingDeclaration:
+        access entitlementKeyword mappingKeyword nonReservedIdentifier "{" entitlementMappingsAndInclusions "}" // ast.EntitlementMappingDeclaration
+    ;
+
+entitlementMappingsAndInclusions:
+        *entitlementMappingElement // [ast.EntitlementMapElement]
+    ;
+
+entitlementMappingElement:
+        entitlementMapping      // ast.EntitlementMapRelation
+    |   entitlementIncludeType  // ast.NominalType
+    ;
+
+entitlementMapping:
+        entitlementMappingSource "->" entitlementMappingTarget // ast.EntitlementMapRelation
+    ;
+
+entitlementMappingSource:
+        nominalType
+    ;
+
+entitlementMappingTarget:
+        nominalType
+    ;
+
+entitlementIncludeType:
+        includeKeyword nominalType // ast.NominalType
+    ;
+
+semicolonEnumerationDeclarationCase:
+        semicolon
+    |   enumerationDeclarationCase // ast.EnumCaseDeclaration
+    ;
+
+enumerationDeclarationCase:
+        access caseKeyword nonReservedIdentifier // ast.EnumCaseDeclaration
+    ;
+
+parameterList:
+        "(" *parameter( "," ) *1comma ")" // ast.ParameterList
+    ;
+
+parameter:
+        labeledParameter   // ast.Parameter
+    |   unlabeledParameter // ast.Parameter
+    ;
+
+labeledParameter:
+        // defaultValue is only used for resource destroyed event declarations
+        argumentLabel parameterName ":" typeAnnotation *1defaultValue // ast.Parameter
+    ;
+
+unlabeledParameter:
+        // defaultValue is only used for resource destroyed event declarations
+        parameterName ":" typeAnnotation *1defaultValue // ast.Parameter
+    ;
+
+argumentLabel:
+        nonReservedIdentifier // ast.Identifier
+    ;
+
+parameterName:
+        nonReservedIdentifier // ast.Identifier
+    ;
+
+defaultValue:
+        "=" expression // ast.Expression
+    ;
+
+typeAnnotation:
+        *1resourceAnnotation fullType // ast.TypeAnnotation
+    ;
+
+resourceAnnotation:
+        "@"
+    ;
+
+fullType:
+        fullTypeNormal // ast.FullType
+    |   fullTypeNested // ast.FullType
+    ;
+
+// TODO split this rule up and to encode the precedence rules
+fullTypeNormal:
+        *1fullTypeReference innerType *fullTypeOptional
+    ;
+
+fullTypeReference:
+        *1fullTypeReferenceAuth "&"
+    ;
+
+fullTypeReferenceAuth:
+        fullTypeReferenceAuthConjunction
+    |   fullTypeReferenceAuthDisjunction
+    |   fullTypeReferenceAuthNoEntitlements
+    |   fullTypeReferenceAuthMapping
+    ;
+
+fullTypeReferenceAuthConjunction:
+        authKeyword "(" 1*nominalType( "," ) ")"
+    ;
+
+fullTypeReferenceAuthDisjunction:
+        authKeyword "(" 1*nominalType( "|" ) ")"
+    ;
+
+fullTypeReferenceAuthNoEntitlements:
+        authKeyword
+    ;
+
+fullTypeReferenceAuthMapping:
+        authKeyword "(" mappingKeyword nominalType ")"
+    ;
+
+fullTypeOptional:
+        // optional must be adjacent to previous token
+        . optional
+    ;
+
+fullTypeNested:
+        "(" fullType ")" *fullTypeOptional
+    ;
+
+innerType:
+        baseIntersectionType    // ast.IntersectionType
+    |   intersectionType        // ast.IntersectionType
+    |   baseType                // ast.Type
+    ;
+
+baseIntersectionType:
+        // baseType and typeRestrictions must be adjacent
+        // Invalid since Cadence 1.0
+        baseType . typeRestrictions // ast.IntersectionType
+    ;
+
+intersectionType:
+        typeRestrictions    // ast.IntersectionType
+    ;
+
+baseType:
+        nominalType
+    |   capabilityType
+    |   functionType        // ast.FunctionType
+    |   variableSizedType   // ast.VariableSizedType
+    |   constantSizedType   // ast.ConstantSizedType
+    |   dictionaryType      // ast.DictionaryType
+    ;
+
+typeRestrictions:
+        "{" *1nominalTypes "}"  // [ast.NominalType]
+    ;
+
+nominalTypes:
+        1*nominalType( "," )    // [ast.NominalType]
+    ;
+
+capabilityType:
+        "Capability" *1instantiationType    // ast.NominalType
+    ;
+
+nominalType:
+        nonReservedIdentifier *nominalTypeMember // ast.NominalType
+    ;
+
+nominalTypeMember:
+        "." nonReservedIdentifier // ast.NominalType
+    ;
+
+instantiationType:
+        "<" *typeAnnotation( "," ) ">"    // ast.InstantiationType
+    ;
+
+functionType:
+        *1viewKeyword funKeyword "(" *typeAnnotation( "," ) ")" *1functionTypeReturn    // ast.FunctionType
+    ;
+
+functionTypeReturn:
+        ":" typeAnnotation  // ast.EmptyIdentifier ast.NominalType ast.TypeAnnotation
+    ;
+
+variableSizedType:
+        "[" fullType "]"    // ast.VariableSizedType
+    ;
+
+constantSizedType:
+        "[" fullType ";" positiveIntegerExpression "]" // ast.ConstantSizedType
+    ;
+
+dictionaryType:
+        "{" dictionaryTypeKey ":" dictionaryTypeValue "}"   // ast.DictionaryType
+    ;
+
+dictionaryTypeKey:
+        fullType    // ast.Type
+    ;
+
+dictionaryTypeValue:
+        fullType    // ast.Type
+    ;
+
+block:
+        "{" statements "}" // ast.Block
+    ;
+
+functionBlock:
+        "{" *1preConditions *1postConditions statements "}" // ast.Block ast.FunctionBlock
+    ;
+
+preConditions:
+        preKeyword conditions // ast.Conditions
+    ;
+
+postConditions:
+        postKeyword conditions // ast.Conditions
+    ;
+
+conditions:
+        "{" *semicolonCondition "}" // ast.Conditions
+    ;
+
+semicolonCondition:
+        semicolon
+    |   emitStatement       // ast.EmitCondition
+    |   conditionExpression // ast.TestCondition
+    ;
+
+conditionExpression:
+        expression *1conditionDescription // ast.TestCondition
+    ;
+
+conditionDescription:
+        ":" expression // ast.Expression
+    ;
+
+statements:
+        *eosStatement // [ast.Statement]
+    ;
+
+eosStatement:
+        eos
+    |   statement // ast.Statement
+    ;
+
+eos:
+        semicolon
+    |   newLine
+    ;
+
+newLine:
+        /
+    ;
+
+statement:
+        returnStatement     // ast.ReturnStatement
+    |   breakStatement      // ast.BreakStatement
+    |   continueStatement   // ast.ContinueStatement
+    |   ifStatement         // ast.IfStatement
+    |   whileStatement      // ast.WhileStatement
+    |   forStatement        // ast.ForStatement
+    |   switchStatement     // ast.SwitchStatement
+    |   emitStatement       // ast.EmitStatement
+    |   declaration         // ast.Declaration
+    |   assignment          // ast.AssignmentStatement
+    |   swap                // ast.SwapStatement
+    |   expression          // ast.ExpressionStatement
+    ;
+
+returnStatement:
+        returnStatementExpression   // ast.ReturnStatement
+    |   returnStatementEmpty        // ast.ReturnStatement
+    ;
+
+returnStatementExpression:
+        returnKeyword expression    // ast.ReturnStatement
+    ;
+
+returnStatementEmpty:
+        returnKeyword // ast.ReturnStatement
+    ;
+
+breakStatement:
+        breakKeyword // ast.BreakStatement
+    ;
+
+continueStatement:
+        continueKeyword // ast.ContinueStatement
+    ;
+
+ifStatement:
+        ifKeyword ifStatementCondition block *1ifStatementElse // ast.IfStatement
+    ;
+
+ifStatementCondition:
+        expression          // ast.Expression
+    |   variableDeclaration // ast.VariableDeclaration
+    ;
+
+ifStatementElse:
+        elseKeyword ifStatementElseElement
+    ;
+
+ifStatementElseElement:
+        ifStatement // ast.IfStatement
+    |   block       // ast.Block
+    ;
+
+whileStatement:
+        whileKeyword expression block // ast.WhileStatement
+    ;
+
+forStatement:
+        forKeyword *1forStatementIndex nonReservedIdentifier inKeyword expression block // ast.ForStatement
+    ;
+
+forStatementIndex:
+        nonReservedIdentifier ","
+    ;
+
+switchStatement:
+        switchKeyword expression "{" *switchCase "}" // ast.SwitchStatement
+    ;
+
+switchCase:
+        switchCaseExpression    // ast.SwitchCase
+    |   switchCaseDefault       // ast.SwitchCase
+    ;
+
+switchCaseExpression:
+        caseKeyword expression ":" statements // ast.SwitchCase
+    ;
+
+switchCaseDefault:
+        defaultKeyword ":" statements // ast.SwitchCase
+    ;
+
+emitStatement:
+        emitKeyword nominalType *1instantiationType argumentList // ast.EmitStatement
+    ;
+
+variableDeclaration:
+        letVariableDeclaration  // ast.VariableDeclaration
+    |   varVariableDeclaration  // ast.VariableDeclaration
+    ;
+
+letVariableDeclaration:
+        access letKeyword nonReservedIdentifier *1variableDeclarationTypeAnnotation transfer expression *1variableDeclarationTrailingTransferExpression // ast.VariableDeclaration
+    ;
+
+varVariableDeclaration:
+        access varKeyword nonReservedIdentifier *1variableDeclarationTypeAnnotation transfer expression *1variableDeclarationTrailingTransferExpression // ast.VariableDeclaration
+    ;
+
+variableDeclarationTypeAnnotation:
+        ":" typeAnnotation // ast.TypeAnnotation
+    ;
+
+variableDeclarationTrailingTransferExpression:
+        transfer expression
+    ;
+
+assignment:
+        assignmentTarget transfer assignmentValue // ast.AssignmentStatement
+    ;
+
+assignmentTarget:
+        expression
+    ;
+
+assignmentValue:
+        expression
+    ;
+
+swap:
+        swapExpressionLeft "<->" swapExpressionRight // ast.SwapStatement
+    ;
+
+swapExpressionLeft:
+        expression
+    ;
+
+swapExpressionRight:
+        expression
+    ;
+
+transfer:
+        transferEqual       // ast.Transfer
+    |   transferMoveForced  // ast.Transfer
+    |   transferMove        // ast.Transfer
+    ;
+
+transferEqual:
+        "="
+    ;
+
+transferMoveForced:
+        moveForced
+    ;
+
+transferMove:
+        move
+    ;
+
+expression:
+        conditionalExpression
+    ;
+
+conditionalExpression:
+        orExpression *1conditionalExpressionBranches  // ast.ConditionalExpression
+    ;
+
+conditionalExpressionBranches:
+        "?" conditionalExpressionBranchesTrue ":" conditionalExpressionBranchesFalse      // [ast.Expression]
+    ;
+
+conditionalExpressionBranchesTrue:
+        expression  // ast.Expression
+    ;
+
+conditionalExpressionBranchesFalse:
+        expression  // ast.Expression
+    ;
+
+orExpression:
+        1*andExpression( "||" ) // [ast.BinaryExpression]
+    ;
+
+andExpression:
+        1*comparisonExpression( "&&" )  // [ast.BinaryExpression]
+    ;
+
+comparisonExpression:
+        1*nilCoalescingExpression( comparisonOp )  // [ast.BinaryExpression]
+    ;
+
+nilCoalescingExpression:
+        1*bitwiseOrExpression( nilCoalescingOperator )  // [ast.BinaryExpression]
+    ;
+
+nilCoalescingOperator:
+        "?" . "?"
+    ;
+
+bitwiseOrExpression:
+        1*bitwiseXorExpression( "|" )   // [ast.BinaryExpression]
+    ;
+
+bitwiseXorExpression:
+        1*bitwiseAndExpression( "^" )   // [ast.BinaryExpression]
+    ;
+
+bitwiseAndExpression:
+        1*bitwiseShiftExpression( "&" ) // [ast.BinaryExpression]
+    ;
+
+bitwiseShiftExpression:
+        1*additiveExpression( bitwiseShiftOp )  // [ast.BinaryExpression]
+    ;
+
+additiveExpression:
+        1*multiplicativeExpression( additiveOp )    // [ast.BinaryExpression]
+    ;
+
+multiplicativeExpression:
+        1*moveExpression( multiplicativeOp )    // [ast.BinaryExpression]
+    ;
+
+moveExpression:
+        *1moveOp castingExpression  // ast.UnaryExpression
+    ;
+
+castingExpression:
+        prefixExpression *castingExpressionCast // ast.CastingExpression
+    ;
+
+castingExpressionCast:
+        castingOp typeAnnotation
+    ;
+
+prefixExpression:
+        *1prefixOp postfixExpression    // ast.UnaryExpression
+    ;
+
+postfixExpression:
+        primaryExpression *postfixOperation   // ast.Expression
+    ;
+
+postfixOperation:
+        forceUnwrapOp           // ast.ForceExpression
+    |   memberAccess            // ast.MemberExpression
+    |   optionalMemberAccess    // ast.MemberExpression
+    |   indexExpression         // ast.IndexExpression
+    |   invocationExpression    // ast.InvocationExpression
+    ;
+
+forceUnwrapOp:
+        // "!" must be on same line as previous token
+        \ "!"
+    ;
+
+invocationExpression:
+        // *1instantiationType argumentList must be on same line as previous token
+        \ *1instantiationType argumentList // ast.InvocationExpression
+    ;
+
+memberAccess:
+        "." . nonReservedIdentifier
+    ;
+
+optionalMemberAccess:
+        "?." . nonReservedIdentifier
+    ;
+
+indexExpression:
+        // "[" must be on same line as previous token
+        \ "[" expression "]"  // ast.IndexExpression
+    ;
+
+primaryExpression:
+        arrayExpression         // ast.ArrayExpression
+    |   attachExpression        // ast.AttachExpression
+    |   createExpression        // ast.CreateExpression
+    |   destroyExpression       // ast.DestroyExpression
+    |   dictionaryExpression    // ast.DictionaryExpression
+    |   falseExpression         // ast.BoolExpression
+    |   fixedPointExpression    // ast.FixedPointExpression
+    |   functionExpression      // ast.FunctionExpression
+    |   identifierExpression    // ast.IdentifierExpression
+    |   integerExpression       // ast.IntegerExpression
+    |   nestedExpression        // ast.Expression
+    |   nilExpression           // ast.NilExpression
+    |   pathExpression          // ast.PathExpression
+    |   stringExpression        // ast.StringExpression
+    |   trueExpression          // ast.BoolExpression
+    |   viewFunctionExpression  // ast.FunctionExpression
+    |   voidExpression          // ast.VoidExpression
+    ;
+
+arrayExpression:
+        "[" *1expressionList "]"    // ast.ArrayExpression
+    ;
+
+attachExpression:
+        attachKeyword nominalType argumentList toKeyword expression    // ast.AttachExpression
+    ;
+
+createExpression:
+        createKeyword nominalType argumentList   // ast.CreateExpression
+    ;
+
+destroyExpression:
+        destroyKeyword expression
+    ;
+
+dictionaryExpression:
+        "{" *dictionaryEntry( "," ) "}"   // ast.DictionaryExpression
+    ;
+
+dictionaryEntry:
+        dictionaryEntryKey ":" dictionaryEntryValue
+    ;
+
+dictionaryEntryKey:
+        expression  // ast.Expression
+    ;
+
+dictionaryEntryValue:
+        expression  // ast.Expression
+    ;
+
+falseExpression:
+        falseKeyword            // ast.BoolExpression
+    ;
+
+fixedPointExpression:
+        fixedPointLiteral       // ast.FixedPointExpression
+    ;
+
+functionExpression:
+        funKeyword parameterList *1functionTypeAnnotation functionBlock // ast.FunctionExpression
+    ;
+
+functionTypeAnnotation:
+        ":" typeAnnotation
+    ;
+
+identifierExpression:
+        nonReservedIdentifier   // ast.IdentifierExpression
+    ;
+
+integerExpression:
+        *1minus positiveIntegerExpression  // ast.IntegerExpression
+    ;
+
+nestedExpression:
+        "(" expression ")"  // ast.Expression
+    ;
+
+nilExpression:
+        nilKeyword              // ast.NilExpression
+    ;
+
+pathExpression:
+        "/" . pathLiteralDomain . "/" . identifier  // ast.PathExpression
+    ;
+
+pathLiteralDomain:
+        identifier  // ast.Identifier
+    ;
+
+stringExpression:
+        <stringToken>   // ast.StringExpression
+    ;
+
+trueExpression:
+        trueKeyword             // ast.BoolExpression
+    ;
+
+viewFunctionExpression:
+        viewKeyword funKeyword parameterList *1functionTypeAnnotation functionBlock // ast.FunctionExpression
+    ;
+
+voidExpression:
+        "(" ")"     // ast.VoidExpression
+    ;
+
+
+
+
+
+
+comparisonOp:
+        equal
+    |   unequal
+    |   less
+    |   greater
+    |   lessEqual
+    |   greaterEqual
+    ;
+
+equal:
+        "=="
+    ;
+
+unequal:
+        "!="
+    ;
+
+less:
+        "<"
+    ;
+
+greater:
+        ">"
+    ;
+
+lessEqual:
+        "<="
+    ;
+
+greaterEqual:
+        ">="
+    ;
+
+bitwiseShiftOp:
+        shiftLeft
+    |   shiftRight
+    ;
+
+shiftLeft:
+        "<<"
+    ;
+
+shiftRight:
+        ">" . ">"
+    ;
+
+additiveOp:
+        plus
+    |   minus
+    ;
+
+plus:
+        "+"
+    ;
+
+minus:
+        "-"
+    ;
+
+multiplicativeOp:
+        mul
+    |   div
+    |   mod
+    ;
+
+mul:
+        "*"
+    ;
+
+div:
+        "/"
+    ;
+
+mod:
+        "%"
+    ;
+
+moveOp:
+        move
+    |   moveForced
+    ;
+
+move:
+        "<-"
+    ;
+
+moveForced:
+        "<-!"
+    ;
+
+prefixOp:
+        negative    // ast.UnaryExpression
+    |   negate      // ast.UnaryExpression
+    |   dereference // ast.UnaryExpression
+    |   reference   // ast.ReferenceExpression
+    ;
+
+negative:
+        "-"
+    ;
+
+negate:
+        "!"
+    ;
+
+dereference:
+        "*"
+    ;
+
+reference:
+        "&"
+    ;
+
+optional:
+        "?"
+    ;
+
+casting:
+        asKeyword
+    ;
+
+failableCasting:
+        asKeyword . "?"
+    ;
+
+forceCasting:
+        asKeyword . "!"
+    ;
+
+castingOp:
+        casting
+    |   failableCasting
+    |   forceCasting
+    ;
+
+argumentList:
+        "(" *argument( "," ) *1comma ")"   // TODO: Should we have a trailing comma without a list of arguments?
+    ;
+
+fixedPointLiteral:
+        *1minus positiveFixedPointLiteral   // ast.FixedPointExpression
+    ;
+
+positiveFixedPointLiteral:
+        <fixedPointToken>   // ast.FixedPointExpression
+    ;
+
+positiveIntegerExpression:
+        positiveDecimalExpression       // ast.IntegerExpression
+    |   positiveBinaryExpression        // ast.IntegerExpression
+    |   positiveOctalExpression         // ast.IntegerExpression
+    |   positiveHexadecimalExpression   // ast.IntegerExpression
+    |   positiveInvalidExpression       // error:
+    ;
+
+positiveDecimalExpression:
+        <decimalToken>  // ast.IntegerExpression
+    ;
+
+positiveBinaryExpression:
+        <binaryToken>   // ast.IntegerExpression
+    ;
+
+positiveOctalExpression:
+        <octalToken>    // ast.IntegerExpression
+    ;
+
+positiveHexadecimalExpression:
+        <hexadecimalToken>  // ast.IntegerExpression
+    ;
+
+positiveInvalidExpression:
+        <invalidNumberToken>
+    ;
+
+expressionList:
+        1*expression( "," ) // [ast.Expression]
+    ;
+
+identifier:
+        <identifierToken>   // ast.IdentifierExpression
+    ;
+
+nonReservedIdentifier:
+        softKeyword
+    |   identifier
+    ;
+
+softKeyword:
+        accessKeyword
+    |   accountKeyword
+    |   allKeyword
+    |   attachKeyword
+    |   authKeyword
+    |   createKeyword
+    |   contractKeyword
+    |   eventKeyword
+    |   forKeyword
+    |   fromKeyword
+    |   inKeyword
+    |   removeKeyword
+    |   selfKeyword
+    |   setKeyword
+    |   toKeyword
+    |   typeKeyword
+    |   viewKeyword
+    ;
+
+accessKeyword:
+        "access"
+    ;
+
+accountKeyword:
+        "account"
+    ;
+
+allKeyword:
+        "all"
+    ;
+
+asKeyword:
+        "as"
+    ;
+
+attachKeyword:
+        "attach"
+    ;
+
+attachmentKeyword:
+        "attachment"
+    ;
+
+authKeyword:
+        "auth"
+    ;
+
+breakKeyword:
+        "break"
+    ;
+
+caseKeyword:
+        "case"
+    ;
+
+continueKeyword:
+        "continue"
+    ;
+
+contractKeyword:
+        "contract"
+    ;
+
+createKeyword:
+        "create"
+    ;
+
+defaultKeyword:
+        "default"
+    ;
+
+destroyKeyword:
+        "destroy"
+    ;
+
+elseKeyword:
+        "else"
+    ;
+
+emitKeyword:
+        "emit"
+    ;
+
+entitlementKeyword:
+        "entitlement"
+    ;
+
+enumKeyword:
+        "enum"
+    ;
+
+eventKeyword:
+        "event"
+    ;
+
+falseKeyword:
+        "false"
+    ;
+
+forKeyword:
+        "for"
+    ;
+
+fromKeyword:
+        "from"
+    ;
+
+funKeyword:
+        "fun"
+    ;
+
+ifKeyword:
+        "if"
+    ;
+
+importKeyword:
+        "import"
+    ;
+
+inKeyword:
+        "in"
+    ;
+
+includeKeyword:
+        "include"
+    ;
+
+initKeyword:
+        "init"
+    ;
+
+interfaceKeyword:
+        "interface"
+    ;
+
+letKeyword:
+        "let"
+    ;
+
+mappingKeyword:
+        "mapping"
+    ;
+
+nilKeyword:
+        "nil"
+    ;
+
+postKeyword:
+        "post"
+    ;
+
+preKeyword:
+        "pre"
+    ;
+
+prepareKeyword:
+        "prepare"
+    ;
+
+privKeyword:
+        "priv"
+    ;
+
+pubKeyword:
+        "pub"
+    ;
+
+removeKeyword:
+        "remove"
+    ;
+
+resourceKeyword:
+        "resource"
+    ;
+
+returnKeyword:
+        "return"
+    ;
+
+selfKeyword:
+        "self"
+    ;
+
+setKeyword:
+        "set"
+    ;
+
+structKeyword:
+        "struct"
+    ;
+
+switchKeyword:
+        "switch"
+    ;
+
+toKeyword:
+        "to"
+    ;
+
+transactionKeyword:
+        "transaction"
+    ;
+
+trueKeyword:
+        "true"
+    ;
+
+typeKeyword:
+        "type"
+    ;
+
+varKeyword:
+        "var"
+    ;
+
+viewKeyword:
+        "view"
+    ;
+
+whileKeyword:
+        "while"
+    ;

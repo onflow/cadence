@@ -101,7 +101,7 @@ func getFunctionTypeFromMember(funcMember *sema.Member, funcName string) *sema.F
 }
 
 func getNestedTypeConstructorValue(
-	inter *interpreter.Interpreter,
+	context interpreter.ValueStaticTypeContext,
 	parent interpreter.Value,
 	typeName string,
 ) *interpreter.HostFunctionValue {
@@ -111,7 +111,7 @@ func getNestedTypeConstructorValue(
 	}
 
 	constructorVar := compositeValue.NestedVariables[typeName]
-	constructor, ok := constructorVar.GetValue(inter).(*interpreter.HostFunctionValue)
+	constructor, ok := constructorVar.GetValue(context).(*interpreter.HostFunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError("invalid type for constructor"))
 	}
@@ -119,9 +119,8 @@ func getNestedTypeConstructorValue(
 }
 
 func arrayValueToSlice(
-	inter *interpreter.Interpreter,
+	context interpreter.ContainerMutationContext,
 	value interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) ([]interpreter.Value, error) {
 	array, ok := value.(*interpreter.ArrayValue)
 	if !ok {
@@ -131,13 +130,12 @@ func arrayValueToSlice(
 	result := make([]interpreter.Value, 0, array.Count())
 
 	array.Iterate(
-		inter,
+		context,
 		func(element interpreter.Value) (resume bool) {
 			result = append(result, element)
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return result, nil
@@ -145,7 +143,7 @@ func arrayValueToSlice(
 
 // newScriptResult Creates a "ScriptResult" using the return value of the executed script.
 func newScriptResult(
-	inter *interpreter.Interpreter,
+	context interpreter.InvocationContext,
 	returnValue interpreter.Value,
 	result *ScriptResult,
 ) interpreter.Value {
@@ -155,21 +153,22 @@ func newScriptResult(
 	}
 
 	// Lookup and get 'ResultStatus' enum value.
-	resultStatusConstructor := getConstructor(inter, testResultStatusTypeName)
+	resultStatusConstructor := getConstructor(context, testResultStatusTypeName)
 	var status interpreter.Value
 	if result.Error == nil {
 		succeededVar := resultStatusConstructor.NestedVariables[testResultStatusTypeSucceededCaseName]
-		status = succeededVar.GetValue(inter)
+		status = succeededVar.GetValue(context)
 	} else {
 		failedVar := resultStatusConstructor.NestedVariables[testResultStatusTypeFailedCaseName]
-		status = failedVar.GetValue(inter)
+		status = failedVar.GetValue(context)
 	}
 
-	errValue := newErrorValue(inter, result.Error)
+	errValue := newErrorValue(context, result.Error)
 
 	// Create a 'ScriptResult' by calling its constructor.
-	scriptResultConstructor := getConstructor(inter, testScriptResultTypeName)
-	scriptResult, err := inter.InvokeExternally(
+	scriptResultConstructor := getConstructor(context, testScriptResultTypeName)
+	scriptResult, err := interpreter.InvokeExternally(
+		context,
 		scriptResultConstructor,
 		scriptResultConstructor.Type,
 		[]interpreter.Value{
@@ -186,9 +185,8 @@ func newScriptResult(
 	return scriptResult
 }
 
-func getConstructor(inter *interpreter.Interpreter, typeName string) *interpreter.HostFunctionValue {
-	resultStatusConstructorVar := inter.FindVariable(typeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue(inter).(*interpreter.HostFunctionValue)
+func getConstructor(variableResolver interpreter.VariableResolver, typeName string) *interpreter.HostFunctionValue {
+	resultStatusConstructor, ok := variableResolver.GetValueOfVariable(typeName).(*interpreter.HostFunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError("invalid type for constructor of '%s'", typeName))
 	}
@@ -197,9 +195,8 @@ func getConstructor(inter *interpreter.Interpreter, typeName string) *interprete
 }
 
 func addressArrayValueToSlice(
-	inter *interpreter.Interpreter,
+	context interpreter.ContainerMutationContext,
 	accountsValue interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) []common.Address {
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
 	if !ok {
@@ -209,7 +206,7 @@ func addressArrayValueToSlice(
 	addresses := make([]common.Address, 0)
 
 	accountsArray.Iterate(
-		inter,
+		context,
 		func(element interpreter.Value) (resume bool) {
 			address, ok := element.(interpreter.AddressValue)
 			if !ok {
@@ -221,16 +218,14 @@ func addressArrayValueToSlice(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return addresses
 }
 
 func accountsArrayValueToSlice(
-	inter *interpreter.Interpreter,
+	context interpreter.PublicKeyCreationContext,
 	accountsValue interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) []*Account {
 
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
@@ -241,55 +236,45 @@ func accountsArrayValueToSlice(
 	accounts := make([]*Account, 0)
 
 	accountsArray.Iterate(
-		inter,
+		context,
 		func(element interpreter.Value) (resume bool) {
 			accountValue, ok := element.(interpreter.MemberAccessibleValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			account := accountFromValue(inter, accountValue, locationRange)
+			account := accountFromValue(context, accountValue)
 
 			accounts = append(accounts, account)
 
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return accounts
 }
 
 func accountFromValue(
-	inter *interpreter.Interpreter,
+	context interpreter.PublicKeyCreationContext,
 	accountValue interpreter.MemberAccessibleValue,
-	locationRange interpreter.LocationRange,
 ) *Account {
 
 	// Get address
-	addressValue := accountValue.GetMember(
-		inter,
-		locationRange,
-		accountAddressFieldName,
-	)
+	addressValue := accountValue.GetMember(context, accountAddressFieldName)
 	address, ok := addressValue.(interpreter.AddressValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	// Get public key
-	publicKeyVal, ok := accountValue.GetMember(
-		inter,
-		locationRange,
-		sema.AccountKeyPublicKeyFieldName,
-	).(interpreter.MemberAccessibleValue)
+	publicKeyVal, ok := accountValue.GetMember(context, sema.AccountKeyPublicKeyFieldName).(interpreter.MemberAccessibleValue)
 
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyVal)
+	publicKey, err := NewPublicKeyFromValue(context, publicKeyVal)
 	if err != nil {
 		panic(err)
 	}
@@ -301,24 +286,25 @@ func accountFromValue(
 }
 
 // newTransactionResult Creates a "TransactionResult" indicating the status of the transaction execution.
-func newTransactionResult(inter *interpreter.Interpreter, result *TransactionResult) interpreter.Value {
+func newTransactionResult(context interpreter.InvocationContext, result *TransactionResult) interpreter.Value {
 	// Lookup and get 'ResultStatus' enum value.
-	resultStatusConstructor := getConstructor(inter, testResultStatusTypeName)
+	resultStatusConstructor := getConstructor(context, testResultStatusTypeName)
 	var status interpreter.Value
 	if result.Error == nil {
 		succeededVar := resultStatusConstructor.NestedVariables[testResultStatusTypeSucceededCaseName]
-		status = succeededVar.GetValue(inter)
+		status = succeededVar.GetValue(context)
 	} else {
 		failedVar := resultStatusConstructor.NestedVariables[testResultStatusTypeFailedCaseName]
-		status = failedVar.GetValue(inter)
+		status = failedVar.GetValue(context)
 	}
 
 	// Create a 'TransactionResult' by calling its constructor.
-	transactionResultConstructor := getConstructor(inter, testTransactionResultTypeName)
+	transactionResultConstructor := getConstructor(context, testTransactionResultTypeName)
 
-	errValue := newErrorValue(inter, result.Error)
+	errValue := newErrorValue(context, result.Error)
 
-	transactionResult, err := inter.InvokeExternally(
+	transactionResult, err := interpreter.InvokeExternally(
+		context,
 		transactionResultConstructor,
 		transactionResultConstructor.Type,
 		[]interpreter.Value{
@@ -334,15 +320,16 @@ func newTransactionResult(inter *interpreter.Interpreter, result *TransactionRes
 	return transactionResult
 }
 
-func newErrorValue(inter *interpreter.Interpreter, err error) interpreter.Value {
+func newErrorValue(context interpreter.InvocationContext, err error) interpreter.Value {
 	if err == nil {
 		return interpreter.Nil
 	}
 
 	// Create a 'Error' by calling its constructor.
-	errorConstructor := getConstructor(inter, testErrorTypeName)
+	errorConstructor := getConstructor(context, testErrorTypeName)
 
-	errorValue, invocationErr := inter.InvokeExternally(
+	errorValue, invocationErr := interpreter.InvokeExternally(
+		context,
 		errorConstructor,
 		errorConstructor.Type,
 		[]interpreter.Value{
@@ -382,14 +369,15 @@ func newMatcherWithAnyStructTestFunction(
 	testFunc interpreter.FunctionValue,
 ) interpreter.Value {
 
-	inter := invocation.Interpreter
+	context := invocation.InvocationContext
 
 	matcherConstructor := getNestedTypeConstructorValue(
-		inter,
+		context,
 		*invocation.Self,
 		testMatcherTypeName,
 	)
-	matcher, err := inter.InvokeExternally(
+	matcher, err := interpreter.InvokeExternally(
+		context,
 		matcherConstructor,
 		matcherConstructor.Type,
 		[]interpreter.Value{
@@ -412,7 +400,7 @@ func newMatcherWithGenericTestFunction(
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.Value {
 
-	typeParameterPair := invocation.TypeParameterTypes.Oldest()
+	typeParameterPair := invocation.TypeArguments.Oldest()
 	if typeParameterPair == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -434,23 +422,22 @@ func newMatcherWithGenericTestFunction(
 	matcherTestFunction := interpreter.NewUnmeteredStaticHostFunctionValue(
 		matcherTestFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
+			invocationContext := invocation.InvocationContext
 
 			for _, argument := range invocation.Arguments {
-				argumentStaticType := argument.StaticType(inter)
+				argumentStaticType := argument.StaticType(invocationContext)
 
-				if !inter.IsSubTypeOfSemaType(argumentStaticType, parameterType) {
-					argumentSemaType := inter.MustConvertStaticToSemaType(argumentStaticType)
+				if !interpreter.IsSubTypeOfSemaType(invocationContext, argumentStaticType, parameterType) {
+					argumentSemaType := interpreter.MustConvertStaticToSemaType(argumentStaticType, invocationContext)
 
-					panic(interpreter.TypeMismatchError{
-						ExpectedType:  parameterType,
-						ActualType:    argumentSemaType,
-						LocationRange: invocation.LocationRange,
+					panic(&interpreter.TypeMismatchError{
+						ExpectedType: parameterType,
+						ActualType:   argumentSemaType,
 					})
 				}
 			}
 
-			value, err := inter.InvokeFunction(testFunc, invocation)
+			value, err := interpreter.InvokeFunction(invocationContext, testFunc, invocation)
 			if err != nil {
 				panic(err)
 			}
@@ -490,17 +477,16 @@ func NewTestInterpreterContractValueHandler(
 		inter *interpreter.Interpreter,
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-		invocationRange ast.Range,
 	) interpreter.ContractValue {
 
 		switch compositeType.Location {
 		case TestContractLocation:
-			contract, err := GetTestContractType().NewTestContract(
-				inter,
-				testFramework,
-				constructorGenerator(common.ZeroAddress),
-				invocationRange,
-			)
+			contract, err := GetTestContractType().
+				NewTestContract(
+					inter,
+					testFramework,
+					constructorGenerator(common.ZeroAddress),
+				)
 			if err != nil {
 				panic(err)
 			}

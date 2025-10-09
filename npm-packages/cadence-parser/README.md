@@ -11,8 +11,8 @@ import {CadenceParser} from "@onflow/cadence-parser"
 const parser = await CadenceParser.create("cadence-parser.wasm")
 
 const ast = parser.parse(`
-  pub contract HelloWorld {
-    pub fun hello() {
+  access(all) contract HelloWorld {
+    access(all) fun hello() {
       log("Hello, world!")
     }
   }

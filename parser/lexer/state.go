@@ -56,9 +56,20 @@ func rootState(l *lexer) stateFn {
 		case '%':
 			l.emitType(TokenPercent)
 		case '(':
+			if l.mode == lexerModeStringInterpolation {
+				// it is necessary to balance brackets when generating tokens for string templates to know when to change modes
+				l.openBrackets++
+			}
 			l.emitType(TokenParenOpen)
 		case ')':
 			l.emitType(TokenParenClose)
+			if l.mode == lexerModeStringInterpolation {
+				l.openBrackets--
+				if l.openBrackets == 0 {
+					l.mode = lexerModeNormal
+					return stringState
+				}
+			}
 		case '{':
 			l.emitType(TokenBraceOpen)
 		case '}':
@@ -118,6 +129,17 @@ func rootState(l *lexer) stateFn {
 			return numberState
 		case '"':
 			return stringState
+		case '\\':
+			if l.mode == lexerModeStringInterpolation {
+				r = l.next()
+				switch r {
+				case '(':
+					l.emitType(TokenStringTemplate)
+					l.openBrackets++
+				}
+			} else {
+				return l.error(fmt.Errorf("unrecognized character: %#U", r))
+			}
 		case '/':
 			r = l.next()
 			switch r {
@@ -199,23 +221,14 @@ func numberState(l *lexer) stateFn {
 		switch r {
 		case 'b':
 			l.scanBinaryRemainder()
-			if l.endOffset-l.startOffset <= 2 {
-				l.emitError(fmt.Errorf("missing digits"))
-			}
 			l.emitType(TokenBinaryIntegerLiteral)
 
 		case 'o':
 			l.scanOctalRemainder()
-			if l.endOffset-l.startOffset <= 2 {
-				l.emitError(fmt.Errorf("missing digits"))
-			}
 			l.emitType(TokenOctalIntegerLiteral)
 
 		case 'x':
 			l.scanHexadecimalRemainder()
-			if l.endOffset-l.startOffset <= 2 {
-				l.emitError(fmt.Errorf("missing digits"))
-			}
 			l.emitType(TokenHexadecimalIntegerLiteral)
 
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_':
@@ -231,10 +244,7 @@ func numberState(l *lexer) stateFn {
 			l.emitType(TokenDecimalIntegerLiteral)
 
 		default:
-			prefixChar := r
-
 			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
-				l.emitError(fmt.Errorf("invalid number literal prefix: %q", prefixChar))
 				l.next()
 
 				tokenType := l.scanDecimalOrFixedPointRemainder()
@@ -324,10 +334,12 @@ func blockCommentState(nesting int) stateFn {
 		case '/':
 			beforeSlashOffset := l.prevEndOffset
 			if l.acceptOne('*') {
-				starOffset := l.endOffset
-				l.endOffset = beforeSlashOffset
-				l.emitType(TokenBlockCommentContent)
-				l.endOffset = starOffset
+				if beforeSlashOffset-l.startOffset > 0 {
+					starOffset := l.endOffset
+					l.endOffset = beforeSlashOffset
+					l.emitType(TokenBlockCommentContent)
+					l.endOffset = starOffset
+				}
 				l.emitType(TokenBlockCommentStart)
 				return blockCommentState(nesting + 1)
 			}
@@ -335,10 +347,12 @@ func blockCommentState(nesting int) stateFn {
 		case '*':
 			beforeStarOffset := l.prevEndOffset
 			if l.acceptOne('/') {
-				slashOffset := l.endOffset
-				l.endOffset = beforeStarOffset
-				l.emitType(TokenBlockCommentContent)
-				l.endOffset = slashOffset
+				if beforeStarOffset-l.startOffset > 0 {
+					slashOffset := l.endOffset
+					l.endOffset = beforeStarOffset
+					l.emitType(TokenBlockCommentContent)
+					l.endOffset = slashOffset
+				}
 				l.emitType(TokenBlockCommentEnd)
 				return blockCommentState(nesting - 1)
 			}

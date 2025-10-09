@@ -34,13 +34,13 @@ var deployedContractFieldNames = []string{
 }
 
 func NewDeployedContractValue(
-	inter *Interpreter,
+	context FunctionCreationContext,
 	address AddressValue,
 	name *StringValue,
 	code *ArrayValue,
 ) *SimpleCompositeValue {
 	deployedContract := NewSimpleCompositeValue(
-		inter,
+		context,
 		sema.DeployedContractType.TypeID,
 		deployedContractStaticType,
 		deployedContractFieldNames,
@@ -52,10 +52,11 @@ func NewDeployedContractValue(
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
-	publicTypesFuncValue := newPublicTypesFunctionValue(
-		inter,
+	publicTypesFuncValue := newInterpreterDeployedContractPublicTypesFunctionValue(
+		context,
 		deployedContract,
 		address,
 		name,
@@ -65,8 +66,51 @@ func NewDeployedContractValue(
 	return deployedContract
 }
 
-func newPublicTypesFunctionValue(
-	inter *Interpreter,
+func NewNativeDeployedContractPublicTypesFunctionValue(
+	addressPointer *common.Address,
+	name *StringValue,
+	publicTypes *ArrayValue,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		var address common.Address
+		if addressPointer == nil {
+			// the vm does not provide any arguments
+			deployedContract := AssertValueOfType[*SimpleCompositeValue](receiver)
+
+			addressFieldValue := deployedContract.GetMember(
+				context,
+				sema.DeployedContractTypeAddressFieldName,
+			)
+			address = common.Address(AssertValueOfType[AddressValue](addressFieldValue))
+
+			nameFieldValue := deployedContract.GetMember(
+				context,
+				sema.DeployedContractTypeNameFieldName,
+			)
+			name = AssertValueOfType[*StringValue](nameFieldValue)
+		} else {
+			address = *addressPointer
+		}
+
+		if publicTypes == nil {
+			publicTypes = DeployedContractPublicTypes(
+				context,
+				address,
+				name,
+			)
+		}
+
+		return publicTypes
+	}
+}
+
+func newInterpreterDeployedContractPublicTypesFunctionValue(
+	context FunctionCreationContext,
 	self MemberAccessibleValue,
 	addressValue AddressValue,
 	name *StringValue,
@@ -76,43 +120,45 @@ func newPublicTypesFunctionValue(
 
 	address := addressValue.ToAddress()
 	return NewBoundHostFunctionValue(
-		inter,
+		context,
 		self,
 		sema.DeployedContractTypePublicTypesFunctionType,
-		func(_ MemberAccessibleValue, inv Invocation) Value {
-			if publicTypes == nil {
-				innerInter := inv.Interpreter
-				contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
-				// we're only looking at the contract as a whole, so no need to construct a nested path
-				qualifiedIdent := name.Str
-				typeID := common.NewTypeIDFromQualifiedName(innerInter, contractLocation, qualifiedIdent)
-				compositeType, err := innerInter.GetCompositeType(contractLocation, qualifiedIdent, typeID)
-				if err != nil {
-					panic(err)
-				}
+		NewNativeDeployedContractPublicTypesFunctionValue(&address, name, publicTypes),
+	)
+}
 
-				nestedTypes := compositeType.NestedTypes
-				pair := nestedTypes.Oldest()
-				// all top-level type declarations in a contract must be public
-				// no need to filter here for public visibility
-				yieldNext := func() Value {
-					if pair == nil {
-						return nil
-					}
-					typeValue := NewTypeValue(innerInter, ConvertSemaToStaticType(innerInter, pair.Value))
-					pair = pair.Next()
-					return typeValue
-				}
+func DeployedContractPublicTypes(
+	context InvocationContext,
+	address common.Address,
+	name *StringValue,
+) *ArrayValue {
+	contractLocation := common.NewAddressLocation(context, address, name.Str)
+	// we're only looking at the contract as a whole, so no need to construct a nested path
+	qualifiedIdent := name.Str
+	typeID := common.NewTypeIDFromQualifiedName(context, contractLocation, qualifiedIdent)
+	compositeType, err := context.GetCompositeType(contractLocation, qualifiedIdent, typeID)
+	if err != nil {
+		panic(err)
+	}
 
-				publicTypes = NewArrayValueWithIterator(
-					innerInter,
-					NewVariableSizedStaticType(innerInter, PrimitiveStaticTypeMetaType),
-					common.Address{},
-					uint64(nestedTypes.Len()),
-					yieldNext,
-				)
-			}
+	nestedTypes := compositeType.NestedTypes
+	pair := nestedTypes.Oldest()
+	// all top-level type declarations in a contract must be public
+	// no need to filter here for public visibility
+	yieldNext := func() Value {
+		if pair == nil {
+			return nil
+		}
+		typeValue := NewTypeValue(context, ConvertSemaToStaticType(context, pair.Value))
+		pair = pair.Next()
+		return typeValue
+	}
 
-			return publicTypes
-		})
+	return NewArrayValueWithIterator(
+		context,
+		NewVariableSizedStaticType(context, PrimitiveStaticTypeMetaType),
+		common.Address{},
+		uint64(nestedTypes.Len()),
+		yieldNext,
+	)
 }

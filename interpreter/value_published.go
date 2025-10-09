@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/values"
 )
 
 // PublishedValue
@@ -47,19 +48,19 @@ var _ Value = &PublishedValue{}
 var _ atree.Value = &PublishedValue{}
 var _ EquatableValue = &PublishedValue{}
 
-func (*PublishedValue) isValue() {}
+func (*PublishedValue) IsValue() {}
 
-func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitPublishedValue(interpreter, v)
+func (v *PublishedValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitPublishedValue(context, v)
 }
 
-func (v *PublishedValue) StaticType(interpreter *Interpreter) StaticType {
+func (v *PublishedValue) StaticType(context ValueStaticTypeContext) StaticType {
 	// checking the static type of a published value should show us the
 	// static type of the underlying value
-	return v.Value.StaticType(interpreter)
+	return v.Value.StaticType(context)
 }
 
-func (*PublishedValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*PublishedValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -75,37 +76,39 @@ func (v *PublishedValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v *PublishedValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.PublishedValueStringMemoryUsage)
+func (v *PublishedValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
+	common.UseMemory(context, common.PublishedValueStringMemoryUsage)
 
 	return fmt.Sprintf(
 		"PublishedValue<%s>(%s)",
-		v.Recipient.MeteredString(interpreter, seenReferences, locationRange),
-		v.Value.MeteredString(interpreter, seenReferences, locationRange),
+		v.Recipient.MeteredString(context, seenReferences),
+		v.Value.MeteredString(context, seenReferences),
 	)
 }
 
-func (v *PublishedValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+func (v *PublishedValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	walkChild(v.Recipient)
 	walkChild(v.Value)
 }
 
 func (v *PublishedValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return false
 }
 
-func (v *PublishedValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *PublishedValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherValue, ok := other.(*PublishedValue)
 	if !ok {
 		return false
 	}
 
-	return otherValue.Recipient.Equal(interpreter, locationRange, v.Recipient) &&
-		otherValue.Value.Equal(interpreter, locationRange, v.Value)
+	return otherValue.Recipient.Equal(context, v.Recipient) &&
+		otherValue.Value.Equal(context, v.Value)
 }
 
 func (*PublishedValue) IsStorable() bool {
@@ -113,20 +116,19 @@ func (*PublishedValue) IsStorable() bool {
 }
 
 func (v *PublishedValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (v *PublishedValue) NeedsStoreTo(address atree.Address) bool {
 	return v.Value.NeedsStoreTo(address)
 }
 
-func (*PublishedValue) IsResourceKinded(_ *Interpreter) bool {
+func (*PublishedValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v *PublishedValue) Transfer(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueTransferContext,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -139,8 +141,7 @@ func (v *PublishedValue) Transfer(
 	if v.NeedsStoreTo(address) {
 
 		innerValue := v.Value.Transfer(
-			interpreter,
-			locationRange,
+			context,
 			address,
 			remove,
 			nil,
@@ -149,8 +150,7 @@ func (v *PublishedValue) Transfer(
 		).(*IDCapabilityValue)
 
 		addressValue := v.Recipient.Transfer(
-			interpreter,
-			locationRange,
+			context,
 			address,
 			remove,
 			nil,
@@ -159,24 +159,24 @@ func (v *PublishedValue) Transfer(
 		).(AddressValue)
 
 		if remove {
-			interpreter.RemoveReferencedSlab(storable)
+			RemoveReferencedSlab(context, storable)
 		}
 
-		return NewPublishedValue(interpreter, addressValue, innerValue)
+		return NewPublishedValue(context, addressValue, innerValue)
 	}
 
 	return v
 
 }
 
-func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
+func (v *PublishedValue) Clone(context ValueCloneContext) Value {
 	return &PublishedValue{
 		Recipient: v.Recipient,
-		Value:     v.Value.Clone(interpreter).(*IDCapabilityValue),
+		Value:     v.Value.Clone(context).(CapabilityValue),
 	}
 }
 
-func (*PublishedValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*PublishedValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

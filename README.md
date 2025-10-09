@@ -1,3 +1,4 @@
+[![Release](https://img.shields.io/github/v/release/onflow/cadence)](https://github.com/onflow/cadence/releases)
 [![CI](https://github.com/onflow/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/onflow/cadence/actions/workflows/ci.yml)
 
 # Cadence
@@ -45,3 +46,5 @@ If you would like to contribute to Cadence, have a look at the [contributing gui
 
 Development documentation can be found in the [`/docs` directory](https://github.com/onflow/cadence/tree/master/docs).
 For example, it contains the source for the language reference.
+
+You can also look out for the next [Cadence Working Group](https://github.com/onflow/Flow-Working-Groups/tree/main/cadence_language_and_execution_working_group) meeting and join our discussions!

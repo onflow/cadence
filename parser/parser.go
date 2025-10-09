@@ -195,22 +195,20 @@ func ParseTokenStream[T any](
 	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenEOF) {
-		p.reportSyntaxError("unexpected token: %s", p.current.Type)
+		p.report(&UnexpectedTokenAtEndError{
+			Token: p.current,
+		})
 	}
 
 	return result, p.errors
 }
 
-func (p *parser) syntaxError(message string, params ...any) error {
+func (p *parser) newSyntaxError(message string, params ...any) *SyntaxError {
 	return NewSyntaxError(p.current.StartPos, message, params...)
 }
 
-func (p *parser) syntaxErrorWithSuggestedFix(message string, suggestedFix string) error {
-	return NewSyntaxErrorWithSuggestedReplacement(p.current.Range, message, suggestedFix)
-}
-
 func (p *parser) reportSyntaxError(message string, params ...any) {
-	err := p.syntaxError(message, params...)
+	err := p.newSyntaxError(message, params...)
 	p.report(err)
 }
 
@@ -260,10 +258,10 @@ func (p *parser) next() {
 			}
 			parseError, ok := err.(ParseError)
 			if !ok {
-				parseError = NewSyntaxError(
-					token.StartPos,
-					err.Error(),
-				)
+				parseError = &SyntaxError{
+					Pos:     token.StartPos,
+					Message: err.Error(),
+				}
 			}
 			p.report(parseError)
 			continue
@@ -285,7 +283,9 @@ func (p *parser) nextSemanticToken() {
 func (p *parser) mustOne(tokenType lexer.TokenType) (lexer.Token, error) {
 	t := p.current
 	if !t.Is(tokenType) {
-		return lexer.Token{}, p.syntaxError("expected token %s", tokenType)
+		return lexer.Token{}, p.newSyntaxError("expected token %s", tokenType).
+			WithSecondary("check for missing punctuation, operators, or syntax elements").
+			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
 	p.next()
 	return t, nil
@@ -307,15 +307,6 @@ func (p *parser) isToken(token lexer.Token, tokenType lexer.TokenType, expected 
 
 	actual := p.tokenSource(token)
 	return string(actual) == expected
-}
-
-func (p *parser) mustToken(tokenType lexer.TokenType, string string) (lexer.Token, error) {
-	t := p.current
-	if !p.isToken(t, tokenType, string) {
-		return lexer.Token{}, p.syntaxError("expected token %s with string value %s", tokenType, string)
-	}
-	p.next()
-	return t, nil
 }
 
 func (p *parser) startBuffering() {
@@ -376,7 +367,7 @@ func (p *parser) checkReplayCount(total, additional, limit uint, kind string) (u
 	newTotal := total + additional
 	// Check for overflow (uint) and for exceeding the limit
 	if newTotal < total || newTotal > limit {
-		return newTotal, p.syntaxError("program too ambiguous, %s replay limit of %d tokens exceeded", kind, limit)
+		return newTotal, p.newSyntaxError("program too ambiguous, %s replay limit of %d tokens exceeded", kind, limit)
 	}
 	return newTotal, nil
 }
@@ -453,9 +444,13 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 		}
 	}()
 
-	var atEnd, insideLineDocString bool
+	var insideLineDocString bool
 
-	for !atEnd {
+	var atEnd bool
+	progress := p.newProgress()
+
+	for !atEnd && p.checkProgress(&progress) {
+
 		switch p.current.Type {
 		case lexer.TokenSpace:
 			space, ok := p.current.SpaceOrError.(lexer.Space)
@@ -534,7 +529,7 @@ func (p *parser) mustNotKeyword(errMsgContext string, token lexer.Token) (ast.Id
 			errMsgContext = " " + errMsgContext
 		}
 
-		return ast.Identifier{}, p.syntaxError("expected identifier%s, got %s", errMsgContext, invalidTokenMsg)
+		return ast.Identifier{}, p.newSyntaxError("expected identifier%s, got %s", errMsgContext, invalidTokenMsg)
 	}
 
 	if token.Type != lexer.TokenIdentifier {
@@ -575,6 +570,27 @@ func (p *parser) endAmbiguity() {
 	if p.ambiguityLevel == 0 {
 		p.localReplayedTokensCount = 0
 	}
+}
+
+type parserProgress struct {
+	offset int
+}
+
+func (p *parser) newProgress() parserProgress {
+	return parserProgress{
+		// -1, because the first call of checkProgress should succeed
+		offset: p.current.StartPos.Offset - 1,
+	}
+}
+
+// checkProgress checks that the parser has made progress since it was called last with this parserProgress.
+func (p *parser) checkProgress(progress *parserProgress) bool {
+	parserOffset := p.current.StartPos.Offset
+	if parserOffset == progress.offset {
+		panic(errors.NewUnexpectedError("parser did not make progress"))
+	}
+	progress.offset = parserOffset
+	return true
 }
 
 func ParseExpression(

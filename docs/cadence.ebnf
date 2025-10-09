@@ -106,9 +106,7 @@ importDeclaration
 
 access
     : (* Not specified *)
-    | Priv
-    | Pub ( '(' Set ')' )?
-    | Access '(' ( Self | Contract | Account | All ) ')'
+    | Access '(' ( Self | Contract | Account | All  | identifier) ')'
     ;
 
 compositeDeclaration
@@ -224,7 +222,7 @@ nominalType
     ;
 
 functionType
-    : Fun '(' 
+    : Fun '('
         ( typeAnnotation ( ',' typeAnnotation )* )?
       ')'
       ( ':' typeAnnotation )?

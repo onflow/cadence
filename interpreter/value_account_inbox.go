@@ -29,6 +29,7 @@ import (
 
 var account_InboxTypeID = sema.Account_InboxType.ID()
 var account_InboxStaticType StaticType = PrimitiveStaticTypeAccount_Inbox
+var account_InboxFieldNames []string = nil
 
 // NewAccountInboxValue constructs an Account.Inbox value.
 func NewAccountInboxValue(
@@ -39,32 +40,57 @@ func NewAccountInboxValue(
 	claimFunction BoundFunctionGenerator,
 ) Value {
 
+	var accountInbox *SimpleCompositeValue
+
+	methods := map[string]FunctionValue{}
+
+	computeLazyStoredMethod := func(name string) FunctionValue {
+		switch name {
+		case sema.Account_InboxTypePublishFunctionName:
+			return publishFunction(accountInbox)
+		case sema.Account_InboxTypeUnpublishFunctionName:
+			return unpublishFunction(accountInbox)
+		case sema.Account_InboxTypeClaimFunctionName:
+			return claimFunction(accountInbox)
+		}
+
+		return nil
+	}
+
+	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
+		}
+
+		return method
+	}
+
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountInboxStringMemoryUsage)
-			addressStr := addressValue.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountInboxStringMemoryUsage)
+			addressStr := addressValue.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.Inbox(%s)", addressStr)
 		}
 		return str
 	}
 
-	accountInbox := NewSimpleCompositeValue(
+	accountInbox = NewSimpleCompositeValue(
 		gauge,
 		account_InboxTypeID,
 		account_InboxStaticType,
+		account_InboxFieldNames,
+		// No fields, only methods.
 		nil,
 		nil,
-		nil,
+		methodGetter,
 		nil,
 		stringer,
-	)
-
-	accountInbox.Fields = map[string]Value{
-		sema.Account_InboxTypePublishFunctionName:   publishFunction(accountInbox),
-		sema.Account_InboxTypeUnpublishFunctionName: unpublishFunction(accountInbox),
-		sema.Account_InboxTypeClaimFunctionName:     claimFunction(accountInbox),
-	}
+	).WithPrivateField(AccountTypePrivateAddressFieldName, addressValue)
 
 	return accountInbox
 }

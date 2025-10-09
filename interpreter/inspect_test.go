@@ -23,7 +23,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/interpreter"
-	. "github.com/onflow/cadence/tests/utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 func TestInspectValue(t *testing.T) {
@@ -44,14 +44,12 @@ func TestInspectValue(t *testing.T) {
 		dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
 		dictValue := NewDictionaryValue(
 			inter,
-			EmptyLocationRange,
 			dictionaryStaticType,
 			dictValueKey, dictValueValue,
 		)
 
 		arrayValue := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},
@@ -62,23 +60,18 @@ func TestInspectValue(t *testing.T) {
 		optionalValue := NewUnmeteredSomeValueNonCopying(arrayValue)
 
 		compositeValue = newTestCompositeValue(inter, common.ZeroAddress)
-		compositeValue.SetMember(
-			inter,
-			EmptyLocationRange,
-			"value",
-			optionalValue,
-		)
+		compositeValue.SetMember(inter, "value", optionalValue)
 	}
 
 	// Get actually stored values.
 	// The values above were removed when they were inserted into the containers.
 
-	optionalValue := compositeValue.GetField(inter, EmptyLocationRange, "value").(*SomeValue)
-	arrayValue := optionalValue.InnerValue(inter, EmptyLocationRange).(*ArrayValue)
-	dictValue := arrayValue.Get(inter, EmptyLocationRange, 0).(*DictionaryValue)
+	optionalValue := compositeValue.GetField(inter, "value").(*SomeValue)
+	arrayValue := optionalValue.InnerValue().(*ArrayValue)
+	dictValue := arrayValue.Get(inter, 0).(*DictionaryValue)
 	dictValueKey := NewUnmeteredStringValue("hello world")
 
-	dictValueValue, _ := dictValue.Get(inter, EmptyLocationRange, dictValueKey)
+	dictValueValue, _ := dictValue.Get(inter, dictValueKey)
 
 	t.Run("dict", func(t *testing.T) {
 
@@ -91,7 +84,6 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
-			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(
@@ -120,7 +112,6 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
-			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(

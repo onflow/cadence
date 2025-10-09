@@ -263,7 +263,7 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 		emulatorBackend,
 		t.executeScriptFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
+			invocationContext := invocation.InvocationContext
 
 			script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -271,17 +271,16 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 			}
 
 			args, err := arrayValueToSlice(
-				inter,
+				invocationContext,
 				invocation.Arguments[1],
-				invocation.LocationRange,
 			)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 
-			result := blockchain.RunScript(inter, script.Str, args)
+			result := blockchain.RunScript(invocationContext, script.Str, args)
 
-			return newScriptResult(inter, result.Value, result)
+			return newScriptResult(invocationContext, result.Value, result)
 		},
 	)
 }
@@ -311,12 +310,10 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 				panic(err)
 			}
 
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
+			inter := invocation.InvocationContext
 
 			return newTestAccountValue(
 				inter,
-				locationRange,
 				account,
 			)
 		},
@@ -324,8 +321,7 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 }
 
 func newTestAccountValue(
-	inter *interpreter.Interpreter,
-	locationRange interpreter.LocationRange,
+	context interpreter.InvocationContext,
 	account *Account,
 ) interpreter.Value {
 
@@ -333,14 +329,14 @@ func newTestAccountValue(
 	address := interpreter.NewAddressValue(nil, account.Address)
 
 	publicKey := NewPublicKeyValue(
-		inter,
-		locationRange,
+		context,
 		account.PublicKey,
 	)
 
 	// Create an 'Account' by calling its constructor.
-	accountConstructor := getConstructor(inter, testAccountTypeName)
-	accountValue, err := inter.InvokeExternally(
+	accountConstructor := getConstructor(context, testAccountTypeName)
+	accountValue, err := interpreter.InvokeExternally(
+		context,
 		accountConstructor,
 		accountConstructor.Type,
 		[]interpreter.Value{
@@ -382,18 +378,15 @@ func (t *testEmulatorBackendType) newGetAccountFunction(
 			account, err := blockchain.GetAccount(address)
 			if err != nil {
 				msg := fmt.Sprintf("account with address: %s was not found", address)
-				panic(PanicError{
-					Message:       msg,
-					LocationRange: invocation.LocationRange,
+				panic(&PanicError{
+					Message: msg,
 				})
 			}
 
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
+			inter := invocation.InvocationContext
 
 			return newTestAccountValue(
 				inter,
-				locationRange,
 				account,
 			)
 		},
@@ -423,8 +416,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 		emulatorBackend,
 		t.addTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
+			inter := invocation.InvocationContext
 
 			transactionValue, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
 			if !ok {
@@ -432,45 +424,28 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 			}
 
 			// Get transaction code
-			codeValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				testTransactionTypeCodeFieldName,
-			)
+			codeValue := transactionValue.GetMember(inter, testTransactionTypeCodeFieldName)
 			code, ok := codeValue.(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
 			// Get authorizers
-			authorizerValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				testTransactionTypeAuthorizersFieldName,
-			)
+			authorizerValue := transactionValue.GetMember(inter, testTransactionTypeAuthorizersFieldName)
 
-			authorizers := addressArrayValueToSlice(inter, authorizerValue, locationRange)
+			authorizers := addressArrayValueToSlice(inter, authorizerValue)
 
 			// Get signers
-			signersValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				testTransactionTypeSignersFieldName,
-			)
+			signersValue := transactionValue.GetMember(inter, testTransactionTypeSignersFieldName)
 
 			signerAccounts := accountsArrayValueToSlice(
 				inter,
 				signersValue,
-				locationRange,
 			)
 
 			// Get arguments
-			argsValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				testTransactionTypeArgumentsFieldName,
-			)
-			args, err := arrayValueToSlice(inter, argsValue, locationRange)
+			argsValue := transactionValue.GetMember(inter, testTransactionTypeArgumentsFieldName)
+			args, err := arrayValueToSlice(inter, argsValue)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
@@ -518,7 +493,7 @@ func (t *testEmulatorBackendType) newExecuteNextTransactionFunction(
 				return interpreter.Nil
 			}
 
-			return newTransactionResult(invocation.Interpreter, result)
+			return newTransactionResult(invocation.InvocationContext, result)
 		},
 	)
 }
@@ -569,7 +544,7 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 		emulatorBackend,
 		t.deployContractFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			// Contract name
 			name, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -587,7 +562,6 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 			args, err := arrayValueToSlice(
 				inter,
 				invocation.Arguments[2],
-				invocation.LocationRange,
 			)
 			if err != nil {
 				panic(err)
@@ -624,7 +598,7 @@ func (t *testEmulatorBackendType) newLogsFunction(
 		t.logsFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			logs := blockchain.Logs()
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			arrayType := interpreter.NewVariableSizedStaticType(
 				inter,
@@ -648,7 +622,6 @@ func (t *testEmulatorBackendType) newLogsFunction(
 
 			return interpreter.NewArrayValue(
 				inter,
-				invocation.LocationRange,
 				arrayType,
 				common.ZeroAddress,
 				values...,
@@ -682,8 +655,7 @@ func (t *testEmulatorBackendType) newServiceAccountFunction(
 			}
 
 			return newTestAccountValue(
-				invocation.Interpreter,
-				invocation.LocationRange,
+				invocation.InvocationContext,
 				serviceAccount,
 			)
 		},
@@ -715,7 +687,7 @@ func (t *testEmulatorBackendType) newEventsFunction(
 			case interpreter.NilValue:
 				// Do nothing
 			case *interpreter.SomeValue:
-				innerValue := value.InnerValue(invocation.Interpreter, invocation.LocationRange)
+				innerValue := value.InnerValue()
 				typeValue, ok := innerValue.(interpreter.TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -726,7 +698,7 @@ func (t *testEmulatorBackendType) newEventsFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			return blockchain.Events(invocation.Interpreter, eventType)
+			return blockchain.Events(invocation.InvocationContext, eventType)
 		},
 	)
 }
@@ -782,7 +754,7 @@ func (t *testEmulatorBackendType) newMoveTimeFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			blockchain.MoveTime(int64(timeDelta.ToInt(invocation.LocationRange)))
+			blockchain.MoveTime(int64(timeDelta.ToInt()))
 			return interpreter.Void
 		},
 	)
@@ -813,7 +785,7 @@ func (t *testEmulatorBackendType) newCreateSnapshotFunction(
 			}
 
 			err := blockchain.CreateSnapshot(name.Str)
-			return newErrorValue(invocation.Interpreter, err)
+			return newErrorValue(invocation.InvocationContext, err)
 		},
 	)
 }
@@ -843,7 +815,7 @@ func (t *testEmulatorBackendType) newLoadSnapshotFunction(
 			}
 
 			err := blockchain.LoadSnapshot(name.Str)
-			return newErrorValue(invocation.Interpreter, err)
+			return newErrorValue(invocation.InvocationContext, err)
 		},
 	)
 }
@@ -851,13 +823,11 @@ func (t *testEmulatorBackendType) newLoadSnapshotFunction(
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	blockchain Blockchain,
-	locationRange interpreter.LocationRange,
 ) *interpreter.CompositeValue {
 
 	// TODO: Use SimpleCompositeValue
 	emulatorBackend := interpreter.NewCompositeValue(
 		inter,
-		locationRange,
 		t.compositeType.Location,
 		testEmulatorBackendTypeName,
 		common.CompositeKindStructure,
@@ -924,12 +894,7 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 	}
 
 	for _, field := range fields {
-		emulatorBackend.SetMember(
-			inter,
-			locationRange,
-			field.Name,
-			field.Value,
-		)
+		emulatorBackend.SetMember(inter, field.Name, field.Value)
 	}
 
 	return emulatorBackend

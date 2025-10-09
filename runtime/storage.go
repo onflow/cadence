@@ -20,7 +20,7 @@ package runtime
 
 import (
 	"fmt"
-	"runtime"
+	goRuntime "runtime"
 	"sort"
 
 	"github.com/fxamacker/cbor/v2"
@@ -32,21 +32,40 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-const StorageDomainContract = "contract"
+const (
+	AccountStorageKey = "stored"
+)
+
+type StorageConfig struct {
+}
 
 type Storage struct {
 	*atree.PersistentSlabStorage
-	NewStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]
-	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
+
+	// cachedDomainStorageMaps is a cache of domain storage maps.
+	// Key is StorageKey{address, domain} and value is domain storage map.
+	cachedDomainStorageMaps map[interpreter.StorageDomainKey]*interpreter.DomainStorageMap
+
+	// contractUpdates is a cache of contract updates.
+	// Key is StorageKey{contract_address, contract_name} and value is contract composite value.
 	contractUpdates *orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]
-	Ledger          atree.Ledger
-	memoryGauge     common.MemoryGauge
+
+	Ledger atree.Ledger
+
+	memoryGauge common.MemoryGauge
+
+	Config StorageConfig
+
+	AccountStorage *AccountStorage
 }
 
 var _ atree.SlabStorage = &Storage{}
 var _ interpreter.Storage = &Storage{}
 
-func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
+func NewPersistentSlabStorage(
+	ledger atree.Ledger,
+	memoryGauge common.MemoryGauge,
+) *atree.PersistentSlabStorage {
 	decodeStorable := func(
 		decoder *cbor.StreamDecoder,
 		slabID atree.SlabID,
@@ -68,96 +87,87 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 	}
 
 	ledgerStorage := atree.NewLedgerBaseStorage(ledger)
-	persistentSlabStorage := atree.NewPersistentSlabStorage(
+
+	return atree.NewPersistentSlabStorage(
 		ledgerStorage,
 		interpreter.CBOREncMode,
 		interpreter.CBORDecMode,
 		decodeStorable,
 		decodeTypeInfo,
 	)
+}
+
+func NewStorage(
+	ledger atree.Ledger,
+	memoryGauge common.MemoryGauge,
+	config StorageConfig,
+) *Storage {
+	persistentSlabStorage := NewPersistentSlabStorage(ledger, memoryGauge)
+
+	accountStorage := NewAccountStorage(
+		ledger,
+		persistentSlabStorage,
+		memoryGauge,
+	)
+
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
 		memoryGauge:           memoryGauge,
+		Config:                config,
+		AccountStorage:        accountStorage,
 	}
 }
 
 const storageIndexLength = 8
 
-func (s *Storage) GetStorageMap(
+// GetDomainStorageMap returns existing or new domain storage map for the given account and domain.
+func (s *Storage) GetDomainStorageMap(
+	storageMutationTracker interpreter.StorageMutationTracker,
 	address common.Address,
-	domain string,
+	domain common.StorageDomain,
 	createIfNotExists bool,
 ) (
-	storageMap *interpreter.StorageMap,
+	domainStorageMap *interpreter.DomainStorageMap,
 ) {
-	key := interpreter.NewStorageKey(s.memoryGauge, address, domain)
+	// Get cached domain storage map if it exists.
 
-	storageMap = s.storageMaps[key]
-	if storageMap == nil {
+	domainStorageKey := interpreter.NewStorageDomainKey(s.memoryGauge, address, domain)
 
-		// Load data through the runtime interface
-
-		var data []byte
-		var err error
-		errors.WrapPanic(func() {
-			data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
-		})
-		if err != nil {
-			panic(interpreter.WrappedExternalError(err))
-		}
-
-		dataLength := len(data)
-		isStorageIndex := dataLength == storageIndexLength
-		if dataLength > 0 && !isStorageIndex {
-			// TODO: add dedicated error type?
-			panic(errors.NewUnexpectedError(
-				"invalid storage index for storage map with domain '%s': expected length %d, got %d",
-				domain, storageIndexLength, dataLength,
-			))
-		}
-
-		// Load existing storage or create and store new one
-
-		atreeAddress := atree.Address(address)
-
-		if isStorageIndex {
-			var slabIndex atree.SlabIndex
-			copy(slabIndex[:], data[:])
-			storageMap = s.loadExistingStorageMap(atreeAddress, slabIndex)
-		} else if createIfNotExists {
-			storageMap = s.StoreNewStorageMap(atreeAddress, domain)
-		}
-
-		if storageMap != nil {
-			s.storageMaps[key] = storageMap
+	if s.cachedDomainStorageMaps != nil {
+		domainStorageMap = s.cachedDomainStorageMaps[domainStorageKey]
+		if domainStorageMap != nil {
+			return domainStorageMap
 		}
 	}
 
-	return storageMap
+	defer func() {
+		// Cache domain storage map
+		if domainStorageMap != nil {
+			s.cacheDomainStorageMap(
+				domainStorageKey,
+				domainStorageMap,
+			)
+		}
+	}()
+
+	return s.AccountStorage.GetDomainStorageMap(
+		storageMutationTracker,
+		address,
+		domain,
+		createIfNotExists,
+	)
 }
 
-func (s *Storage) loadExistingStorageMap(address atree.Address, slabIndex atree.SlabIndex) *interpreter.StorageMap {
-
-	slabID := atree.NewSlabID(address, slabIndex)
-
-	return interpreter.NewStorageMapWithRootID(s, slabID)
-}
-
-func (s *Storage) StoreNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
-	storageMap := interpreter.NewStorageMap(s.memoryGauge, s, address)
-
-	slabIndex := storageMap.SlabID().Index()
-
-	storageKey := interpreter.NewStorageKey(s.memoryGauge, common.Address(address), domain)
-
-	if s.NewStorageMaps == nil {
-		s.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
+func (s *Storage) cacheDomainStorageMap(
+	storageDomainKey interpreter.StorageDomainKey,
+	domainStorageMap *interpreter.DomainStorageMap,
+) {
+	if s.cachedDomainStorageMaps == nil {
+		s.cachedDomainStorageMaps = map[interpreter.StorageDomainKey]*interpreter.DomainStorageMap{}
 	}
-	s.NewStorageMaps.Set(storageKey, slabIndex)
 
-	return storageMap
+	s.cachedDomainStorageMaps[storageDomainKey] = domainStorageMap
 }
 
 func (s *Storage) recordContractUpdate(
@@ -201,97 +211,88 @@ func SortContractUpdates(updates []ContractUpdate) {
 
 // commitContractUpdates writes the contract updates to storage.
 // The contract updates were delayed so they are not observable during execution.
-func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
+func (s *Storage) commitContractUpdates(context interpreter.ValueTransferContext) {
 	if s.contractUpdates == nil {
 		return
 	}
 
 	for pair := s.contractUpdates.Oldest(); pair != nil; pair = pair.Next() {
-		s.writeContractUpdate(inter, pair.Key, pair.Value)
+		s.writeContractUpdate(context, pair.Key, pair.Value)
 	}
 }
 
 func (s *Storage) writeContractUpdate(
-	inter *interpreter.Interpreter,
+	context interpreter.ValueTransferContext,
 	key interpreter.StorageKey,
 	contractValue *interpreter.CompositeValue,
 ) {
-	storageMap := s.GetStorageMap(key.Address, StorageDomainContract, true)
+	storageMap := s.GetDomainStorageMap(context, key.Address, common.StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
 	storageMapKey := interpreter.StringStorageMapKey(key.Key)
 	if contractValue == nil {
-		storageMap.WriteValue(inter, storageMapKey, nil)
+		storageMap.WriteValue(context, storageMapKey, nil)
 	} else {
-		storageMap.WriteValue(inter, storageMapKey, contractValue)
+		storageMap.WriteValue(context, storageMapKey, contractValue)
 	}
 }
 
 // Commit serializes/saves all values in the readCache in storage (through the runtime interface).
-func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
-	return s.commit(inter, commitContractUpdates, true)
+func (s *Storage) Commit(context interpreter.ValueTransferContext, commitContractUpdates bool) error {
+	return s.commit(context, commitContractUpdates, true)
 }
 
-// NondeterministicCommit serializes and commits all values in the deltas storage
+// Deprecated: NondeterministicCommit serializes and commits all values in the deltas storage
 // in nondeterministic order.  This function is used when commit ordering isn't
 // required (e.g. migration programs).
 func (s *Storage) NondeterministicCommit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
 	return s.commit(inter, commitContractUpdates, false)
 }
 
-func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates bool, deterministic bool) error {
+func (s *Storage) commit(context interpreter.ValueTransferContext, commitContractUpdates bool, deterministic bool) error {
 
 	if commitContractUpdates {
-		s.commitContractUpdates(inter)
+		s.commitContractUpdates(context)
 	}
 
-	err := s.commitNewStorageMaps()
+	err := s.AccountStorage.commit()
 	if err != nil {
 		return err
 	}
 
 	// Commit the underlying slab storage's writes
 
-	size := s.PersistentSlabStorage.DeltasSizeWithoutTempAddresses()
+	slabStorage := s.PersistentSlabStorage
+
+	size := slabStorage.DeltasSizeWithoutTempAddresses()
 	if size > 0 {
-		inter.ReportComputation(common.ComputationKindEncodeValue, uint(size))
-		usage := common.NewBytesMemoryUsage(int(size))
-		common.UseMemory(s.memoryGauge, usage)
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindEncodeValue,
+				Intensity: size,
+			},
+		)
+
+		common.UseMemory(
+			context,
+			common.NewBytesMemoryUsage(int(size)),
+		)
 	}
 
-	deltas := s.PersistentSlabStorage.DeltasWithoutTempAddresses()
-	common.UseMemory(s.memoryGauge, common.NewAtreeEncodedSlabMemoryUsage(deltas))
+	deltas := slabStorage.DeltasWithoutTempAddresses()
+	common.UseMemory(context, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
 	// TODO: report encoding metric for all encoded slabs
+	workerCount := goRuntime.NumCPU()
 	if deterministic {
-		return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
+		return slabStorage.FastCommit(workerCount)
 	} else {
-		return s.PersistentSlabStorage.NondeterministicFastCommit(runtime.NumCPU())
+		return slabStorage.NondeterministicFastCommit(workerCount)
 	}
-}
-
-func (s *Storage) commitNewStorageMaps() error {
-	if s.NewStorageMaps == nil {
-		return nil
-	}
-
-	for pair := s.NewStorageMaps.Oldest(); pair != nil; pair = pair.Next() {
-		var err error
-		errors.WrapPanic(func() {
-			err = s.Ledger.SetValue(
-				pair.Key.Address[:],
-				[]byte(pair.Key.Key),
-				pair.Value[:],
-			)
-		})
-		if err != nil {
-			return interpreter.WrappedExternalError(err)
-		}
-	}
-
-	return nil
 }
 
 func (s *Storage) CheckHealth() error {
+
 	// Check slab storage health
 	rootSlabIDs, err := atree.CheckStorageHealth(s, -1)
 	if err != nil {
@@ -311,28 +312,34 @@ func (s *Storage) CheckHealth() error {
 		accountRootSlabIDs[rootSlabID] = struct{}{}
 	}
 
-	// Check that each storage map refers to an existing slab.
-
-	found := map[atree.SlabID]struct{}{}
+	// Check that account storage maps and unmigrated domain storage maps
+	// match returned root slabs from atree.CheckStorageHealth.
 
 	var storageMapStorageIDs []atree.SlabID
 
-	for _, storageMap := range s.storageMaps { //nolint:maprange
-		storageMapStorageIDs = append(
-			storageMapStorageIDs,
-			storageMap.SlabID(),
-		)
-	}
+	// Get cached account storage map slab IDs.
+	storageMapStorageIDs = append(
+		storageMapStorageIDs,
+		s.AccountStorage.cachedRootSlabIDs()...,
+	)
 
-	sort.Slice(storageMapStorageIDs, func(i, j int) bool {
-		a := storageMapStorageIDs[i]
-		b := storageMapStorageIDs[j]
-		return a.Compare(b) < 0
-	})
+	sort.Slice(
+		storageMapStorageIDs,
+		func(i, j int) bool {
+			a := storageMapStorageIDs[i]
+			b := storageMapStorageIDs[j]
+			return a.Compare(b) < 0
+		},
+	)
+
+	found := map[atree.SlabID]struct{}{}
 
 	for _, storageMapStorageID := range storageMapStorageIDs {
 		if _, ok := accountRootSlabIDs[storageMapStorageID]; !ok {
-			return errors.NewUnexpectedError("account storage map points to non-existing slab %s", storageMapStorageID)
+			return errors.NewUnexpectedError(
+				"account storage map (and unmigrated domain storage map) points to non-root slab %s",
+				storageMapStorageID,
+			)
 		}
 
 		found[storageMapStorageID] = struct{}{}
@@ -379,5 +386,26 @@ var _ errors.InternalError = UnreferencedRootSlabsError{}
 func (UnreferencedRootSlabsError) IsInternalError() {}
 
 func (e UnreferencedRootSlabsError) Error() string {
-	return fmt.Sprintf("slabs not referenced: %s", e.UnreferencedRootSlabIDs)
+	return fmt.Sprintf(
+		"%s slabs not referenced: %s",
+		errors.InternalErrorMessagePrefix,
+		e.UnreferencedRootSlabIDs,
+	)
+}
+
+func CommitStorage(context interpreter.ValueTransferContext, storage *Storage, checkStorageHealth bool) error {
+	const commitContractUpdates = true
+	err := storage.Commit(context, commitContractUpdates)
+	if err != nil {
+		return err
+	}
+
+	if checkStorageHealth {
+		err = storage.CheckHealth()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

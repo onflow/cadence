@@ -1,9 +1,10 @@
 description: Flow Core Contracts
 maintainers:
-  - bastian.mueller@flowfoundation.org
-  - joshua.hannan@flowfoundation.org
 url: https://github.com/onflow/flow-core-contracts.git
 branch: master
 go_tests:
 - path: lib/go/test
   command: make test
+cadence_tests:
+- path: .
+  command: flow test tests/*.cdc

@@ -385,7 +385,7 @@ class Updater {
         const rootRepoVersion = this.getExpectedVersion(rootFullRepoName)
         const branch = ['auto-update', rootRepoOwner, rootRepoName, rootRepoVersion].join('-')
         console.log(`Creating branch ${branch} ...`)
-        await exec(`git checkout -b ${branch}`)
+        await exec(`git checkout -b ${branch}`, {strict: true})
 
         // TODO: only update dependencies that are updatable
 
@@ -403,20 +403,20 @@ class Updater {
 
             console.log(`Updating mod ${fullModName} to ${deps.join(', ')} ...`)
 
-            await exec(`go get ${deps.join(' ')}`)
+            await exec(`go get ${deps.join(' ')}`, {strict: true})
 
             console.log(`Cleaning up mod ${fullModName} ...`)
-            await exec(`go mod tidy`)
+            await exec(`go mod tidy`, {strict: true})
         }
 
         console.log(`Committing update ...`)
 
         const message = `Update to ${capitalizeFirstLetter(rootRepoName)} ${rootRepoVersion}`
 
-        await exec(`git commit -a -m "${message}"`)
+        await exec(`git commit -a -m "${message}"`, {strict: true})
 
         console.log(`Pushing update ...`)
-        await exec(`git push -u origin ${branch}"`)
+        await exec(`git push -u origin ${branch}"`, {strict: true})
 
         console.log(`Creating PR ...`)
 
@@ -476,15 +476,70 @@ ${updateList}
     }
 }
 
+async function getGitHubToken(): Promise<string | undefined> {
+    // 1. Try environment variable first
+    if (process.env.GH_TOKEN) {
+        console.log("🔑 Using GitHub token from GH_TOKEN environment variable")
+        return process.env.GH_TOKEN
+    }
+
+    if (process.env.GITHUB_TOKEN) {
+        console.log("🔑 Using GitHub token from GITHUB_TOKEN environment variable")
+        return process.env.GITHUB_TOKEN
+    }
+
+    // 2. Try GitHub CLI auth token
+    try {
+        const result = await exec.quiet('gh auth token')
+        if (result.stdout?.trim()) {
+            console.log("🔑 Using GitHub token from GitHub CLI")
+            return result.stdout.trim()
+        }
+    } catch (error) {
+        // GitHub CLI not available or not authenticated, continue
+    }
+
+    // 3. Try macOS keychain (if on macOS)
+    if (process.platform === 'darwin') {
+        try {
+            // Try to get github.com token from keychain
+            const result = await exec.quiet('security find-internet-password -s github.com -w')
+            if (result.stdout?.trim()) {
+                console.log("🔑 Using GitHub token from macOS Keychain")
+                return result.stdout.trim()
+            }
+        } catch (error) {
+            // Keychain doesn't have github.com password, continue
+        }
+    }
+
+    return undefined
+}
+
 async function authenticate(): Promise<Octokit> {
+    const token = await getGitHubToken()
+    
+    if (!token) {
+        console.error("❌ No GitHub token found!")
+        console.error("Please set up authentication using one of these methods:")
+        console.error("  1. Set GH_TOKEN or GITHUB_TOKEN environment variable")
+        console.error("  2. Install and authenticate with GitHub CLI: gh auth login")
+        console.error("  3. Add token to macOS Keychain for github.com")
+        process.exit(1)
+    }
+
     const octokit = new Octokit({
-        auth: process.env.GH_TOKEN
+        auth: token
     })
 
-    const {data: {login}} = await octokit.rest.users.getAuthenticated()
-    console.log("👋 Hello, %s", login)
-
-    return octokit
+    try {
+        const {data: {login}} = await octokit.rest.users.getAuthenticated()
+        console.log("👋 Hello, %s", login)
+        return octokit
+    } catch (error) {
+        console.error("❌ Failed to authenticate with GitHub. Please check your token.")
+        throw error
+    }
 }
 
 function getTagName(modPath: string, version: string) {
@@ -540,14 +595,14 @@ class Releaser {
         process.chdir(dir)
 
         console.log(`Tagging ${this.repo} version ${this.version} ...`)
-        await exec(`git tag ${tag}`)
+        await exec(`git tag ${tag}`, {strict: true})
 
         if (this.modPath !== '') {
             console.log(`Pushing ${this.repo} mod ${this.modPath} version ${this.version} ...`)
         } else {
             console.log(`Pushing ${this.repo} version ${this.version} ...`)
         }
-        await exec(`git push origin --tags`)
+        await exec(`git push origin --tags`, {strict: true})
 
         console.log(`Cleaning up clone of ${this.repo}`)
         await rm(dir, { recursive: true, force: true })
@@ -707,7 +762,8 @@ async function gitClone(protocol: Protocol, fullRepoName: string, dir: string, b
             console.error(`unsupported protocol: ${protocol}`)
             return
     }
-    await exec(`git clone --depth 1 ${branch ? `-b ${branch} ` : ""}${prefix}${fullRepoName} ${dir}`)
+    const command = `git clone --depth 1 ${branch ? `-b ${branch} ` : ""}${prefix}${fullRepoName} ${dir}`
+    await exec(command, {strict: true})
 }
 
 async function runWithConsoleGroup(func: () => Promise<boolean>): Promise<boolean> {

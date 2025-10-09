@@ -35,7 +35,66 @@ type MemoryGauge interface {
 	MeterMemory(usage MemoryUsage) error
 }
 
+type FunctionMemoryGauge func(usage MemoryUsage) error
+
+var _ MemoryGauge = FunctionMemoryGauge(nil)
+
+func (f FunctionMemoryGauge) MeterMemory(usage MemoryUsage) error {
+	return f(usage)
+}
+
+type ComputationUsage struct {
+	Kind      ComputationKind
+	Intensity uint64
+}
+
+type ComputationGauge interface {
+	MeterComputation(usage ComputationUsage) error
+}
+
+type FunctionComputationGauge func(usage ComputationUsage) error
+
+var _ ComputationGauge = FunctionComputationGauge(nil)
+
+func (f FunctionComputationGauge) MeterComputation(usage ComputationUsage) error {
+	return f(usage)
+}
+
+// Gauge combines a memory and computation gauge.
+// Metering-sites can use this combined interface
+// if they need to do both memory and computation metering.
+type Gauge interface {
+	MemoryGauge
+	ComputationGauge
+}
+
+func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
+	if gauge == nil || usage.Amount == 0 {
+		return
+	}
+
+	err := gauge.MeterMemory(usage)
+	if err != nil {
+		panic(errors.MemoryMeteringError{Err: err})
+	}
+}
+
+func UseComputation(gauge ComputationGauge, usage ComputationUsage) {
+	if gauge == nil || usage.Intensity == 0 {
+		return
+	}
+
+	err := gauge.MeterComputation(usage)
+	if err != nil {
+		panic(errors.ComputationMeteringError{Err: err})
+	}
+}
+
 var (
+	StatementComputationUsage          = NewConstantComputationUsage(ComputationKindStatement)
+	LoopComputationUsage               = NewConstantComputationUsage(ComputationKindLoop)
+	FunctionInvocationComputationUsage = NewConstantComputationUsage(ComputationKindFunctionInvocation)
+
 	// Tokens
 
 	TypeTokenMemoryUsage  = NewConstantMemoryUsage(MemoryKindTypeToken)
@@ -56,6 +115,7 @@ var (
 	TransferMemoryUsage          = NewConstantMemoryUsage(MemoryKindTransfer)
 	TypeAnnotationMemoryUsage    = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
 	DictionaryEntryMemoryUsage   = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
+	SwitchCaseMemoryUsage        = NewConstantMemoryUsage(MemoryKindSwitchCase)
 
 	// AST Declarations
 
@@ -273,23 +333,25 @@ var (
 	IntersectionStaticTypeStringMemoryUsage          = NewRawStringMemoryUsage(2)  // {}
 	IntersectionStaticTypeSeparatorStringMemoryUsage = NewRawStringMemoryUsage(2)  // ,
 	InclusiveRangeStaticTypeStringMemoryUsage        = NewRawStringMemoryUsage(16) // InclusiveRange<>
+
+	// Compiler
+
+	CompilerMemoryUsage         = NewConstantMemoryUsage(MemoryKindCompiler)
+	CompilerGlobalMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompilerGlobal)
+	CompilerConstantMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerConstant)
 )
-
-func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
-	if gauge == nil {
-		return
-	}
-
-	err := gauge.MeterMemory(usage)
-	if err != nil {
-		panic(errors.MemoryError{Err: err})
-	}
-}
 
 func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 	return MemoryUsage{
 		Kind:   kind,
 		Amount: 1,
+	}
+}
+
+func NewConstantComputationUsage(kind ComputationKind) ComputationUsage {
+	return ComputationUsage{
+		Kind:      kind,
+		Intensity: 1,
 	}
 }
 
@@ -795,6 +857,13 @@ func NewArrayExpressionMemoryUsage(length int) MemoryUsage {
 	}
 }
 
+func NewStringTemplateExpressionMemoryUsage(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindStringTemplateExpression,
+		Amount: uint64(length),
+	}
+}
+
 func NewDictionaryExpressionMemoryUsage(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind: MemoryKindDictionaryExpression,
@@ -841,5 +910,12 @@ func NewAtreeEncodedSlabMemoryUsage(slabsCount uint) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindAtreeEncodedSlab,
 		Amount: uint64(slabsCount),
+	}
+}
+
+func NewGoSliceMemoryUsages(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindGoSliceLength,
+		Amount: uint64(length),
 	}
 }

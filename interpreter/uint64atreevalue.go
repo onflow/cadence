@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/values"
 )
 
 type Uint64AtreeValue uint64
@@ -48,7 +49,7 @@ func NewUint64AtreeValue(gauge common.MemoryGauge, s uint64) Uint64AtreeValue {
 }
 
 func (v Uint64AtreeValue) ByteSize() uint32 {
-	return getUintCBORSize(uint64(v))
+	return values.GetUintCBORSize(uint64(v))
 }
 
 func (v Uint64AtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

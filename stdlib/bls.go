@@ -21,6 +21,7 @@ package stdlib
 //go:generate go run ../sema/gen -p stdlib bls.cdc bls.gen.go
 
 import (
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -34,75 +35,99 @@ type BLSPublicKeyAggregator interface {
 	BLSAggregatePublicKeys(publicKeys []*PublicKey) (*PublicKey, error)
 }
 
-func newBLSAggregatePublicKeysFunction(
+func NativeBLSAggregatePublicKeysFunction(
+	aggregator BLSPublicKeyAggregator,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		publicKeysValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return BLSAggregatePublicKeys(
+			context,
+			publicKeysValue,
+			aggregator,
+		)
+	}
+}
+
+func newInterpreterBLSAggregatePublicKeysFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSPublicKeyAggregator,
 ) *interpreter.HostFunctionValue {
 	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
 	// However, this is not a problem for now, since underlying contract doesn't get moved.
-	return interpreter.NewStaticHostFunctionValue(
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		gauge,
 		BLSTypeAggregatePublicKeysFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			publicKeysValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+		NativeBLSAggregatePublicKeysFunction(aggregator),
+	)
+}
+
+func NewVMBLSAggregatePublicKeysFunction(
+	aggregator BLSPublicKeyAggregator,
+) VMFunction {
+	return VMFunction{
+		BaseType: BLSType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			BLSTypeAggregatePublicKeysFunctionName,
+			BLSTypeAggregatePublicKeysFunctionType,
+			NativeBLSAggregatePublicKeysFunction(aggregator),
+		),
+	}
+}
+
+func BLSAggregatePublicKeys(
+	context interpreter.InvocationContext,
+	publicKeysValue *interpreter.ArrayValue,
+	aggregator BLSPublicKeyAggregator,
+) interpreter.Value {
+
+	interpreter.ExpectType(
+		context,
+		publicKeysValue,
+		sema.PublicKeyArrayType,
+	)
+
+	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
+	publicKeysValue.Iterate(
+		context,
+		func(element interpreter.Value) (resume bool) {
+			publicKeyValue, ok := element.(*interpreter.CompositeValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			inter.ExpectType(
-				publicKeysValue,
-				sema.PublicKeyArrayType,
-				locationRange,
-			)
-
-			publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
-			publicKeysValue.Iterate(
-				inter,
-				func(element interpreter.Value) (resume bool) {
-					publicKeyValue, ok := element.(*interpreter.CompositeValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
-					if err != nil {
-						panic(err)
-					}
-
-					publicKeys = append(publicKeys, publicKey)
-
-					// Continue iteration
-					return true
-				},
-				false,
-				locationRange,
-			)
-
-			var err error
-			var aggregatedPublicKey *PublicKey
-			errors.WrapPanic(func() {
-				aggregatedPublicKey, err = aggregator.BLSAggregatePublicKeys(publicKeys)
-			})
-
-			// If the crypto layer produces an error, we have invalid input, return nil
+			publicKey, err := NewPublicKeyFromValue(context, publicKeyValue)
 			if err != nil {
-				return interpreter.NilOptionalValue
+				panic(err)
 			}
 
-			aggregatedPublicKeyValue := NewPublicKeyValue(
-				inter,
-				locationRange,
-				aggregatedPublicKey,
-			)
+			publicKeys = append(publicKeys, publicKey)
 
-			return interpreter.NewSomeValueNonCopying(
-				inter,
-				aggregatedPublicKeyValue,
-			)
+			// Continue iteration
+			return true
 		},
+		false,
+	)
+
+	aggregatedPublicKey, err := aggregator.BLSAggregatePublicKeys(publicKeys)
+
+	// If the crypto layer produces an error, we have invalid input, return nil
+	if err != nil {
+		return interpreter.NilOptionalValue
+	}
+
+	aggregatedPublicKeyValue := NewPublicKeyValue(
+		context,
+		aggregatedPublicKey,
+	)
+
+	return interpreter.NewSomeValueNonCopying(
+		context,
+		aggregatedPublicKeyValue,
 	)
 }
 
@@ -111,71 +136,96 @@ type BLSSignatureAggregator interface {
 	BLSAggregateSignatures(signatures [][]byte) ([]byte, error)
 }
 
-func newBLSAggregateSignaturesFunction(
+func NativeBLSAggregateSignaturesFunction(
+	aggregator BLSSignatureAggregator,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		signaturesValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return BLSAggregateSignatures(
+			context,
+			signaturesValue,
+			aggregator,
+		)
+	}
+}
+
+func newInterpreterBLSAggregateSignaturesFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSSignatureAggregator,
 ) *interpreter.HostFunctionValue {
 	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
 	// However, this is not a problem for now, since underlying contract doesn't get moved.
-	return interpreter.NewStaticHostFunctionValue(
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		gauge,
 		BLSTypeAggregateSignaturesFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			signaturesValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+		NativeBLSAggregateSignaturesFunction(aggregator),
+	)
+}
+
+func NewVMBLSAggregateSignaturesFunction(
+	aggregator BLSSignatureAggregator,
+) VMFunction {
+	return VMFunction{
+		BaseType: BLSType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			BLSTypeAggregateSignaturesFunctionName,
+			BLSTypeAggregateSignaturesFunctionType,
+			NativeBLSAggregateSignaturesFunction(aggregator),
+		),
+	}
+}
+
+func BLSAggregateSignatures(
+	context interpreter.InvocationContext,
+	signaturesValue *interpreter.ArrayValue,
+	aggregator BLSSignatureAggregator,
+) interpreter.Value {
+
+	interpreter.ExpectType(
+		context,
+		signaturesValue,
+		sema.ByteArrayArrayType,
+	)
+
+	bytesArray := make([][]byte, 0, signaturesValue.Count())
+	signaturesValue.Iterate(
+		context,
+		func(element interpreter.Value) (resume bool) {
+			signature, ok := element.(*interpreter.ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			inter.ExpectType(
-				signaturesValue,
-				sema.ByteArrayArrayType,
-				locationRange,
-			)
-
-			bytesArray := make([][]byte, 0, signaturesValue.Count())
-			signaturesValue.Iterate(
-				inter,
-				func(element interpreter.Value) (resume bool) {
-					signature, ok := element.(*interpreter.ArrayValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
-					if err != nil {
-						panic(err)
-					}
-
-					bytesArray = append(bytesArray, bytes)
-
-					// Continue iteration
-					return true
-				},
-				false,
-				locationRange,
-			)
-
-			var err error
-			var aggregatedSignature []byte
-			errors.WrapPanic(func() {
-				aggregatedSignature, err = aggregator.BLSAggregateSignatures(bytesArray)
-			})
-
-			// If the crypto layer produces an error, we have invalid input, return nil
+			bytes, err := interpreter.ByteArrayValueToByteSlice(context, signature)
 			if err != nil {
-				return interpreter.NilOptionalValue
+				panic(err)
 			}
 
-			aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
+			bytesArray = append(bytesArray, bytes)
 
-			return interpreter.NewSomeValueNonCopying(
-				inter,
-				aggregatedSignatureValue,
-			)
+			// Continue iteration
+			return true
 		},
+		false,
+	)
+
+	aggregatedSignature, err := aggregator.BLSAggregateSignatures(bytesArray)
+
+	// If the crypto layer produces an error, we have invalid input, return nil
+	if err != nil {
+		return interpreter.NilOptionalValue
+	}
+
+	aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(context, aggregatedSignature)
+
+	return interpreter.NewSomeValueNonCopying(
+		context,
+		aggregatedSignatureValue,
 	)
 }
 
@@ -193,9 +243,29 @@ func NewBLSContract(
 	gauge common.MemoryGauge,
 	handler BLSContractHandler,
 ) StandardLibraryValue {
-	blsContractFields := map[string]interpreter.Value{
-		BLSTypeAggregatePublicKeysFunctionName: newBLSAggregatePublicKeysFunction(gauge, handler),
-		BLSTypeAggregateSignaturesFunctionName: newBLSAggregateSignaturesFunction(gauge, handler),
+	methods := map[string]interpreter.FunctionValue{}
+
+	computeLazyStoredMethod := func(name string) interpreter.FunctionValue {
+		switch name {
+		case BLSTypeAggregatePublicKeysFunctionName:
+			return newInterpreterBLSAggregatePublicKeysFunction(gauge, handler)
+		case BLSTypeAggregateSignaturesFunctionName:
+			return newInterpreterBLSAggregateSignaturesFunction(gauge, handler)
+		default:
+			return nil
+		}
+	}
+
+	blsContractMethodsGetter := func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
+		}
+
+		return method
 	}
 
 	blsContractValue := interpreter.NewSimpleCompositeValue(
@@ -203,8 +273,9 @@ func NewBLSContract(
 		BLSType.ID(),
 		BLSTypeStaticType,
 		nil,
-		blsContractFields,
 		nil,
+		nil,
+		blsContractMethodsGetter,
 		nil,
 		nil,
 	)

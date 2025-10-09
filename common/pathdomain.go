@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=PathDomain
+//go:generate stringer -type=PathDomain
 
 type PathDomain uint8
 
@@ -66,6 +66,21 @@ func (i PathDomain) Identifier() string {
 
 	case PathDomainPublic:
 		return "public"
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
+func (i PathDomain) StorageDomain() StorageDomain {
+	switch i {
+	case PathDomainStorage:
+		return StorageDomainPathStorage
+
+	case PathDomainPrivate:
+		return StorageDomainPathPrivate
+
+	case PathDomainPublic:
+		return StorageDomainPathPublic
 	}
 
 	panic(errors.NewUnreachableError())

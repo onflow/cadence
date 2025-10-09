@@ -53,7 +53,7 @@ var _ atree.Storable = NonStorable{}
 
 func (s NonStorable) Encode(_ *atree.Encoder) error {
 	//nolint:gosimple
-	return NonStorableValueError{
+	return &NonStorableValueError{
 		Value: s.Value,
 	}
 }
@@ -91,10 +91,10 @@ type Value interface {
 	// Stringer provides `func String() string`
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
-	isValue()
-	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
-	Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange)
-	StaticType(interpreter *Interpreter) StaticType
+	IsValue()
+	Accept(context ValueVisitContext, visitor Visitor)
+	Walk(walkContext ValueWalkContext, walkChild func(Value))
+	StaticType(context ValueStaticTypeContext) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
 	// Non-container values trivially always conform to their own static type.
@@ -103,18 +103,13 @@ type Value interface {
 	// If the container contains static type information about nested values,
 	// e.g. the element type of an array, it also ensures the nested values'
 	// static types are subtypes.
-	ConformsToStaticType(
-		interpreter *Interpreter,
-		locationRange LocationRange,
-		results TypeConformanceResults,
-	) bool
+	ConformsToStaticType(context ValueStaticTypeConformanceContext, results TypeConformanceResults) bool
 	RecursiveString(seenReferences SeenReferences) string
-	MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string
-	IsResourceKinded(interpreter *Interpreter) bool
+	MeteredString(context ValueStringContext, seenReferences SeenReferences) string
+	IsResourceKinded(context ValueStaticTypeContext) bool
 	NeedsStoreTo(address atree.Address) bool
 	Transfer(
-		interpreter *Interpreter,
-		locationRange LocationRange,
+		transferContext ValueTransferContext,
 		address atree.Address,
 		remove bool,
 		storable atree.Storable,
@@ -122,85 +117,94 @@ type Value interface {
 		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
 	) Value
 	DeepRemove(
-		interpreter *Interpreter,
+		removeContext ValueRemoveContext,
 		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
 	)
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	// NOTE: memory metering is unnecessary for Clone methods
-	Clone(interpreter *Interpreter) Value
-	IsImportable(interpreter *Interpreter, locationRange LocationRange) bool
+	Clone(cloneContext ValueCloneContext) Value
+	IsImportable(context ValueImportableContext) bool
 }
 
 // ValueIndexableValue
 
 type ValueIndexableValue interface {
 	Value
-	GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value
-	SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
-	RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value
-	InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
+	GetKey(context ValueComparisonContext, key Value) Value
+	SetKey(context ContainerMutationContext, key Value, value Value)
+	RemoveKey(context ContainerMutationContext, key Value) Value
+	InsertKey(context ContainerMutationContext, key Value, value Value)
 }
 
 type TypeIndexableValue interface {
 	Value
-	GetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
-	SetTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type, value Value)
-	RemoveTypeKey(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) Value
+	GetTypeKey(context MemberAccessibleContext, ty sema.Type) Value
+	SetTypeKey(context ValueTransferContext, ty sema.Type, value Value)
+	RemoveTypeKey(context ValueTransferContext, ty sema.Type) Value
 }
 
 // MemberAccessibleValue
 
 type MemberAccessibleValue interface {
 	Value
-	GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
-	RemoveMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
-	// returns whether a value previously existed with this name
-	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) bool
+	GetMember(context MemberAccessibleContext, name string) Value
+	RemoveMember(context ValueTransferContext, name string) Value
+	// SetMember returns whether a value previously existed with this name.
+	SetMember(context ValueTransferContext, name string, value Value) bool
+	// GetMethod returns member functions of this value.
+	// IMPORTANT: This method is for internal use only. Always use `GetMember` to retrieve a member of any kind.
+	GetMethod(context MemberAccessibleContext, name string) FunctionValue
 }
+
+type ValueComparisonContext interface {
+	common.MemoryGauge
+	ValueStaticTypeContext
+}
+
+var _ ValueComparisonContext = &Interpreter{}
 
 // EquatableValue
 
 type EquatableValue interface {
 	Value
 	// Equal returns true if the given value is equal to this value.
-	// If no location range is available, pass e.g. EmptyLocationRange
-	Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool
+	Equal(context ValueComparisonContext, other Value) bool
 }
 
-func newValueComparator(interpreter *Interpreter, locationRange LocationRange) atree.ValueComparator {
+func newValueComparator(context ValueComparisonContext) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
-		value := MustConvertStoredValue(interpreter, atreeValue)
-		otherValue := StoredValue(interpreter, otherStorable, storage)
-		return value.(EquatableValue).Equal(interpreter, locationRange, otherValue), nil
+		value := MustConvertStoredValue(context, atreeValue)
+		otherValue := StoredValue(context, otherStorable, storage)
+		return value.(EquatableValue).Equal(context, otherValue), nil
 	}
 }
 
 // ComparableValue
 type ComparableValue interface {
 	EquatableValue
-	Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
-	LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
-	Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
-	GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	Less(context ValueComparisonContext, other ComparableValue) BoolValue
+	LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue
+	Greater(context ValueComparisonContext, other ComparableValue) BoolValue
+	GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue
 }
 
 // ResourceKindedValue
 
 type ResourceKindedValue interface {
 	Value
-	Destroy(interpreter *Interpreter, locationRange LocationRange)
+	Destroy(context ResourceDestructionContext)
 	IsDestroyed() bool
-	isInvalidatedResource(*Interpreter) bool
+	isInvalidatedResource(context ValueStaticTypeContext) bool
 }
 
-func maybeDestroy(interpreter *Interpreter, locationRange LocationRange, value Value) {
+func maybeDestroy(context ResourceDestructionContext, value Value) {
 	resourceKindedValue, ok := value.(ResourceKindedValue)
 	if !ok {
 		return
 	}
 
-	resourceKindedValue.Destroy(interpreter, locationRange)
+	resourceKindedValue.Destroy(context)
 }
 
 // ReferenceTrackedResourceKindedValue is a resource-kinded value
@@ -209,7 +213,7 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	ValueID() atree.ValueID
-	IsStaleResource(*Interpreter) bool
+	IsStaleResource(ValueStaticTypeContext) bool
 }
 
 // ContractValue is the value of a contract.
@@ -224,14 +228,13 @@ type ContractValue interface {
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
-	Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator
 	ForEach(
-		interpreter *Interpreter,
+		context IterableValueForeachContext,
 		elementType sema.Type,
 		function func(value Value) (resume bool),
 		transferElements bool,
-		locationRange LocationRange,
 	)
+	Iterator(context ValueStaticTypeContext) ValueIterator
 }
 
 // OwnedValue is a value which has an owner
@@ -240,58 +243,60 @@ type OwnedValue interface {
 	GetOwner() common.Address
 }
 
+type ValueIteratorContext interface {
+	common.MemoryGauge
+	NumberValueArithmeticContext
+}
+
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
-	Next(interpreter *Interpreter, locationRange LocationRange) Value
+	HasNext() bool
+	Next(context ValueIteratorContext) Value
+	ValueID() (atree.ValueID, bool)
 }
 
-func safeAdd(a, b int, locationRange LocationRange) int {
+// atreeContainerBackedValue is an interface for values using atree containers
+// (atree.Array or atree.OrderedMap) under the hood.
+type atreeContainerBackedValue interface {
+	Value
+	isAtreeContainerBackedValue()
+}
+
+func safeAdd(a, b int) int {
 	// INT32-C
 	if (b > 0) && (a > (goMaxInt - b)) {
-		panic(OverflowError{
-			LocationRange: locationRange,
-		})
+		panic(&OverflowError{})
 	} else if (b < 0) && (a < (goMinInt - b)) {
-		panic(UnderflowError{
-			LocationRange: locationRange,
-		})
+		panic(&UnderflowError{})
 	}
 	return a + b
 }
 
-func safeMul(a, b int, locationRange LocationRange) int {
+func safeMul(a, b int) int {
 	// INT32-C
 	if a > 0 {
 		if b > 0 {
 			// positive * positive = positive. overflow?
 			if a > (goMaxInt / b) {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
+				panic(&OverflowError{})
 			}
 		} else {
 			// positive * negative = negative. underflow?
 			if b < (goMinInt / a) {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
+				panic(&UnderflowError{})
 			}
 		}
 	} else {
 		if b > 0 {
 			// negative * positive = negative. underflow?
 			if a < (goMinInt / b) {
-				panic(UnderflowError{
-					LocationRange: locationRange,
-				})
+				panic(&UnderflowError{})
 			}
 		} else {
 			// negative * negative = positive. overflow?
 			if (a != 0) && (b < (goMaxInt / a)) {
-				panic(OverflowError{
-					LocationRange: locationRange,
-				})
+				panic(&OverflowError{})
 			}
 		}
 	}

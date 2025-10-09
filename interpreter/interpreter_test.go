@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"flag"
 	"fmt"
 	"testing"
 
@@ -27,7 +28,63 @@ import (
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/test_utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
+
+var compile = flag.Bool("compile", false, "Run tests using the compiler")
+
+func parseCheckAndPrepare(tb testing.TB, code string) Invokable {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepare(tb, code, *compile)
+}
+
+func parseCheckAndPrepareWithEvents(tb testing.TB, code string) (
+	invokable Invokable,
+	getEvents func() []test_utils.TestEvent,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithEvents(tb, code, *compile)
+}
+
+func parseCheckAndPrepareWithOptions(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (
+	invokable Invokable,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile)
+}
+
+func parseCheckAndPrepareWithLogs(
+	tb testing.TB,
+	code string,
+) (
+	invokable Invokable,
+	getLogs func() []string,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithLogs(tb, code, *compile)
+}
+
+func parseCheckAndPrepareWithAtreeValidationsDisabled(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (Invokable, error) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithAtreeValidationsDisabled(
+		tb,
+		code,
+		options,
+		*compile,
+	)
+}
 
 func TestInterpreterOptionalBoxing(t *testing.T) {
 
@@ -36,8 +93,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool to Bool?", func(t *testing.T) {
 		inter := newTestInterpreter(t)
 
-		value := inter.BoxOptional(
-			EmptyLocationRange,
+		value := BoxOptional(
+			inter,
 			TrueValue,
 			&sema.OptionalType{Type: sema.BoolType},
 		)
@@ -50,8 +107,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool? to Bool?", func(t *testing.T) {
 		inter := newTestInterpreter(t)
 
-		value := inter.BoxOptional(
-			EmptyLocationRange,
+		value := BoxOptional(
+			inter,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
 			&sema.OptionalType{Type: sema.BoolType},
 		)
@@ -64,10 +121,14 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool? to Bool??", func(t *testing.T) {
 		inter := newTestInterpreter(t)
 
-		value := inter.BoxOptional(
-			EmptyLocationRange,
+		value := BoxOptional(
+			inter,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
-			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
+			&sema.OptionalType{
+				Type: &sema.OptionalType{
+					Type: sema.BoolType,
+				},
+			},
 		)
 		assert.Equal(t,
 			NewUnmeteredSomeValueNonCopying(
@@ -81,10 +142,14 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		// NOTE:
-		value := inter.BoxOptional(
-			EmptyLocationRange,
+		value := BoxOptional(
+			inter,
 			Nil,
-			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
+			&sema.OptionalType{
+				Type: &sema.OptionalType{
+					Type: sema.BoolType,
+				},
+			},
 		)
 		assert.Equal(t,
 			Nil,
@@ -96,10 +161,14 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		// NOTE:
-		value := inter.BoxOptional(
-			EmptyLocationRange,
+		value := BoxOptional(
+			inter,
 			NewUnmeteredSomeValueNonCopying(Nil),
-			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
+			&sema.OptionalType{
+				Type: &sema.OptionalType{
+					Type: sema.BoolType,
+				},
+			},
 		)
 		assert.Equal(t,
 			Nil,
@@ -126,8 +195,8 @@ func TestInterpreterBoxing(t *testing.T) {
 					NewUnmeteredSomeValueNonCopying(
 						TrueValue,
 					),
-					inter.ConvertAndBox(
-						EmptyLocationRange,
+					ConvertAndBox(
+						inter,
 						TrueValue,
 						sema.BoolType,
 						&sema.OptionalType{Type: anyType},
@@ -143,8 +212,8 @@ func TestInterpreterBoxing(t *testing.T) {
 					NewUnmeteredSomeValueNonCopying(
 						TrueValue,
 					),
-					inter.ConvertAndBox(
-						EmptyLocationRange,
+					ConvertAndBox(
+						inter,
 						NewUnmeteredSomeValueNonCopying(TrueValue),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},
@@ -181,7 +250,6 @@ func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {
 
 	array := NewArrayValue(
 		inter,
-		EmptyLocationRange,
 		typ,
 		owner,
 		values...,

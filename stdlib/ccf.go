@@ -31,8 +31,7 @@ import (
 type Exporter interface {
 	ExportValue(
 		value interpreter.Value,
-		interpreter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
+		context interpreter.ValueExportContext,
 	) (
 		cadence.Value,
 		error,
@@ -52,20 +51,19 @@ func newCCFEncodeFunction(
 		gauge,
 		CCFTypeEncodeFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
+			inter := invocation.InvocationContext
 
 			referenceValue, ok := invocation.Arguments[0].(interpreter.ReferenceValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			referencedValue := referenceValue.ReferencedValue(inter, locationRange, true)
+			referencedValue := referenceValue.ReferencedValue(inter, true)
 			if referencedValue == nil {
 				return interpreter.Nil
 			}
 
-			exportedValue, err := handler.ExportValue(*referencedValue, inter, locationRange)
+			exportedValue, err := handler.ExportValue(*referencedValue, inter)
 			if err != nil {
 				return interpreter.Nil
 			}
@@ -99,6 +97,7 @@ func NewCCFContract(
 		CCFTypeStaticType,
 		nil,
 		ccfContractFields,
+		nil,
 		nil,
 		nil,
 		nil,

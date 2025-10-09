@@ -30,12 +30,12 @@ import (
 // FunctionValue
 type FunctionValue interface {
 	Value
-	isFunctionValue()
-	FunctionType() *sema.FunctionType
+	IsFunctionValue()
+	FunctionType(context ValueStaticTypeContext) *sema.FunctionType
 	// invoke evaluates the function.
 	// Only used internally by the interpreter.
 	// Use Interpreter.InvokeFunctionValue if you want to invoke the function externally
-	invoke(Invocation) Value
+	Invoke(Invocation) Value
 }
 
 // InterpretedFunctionValue
@@ -78,7 +78,7 @@ func NewInterpretedFunctionValue(
 var _ Value = &InterpretedFunctionValue{}
 var _ FunctionValue = &InterpretedFunctionValue{}
 
-func (*InterpretedFunctionValue) isValue() {}
+func (*InterpretedFunctionValue) IsValue() {}
 
 func (f *InterpretedFunctionValue) String() string {
 	return f.Type.String()
@@ -88,36 +88,39 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+func (f *InterpretedFunctionValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	// TODO: Meter sema.Type String conversion
 	typeString := f.Type.String()
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(8+len(typeString)))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(8+len(typeString)))
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitInterpretedFunctionValue(interpreter, f)
+func (f *InterpretedFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitInterpretedFunctionValue(context, f)
 }
 
-func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f *InterpretedFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (f *InterpretedFunctionValue) StaticType(interpreter *Interpreter) StaticType {
-	return ConvertSemaToStaticType(interpreter, f.Type)
+func (f *InterpretedFunctionValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return ConvertSemaToStaticType(context, f.Type)
 }
 
-func (*InterpretedFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*InterpretedFunctionValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
-func (*InterpretedFunctionValue) isFunctionValue() {}
+func (*InterpretedFunctionValue) IsFunctionValue() {}
 
-func (f *InterpretedFunctionValue) FunctionType() *sema.FunctionType {
+func (f *InterpretedFunctionValue) FunctionType(ValueStaticTypeContext) *sema.FunctionType {
 	return f.Type
 }
 
-func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
+func (f *InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 
 	// The check that arguments' dynamic types match the parameter types
 	// was already performed by the interpreter's checkValueTransferTargetType function
@@ -126,8 +129,7 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 }
 
 func (f *InterpretedFunctionValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -141,13 +143,12 @@ func (*InterpretedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+func (*InterpretedFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (f *InterpretedFunctionValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -156,16 +157,16 @@ func (f *InterpretedFunctionValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return f
 }
 
-func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
+func (f *InterpretedFunctionValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 
-func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*InterpretedFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -186,8 +187,11 @@ func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *HostFunctionValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.HostFunctionValueStringMemoryUsage)
+func (f *HostFunctionValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
+	common.UseMemory(context, common.HostFunctionValueStringMemoryUsage)
 	return f.String()
 }
 
@@ -210,7 +214,6 @@ func NewUnmeteredStaticHostFunctionValue(
 
 // NewStaticHostFunctionValue constructs a host function that is not bounded to any value.
 // For constructing a function bound to a value (e.g: a member function), the output of this method
-// must be wrapped with a bound-function, or `NewBoundHostFunctionValue` method must be used.
 func NewStaticHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,
@@ -227,31 +230,31 @@ var _ FunctionValue = &HostFunctionValue{}
 var _ MemberAccessibleValue = &HostFunctionValue{}
 var _ ContractValue = &HostFunctionValue{}
 
-func (*HostFunctionValue) isValue() {}
+func (*HostFunctionValue) IsValue() {}
 
-func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitHostFunctionValue(interpreter, f)
+func (f *HostFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitHostFunctionValue(context, f)
 }
 
-func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f *HostFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (f *HostFunctionValue) StaticType(interpreter *Interpreter) StaticType {
-	return ConvertSemaToStaticType(interpreter, f.Type)
+func (f *HostFunctionValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return ConvertSemaToStaticType(context, f.Type)
 }
 
-func (*HostFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*HostFunctionValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
-func (*HostFunctionValue) isFunctionValue() {}
+func (*HostFunctionValue) IsFunctionValue() {}
 
-func (f *HostFunctionValue) FunctionType() *sema.FunctionType {
+func (f *HostFunctionValue) FunctionType(_ ValueStaticTypeContext) *sema.FunctionType {
 	return f.Type
 }
 
-func (f *HostFunctionValue) invoke(invocation Invocation) Value {
+func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 
 	// The check that arguments' dynamic types match the parameter types
 	// was already performed by the interpreter's checkValueTransferTargetType function
@@ -259,28 +262,31 @@ func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
-			return variable.GetValue(inter)
+			return variable.GetValue(context)
 		}
 	}
 	return nil
 }
 
-func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (f *HostFunctionValue) GetMethod(_ MemberAccessibleContext, _ string) FunctionValue {
+	return nil
+}
+
+func (*HostFunctionValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Host functions have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*HostFunctionValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (f *HostFunctionValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
+	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -294,13 +300,12 @@ func (*HostFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+func (*HostFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (f *HostFunctionValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -309,70 +314,78 @@ func (f *HostFunctionValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return f
 }
 
-func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
+func (f *HostFunctionValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 
-func (*HostFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*HostFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
-	v.NestedVariables = variables
+func (f *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
+	f.NestedVariables = variables
 }
 
 // BoundFunctionValue
 type BoundFunctionValue struct {
-	Function           FunctionValue
-	Base               *EphemeralReferenceValue
-	BoundAuthorization Authorization
-	SelfReference      ReferenceValue
-	selfIsReference    bool
+	Function        FunctionValue
+	Base            *EphemeralReferenceValue
+	SelfReference   ReferenceValue
+	selfIsReference bool
 }
 
 var _ Value = BoundFunctionValue{}
 var _ FunctionValue = BoundFunctionValue{}
 
 func NewBoundFunctionValue(
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	function FunctionValue,
 	self *Value,
 	base *EphemeralReferenceValue,
-	boundAuth Authorization,
 ) BoundFunctionValue {
 
-	// Since 'self' work as an implicit reference, create an explicit one and hold it.
-	// This reference is later used to check the validity of the referenced value/resource.
-	// For attachments, 'self' is already a reference. So no need to create a reference again.
-
-	selfRef, selfIsRef := (*self).(ReferenceValue)
-	if !selfIsRef {
-		semaType := interpreter.MustSemaTypeOfValue(*self)
-		selfRef = NewEphemeralReferenceValue(interpreter, boundAuth, *self, semaType, EmptyLocationRange)
-	}
+	selfRef, selfIsRef := ReceiverReference(context, *self)
 
 	return NewBoundFunctionValueFromSelfReference(
-		interpreter,
+		context,
 		function,
 		selfRef,
 		selfIsRef,
 		base,
-		boundAuth,
 	)
 }
 
+func ReceiverReference(context ReferenceCreationContext, receiver Value) (ReferenceValue, bool) {
+	// Since 'self' work as an implicit reference, create an explicit one and hold it.
+	// This reference is later used to check the validity of the referenced value/resource.
+	// For attachments, 'self' is already a reference. So no need to create a reference again.
+
+	selfRef, selfIsRef := receiver.(ReferenceValue)
+	if !selfIsRef {
+		semaType := MustSemaTypeOfValue(receiver, context)
+		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
+		// it is not directly exposed to the users
+		selfRef = NewEphemeralReferenceValue(
+			context,
+			UnauthorizedAccess,
+			receiver,
+			semaType,
+		)
+	}
+	return selfRef, selfIsRef
+}
+
 func NewBoundFunctionValueFromSelfReference(
-	interpreter *Interpreter,
+	gauge common.MemoryGauge,
 	function FunctionValue,
 	selfReference ReferenceValue,
 	selfIsReference bool,
 	base *EphemeralReferenceValue,
-	boundAuth Authorization,
 ) BoundFunctionValue {
 
 	// If the function is already a bound function, then do not re-wrap.
@@ -380,18 +393,17 @@ func NewBoundFunctionValueFromSelfReference(
 		return boundFunc
 	}
 
-	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
+	common.UseMemory(gauge, common.BoundFunctionValueMemoryUsage)
 
 	return BoundFunctionValue{
-		Function:           function,
-		SelfReference:      selfReference,
-		selfIsReference:    selfIsReference,
-		Base:               base,
-		BoundAuthorization: boundAuth,
+		Function:        function,
+		SelfReference:   selfReference,
+		selfIsReference: selfIsReference,
+		Base:            base,
 	}
 }
 
-func (BoundFunctionValue) isValue() {}
+func (BoundFunctionValue) IsValue() {}
 
 func (f BoundFunctionValue) String() string {
 	return f.RecursiveString(SeenReferences{})
@@ -401,78 +413,88 @@ func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) strin
 	return f.Function.RecursiveString(seenReferences)
 }
 
-func (f BoundFunctionValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
-	return f.Function.MeteredString(interpreter, seenReferences, locationRange)
+func (f BoundFunctionValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
+	return f.Function.MeteredString(context, seenReferences)
 }
 
-func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitBoundFunctionValue(interpreter, f)
+func (f BoundFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitBoundFunctionValue(context, f)
 }
 
-func (f BoundFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (f BoundFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (f BoundFunctionValue) StaticType(inter *Interpreter) StaticType {
-	return f.Function.StaticType(inter)
+func (f BoundFunctionValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return f.Function.StaticType(context)
 }
 
-func (BoundFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (BoundFunctionValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
-func (BoundFunctionValue) isFunctionValue() {}
+func (BoundFunctionValue) IsFunctionValue() {}
 
-func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
-	return f.Function.FunctionType()
+func (f BoundFunctionValue) FunctionType(context ValueStaticTypeContext) *sema.FunctionType {
+	return f.Function.FunctionType(context)
 }
 
-func (f BoundFunctionValue) invoke(invocation Invocation) Value {
+func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 
 	invocation.Base = f.Base
-	invocation.BoundAuthorization = f.BoundAuthorization
 
-	locationRange := invocation.LocationRange
-	inter := invocation.Interpreter
+	inter := invocation.InvocationContext
 
 	// If the `self` is already a reference to begin with (e.g: attachments),
 	// then pass the reference as-is to the invocation.
 	// Otherwise, always dereference, at the time of the invocation.
 
-	if f.selfIsReference {
-		var self Value = f.SelfReference
-		invocation.Self = &self
+	receiver := GetReceiver(
+		f.SelfReference,
+		f.selfIsReference,
+		inter,
+	)
+	invocation.Self = receiver
+
+	return f.Function.Invoke(invocation)
+}
+
+func GetReceiver(
+	receiverReference ReferenceValue,
+	receiverIsReference bool,
+	context ValueStaticTypeContext,
+) *Value {
+	var receiver *Value
+
+	if receiverIsReference {
+		var receiverValue Value = receiverReference
+		receiver = &receiverValue
 	} else {
-		invocation.Self = f.SelfReference.ReferencedValue(
-			inter,
-			EmptyLocationRange,
-			true,
-		)
+		receiver = receiverReference.ReferencedValue(context, true)
 	}
 
-	if _, isStorageRef := f.SelfReference.(*StorageReferenceValue); isStorageRef {
+	if _, isStorageRef := receiverReference.(*StorageReferenceValue); isStorageRef {
 		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
 		// If nil, that means the value has been moved out of storage.
-		if invocation.Self == nil {
-			panic(ReferencedValueChangedError{
-				LocationRange: locationRange,
-			})
+		if receiver == nil {
+			panic(&ReferencedValueChangedError{})
 		}
 	} else {
-		inter.checkInvalidatedResourceOrResourceReference(f.SelfReference, locationRange)
+		CheckInvalidatedResourceOrResourceReference(receiverReference, context)
 	}
 
-	return f.Function.invoke(invocation)
+	return receiver
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueStaticTypeConformanceContext,
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToStaticType(
-		interpreter,
-		locationRange,
+		context,
 		results,
 	)
 }
@@ -485,13 +507,12 @@ func (BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+func (BoundFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (f BoundFunctionValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -500,49 +521,22 @@ func (f BoundFunctionValue) Transfer(
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return f
 }
 
-func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
+func (f BoundFunctionValue) Clone(_ ValueCloneContext) Value {
 	return f
 }
 
-func (BoundFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
+func (BoundFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
-}
-
-// NewBoundHostFunctionValue creates a bound-function value for a host-function.
-func NewBoundHostFunctionValue[T Value](
-	interpreter *Interpreter,
-	self Value,
-	funcType *sema.FunctionType,
-	function func(self T, invocation Invocation) Value,
-) BoundFunctionValue {
-
-	wrappedFunction := func(invocation Invocation) Value {
-		self, ok := (*invocation.Self).(T)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		return function(self, invocation)
-	}
-
-	hostFunc := NewStaticHostFunctionValue(interpreter, funcType, wrappedFunction)
-
-	return NewBoundFunctionValue(
-		interpreter,
-		hostFunc,
-		&self,
-		nil,
-		nil,
-	)
 }
 
 // NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.
 func NewUnmeteredBoundHostFunctionValue(
-	interpreter *Interpreter,
+	context FunctionCreationContext,
 	self Value,
 	funcType *sema.FunctionType,
 	function HostFunction,
@@ -551,10 +545,9 @@ func NewUnmeteredBoundHostFunctionValue(
 	hostFunc := NewUnmeteredStaticHostFunctionValue(funcType, function)
 
 	return NewBoundFunctionValue(
-		interpreter,
+		context,
 		hostFunc,
 		&self,
-		nil,
 		nil,
 	)
 }

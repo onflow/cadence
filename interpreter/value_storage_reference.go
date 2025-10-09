@@ -74,13 +74,13 @@ func NewStorageReferenceValue(
 	)
 }
 
-func (*StorageReferenceValue) isValue() {}
+func (*StorageReferenceValue) IsValue() {}
 
-func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitStorageReferenceValue(interpreter, v)
+func (v *StorageReferenceValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitStorageReferenceValue(context, v)
 }
 
-func (*StorageReferenceValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (*StorageReferenceValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -93,13 +93,16 @@ func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StorageReferenceValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.StorageReferenceValueStringMemoryUsage)
+func (v *StorageReferenceValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
+	common.UseMemory(context, common.StorageReferenceValueStringMemoryUsage)
 	return v.String()
 }
 
-func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
-	referencedValue, err := v.dereference(inter, EmptyLocationRange)
+func (v *StorageReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
+	referencedValue, err := v.dereference(context)
 	if err != nil {
 		panic(err)
 	}
@@ -107,9 +110,9 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 	self := *referencedValue
 
 	return NewReferenceStaticType(
-		inter,
+		context,
 		v.Authorization,
-		self.StaticType(inter),
+		self.StaticType(context),
 	)
 }
 
@@ -117,39 +120,37 @@ func (v *StorageReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*StorageReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*StorageReferenceValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
-func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRange LocationRange) (*Value, error) {
+func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Value, error) {
 	address := v.TargetStorageAddress
-	domain := v.TargetPath.Domain.Identifier()
+	domain := v.TargetPath.Domain.StorageDomain()
 	identifier := v.TargetPath.Identifier
 
 	storageMapKey := StringStorageMapKey(identifier)
 
-	referenced := interpreter.ReadStored(address, domain, storageMapKey)
+	referenced := context.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		return nil, nil
 	}
 
 	if reference, isReference := referenced.(ReferenceValue); isReference {
-		panic(NestedReferenceError{
-			Value:         reference,
-			LocationRange: locationRange,
+		panic(&NestedReferenceError{
+			Value: reference,
 		})
 	}
 
 	if v.BorrowedType != nil {
-		staticType := referenced.StaticType(interpreter)
+		staticType := referenced.StaticType(context)
 
-		if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
-			semaType := interpreter.MustConvertStaticToSemaType(staticType)
+		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
+			semaType := context.SemaTypeFromStaticType(staticType)
 
-			return nil, ForceCastTypeMismatchError{
-				ExpectedType:  v.BorrowedType,
-				ActualType:    semaType,
-				LocationRange: locationRange,
+			return nil, &ForceCastTypeMismatchError{
+				ExpectedType: v.BorrowedType,
+				ActualType:   semaType,
 			}
 		}
 	}
@@ -157,18 +158,17 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 	return &referenced, nil
 }
 
-func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value {
-	referencedValue, err := v.dereference(interpreter, locationRange)
+func (v *StorageReferenceValue) ReferencedValue(context ValueStaticTypeContext, errorOnFailedDereference bool) *Value {
+	referencedValue, err := v.dereference(context)
 	if err == nil {
 		return referencedValue
 	}
-	if forceCastErr, ok := err.(ForceCastTypeMismatchError); ok {
+	if forceCastErr, ok := err.(*ForceCastTypeMismatchError); ok {
 		if errorOnFailedDereference {
 			// relay the type mismatch error with a dereference error context
-			panic(DereferenceError{
-				ExpectedType:  forceCastErr.ExpectedType,
-				ActualType:    forceCastErr.ActualType,
-				LocationRange: locationRange,
+			panic(&DereferenceError{
+				ExpectedType: forceCastErr.ExpectedType,
+				ActualType:   forceCastErr.ActualType,
 			})
 		}
 		return nil
@@ -177,154 +177,148 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locati
 }
 
 func (v *StorageReferenceValue) mustReferencedValue(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueStaticTypeContext,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
+	referencedValue := v.ReferencedValue(context, true)
 	if referencedValue == nil {
-		panic(DereferenceError{
-			Cause:         "no value is stored at this path",
-			LocationRange: locationRange,
+		panic(&DereferenceError{
+			Cause: "no value is stored at this path",
 		})
 	}
 
 	return *referencedValue
 }
 
-func (v *StorageReferenceValue) GetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-) Value {
-	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
+	referencedValue := v.mustReferencedValue(context)
 
-	member := interpreter.getMember(referencedValue, locationRange, name)
+	var member Value
+
+	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
+		member = memberAccessibleValue.GetMember(context, name)
+	}
+
+	if member == nil {
+		// NOTE: Must call the `GetMethod` of the `StorageReferenceValue`, not of the referenced-value.
+		member = context.GetMethod(v, name)
+	}
 
 	// If the member is a function, it is always a bound-function.
-	// By default, bound functions create and hold an ephemeral reference (`SelfReference`).
-	// For storage references, replace this default one with the actual storage reference.
+	// By default, bound functions create and hold an ephemeral reference
+	// (in `BoundFunctionValue.SelfReference`).
+	// For storage references, replace this default one with a storage reference.
+	//
+	// However, we cannot use the storage reference as-is:
+	// Because we look up the member on the referenced value,
+	// we also must use its type as the borrowed type for the `SelfReference` type,
+	// because during invocation the bound function can only be invoked
+	// if the type of the dereferenced value at that time still matches
+	// the type of the dereferenced value at the time of binding (here).
+	//
+	// For example, imagine storing a value of type T (e.g. `String`),
+	// creating a reference with a supertype (e.g. `AnyStruct`),
+	// and then creating a bound function on it.
+	// Then, if we change the storage location to store a value of unrelated type U instead (e.g. `Int`),
+	// and invoke the bound function, the bound function is potentially invalid.
+	//
 	// It is not possible (or a lot of work), to create the bound function with the storage reference
 	// when it was created originally, because `getMember(referencedValue, ...)` doesn't know
 	// whether the member was accessed directly, or via a reference.
-	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
-		boundFunction.SelfReference = v
-		return boundFunction
-	}
-
-	return member
+	return context.MaybeUpdateStorageReferenceMemberReceiver(
+		v,
+		referencedValue,
+		member,
+	)
 }
 
-func (v *StorageReferenceValue) RemoveMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
-
-	return self.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, name)
+func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	referencedValue := v.mustReferencedValue(context)
+	return getBuiltinFunctionMember(context, referencedValue, name)
 }
 
-func (v *StorageReferenceValue) SetMember(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	name string,
-	value Value,
-) bool {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {
+	self := v.mustReferencedValue(context)
 
-	return interpreter.setMember(self, locationRange, name, value)
+	return self.(MemberAccessibleValue).RemoveMember(context, name)
 }
 
-func (v *StorageReferenceValue) GetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) SetMember(context ValueTransferContext, name string, value Value) bool {
+	self := v.mustReferencedValue(context)
+
+	return setMember(
+		context,
+		self,
+		name,
+		value,
+	)
+}
+
+func (v *StorageReferenceValue) GetKey(context ValueComparisonContext, key Value) Value {
+	self := v.mustReferencedValue(context)
 
 	return self.(ValueIndexableValue).
-		GetKey(interpreter, locationRange, key)
+		GetKey(context, key)
 }
 
-func (v *StorageReferenceValue) SetKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-	value Value,
-) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) SetKey(context ContainerMutationContext, key Value, value Value) {
+	self := v.mustReferencedValue(context)
 
 	self.(ValueIndexableValue).
-		SetKey(interpreter, locationRange, key, value)
+		SetKey(context, key, value)
 }
 
-func (v *StorageReferenceValue) InsertKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-	value Value,
-) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
+	self := v.mustReferencedValue(context)
 
 	self.(ValueIndexableValue).
-		InsertKey(interpreter, locationRange, key, value)
+		InsertKey(context, key, value)
 }
 
-func (v *StorageReferenceValue) RemoveKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key Value,
-) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) RemoveKey(context ContainerMutationContext, key Value) Value {
+	self := v.mustReferencedValue(context)
 
 	return self.(ValueIndexableValue).
-		RemoveKey(interpreter, locationRange, key)
+		RemoveKey(context, key)
 }
 
 func (v *StorageReferenceValue) GetTypeKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context MemberAccessibleContext,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context)
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+		access := MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization)
 		return selfComposite.getTypeKey(
-			interpreter,
-			locationRange,
+			context,
 			key,
-			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+			access,
 		)
 	}
 
 	return self.(TypeIndexableValue).
-		GetTypeKey(interpreter, locationRange, key)
+		GetTypeKey(context, key)
 }
 
 func (v *StorageReferenceValue) SetTypeKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueTransferContext,
 	key sema.Type,
 	value Value,
 ) {
-	self := v.mustReferencedValue(interpreter, locationRange)
+	self := v.mustReferencedValue(context)
 
 	self.(TypeIndexableValue).
-		SetTypeKey(interpreter, locationRange, key, value)
+		SetTypeKey(context, key, value)
 }
 
-func (v *StorageReferenceValue) RemoveTypeKey(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	key sema.Type,
-) Value {
-	self := v.mustReferencedValue(interpreter, locationRange)
+func (v *StorageReferenceValue) RemoveTypeKey(context ValueTransferContext, key sema.Type) Value {
+	self := v.mustReferencedValue(context)
 
 	return self.(TypeIndexableValue).
-		RemoveTypeKey(interpreter, locationRange, key)
+		RemoveTypeKey(context, key)
 }
 
-func (v *StorageReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v *StorageReferenceValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
@@ -342,28 +336,23 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Val
 }
 
 func (v *StorageReferenceValue) ConformsToStaticType(
-	interpreter *Interpreter,
-	locationRange LocationRange,
+	context ValueStaticTypeConformanceContext,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue, err := v.dereference(interpreter, locationRange)
+	referencedValue, err := v.dereference(context)
 	if referencedValue == nil || err != nil {
 		return false
 	}
 
 	self := *referencedValue
 
-	staticType := self.StaticType(interpreter)
+	staticType := self.StaticType(context)
 
-	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
+	if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
 		return false
 	}
 
-	return self.ConformsToStaticType(
-		interpreter,
-		locationRange,
-		results,
-	)
+	return self.ConformsToStaticType(context, results)
 }
 
 func (*StorageReferenceValue) IsStorable() bool {
@@ -378,13 +367,12 @@ func (*StorageReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StorageReferenceValue) IsResourceKinded(_ *Interpreter) bool {
+func (*StorageReferenceValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v *StorageReferenceValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
+	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -392,12 +380,12 @@ func (v *StorageReferenceValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
+func (v *StorageReferenceValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredStorageReferenceValue(
 		v.Authorization,
 		v.TargetStorageAddress,
@@ -406,42 +394,34 @@ func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
 	)
 }
 
-func (*StorageReferenceValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*StorageReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
 func (*StorageReferenceValue) isReference() {}
 
-func (v *StorageReferenceValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
-	// Not used for now
-	panic(errors.NewUnreachableError())
-}
-
 func (v *StorageReferenceValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
 	_ bool,
-	locationRange LocationRange,
 ) {
-	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+	referencedValue := v.mustReferencedValue(context)
 	forEachReference(
-		interpreter,
+		context,
 		v,
 		referencedValue,
 		elementType,
 		function,
-		locationRange,
 	)
 }
 
 func forEachReference(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	reference ReferenceValue,
 	referencedValue Value,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
-	locationRange LocationRange,
 ) {
 	referencedIterable, ok := referencedValue.(IterableValue)
 	if !ok {
@@ -454,10 +434,14 @@ func forEachReference(
 		// The loop dereference the reference once, and hold onto that referenced-value.
 		// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 		// So check the validity of the reference, before each iteration.
-		interpreter.checkInvalidatedResourceOrResourceReference(reference, locationRange)
+		CheckInvalidatedResourceOrResourceReference(reference, context)
 
 		if isResultReference {
-			value = interpreter.getReferenceValue(value, elementType, locationRange)
+			value = getReferenceValue(
+				context,
+				value,
+				elementType,
+			)
 		}
 
 		return function(value)
@@ -473,14 +457,25 @@ func forEachReference(
 	const transferElements = false
 
 	referencedIterable.ForEach(
-		interpreter,
+		context,
 		referencedElementType,
 		updatedFunction,
 		transferElements,
-		locationRange,
 	)
 }
 
 func (v *StorageReferenceValue) BorrowType() sema.Type {
 	return v.BorrowedType
+}
+
+func (v *StorageReferenceValue) Iterator(context ValueStaticTypeContext) ValueIterator {
+	referencedValue := v.mustReferencedValue(context)
+	referencedIterable, ok := referencedValue.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return &ReferenceValueIterator{
+		iterator: referencedIterable.Iterator(context),
+	}
 }
