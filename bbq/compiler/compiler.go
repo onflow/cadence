@@ -2479,7 +2479,6 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	implicitArgIndex uint16,
 	implicitArgType sema.Type,
 ) (_ struct{}) {
-	// TODO: copy
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 
@@ -3419,7 +3418,6 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		// Store the new composite as the return value.
 		returnLocalIndex = c.currentFunction.generateLocalIndex()
 		c.emitSetLocal(returnLocalIndex)
-		c.emitGetLocal(returnLocalIndex)
 		attachType := enclosingType.(sema.EntitlementSupportingType)
 		baseAccess := attachType.SupportedEntitlements().Access()
 		refType := &sema.ReferenceType{
@@ -3433,6 +3431,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		c.emitGetLocal(returnLocalIndex)
 		c.emit(opcode.InstructionSetAttachmentBase{})
 		// Set `self` to be a reference.
+		c.emitGetLocal(returnLocalIndex)
 		c.emit(opcode.InstructionNewRef{
 			Type:       c.getOrAddType(refType),
 			IsImplicit: false,
@@ -3508,6 +3507,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 			// Declare a receiver if this is an object method.
 			parameterCount++
 
+			// Attachments provide an extra parameter: `base`.
 			if typ, ok := enclosingType.(*sema.CompositeType); ok {
 				if typ.Kind == common.CompositeKindAttachment {
 					parameterCount++
@@ -4115,7 +4115,7 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 	return uint16(count)
 }
 
-func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool, declareBase bool) {
+func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declareReceiver bool, declareBase bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
