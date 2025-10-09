@@ -82,6 +82,7 @@ var _ stdlib.BLSPoPVerifier = &vmEnvironment{}
 var _ stdlib.BLSPublicKeyAggregator = &vmEnvironment{}
 var _ stdlib.BLSSignatureAggregator = &vmEnvironment{}
 var _ stdlib.Hasher = &vmEnvironment{}
+var _ stdlib.Exporter = &vmEnvironment{}
 var _ ArgumentDecoder = &vmEnvironment{}
 
 func newVMEnvironment(config Config) *vmEnvironment {
@@ -641,7 +642,7 @@ func (e *vmEnvironment) vmBuiltinGlobals(
 	return
 }
 
-func (e *vmEnvironment) ExportValue(
+func (*vmEnvironment) ExportValue(
 	value interpreter.Value,
 	context interpreter.ValueExportContext,
 ) (cadence.Value, error) {

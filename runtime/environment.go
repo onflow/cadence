@@ -578,7 +578,7 @@ func (e *InterpreterEnvironment) ProgramLog(message string) error {
 	return e.Interface.ProgramLog(message)
 }
 
-func (e *InterpreterEnvironment) ExportValue(
+func (*InterpreterEnvironment) ExportValue(
 	value interpreter.Value,
 	context interpreter.ValueExportContext,
 ) (
