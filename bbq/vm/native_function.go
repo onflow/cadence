@@ -58,7 +58,13 @@ func (g *VMTypeArgumentsIterator) NextSema() sema.Type {
 	return g.context.SemaTypeFromStaticType(staticType)
 }
 
-// Like in the interpreter's native_function, these are all the functions that need to exist to work with the VM
+func NewTypeArgumentsIterator(context *Context, arguments []bbq.StaticType) interpreter.TypeArgumentsIterator {
+	if len(arguments) == 0 {
+		return interpreter.TheEmptyTypeArgumentsIterator
+	}
+	return NewVMTypeArgumentsIterator(context, arguments)
+}
+
 func AdaptNativeFunctionForVM(fn interpreter.NativeFunction) NativeFunctionVM {
 	return func(
 		context *Context,
@@ -66,7 +72,7 @@ func AdaptNativeFunctionForVM(fn interpreter.NativeFunction) NativeFunctionVM {
 		receiver Value,
 		arguments []Value,
 	) Value {
-		typeArgumentsIterator := NewVMTypeArgumentsIterator(context, typeArguments)
+		typeArgumentsIterator := NewTypeArgumentsIterator(context, typeArguments)
 
 		return fn(
 			context,
