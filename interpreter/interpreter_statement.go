@@ -38,8 +38,6 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 
 	interpreter.statement = statement
 
-	common.UseComputation(interpreter, common.StatementComputationUsage)
-
 	config := interpreter.SharedState.Config
 
 	debugger := config.Debugger
@@ -51,6 +49,8 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 	if onStatement != nil {
 		onStatement(interpreter, statement)
 	}
+
+	common.UseComputation(interpreter, common.StatementComputationUsage)
 
 	return ast.AcceptStatement[StatementResult](statement, interpreter)
 }

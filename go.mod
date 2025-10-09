@@ -9,6 +9,7 @@ require (
 	github.com/dave/dst v0.27.3
 	github.com/fxamacker/cbor/v2 v2.8.1-0.20250402194037-6f932b086829
 	github.com/goccy/go-yaml v1.18.0
+	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5
 	github.com/itchyny/gojq v0.12.17
 	github.com/k0kubun/pp/v3 v3.5.0
 	github.com/kodova/html-to-markdown v1.0.1
