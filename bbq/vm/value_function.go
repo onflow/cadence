@@ -160,16 +160,9 @@ func (v CompiledFunctionValue) IsNative() bool {
 	return false
 }
 
-type NativeFunctionVM func(
-	context *Context,
-	typeArguments []bbq.StaticType,
-	receiver Value,
-	arguments []Value,
-) Value
-
 type NativeFunctionValue struct {
 	Name     string
-	Function NativeFunctionVM
+	Function interpreter.NativeFunction
 
 	// A function value can only have either one of `functionType` or `functionTypeGetter`.
 	functionType       *sema.FunctionType
