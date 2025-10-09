@@ -22,6 +22,7 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/ccf"
 	"github.com/onflow/cadence/errors"
@@ -42,42 +43,62 @@ type CCFContractHandler interface {
 	Exporter
 }
 
-// newCCFEncodeFunction creates a new host function that encodes a value using the CCF encoding format.
-func newCCFEncodeFunction(
+func NativeCCFEncodeFunction(handler CCFContractHandler) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+
+		referenceValue, ok := args[0].(interpreter.ReferenceValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		referencedValue := referenceValue.ReferencedValue(context, true)
+		if referencedValue == nil {
+			return interpreter.Nil
+		}
+
+		exportedValue, err := handler.ExportValue(*referencedValue, context)
+		if err != nil {
+			return interpreter.Nil
+		}
+
+		encoded, err := ccf.Encode(exportedValue)
+		if err != nil {
+			return interpreter.Nil
+		}
+
+		res := interpreter.ByteSliceToByteArrayValue(context, encoded)
+
+		return interpreter.NewSomeValueNonCopying(context, res)
+	}
+}
+
+func newInterpreterCCFEncodeFunction(
 	gauge common.MemoryGauge,
 	handler CCFContractHandler,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewStaticHostFunctionValue(
+	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
+	// However, this is not a problem for now, since underlying contract doesn't get moved.
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		gauge,
-		CCFTypeEncodeFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.InvocationContext
-
-			referenceValue, ok := invocation.Arguments[0].(interpreter.ReferenceValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			referencedValue := referenceValue.ReferencedValue(inter, true)
-			if referencedValue == nil {
-				return interpreter.Nil
-			}
-
-			exportedValue, err := handler.ExportValue(*referencedValue, inter)
-			if err != nil {
-				return interpreter.Nil
-			}
-
-			encoded, err := ccf.Encode(exportedValue)
-			if err != nil {
-				return interpreter.Nil
-			}
-
-			res := interpreter.ByteSliceToByteArrayValue(inter, encoded)
-
-			return interpreter.NewSomeValueNonCopying(inter, res)
-		},
+		BLSTypeAggregatePublicKeysFunctionType,
+		NativeCCFEncodeFunction(handler),
 	)
+}
+
+func NewVMCCFEncodeFunction(handler CCFContractHandler) VMFunction {
+	return VMFunction{
+		BaseType: CCFType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			CCFTypeEncodeFunctionName,
+			CCFTypeEncodeFunctionType,
+			NativeCCFEncodeFunction(handler),
+		),
+	}
 }
 
 var CCFTypeStaticType = interpreter.ConvertSemaToStaticType(nil, CCFType)
@@ -88,7 +109,7 @@ func NewCCFContract(
 ) StandardLibraryValue {
 
 	ccfContractFields := map[string]interpreter.Value{
-		CCFTypeEncodeFunctionName: newCCFEncodeFunction(gauge, handler),
+		CCFTypeEncodeFunctionName: newInterpreterCCFEncodeFunction(gauge, handler),
 	}
 
 	var ccfContractValue = interpreter.NewSimpleCompositeValue(

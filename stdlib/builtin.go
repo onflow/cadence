@@ -51,6 +51,11 @@ var DefaultStandardLibraryTypes = []StandardLibraryType{
 		Name: RLPTypeName,
 		Kind: common.DeclarationKindContract,
 	},
+	{
+		Type: CCFType,
+		Name: CCFTypeName,
+		Kind: common.DeclarationKindContract,
+	},
 }
 
 func InterpreterDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
@@ -140,6 +145,8 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 
 		NewVMBLSAggregatePublicKeysFunction(handler),
 		NewVMBLSAggregateSignaturesFunction(handler),
+
+		NewVMCCFEncodeFunction(handler),
 
 		NewVMHashAlgorithmHashFunction(handler),
 		NewVMHashAlgorithmHashWithTagFunction(handler),
