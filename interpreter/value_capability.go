@@ -100,11 +100,11 @@ func (v *IDCapabilityValue) isInvalid() bool {
 	return v.ID == InvalidCapabilityID
 }
 
-func (v *IDCapabilityValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v *IDCapabilityValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitCapabilityValue(context, v)
 }
 
-func (v *IDCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
+func (v *IDCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	walkChild(v.ID)
 	walkChild(v.address)
 }
@@ -116,7 +116,7 @@ func (v *IDCapabilityValue) StaticType(context ValueStaticTypeContext) StaticTyp
 	)
 }
 
-func (v *IDCapabilityValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (v *IDCapabilityValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -132,17 +132,20 @@ func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) strin
 	)
 }
 
-func (v *IDCapabilityValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *IDCapabilityValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 	common.UseMemory(context, common.IDCapabilityValueStringMemoryUsage)
 
 	return format.Capability(
 		v.BorrowType.MeteredString(context),
-		v.address.MeteredString(context, seenReferences, locationRange),
-		v.ID.MeteredString(context, seenReferences, locationRange),
+		v.address.MeteredString(context, seenReferences),
+		v.ID.MeteredString(context, seenReferences),
 	)
 }
 
-func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case sema.CapabilityTypeAddressFieldName:
 		return v.address
@@ -151,14 +154,10 @@ func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, locationR
 		return v.ID
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v *IDCapabilityValue) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	name string,
-) FunctionValue {
+func (v *IDCapabilityValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
@@ -174,32 +173,31 @@ func (v *IDCapabilityValue) GetMethod(
 	return nil
 }
 
-func (*IDCapabilityValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (*IDCapabilityValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Capabilities have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*IDCapabilityValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (*IDCapabilityValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *IDCapabilityValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v *IDCapabilityValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *IDCapabilityValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherCapability, ok := other.(*IDCapabilityValue)
 	if !ok {
 		return false
 	}
 
 	return otherCapability.ID == v.ID &&
-		otherCapability.address.Equal(context, locationRange, v.address) &&
+		otherCapability.address.Equal(context, v.address) &&
 		otherCapability.BorrowType.Equal(v.BorrowType)
 }
 
@@ -234,7 +232,6 @@ func (*IDCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v *IDCapabilityValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

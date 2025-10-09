@@ -22,7 +22,6 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -35,17 +34,17 @@ var _ NumberValueArithmeticContext = &Interpreter{}
 // NumberValue
 type NumberValue interface {
 	ComparableValue
-	ToInt(locationRange LocationRange) int
-	Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue
-	Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	ToInt() int
+	Negate(context NumberValueArithmeticContext) NumberValue
+	Plus(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	SaturatingPlus(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	Minus(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	SaturatingMinus(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	Mod(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	Mul(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	SaturatingMul(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	Div(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	SaturatingDiv(context NumberValueArithmeticContext, other NumberValue) NumberValue
 	ToBigEndianBytes() []byte
 }
 
@@ -54,7 +53,6 @@ func getNumberValueFunctionMember(
 	v NumberValue,
 	name string,
 	typ sema.Type,
-	locationRange LocationRange,
 ) FunctionValue {
 	switch name {
 
@@ -63,10 +61,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v NumberValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				return NumberValueToString(invocationContext, v)
-			},
+			NativeNumberToStringFunction,
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
@@ -74,12 +69,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.ToBigEndianBytesFunctionType,
-			func(v NumberValue, invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(
-					invocation.InvocationContext,
-					v.ToBigEndianBytes(),
-				)
-			},
+			NativeNumberToBigEndianBytesFunction,
 		)
 
 	case sema.NumericTypeSaturatingAddFunctionName:
@@ -87,18 +77,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingPlus(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
-			},
+			NativeNumberSaturatingAddFunction,
 		)
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
@@ -106,18 +85,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingMinus(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
-			},
+			NativeNumberSaturatingSubtractFunction,
 		)
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
@@ -125,18 +93,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingMul(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
-			},
+			NativeNumberSaturatingMultiplyFunction,
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
@@ -144,18 +101,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingDiv(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
-			},
+			NativeNumberSaturatingDivideFunction,
 		)
 	}
 
@@ -178,11 +124,11 @@ func NumberValueToString(
 
 type IntegerValue interface {
 	NumberValue
-	BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
+	BitwiseOr(context ValueStaticTypeContext, other IntegerValue) IntegerValue
+	BitwiseXor(context ValueStaticTypeContext, other IntegerValue) IntegerValue
+	BitwiseAnd(context ValueStaticTypeContext, other IntegerValue) IntegerValue
+	BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue
+	BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue
 }
 
 // BigNumberValue is a number value with an integer value outside the range of int64
@@ -191,3 +137,74 @@ type BigNumberValue interface {
 	ByteLength() int
 	ToBigInt(memoryGauge common.MemoryGauge) *big.Int
 }
+
+// all native number functions
+var NativeNumberToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		return NumberValueToString(context, receiver.(NumberValue))
+	},
+)
+
+var NativeNumberToBigEndianBytesFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		return ByteSliceToByteArrayValue(context, receiver.(NumberValue).ToBigEndianBytes())
+	},
+)
+
+var NativeNumberSaturatingAddFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		other := AssertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingPlus(context, other)
+	},
+)
+
+var NativeNumberSaturatingSubtractFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		other := AssertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingMinus(context, other)
+	},
+)
+
+var NativeNumberSaturatingMultiplyFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		other := AssertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingMul(context, other)
+	},
+)
+
+var NativeNumberSaturatingDivideFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		other := AssertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingDiv(context, other)
+	},
+)

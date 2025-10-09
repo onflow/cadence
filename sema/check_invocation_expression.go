@@ -579,7 +579,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 	argumentIndex int,
 	functionType *FunctionType,
 	argumentTypes []Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 ) (
 	parameterType Type,
 ) {
@@ -595,12 +595,12 @@ func (checker *Checker) checkInvocationRequiredArgument(
 	// If all type parameters have been bound to a type,
 	// then resolve the parameter type with the type arguments,
 	// and propose the parameter type as the expected type for the argument.
-	if typeParameters.Len() == typeParameterCount {
+	if typeArguments.Len() == typeParameterCount {
 
 		// Optimization: only resolve if there are type parameters.
 		// This avoids unnecessary work for non-generic functions.
 		if typeParameterCount > 0 {
-			parameterType = parameterType.Resolve(typeParameters)
+			parameterType = parameterType.Resolve(typeArguments)
 			// If the type parameter could not be resolved, use the invalid type.
 			if parameterType == nil {
 				checker.report(&InvocationTypeInferenceError{
@@ -676,12 +676,12 @@ func (checker *Checker) checkInvocationRequiredArgument(
 
 		if parameterType.Unify(
 			argumentType,
-			typeParameters,
+			typeArguments,
 			checker.report,
 			checker.memoryGauge,
 			argument.Expression,
 		) {
-			parameterType = parameterType.Resolve(typeParameters)
+			parameterType = parameterType.Resolve(typeArguments)
 			// If the type parameter could not be resolved, use the invalid type.
 			if parameterType == nil {
 				checker.report(&InvocationTypeInferenceError{
@@ -769,7 +769,7 @@ func (checker *Checker) reportInvalidTypeArgumentCount(
 func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 	typeArguments []*ast.TypeAnnotation,
 	typeParameters []*TypeParameter,
-	typeParameterTypes *TypeParameterTypeOrderedMap,
+	typeArgumentsMap *TypeParameterTypeOrderedMap,
 ) {
 	for i := 0; i < len(typeArguments); i++ {
 		rawTypeArgument := typeArguments[i]
@@ -795,7 +795,7 @@ func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 
 		// Bind the type argument to the type parameter
 
-		typeParameterTypes.Set(typeParameter, ty)
+		typeArgumentsMap.Set(typeParameter, ty)
 	}
 }
 

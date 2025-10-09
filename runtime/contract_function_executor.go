@@ -131,7 +131,6 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 		storage,
 		context.MemoryGauge,
 		context.ComputationGauge,
-		context.CoverageReport,
 	)
 	executor.environment = environment
 
@@ -251,11 +250,7 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 		},
 	)
 
-	contractMember := contractValue.GetMember(
-		inter,
-		invocation.LocationRange,
-		executor.functionName,
-	)
+	contractMember := contractValue.GetMember(inter, executor.functionName)
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)
 	if !ok {
@@ -277,7 +272,7 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 	}
 
 	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
+	exportedValue, err = ExportValue(value, inter)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +328,7 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	}
 
 	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, context, interpreter.EmptyLocationRange)
+	exportedValue, err = ExportValue(value, context)
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +344,6 @@ func (executor *contractFunctionExecutor) convertArgument(
 	context ArgumentConversionContext,
 	argument cadence.Value,
 	argumentType sema.Type,
-	locationRange interpreter.LocationRange,
 ) (interpreter.Value, error) {
 	environment := executor.environment
 
@@ -367,7 +361,6 @@ func (executor *contractFunctionExecutor) convertArgument(
 				common.Address(address),
 				environment,
 				referenceType.Authorization,
-				locationRange,
 			)
 
 			return accountReferenceValue, nil
@@ -376,7 +369,6 @@ func (executor *contractFunctionExecutor) convertArgument(
 
 	return ImportValue(
 		context,
-		locationRange,
 		environment,
 		environment.ResolveLocation,
 		argument,
@@ -391,17 +383,11 @@ func (executor *contractFunctionExecutor) appendArguments(
 	[]interpreter.Value,
 	error,
 ) {
-	locationRange := interpreter.LocationRange{
-		Location:    executor.context.Location,
-		HasPosition: ast.EmptyRange,
-	}
-
 	for i, argumentType := range executor.argumentTypes {
 		argument, err := executor.convertArgument(
 			context,
 			executor.arguments[i],
 			argumentType,
-			locationRange,
 		)
 		if err != nil {
 			return nil, err

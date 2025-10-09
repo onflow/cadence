@@ -114,11 +114,11 @@ func (v *StringValue) prepareGraphemes() {
 
 func (*StringValue) IsValue() {}
 
-func (v *StringValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v *StringValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitStringValue(context, v)
 }
 
-func (*StringValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (*StringValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -126,7 +126,7 @@ func (*StringValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeString)
 }
 
-func (*StringValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*StringValue) IsImportable(_ ValueImportableContext) bool {
 	return sema.StringType.Importable
 }
 
@@ -138,13 +138,16 @@ func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StringValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *StringValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(context, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
-func (v *StringValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v *StringValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
@@ -152,56 +155,52 @@ func (v *StringValue) Equal(_ ValueComparisonContext, _ LocationRange, other Val
 	return v.Str == otherString.Str
 }
 
-func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return v.Str < otherString.Str
 }
 
-func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return v.Str <= otherString.Str
 }
 
-func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return v.Str > otherString.Str
 }
 
-func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -211,7 +210,7 @@ func (v *StringValue) GreaterEqual(context ValueComparisonContext, other Compara
 // HashInput returns a byte slice containing:
 // - HashInputTypeString (1 byte)
 // - string value (n bytes)
-func (v *StringValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v *StringValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	length := 1 + len(v.Str)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -225,12 +224,12 @@ func (v *StringValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch [
 	return buffer
 }
 
-func (v *StringValue) Concat(context StringValueFunctionContext, other *StringValue, locationRange LocationRange) Value {
+func (v *StringValue) Concat(context StringValueFunctionContext, other *StringValue) Value {
 
 	firstLength := len(v.Str)
 	secondLength := len(other.Str)
 
-	newLength := safeAdd(firstLength, secondLength, locationRange)
+	newLength := safeAdd(firstLength, secondLength)
 
 	memoryUsage := common.NewStringMemoryUsage(newLength)
 
@@ -259,30 +258,28 @@ func (v *StringValue) Concat(context StringValueFunctionContext, other *StringVa
 
 var EmptyString = NewUnmeteredStringValue("")
 
-func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRange) Value {
-	fromIndex := from.ToInt(locationRange)
-	toIndex := to.ToInt(locationRange)
-	return v.slice(fromIndex, toIndex, locationRange)
+func (v *StringValue) Slice(from IntValue, to IntValue) Value {
+	fromIndex := from.ToInt()
+	toIndex := to.ToInt()
+	return v.slice(fromIndex, toIndex)
 }
 
-func (v *StringValue) slice(fromIndex int, toIndex int, locationRange LocationRange) *StringValue {
+func (v *StringValue) slice(fromIndex int, toIndex int) *StringValue {
 
 	length := v.Length()
 
 	if fromIndex < 0 || fromIndex > length || toIndex < 0 || toIndex > length {
 		panic(&StringSliceIndicesError{
-			FromIndex:     fromIndex,
-			UpToIndex:     toIndex,
-			Length:        length,
-			LocationRange: locationRange,
+			FromIndex: fromIndex,
+			UpToIndex: toIndex,
+			Length:    length,
 		})
 	}
 
 	if fromIndex > toIndex {
 		panic(&InvalidSliceIndexError{
-			FromIndex:     fromIndex,
-			UpToIndex:     toIndex,
-			LocationRange: locationRange,
+			FromIndex: fromIndex,
+			UpToIndex: toIndex,
 		})
 	}
 
@@ -316,21 +313,20 @@ func (v *StringValue) slice(fromIndex int, toIndex int, locationRange LocationRa
 	return NewUnmeteredStringValue(v.Str[start:end])
 }
 
-func (v *StringValue) checkBounds(index int, locationRange LocationRange) {
+func (v *StringValue) checkBounds(index int) {
 	length := v.Length()
 
 	if index < 0 || index >= length {
 		panic(&StringIndexOutOfBoundsError{
-			Index:         index,
-			Length:        length,
-			LocationRange: locationRange,
+			Index:  index,
+			Length: length,
 		})
 	}
 }
 
-func (v *StringValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
-	index := key.(NumberValue).ToInt(locationRange)
-	v.checkBounds(index, locationRange)
+func (v *StringValue) GetKey(context ValueComparisonContext, key Value) Value {
+	index := key.(NumberValue).ToInt()
+	v.checkBounds(index)
 
 	v.prepareGraphemes()
 
@@ -348,19 +344,19 @@ func (v *StringValue) GetKey(context ValueComparisonContext, locationRange Locat
 	)
 }
 
-func (*StringValue) SetKey(_ ContainerMutationContext, _ LocationRange, _ Value, _ Value) {
+func (*StringValue) SetKey(_ ContainerMutationContext, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) InsertKey(_ ContainerMutationContext, _ LocationRange, _ Value, _ Value) {
+func (*StringValue) InsertKey(_ ContainerMutationContext, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) RemoveKey(_ ContainerMutationContext, _ LocationRange, _ Value) Value {
+func (*StringValue) RemoveKey(_ ContainerMutationContext, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *StringValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case sema.StringTypeLengthFieldName:
 		length := v.Length()
@@ -370,30 +366,17 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 		return ByteSliceToByteArrayValue(context, []byte(v.Str))
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v *StringValue) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	name string,
-) FunctionValue {
+func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.StringTypeConcatFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeConcatFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				other := invocation.Arguments[0]
-				return StringConcat(
-					invocationContext,
-					v,
-					other,
-					locationRange,
-				)
-			},
+			NativeStringConcatFunction,
 		)
 
 	case sema.StringTypeSliceFunctionName:
@@ -401,19 +384,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeSliceFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				from, ok := invocation.Arguments[0].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				to, ok := invocation.Arguments[1].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Slice(from, to, invocation.LocationRange)
-			},
+			NativeStringSliceFunction,
 		)
 
 	case sema.StringTypeContainsFunctionName:
@@ -421,14 +392,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeContainsFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Contains(invocation.InvocationContext, other)
-			},
+			NativeStringContainsFunction,
 		)
 
 	case sema.StringTypeIndexFunctionName:
@@ -436,14 +400,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.IndexOf(invocation.InvocationContext, other)
-			},
+			NativeStringIndexFunction,
 		)
 
 	case sema.StringTypeCountFunctionName:
@@ -451,18 +408,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Count(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					other,
-				)
-			},
+			NativeStringCountFunction,
 		)
 
 	case sema.StringTypeDecodeHexFunctionName:
@@ -470,12 +416,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeDecodeHexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				return v.DecodeHex(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-				)
-			},
+			NativeStringDecodeHexFunction,
 		)
 
 	case sema.StringTypeToLowerFunctionName:
@@ -483,9 +424,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeToLowerFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				return v.ToLower(invocation.InvocationContext)
-			},
+			NativeStringToLowerFunction,
 		)
 
 	case sema.StringTypeSplitFunctionName:
@@ -493,18 +432,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeSplitFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				separator, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Split(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					separator,
-				)
-			},
+			NativeStringSplitFunction,
 		)
 
 	case sema.StringTypeReplaceAllFunctionName:
@@ -512,24 +440,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeReplaceAllFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				original, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				replacement, ok := invocation.Arguments[1].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.ReplaceAll(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					original,
-					replacement,
-				)
-			},
+			NativeStringReplaceAllFunction,
 		)
 	}
 
@@ -540,21 +451,20 @@ func StringConcat(
 	context StringValueFunctionContext,
 	this *StringValue,
 	other Value,
-	locationRange LocationRange,
 ) Value {
 	otherArray, ok := other.(*StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return this.Concat(context, otherArray, locationRange)
+	return this.Concat(context, otherArray)
 }
 
-func (*StringValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (*StringValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Strings have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (*StringValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Strings have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -615,13 +525,13 @@ func (v *StringValue) ToLower(context StringValueFunctionContext) *StringValue {
 	)
 }
 
-func (v *StringValue) Split(context ArrayCreationContext, locationRange LocationRange, separator *StringValue) *ArrayValue {
+func (v *StringValue) Split(context ArrayCreationContext, separator *StringValue) *ArrayValue {
 
 	if len(separator.Str) == 0 {
-		return v.Explode(context, locationRange)
+		return v.Explode(context)
 	}
 
-	count := v.count(context, locationRange, separator) + 1
+	count := v.count(context, separator) + 1
 
 	partIndex := 0
 
@@ -659,13 +569,11 @@ func (v *StringValue) Split(context ArrayCreationContext, locationRange Location
 			part := remaining.slice(
 				0,
 				separatorCharacterIndex,
-				locationRange,
 			)
 
 			remaining = remaining.slice(
 				separatorCharacterIndex+separator.Length(),
 				remaining.Length(),
-				locationRange,
 			)
 
 			return part
@@ -674,9 +582,9 @@ func (v *StringValue) Split(context ArrayCreationContext, locationRange Location
 }
 
 // Explode returns a Cadence array of type [String], where each element is a single character of the string
-func (v *StringValue) Explode(context ArrayCreationContext, locationRange LocationRange) *ArrayValue {
+func (v *StringValue) Explode(context ArrayCreationContext) *ArrayValue {
 
-	iterator := v.Iterator(context, locationRange)
+	iterator := v.Iterator(context)
 
 	return NewArrayValueWithIterator(
 		context,
@@ -684,7 +592,7 @@ func (v *StringValue) Explode(context ArrayCreationContext, locationRange Locati
 		common.ZeroAddress,
 		uint64(v.Length()),
 		func() Value {
-			value := iterator.Next(context, locationRange)
+			value := iterator.Next(context)
 			if value == nil {
 				return nil
 			}
@@ -709,12 +617,11 @@ func (v *StringValue) Explode(context ArrayCreationContext, locationRange Locati
 
 func (v *StringValue) ReplaceAll(
 	context StringValueFunctionContext,
-	locationRange LocationRange,
 	original *StringValue,
 	replacement *StringValue,
 ) *StringValue {
 
-	count := v.count(context, locationRange, original)
+	count := v.count(context, original)
 	if count == 0 {
 		return v
 	}
@@ -763,7 +670,6 @@ func (v *StringValue) ReplaceAll(
 				remaining = remaining.slice(
 					originalCharacterIndex+original.Length(),
 					remaining.Length(),
-					locationRange,
 				)
 			}
 			b.WriteString(remaining.Str)
@@ -786,7 +692,6 @@ func (*StringValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v *StringValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -824,20 +729,18 @@ func (*StringValue) ChildStorables() []atree.Storable {
 var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteArrayType)
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
-func (v *StringValue) DecodeHex(context ArrayCreationContext, locationRange LocationRange) *ArrayValue {
+func (v *StringValue) DecodeHex(context ArrayCreationContext) *ArrayValue {
 	bs, err := hex.DecodeString(v.Str)
 	if err != nil {
 		if err, ok := err.(hex.InvalidByteError); ok {
 			panic(&InvalidHexByteError{
-				LocationRange: locationRange,
-				Byte:          byte(err),
+
+				Byte: byte(err),
 			})
 		}
 
 		if err == hex.ErrLength {
-			panic(&InvalidHexLengthError{
-				LocationRange: locationRange,
-			})
+			panic(&InvalidHexLengthError{})
 		}
 
 		panic(err)
@@ -871,13 +774,12 @@ func (v *StringValue) DecodeHex(context ArrayCreationContext, locationRange Loca
 
 func (v *StringValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v *StringValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueIterator {
+func (v *StringValue) Iterator(_ ValueStaticTypeContext) ValueIterator {
 	return &StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
@@ -888,11 +790,10 @@ func (v *StringValue) ForEach(
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
-	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(context, locationRange)
+	iterator := v.Iterator(context)
 	for {
-		value := iterator.Next(context, locationRange)
+		value := iterator.Next(context)
 		if value == nil {
 			return
 		}
@@ -900,7 +801,6 @@ func (v *StringValue) ForEach(
 		if transferElements {
 			value = value.Transfer(
 				context,
-				locationRange,
 				atree.Address{},
 				false,
 				nil,
@@ -1083,12 +983,12 @@ func (v *StringValue) Contains(context StringValueFunctionContext, other *String
 	return characterIndex >= 0
 }
 
-func (v *StringValue) Count(context StringValueFunctionContext, locationRange LocationRange, other *StringValue) IntValue {
-	index := v.count(context, locationRange, other)
+func (v *StringValue) Count(context StringValueFunctionContext, other *StringValue) IntValue {
+	index := v.count(context, other)
 	return NewIntValueFromInt64(context, int64(index))
 }
 
-func (v *StringValue) count(gauge common.ComputationGauge, locationRange LocationRange, other *StringValue) int {
+func (v *StringValue) count(gauge common.ComputationGauge, other *StringValue) int {
 	if other.Length() == 0 {
 		return 1 + v.Length()
 	}
@@ -1116,7 +1016,6 @@ func (v *StringValue) count(gauge common.ComputationGauge, locationRange Locatio
 		remaining = remaining.slice(
 			index+other.Length(),
 			remaining.Length(),
-			locationRange,
 		)
 	}
 }
@@ -1128,7 +1027,7 @@ type StringValueIterator struct {
 
 var _ ValueIterator = &StringValueIterator{}
 
-func (i *StringValueIterator) Next(_ ValueIteratorContext, _ LocationRange) Value {
+func (i *StringValueIterator) Next(_ ValueIteratorContext) Value {
 	if !i.HasNext() {
 		return nil
 	}
@@ -1150,63 +1049,82 @@ func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
 	return atree.ValueID{}, false
 }
 
-func stringFunctionEncodeHex(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+var NativeStringEncodeHexFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionEncodeHex(context, argument)
+	},
+)
 
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
+var NativeStringFromUtf8Function = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionFromUtf8(context, argument)
+	},
+)
 
-	return StringFunctionEncodeHex(
-		invocationContext,
-		argument,
-		locationRange,
-	)
-}
+var NativeStringFromCharactersFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionFromCharacters(context, argument)
+	},
+)
+
+var NativeStringJoinFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		stringArray := AssertValueOfType[*ArrayValue](args[0])
+		separator := AssertValueOfType[*StringValue](args[1])
+		return StringFunctionJoin(
+			context,
+			stringArray,
+			separator,
+		)
+	},
+)
 
 func StringFunctionEncodeHex(
 	invocationContext InvocationContext,
 	argument *ArrayValue,
-	locationRange LocationRange,
 ) Value {
 	memoryUsage := common.NewStringMemoryUsage(
-		safeMul(argument.Count(), 2, locationRange),
+		safeMul(argument.Count(), 2),
 	)
 	return NewStringValue(
 		invocationContext,
 		memoryUsage,
 		func() string {
-			bytes, _ := ByteArrayValueToByteSlice(invocationContext, argument, locationRange)
+			bytes, _ := ByteArrayValueToByteSlice(invocationContext, argument)
 			return hex.EncodeToString(bytes)
 		},
-	)
-}
-
-func stringFunctionFromUtf8(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
-
-	return StringFunctionFromUtf8(
-		invocationContext,
-		argument,
-		locationRange,
 	)
 }
 
 func StringFunctionFromUtf8(
 	invocationContext InvocationContext,
 	argument *ArrayValue,
-	locationRange LocationRange,
 ) Value {
 	// naively read the entire byte array before validating
-	buf, err := ByteArrayValueToByteSlice(invocationContext, argument, locationRange)
+	buf, err := ByteArrayValueToByteSlice(invocationContext, argument)
 
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -1226,26 +1144,9 @@ func StringFunctionFromUtf8(
 	)
 }
 
-func stringFunctionFromCharacters(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
-
-	return StringFunctionFromCharacters(
-		invocationContext,
-		argument,
-		locationRange,
-	)
-}
-
 func StringFunctionFromCharacters(
 	invocationContext InvocationContext,
 	argument *ArrayValue,
-	locationRange LocationRange,
 ) Value {
 	// NewStringMemoryUsage already accounts for empty string.
 	common.UseMemory(invocationContext, common.NewStringMemoryUsage(0))
@@ -1268,44 +1169,21 @@ func StringFunctionFromCharacters(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return NewUnmeteredStringValue(builder.String())
-}
-
-func stringFunctionJoin(invocation Invocation) Value {
-	stringArray, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-
-	separator, ok := invocation.Arguments[1].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return StringFunctionJoin(
-		invocationContext,
-		stringArray,
-		separator,
-		invocation.LocationRange,
-	)
 }
 
 func StringFunctionJoin(
 	context InvocationContext,
 	stringArray *ArrayValue,
 	separator *StringValue,
-	locationRange LocationRange,
 ) Value {
 	switch stringArray.Count() {
 	case 0:
 		return EmptyString
 	case 1:
-		return stringArray.Get(context, locationRange, 0)
+		return stringArray.Get(context, 0)
 	}
 
 	// NewStringMemoryUsage already accounts for empty string.
@@ -1355,7 +1233,6 @@ func StringFunctionJoin(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return NewUnmeteredStringValue(builder.String())
@@ -1364,11 +1241,9 @@ func StringFunctionJoin(
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
 // Type bound functions are static functions.
 var stringFunction = func() Value {
-	functionValue := NewUnmeteredStaticHostFunctionValue(
+	functionValue := NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		sema.StringFunctionType,
-		func(invocation Invocation) Value {
-			return EmptyString
-		},
+		NativeStringFunction,
 	)
 
 	addMember := func(name string, value Value) {
@@ -1382,35 +1257,162 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeEncodeHexFunctionType,
-			stringFunctionEncodeHex,
+			NativeStringEncodeHexFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromUtf8FunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeFromUtf8FunctionType,
-			stringFunctionFromUtf8,
+			NativeStringFromUtf8Function,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromCharactersFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeFromCharactersFunctionType,
-			stringFunctionFromCharacters,
+			NativeStringFromCharactersFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeJoinFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeJoinFunctionType,
-			stringFunctionJoin,
+			NativeStringJoinFunction,
 		),
 	)
 
 	return functionValue
 }()
+
+// Native string functions
+
+var NativeStringConcatFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		this := AssertValueOfType[*StringValue](receiver)
+		other := args[0]
+		return StringConcat(
+			context,
+			this,
+			other,
+		)
+	},
+)
+
+var NativeStringSliceFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		from := AssertValueOfType[IntValue](args[0])
+		to := AssertValueOfType[IntValue](args[1])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Slice(from, to)
+	},
+)
+
+var NativeStringContainsFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		other := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Contains(context, other)
+	},
+)
+
+var NativeStringIndexFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		other := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.IndexOf(context, other)
+	},
+)
+
+var NativeStringCountFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		other := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Count(context, other)
+	},
+)
+
+var NativeStringDecodeHexFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.DecodeHex(context)
+	},
+)
+
+var NativeStringToLowerFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.ToLower(context)
+	},
+)
+
+var NativeStringSplitFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		separator := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Split(context, separator)
+	},
+)
+
+var NativeStringReplaceAllFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		original := AssertValueOfType[*StringValue](args[0])
+		replacement := AssertValueOfType[*StringValue](args[1])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.ReplaceAll(
+			context,
+			original,
+			replacement,
+		)
+	},
+)

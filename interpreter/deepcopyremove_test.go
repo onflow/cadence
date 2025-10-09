@@ -59,14 +59,12 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	dictValueValue := interpreter.NewUnmeteredInt256ValueFromInt64(1)
 	dictValue := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		dictionaryStaticType,
 		dictValueKey, dictValueValue,
 	)
 
 	arrayValue := interpreter.NewArrayValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.VariableSizedStaticType{
 			Type: dictionaryStaticType,
 		},
@@ -78,12 +76,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	compositeValue := newTestCompositeValue(inter, address)
 
-	compositeValue.SetMember(
-		inter,
-		interpreter.EmptyLocationRange,
-		"value",
-		optionalValue,
-	)
+	compositeValue.SetMember(inter, "value", optionalValue)
 
 	compositeValue.DeepRemove(inter, true)
 

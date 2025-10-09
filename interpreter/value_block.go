@@ -37,7 +37,7 @@ var blockFieldNames = []string{
 var blockFieldFormatters = func(context ContainerMutationContext) map[string]func(common.MemoryGauge, Value, SeenReferences) string {
 	return map[string]func(common.MemoryGauge, Value, SeenReferences) string{
 		sema.BlockTypeIdFieldName: func(memoryGauge common.MemoryGauge, value Value, references SeenReferences) string {
-			bytes, err := ByteArrayValueToByteSlice(context, value, EmptyLocationRange)
+			bytes, err := ByteArrayValueToByteSlice(context, value)
 			if err != nil {
 				panic(err)
 			}

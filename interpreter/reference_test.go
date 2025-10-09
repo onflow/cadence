@@ -640,7 +640,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -659,7 +658,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", arrayRef)
@@ -749,7 +747,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		array1 := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -768,14 +765,12 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		// Resource array in account 0x02
 
 		array2 := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -794,7 +789,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", arrayRef1, arrayRef2)
@@ -849,7 +843,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -868,7 +861,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", arrayRef)
@@ -977,7 +969,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
@@ -996,7 +987,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err = inter.Invoke("setup", arrayRef)
@@ -2044,7 +2034,6 @@ func TestInterpretDereference(t *testing.T) {
 			) interpreter.Value {
 				return interpreter.NewArrayValue(
 					context,
-					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: innerStaticType,
 					},
@@ -2461,7 +2450,6 @@ func TestInterpretDereference(t *testing.T) {
 			) interpreter.Value {
 				return interpreter.NewArrayValue(
 					context,
-					interpreter.EmptyLocationRange,
 					&interpreter.ConstantSizedStaticType{
 						Type: innerStaticType,
 						Size: 3,
@@ -2859,7 +2847,6 @@ func TestInterpretDereference(t *testing.T) {
 				inter,
 				interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeInt,
 						ValueType: interpreter.PrimitiveStaticTypeString,
@@ -2893,7 +2880,6 @@ func TestInterpretDereference(t *testing.T) {
 				inter,
 				interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.DictionaryStaticType{
 						KeyType: interpreter.PrimitiveStaticTypeInt,
 						ValueType: &interpreter.VariableSizedStaticType{
@@ -2903,7 +2889,6 @@ func TestInterpretDereference(t *testing.T) {
 					interpreter.NewUnmeteredIntValueFromInt64(1),
 					interpreter.NewArrayValue(
 						inter,
-						interpreter.EmptyLocationRange,
 						&interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
@@ -2914,7 +2899,6 @@ func TestInterpretDereference(t *testing.T) {
 					interpreter.NewUnmeteredIntValueFromInt64(2),
 					interpreter.NewArrayValue(
 						inter,
-						interpreter.EmptyLocationRange,
 						&interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
@@ -3260,14 +3244,12 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 
 		expectedResult := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, sType),
 			},
 			common.ZeroAddress,
 			interpreter.NewCompositeValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				TestLocation,
 				"S",
 				common.CompositeKindStructure,

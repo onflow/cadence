@@ -781,7 +781,7 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
 	// Run validation scripts
 
-	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0, interpreter.EmptyLocationRange)
+	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0)
 
 	inter := NewTestInterpreter(tb)
 
@@ -810,9 +810,9 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
 		value := interpreter.NewUnmeteredUFix64Value(uint64(result.(cadence.UFix64)))
 
-		require.True(tb, bool(value.Less(inter, mintAmountValue, interpreter.EmptyLocationRange)))
+		require.True(tb, bool(value.Less(inter, mintAmountValue)))
 
-		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.UFix64Value)
+		sum = sum.Plus(inter, value).(interpreter.UFix64Value)
 	}
 
 	RequireValuesEqual(tb, nil, mintAmountValue, sum)
@@ -1157,17 +1157,13 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	contractValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		common.NewAddressLocation(nil, contractsAddress, contractName),
 		contractName,
 		common.CompositeKindContract,
 		[]interpreter.CompositeField{
 			{
-				Name: fungibleTokenTypeTotalSupplyFieldName,
-				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
-					4321,
-					interpreter.EmptyLocationRange,
-				),
+				Name:  fungibleTokenTypeTotalSupplyFieldName,
+				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(4321),
 			},
 		},
 		contractsAddress,
@@ -1189,7 +1185,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	vaultValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		common.NewAddressLocation(nil, contractsAddress, contractName),
 		fmt.Sprintf("%s.Vault", contractName),
 		common.CompositeKindResource,
@@ -1199,11 +1194,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 				Value: interpreter.NewUnmeteredUInt64Value(42),
 			},
 			{
-				Name: fungibleTokenVaultTypeBalanceFieldName,
-				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
-					1234,
-					interpreter.EmptyLocationRange,
-				),
+				Name:  fungibleTokenVaultTypeBalanceFieldName,
+				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(1234),
 			},
 		},
 		userAddress,

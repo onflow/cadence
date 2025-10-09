@@ -180,8 +180,11 @@ func TestInterpretAssert(t *testing.T) {
 	)
 	assert.Equal(t,
 		interpreter.Error{
-			Err: AssertionError{
+			Err: &AssertionError{
 				Message: "oops",
+				LocationRange: interpreter.LocationRange{
+					Location: TestLocation,
+				},
 			},
 			Location: TestLocation,
 		},
@@ -191,8 +194,11 @@ func TestInterpretAssert(t *testing.T) {
 	_, err = inter.Invoke("test", interpreter.FalseValue)
 	assert.Equal(t,
 		interpreter.Error{
-			Err: AssertionError{
+			Err: &AssertionError{
 				Message: "",
+				LocationRange: interpreter.LocationRange{
+					Location: TestLocation,
+				},
 			},
 			Location: TestLocation,
 		},
@@ -276,6 +282,9 @@ func TestInterpretPanic(t *testing.T) {
 		interpreter.Error{
 			Err: &PanicError{
 				Message: "oops",
+				LocationRange: interpreter.LocationRange{
+					Location: TestLocation,
+				},
 			},
 			Location: TestLocation,
 		},
