@@ -1469,6 +1469,11 @@ func generateErrors() []namedError {
 				Range:             placeholderRange,
 			},
 		},
+		{"sema.MissingTypeError",
+			&sema.MissingTypeError{
+				Range: placeholderRange,
+			},
+		},
 		{"sema.MultipleInterfaceDefaultImplementationsError",
 			&sema.MultipleInterfaceDefaultImplementationsError{
 				CompositeKindedType: placeholderCompositeKindedType,

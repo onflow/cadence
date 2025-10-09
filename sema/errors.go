@@ -6874,7 +6874,6 @@ type UnconvertibleTypeError struct {
 var _ SemanticError = &UnconvertibleTypeError{}
 var _ errors.UserError = &UnconvertibleTypeError{}
 var _ errors.SecondaryError = &UnconvertibleTypeError{}
-var _ errors.HasDocumentationLink = &UnconvertibleTypeError{}
 
 func (e *UnconvertibleTypeError) isSemanticError() {}
 
@@ -6885,11 +6884,7 @@ func (e *UnconvertibleTypeError) Error() string {
 }
 
 func (*UnconvertibleTypeError) SecondaryError() string {
-	return "use explicit type conversion or check if the type supports conversion"
-}
-
-func (*UnconvertibleTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/values-and-types"
+	return "report this to the Cadence team at https://github.com/onflow/cadence/issues/new"
 }
 
 // InvalidMappingAuthorizationError
@@ -6998,4 +6993,30 @@ func (*DuplicateImportError) SecondaryError() string {
 
 func (*DuplicateImportError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
+}
+
+// MissingTypeError
+
+type MissingTypeError struct {
+	ast.Range
+}
+
+var _ SemanticError = &MissingTypeError{}
+var _ errors.UserError = &MissingTypeError{}
+var _ errors.SecondaryError = &MissingTypeError{}
+
+func (e *MissingTypeError) isSemanticError() {}
+
+func (*MissingTypeError) IsUserError() {}
+
+func (e *MissingTypeError) Error() string {
+	return "missing type"
+}
+
+func (*MissingTypeError) SecondaryError() string {
+	return "a type is expected here; add the missing type"
+}
+
+func (*MissingTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system"
 }
