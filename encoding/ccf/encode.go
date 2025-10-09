@@ -1429,7 +1429,7 @@ func (e *Encoder) encodeTypeValue(typ cadence.Type, visited ccfTypeIDByCadenceTy
 		visited[cadenceTypeID] = ccfTypeID(len(visited))
 	}
 
-	simpleTypeID, ok := simpleTypeIDByType(typ)
+	simpleTypeID, ok := SimpleTypeIDByType(typ)
 	if ok {
 		return e.encodeSimpleTypeValue(simpleTypeID)
 	}
