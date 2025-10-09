@@ -210,7 +210,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return false
 		}
 
-		return false
+		return IsParameterizedSubType(subType, typedSuperType)
 
 	case *InterfaceType:
 		switch typedSubType := subType.(type) {
@@ -223,7 +223,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
 		}
 
-		return false
+		return IsParameterizedSubType(subType, typedSuperType)
 
 	case *IntersectionType:
 		switch typedSuperType.LegacyType {
@@ -295,7 +295,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return false
 		}
 
-		return false
+		return IsParameterizedSubType(subType, typedSuperType)
 
 	case *FunctionType:
 		switch typedSubType := subType.(type) {
@@ -324,7 +324,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 		}
 
-		return false
+		return IsParameterizedSubType(subType, typedSuperType)
 
 	}
 

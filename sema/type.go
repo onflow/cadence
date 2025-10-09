@@ -7972,14 +7972,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	// T<Us> <: V
 	// if T <: V
-
-	if typedSubType, ok := subType.(ParameterizedType); ok {
-		if baseType := typedSubType.BaseType(); baseType != nil {
-			return IsSubType(baseType, superType)
-		}
-	}
-
-	return false
+	return IsParameterizedSubType(subType, superType)
 }
 
 // UnwrapOptionalType returns the type if it is not an optional type,

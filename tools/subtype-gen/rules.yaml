@@ -230,6 +230,9 @@ rules:
                 source: sub
                 type: CompositeType
             - never
+        - isParameterizedSubtype:
+            sub: sub
+            super: super
 
   - super: InterfaceType
     predicate:
@@ -258,6 +261,9 @@ rules:
           - setContains:
               source: sub.EffectiveInterfaceConformanceSet
               target: super
+        - isParameterizedSubtype:
+            sub: sub
+            super: super
 
   - super: IntersectionType
     predicate:
@@ -349,7 +355,6 @@ rules:
           - equals:
               source: sub.LegacyType
               target: super.LegacyType
-
         - and:
           - mustType:
               source: sub
@@ -362,6 +367,9 @@ rules:
               source: sub
               target:
                 oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
+        - isParameterizedSubtype:
+            sub: sub
+            super: super
 
   - super: FunctionType
     predicate:
@@ -388,21 +396,25 @@ rules:
 
   - super: ParameterizedType
     predicate:
-      and:
-        - not:
-            equals:
-              source: super.BaseType
-              target: nil
-        - mustType:
-            source: sub
-            type: ParameterizedType
-        - not:
-            equals:
-              source: sub.BaseType
-              target: nil
-        - subtype:
-            super: super.BaseType
-            sub: sub.BaseType
-        - typeArgumentsEqual:
-            source: sub
-            target: super
+      or:
+        - and:
+          - not:
+              equals:
+                source: super.BaseType
+                target: nil
+          - mustType:
+              source: sub
+              type: ParameterizedType
+          - not:
+              equals:
+                source: sub.BaseType
+                target: nil
+          - subtype:
+              super: super.BaseType
+              sub: sub.BaseType
+          - typeArgumentsEqual:
+              source: sub
+              target: super
+        - isParameterizedSubtype:
+            sub: sub
+            super: super

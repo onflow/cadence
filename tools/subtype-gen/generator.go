@@ -717,6 +717,9 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case TypeArgumentsEqualPredicate:
 		return gen.typeAegumentsEqualCheck(p)
 
+	case IsParameterizedSubtypePredicate:
+		return gen.isParameterizedSubtype(p)
+
 	default:
 		panic(fmt.Errorf("unsupported predicate: %T", p))
 	}
@@ -1407,6 +1410,20 @@ func (gen *SubTypeCheckGenerator) typeAegumentsEqualCheck(p TypeArgumentsEqualPr
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("AreTypeArgumentsEqual"),
+			args...,
+		),
+	}
+}
+
+func (gen *SubTypeCheckGenerator) isParameterizedSubtype(p IsParameterizedSubtypePredicate) []dst.Node {
+	args := []dst.Expr{
+		gen.expressionIgnoreNegation(p.Sub),
+		gen.expressionIgnoreNegation(p.Super),
+	}
+
+	return []dst.Node{
+		gen.callExpression(
+			dst.NewIdent("IsParameterizedSubType"),
 			args...,
 		),
 	}

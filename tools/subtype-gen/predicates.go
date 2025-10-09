@@ -18,154 +18,203 @@
 
 package subtype_gen
 
-// Predicate represents different types of predicates in rules
+// Predicate represents different types of predicates in rules.
 type Predicate interface {
-	GetType() string
+	isPredicate()
 }
 
-// AlwaysPredicate represents an always-true condition
+// AlwaysPredicate represents an always-true condition.
 type AlwaysPredicate struct{}
 
-func (a AlwaysPredicate) GetType() string { return "always" }
+var _ Predicate = AlwaysPredicate{}
 
-// NeverPredicate represents a never-true condition
+func (a AlwaysPredicate) isPredicate() {}
+
+// NeverPredicate represents a never-true condition.
 type NeverPredicate struct{}
 
-func (a NeverPredicate) GetType() string { return "never" }
+var _ Predicate = NeverPredicate{}
 
-// IsResourcePredicate represents a resource type check
+func (a NeverPredicate) isPredicate() {}
+
+// IsResourcePredicate represents a resource type check.
 type IsResourcePredicate struct {
 	Expression Expression `yaml:"isResource"`
 }
 
-func (i IsResourcePredicate) GetType() string { return "isResource" }
+var _ Predicate = IsResourcePredicate{}
 
-// IsAttachmentPredicate represents an attachment type check
+func (i IsResourcePredicate) isPredicate() {}
+
+// IsAttachmentPredicate represents an attachment type check.
 type IsAttachmentPredicate struct {
 	Expression Expression `yaml:"isAttachment"`
 }
 
-func (i IsAttachmentPredicate) GetType() string { return "isAttachment" }
+var _ Predicate = IsAttachmentPredicate{}
 
-// IsHashableStructPredicate represents a hashable struct type check
+func (i IsAttachmentPredicate) isPredicate() {}
+
+// IsHashableStructPredicate represents a hashable struct type check.
 type IsHashableStructPredicate struct {
 	Expression Expression `yaml:"isHashableStruct"`
 }
 
-func (i IsHashableStructPredicate) GetType() string { return "isHashableStruct" }
+var _ Predicate = IsHashableStructPredicate{}
 
-// IsStorablePredicate represents a storable type check
+func (i IsHashableStructPredicate) isPredicate() {}
+
+// IsStorablePredicate represents a storable type check.
 type IsStorablePredicate struct {
 	Expression Expression `yaml:"isStorable"`
 }
 
-func (i IsStorablePredicate) GetType() string { return "isStorable" }
+var _ Predicate = IsStorablePredicate{}
 
-// EqualsPredicate represents an equality check
+func (i IsStorablePredicate) isPredicate() {}
+
+// EqualsPredicate represents an equality check.
 type EqualsPredicate struct {
 	Source Expression `yaml:"source"`
 	Target Expression `yaml:"target"`
 }
 
-func (e EqualsPredicate) GetType() string { return "equals" }
+var _ Predicate = EqualsPredicate{}
 
-// SubtypePredicate represents a subtype check
+func (e EqualsPredicate) isPredicate() {}
+
+// SubtypePredicate represents a subtype check.
 type SubtypePredicate struct {
 	Sub   Expression `yaml:"sub"`
 	Super Expression `yaml:"super"`
 }
 
-func (s SubtypePredicate) GetType() string { return "subtype" }
+var _ Predicate = SubtypePredicate{}
 
-// AndPredicate represents a logical AND predicate
+func (s SubtypePredicate) isPredicate() {}
+
+// AndPredicate represents a logical AND predicate.
 type AndPredicate struct {
 	Predicates []Predicate `yaml:"and"`
 }
 
-func (a AndPredicate) GetType() string { return "and" }
+var _ Predicate = AndPredicate{}
 
-// OrPredicate represents a logical OR predicate
+func (a AndPredicate) isPredicate() {}
+
+// OrPredicate represents a logical OR predicate.
 type OrPredicate struct {
 	Predicates []Predicate `yaml:"or"`
 }
 
-func (o OrPredicate) GetType() string { return "or" }
+var _ Predicate = OrPredicate{}
 
-// NotPredicate represents a logical NOT predicate
+func (o OrPredicate) isPredicate() {}
+
+// NotPredicate represents a logical NOT predicate.
 type NotPredicate struct {
 	Predicate Predicate `yaml:"not"`
 }
 
-func (n NotPredicate) GetType() string { return "not" }
+var _ Predicate = NotPredicate{}
 
-// PermitsPredicate represents a permits check
+func (n NotPredicate) isPredicate() {}
+
+// PermitsPredicate represents a permits check.
 type PermitsPredicate struct {
 	Sub   Expression `yaml:"sub"`
 	Super Expression `yaml:"super"`
 }
 
-func (p PermitsPredicate) GetType() string { return "permits" }
+var _ Predicate = PermitsPredicate{}
 
-// TypeParamsEqualPredicate represents a type parameters equality check
+func (p PermitsPredicate) isPredicate() {}
+
+// TypeParamsEqualPredicate represents a type parameters equality check.
 type TypeParamsEqualPredicate struct {
 	Source Expression `yaml:"source"`
 	Target Expression `yaml:"target"`
 }
 
-func (t TypeParamsEqualPredicate) GetType() string { return "typeParamsEqual" }
+var _ Predicate = TypeParamsEqualPredicate{}
 
-// ParamsContravariantPredicate represents a params contravariant check
+func (t TypeParamsEqualPredicate) isPredicate() {}
+
+// ParamsContravariantPredicate represents a params contravariant check.
 type ParamsContravariantPredicate struct {
 	Source Expression `yaml:"source"`
 	Target Expression `yaml:"target"`
 }
 
-func (p ParamsContravariantPredicate) GetType() string { return "paramsContravariant" }
+var _ Predicate = ParamsContravariantPredicate{}
 
-// ReturnCovariantPredicate represents a return covariant check
+func (p ParamsContravariantPredicate) isPredicate() {}
+
+// ReturnCovariantPredicate represents a return covariant check.
 type ReturnCovariantPredicate struct {
 	Source Expression `yaml:"source"`
 	Target Expression `yaml:"target"`
 }
 
-func (r ReturnCovariantPredicate) GetType() string { return "returnCovariant" }
+var _ Predicate = ReturnCovariantPredicate{}
 
-// ConstructorEqualPredicate represents a constructor equality check
+func (r ReturnCovariantPredicate) isPredicate() {}
+
+// ConstructorEqualPredicate represents a constructor equality check.
 type ConstructorEqualPredicate struct {
 	Source Expression `yaml:"source"`
 	Target Expression `yaml:"target"`
 }
 
-func (c ConstructorEqualPredicate) GetType() string { return "constructorEqual" }
+var _ Predicate = ConstructorEqualPredicate{}
 
-// TypeAssertionPredicate represents a type assertion
+func (c ConstructorEqualPredicate) isPredicate() {}
+
+// TypeAssertionPredicate represents a type assertion.
 type TypeAssertionPredicate struct {
 	Source Expression `yaml:"source"`
 	Type   Type       `yaml:"type"`
 }
 
-func (e TypeAssertionPredicate) GetType() string { return "mustType" }
+var _ Predicate = TypeAssertionPredicate{}
+
+func (e TypeAssertionPredicate) isPredicate() {}
 
 type SetContainsPredicate struct {
 	Source Expression `yaml:"source"`
 	Target Expression `yaml:"target"`
 }
 
-func (e SetContainsPredicate) GetType() string { return "setContains" }
+var _ Predicate = SetContainsPredicate{}
+
+func (e SetContainsPredicate) isPredicate() {}
 
 type IsIntersectionSubsetPredicate struct {
 	Sub   Expression `yaml:"sub"`
 	Super Expression `yaml:"super"`
 }
 
-func (p IsIntersectionSubsetPredicate) GetType() string { return "isIntersectionSubset" }
+var _ Predicate = IsIntersectionSubsetPredicate{}
+
+func (p IsIntersectionSubsetPredicate) isPredicate() {}
 
 type TypeArgumentsEqualPredicate struct {
 	Source Expression `yaml:"source"`
 	Target Expression `yaml:"target"`
 }
 
-func (c TypeArgumentsEqualPredicate) GetType() string { return "typeArgumentsEqual" }
+var _ Predicate = TypeArgumentsEqualPredicate{}
+
+func (c TypeArgumentsEqualPredicate) isPredicate() {}
+
+type IsParameterizedSubtypePredicate struct {
+	Sub   Expression `yaml:"sub"`
+	Super Expression `yaml:"super"`
+}
+
+var _ Predicate = IsParameterizedSubtypePredicate{}
+
+func (c IsParameterizedSubtypePredicate) isPredicate() {}
 
 // Predicates is a collection of predicates.
 type Predicates struct {

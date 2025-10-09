@@ -207,7 +207,7 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			return false
 		}
 
-		return false
+		return IsParameterizedSubType(subType, typedSuperType)
 
 	case *InterfaceStaticType:
 		switch typedSubType := subType.(type) {
@@ -220,7 +220,7 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			return typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
 		}
 
-		return false
+		return IsParameterizedSubType(subType, typedSuperType)
 
 	case *IntersectionStaticType:
 		switch typedSuperType.LegacyType {
@@ -292,7 +292,7 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			return false
 		}
 
-		return false
+		return IsParameterizedSubType(subType, typedSuperType)
 
 	case FunctionStaticType:
 		switch typedSubType := subType.(type) {

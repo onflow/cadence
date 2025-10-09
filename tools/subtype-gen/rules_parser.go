@@ -306,6 +306,16 @@ func parsePredicate(predicate any) (Predicate, error) {
 				Target: targetExpr,
 			}, nil
 
+		case "isParameterizedSubtype":
+			superType, subType, err := parseSuperAndSubExpressions(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return IsParameterizedSubtypePredicate{
+				Sub:   subType,
+				Super: superType,
+			}, nil
 		default:
 			return nil, fmt.Errorf("unsupported predicate: %s", key)
 		}
