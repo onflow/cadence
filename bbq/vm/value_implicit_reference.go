@@ -38,6 +38,15 @@ var implicitReferenceMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKi
 func NewImplicitReferenceValue(context interpreter.ReferenceCreationContext, value Value) ImplicitReferenceValue {
 	common.UseMemory(context, implicitReferenceMemoryUsage)
 
+	// If the value is already an EphemeralReferenceValue, we can use it directly.
+	// This is useful for attachments.
+	if selfRef, ok := value.(*interpreter.EphemeralReferenceValue); ok {
+		return ImplicitReferenceValue{
+			value:   value,
+			selfRef: selfRef,
+		}
+	}
+
 	semaType := interpreter.MustSemaTypeOfValue(value, context)
 
 	// Create an explicit reference to represent the implicit reference behavior of 'self' value.

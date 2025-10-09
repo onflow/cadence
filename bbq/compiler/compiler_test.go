@@ -1854,11 +1854,12 @@ func TestCompileMember(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 4)
+	require.Len(t, functions, 5)
 
 	const (
 		initFuncIndex = iota
-		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment)
+		_
 		_
 		_
 		getValueFuncIndex
@@ -2759,12 +2760,13 @@ func TestCompileMethodInvocation(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 5)
+	require.Len(t, functions, 6)
 
 	const (
 		testFuncIndex = iota
 		initFuncIndex
-		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment)
+		_
 		_
 		_
 		fFuncIndex
@@ -2856,12 +2858,13 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 4)
+	require.Len(t, functions, 5)
 
 	const (
 		testFuncIndex = iota
 		initFuncIndex
-		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		// Next three indexes are for builtin methods (i.e: getType, isInstance)
+		_
 		_
 		_
 	)
@@ -3195,15 +3198,17 @@ func TestCompileDefaultFunction(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 7)
+	require.Len(t, functions, 9)
 
 	const (
 		concreteTypeConstructorIndex uint16 = iota
-		// Next two indexes are for builtin methods (i.e: getType, isInstance) for concrete type
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for concrete type
+		_
 		_
 		_
 		concreteTypeFunctionIndex
-		// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for interface type
+		_
 		_
 		_
 		interfaceFunctionIndex
@@ -3251,7 +3256,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 			},
 
 			// return
-			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionReturnValue{},
 		},
 		concreteTypeTestFunc.Code,
@@ -3279,7 +3284,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 			// 42
 			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionTransferAndConvert{Type: 6},
 
 			// return
 			opcode.InstructionReturnValue{},
@@ -3574,16 +3579,18 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		program := comp.Compile()
 		functions := program.Functions
-		require.Len(t, functions, 6)
+		require.Len(t, functions, 8)
 
 		// Function indexes
 		const (
 			concreteTypeConstructorIndex uint16 = iota
-			// Next two indexes are for builtin methods (i.e: getType, isInstance) for concrete type
+			// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for concrete type
+			_
 			_
 			_
 			concreteTypeFunctionIndex
-			// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
+			// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for interface type
+			_
 			_
 			_
 			failPreConditionFunctionIndex
@@ -3659,7 +3666,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3672,7 +3679,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 42
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: const42Index},
-				opcode.InstructionTransferAndConvert{Type: 6},
+				opcode.InstructionTransferAndConvert{Type: 7},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
@@ -3701,7 +3708,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3750,16 +3757,18 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		program := comp.Compile()
 		functions := program.Functions
-		require.Len(t, functions, 6)
+		require.Len(t, functions, 8)
 
 		// Function indexes
 		const (
 			concreteTypeConstructorIndex uint16 = iota
-			// Next two indexes are for builtin methods (i.e: getType, isInstance) for concrete type
+			// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for concrete type
+			_
 			_
 			_
 			concreteTypeFunctionIndex
-			// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
+			// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for interface type
+			_
 			_
 			_
 			failPostConditionFunctionIndex
@@ -3820,7 +3829,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// var $before_0 = x
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionSetLocal{Local: beforeVarIndex},
 
 				// Function body
@@ -3830,7 +3839,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 42
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: const42Index},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
@@ -3859,7 +3868,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransferAndConvert{Type: 6},
+				opcode.InstructionTransferAndConvert{Type: 7},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -4021,12 +4030,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 
 		dProgram := ParseCheckAndCompile(t, dContract, dLocation, programs)
-		require.Len(t, dProgram.Functions, 8)
+		require.Len(t, dProgram.Functions, 9)
 
 		// Function indexes
 		const (
-			concreteTypeFunctionIndex     = 7
-			failPreConditionFunctionIndex = 11
+			concreteTypeFunctionIndex     = 8
+			failPreConditionFunctionIndex = 12
 		)
 
 		// `D.Vault` type's `getBalance` function.
@@ -4061,11 +4070,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 
 				// Load receiver `A.TestStruct()`
-				opcode.InstructionGetGlobal{Global: 9},
+				opcode.InstructionGetGlobal{Global: 10},
 				opcode.InstructionInvoke{ArgCount: 0},
 
 				// Get function value `A.TestStruct.test()`
-				opcode.InstructionGetMethod{Method: 10},
+				opcode.InstructionGetMethod{Method: 11},
 				opcode.InstructionInvoke{
 					ArgCount: 0,
 				},
@@ -4078,7 +4087,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: panicMessageIndex},
-				opcode.InstructionTransferAndConvert{Type: 9},
+				opcode.InstructionTransferAndConvert{Type: 10},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -4942,7 +4951,7 @@ func TestCompileTransaction(t *testing.T) {
 
 	program := comp.Compile()
 	functions := program.Functions
-	require.Len(t, functions, 6)
+	require.Len(t, functions, 7)
 
 	// constant indexes
 	const (
@@ -4992,7 +5001,8 @@ func TestCompileTransaction(t *testing.T) {
 	// Function indexes
 	const (
 		transactionInitFunctionIndex uint16 = iota
-		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment)
+		_
 		_
 		_
 		prepareFunctionIndex
@@ -5004,7 +5014,8 @@ func TestCompileTransaction(t *testing.T) {
 
 	const (
 		nGlobalIndex = iota
-		// Next 6 indexes are for functions, see above
+		// Next 7 indexes are for functions, see above
+		_
 		_
 		_
 		_
@@ -5068,7 +5079,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionGetConstant{Constant: oneConstIndex},
 			opcode.InstructionGetGlobal{Global: nGlobalIndex},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransferAndConvert{Type: 4},
+			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionSetField{
 				FieldName:    fieldNameConstIndex,
 				AccessedType: 1,
@@ -5129,7 +5140,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPreConditionGlobalIndex},
 			opcode.InstructionGetConstant{Constant: preErrorMessageConstIndex},
-			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
 
 			// Drop since it's a statement-expression
@@ -5141,7 +5152,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionGetConstant{Constant: threeConstIndex},
 			opcode.InstructionGetGlobal{Global: nGlobalIndex},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransferAndConvert{Type: 4},
+			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionSetField{
 				FieldName:    fieldNameConstIndex,
 				AccessedType: 1,
@@ -5168,7 +5179,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPostConditionGlobalIndex},
 			opcode.InstructionGetConstant{Constant: postErrorMessageConstIndex},
-			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
 
 			// Drop since it's a statement-expression
@@ -7143,7 +7154,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 4)
+		require.Len(t, functions, 5)
 
 		const (
 			fooIndex = iota
@@ -7222,7 +7233,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 5)
+		require.Len(t, functions, 6)
 
 		const (
 			fooIndex = iota
@@ -7254,7 +7265,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 				opcode.InstructionUnwrap{},
 
 				// Load `Foo.bar` function
-				opcode.InstructionGetMethod{Method: 4},
+				opcode.InstructionGetMethod{Method: 5},
 				opcode.InstructionInvoke{ArgCount: 0},
 				opcode.InstructionWrap{},
 				opcode.InstructionJump{Target: 16},
@@ -7300,7 +7311,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 4)
+		require.Len(t, functions, 5)
 
 		const (
 			xIndex = iota
@@ -7381,7 +7392,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 4)
+		require.Len(t, functions, 5)
 
 		const (
 			xIndex = iota
@@ -7492,7 +7503,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 7)
+		require.Len(t, functions, 9)
 
 		const (
 			xIndex = iota
@@ -7505,7 +7516,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 			[]opcode.Instruction{
 				// let x: @R <- create R()
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 4},
+				opcode.InstructionGetGlobal{Global: 5},
 				opcode.InstructionInvoke{ArgCount: 0},
 				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: xIndex},
@@ -7585,7 +7596,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 4)
+		require.Len(t, functions, 5)
 
 		const (
 			xIndex = iota
@@ -8313,7 +8324,7 @@ func TestCompileSwapMembers(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 4)
+	require.Len(t, functions, 5)
 
 	const (
 		sIndex = iota
@@ -9270,6 +9281,156 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 }
 
+func TestCompileAttachments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct S {}
+			attachment A for S {
+				let x: Int
+				init(x: Int) {
+					self.x = x
+				}
+				fun foo(): Int { return self.x }
+			}
+			fun test(): Int {
+				var s = S()
+				s = attach A(x: 3) to s
+				return s[A]?.foo()!
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 9)
+
+		// global functions
+		const (
+			sConstructorGlobalIndex = 1
+			aConstructorGlobalIndex = 5
+		)
+
+		// local variables
+		const (
+			sLocalIndex = iota
+			sTmpLocalIndex
+			sRefLocalIndex
+			attachmentLocalIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// STATEMENT: var s = S()
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: sConstructorGlobalIndex},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: sLocalIndex},
+
+				// STATEMENT: s = attach A(x:3) to s
+				opcode.InstructionStatement{},
+				// get s on stack
+				opcode.InstructionGetLocal{Local: sLocalIndex},
+				// store s in a separate local, put on stack
+				opcode.InstructionSetLocal{Local: sTmpLocalIndex},
+				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
+				// create a reference to s and store locally
+				opcode.InstructionNewRef{Type: 2, IsImplicit: false},
+				opcode.InstructionSetLocal{Local: sRefLocalIndex},
+				// get A constructor
+				opcode.InstructionGetGlobal{Global: aConstructorGlobalIndex},
+				// get 3
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 3},
+				// get s reference
+				opcode.InstructionGetLocal{Local: sRefLocalIndex},
+				// invoke A constructor with &s as arg, puts A on stack
+				opcode.InstructionInvoke{TypeArgs: []uint16{1}, ArgCount: 2},
+				// get s back on stack
+				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
+				// attachment operation, attach A to s-copy
+				opcode.InstructionSetTypeIndex{Type: 4},
+				// return value is s-copy
+				opcode.InstructionTransferAndConvert{Type: 1},
+				// finish assignment of s
+				opcode.InstructionSetLocal{Local: sLocalIndex},
+
+				// STATEMENT: return s[A]?.foo()!
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: sLocalIndex},
+				// access A on s: s[A], returns attachment reference as optional
+				opcode.InstructionGetTypeIndex{Type: 4},
+				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionJumpIfNil{Target: 32},
+				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionUnwrap{},
+				// call foo if not nil
+				opcode.InstructionGetMethod{Method: 8},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionWrap{},
+				opcode.InstructionJump{Target: 33},
+				opcode.InstructionNil{},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+
+		// local variables
+		const (
+			xLocalIndex = iota
+			baseLocalIndex
+			selfLocalIndex
+			returnLocalIndex
+		)
+
+		// `A` init
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// create attachment
+				opcode.InstructionNewComposite{Kind: 6, Type: 4},
+				// set returnLocalIndex to attachment
+				opcode.InstructionSetLocal{Local: returnLocalIndex},
+				// set base to be the attachment
+				opcode.InstructionGetLocal{Local: baseLocalIndex},
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
+				opcode.InstructionSetAttachmentBase{},
+				// get a reference to attachment
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
+				// set self to be the reference
+				opcode.InstructionNewRef{Type: 10, IsImplicit: false},
+				opcode.InstructionSetLocal{Local: selfLocalIndex},
+
+				// self.x = x
+				opcode.InstructionStatement{},
+				// get self
+				opcode.InstructionGetLocal{Local: selfLocalIndex},
+				// get x
+				opcode.InstructionGetLocal{Local: xLocalIndex},
+				opcode.InstructionTransferAndConvert{Type: 3},
+				// set self.x = x
+				opcode.InstructionSetField{FieldName: 1, AccessedType: 10},
+				// return created attachment (returnLocalIndex)
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[5].Code,
+		)
+	})
+}
+
 func TestCompileImportEnumCase(t *testing.T) {
 
 	t.Parallel()
@@ -9356,7 +9517,7 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 3)
+	require.Len(t, functions, 4)
 
 	const (
 		siIndex = iota
@@ -9507,7 +9668,7 @@ func TestCompileInjectedContract(t *testing.T) {
 
 	aTestFunction := functions[3]
 
-	require.Equal(t, aTestFunction.Name, "A.test")
+	require.Equal(t, aTestFunction.QualifiedName, "A.test")
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -9671,9 +9832,9 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	)
 
 	functions := barProgram.Functions
-	require.Len(t, functions, 7)
+	require.Len(t, functions, 8)
 
-	defaultDestroyEventConstructor := functions[4]
+	defaultDestroyEventConstructor := functions[5]
 	require.Equal(t, "Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.Name)
 
 	const (
@@ -9684,7 +9845,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// Create a `Bar.XYZ.ResourceDestroyed` event value.
-			opcode.InstructionNewComposite{Kind: 4, Type: 3},
+			opcode.InstructionNewComposite{Kind: 4, Type: 4},
 			opcode.InstructionSetLocal{Local: selfIndex},
 			opcode.InstructionStatement{},
 
@@ -9692,10 +9853,10 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 			//  `self.x = x`
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionTransferAndConvert{Type: 4},
+			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionSetField{
 				FieldName:    0,
-				AccessedType: 3,
+				AccessedType: 4,
 			},
 
 			// Return the constructed event value.
@@ -9734,13 +9895,13 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
 	functions = fooProgram.Functions
-	require.Len(t, functions, 11)
+	require.Len(t, functions, 12)
 
-	defaultDestroyEventEmittingFunction := functions[7]
-	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.Name)
+	defaultDestroyEventEmittingFunction := functions[8]
+	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.QualifiedName)
 
-	const inheritedEventConstructorIndex = 9
-	const selfDefinedABCEventConstructorIndex = 12
+	const inheritedEventConstructorIndex = 10
+	const selfDefinedABCEventConstructorIndex = 13
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -9761,7 +9922,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 			// Foo.ABC.ResourceDestroyed(self.x)
 			opcode.InstructionGetGlobal{Global: selfDefinedABCEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionGetField{FieldName: 2, AccessedType: 8},
+			opcode.InstructionGetField{FieldName: 2, AccessedType: 9},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
 
@@ -9990,7 +10151,7 @@ func TestCompileImportAlias(t *testing.T) {
 					Location:      nil,
 					Name:          "Bar.hello",
 					QualifiedName: "Bar.hello",
-					Index:         3,
+					Index:         4,
 				},
 				"Bar.isInstance": {
 					Location:      nil,
@@ -10002,13 +10163,19 @@ func TestCompileImportAlias(t *testing.T) {
 					Location:      nil,
 					Name:          "Bar.defaultHello",
 					QualifiedName: "Bar.defaultHello",
-					Index:         4,
+					Index:         5,
 				},
 				"A.0000000000000001.FooInterface.defaultHello": {
 					Location:      importLocation,
 					Name:          "FooInterface.defaultHello",
 					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
-					Index:         5,
+					Index:         6,
+				},
+				"Bar.forEachAttachment": {
+					Location:      nil,
+					Name:          "Bar.forEachAttachment",
+					QualifiedName: "Bar.forEachAttachment",
+					Index:         3,
 				},
 			},
 			comp.Globals,

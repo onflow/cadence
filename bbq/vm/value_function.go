@@ -325,6 +325,7 @@ func (v *NativeFunctionValue) GetMethod(_ interpreter.MemberAccessibleContext, _
 }
 
 func (v *NativeFunctionValue) IsNative() bool {
+	// Native functions are always native.
 	return true
 }
 
@@ -335,6 +336,7 @@ type BoundFunctionValue struct {
 
 	Method       FunctionValue
 	functionType *sema.FunctionType
+	Base         *interpreter.EphemeralReferenceValue
 }
 
 var boundFunctionMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindBoundFunctionVMValue)
@@ -343,6 +345,7 @@ func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
 	receiver interpreter.Value,
 	method FunctionValue,
+	base *interpreter.EphemeralReferenceValue,
 ) FunctionValue {
 
 	common.UseMemory(context, boundFunctionMemoryUsage)
@@ -353,10 +356,17 @@ func NewBoundFunctionValue(
 
 	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver)
 
+	if compositeValue, ok := receiver.(*interpreter.CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
+		// Force the receiver to be a reference if it is an attachment.
+		// This is because self in attachments are always references.
+		receiverIsRef = true
+	}
+
 	return &BoundFunctionValue{
 		Method:              method,
 		ReceiverReference:   receiverRef,
 		receiverIsReference: receiverIsRef,
+		Base:                base,
 	}
 }
 
@@ -491,15 +501,16 @@ func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStati
 		v.receiverIsReference,
 		context,
 	)
+	return maybeDereferenceReceiver(context, *receiver, v.IsNative())
+}
 
-	return maybeDereference(context, *receiver)
+func (v *BoundFunctionValue) IsNative() bool {
+	// BoundFunctionValue is a wrapper around a function value, which can be either native or compiled.
+	// So, we delegate the call to the underlying function value.
+	return v.Method.IsNative()
 }
 
 func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) ImplicitReferenceValue {
 	receiverValue := v.DereferencedReceiver(context)
 	return NewImplicitReferenceValue(context, receiverValue)
-}
-
-func (v *BoundFunctionValue) IsNative() bool {
-	return v.Method.IsNative()
 }

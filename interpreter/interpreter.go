@@ -1127,7 +1127,7 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 		}
 		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
 		access := supportedEntitlements.Access()
-		base, self = attachmentBaseAndSelfValues(
+		base, self = AttachmentBaseAndSelfValues(
 			declarationInterpreter,
 			access,
 			containingResourceComposite,
@@ -5385,7 +5385,7 @@ func (interpreter *Interpreter) reportInvokedFunctionReturn() {
 	onInvokedFunctionReturn(interpreter)
 }
 
-func getAccessOfMember(context ValueStaticTypeContext, self Value, identifier string) sema.Access {
+func GetAccessOfMember(context ValueStaticTypeContext, self Value, identifier string) sema.Access {
 	typ, err := ConvertStaticToSemaType(context, self.StaticType(context))
 	// some values (like transactions) do not have types that can be looked up this way. These types
 	// do not support entitled members, so their access is always unauthorized
@@ -5441,7 +5441,10 @@ var NativeIsInstanceFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		typeValue := AssertValueOfType[TypeValue](args[0])
+		// Retrieve the type from the end of arguments without using a fixed offset.
+		// This is because this function can be invoked on attachments
+		// which will have `base` as the first argument instead of the type.
+		typeValue := AssertValueOfType[TypeValue](args[len(args)-1])
 		return IsInstance(context, receiver, typeValue)
 	},
 )

@@ -131,10 +131,10 @@ const (
 	GetIndex
 	RemoveIndex
 	GetMethod
-	_
-	_
-	_
-	_
+	GetTypeIndex
+	SetTypeIndex
+	RemoveTypeIndex
+	SetAttachmentBase
 	_
 	_
 

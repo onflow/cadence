@@ -334,7 +334,7 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	boundFunction := NewBoundFunctionValue(context, receiver, functionValue)
+	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
 
 	return vm.validateAndInvokeExternally(boundFunction, arguments)
 }
@@ -484,6 +484,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 		context,
 		transaction,
 		prepareFunction,
+		nil,
 	)
 
 	_, err := vm.validateAndInvokeExternally(boundPrepareFunction, signers)
@@ -508,6 +509,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 		context,
 		transaction,
 		executeFunction,
+		nil,
 	)
 
 	_, err := vm.validateAndInvokeExternally(boundExecuteFunction, nil)
@@ -798,6 +800,14 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load the invoked value
 	functionValue := vm.pop()
 
+	// Add base to front of arguments if the function is bound and base is defined.
+	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
+		base := boundFunction.Base
+		if base != nil {
+			arguments = append([]Value{base}, arguments...)
+		}
+	}
+
 	invokeFunction(
 		vm,
 		functionValue,
@@ -815,10 +825,18 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
+	var base *interpreter.EphemeralReferenceValue
+	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
+			base, receiver = AttachmentBaseAndSelfValues(vm.context, refValue, method)
+		}
+	}
+
 	boundFunction := NewBoundFunctionValue(
 		vm.context,
 		receiver,
 		method,
+		base,
 	)
 
 	vm.push(boundFunction)
@@ -902,9 +920,16 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	return typeArguments
 }
 
-func maybeDereference(context interpreter.ValueStaticTypeContext, value Value) Value {
+func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value, isNative bool) Value {
 	switch typedValue := value.(type) {
 	case *interpreter.EphemeralReferenceValue:
+		// Do not dereference attachments, so that the receiver is a reference as expected.
+		// Exception: Native function receiver needs to be dereferenced to match interpreter.
+		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok && !isNative {
+			if val.Kind == common.CompositeKindAttachment {
+				return value
+			}
+		}
 		return typedValue.Value
 	case *interpreter.StorageReferenceValue:
 		referencedValue := typedValue.ReferencedValue(context, true)
@@ -1399,6 +1424,121 @@ func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 	vm.push(interpreter.BuildStringTemplate(valuesStr, expressions))
 }
 
+func opGetTypeIndex(vm *VM, ins opcode.InstructionGetTypeIndex) {
+	context := vm.context
+
+	target := vm.pop()
+
+	// Get attachment type
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
+	typ := context.SemaTypeFromStaticType(staticType)
+
+	compositeValue := target.(interpreter.TypeIndexableValue)
+	value := compositeValue.GetTypeKey(context, typ)
+	vm.push(value)
+}
+
+func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
+	context := vm.context
+
+	fieldValue, target := vm.pop2()
+
+	// Get attachment type
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
+	typ := context.SemaTypeFromStaticType(staticType)
+	attachment := fieldValue.(*interpreter.CompositeValue)
+
+	base := target.(*interpreter.CompositeValue)
+
+	if inIteration := context.inAttachmentIteration(base); inIteration {
+		panic(&interpreter.AttachmentIterationMutationError{
+			Value: base,
+		})
+	}
+
+	// transfer here instead of in compiler
+	// so we can check attachment iteration properly
+	base = base.Transfer(
+		context,
+		atree.Address{},
+		false,
+		nil,
+		nil,
+		true, // base is standalone,
+	).(*interpreter.CompositeValue)
+
+	base.SetTypeKey(
+		context,
+		typ,
+		fieldValue,
+	)
+	attachment.SetBaseValue(base)
+	vm.push(base)
+}
+
+func opSetAttachmentBase(vm *VM) {
+	base, attachment := vm.pop2()
+
+	attachmentComposite, ok := attachment.(*interpreter.CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	baseRef, ok := base.(*interpreter.EphemeralReferenceValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	baseComposite, ok := baseRef.Value.(*interpreter.CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	attachmentComposite.SetBaseValue(baseComposite)
+}
+
+func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
+	target := vm.pop()
+
+	// Get attachment type
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
+	typ := vm.context.SemaTypeFromStaticType(staticType)
+
+	base, ok := target.(*interpreter.CompositeValue)
+	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
+		panic(&interpreter.AttachmentIterationMutationError{
+			Value: base,
+		})
+	}
+	// We enforce this in the checker, but check defensively anyway
+	if !ok || !base.Kind.SupportsAttachments() {
+		panic(&interpreter.InvalidAttachmentOperationTargetError{
+			Value: target,
+		})
+	}
+
+	removed := base.RemoveTypeKey(vm.context, typ)
+	// Attachment not present on this base
+	if removed == nil {
+		return
+	}
+
+	attachment, ok := removed.(*interpreter.CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if attachment.IsResourceKinded(vm.context) {
+		// This attachment is no longer attached to its base,
+		// but the `base` variable is still available in the destructor
+		attachment.SetBaseValue(base)
+		attachment.Destroy(vm.context)
+	}
+}
+
 func (vm *VM) run() {
 
 	entryPointCallStackSize := len(vm.callstack)
@@ -1572,6 +1712,14 @@ func (vm *VM) run() {
 			opStatement(vm)
 		case opcode.InstructionTemplateString:
 			opStringTemplate(vm, ins)
+		case opcode.InstructionGetTypeIndex:
+			opGetTypeIndex(vm, ins)
+		case opcode.InstructionSetTypeIndex:
+			opSetTypeIndex(vm, ins)
+		case opcode.InstructionRemoveTypeIndex:
+			opRemoveTypeIndex(vm, ins)
+		case opcode.InstructionSetAttachmentBase:
+			opSetAttachmentBase(vm)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
