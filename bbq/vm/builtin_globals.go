@@ -326,22 +326,7 @@ var compositeBuiltInFunctions = []*NativeFunctionValue{
 				compositeType.GetCompositeKind(),
 			)
 		},
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.TypeArgumentsIterator,
-			receiver interpreter.Value,
-			args []interpreter.Value,
-		) interpreter.Value {
-			compositeValue := receiver.(*interpreter.CompositeValue)
-
-			functionValue, ok := args[0].(FunctionValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			compositeValue.ForEachAttachment(context, functionValue)
-			return interpreter.Void
-		},
+		interpreter.NativeForEachAttachmentFunction,
 	),
 }
 
