@@ -9403,12 +9403,12 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionNewComposite{Kind: 6, Type: 4},
 				// set returnLocalIndex to attachment
 				opcode.InstructionSetLocal{Local: returnLocalIndex},
-				// get a reference to attachment
-				opcode.InstructionGetLocal{Local: returnLocalIndex},
 				// set base to be the attachment
 				opcode.InstructionGetLocal{Local: baseLocalIndex},
 				opcode.InstructionGetLocal{Local: returnLocalIndex},
 				opcode.InstructionSetAttachmentBase{},
+				// get a reference to attachment
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
 				// set self to be the reference
 				opcode.InstructionNewRef{Type: 10, IsImplicit: false},
 				opcode.InstructionSetLocal{Local: selfLocalIndex},
