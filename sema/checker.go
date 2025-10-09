@@ -887,6 +887,9 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 		return checker.convertInstantiationType(t)
 
 	case nil:
+		checker.report(&MissingTypeError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
+		})
 		return InvalidType
 
 	default:

@@ -6994,3 +6994,29 @@ func (*DuplicateImportError) SecondaryError() string {
 func (*DuplicateImportError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
+
+// MissingTypeError
+
+type MissingTypeError struct {
+	ast.Range
+}
+
+var _ SemanticError = &MissingTypeError{}
+var _ errors.UserError = &MissingTypeError{}
+var _ errors.SecondaryError = &MissingTypeError{}
+
+func (e *MissingTypeError) isSemanticError() {}
+
+func (*MissingTypeError) IsUserError() {}
+
+func (e *MissingTypeError) Error() string {
+	return "missing type"
+}
+
+func (*MissingTypeError) SecondaryError() string {
+	return "a type is expected here; add the missing type"
+}
+
+func (*MissingTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system"
+}
