@@ -62,6 +62,13 @@ func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 	return g.meter[kind]
 }
 
+func ifTracing[T any](tracingValue, nonTracingValue T) T {
+	if interpreter.TracingEnabled {
+		return tracingValue
+	}
+	return nonTracingValue
+}
+
 func parseCheckAndPrepareWithMemoryMetering(
 	t *testing.T,
 	code string,
@@ -86,6 +93,38 @@ func ifCompile[T any](compileValue, interpretValue T) T {
 		return compileValue
 	}
 	return interpretValue
+}
+
+func newMeteredLogFunction(meter *testMemoryGauge, loggedString *string) stdlib.StandardLibraryValue {
+	return stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"log",
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.AnyStructTypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+		},
+		``,
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			// Reset gauge, to only capture the values metered during string conversion
+			meter.meter = make(map[common.MemoryKind]uint64)
+
+			*loggedString = args[0].MeteredString(
+				context,
+				interpreter.SeenReferences{},
+			)
+			return interpreter.Void
+		},
+	)
 }
 
 func TestInterpretArrayMetering(t *testing.T) {
@@ -709,7 +748,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](27, 9), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -785,7 +824,6 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err = inter.Invoke("main", account)
@@ -817,7 +855,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](9, 0), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -848,7 +886,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](11, 2), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
@@ -882,7 +920,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](13, 4), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -7081,7 +7119,6 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			authorization,
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err = inter.Invoke("main", account)
@@ -9240,7 +9277,6 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 		nil,
 		address,
 		authorization,
-		interpreter.EmptyLocationRange,
 	)
 
 	_, err = inter.Invoke("main", account)
@@ -9258,31 +9294,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"log",
-			&sema.FunctionType{
-				Parameters: []sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-			},
-			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				// Reset gauge, to only capture the values metered during string conversion
-				meter.meter = make(map[common.MemoryKind]uint64)
-
-				loggedString = invocation.Arguments[0].MeteredString(
-					invocation.InvocationContext,
-					interpreter.SeenReferences{},
-					invocation.LocationRange,
-				)
-				return interpreter.Void
-			},
-		)
+		logFunction := newMeteredLogFunction(meter, &loggedString)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
@@ -9607,31 +9619,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"log",
-			&sema.FunctionType{
-				Parameters: []sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-			},
-			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				// Reset gauge, to only capture the values metered during string conversion
-				meter.meter = make(map[common.MemoryKind]uint64)
-
-				loggedString = invocation.Arguments[0].MeteredString(
-					invocation.InvocationContext,
-					interpreter.SeenReferences{},
-					invocation.LocationRange,
-				)
-				return interpreter.Void
-			},
-		)
+		logFunction := newMeteredLogFunction(meter, &loggedString)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)

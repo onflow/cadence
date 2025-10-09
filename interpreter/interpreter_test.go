@@ -197,7 +197,6 @@ func TestInterpreterBoxing(t *testing.T) {
 					),
 					ConvertAndBox(
 						inter,
-						EmptyLocationRange,
 						TrueValue,
 						sema.BoolType,
 						&sema.OptionalType{Type: anyType},
@@ -215,7 +214,6 @@ func TestInterpreterBoxing(t *testing.T) {
 					),
 					ConvertAndBox(
 						inter,
-						EmptyLocationRange,
 						NewUnmeteredSomeValueNonCopying(TrueValue),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},
@@ -252,7 +250,6 @@ func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {
 
 	array := NewArrayValue(
 		inter,
-		EmptyLocationRange,
 		typ,
 		owner,
 		values...,

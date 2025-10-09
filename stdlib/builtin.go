@@ -174,7 +174,6 @@ func VMDefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []Stan
 
 type CompositeValueFunctionsHandler func(
 	inter *interpreter.Interpreter,
-	locationRange interpreter.LocationRange,
 	compositeValue *interpreter.CompositeValue,
 ) *interpreter.FunctionOrderedMap
 
@@ -186,7 +185,6 @@ func DefaultStandardLibraryCompositeValueFunctionHandlers(
 	return CompositeValueFunctionsHandlers{
 		sema.PublicKeyType.ID(): func(
 			inter *interpreter.Interpreter,
-			_ interpreter.LocationRange,
 			publicKeyValue *interpreter.CompositeValue,
 		) *interpreter.FunctionOrderedMap {
 			return PublicKeyFunctions(inter, publicKeyValue, handler)

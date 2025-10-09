@@ -21,16 +21,18 @@ GOPATH ?= $(HOME)/go
 # Ensure go bin path is in path (Especially for CI)
 PATH := $(PATH):$(GOPATH)/bin
 
-COVERPKGS := $(shell go list ./... | grep -v /cmd | grep -v /test | tr "\n" "," | sed 's/,*$$//')
-
-
 LINTERS :=
 ifneq ($(linters),)
 	LINTERS = -E $(linters)
 endif
 
 .PHONY: build
-build: build-tools ./cmd/parse/parse ./cmd/parse/parse.wasm ./cmd/check/check ./cmd/main/main
+build: build-commands build-tools
+
+# Commands
+
+.PHONY: build-commands
+build-commands: ./cmd/parse/parse ./cmd/parse/parse.wasm ./cmd/check/check ./cmd/main/main
 
 ./cmd/parse/parse:
 	go build -o $@ ./cmd/parse
@@ -44,54 +46,95 @@ build: build-tools ./cmd/parse/parse ./cmd/parse/parse.wasm ./cmd/check/check ./
 ./cmd/main/main:
 	go build -o $@ ./cmd/main
 
+# Tools
+
 .PHONY: build-tools
 build-tools: build-analysis build-get-contracts build-compatibility-check
+
+.PHONY: test-tools
+test-tools: test-analysis test-compatibility-check
+
+## Analysis tool
 
 .PHONY: build-analysis
 build-analysis:
 	(cd ./tools/analysis && go build .)
 
+.PHONY: test-analysis
+test-analysis:
+	(cd ./tools/analysis && go test .)
+
+## Get contracts tool
+
 .PHONY: build-get-contracts
 build-get-contracts:
 	(cd ./tools/get-contracts && go build .)
+
+## Compatibility check tool
 
 .PHONY: build-compatibility-check
 build-compatibility-check:
 	(cd ./tools/compatibility-check && go build .)
 
-.PHONY: ci
-ci: test-with-compiler test-with-tracing test-tools
-	# test all packages
-	go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
-	# run interpreter smoke tests. results from run above are reused, so no tests runs are duplicated
-	go test -count=5 ./interpreter/... -runSmokeTests=true -validateAtree=false
-	# remove coverage of empty functions from report
-	sed -i -e 's/^.* 0 0$$//' coverage.txt
+.PHONY: test-compatibility-check
+test-compatibility-check:
+	(cd ./tools/compatibility-check && go test .)
+
+# Testing
+
+TEST_PKGS := $(shell go list ./... | grep -Ev '/cmd|/analysis|/tools')
+COVER_PKGS := $(shell echo $(TEST_PKGS) | tr ' ' ',')
 
 .PHONY: test
-test: test-all-packages test-tools test-with-compiler
-
-.PHONY: test-all-packages
-test-all-packages:
-	(go test -parallel 8 ./...)
-
-.PHONY: test-tools
-test-tools:
-	(cd ./tools/analysis && go test -parallel 8 ./)
-	(cd ./tools/compatibility-check && go test -parallel 8 ./)
-	(cd ./tools/constructorcheck && go test -parallel 8 ./)
-	(cd ./tools/maprange && go test -parallel 8 ./)
-
-
-.PHONY: test-with-compiler
-test-with-compiler:
-	(go test -parallel 8 ./interpreter/... -compile=true)
-	(go test -parallel 8 ./runtime/... -compile=true)
+test: test-with-compiler test-with-tracing
+	go test $(TEST_PKGS)
 
 .PHONY: test-with-tracing
 test-with-tracing:
-	(go test -parallel 8 ./runtime/... -run TestInterpreterTracing -tags cadence_tracing)
-	(go test -parallel 8 ./runtime/... -run TestRuntimeTracing -tags cadence_tracing)
+	go test -tags cadence_tracing $(TEST_PKGS)
+
+.PHONY: ci
+ci: test-with-coverage test-with-compiler smoke-test
+
+.PHONY: ci-with-tracing
+ci-with-tracing: test-with-tracing test-with-compiler-and-tracing
+
+.PHONY: test-with-coverage
+test-with-coverage:
+	go test -coverprofile=coverage.txt -covermode=atomic -race -coverpkg $(COVER_PKGS) $(TEST_PKGS)
+	# remove coverage of empty functions from report
+	sed -i -e 's/^.* 0 0$$//' coverage.txt
+
+.PHONY: smoke-test
+smoke-test:
+	go test -count=5 ./interpreter/... -runSmokeTests=true -validateAtree=false
+
+.PHONY: test-with-compiler
+test-with-compiler:
+	go test ./interpreter/... ./runtime/... -compile=true
+
+.PHONY: test-with-compiler-and-tracing
+test-with-compiler-and-tracing:
+	go test -tags cadence_tracing ./interpreter/... ./runtime/... -compile=true
+
+# Benchmarking
+
+BENCH_REPS ?= 1
+BENCH_TIME ?= 3s
+BENCH_PKGS ?= $(shell go list ./... | grep -Ev '/old_parser')
+BENCH_PKGS_COMMON ?= $(shell go list ./... | grep -Ev '/old_parser|/encoding|/parser|/sema|/bbq')
+
+.PHONY: bench
+bench:
+	for i in {1..$(BENCH_REPS)}; do \
+		go test -run=^$$ -bench=. -benchmem -shuffle=on -benchtime=$(BENCH_TIME) $(BENCH_PKGS) ; \
+	done
+
+.PHONY: bench-common
+bench-common:
+	$(MAKE) bench BENCH_PKGS="$(BENCH_PKGS_COMMON)"
+
+# Linting
 
 .PHONY: lint
 lint: build-linter
@@ -104,46 +147,88 @@ fix-lint: build-linter
 .PHONY: build-linter
 build-linter: tools/golangci-lint/golangci-lint tools/maprange/maprange.so tools/unkeyed/unkeyed.so tools/constructorcheck/constructorcheck.so
 
+.PHONY: test-linter
+test-linter: test-maprange test-unkeyed test-constructorcheck
+
+.PHONY: clean-linter
+clean-linter: clean-maprange clean-unkeyed clean-constructorcheck
+	rm -f tools/golangci-lint/golangci-lint
+
+## Maprange linter
+
 tools/maprange/maprange.so:
 	(cd tools/maprange && $(MAKE))
+
+.PHONY: clean-maprange
+clean-maprange:
+	rm -f tools/maprange/maprange.so
+
+.PHONY: test-maprange
+test-maprange:
+	(cd ./tools/maprange && go test .)
+
+## Unkeyed linter
 
 tools/unkeyed/unkeyed.so:
 	(cd tools/unkeyed && $(MAKE))
 
+.PHONY: clean-unkeyed
+clean-unkeyed:
+	rm -f tools/unkeyed/unkeyed.so
+
+.PHONY: test-unkeyed
+test-unkeyed:
+	(cd ./tools/unkeyed && go test .)
+
+## Constructorcheck linter
+
 tools/constructorcheck/constructorcheck.so:
 	(cd tools/constructorcheck && $(MAKE))
+
+.PHONY: test-constructorcheck
+test-constructorcheck:
+	(cd ./tools/constructorcheck && go test .)
 
 tools/golangci-lint/golangci-lint:
 	(cd tools/golangci-lint && $(MAKE))
 
-.PHONY: clean-linter
-clean-linter:
-	rm -f tools/golangci-lint/golangci-lint \
-		tools/maprange/maprange.so \
-		tools/unkeyed/unkeyed.so \
-		tools/constructorcheck/constructorcheck.so
+.PHONY: clean-constructorcheck
+clean-constructorcheck:
+	rm -f tools/constructorcheck/constructorcheck.so
 
-.PHONY: check-headers
-check-headers:
-	@./check-headers.sh
+# Code generation
 
 .PHONY: generate
 generate:
 	go install golang.org/x/tools/cmd/stringer@v0.32.0
 	go generate -v ./...
 
+# Other checks and validation
+
+.PHONY: check-headers
+check-headers:
+	@./check-headers.sh
+
 .PHONY: check-tidy
 check-tidy: generate
 	go mod tidy
-	git diff --exit-code
 	git diff --exit-code
 
 .PHONY: validate-error-doc-links
 validate-error-doc-links:
 	go run ./cmd/errors validate-doc-links
 
+# Release (version bumping)
+
 .PHONY: release
 release:
 	@(VERSIONED_FILES="version.go \
 	npm-packages/cadence-parser/package.json" \
 	bash ./bump-version.sh $(bump))
+
+# Tools
+
+.PHONY: install-benchstat
+install-benchstat:
+	# Last version to support HTML output
+	go install golang.org/x/perf/cmd/benchstat@91a04616dc65ba76dbe9e5cf746b923b1402d303

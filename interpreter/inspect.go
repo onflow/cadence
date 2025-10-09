@@ -28,11 +28,10 @@ func (f valueInspector) WalkValue(_ ValueWalkContext, value Value) ValueWalker {
 	return nil
 }
 
-func InspectValue(context ValueWalkContext, value Value, f func(Value) bool, locationRange LocationRange) {
+func InspectValue(context ValueWalkContext, value Value, f func(Value) bool) {
 	WalkValue(
 		context,
 		valueInspector(f),
 		value,
-		locationRange,
 	)
 }

@@ -52,15 +52,27 @@ const (
 )
 
 type instruction struct {
-	Name        string
-	Description string
-	Operands    []operand
+	Name           string
+	Description    string
+	Operands       []operand
+	ControlEffects []controlEffect `yaml:"controlEffects"`
+}
+
+type controlEffect struct {
+	// only one of the following should be set
+	Jump   *string   `yaml:"jump,omitempty"`
+	Call   *struct{} `yaml:"call,omitempty"`
+	Return *string   `yaml:"return,omitempty"`
 }
 
 type operand struct {
 	Name        string
 	Description string
 	Type        operandType
+}
+
+func (ins instruction) hasControlEffects() bool {
+	return len(ins.ControlEffects) > 0
 }
 
 func main() {
@@ -103,6 +115,74 @@ func main() {
 	err = os.WriteFile(goPath, buffer.Bytes(), 0644)
 	if err != nil {
 		panic(err)
+	}
+
+	generatedOpcodePath := "opcode_flow.go"
+	// write opcode.isControlFlow to separate hardcoded file
+	buffer.Reset()
+	_, err = fmt.Fprintf(&buffer, headerFormat, yamlPath)
+	if err != nil {
+		panic(err)
+	}
+
+	writeGoFile(&buffer, []dst.Decl{generateIsControlFlowMethod(instructions)}, opcodePackagePath)
+
+	err = os.WriteFile(generatedOpcodePath, buffer.Bytes(), 0644)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func generateIsControlFlowMethod(instructions []instruction) *dst.FuncDecl {
+	var caseExprs []dst.Expr
+
+	for _, ins := range instructions {
+		if ins.hasControlEffects() {
+			caseExprs = append(caseExprs, dst.NewIdent(firstUpper(ins.Name)))
+		}
+	}
+
+	return &dst.FuncDecl{
+		Recv: &dst.FieldList{
+			List: []*dst.Field{
+				{
+					Names: []*dst.Ident{dst.NewIdent("i")},
+					Type:  dst.NewIdent("Opcode"),
+				},
+			},
+		},
+		Name: dst.NewIdent("IsControlFlow"),
+		Type: &dst.FuncType{
+			Results: &dst.FieldList{
+				List: []*dst.Field{{Type: dst.NewIdent("bool")}},
+			},
+		},
+		Body: &dst.BlockStmt{
+			List: []dst.Stmt{
+				&dst.SwitchStmt{
+					Tag: dst.NewIdent("i"),
+					Body: &dst.BlockStmt{
+						List: []dst.Stmt{
+							&dst.CaseClause{
+								List: caseExprs,
+								Body: []dst.Stmt{
+									&dst.ReturnStmt{
+										Results: []dst.Expr{dst.NewIdent("true")},
+									},
+								},
+							},
+							&dst.CaseClause{
+								Body: []dst.Stmt{
+									&dst.ReturnStmt{
+										Results: []dst.Expr{dst.NewIdent("false")},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

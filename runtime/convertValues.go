@@ -38,12 +38,10 @@ import (
 func ExportValue(
 	value interpreter.Value,
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 ) (cadence.Value, error) {
 	return exportValue(
 		value,
 		context,
-		locationRange,
 		seenReferences{},
 	)
 }
@@ -60,7 +58,6 @@ type seenReferences map[interpreter.ReferenceValue]struct{}
 func exportValue(
 	value interpreter.Value,
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	seenReferences seenReferences,
 ) (
 	cadence.Value,
@@ -73,7 +70,7 @@ func exportValue(
 	case interpreter.NilValue:
 		return cadence.NewMeteredOptional(context, nil), nil
 	case *interpreter.SomeValue:
-		return exportSomeValue(v, context, locationRange, seenReferences)
+		return exportSomeValue(v, context, seenReferences)
 	case interpreter.BoolValue:
 		return cadence.NewMeteredBool(context, bool(v)), nil
 	case *interpreter.StringValue:
@@ -96,7 +93,6 @@ func exportValue(
 		return exportArrayValue(
 			v,
 			context,
-			locationRange,
 			seenReferences,
 		)
 	case interpreter.IntValue:
@@ -199,21 +195,18 @@ func exportValue(
 		return exportCompositeValue(
 			v,
 			context,
-			locationRange,
 			seenReferences,
 		)
 	case *interpreter.SimpleCompositeValue:
 		return exportCompositeValue(
 			v,
 			context,
-			locationRange,
 			seenReferences,
 		)
 	case *interpreter.DictionaryValue:
 		return exportDictionaryValue(
 			v,
 			context,
-			locationRange,
 			seenReferences,
 		)
 	case interpreter.AddressValue:
@@ -241,7 +234,6 @@ func exportValue(
 		return exportValue(
 			v.Value,
 			context,
-			locationRange,
 			seenReferences,
 		)
 	case *interpreter.StorageReferenceValue:
@@ -252,7 +244,7 @@ func exportValue(
 		defer delete(seenReferences, v)
 		seenReferences[v] = struct{}{}
 
-		referencedValue := v.ReferencedValue(context, interpreter.EmptyLocationRange, true)
+		referencedValue := v.ReferencedValue(context, true)
 		if referencedValue == nil {
 			return nil, nil
 		}
@@ -260,7 +252,6 @@ func exportValue(
 		return exportValue(
 			*referencedValue,
 			context,
-			locationRange,
 			seenReferences,
 		)
 	case interpreter.FunctionValue:
@@ -276,7 +267,6 @@ func exportValue(
 func exportSomeValue(
 	v *interpreter.SomeValue,
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	seenReferences seenReferences,
 ) (
 	cadence.Optional,
@@ -291,7 +281,6 @@ func exportSomeValue(
 	value, err := exportValue(
 		innerValue,
 		context,
-		locationRange,
 		seenReferences,
 	)
 	if err != nil {
@@ -304,7 +293,6 @@ func exportSomeValue(
 func exportArrayValue(
 	v *interpreter.ArrayValue,
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	seenReferences seenReferences,
 ) (
 	cadence.Array,
@@ -324,7 +312,6 @@ func exportArrayValue(
 					exportedValue, err = exportValue(
 						value,
 						context,
-						locationRange,
 						seenReferences,
 					)
 					if err != nil {
@@ -337,7 +324,6 @@ func exportArrayValue(
 					return true
 				},
 				false,
-				locationRange,
 			)
 
 			if err != nil {
@@ -358,7 +344,6 @@ func exportArrayValue(
 func exportCompositeValue(
 	v interpreter.Value,
 	context interpreter.CompositeValueExportContext,
-	locationRange interpreter.LocationRange,
 	seenReferences seenReferences,
 ) (
 	cadence.Value,
@@ -383,7 +368,7 @@ func exportCompositeValue(
 		// Continue.
 	case *sema.InclusiveRangeType:
 		// InclusiveRange is stored as a CompositeValue but isn't a CompositeType.
-		return exportCompositeValueAsInclusiveRange(v, semaType, context, locationRange, seenReferences)
+		return exportCompositeValueAsInclusiveRange(v, semaType, context, seenReferences)
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -415,20 +400,19 @@ func exportCompositeValue(
 				computeField := v.ComputeField
 
 				if fieldValue == nil && computeField != nil {
-					fieldValue = computeField(fieldName, context, locationRange)
+					fieldValue = computeField(fieldName, context)
 				}
 
 			case *interpreter.CompositeValue:
 				fieldValue = v.GetField(context, fieldName)
 				if fieldValue == nil {
-					fieldValue = v.GetComputedField(context, locationRange, fieldName)
+					fieldValue = v.GetComputedField(context, fieldName)
 				}
 			}
 
 			exportedFieldValue, err := exportValue(
 				fieldValue,
 				context,
-				locationRange,
 				seenReferences,
 			)
 			if err != nil {
@@ -438,11 +422,10 @@ func exportCompositeValue(
 		}
 
 		if composite, ok := v.(*interpreter.CompositeValue); ok {
-			for _, attachment := range composite.GetAttachments(context, locationRange) {
+			for _, attachment := range composite.GetAttachments(context) {
 				exportedAttachmentValue, err := exportValue(
 					attachment,
 					context,
-					locationRange,
 					seenReferences,
 				)
 				if err != nil {
@@ -548,7 +531,6 @@ func exportCompositeValue(
 func exportDictionaryValue(
 	v *interpreter.DictionaryValue,
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	seenReferences seenReferences,
 ) (
 	cadence.Dictionary,
@@ -563,14 +545,12 @@ func exportDictionaryValue(
 
 			v.Iterate(
 				context,
-				locationRange,
 				func(key, value interpreter.Value) (resume bool) {
 
 					var convertedKey cadence.Value
 					convertedKey, err = exportValue(
 						key,
 						context,
-						locationRange,
 						seenReferences,
 					)
 					if err != nil {
@@ -581,7 +561,6 @@ func exportDictionaryValue(
 					convertedValue, err = exportValue(
 						value,
 						context,
-						locationRange,
 						seenReferences,
 					)
 					if err != nil {
@@ -620,7 +599,6 @@ func exportCompositeValueAsInclusiveRange(
 	v interpreter.Value,
 	inclusiveRangeType *sema.InclusiveRangeType,
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	seenReferences seenReferences,
 ) (
 	*cadence.InclusiveRange,
@@ -642,7 +620,6 @@ func exportCompositeValueAsInclusiveRange(
 		return exportValue(
 			fieldValue,
 			context,
-			locationRange,
 			seenReferences,
 		)
 	}
@@ -738,7 +715,6 @@ func exportPathCapabilityValue(
 func exportEvent(
 	context interpreter.ValueExportContext,
 	event exportableEvent,
-	locationRange interpreter.LocationRange,
 	seenReferences seenReferences,
 ) (
 	cadence.Event,
@@ -754,7 +730,6 @@ func exportEvent(
 				value, err := exportValue(
 					field,
 					context,
-					locationRange,
 					seenReferences,
 				)
 				if err != nil {
@@ -798,7 +773,6 @@ type ValueImportContext interface {
 
 type valueImporter struct {
 	context                ValueImportContext
-	locationRange          interpreter.LocationRange
 	standardLibraryHandler stdlib.StandardLibraryHandler
 	resolveLocation        sema.LocationHandlerFunc
 }
@@ -806,7 +780,6 @@ type valueImporter struct {
 // ImportValue converts a Cadence value to a runtime value.
 func ImportValue(
 	context ValueImportContext,
-	locationRange interpreter.LocationRange,
 	standardLibraryHandler stdlib.StandardLibraryHandler,
 	resolveLocation sema.LocationHandlerFunc,
 	value cadence.Value,
@@ -814,7 +787,6 @@ func ImportValue(
 ) (interpreter.Value, error) {
 	return valueImporter{
 		context:                context,
-		locationRange:          locationRange,
 		standardLibraryHandler: standardLibraryHandler,
 		resolveLocation:        resolveLocation,
 	}.importValue(value, expectedType)
@@ -1306,7 +1278,6 @@ func (i valueImporter) importArrayValue(
 	}
 
 	inter := i.context
-	locationRange := i.locationRange
 
 	for elementIndex, element := range v.Values {
 		value, err := i.importValue(
@@ -1346,7 +1317,6 @@ func (i valueImporter) importArrayValue(
 
 	return interpreter.NewArrayValue(
 		inter,
-		locationRange,
 		staticArrayType,
 		common.ZeroAddress,
 		values...,
@@ -1372,7 +1342,6 @@ func (i valueImporter) importDictionaryValue(
 	}
 
 	inter := i.context
-	locationRange := i.locationRange
 
 	for pairIndex, pair := range v.Pairs {
 		key, err := i.importValue(pair.Key, keyType)
@@ -1432,7 +1401,6 @@ func (i valueImporter) importDictionaryValue(
 
 	return interpreter.NewDictionaryValue(
 		inter,
-		locationRange,
 		dictionaryStaticType,
 		keysAndValues...,
 	), nil
@@ -1454,7 +1422,6 @@ func (i valueImporter) importInclusiveRangeValue(
 	}
 
 	inter := i.context
-	locationRange := i.locationRange
 
 	// start, end, and step. The order matters.
 	members := make([]interpreter.IntegerValue, 3)
@@ -1518,7 +1485,6 @@ func (i valueImporter) importInclusiveRangeValue(
 
 	return interpreter.NewInclusiveRangeValueWithStep(
 		inter,
-		locationRange,
 		startValue,
 		endValue,
 		stepValue,
@@ -1540,7 +1506,6 @@ func (i valueImporter) importCompositeValue(
 	var fields []interpreter.CompositeField
 
 	inter := i.context
-	locationRange := i.locationRange
 
 	// Resolve the location if it is not nil (not a built-in type)
 
@@ -1627,7 +1592,6 @@ func (i valueImporter) importCompositeValue(
 
 	return interpreter.NewCompositeValue(
 		inter,
-		locationRange,
 		location,
 		qualifiedIdentifier,
 		kind,
@@ -1704,7 +1668,6 @@ func (i valueImporter) importPublicKey(
 
 	return stdlib.NewPublicKeyFromFields(
 		i.context,
-		i.locationRange,
 		publicKeyValue,
 		signAlgoValue,
 		i.standardLibraryHandler,

@@ -73,7 +73,7 @@ func TestRuntimeTracingEnabled(t *testing.T) {
 	assert.Equal(t,
 		ifCompile(
 			[]string{
-				"function.transaction",
+				"invoke",
 				"atreeMap.new",
 				"dictionary.construct",
 				"atreeMap.newFromBatchData",
@@ -82,7 +82,7 @@ func TestRuntimeTracingEnabled(t *testing.T) {
 				"array.construct",
 				"atreeArray.newFromBatchData",
 				"array.transfer",
-				"function.transaction.prepare",
+				"invoke",
 			},
 			[]string{
 				"atreeMap.new",

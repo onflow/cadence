@@ -88,18 +88,21 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (f *InterpretedFunctionValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	// TODO: Meter sema.Type String conversion
 	typeString := f.Type.String()
 	common.UseMemory(context, common.NewRawStringMemoryUsage(8+len(typeString)))
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (f *InterpretedFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitInterpretedFunctionValue(context, f)
 }
 
-func (f *InterpretedFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (f *InterpretedFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -107,7 +110,7 @@ func (f *InterpretedFunctionValue) StaticType(context ValueStaticTypeContext) St
 	return ConvertSemaToStaticType(context, f.Type)
 }
 
-func (*InterpretedFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*InterpretedFunctionValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -127,7 +130,6 @@ func (f *InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 
 func (f *InterpretedFunctionValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -147,7 +149,6 @@ func (*InterpretedFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool
 
 func (f *InterpretedFunctionValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -186,7 +187,10 @@ func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *HostFunctionValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (f *HostFunctionValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(context, common.HostFunctionValueStringMemoryUsage)
 	return f.String()
 }
@@ -210,7 +214,6 @@ func NewUnmeteredStaticHostFunctionValue(
 
 // NewStaticHostFunctionValue constructs a host function that is not bounded to any value.
 // For constructing a function bound to a value (e.g: a member function), the output of this method
-// must be wrapped with a bound-function, or `NewBoundHostFunctionValue` method must be used.
 func NewStaticHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,
@@ -229,11 +232,11 @@ var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) IsValue() {}
 
-func (f *HostFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (f *HostFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitHostFunctionValue(context, f)
 }
 
-func (f *HostFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (f *HostFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -241,7 +244,7 @@ func (f *HostFunctionValue) StaticType(context ValueStaticTypeContext) StaticTyp
 	return ConvertSemaToStaticType(context, f.Type)
 }
 
-func (*HostFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*HostFunctionValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -259,7 +262,7 @@ func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
+func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue(context)
@@ -268,27 +271,22 @@ func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, _ Locatio
 	return nil
 }
 
-func (f *HostFunctionValue) GetMethod(
-	_ MemberAccessibleContext,
-	_ LocationRange,
-	_ string,
-) FunctionValue {
+func (f *HostFunctionValue) GetMethod(_ MemberAccessibleContext, _ string) FunctionValue {
 	return nil
 }
 
-func (*HostFunctionValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (*HostFunctionValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Host functions have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*HostFunctionValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (*HostFunctionValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (f *HostFunctionValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -308,7 +306,6 @@ func (*HostFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (f *HostFunctionValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -373,7 +370,12 @@ func ReceiverReference(context ReferenceCreationContext, receiver Value) (Refere
 		semaType := MustSemaTypeOfValue(receiver, context)
 		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
 		// it is not directly exposed to the users
-		selfRef = NewEphemeralReferenceValue(context, UnauthorizedAccess, receiver, semaType, EmptyLocationRange)
+		selfRef = NewEphemeralReferenceValue(
+			context,
+			UnauthorizedAccess,
+			receiver,
+			semaType,
+		)
 	}
 	return selfRef, selfIsRef
 }
@@ -411,15 +413,18 @@ func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) strin
 	return f.Function.RecursiveString(seenReferences)
 }
 
-func (f BoundFunctionValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
-	return f.Function.MeteredString(context, seenReferences, locationRange)
+func (f BoundFunctionValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
+	return f.Function.MeteredString(context, seenReferences)
 }
 
-func (f BoundFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (f BoundFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(context, f)
 }
 
-func (f BoundFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (f BoundFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -427,7 +432,7 @@ func (f BoundFunctionValue) StaticType(context ValueStaticTypeContext) StaticTyp
 	return f.Function.StaticType(context)
 }
 
-func (BoundFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (BoundFunctionValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -441,7 +446,6 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 
 	invocation.Base = f.Base
 
-	locationRange := invocation.LocationRange
 	inter := invocation.InvocationContext
 
 	// If the `self` is already a reference to begin with (e.g: attachments),
@@ -452,7 +456,6 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 		f.SelfReference,
 		f.selfIsReference,
 		inter,
-		locationRange,
 	)
 	invocation.Self = receiver
 
@@ -463,7 +466,6 @@ func GetReceiver(
 	receiverReference ReferenceValue,
 	receiverIsReference bool,
 	context ValueStaticTypeContext,
-	locationRange LocationRange,
 ) *Value {
 	var receiver *Value
 
@@ -471,23 +473,17 @@ func GetReceiver(
 		var receiverValue Value = receiverReference
 		receiver = &receiverValue
 	} else {
-		receiver = receiverReference.ReferencedValue(
-			context,
-			EmptyLocationRange,
-			true,
-		)
+		receiver = receiverReference.ReferencedValue(context, true)
 	}
 
 	if _, isStorageRef := receiverReference.(*StorageReferenceValue); isStorageRef {
 		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
 		// If nil, that means the value has been moved out of storage.
 		if receiver == nil {
-			panic(&ReferencedValueChangedError{
-				LocationRange: locationRange,
-			})
+			panic(&ReferencedValueChangedError{})
 		}
 	} else {
-		CheckInvalidatedResourceOrResourceReference(receiverReference, locationRange, context)
+		CheckInvalidatedResourceOrResourceReference(receiverReference, context)
 	}
 
 	return receiver
@@ -495,12 +491,10 @@ func GetReceiver(
 
 func (f BoundFunctionValue) ConformsToStaticType(
 	context ValueStaticTypeConformanceContext,
-	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToStaticType(
 		context,
-		locationRange,
 		results,
 	)
 }
@@ -519,7 +513,6 @@ func (BoundFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (f BoundFunctionValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -539,32 +532,6 @@ func (f BoundFunctionValue) Clone(_ ValueCloneContext) Value {
 
 func (BoundFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
-}
-
-// NewBoundHostFunctionValue creates a bound-function value for a host-function.
-func NewBoundHostFunctionValue[T Value](
-	context FunctionCreationContext,
-	self Value,
-	funcType *sema.FunctionType,
-	function func(self T, invocation Invocation) Value,
-) BoundFunctionValue {
-
-	wrappedFunction := func(invocation Invocation) Value {
-		self, ok := (*invocation.Self).(T)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		return function(self, invocation)
-	}
-
-	hostFunc := NewStaticHostFunctionValue(context, funcType, wrappedFunction)
-
-	return NewBoundFunctionValue(
-		context,
-		hostFunc,
-		&self,
-		nil,
-	)
 }
 
 // NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.

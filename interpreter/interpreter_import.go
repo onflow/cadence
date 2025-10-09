@@ -116,9 +116,6 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 				UnauthorizedAccess,
 				compositeValue,
 				semaType,
-				LocationRange{
-					Location: interpreter.Location,
-				},
 			)
 		}
 

@@ -325,11 +325,7 @@ func (d *Desugar) tempResultVariable(
 		// We just need the variable to be defined. Value is assigned later.
 		nil,
 
-		ast.NewTransfer(
-			d.memoryGauge,
-			ast.TransferOperationCopy, // TODO: determine based on return value (if resource, this should be a move)
-			pos,
-		),
+		nil,
 		pos,
 		nil,
 		nil,
@@ -357,8 +353,8 @@ func (d *Desugar) declareResultVariable(
 	pos := funcBlock.EndPosition(d.memoryGauge)
 	resultVarType, exist := d.elaboration.ResultVariableType(funcBlock)
 
-	// Declare 'result' variable as needed, and assign the temp-result to it.
-	// i.e: `let result = $_result`
+	// Declare 'result' variable and assign the temp-result to it, if needed.
+	// i.e: `let result $noTransfer $_result`
 	if !exist || resultVarType == sema.VoidType {
 		return modifiedStatements
 	}
@@ -389,9 +385,8 @@ func (d *Desugar) declareResultVariable(
 		returnValueExpr,
 		ast.NewTransfer(
 			d.memoryGauge,
-			// This is always a copy.
-			// Because result becomes a reference, if the return type is resource.
-			ast.TransferOperationCopy,
+			// NOTE: Use the internal "no transfer" operator, so no additional transfer occurs.
+			ast.TransferOperationInternalNoTransfer,
 			pos,
 		),
 		pos,

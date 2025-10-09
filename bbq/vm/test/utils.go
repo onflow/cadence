@@ -68,7 +68,6 @@ type testAccountHandler struct {
 	accountKeysCount func(address common.Address) (uint32, error)
 	emitEvent        func(
 		context interpreter.ValueExportContext,
-		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
 	)
@@ -218,7 +217,6 @@ func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint32, e
 
 func (t *testAccountHandler) EmitEvent(
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
 ) {
@@ -227,7 +225,6 @@ func (t *testAccountHandler) EmitEvent(
 	}
 	t.emitEvent(
 		context,
-		locationRange,
 		eventType,
 		values,
 	)
@@ -426,11 +423,13 @@ func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activation
 		vm.NewNativeFunctionValue(
 			stdlib.PanicFunctionName,
 			stdlib.PanicFunctionType,
-			func(context *vm.Context, _ []interpreter.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-				messageValue, ok := arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.Value,
+				arguments []interpreter.Value,
+			) vm.Value {
+				messageValue := interpreter.AssertValueOfType[*interpreter.StringValue](arguments[0])
 
 				panic(&stdlib.PanicError{
 					Message: messageValue.Str,
@@ -446,7 +445,7 @@ func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(logs *[]string) vm.Built
 
 	logFunction := stdlib.NewVMLogFunction(
 		stdlib.FunctionLogger(
-			func(message string, locationRange interpreter.LocationRange) error {
+			func(message string) error {
 				*logs = append(*logs, message)
 				return nil
 			},
@@ -546,7 +545,12 @@ func newConditionLogFunction(logs *[]string) stdlib.StandardLibraryValue {
 		conditionLogFunctionName,
 		conditionLogFunctionType,
 		"",
-		func(_ *vm.Context, _ []interpreter.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			arguments []interpreter.Value,
+		) interpreter.Value {
 			message := arguments[0].String()
 			*logs = append(*logs, message)
 			return interpreter.TrueValue

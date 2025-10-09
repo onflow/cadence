@@ -418,7 +418,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke("get", ref)
@@ -471,7 +470,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke("get", ref)
@@ -519,7 +517,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke(
@@ -570,7 +567,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke(

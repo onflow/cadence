@@ -284,8 +284,6 @@ func load() {
 
 	var slabNotFoundErrCount int
 
-	locationRange := interpreter.EmptyLocationRange
-
 	for storageKey, data := range storage { //nolint:maprange
 		_ = bar.Add(1)
 
@@ -301,7 +299,6 @@ func load() {
 			data,
 			inter,
 			slabStorage,
-			locationRange,
 		)
 
 		var slabNotFoundErr *atree.SlabNotFoundError
@@ -319,7 +316,6 @@ func loadStorageKey(
 	data []byte,
 	inter *interpreter.Interpreter,
 	slabStorage *slabStorage,
-	locationRange interpreter.LocationRange,
 ) (err error) {
 
 	defer func() {
@@ -411,7 +407,6 @@ func loadStorageKey(
 
 					return true
 				},
-				locationRange,
 			)
 
 			if *checkValuesFlag {

@@ -176,6 +176,8 @@ func TestPrintInstruction(t *testing.T) {
 		"JumpIfNil target:258":   {byte(JumpIfNil), 1, 2},
 
 		"TransferAndConvert type:258": {byte(TransferAndConvert), 1, 2},
+		"Transfer":                    {byte(Transfer)},
+		"Convert type:258":            {byte(Convert), 1, 2},
 
 		"NewSimpleComposite kind:CompositeKind(258) type:772":          {byte(NewSimpleComposite), 1, 2, 3, 4},
 		"NewComposite kind:CompositeKind(258) type:772":                {byte(NewComposite), 1, 2, 3, 4},
@@ -253,7 +255,6 @@ func TestPrintInstruction(t *testing.T) {
 		"IteratorEnd":     {byte(IteratorEnd)},
 
 		"EmitEvent type:258 argCount:772": {byte(EmitEvent), 1, 2, 3, 4},
-		"Transfer":                        {byte(Transfer)},
 		"Loop":                            {byte(Loop)},
 		"Statement":                       {byte(Statement)},
 		"TemplateString exprSize:258":     {byte(TemplateString), 1, 2, 3, 4},

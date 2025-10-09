@@ -1872,7 +1872,7 @@ func TestCompileMember(t *testing.T) {
 		const valueIndex = iota
 
 		// localsOffset is the offset of the first local variable.
-		// Initializers do not have a $result variable
+		// Initializers do not have a $_result variable
 		const localsOffset = parameterCount
 
 		const (
@@ -3400,8 +3400,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Would be equivalent to:
 		// fun test(x: Int): Int {
+		//    let $_result
 		//    $_result = 5
-		//    let result = $_result
+		//    let result $noTransfer $_result
 		//    if !(x > 0) {
 		//       $failPostCondition("")
 		//    }
@@ -3414,15 +3415,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -3448,7 +3450,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -3484,8 +3485,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Would be equivalent to:
 		// fun test(x: @AnyResource?): @AnyResource? {
-		//    var $_result <-x
-		//    let result = &$_result
+		//    var $_result <- x
+		//    let result $noTransfer &$_result
 		//    if !(result != nil) {
 		//        $failPostCondition("")
 		//    }
@@ -3495,20 +3496,22 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
 
-				// $_result = x
+				// $_result <- x
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransfer{},
+				opcode.InstructionConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 7},
 
 				// Get the reference and assign to `result`.
-				// i.e: `let result = &$_result`
+				// i.e: `let result $noTransfer &$_result`
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionNewRef{Type: 1},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionNewRef{Type: 2},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -3520,13 +3523,13 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 22},
+				opcode.InstructionJumpIfFalse{Target: 23},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
-				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3534,7 +3537,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -3636,7 +3638,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//        }
 		//
 		//        var $_result = 42
-		//        let result = $_result
+		//        let result $noTransfer $_result
 		//
 		//        if !(y > 0) {
 		//            $failPostCondition("")
@@ -3677,15 +3679,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 42
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: const42Index},
+				opcode.InstructionTransferAndConvert{Type: 7},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 17},
+				opcode.InstructionJump{Target: 18},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 7},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Inherited post condition
@@ -3713,7 +3716,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 7},
 				opcode.InstructionReturnValue{},
 			},
 			concreteTypeTestFunc.Code,
@@ -3811,7 +3813,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//    fun test(x: Int): Int {
 		//        var $before_0 = x
 		//        var $_result = 42
-		//        let result = $_result
+		//        let result $noTransfer $_result
 		//        if !($before_0 < x) {
 		//            $failPostCondition("")
 		//        }
@@ -3837,15 +3839,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 42
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: const42Index},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 9},
+				opcode.InstructionJump{Target: 10},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 6},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Inherited post condition
@@ -3873,7 +3876,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionReturnValue{},
 			},
 			concreteTypeTestFunc.Code,
@@ -4178,7 +4180,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//     }
 		//
 		//     $_result = 5
-		//     let result = $_result
+		//     let result $noTransfer $_result
 		//
 		//     // Post-conditions
 		//     if !(exp_0 < x) {
@@ -4224,15 +4226,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 21},
+				opcode.InstructionJump{Target: 22},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Post conditions
@@ -4257,7 +4260,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -5213,6 +5215,8 @@ func TestCompileForce(t *testing.T) {
 
 	t.Run("optional", func(t *testing.T) {
 
+		t.Parallel()
+
 		checker, err := ParseAndCheck(t, `
             fun test(x: Int?): Int {
                 return x!
@@ -5246,6 +5250,7 @@ func TestCompileForce(t *testing.T) {
 	})
 
 	t.Run("non-optional", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
             fun test(x: Int): Int {
@@ -5347,6 +5352,42 @@ func TestCompileReturns(t *testing.T) {
 		)
 	})
 
+	t.Run("resource value return", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(x: @AnyResource): @AnyResource {
+                return <- x
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const xIndex = 0
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return <- x
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: xIndex},
+				// There should be only one transfer
+				opcode.InstructionTransfer{},
+				opcode.InstructionConvert{Type: 1},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+
 	t.Run("empty return with post condition", func(t *testing.T) {
 		t.Parallel()
 
@@ -5434,15 +5475,16 @@ func TestCompileReturns(t *testing.T) {
 				// $_result = a
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: aIndex},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// Jump to post conditions
-				opcode.InstructionJump{Target: 9},
+				opcode.InstructionJump{Target: 10},
 
-				// result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Post condition
@@ -5459,8 +5501,9 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionDrop{},
 
 				// return $_result
+				// Note: no transfer/convert, since the value is already
+				// transferred/converted when assigning to `$_result`.
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
@@ -7374,7 +7417,8 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionTransfer{},
+				opcode.InstructionConvert{Type: 1},
 				opcode.InstructionNewDictionary{Type: 2, Size: 1, IsResource: true},
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
@@ -7691,7 +7735,7 @@ func TestCompileEnum(t *testing.T) {
 		const rawValueIndex = iota
 
 		// localsOffset is the offset of the first local variable.
-		// Initializers do not have a $result variable
+		// Initializers do not have a $_result variable
 		const localsOffset = parameterCount
 
 		const (
@@ -8898,7 +8942,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		// Would be equivalent to:
 		// fun test(x: Int): Int {
 		//    $_result = 5
-		//    let result = $_result
+		//    let result $noTransfer $_result
 		//    if !(x > 0) {
 		//        $failPostCondition("")
 		//    }
@@ -8911,15 +8955,16 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -8945,7 +8990,6 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionReturnValue{},
 			},
 			functions[anonymousFunctionIndex].Code,
@@ -9088,7 +9132,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		// Would be equivalent to:
 		// fun test(x: Int): Int {
 		//    $_result = 5
-		//    let result = $_result
+		//    let result $noTransfer $_result
 		//    if !(x > 0) {
 		//        $failPostCondition("")
 		//    }
@@ -9101,15 +9145,16 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -9135,7 +9180,6 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionReturnValue{},
 			},
 			functions[anonymousFunctionIndex].Code,
@@ -9900,7 +9944,12 @@ func TestCompileImportAlias(t *testing.T) {
 
 	t.Run("simple alias", func(t *testing.T) {
 
-		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "")
+		t.Parallel()
+
+		importLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "Foo",
+		}
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -9932,7 +9981,9 @@ func TestCompileImportAlias(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					LocationHandler: SingleIdentifierLocationResolver(t),
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, importedChecker.Location, location)
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil
@@ -9947,6 +9998,7 @@ func TestCompileImportAlias(t *testing.T) {
 			checker.Location,
 		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, importLocation, location)
 			return importedProgram
 		}
 
@@ -9997,7 +10049,12 @@ func TestCompileImportAlias(t *testing.T) {
 
 	t.Run("interface", func(t *testing.T) {
 
-		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "")
+		t.Parallel()
+
+		importLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "FooInterface",
+		}
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -10033,7 +10090,9 @@ func TestCompileImportAlias(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					LocationHandler: SingleIdentifierLocationResolver(t),
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, importedChecker.Location, location)
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil

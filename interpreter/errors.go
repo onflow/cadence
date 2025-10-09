@@ -88,7 +88,7 @@ func (e Error) ChildErrors() []error {
 
 		errs = append(
 			errs,
-			&StackTraceError{
+			StackTraceError{
 				LocationRange: locationRange,
 			},
 		)
@@ -105,20 +105,16 @@ type StackTraceError struct {
 	LocationRange
 }
 
-func (e *StackTraceError) Error() string {
+func (StackTraceError) Error() string {
 	return ""
 }
 
-func (e *StackTraceError) Prefix() string {
+func (StackTraceError) Prefix() string {
 	return ""
 }
 
-func (e *StackTraceError) ImportLocation() common.Location {
+func (e StackTraceError) ImportLocation() common.Location {
 	return e.Location
-}
-
-func (e *StackTraceError) SetLocationRange(locationRange LocationRange) {
-	e.LocationRange = locationRange
 }
 
 // PositionedError wraps an un-positioned error with position info.
@@ -885,47 +881,65 @@ func (e *ContainerMutationError) SetLocationRange(locationRange LocationRange) {
 // NonStorableValueError
 type NonStorableValueError struct {
 	Value Value
+	LocationRange
 }
 
-var _ errors.UserError = NonStorableValueError{}
+var _ errors.UserError = &NonStorableValueError{}
+var _ HasLocationRange = &NonStorableValueError{}
 
-func (NonStorableValueError) IsUserError() {}
+func (*NonStorableValueError) IsUserError() {}
 
-func (e NonStorableValueError) Error() string {
+func (e *NonStorableValueError) Error() string {
 	return "cannot store non-storable value"
+}
+
+func (e *NonStorableValueError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // NonStorableStaticTypeError
 type NonStorableStaticTypeError struct {
 	Type sema.Type
+	LocationRange
 }
 
-var _ errors.UserError = NonStorableStaticTypeError{}
+var _ errors.UserError = &NonStorableStaticTypeError{}
+var _ HasLocationRange = &NonStorableStaticTypeError{}
 
-func (NonStorableStaticTypeError) IsUserError() {}
+func (*NonStorableStaticTypeError) IsUserError() {}
 
-func (e NonStorableStaticTypeError) Error() string {
+func (e *NonStorableStaticTypeError) Error() string {
 	return fmt.Sprintf(
 		"cannot store non-storable type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// InterfaceMissingLocation is reported during interface lookup,
+func (e *NonStorableStaticTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// InterfaceMissingLocationError is reported during interface lookup,
 // if an interface is looked up without a location
 type InterfaceMissingLocationError struct {
 	QualifiedIdentifier string
+	LocationRange
 }
 
-var _ errors.UserError = InterfaceMissingLocationError{}
+var _ errors.UserError = &InterfaceMissingLocationError{}
+var _ HasLocationRange = &InterfaceMissingLocationError{}
 
-func (InterfaceMissingLocationError) IsUserError() {}
+func (*InterfaceMissingLocationError) IsUserError() {}
 
-func (e InterfaceMissingLocationError) Error() string {
+func (e *InterfaceMissingLocationError) Error() string {
 	return fmt.Sprintf(
 		"tried to look up interface %s without a location",
 		e.QualifiedIdentifier,
 	)
+}
+
+func (e *InterfaceMissingLocationError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // InvalidOperandsError
@@ -988,15 +1002,21 @@ func (e *InvalidPublicKeyError) SetLocationRange(locationRange LocationRange) {
 
 // NonTransferableValueError
 type NonTransferableValueError struct {
+	LocationRange
 	Value Value
 }
 
 var _ errors.UserError = &NonTransferableValueError{}
+var _ HasLocationRange = &NonTransferableValueError{}
 
 func (*NonTransferableValueError) IsUserError() {}
 
 func (e *NonTransferableValueError) Error() string {
 	return "cannot transfer non-transferable value"
+}
+
+func (e *NonTransferableValueError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // DuplicateKeyInResourceDictionaryError
@@ -1396,17 +1416,24 @@ func (e *ResourceLossError) SetLocationRange(locationRange LocationRange) {
 
 // InvalidCapabilityIDError
 
-type InvalidCapabilityIDError struct{}
+type InvalidCapabilityIDError struct {
+	LocationRange
+}
 
-var _ errors.InternalError = InvalidCapabilityIDError{}
+var _ errors.InternalError = &InvalidCapabilityIDError{}
+var _ HasLocationRange = &InvalidCapabilityIDError{}
 
-func (InvalidCapabilityIDError) IsInternalError() {}
+func (*InvalidCapabilityIDError) IsInternalError() {}
 
-func (e InvalidCapabilityIDError) Error() string {
+func (e *InvalidCapabilityIDError) Error() string {
 	return fmt.Sprintf(
 		"%s capability created with invalid ID",
 		errors.InternalErrorMessagePrefix,
 	)
+}
+
+func (e *InvalidCapabilityIDError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ReferencedValueChangedError

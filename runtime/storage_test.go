@@ -3188,7 +3188,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	arrayValue := secondValue.(*interpreter.ArrayValue)
 
-	element := arrayValue.Get(inter, interpreter.EmptyLocationRange, 2)
+	element := arrayValue.Get(inter, 2)
 	RequireValuesEqual(
 		t,
 		inter,
@@ -3201,7 +3201,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	rValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("r"))
 	require.IsType(t, &interpreter.CompositeValue{}, rValue)
 
-	_, err = ExportValue(rValue, inter, interpreter.EmptyLocationRange)
+	_, err = ExportValue(rValue, inter)
 	require.NoError(t, err)
 }
 
@@ -6833,7 +6833,7 @@ func TestRuntimeStorage2(t *testing.T) {
 					v := domainStorageMap.ReadValue(nil, k)
 					ev, ok := v.(interpreter.EquatableValue)
 					require.True(t, ok)
-					require.True(t, ev.Equal(inter, interpreter.EmptyLocationRange, expectedV))
+					require.True(t, ev.Equal(inter, expectedV))
 				}
 			}
 
@@ -7113,7 +7113,7 @@ func TestRuntimeStorage2(t *testing.T) {
 				for k, expectedValue := range domainValues {
 					v := domainStorageMap.ReadValue(nil, k)
 					ev := v.(interpreter.EquatableValue)
-					require.True(t, ev.Equal(inter, interpreter.EmptyLocationRange, expectedValue))
+					require.True(t, ev.Equal(inter, expectedValue))
 				}
 			}
 
@@ -7941,7 +7941,7 @@ func checkAccountStorageMapData(
 
 			ev, ok := value.(interpreter.EquatableValue)
 			require.True(tb, ok)
-			require.True(tb, ev.Equal(inter, interpreter.EmptyLocationRange, expectedValue))
+			require.True(tb, ev.Equal(inter, expectedValue))
 		}
 	}
 

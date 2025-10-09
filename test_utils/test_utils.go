@@ -122,7 +122,6 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 	interpreterConfig := &interpreter.Config{
 		OnEventEmitted: func(
 			_ interpreter.ValueExportContext,
-			_ interpreter.LocationRange,
 			eventType *sema.CompositeType,
 			eventFields []interpreter.Value,
 		) error {
@@ -172,8 +171,13 @@ func ParseCheckAndPrepareWithLogs(
 		"log",
 		stdlib.LogFunctionType,
 		"",
-		func(invocation interpreter.Invocation) interpreter.Value {
-			value := invocation.Arguments[0]
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			value := args[0]
 			logs = append(logs, value.String())
 			return interpreter.Void
 		},
@@ -345,7 +349,12 @@ func ParseCheckAndPrepareWithOptions(
 						value = vm.NewNativeFunctionValue(
 							name,
 							functionValue.Type,
-							func(context *vm.Context, _ []interpreter.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+							func(
+								context interpreter.NativeFunctionContext,
+								_ interpreter.TypeArgumentsIterator,
+								_ interpreter.Value,
+								arguments []interpreter.Value,
+							) interpreter.Value {
 
 								var argumentTypes []sema.Type
 								if len(arguments) > 0 {
@@ -364,7 +373,7 @@ func ParseCheckAndPrepareWithOptions(
 									argumentTypes,
 									// TODO: provide these if they are needed for tests.
 									nil,
-									interpreter.EmptyLocationRange,
+									interpreter.LocationRange{},
 								)
 								return functionValue.Function(invocation)
 							},

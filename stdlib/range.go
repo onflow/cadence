@@ -22,10 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -116,79 +113,42 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-var InterpreterInclusiveRangeConstructor = NewInterpreterStandardLibraryStaticFunction(
-	"InclusiveRange",
-	inclusiveRangeConstructorFunctionType,
-	inclusiveRangeConstructorFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		invocationContext := invocation.InvocationContext
-		locationRange := invocation.LocationRange
-
-		start, ok := invocation.Arguments[0].(interpreter.IntegerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		end, ok := invocation.Arguments[1].(interpreter.IntegerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
+var NativeInclusiveRangeConstructorFunction = interpreter.NativeFunction(
+	func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		start := interpreter.AssertValueOfType[interpreter.IntegerValue](args[0])
+		end := interpreter.AssertValueOfType[interpreter.IntegerValue](args[1])
 		var step interpreter.IntegerValue
-		if len(invocation.Arguments) > 2 {
-			step, ok = invocation.Arguments[2].(interpreter.IntegerValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		if len(args) > 2 {
+			step = interpreter.AssertValueOfType[interpreter.IntegerValue](args[2])
 		}
 
-		return NewInclusiveRange(
-			invocationContext,
-			locationRange,
-			start,
-			end,
-			step,
-		)
+		return NewInclusiveRange(context, start, end, step)
 	},
 )
 
-var VMInclusiveRangeConstructor = NewVMStandardLibraryStaticFunction(
+var InterpreterInclusiveRangeConstructor = NewNativeStandardLibraryStaticFunction(
 	"InclusiveRange",
 	inclusiveRangeConstructorFunctionType,
 	inclusiveRangeConstructorFunctionDocString,
-	func(context *vm.Context, typeArguments []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+	NativeInclusiveRangeConstructorFunction,
+	false,
+)
 
-		start, ok := arguments[0].(interpreter.IntegerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		end, ok := arguments[1].(interpreter.IntegerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		var step interpreter.IntegerValue
-		if len(arguments) > 2 {
-			step, ok = arguments[2].(interpreter.IntegerValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-		}
-
-		return NewInclusiveRange(
-			context,
-			interpreter.EmptyLocationRange,
-			start,
-			end,
-			step,
-		)
-	},
+var VMInclusiveRangeConstructor = NewNativeStandardLibraryStaticFunction(
+	"InclusiveRange",
+	inclusiveRangeConstructorFunctionType,
+	inclusiveRangeConstructorFunctionDocString,
+	NativeInclusiveRangeConstructorFunction,
+	true,
 )
 
 func NewInclusiveRange(
 	invocationContext interpreter.InvocationContext,
-	locationRange interpreter.LocationRange,
 	start interpreter.IntegerValue,
 	end interpreter.IntegerValue,
 	step interpreter.IntegerValue,
@@ -198,7 +158,6 @@ func NewInclusiveRange(
 	endStaticType := end.StaticType(invocationContext)
 	if !startStaticType.Equal(endStaticType) {
 		panic(&interpreter.InclusiveRangeConstructionError{
-			LocationRange: locationRange,
 			Message: fmt.Sprintf(
 				"start and end are of different types. start: %s and end: %s",
 				startStaticType,
@@ -218,7 +177,6 @@ func NewInclusiveRange(
 		stepStaticType := step.StaticType(invocationContext)
 		if stepStaticType != startStaticType {
 			panic(&interpreter.InclusiveRangeConstructionError{
-				LocationRange: locationRange,
 				Message: fmt.Sprintf(
 					"step must be of the same type as start and end. start/end: %s and step: %s",
 					startStaticType,
@@ -229,7 +187,6 @@ func NewInclusiveRange(
 
 		return interpreter.NewInclusiveRangeValueWithStep(
 			invocationContext,
-			locationRange,
 			start,
 			end,
 			step,
@@ -240,7 +197,6 @@ func NewInclusiveRange(
 
 	return interpreter.NewInclusiveRangeValue(
 		invocationContext,
-		locationRange,
 		start,
 		end,
 		rangeStaticType,

@@ -50,7 +50,6 @@ type Environment interface {
 		storage *Storage,
 		memoryGauge common.MemoryGauge,
 		computationGauge common.ComputationGauge,
-		coverageReport *CoverageReport,
 	)
 	ParseAndCheckProgram(
 		code []byte,
@@ -68,8 +67,7 @@ type Environment interface {
 // that gets reconfigured by InterpreterEnvironment.Configure
 type interpreterEnvironmentReconfigured struct {
 	Interface
-	storage        *Storage
-	coverageReport *CoverageReport
+	storage *Storage
 }
 
 type InterpreterEnvironment struct {
@@ -188,14 +186,12 @@ func (e *InterpreterEnvironment) Configure(
 	storage *Storage,
 	memoryGauge common.MemoryGauge,
 	computationGauge common.ComputationGauge,
-	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
 	e.InterpreterConfig.Storage = storage
 	e.InterpreterConfig.MemoryGauge = memoryGauge
 	e.InterpreterConfig.ComputationGauge = computationGauge
-	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
 
 	e.CheckingEnvironment.configure(
@@ -255,13 +251,11 @@ func (e *InterpreterEnvironment) CommitStorageTemporarily(context interpreter.Va
 
 func (e *InterpreterEnvironment) EmitEvent(
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
 ) {
 	EmitEventFields(
 		context,
-		locationRange,
 		eventType,
 		values,
 		e.Interface.EmitEvent,
@@ -326,19 +320,20 @@ func (e *InterpreterEnvironment) newInterpreter(
 }
 
 func (e *InterpreterEnvironment) newOnStatementHandler() interpreter.OnStatementFunc {
-	if e.config.CoverageReport == nil {
+	coverageReport := e.config.CoverageReport
+	if coverageReport == nil {
 		return nil
 	}
 
 	return func(inter *interpreter.Interpreter, statement ast.Statement) {
 		location := inter.Location
-		if !e.coverageReport.IsLocationInspected(location) {
+		if !coverageReport.IsLocationInspected(location) {
 			program := inter.Program.Program
-			e.coverageReport.InspectProgram(location, program)
+			coverageReport.InspectProgram(location, program)
 		}
 
 		line := statement.StartPosition().Line
-		e.coverageReport.AddLineHit(location, line)
+		coverageReport.AddLineHit(location, line)
 	}
 }
 
@@ -354,7 +349,6 @@ func (e *InterpreterEnvironment) newContractValueHandler() interpreter.ContractV
 		inter *interpreter.Interpreter,
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-		invocationRange ast.Range,
 	) interpreter.ContractValue {
 
 		// If the contract is the deployed contract, instantiate it using
@@ -377,7 +371,6 @@ func (e *InterpreterEnvironment) newContractValueHandler() interpreter.ContractV
 					invocation.ArgumentTypes,
 					invocation.ParameterTypes,
 					invocation.ContractType,
-					invocationRange,
 				)
 				if err != nil {
 					panic(err)
@@ -445,7 +438,6 @@ func (e *InterpreterEnvironment) newCompositeTypeHandler() interpreter.Composite
 func (e *InterpreterEnvironment) newCompositeValueFunctionsHandler() interpreter.CompositeValueFunctionsHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
 		compositeValue *interpreter.CompositeValue,
 	) *interpreter.FunctionOrderedMap {
 
@@ -454,7 +446,7 @@ func (e *InterpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 			return nil
 		}
 
-		return handler(inter, locationRange, compositeValue)
+		return handler(inter, compositeValue)
 	}
 }
 
@@ -572,6 +564,6 @@ func (e *InterpreterEnvironment) getBaseActivation(
 	return
 }
 
-func (e *InterpreterEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
+func (e *InterpreterEnvironment) ProgramLog(message string) error {
 	return e.Interface.ProgramLog(message)
 }
