@@ -227,7 +227,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 					prettier.Text(")"),
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Text("{"),
 			prettier.Indent{
 				Doc: prettier.Concat{
@@ -239,7 +239,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 								prettier.HardLine{},
 								prettier.Concat{
 									prettier.Text("let"),
-									prettier.Text(" "),
+									prettier.Space,
 									prettier.Group{
 										Doc: prettier.Concat{
 											prettier.Text("f"),
@@ -280,7 +280,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 									},
 								},
 							},
-							prettier.Text(" "),
+							prettier.Space,
 							prettier.Text("{}"),
 						},
 					},
@@ -290,7 +290,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("pre"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -319,7 +319,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 						prettier.HardLine{},
 						prettier.Concat{
 							prettier.Text("execute"),
-							prettier.Text(" "),
+							prettier.Space,
 							prettier.Concat{
 								prettier.Text("{"),
 								prettier.Indent{
@@ -339,7 +339,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("post"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{

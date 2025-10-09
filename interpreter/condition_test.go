@@ -670,7 +670,6 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 						OnEventEmitted: func(
 							_ interpreter.ValueExportContext,
-							_ interpreter.LocationRange,
 							eventType *sema.CompositeType,
 							eventFields []interpreter.Value,
 						) error {
@@ -862,7 +861,6 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					var events []testEvent
 					onEmitEvents := func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						eventFields []interpreter.Value,
 					) error {

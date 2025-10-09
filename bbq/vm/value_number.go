@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -28,21 +27,15 @@ import (
 // members
 
 func init() {
-	for _, pathType := range sema.AllNumberTypes {
-		typeName := commons.TypeQualifier(pathType)
+	for _, numType := range sema.AllNumberTypes {
+		typeName := commons.TypeQualifier(numType)
 
 		registerBuiltinTypeBoundFunction(
 			typeName,
 			NewNativeFunctionValue(
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
-				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-					number := receiver.(interpreter.NumberValue)
-					return interpreter.NumberValueToString(
-						context,
-						number,
-					)
-				},
+				interpreter.NativeNumberToStringFunction,
 			),
 		)
 
@@ -51,13 +44,7 @@ func init() {
 			NewNativeFunctionValue(
 				sema.ToBigEndianBytesFunctionName,
 				sema.ToBigEndianBytesFunctionType,
-				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-					number := receiver.(interpreter.NumberValue)
-					return interpreter.ByteSliceToByteArrayValue(
-						context,
-						number.ToBigEndianBytes(),
-					)
-				},
+				interpreter.NativeNumberToBigEndianBytesFunction,
 			),
 		)
 	}

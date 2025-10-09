@@ -31,6 +31,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -283,8 +284,6 @@ func load() {
 
 	var slabNotFoundErrCount int
 
-	locationRange := interpreter.EmptyLocationRange
-
 	for storageKey, data := range storage { //nolint:maprange
 		_ = bar.Add(1)
 
@@ -300,7 +299,6 @@ func load() {
 			data,
 			inter,
 			slabStorage,
-			locationRange,
 		)
 
 		var slabNotFoundErr *atree.SlabNotFoundError
@@ -318,7 +316,6 @@ func loadStorageKey(
 	data []byte,
 	inter *interpreter.Interpreter,
 	slabStorage *slabStorage,
-	locationRange interpreter.LocationRange,
 ) (err error) {
 
 	defer func() {
@@ -410,7 +407,6 @@ func loadStorageKey(
 
 					return true
 				},
-				locationRange,
 			)
 
 			if *checkValuesFlag {
@@ -564,14 +560,7 @@ payloadLoop:
 
 		if filter {
 			owner := common.MustBytesToAddress([]byte(storageKey[0]))
-			var found bool
-			for _, address := range addresses {
-				if owner == address {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !slices.Contains(addresses, owner) {
 				continue payloadLoop
 			}
 		}

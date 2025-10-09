@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // LocationCoverage records coverage information for a location.
@@ -565,4 +566,17 @@ func (r *CoverageReport) sourcePathForLocation(location common.Location) string 
 	}
 
 	return locationSource
+}
+
+func (r *CoverageReport) newOnStatementHandler() interpreter.OnStatementFunc {
+	return func(inter *interpreter.Interpreter, statement ast.Statement) {
+		location := inter.Location
+		if !r.IsLocationInspected(location) {
+			program := inter.Program.Program
+			r.InspectProgram(location, program)
+		}
+
+		line := statement.StartPosition().Line
+		r.AddLineHit(location, line)
+	}
 }

@@ -148,7 +148,7 @@ var membersEndDoc prettier.Doc = prettier.Text("}")
 var membersEmptyDoc prettier.Doc = prettier.Text("{}")
 
 func (m *Members) Doc() prettier.Doc {
-	if len(m.declarations) == 0 {
+	if m == nil || len(m.declarations) == 0 {
 		return membersEmptyDoc
 	}
 

@@ -2364,7 +2364,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2443,7 +2442,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *tes
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2520,7 +2518,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *tes
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2593,7 +2590,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2670,7 +2666,6 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						eventFields []interpreter.Value,
 					) error {
@@ -2737,7 +2732,6 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						eventFields []interpreter.Value,
 					) error {
@@ -2793,7 +2787,6 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -3014,33 +3007,36 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndPrepareWithOptions(t, `
-        resource R{}
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          resource R{}
 
-        fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
-            arrRef.append(<- copy2!)
-            return <- create R()
-        }
+          fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+              arrRef.append(<- copy2!)
+              return <- create R()
+          }
 
-        fun main() {
-            var victim: @R? <- create R()
-            var arr: @[R] <- []
+          fun main() {
+              var victim: @R? <- create R()
+              var arr: @[R] <- []
 
-            // In the optional binding below, the 'victim' must be invalidated
-            // before evaluation of the collect() call
-            if let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R]) {
-                arr.append(<- copy1)
-            }
+              // In the optional binding below, the 'victim' must be invalidated
+              // before evaluation of the collect() call
+              if let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R]) {
+                  arr.append(<- copy1)
+              }
 
-            destroy arr // This crashes
-            destroy victim
-        }
-    `, ParseCheckAndInterpretOptions{
-		HandleCheckerError: func(err error) {
-			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+              destroy arr // This crashes
+              destroy victim
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
@@ -3051,39 +3047,42 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	assert.Equal(t, 56, errorStartPos.Column)
+	assert.Equal(t, ifCompile(55, 58), errorStartPos.Column)
 }
 
 func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndPrepareWithOptions(t, `
-        resource R{}
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          resource R{}
 
-        fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
-            arrRef.append(<- copy2!)
-            return <- create R()
-        }
+          fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+              arrRef.append(<- copy2!)
+              return <- create R()
+          }
 
-        fun main() {
-            var victim: @R? <- create R()
-            var arr: @[R] <- []
+          fun main() {
+              var victim: @R? <- create R()
+              var arr: @[R] <- []
 
-            // In the optional binding below, the 'victim' must be invalidated
-            // before evaluation of the collect() call
-            let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R])
+              // In the optional binding below, the 'victim' must be invalidated
+              // before evaluation of the collect() call
+              let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R])
 
-            destroy copy1
-            destroy arr
-         destroy victim
-        }
-    `, ParseCheckAndInterpretOptions{
-		HandleCheckerError: func(err error) {
-			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+              destroy copy1
+              destroy arr
+           destroy victim
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
@@ -3094,7 +3093,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	assert.Equal(t, 53, errorStartPos.Column)
+	assert.Equal(t, ifCompile(52, 55), errorStartPos.Column)
 }
 
 func TestInterpretResourceLoss(t *testing.T) {

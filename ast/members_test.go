@@ -103,7 +103,7 @@ func TestMembers_Doc(t *testing.T) {
 							prettier.Group{
 								Doc: prettier.Concat{
 									prettier.Text("var"),
-									prettier.Text(" "),
+									prettier.Space,
 									prettier.Group{
 										Doc: prettier.Concat{
 											prettier.Group{
@@ -111,7 +111,7 @@ func TestMembers_Doc(t *testing.T) {
 													prettier.Text("x"),
 												},
 											},
-											prettier.Text(" "),
+											prettier.Space,
 											prettier.Text("="),
 											prettier.Group{
 												Doc: prettier.Indent{
@@ -132,7 +132,7 @@ func TestMembers_Doc(t *testing.T) {
 							prettier.Group{
 								Doc: prettier.Concat{
 									prettier.Text("var"),
-									prettier.Text(" "),
+									prettier.Space,
 									prettier.Group{
 										Doc: prettier.Concat{
 											prettier.Group{
@@ -140,7 +140,7 @@ func TestMembers_Doc(t *testing.T) {
 													prettier.Text("y"),
 												},
 											},
-											prettier.Text(" "),
+											prettier.Space,
 											prettier.Text("="),
 											prettier.Group{
 												Doc: prettier.Indent{

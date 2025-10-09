@@ -1,8 +1,6 @@
 module github.com/onflow/cadence
 
-go 1.23.7
-
-toolchain go1.24.2
+go 1.24
 
 require (
 	github.com/SaveTheRbtz/mph v0.1.1-0.20240117162131-4166ec7869bc
@@ -11,17 +9,19 @@ require (
 	github.com/dave/dst v0.27.3
 	github.com/fxamacker/cbor/v2 v2.8.1-0.20250402194037-6f932b086829
 	github.com/goccy/go-yaml v1.18.0
+	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5
 	github.com/itchyny/gojq v0.12.17
 	github.com/k0kubun/pp/v3 v3.5.0
 	github.com/kodova/html-to-markdown v1.0.1
 	github.com/kr/pretty v0.3.1
 	github.com/leanovate/gopter v0.2.11
 	github.com/logrusorgru/aurora/v4 v4.0.0
-	github.com/onflow/atree v0.10.1
+	github.com/onflow/atree v0.11.0
 	github.com/onflow/crypto v0.25.3
+	github.com/onflow/fixed-point v0.1.1
 	github.com/rivo/uniseg v0.4.7
 	github.com/schollz/progressbar/v3 v3.18.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	github.com/tidwall/pretty v1.2.1
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d

@@ -328,7 +328,8 @@ func (r *runtime) ParseAndCheckProgram(
 		context.Interface,
 		codesAndPrograms,
 		nil,
-		context.CoverageReport,
+		context.MemoryGauge,
+		context.ComputationGauge,
 	)
 
 	program, err = environment.ParseAndCheckProgram(
@@ -357,7 +358,7 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 
 	storage := NewStorage(
 		runtimeInterface,
-		runtimeInterface,
+		context.MemoryGauge,
 		StorageConfig{},
 	)
 
@@ -370,7 +371,8 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 		runtimeInterface,
 		codesAndPrograms,
 		storage,
-		context.CoverageReport,
+		context.MemoryGauge,
+		context.ComputationGauge,
 	)
 
 	interpreterEnv, ok := environment.(*InterpreterEnvironment)
@@ -431,7 +433,7 @@ func (r *runtime) ReadStored(
 
 	var exportedValue cadence.Value
 	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
+		exportedValue, err = ExportValue(value, inter)
 		if err != nil {
 			return nil, newError(err, location, codesAndPrograms)
 		}

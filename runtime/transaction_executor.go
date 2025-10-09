@@ -111,7 +111,7 @@ func (executor *transactionExecutor) preprocess() (err error) {
 
 	storage := NewStorage(
 		runtimeInterface,
-		runtimeInterface,
+		context.MemoryGauge,
 		StorageConfig{},
 	)
 	executor.storage = storage
@@ -129,7 +129,8 @@ func (executor *transactionExecutor) preprocess() (err error) {
 		runtimeInterface,
 		codesAndPrograms,
 		storage,
-		context.CoverageReport,
+		context.MemoryGauge,
+		context.ComputationGauge,
 	)
 	executor.environment = environment
 
@@ -305,7 +306,6 @@ func (executor *transactionExecutor) executeWithVM() (err error) {
 	arguments, err := importValidatedArguments(
 		context,
 		environment,
-		interpreter.EmptyLocationRange,
 		executor.script.Arguments,
 		executor.transactionType.Parameters,
 	)
@@ -343,7 +343,6 @@ func (executor *transactionExecutor) transactionExecutionFunction() interpretFun
 		arguments, err := importValidatedArguments(
 			inter,
 			executor.environment,
-			interpreter.EmptyLocationRange,
 			executor.script.Arguments,
 			executor.transactionType.Parameters,
 		)

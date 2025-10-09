@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/integer"
 )
 
 const TypeIDSeparator = '.'
@@ -191,7 +192,7 @@ type Type interface {
 	//
 	Unify(
 		other Type,
-		typeParameters *TypeParameterTypeOrderedMap,
+		typeArguments *TypeParameterTypeOrderedMap,
 		report func(err error),
 		memoryGauge common.MemoryGauge,
 		outerRange ast.HasPosition,
@@ -788,7 +789,7 @@ func (t *OptionalType) RewriteWithIntersectionTypes() (Type, bool) {
 
 func (t *OptionalType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -801,7 +802,7 @@ func (t *OptionalType) Unify(
 
 	return t.Type.Unify(
 		otherOptional.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -1013,13 +1014,13 @@ func (t *GenericType) RewriteWithIntersectionTypes() (result Type, rewritten boo
 
 func (t *GenericType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
 ) bool {
 
-	if unifiedType, ok := typeParameters.Get(t.TypeParameter); ok {
+	if unifiedType, ok := typeArguments.Get(t.TypeParameter); ok {
 
 		// If the type parameter is already unified with a type argument
 		// (either explicit by a type argument, or implicit through an argument's type),
@@ -1039,7 +1040,7 @@ func (t *GenericType) Unify(
 	} else {
 		// If the type parameter is not yet unified to a type argument, unify it.
 
-		typeParameters.Set(t.TypeParameter, other)
+		typeArguments.Set(t.TypeParameter, other)
 
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument's type is a subtype of the type bound.
@@ -1899,6 +1900,21 @@ var Fix64Type = NewFixedPointNumericType(Fix64TypeName).
 	})
 var Fix64TypeAnnotation = NewTypeAnnotation(Fix64Type)
 
+// Fix128Type represents the 128-bit signed decimal fixed-point type `Fix128`
+// which has a scale of Fix128Scale, and checks for overflow and underflow.
+var Fix128Type = NewFixedPointNumericType(Fix128TypeName).
+	WithTag(Fix128TypeTag).
+	WithIntRange(Fix128TypeMinIntBig, Fix128TypeMaxIntBig).
+	WithFractionalRange(Fix128TypeMinFractionalBig, Fix128TypeMaxFractionalBig).
+	WithScale(Fix128Scale).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Fix128TypeAnnotation = NewTypeAnnotation(Fix128Type)
+
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 // which has a scale of 1E9, and checks for overflow and underflow
 var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
@@ -1912,6 +1928,20 @@ var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
 		Multiply: true,
 	})
 var UFix64TypeAnnotation = NewTypeAnnotation(UFix64Type)
+
+// UFix128Type represents the 128-bit unsigned decimal fixed-point type `UFix128`
+// which has a scale of Fix128Scale, and checks for overflow and underflow.
+var UFix128Type = NewFixedPointNumericType(UFix128TypeName).
+	WithTag(UFix128TypeTag).
+	WithIntRange(UFix128TypeMinIntBig, UFix128TypeMaxIntBig).
+	WithFractionalRange(UFix128TypeMinFractionalBig, UFix128TypeMaxFractionalBig).
+	WithScale(Fix128Scale).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UFix128TypeAnnotation = NewTypeAnnotation(UFix128Type)
 
 // Numeric type ranges
 var (
@@ -1927,18 +1957,8 @@ var (
 	Int64TypeMinInt = new(big.Int).SetInt64(math.MinInt64)
 	Int64TypeMaxInt = new(big.Int).SetInt64(math.MaxInt64)
 
-	Int128TypeMinIntBig = func() *big.Int {
-		int128TypeMin := big.NewInt(-1)
-		int128TypeMin.Lsh(int128TypeMin, 127)
-		return int128TypeMin
-	}()
-
-	Int128TypeMaxIntBig = func() *big.Int {
-		int128TypeMax := big.NewInt(1)
-		int128TypeMax.Lsh(int128TypeMax, 127)
-		int128TypeMax.Sub(int128TypeMax, big.NewInt(1))
-		return int128TypeMax
-	}()
+	Int128TypeMinIntBig = integer.Int128TypeMinIntBig
+	Int128TypeMaxIntBig = integer.Int128TypeMaxIntBig
 
 	Int256TypeMinIntBig = func() *big.Int {
 		int256TypeMin := big.NewInt(-1)
@@ -1968,14 +1988,7 @@ var (
 	UInt64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
 
 	UInt128TypeMinIntBig = new(big.Int)
-
-	UInt128TypeMaxIntBig = func() *big.Int {
-		uInt128TypeMax := big.NewInt(1)
-		uInt128TypeMax.Lsh(uInt128TypeMax, 128)
-		uInt128TypeMax.Sub(uInt128TypeMax, big.NewInt(1))
-		return uInt128TypeMax
-
-	}()
+	UInt128TypeMaxIntBig = integer.UInt128TypeMaxIntBig
 
 	UInt256TypeMinIntBig = new(big.Int)
 
@@ -2024,6 +2037,8 @@ var (
 		return word256TypeMax
 	}()
 
+	// Fix64
+
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
 	Fix64TypeMinIntBig = fixedpoint.Fix64TypeMinIntBig
@@ -2032,11 +2047,33 @@ var (
 	Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
 	Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
 
+	// Fix128
+
+	Fix128FactorIntBig = fixedpoint.Fix128FactorAsBigInt
+
+	Fix128TypeMinIntBig = fixedpoint.Fix128TypeMinIntBig
+	Fix128TypeMaxIntBig = fixedpoint.Fix128TypeMaxIntBig
+
+	Fix128TypeMinFractionalBig = fixedpoint.Fix128TypeMinFractionalBig
+	Fix128TypeMaxFractionalBig = fixedpoint.Fix128TypeMaxFractionalBig
+
+	// UFix64
+
 	UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
 	UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
 
 	UFix64TypeMinFractionalBig = fixedpoint.UFix64TypeMinFractionalBig
 	UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
+
+	// UFix128
+
+	UFix128FactorIntBig = fixedpoint.UFix128FactorAsBigInt
+
+	UFix128TypeMinIntBig = fixedpoint.UFix128TypeMinIntBig
+	UFix128TypeMaxIntBig = fixedpoint.UFix128TypeMaxIntBig
+
+	UFix128TypeMinFractionalBig = fixedpoint.UFix128TypeMinFractionalBig
+	UFix128TypeMaxFractionalBig = fixedpoint.UFix128TypeMaxFractionalBig
 )
 
 // size constants (in bytes) for fixed-width numeric types
@@ -2057,6 +2094,8 @@ const (
 	UFix64TypeSize  uint = 8
 	Int128TypeSize  uint = 16
 	UInt128TypeSize uint = 16
+	Fix128TypeSize  uint = 16
+	UFix128TypeSize uint = 16
 	Word128TypeSize uint = 16
 	Int256TypeSize  uint = 32
 	UInt256TypeSize uint = 32
@@ -2071,6 +2110,8 @@ const Fix64TypeMaxInt = fixedpoint.Fix64TypeMaxInt
 
 const Fix64TypeMinFractional = fixedpoint.Fix64TypeMinFractional
 const Fix64TypeMaxFractional = fixedpoint.Fix64TypeMaxFractional
+
+const Fix128Scale = fixedpoint.Fix128Scale
 
 const UFix64TypeMinInt = fixedpoint.UFix64TypeMinInt
 const UFix64TypeMaxInt = fixedpoint.UFix64TypeMaxInt
@@ -3114,7 +3155,7 @@ func (t *VariableSizedType) IndexingType() Type {
 
 func (t *VariableSizedType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -3127,7 +3168,7 @@ func (t *VariableSizedType) Unify(
 
 	return t.Type.Unify(
 		otherArray.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -3302,7 +3343,7 @@ func (t *ConstantSizedType) IndexingType() Type {
 
 func (t *ConstantSizedType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -3319,7 +3360,7 @@ func (t *ConstantSizedType) Unify(
 
 	return t.Type.Unify(
 		otherArray.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -4016,7 +4057,7 @@ func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
 
 func (t *FunctionType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -4047,7 +4088,7 @@ func (t *FunctionType) Unify(
 		otherParameter := otherFunction.Parameters[i]
 		parameterUnified := parameter.TypeAnnotation.Type.Unify(
 			otherParameter.TypeAnnotation.Type,
-			typeParameters,
+			typeArguments,
 			report,
 			memoryGauge,
 			outerRange,
@@ -4059,7 +4100,7 @@ func (t *FunctionType) Unify(
 
 	returnTypeUnified := t.ReturnTypeAnnotation.Type.Unify(
 		otherFunction.ReturnTypeAnnotation.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -4274,10 +4315,12 @@ var BaseValueActivation = NewVariableActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
 	Fix64Type,
+	Fix128Type,
 }
 
 var AllUnsignedFixedPointTypes = []Type{
 	UFix64Type,
+	UFix128Type,
 }
 
 var AllFixedPointTypes = common.Concat(
@@ -6523,7 +6566,7 @@ type DictionaryEntryType struct {
 
 func (t *DictionaryType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -6536,7 +6579,7 @@ func (t *DictionaryType) Unify(
 
 	keyUnified := t.KeyType.Unify(
 		otherDictionary.KeyType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -6544,7 +6587,7 @@ func (t *DictionaryType) Unify(
 
 	valueUnified := t.ValueType.Unify(
 		otherDictionary.ValueType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -6739,15 +6782,12 @@ func (t *InclusiveRangeType) Instantiate(
 	}
 
 	// memberType must only be a leaf integer type.
-	for _, ty := range AllNonLeafIntegerTypes {
-		if memberType == ty {
-			report(&InvalidTypeArgumentError{
-				TypeArgumentName: inclusiveRangeTypeParameter.Name,
-				Range:            getRange(),
-				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
-			})
-			break
-		}
+	if slices.Contains(AllNonLeafIntegerTypes, memberType) {
+		report(&InvalidTypeArgumentError{
+			TypeArgumentName: inclusiveRangeTypeParameter.Name,
+			Range:            getRange(),
+			Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
+		})
 	}
 
 	return &InclusiveRangeType{
@@ -6908,7 +6948,7 @@ func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
 
 func (t *InclusiveRangeType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -6920,7 +6960,7 @@ func (t *InclusiveRangeType) Unify(
 
 	return t.MemberType.Unify(
 		otherRange.MemberType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -7192,7 +7232,7 @@ func (t *ReferenceType) IndexingType() Type {
 
 func (t *ReferenceType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -7204,7 +7244,7 @@ func (t *ReferenceType) Unify(
 
 	return t.Type.Unify(
 		otherReference.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -7568,8 +7608,10 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case FixedPointType:
 		switch subType {
-		case FixedPointType, SignedFixedPointType,
-			UFix64Type:
+		case FixedPointType,
+			SignedFixedPointType,
+			UFix64Type,
+			UFix128Type:
 
 			return true
 
@@ -7579,7 +7621,9 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case SignedFixedPointType:
 		switch subType {
-		case SignedFixedPointType, Fix64Type:
+		case SignedFixedPointType,
+			Fix64Type,
+			Fix128Type:
 			return true
 
 		default:
@@ -8671,7 +8715,7 @@ func (t *CapabilityType) RewriteWithIntersectionTypes() (Type, bool) {
 
 func (t *CapabilityType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -8687,7 +8731,7 @@ func (t *CapabilityType) Unify(
 
 	return t.BorrowType.Unify(
 		otherCap.BorrowType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,

@@ -34,6 +34,7 @@ const (
 
 	GeneratedNameQualifier              = "$"
 	ResourceDestroyedEventsFunctionName = GeneratedNameQualifier + ast.ResourceDestructionDefaultEventName
+	CollectEventsParamName              = "collectEvents"
 
 	// Names used by generated constructs
 

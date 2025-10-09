@@ -1,3 +1,5 @@
+//go:build !cadence_tracing
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -16,26 +18,6 @@
  * limitations under the License.
  */
 
-package compiler
+package interpreter
 
-import "github.com/onflow/cadence/common"
-
-type Global struct {
-	Name     string
-	Location common.Location
-	Index    uint16
-}
-
-func NewGlobal(
-	memoryGauge common.MemoryGauge,
-	name string,
-	location common.Location,
-	index uint16,
-) *Global {
-	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
-	return &Global{
-		Name:     name,
-		Location: location,
-		Index:    index,
-	}
-}
+const TracingEnabled = false

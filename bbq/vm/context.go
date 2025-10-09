@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -49,12 +50,17 @@ type Context struct {
 	containerValueIteration       map[atree.ValueID]int
 	destroyedResources            map[atree.ValueID]struct{}
 
-	// semaTypes is a cache-alike for temporary storing sema-types by their ID,
+	// semaTypeCache is a cache-alike for temporary storing sema-types by their ID,
 	// to avoid repeated conversions from static-types to sema-types.
 	// This cache-alike is maintained per execution.
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
-	semaTypes map[sema.TypeID]sema.Type
+	semaTypeCache map[sema.TypeID]sema.Type
+
+	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
+	linkedGlobalsCache map[common.Location]LinkedGlobals
+
+	getLocationRange func() interpreter.LocationRange
 }
 
 var _ interpreter.ReferenceTracker = &Context{}
@@ -69,6 +75,15 @@ func NewContext(config *Config) *Context {
 	return &Context{
 		Config: config,
 	}
+}
+
+func (c *Context) newReusing() *Context {
+	newContext := NewContext(c.Config)
+
+	newContext.semaTypeCache = c.semaTypeCache
+	newContext.linkedGlobalsCache = c.linkedGlobalsCache
+
+	return newContext
 }
 
 func (c *Context) RecordStorageMutation() {
@@ -157,6 +172,7 @@ func (c *Context) MaybeValidateAtreeStorage() {
 }
 
 func (c *Context) IsTypeInfoRecovered(location common.Location) bool {
+	c.ensureProgramInitialized(location)
 	elaboration, err := c.ElaborationResolver(location)
 	if err != nil {
 		return false
@@ -190,37 +206,33 @@ func (c *Context) startContainerValueIteration(valueID atree.ValueID) {
 	c.containerValueIteration[valueID]++
 }
 
-func (c *Context) ValidateContainerMutation(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+func (c *Context) ValidateContainerMutation(valueID atree.ValueID) {
 	_, present := c.containerValueIteration[valueID]
 	if !present {
 		return
 	}
-	panic(&interpreter.ContainerMutatedDuringIterationError{
-		LocationRange: locationRange,
-	})
+	panic(&interpreter.ContainerMutatedDuringIterationError{})
 }
 
-func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
+func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue) *interpreter.FunctionOrderedMap {
 	//TODO
 	return nil
 }
 
-func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID) {
 	_, exists := c.destroyedResources[valueID]
 	if exists {
-		panic(&interpreter.DestroyedResourceError{
-			LocationRange: locationRange,
-		})
+		panic(&interpreter.DestroyedResourceError{})
 	}
 }
 
-func (c *Context) GetMemberAccessContextForLocation(_ common.Location) interpreter.MemberAccessibleContext {
-	//TODO
+func (c *Context) GetMemberAccessContextForLocation(location common.Location) interpreter.MemberAccessibleContext {
+	c.ensureProgramInitialized(location)
 	return c
 }
 
-func (c *Context) WithResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange, f func()) {
-	c.EnforceNotResourceDestruction(valueID, locationRange)
+func (c *Context) WithResourceDestruction(valueID atree.ValueID, f func()) {
+	c.EnforceNotResourceDestruction(valueID)
 
 	if c.destroyedResources == nil {
 		c.destroyedResources = make(map[atree.ValueID]struct{})
@@ -258,14 +270,11 @@ func (c *Context) InvokeFunction(
 }
 
 func (c *Context) GetResourceDestructionContextForLocation(location common.Location) interpreter.ResourceDestructionContext {
+	c.ensureProgramInitialized(location)
 	return c
 }
 
-func (c *Context) GetMethod(
-	value interpreter.MemberAccessibleValue,
-	name string,
-	_ interpreter.LocationRange,
-) interpreter.FunctionValue {
+func (c *Context) GetMethod(value interpreter.MemberAccessibleValue, name string) interpreter.FunctionValue {
 	staticType := value.StaticType(c)
 
 	semaType := c.SemaTypeFromStaticType(staticType)
@@ -305,49 +314,41 @@ func (c *Context) GetFunction(
 	return c.lookupFunction(location, name)
 }
 
-func (c *Context) DefaultDestroyEvents(
-	resourceValue *interpreter.CompositeValue,
-	locationRange interpreter.LocationRange,
-) []*interpreter.CompositeValue {
-	method := c.GetMethod(
-		resourceValue,
-		commons.ResourceDestroyedEventsFunctionName,
-		EmptyLocationRange,
-	)
+func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue) []*interpreter.CompositeValue {
+	method := c.GetMethod(resourceValue, commons.ResourceDestroyedEventsFunctionName)
 
 	if method == nil {
 		return nil
 	}
 
-	// The generated function takes no arguments.
-	events := c.InvokeFunction(method, nil)
-	eventsArray, ok := events.(*interpreter.ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+	eventValues := make([]*interpreter.CompositeValue, 0)
 
-	length := eventsArray.Count()
-	common.UseMemory(c, common.NewGoSliceMemoryUsages(length))
-
-	eventValues := make([]*interpreter.CompositeValue, 0, eventsArray.Count())
-
-	eventsArray.Iterate(
-		c,
-		func(element interpreter.Value) (resume bool) {
-			event := element.(*interpreter.CompositeValue)
-			eventValues = append(eventValues, event)
-			return true
+	collectFunction := NewNativeFunctionValue(
+		"", // anonymous function
+		commons.CollectEventsFunctionType,
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			arguments []interpreter.Value,
+		) interpreter.Value {
+			for _, argument := range arguments {
+				event := argument.(*interpreter.CompositeValue)
+				eventValues = append(eventValues, event)
+			}
+			return interpreter.Void
 		},
-		false,
-		locationRange,
 	)
+
+	// The generated function takes no arguments, and returns nothing.
+	c.InvokeFunction(method, []Value{collectFunction})
 
 	return eventValues
 }
 
 func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
 	typeID := staticType.ID()
-	semaType, ok := c.semaTypes[typeID]
+	semaType, ok := c.semaTypeCache[typeID]
 	if ok {
 		return semaType
 	}
@@ -355,15 +356,16 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	// TODO: avoid the sema-type conversion
 	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
 
-	if c.semaTypes == nil {
-		c.semaTypes = make(map[sema.TypeID]sema.Type)
+	if c.semaTypeCache == nil {
+		c.semaTypeCache = make(map[sema.TypeID]sema.Type)
 	}
-	c.semaTypes[typeID] = semaType
+	c.semaTypeCache[typeID] = semaType
 
 	return semaType
 }
 
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
+	c.ensureProgramInitialized(contractLocation)
 	return c.ContractValueHandler(c, contractLocation)
 }
 
@@ -384,6 +386,72 @@ func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
 	return member
 }
 
-func (c *Context) TracingEnabled() bool {
-	return c.Tracer != nil
+func (c *Context) ensureProgramInitialized(location common.Location) {
+	if location == nil {
+		return
+	}
+
+	c.linkLocation(location)
+}
+
+func (c *Context) linkLocation(location common.Location) LinkedGlobals {
+	linkedGlobals, ok := c.linkedGlobalsCache[location]
+	if ok {
+		return linkedGlobals
+	}
+
+	program := c.ImportHandler(location)
+	if program == nil {
+		return LinkedGlobals{}
+	}
+
+	return c.linkGlobals(location, program)
+}
+
+func (c *Context) linkGlobals(location common.Location, program *bbq.InstructionProgram) LinkedGlobals {
+	if c.linkedGlobalsCache == nil {
+		c.linkedGlobalsCache = map[common.Location]LinkedGlobals{}
+	}
+
+	return LinkGlobals(
+		c.MemoryGauge,
+		location,
+		program,
+		c,
+		c.linkedGlobalsCache,
+	)
+}
+
+func (c *Context) GetCompositeType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID common.TypeID,
+) (*sema.CompositeType, error) {
+	c.ensureProgramInitialized(location)
+	return c.Config.GetCompositeType(location, qualifiedIdentifier, typeID)
+}
+
+func (c *Context) GetInterfaceType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID common.TypeID,
+) (*sema.InterfaceType, error) {
+	c.ensureProgramInitialized(location)
+	return c.Config.GetInterfaceType(location, qualifiedIdentifier, typeID)
+}
+
+func (c *Context) GetEntitlementType(
+	typeID common.TypeID,
+) (*sema.EntitlementType, error) {
+	return c.Config.GetEntitlementType(typeID, c.ensureProgramInitialized)
+}
+
+func (c *Context) GetEntitlementMapType(
+	typeID common.TypeID,
+) (*sema.EntitlementMapType, error) {
+	return c.Config.GetEntitlementMapType(typeID, c.ensureProgramInitialized)
+}
+
+func (c *Context) LocationRange() interpreter.LocationRange {
+	return c.getLocationRange()
 }

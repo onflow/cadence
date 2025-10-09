@@ -39,15 +39,18 @@ func (PlaceholderValue) RecursiveString(_ SeenReferences) string {
 	return ""
 }
 
-func (PlaceholderValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (PlaceholderValue) MeteredString(
+	_ ValueStringContext,
+	_ SeenReferences,
+) string {
 	return ""
 }
 
-func (PlaceholderValue) Accept(_ ValueVisitContext, _ Visitor, _ LocationRange) {
+func (PlaceholderValue) Accept(_ ValueVisitContext, _ Visitor) {
 	// NO-OP
 }
 
-func (PlaceholderValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (PlaceholderValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -55,13 +58,12 @@ func (PlaceholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return PrimitiveStaticTypeNever
 }
 
-func (PlaceholderValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (PlaceholderValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
 func (PlaceholderValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -81,7 +83,6 @@ func (PlaceholderValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v PlaceholderValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

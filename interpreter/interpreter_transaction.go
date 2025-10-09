@@ -81,7 +81,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 			self := Value(self)
 			invocation.Self = &self
-			interpreter.declareSelfVariable(self, invocation.LocationRange)
+			interpreter.declareSelfVariable(self)
 
 			if declaration.ParameterList != nil {
 				// If the transaction has a parameter list of N parameters,
@@ -135,18 +135,12 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				preConditions = declaration.PreConditions.Conditions
 			}
 
-			declarationLocationRange := LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: declaration,
-			}
-
 			return interpreter.visitFunctionBody(
 				postConditionsRewrite.BeforeStatements,
 				preConditions,
 				body,
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
-				declarationLocationRange,
 			)
 		},
 	}

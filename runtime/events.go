@@ -27,7 +27,6 @@ import (
 
 func EmitEventFields(
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	eventFields []interpreter.Value,
 	emitEvent func(cadence.Event) error,
@@ -52,7 +51,6 @@ func EmitEventFields(
 	exportedEvent, err := exportEvent(
 		context,
 		eventValue,
-		locationRange,
 		seenReferences{},
 	)
 	if err != nil {

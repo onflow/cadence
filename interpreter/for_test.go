@@ -252,7 +252,6 @@ func TestInterpretForString(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeCharacter,
 				},
@@ -286,7 +285,6 @@ func TestInterpretForString(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeCharacter,
 				},
@@ -319,7 +317,6 @@ func TestInterpretForString(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeCharacter,
 				},
@@ -390,8 +387,13 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 				sema.VoidTypeAnnotation,
 			),
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				check(invocation.Arguments[0])
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
+				check(args[0])
 				return interpreter.Void
 			},
 		)
@@ -879,7 +881,6 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 			invokable,
 			interpreter.NewArrayValue(
 				invokable,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeCharacter,
 				},
@@ -1151,7 +1152,6 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 					return true
 				},
 				false,
-				interpreter.EmptyLocationRange,
 			)
 
 			assert.Equal(t, len(testCase.loopElements), count)

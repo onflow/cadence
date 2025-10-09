@@ -20,9 +20,13 @@ package runtime_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/ast"
@@ -595,6 +599,8 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
 	signerAccount := contractsAddress
 
+	enablePrintTrace := false
+
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
@@ -617,6 +623,12 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 		},
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
+		},
+
+		OnRecordTrace: func(operation string, duration time.Duration, attrs []attribute.KeyValue) {
+			if enablePrintTrace {
+				printTrace(operation, duration, attrs)
+			}
 		},
 	}
 
@@ -736,6 +748,9 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 		}
 	}
 
+	// Uncomment to enable tracing.
+	//enablePrintTrace = true
+
 	for loop() {
 
 		err = runtime.ExecuteTransaction(
@@ -758,13 +773,15 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 		transferCount++
 	}
 
+	enablePrintTrace = false
+
 	if b != nil {
 		b.StopTimer()
 	}
 
 	// Run validation scripts
 
-	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0, interpreter.EmptyLocationRange)
+	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0)
 
 	inter := NewTestInterpreter(tb)
 
@@ -793,12 +810,38 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
 		value := interpreter.NewUnmeteredUFix64Value(uint64(result.(cadence.UFix64)))
 
-		require.True(tb, bool(value.Less(inter, mintAmountValue, interpreter.EmptyLocationRange)))
+		require.True(tb, bool(value.Less(inter, mintAmountValue)))
 
-		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.UFix64Value)
+		sum = sum.Plus(inter, value).(interpreter.UFix64Value)
 	}
 
 	RequireValuesEqual(tb, nil, mintAmountValue, sum)
+}
+
+func printTrace(
+	operationName string,
+	_ time.Duration,
+	attrs []attribute.KeyValue,
+) {
+	sb := strings.Builder{}
+	sb.WriteString(operationName)
+
+	attributesLength := len(attrs)
+
+	if attributesLength > 0 {
+		sb.WriteString(": ")
+		for i, attr := range attrs {
+			sb.WriteString(string(attr.Key))
+			sb.WriteString(":")
+			sb.WriteString(attr.Value.AsString())
+
+			if i < attributesLength-1 {
+				sb.WriteString(", ")
+			}
+		}
+	}
+
+	fmt.Println(sb.String())
 }
 
 const oldExampleToken = `
@@ -860,13 +903,13 @@ func importsAddressLocation(program *ast.Program, address common.Address, name s
 		}
 
 		// The import declaration imports all identifiers, so also the location
-		if len(importDeclaration.Identifiers) == 0 {
+		if len(importDeclaration.Imports) == 0 {
 			return true
 		}
 
 		// The import declaration imports specific identifiers, so check if the location is imported
-		for _, identifier := range importDeclaration.Identifiers {
-			if identifier.Identifier == name {
+		for _, imp := range importDeclaration.Imports {
+			if imp.Identifier.Identifier == name {
 				return true
 			}
 		}
@@ -959,7 +1002,7 @@ func BenchmarkRuntimeFungibleTokenTransferInterpreter(b *testing.B) {
 }
 
 func BenchmarkRuntimeFungibleTokenTransferVM(b *testing.B) {
-	testRuntimeFungibleTokenTransfer(b, false)
+	testRuntimeFungibleTokenTransfer(b, true)
 }
 
 func getField(declaration *ast.CompositeDeclaration, name string) *ast.FieldDeclaration {
@@ -1114,17 +1157,13 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	contractValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		common.NewAddressLocation(nil, contractsAddress, contractName),
 		contractName,
 		common.CompositeKindContract,
 		[]interpreter.CompositeField{
 			{
-				Name: fungibleTokenTypeTotalSupplyFieldName,
-				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
-					4321,
-					interpreter.EmptyLocationRange,
-				),
+				Name:  fungibleTokenTypeTotalSupplyFieldName,
+				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(4321),
 			},
 		},
 		contractsAddress,
@@ -1146,7 +1185,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	vaultValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		common.NewAddressLocation(nil, contractsAddress, contractName),
 		fmt.Sprintf("%s.Vault", contractName),
 		common.CompositeKindResource,
@@ -1156,11 +1194,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 				Value: interpreter.NewUnmeteredUInt64Value(42),
 			},
 			{
-				Name: fungibleTokenVaultTypeBalanceFieldName,
-				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
-					1234,
-					interpreter.EmptyLocationRange,
-				),
+				Name:  fungibleTokenVaultTypeBalanceFieldName,
+				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(1234),
 			},
 		},
 		userAddress,

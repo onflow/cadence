@@ -85,11 +85,11 @@ var _ MemberAccessibleValue = Word128Value{}
 
 func (Word128Value) IsValue() {}
 
-func (v Word128Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v Word128Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitWord128Value(context, v)
 }
 
-func (Word128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (Word128Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -97,15 +97,13 @@ func (Word128Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord128)
 }
 
-func (Word128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (Word128Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
-func (v Word128Value) ToInt(locationRange LocationRange) int {
+func (v Word128Value) ToInt() int {
 	if !v.BigInt.IsInt64() {
-		panic(&OverflowError{
-			LocationRange: locationRange,
-		})
+		panic(&OverflowError{})
 	}
 	return int(v.BigInt.Int64())
 }
@@ -127,7 +125,10 @@ func (v Word128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word128Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v Word128Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -137,18 +138,17 @@ func (v Word128Value) MeteredString(context ValueStringContext, _ SeenReferences
 	return v.String()
 }
 
-func (v Word128Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
+func (v Word128Value) Negate(NumberValueArithmeticContext) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Plus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -179,18 +179,17 @@ func (v Word128Value) Plus(context NumberValueArithmeticContext, other NumberVal
 	)
 }
 
-func (v Word128Value) SaturatingPlus(_ NumberValueArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingPlus(_ NumberValueArithmeticContext, _ NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Minus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -221,18 +220,17 @@ func (v Word128Value) Minus(context NumberValueArithmeticContext, other NumberVa
 	)
 }
 
-func (v Word128Value) SaturatingMinus(_ NumberValueArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingMinus(_ NumberValueArithmeticContext, _ NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Mod(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -241,23 +239,20 @@ func (v Word128Value) Mod(context NumberValueArithmeticContext, other NumberValu
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(&DivisionByZeroError{
-					LocationRange: locationRange,
-				})
+				panic(&DivisionByZeroError{})
 			}
 			return res.Rem(v.BigInt, o.BigInt)
 		},
 	)
 }
 
-func (v Word128Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Mul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -274,18 +269,17 @@ func (v Word128Value) Mul(context NumberValueArithmeticContext, other NumberValu
 	)
 }
 
-func (v Word128Value) SaturatingMul(_ NumberValueArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingMul(_ NumberValueArithmeticContext, _ NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word128Value) Div(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -294,28 +288,25 @@ func (v Word128Value) Div(context NumberValueArithmeticContext, other NumberValu
 		func() *big.Int {
 			res := new(big.Int)
 			if o.BigInt.Cmp(res) == 0 {
-				panic(&DivisionByZeroError{
-					LocationRange: locationRange,
-				})
+				panic(&DivisionByZeroError{})
 			}
-			return res.Div(v.BigInt, o.BigInt)
+			return res.Quo(v.BigInt, o.BigInt)
 		},
 	)
 
 }
 
-func (v Word128Value) SaturatingDiv(_ NumberValueArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
+func (v Word128Value) SaturatingDiv(_ NumberValueArithmeticContext, _ NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word128Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word128Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -323,14 +314,13 @@ func (v Word128Value) Less(context ValueComparisonContext, other ComparableValue
 	return cmp == -1
 }
 
-func (v Word128Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word128Value) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -338,14 +328,13 @@ func (v Word128Value) LessEqual(context ValueComparisonContext, other Comparable
 	return cmp <= 0
 }
 
-func (v Word128Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word128Value) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -353,14 +342,13 @@ func (v Word128Value) Greater(context ValueComparisonContext, other ComparableVa
 	return cmp == 1
 }
 
-func (v Word128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -368,7 +356,7 @@ func (v Word128Value) GreaterEqual(context ValueComparisonContext, other Compara
 	return cmp >= 0
 }
 
-func (v Word128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v Word128Value) Equal(_ ValueComparisonContext, other Value) bool {
 	otherInt, ok := other.(Word128Value)
 	if !ok {
 		return false
@@ -380,7 +368,7 @@ func (v Word128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Val
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord128 (1 byte)
 // - big int encoded in big endian (n bytes)
-func (v Word128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v Word128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
@@ -396,7 +384,7 @@ func (v Word128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch [
 	return buffer
 }
 
-func ConvertWord128(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+func ConvertWord128(memoryGauge common.MemoryGauge, value Value) Value {
 	return NewWord128ValueFromBigInt(
 		memoryGauge,
 		func() *big.Int {
@@ -408,7 +396,7 @@ func ConvertWord128(memoryGauge common.MemoryGauge, value Value, locationRange L
 				v = value.ToBigInt(memoryGauge)
 
 			case NumberValue:
-				v = big.NewInt(int64(value.ToInt(locationRange)))
+				v = big.NewInt(int64(value.ToInt()))
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -425,14 +413,13 @@ func ConvertWord128(memoryGauge common.MemoryGauge, value Value, locationRange L
 	)
 }
 
-func (v Word128Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word128Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -445,14 +432,13 @@ func (v Word128Value) BitwiseOr(context ValueStaticTypeContext, other IntegerVal
 	)
 }
 
-func (v Word128Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word128Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -465,14 +451,13 @@ func (v Word128Value) BitwiseXor(context ValueStaticTypeContext, other IntegerVa
 	)
 }
 
-func (v Word128Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word128Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -486,21 +471,18 @@ func (v Word128Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerVa
 
 }
 
-func (v Word128Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word128Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(&NegativeShiftError{
-			LocationRange: locationRange,
-		})
+		panic(&NegativeShiftError{})
 	}
 	if !o.BigInt.IsUint64() || o.BigInt.Uint64() >= 128 {
 		return NewWord128ValueFromUint64(context, 0)
@@ -521,7 +503,7 @@ func (v Word128Value) BitwiseLeftShift(context ValueStaticTypeContext, other Int
 	)
 }
 
-func (v Word128Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word128Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
@@ -532,9 +514,7 @@ func (v Word128Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	}
 
 	if o.BigInt.Sign() < 0 {
-		panic(&NegativeShiftError{
-			LocationRange: locationRange,
-		})
+		panic(&NegativeShiftError{})
 	}
 	if !o.BigInt.IsUint64() {
 		return NewWord128ValueFromUint64(context, 0)
@@ -549,24 +529,20 @@ func (v Word128Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	)
 }
 
-func (v Word128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v Word128Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v Word128Value) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	name string,
-) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Word128Type, locationRange)
+func (v Word128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.Word128Type)
 }
 
-func (Word128Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (Word128Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word128Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (Word128Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -577,7 +553,6 @@ func (v Word128Value) ToBigEndianBytes() []byte {
 
 func (v Word128Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -601,7 +576,6 @@ func (Word128Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v Word128Value) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

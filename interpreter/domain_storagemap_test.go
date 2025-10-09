@@ -671,7 +671,7 @@ func TestDomainStorageMapIteratorNextValue(t *testing.T) {
 
 			match := false
 			for _, expectedValue := range domainValues {
-				if ev.Equal(inter, interpreter.EmptyLocationRange, expectedValue) {
+				if ev.Equal(inter, expectedValue) {
 					match = true
 					break
 				}

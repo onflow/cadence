@@ -1311,6 +1311,111 @@ func TestCheckInvalidInterfaceConformanceRepetition(t *testing.T) {
 	}
 }
 
+func TestCheckInvalidInterfaceConformanceSuggestedFixes(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("in middle", func(t *testing.T) {
+
+		const code = `
+          struct interface X {}
+
+          struct interface Y {}
+
+          struct TestImpl: X, X, Y {}
+        `
+		_, err := ParseAndCheck(t, code)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var duplicateConformanceErr *sema.DuplicateConformanceError
+		assert.ErrorAs(t, errs[0], &duplicateConformanceErr)
+
+		fixes := duplicateConformanceErr.SuggestFixes(code)
+
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove duplicate conformance",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 95, Line: 6, Column: 28},
+								EndPos:   ast.Position{Offset: 97, Line: 6, Column: 30},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+          struct interface X {}
+
+          struct interface Y {}
+
+          struct TestImpl: X, Y {}
+        `
+
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("at end", func(t *testing.T) {
+
+		const code = `
+          struct interface X {}
+
+          struct interface Y {}
+
+          struct TestImpl: X, Y, X {}
+        `
+		_, err := ParseAndCheck(t, code)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var duplicateConformanceErr *sema.DuplicateConformanceError
+		assert.ErrorAs(t, errs[0], &duplicateConformanceErr)
+
+		fixes := duplicateConformanceErr.SuggestFixes(code)
+
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove duplicate conformance",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 98, Line: 6, Column: 31},
+								EndPos:   ast.Position{Offset: 100, Line: 6, Column: 33},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+          struct interface X {}
+
+          struct interface Y {}
+
+          struct TestImpl: X, Y {}
+        `
+
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+}
+
 func TestCheckInvalidInterfaceTypeAsValue(t *testing.T) {
 
 	t.Parallel()
@@ -1744,7 +1849,7 @@ func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
 	})
 }
 
-func TestCheckMultipleInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
+func TestCheckMultipleInterfaceDefaultImplementationWhenOverridden(t *testing.T) {
 
 	t.Parallel()
 

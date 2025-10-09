@@ -45,7 +45,6 @@ type InclusiveRangeIteratorContext interface {
 
 func NewInclusiveRangeIterator(
 	context InclusiveRangeIteratorContext,
-	locationRange LocationRange,
 	v *CompositeValue,
 	typ InclusiveRangeStaticType,
 ) *InclusiveRangeIterator {
@@ -55,7 +54,7 @@ func NewInclusiveRangeIterator(
 	endValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeEndFieldName)
 
 	stepValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeStepFieldName)
-	stepNegative := stepValue.Less(context, zeroValue, locationRange)
+	stepNegative := stepValue.Less(context, zeroValue)
 
 	i := &InclusiveRangeIterator{
 		rangeValue:   v,
@@ -63,24 +62,24 @@ func NewInclusiveRangeIterator(
 		step:         stepValue,
 		end:          endValue,
 	}
-	i.next = i.validate(startValue, context, locationRange)
+	i.next = i.validate(startValue, context)
 
 	return i
 }
 
-func (i *InclusiveRangeIterator) Next(context ValueIteratorContext, locationRange LocationRange) Value {
+func (i *InclusiveRangeIterator) Next(context ValueIteratorContext) Value {
 	valueToReturn := i.next
 	if valueToReturn == nil {
 		return nil
 	}
 
 	// Update the next value.
-	nextValueToReturn, ok := valueToReturn.Plus(context, i.step, locationRange).(IntegerValue)
+	nextValueToReturn, ok := valueToReturn.Plus(context, i.step).(IntegerValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	i.next = i.validate(nextValueToReturn, context, locationRange)
+	i.next = i.validate(nextValueToReturn, context)
 
 	return valueToReturn
 }
@@ -88,12 +87,11 @@ func (i *InclusiveRangeIterator) Next(context ValueIteratorContext, locationRang
 func (i *InclusiveRangeIterator) validate(
 	element IntegerValue,
 	context ValueIteratorContext,
-	locationRange LocationRange,
 ) IntegerValue {
 	// Ensure that element is within the bounds.
-	if i.stepNegative && bool(element.Less(context, i.end, locationRange)) {
+	if i.stepNegative && bool(element.Less(context, i.end)) {
 		return nil
-	} else if !i.stepNegative && bool(element.Greater(context, i.end, locationRange)) {
+	} else if !i.stepNegative && bool(element.Greater(context, i.end)) {
 		return nil
 	}
 

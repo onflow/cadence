@@ -20,10 +20,14 @@ package test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
@@ -98,23 +102,17 @@ func compiledFTTransfer(tb testing.TB) {
 
 			activation.Set(
 				stdlib.AssertFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.AssertFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.AssertFunctionName),
 			)
 
 			activation.Set(
 				stdlib.GetAccountFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.GetAccountFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.GetAccountFunctionName),
 			)
 
 			activation.Set(
 				stdlib.PanicFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.PanicFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.PanicFunctionName),
 			)
 
 			return activation
@@ -152,7 +150,6 @@ func compiledFTTransfer(tb testing.TB) {
 	accountHandler := &testAccountHandler{
 		emitEvent: func(
 			_ interpreter.ValueExportContext,
-			_ interpreter.LocationRange,
 			_ *sema.CompositeType,
 			_ []interpreter.Value,
 		) {
@@ -166,7 +163,6 @@ func compiledFTTransfer(tb testing.TB) {
 
 	vmConfig.CapabilityBorrowHandler = func(
 		context interpreter.BorrowCapabilityControllerContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
 		wantedBorrowType *sema.ReferenceType,
@@ -174,7 +170,6 @@ func compiledFTTransfer(tb testing.TB) {
 	) interpreter.ReferenceValue {
 		return stdlib.BorrowCapabilityController(
 			context,
-			locationRange,
 			address,
 			capabilityID,
 			wantedBorrowType,
@@ -185,7 +180,6 @@ func compiledFTTransfer(tb testing.TB) {
 
 	vmConfig.OnEventEmitted = func(
 		_ interpreter.ValueExportContext,
-		_ interpreter.LocationRange,
 		_ *sema.CompositeType,
 		_ []interpreter.Value,
 	) error {
@@ -205,7 +199,6 @@ func compiledFTTransfer(tb testing.TB) {
 			accountHandler,
 			interpreter.NewAddressValue(nil, contractsAddress),
 			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		return map[string]interpreter.Value{
@@ -322,7 +315,6 @@ func compiledFTTransfer(tb testing.TB) {
 			accountHandler,
 			interpreter.AddressValue(address),
 			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
 		)
 		err := setupTxVM.InvokeTransaction(nil, authorizer)
 		require.NoError(tb, err)
@@ -370,7 +362,6 @@ func compiledFTTransfer(tb testing.TB) {
 		accountHandler,
 		interpreter.AddressValue(contractsAddress),
 		authorization,
-		interpreter.EmptyLocationRange,
 	)
 
 	err := mintTxVM.InvokeTransaction(mintTxArgs, mintTxAuthorizer)
@@ -409,7 +400,6 @@ func compiledFTTransfer(tb testing.TB) {
 		accountHandler,
 		interpreter.AddressValue(senderAddress),
 		authorization,
-		interpreter.EmptyLocationRange,
 	)
 
 	var transferCount int
@@ -430,8 +420,10 @@ func compiledFTTransfer(tb testing.TB) {
 		}
 	}
 
-	for loop() {
+	// Uncomment to enable tracing.
+	//vmConfig.Tracer = interpreter.CallbackTracer(printTrace)
 
+	for loop() {
 		err := tokenTransferTxVM.InvokeTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(tb, err)
 		require.Equal(tb, 0, tokenTransferTxVM.StackSize())
@@ -475,9 +467,17 @@ func compiledFTTransfer(tb testing.TB) {
 		require.Equal(tb, 0, validationScriptVM.StackSize())
 
 		if address == senderAddress {
-			assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(total-transferAmount*uint64(transferCount)), result)
+			assert.Equal(
+				tb,
+				interpreter.NewUnmeteredUFix64Value(total-transferAmount*uint64(transferCount)),
+				result,
+			)
 		} else {
-			assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(transferAmount*uint64(transferCount)), result)
+			assert.Equal(
+				tb,
+				interpreter.NewUnmeteredUFix64Value(transferAmount*uint64(transferCount)),
+				result,
+			)
 		}
 	}
 }
@@ -491,4 +491,30 @@ func TestFTTransfer(t *testing.T) {
 func BenchmarkFTTransfer(b *testing.B) {
 
 	compiledFTTransfer(b)
+}
+
+func printTrace(
+	operationName string,
+	_ time.Duration,
+	attrs []attribute.KeyValue,
+) {
+	sb := strings.Builder{}
+	sb.WriteString(operationName)
+
+	attributesLength := len(attrs)
+
+	if attributesLength > 0 {
+		sb.WriteString(": ")
+		for i, attr := range attrs {
+			sb.WriteString(string(attr.Key))
+			sb.WriteString(":")
+			sb.WriteString(attr.Value.AsString())
+
+			if i < attributesLength-1 {
+				sb.WriteString(", ")
+			}
+		}
+	}
+
+	fmt.Println(sb.String())
 }

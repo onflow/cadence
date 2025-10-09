@@ -21,6 +21,7 @@ package compiler
 import (
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
@@ -45,16 +46,16 @@ type Compiler[E, T any] struct {
 
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
-	functions          []*function[E]
-	globalVariables    []*globalVariable[E]
-	constants          []*Constant
-	Globals            map[string]*Global
-	globalImports      *activations.Activation[GlobalImport]
-	importedGlobals    []*Global
-	controlFlows       []controlFlow
-	currentControlFlow *controlFlow
-	returns            []returns
-	currentReturn      *returns
+	functions           []*function[E]
+	globalVariables     []*globalVariable[E]
+	constants           []*DecodedConstant
+	Globals             map[string]bbq.Global
+	importedGlobals     *activations.Activation[GlobalImport]
+	usedImportedGlobals []bbq.Global
+	controlFlows        []controlFlow
+	currentControlFlow  *controlFlow
+	returns             []returns
+	currentReturn       *returns
 
 	types         []sema.Type
 	compiledTypes []T
@@ -80,7 +81,7 @@ type Compiler[E, T any] struct {
 
 	// Cache alike for compiledTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
-	constantsInPool map[constantsCacheKey]*Constant
+	constantsInPool map[constantUniqueKey]*DecodedConstant
 
 	codeGen CodeGen[E]
 	typeGen TypeGen[T]
@@ -89,11 +90,21 @@ type Compiler[E, T any] struct {
 	// This could be also reused during compilation to desugar expressions and statements.
 	// Important: It must NOT be reused to desugar any top-level declaration, after the initial use.
 	desugar *Desugar
-}
 
-type constantsCacheKey struct {
-	data string
-	kind constant.Kind
+	// used for import aliasing, maps an alias to its address qualified name
+	// e.g. Foo1 -> A.0001.Foo
+	// this is used for all global (var/func) loads
+	// this allows us to map all aliases back to their address qualified type
+	// type needs to be address qualified because two types with the same name can be aliased in the same program
+	// we need to differentiate between these in method compilation
+	globalAliasTable map[string]string
+	// some globals are address qualified as a result of import aliasing
+	// these globals should be restored to their original un-aliased typenames for linking
+	// e.g. A.0001.Foo -> Foo
+	// note a key might be added in this map multiple times but always with the same value
+	// this table maps a global from its address qualified name to its original un-aliased typename
+	// used mainly for exporting imports for linking
+	globalRemoveAddressTable map[string]string
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
@@ -141,7 +152,19 @@ func NewInstructionCompilerWithConfig(
 
 type GlobalImport struct {
 	Location common.Location
-	Name     string
+	// Need to maintain both "qualified" and "unqualified" names for a given import,
+	// because when type-aliasing is used, imported name becomes qualified.
+	// However, the same import must use the unqualified name when linking.
+	// TODO: We can simplify this by always using qualified names for all imports.
+	QualifiedName string
+	Name          string
+}
+
+func NewGlobalImport(name string) GlobalImport {
+	return GlobalImport{
+		Name:          name,
+		QualifiedName: name,
+	}
 }
 
 func newCompiler[E, T any](
@@ -152,13 +175,13 @@ func newCompiler[E, T any](
 	typeGen TypeGen[T],
 ) *Compiler[E, T] {
 
-	var globalImports *activations.Activation[GlobalImport]
+	var importedGlobals *activations.Activation[GlobalImport]
 	if config.BuiltinGlobalsProvider != nil {
-		globalImports = config.BuiltinGlobalsProvider(location)
+		importedGlobals = config.BuiltinGlobalsProvider(location)
 	} else {
-		globalImports = DefaultBuiltinGlobals()
+		importedGlobals = DefaultBuiltinGlobals()
 	}
-	globalImports = activations.NewActivation(config.MemoryGauge, globalImports)
+	importedGlobals = activations.NewActivation(config.MemoryGauge, importedGlobals)
 
 	common.UseMemory(config.MemoryGauge, common.CompilerMemoryUsage)
 
@@ -167,10 +190,10 @@ func newCompiler[E, T any](
 		DesugaredElaboration: NewDesugaredElaboration(program.Elaboration),
 		Config:               config,
 		location:             location,
-		Globals:              make(map[string]*Global),
-		globalImports:        globalImports,
+		Globals:              make(map[string]bbq.Global),
+		importedGlobals:      importedGlobals,
 		typesInPool:          make(map[sema.TypeID]uint16),
-		constantsInPool:      make(map[constantsCacheKey]*Constant),
+		constantsInPool:      make(map[constantUniqueKey]*DecodedConstant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
@@ -180,7 +203,7 @@ func newCompiler[E, T any](
 	}
 }
 
-func (c *Compiler[_, _]) findGlobal(name string) *Global {
+func (c *Compiler[E, _]) findGlobal(name string) bbq.Global {
 	global, ok := c.Globals[name]
 	if ok {
 		return global
@@ -198,14 +221,14 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 		}
 	}
 
-	importedGlobal := c.globalImports.Find(name)
+	importedGlobal := c.importedGlobals.Find(name)
 	if importedGlobal == (GlobalImport{}) {
 		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", name))
 	}
-	if importedGlobal.Name != name {
+	if importedGlobal.QualifiedName != name {
 		panic(errors.NewUnexpectedError(
 			"imported global %q does not match the expected name %q",
-			importedGlobal.Name,
+			importedGlobal.QualifiedName,
 			name,
 		))
 	}
@@ -216,17 +239,31 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	//
 	// If a global is found in imported globals, that means the index is not set.
 	// So set an index and add it to the 'globals'.
+	return c.addUsedImportedGlobal(
+		importedGlobal.Name,
+		importedGlobal.QualifiedName,
+		importedGlobal.Location,
+	)
+}
+
+func (c *Compiler[E, _]) addUsedImportedGlobal(
+	name string,
+	qualifiedName string,
+	location common.Location,
+) bbq.Global {
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
-		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
+		panic(errors.NewUnexpectedError("invalid global declaration '%s'", qualifiedName))
 	}
-	global = NewGlobal(
+
+	global := bbq.NewImportedGlobal(
 		c.Config.MemoryGauge,
 		name,
-		importedGlobal.Location,
+		qualifiedName,
+		location,
 		uint16(count),
 	)
-	c.Globals[name] = global
+	c.Globals[qualifiedName] = global
 
 	// Also add it to the usedImportedGlobals.
 	// This is later used to export the imports, which is eventually used by the linker.
@@ -236,37 +273,45 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	// Earlier we already reserved the indexes for the globals defined in the current program.
 	// (`reserveGlobals`)
 
-	c.importedGlobals = append(c.importedGlobals, global)
-
+	c.usedImportedGlobals = append(c.usedImportedGlobals, global)
 	return global
 }
 
-func (c *Compiler[_, _]) addGlobal(name string) *Global {
+func (c *Compiler[E, _]) addGlobal(name string, kind bbq.GlobalKind) bbq.Global {
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
 
-	global := NewGlobal(
-		c.Config.MemoryGauge,
-		name,
-		nil,
-		uint16(count),
-	)
+	var global bbq.Global
+
+	switch kind {
+	case bbq.GlobalKindFunction:
+		global = bbq.NewFunctionGlobal[E](c.Config.MemoryGauge, name, nil, uint16(count))
+	case bbq.GlobalKindVariable:
+		global = bbq.NewVariableGlobal[E](c.Config.MemoryGauge, name, nil, uint16(count))
+	case bbq.GlobalKindContract:
+		global = bbq.NewContractGlobal(c.Config.MemoryGauge, name, nil, uint16(count))
+	default:
+		panic(errors.NewDefaultUserError("unsupported global kind %#q", kind))
+	}
+
 	c.Globals[name] = global
+
 	return global
 }
 
-func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) {
-	existing := c.globalImports.Find(name)
+func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name, qualifiedName string) {
+	existing := c.importedGlobals.Find(qualifiedName)
 	if existing != (GlobalImport{}) {
 		return
 	}
-	c.globalImports.Set(
-		name,
+	c.importedGlobals.Set(
+		qualifiedName,
 		GlobalImport{
-			Location: location,
-			Name:     name,
+			Location:      location,
+			Name:          name,
+			QualifiedName: qualifiedName,
 		},
 	)
 }
@@ -347,33 +392,35 @@ func (c *Compiler[E, _]) targetFunction(function *function[E]) {
 	c.codeGen.SetTarget(code)
 }
 
-func (c *Compiler[_, _]) addConstant(kind constant.Kind, data []byte) *Constant {
+func (c *Compiler[_, _]) addConstant(
+	kind constant.Kind,
+	data constant.ConstantData,
+	constantKey constantUniqueKey,
+) *DecodedConstant {
 	count := len(c.constants)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid constant declaration"))
 	}
 
 	// Optimization: Reuse the constant if it is already added to the constant pool.
-	cacheKey := constantsCacheKey{
-		data: string(data),
-		kind: kind,
-	}
-	if constant, ok := c.constantsInPool[cacheKey]; ok {
-		return constant
+	if existingConstant, ok := c.constantsInPool[constantKey]; ok {
+		return existingConstant
 	}
 
-	constant := NewConstant(
+	newConstant := NewDecodedConstant(
 		c.Config.MemoryGauge,
 		uint16(count),
 		kind,
 		data,
 	)
-	c.constants = append(c.constants, constant)
-	c.constantsInPool[cacheKey] = constant
-	return constant
+
+	c.constants = append(c.constants, newConstant)
+	c.constantsInPool[constantKey] = newConstant
+
+	return newConstant
 }
 
-func (c *Compiler[_, _]) emitGetConstant(constant *Constant) {
+func (c *Compiler[_, _]) emitGetConstant(constant *DecodedConstant) {
 	c.emit(opcode.InstructionGetConstant{
 		Constant: constant.index,
 	})
@@ -383,26 +430,53 @@ func (c *Compiler[_, _]) emitStringConst(str string) {
 	c.emitGetConstant(c.addStringConst(str))
 }
 
-func (c *Compiler[_, _]) addStringConst(str string) *Constant {
-	return c.addConstant(constant.String, []byte(str))
+func (c *Compiler[_, _]) addStringConst(str string) *DecodedConstant {
+	// NOTE: already metered in lexer/parser. This is also equivalent in the interpreter.
+	stringValue := interpreter.NewUnmeteredStringValue(str)
+	return c.addConstant(
+		constant.String,
+		stringValue,
+		stringConstantKey{
+			constantKind: constant.String,
+			content:      str,
+		},
+	)
+}
+
+func (c *Compiler[_, _]) addRawStringConst(str string) *DecodedConstant {
+	return c.addConstant(
+		constant.RawString,
+		str,
+		stringConstantKey{
+			constantKind: constant.RawString,
+			content:      str,
+		},
+	)
 }
 
 func (c *Compiler[_, _]) emitCharacterConst(str string) {
 	c.emitGetConstant(c.addCharacterConst(str))
 }
 
-func (c *Compiler[_, _]) addCharacterConst(str string) *Constant {
-	return c.addConstant(constant.Character, []byte(str))
+func (c *Compiler[_, _]) addCharacterConst(str string) *DecodedConstant {
+	// NOTE: already metered in lexer/parser. This is also equivalent in the interpreter.
+	stringValue := interpreter.NewUnmeteredCharacterValue(str)
+	return c.addConstant(
+		constant.Character,
+		stringValue,
+		stringConstantKey{
+			constantKind: constant.Character,
+			content:      str,
+		},
+	)
 }
 
 func (c *Compiler[_, _]) emitIntConst(i int64) {
-	c.emitGetConstant(c.addIntConst(i))
-}
-
-func (c *Compiler[_, _]) addIntConst(i int64) *Constant {
-	// NOTE: also adjust VisitIntegerExpression!
-	data := interpreter.NewUnmeteredIntValueFromInt64(i).ToBigEndianBytes()
-	return c.addConstant(constant.Int, data)
+	value := big.NewInt(i)
+	c.emitIntegerConstant(
+		value,
+		sema.IntegerType,
+	)
 }
 
 func (c *Compiler[_, _]) emitJump(target int) int {
@@ -591,17 +665,19 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	variableDeclarations := c.Program.VariableDeclarations()
 	functionDeclarations := c.Program.FunctionDeclarations()
 	interfaceDeclarations := c.Program.InterfaceDeclarations()
+	transactionDeclarations := c.Program.TransactionDeclarations()
 
-	// Reserve globals for functions/types before visiting their implementations.
-	c.reserveGlobals(
+	// Phase 1: Collect all global symbols, assign indices
+	c.initializeAllGlobals(
 		contracts,
 		variableDeclarations,
 		functionDeclarations,
 		compositeDeclarations,
 		interfaceDeclarations,
+		transactionDeclarations,
 	)
 
-	// Compile declarations
+	// Phase 2: Compile declarations, all globals must be initialized at this point.
 	for _, declaration := range variableDeclarations {
 		c.compileDeclaration(declaration)
 	}
@@ -614,12 +690,31 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	for _, declaration := range interfaceDeclarations {
 		c.compileDeclaration(declaration)
 	}
+	for _, declaration := range transactionDeclarations {
+		c.compileDeclaration(declaration)
+	}
 
+	// Phase 3: Link the compiled code with its associated global and export symbols
 	functions := c.exportFunctions()
 	constants := c.exportConstants()
 	types := c.exportTypes()
 	imports := c.exportImports()
 	variables := c.exportGlobalVariables()
+	globals := c.exportGlobals()
+
+	// associate the contract with the global for linking
+	// can't do this in exportContracts because it's called before initializeAllGlobals
+	for _, contract := range contracts {
+		global := c.Globals[contract.Name]
+		if contractGlobal, ok := global.(*bbq.ContractGlobal); ok {
+			if contractGlobal.GlobalInfo.Location != nil && global == nil {
+				panic(errors.NewUnexpectedError("global not found for contract %s", contract.Name))
+			}
+			contractGlobal.Contract = contract
+		} else {
+			panic(errors.NewUnexpectedError("wrong global type found for contract %s", contract.Name))
+		}
+	}
 
 	return &bbq.Program[E, T]{
 		Functions: functions,
@@ -628,39 +723,42 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		Imports:   imports,
 		Contracts: contracts,
 		Variables: variables,
+		Globals:   globals,
 	}
 }
 
-func (c *Compiler[_, _]) reserveGlobals(
+func (c *Compiler[_, _]) initializeAllGlobals(
 	contract []*bbq.Contract,
 	variableDecls []*ast.VariableDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
+	transactionDecls []*ast.TransactionDeclaration,
 ) {
 	// Reserve globals for the contract values before everything.
 	// Contract values must be always start at the zero-th index.
 	for _, contract := range contract {
-		c.addGlobal(contract.Name)
+		c.addGlobal(contract.Name, bbq.GlobalKindContract)
 	}
 
-	c.reserveVariableGlobals(
+	c.initializeVariableGlobals(
 		nil,
 		variableDecls,
 		nil,
 		compositeDecls,
 	)
 
-	c.reserveFunctionGlobals(
+	c.initializeFunctionGlobals(
 		nil,
 		nil,
 		functionDecls,
 		compositeDecls,
 		interfaceDecls,
+		transactionDecls,
 	)
 }
 
-func (c *Compiler[_, _]) reserveVariableGlobals(
+func (c *Compiler[_, _]) initializeVariableGlobals(
 	enclosingType sema.CompositeKindedType,
 	variableDecls []*ast.VariableDeclaration,
 	enumCaseDecls []*ast.EnumCaseDeclaration,
@@ -668,7 +766,7 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 ) {
 	for _, declaration := range variableDecls {
 		variableName := declaration.Identifier.Identifier
-		c.addGlobal(variableName)
+		c.addGlobal(variableName, bbq.GlobalKindVariable)
 	}
 
 	for _, declaration := range enumCaseDecls {
@@ -677,7 +775,7 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 		// e.g: `enum E: UInt8 { case A; case B }` will reserve globals `E.A`, `E.B`.
 		enumCaseName := declaration.Identifier.Identifier
 		qualifiedName := commons.TypeQualifiedName(enclosingType, enumCaseName)
-		c.addGlobal(qualifiedName)
+		c.addGlobal(qualifiedName, bbq.GlobalKindVariable)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -685,7 +783,7 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 
 		members := declaration.Members
 
-		c.reserveVariableGlobals(
+		c.initializeVariableGlobals(
 			compositeType,
 			nil,
 			members.EnumCases(),
@@ -694,22 +792,23 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 	}
 }
 
-func (c *Compiler[_, _]) reserveFunctionGlobals(
+func (c *Compiler[_, _]) initializeFunctionGlobals(
 	enclosingType sema.CompositeKindedType,
 	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
+	transactionDecls []*ast.TransactionDeclaration,
 ) {
 	for _, declaration := range specialFunctionDecls {
 		switch declaration.Kind {
 		case common.DeclarationKindDestructorLegacy,
 			common.DeclarationKindPrepare:
 			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
-			// must be also visited here. And must be visited only them. e.g: Don't visit inits.
+			// must be also visited here. And must only visit them. e.g: Don't visit inits.
 			functionName := declaration.FunctionDeclaration.Identifier.Identifier
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
-			c.addGlobal(qualifiedName)
+			c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
 		}
 	}
 
@@ -719,14 +818,14 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 		for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
 			functionName := boundFunction.Name
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
-			c.addGlobal(qualifiedName)
+			c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
 		}
 	}
 
 	for _, declaration := range functionDecls {
 		functionName := declaration.Identifier.Identifier
 		qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
-		c.addGlobal(qualifiedName)
+		c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -764,23 +863,17 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 			constructorName = commons.TypeQualifier(compositeType)
 		}
 
-		c.addGlobal(constructorName)
-
-		if declaration.CompositeKind == common.CompositeKindEnum {
-			// For enums, also reserve a global for the "lookup function".
-			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
-			functionName := commons.TypeQualifier(compositeType)
-			c.addGlobal(functionName)
-		}
+		c.addGlobal(constructorName, bbq.GlobalKindFunction)
 
 		members := declaration.Members
 
-		c.reserveFunctionGlobals(
+		c.initializeFunctionGlobals(
 			compositeType,
 			members.SpecialFunctions(),
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
+			nil,
 		)
 	}
 
@@ -790,26 +883,41 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 		members := declaration.Members
 		interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
 
-		c.reserveFunctionGlobals(
+		c.initializeFunctionGlobals(
 			interfaceType,
 			members.SpecialFunctions(),
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
+			nil,
 		)
+	}
+
+	switch len(transactionDecls) {
+	case 0:
+		// No-op
+	case 1:
+		transactionDecl := transactionDecls[0]
+		if transactionDecl.ParameterList != nil &&
+			len(transactionDecl.ParameterList.Parameters) > 0 {
+
+			c.addGlobal(commons.ProgramInitFunctionName, bbq.GlobalKindFunction)
+		}
+	default:
+		panic(errors.NewUnexpectedError("multiple transaction declarations"))
 	}
 }
 
-func (c *Compiler[_, _]) exportConstants() []constant.Constant {
-	var constants []constant.Constant
+func (c *Compiler[_, _]) exportConstants() []constant.DecodedConstant {
+	var constants []constant.DecodedConstant
 
 	count := len(c.constants)
 	if count > 0 {
-		constants = make([]constant.Constant, 0, count)
+		constants = make([]constant.DecodedConstant, 0, count)
 		for _, c := range c.constants {
 			constants = append(
 				constants,
-				constant.Constant{
+				constant.DecodedConstant{
 					Data: c.data,
 					Kind: c.kind,
 				},
@@ -824,16 +932,51 @@ func (c *Compiler[_, T]) exportTypes() []T {
 	return c.compiledTypes
 }
 
+func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
+	globals := make([]bbq.Global, len(c.Globals))
+
+	for _, global := range c.Globals { //nolint:maprange
+		index := int(global.GetGlobalInfo().Index)
+
+		existingGlobal := globals[index]
+		if existingGlobal != nil {
+			panic(errors.NewUnexpectedError(
+				"duplicate global index %d. existing global: %#q, new global %#q",
+				index,
+				existingGlobal.GetGlobalInfo().QualifiedName,
+				global.GetGlobalInfo().QualifiedName,
+			))
+		}
+
+		globals[index] = global
+	}
+
+	return globals
+}
+
+// removeAlias removes the address qualifier from the name if it exists
+func (c *Compiler[_, T]) removeAlias(name string) string {
+	if c.globalRemoveAddressTable == nil {
+		return name
+	}
+	antialias, ok := c.globalRemoveAddressTable[name]
+	if ok {
+		return antialias
+	}
+	return name
+}
+
 func (c *Compiler[_, _]) exportImports() []bbq.Import {
 	var exportedImports []bbq.Import
 
-	count := len(c.importedGlobals)
+	count := len(c.usedImportedGlobals)
 	if count > 0 {
 		exportedImports = make([]bbq.Import, 0, count)
-		for _, importedGlobal := range c.importedGlobals {
+		for _, importedGlobal := range c.usedImportedGlobals {
+			name := c.removeAlias(importedGlobal.GetGlobalInfo().Name)
 			bbqImport := bbq.Import{
-				Location: importedGlobal.Location,
-				Name:     importedGlobal.Name,
+				Location: importedGlobal.GetGlobalInfo().Location,
+				Name:     name,
 			}
 			exportedImports = append(exportedImports, bbqImport)
 		}
@@ -849,10 +992,26 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 	if count > 0 {
 		functions = make([]bbq.Function[E], 0, count)
 		for _, function := range c.functions {
+			newFunction := c.newBBQFunction(function)
 			functions = append(
 				functions,
-				c.newBBQFunction(function),
+				newFunction,
 			)
+			// associate the function with the global for linking
+			global := c.Globals[function.qualifiedName]
+			// function expressions do not have globals
+			// see VisitFunctionExpression
+			if newFunction.IsAnonymous() {
+				continue
+			}
+			if global == nil {
+				panic(errors.NewUnexpectedError("global not found for function %s", function.qualifiedName))
+			}
+			if functionGlobal, ok := global.(*bbq.FunctionGlobal[E]); ok {
+				functionGlobal.Function = &newFunction
+			} else {
+				panic(errors.NewUnexpectedError("wrong global type found for function %s", function.qualifiedName))
+			}
 		}
 	}
 	return functions
@@ -893,6 +1052,17 @@ func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
 				Getter: getter,
 			}
 
+			// associate the variable with the global for linking
+			global := c.Globals[variable.Name]
+			if global == nil {
+				panic(errors.NewUnexpectedError("global not found for global variable %s", variable.Name))
+			}
+			if variableGlobal, ok := global.(*bbq.VariableGlobal[E]); ok {
+				variableGlobal.Variable = &variable
+			} else {
+				panic(errors.NewUnexpectedError("wrong global type found for global variable %s", variable.Name))
+			}
+
 			globalVariables = append(globalVariables, variable)
 		}
 	}
@@ -918,18 +1088,13 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 		location := contractType.GetLocation()
 		name := contractType.GetIdentifier()
 
-		var addressBytes []byte
-		addressLocation, ok := location.(common.AddressLocation)
-		if ok {
-			addressBytes = addressLocation.Address.Bytes()
+		contract := bbq.Contract{
+			Name:     name,
+			Location: location,
 		}
-
 		contracts = append(
 			contracts,
-			&bbq.Contract{
-				Name:    name,
-				Address: addressBytes,
-			},
+			&contract,
 		)
 	}
 
@@ -983,7 +1148,9 @@ func (c *Compiler[_, _]) compileBlock(
 				c.emit(opcode.InstructionReturn{})
 			} else {
 				c.emitGetLocal(local.index)
-				c.emitTransferAndConvertAndReturnValue(returnType)
+				// Do not transfer/convert, since the assignment to the temp
+				// `$_result` variable already did the transfer and convert.
+				c.emit(opcode.InstructionReturnValue{})
 			}
 		} else if needsSyntheticReturn(block.Statements) {
 			// If there are no post conditions,
@@ -1083,6 +1250,12 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 			if tempResultVar != nil {
 				// (1.a.i)
 				// Assign the return value to the temp-result variable.
+
+				// Must transfer and convert, so that `result` variable gets the
+				// correct converted value.
+				returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
+				c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+
 				c.emitSetLocal(tempResultVar.index)
 			} else {
 				// (1.a.ii)
@@ -1361,7 +1534,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 		// If a reference is taken to the value, then do not transfer.
 	} else {
-		c.emitTransferAndConvert(loopVarType)
+		c.mustEmitTransferAndConvert(loopVarType)
 	}
 
 	// Store it (next entry) in a local var.
@@ -1501,6 +1674,16 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 	return
 }
 
+func assertNotInternalNoTransfer(transfer *ast.Transfer) {
+	if transfer != nil &&
+		transfer.Operation == ast.TransferOperationInternalNoTransfer {
+
+		panic(errors.NewUnexpectedError(
+			"internal no-transfer not allowed here",
+		))
+	}
+}
+
 func (c *Compiler[_, _]) compileVariableDeclaration(
 	declaration *ast.VariableDeclaration,
 	varDeclTypes sema.VariableDeclarationTypes,
@@ -1520,9 +1703,22 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 	// No second value.
 	if secondValue == nil {
 		c.compileExpression(firstValue)
-		c.emitTransferAndConvert(firstValueTransferType)
+
+		transfer := declaration.Transfer
+
+		needTransferAndConvert :=
+			!(transfer != nil &&
+				transfer.Operation == ast.TransferOperationInternalNoTransfer)
+
+		if needTransferAndConvert {
+			c.mustEmitTransferAndConvert(firstValueTransferType)
+		}
+
 		return
 	}
+
+	assertNotInternalNoTransfer(declaration.Transfer)
+	assertNotInternalNoTransfer(declaration.SecondTransfer)
 
 	// Also has a second value.
 	// The middle expression (i.e: the first value), and its sub expressions,
@@ -1535,11 +1731,11 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 
 		// Need to transfer the value "out",
 		// before the second value is being assigned
-		c.emitTransferAndConvert(firstValueTransferType)
+		c.mustEmitTransferAndConvert(firstValueTransferType)
 
 		// Evaluate and transfer second value.
 		c.compileExpression(secondValue)
-		c.emitTransferAndConvert(firstValueType)
+		c.mustEmitTransferAndConvert(firstValueType)
 
 		// Store second value in first value's variable.
 		c.emitVariableStore(firstValue.Identifier.Identifier)
@@ -1556,13 +1752,13 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		c.compileMemberAccess(firstValue)
 		// Need to transfer the value "out",
 		// before the second value is being assigned
-		c.emitTransferAndConvert(firstValueTransferType)
+		c.mustEmitTransferAndConvert(firstValueTransferType)
 
 		// Evaluate and transfer second value.
 		// The first value becomes the target.
 		c.emitGetLocal(memberExprParentLocal)
 		c.compileExpression(secondValue)
-		c.emitTransferAndConvert(firstValueType)
+		c.mustEmitTransferAndConvert(firstValueType)
 
 		// Assign the second value to the first value's field.
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(firstValue)
@@ -1571,7 +1767,7 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		}
 		memberAccessedTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
 
-		constant := c.addStringConst(firstValue.Identifier.Identifier)
+		constant := c.addRawStringConst(firstValue.Identifier.Identifier)
 		c.emit(opcode.InstructionSetField{
 			FieldName:    constant.index,
 			AccessedType: memberAccessedTypeIndex,
@@ -1594,14 +1790,14 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		c.compileIndexAccess(firstValue)
 		// Need to transfer the value "out",
 		// before the second value is being assigned
-		c.emitTransferAndConvert(firstValueTransferType)
+		c.mustEmitTransferAndConvert(firstValueTransferType)
 
 		// Evaluate and transfer second value.
 		// The first value becomes the target.
 		c.emitGetLocal(indexExprTargetLocal)
 		c.emitGetLocal(indexExprIndexLocal)
 		c.compileExpression(secondValue)
-		c.emitTransferAndConvert(firstValueType)
+		c.mustEmitTransferAndConvert(firstValueType)
 		c.emit(opcode.InstructionSetIndex{})
 
 	default:
@@ -1637,12 +1833,17 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 
 		// Compile function body
 		c.compileExpression(declaration.Value)
-		c.emitTransferAndConvertAndReturnValue(varDeclTypes.TargetType)
+
+		// The return here is the assignment to the global variable.
+		// Therefore, always transfer the value.
+		c.mustEmitTransferAndConvert(varDeclTypes.TargetType)
+
+		c.emit(opcode.InstructionReturnValue{})
 	}()
 }
 
 func (c *Compiler[_, _]) emitTransferAndConvertAndReturnValue(returnType sema.Type) {
-	c.emitTransferAndConvert(returnType)
+	c.emitTransferIfNotResourceAndConvert(returnType)
 	c.emit(opcode.InstructionReturnValue{})
 }
 
@@ -1670,14 +1871,14 @@ func (c *Compiler[_, _]) compileAssignment(
 	switch target := target.(type) {
 	case *ast.IdentifierExpression:
 		c.compileExpression(value)
-		c.emitTransferAndConvert(targetType)
+		c.mustEmitTransferAndConvert(targetType)
 		c.emitVariableStore(target.Identifier.Identifier)
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
 		c.compileExpression(value)
-		c.emitTransferAndConvert(targetType)
-		constant := c.addStringConst(target.Identifier.Identifier)
+		c.mustEmitTransferAndConvert(targetType)
+		constant := c.addRawStringConst(target.Identifier.Identifier)
 
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(target)
 		if !ok {
@@ -1697,7 +1898,7 @@ func (c *Compiler[_, _]) compileAssignment(
 		c.emitIndexKeyTransferAndConvert(target)
 
 		c.compileExpression(value)
-		c.emitTransferAndConvert(targetType)
+		c.mustEmitTransferAndConvert(targetType)
 
 		c.emit(opcode.InstructionSetIndex{})
 
@@ -1831,7 +2032,7 @@ func (c *Compiler[_, _]) compileSwapGet(
 		panic(errors.NewUnreachableError())
 	}
 
-	c.emitTransferAndConvert(targetType)
+	c.mustEmitTransferAndConvert(targetType)
 
 	valueIndex = c.currentFunction.generateLocalIndex()
 	c.emitSetLocal(valueIndex)
@@ -1857,7 +2058,7 @@ func (c *Compiler[_, _]) compileSwapSet(
 		c.emitGetLocal(valueIndex)
 
 		name := sideExpression.Identifier.Identifier
-		constant := c.addStringConst(name)
+		constant := c.addRawStringConst(name)
 
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(sideExpression)
 		if !ok {
@@ -1889,7 +2090,7 @@ func (c *Compiler[_, _]) emitIndexKeyTransferAndConvert(indexExpression *ast.Ind
 	}
 
 	indexedType := indexExpressionTypes.IndexedType
-	c.emitTransferAndConvert(indexedType.IndexingType())
+	c.emitTransferIfNotResourceAndConvert(indexedType.IndexingType())
 }
 
 func (c *Compiler[_, _]) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
@@ -1928,80 +2129,90 @@ func (c *Compiler[_, _]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
 func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
 	value := expression.Value
 	integerType := c.DesugaredElaboration.IntegerExpressionType(expression)
-	c.emitIntegerConstant(value, integerType)
+	c.emitIntegerConstant(
+		value,
+		integerType,
+	)
 
 	return
 }
 
-func (c *Compiler[_, _]) emitIntegerConstant(value *big.Int, integerType sema.Type) {
+func (c *Compiler[_, _]) emitIntegerConstant(
+	value *big.Int,
+	integerType sema.Type,
+) {
 	constantKind := constant.FromSemaType(integerType)
 
-	var data []byte
+	var data constant.ConstantData
 
 	switch constantKind {
 	case constant.Int:
-		// NOTE: also adjust addIntConst!
-		data = interpreter.NewUnmeteredIntValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredIntValueFromBigInt(value)
 
 	case constant.Int8:
-		data = interpreter.NewUnmeteredInt8Value(int8(value.Int64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt8Value(int8(value.Int64()))
 
 	case constant.Int16:
-		data = interpreter.NewUnmeteredInt16Value(int16(value.Int64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt16Value(int16(value.Int64()))
 
 	case constant.Int32:
-		data = interpreter.NewUnmeteredInt32Value(int32(value.Int64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt32Value(int32(value.Int64()))
 
 	case constant.Int64:
-		data = interpreter.NewUnmeteredInt64Value(value.Int64()).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt64Value(value.Int64())
 
 	case constant.Int128:
-		data = interpreter.NewUnmeteredInt128ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt128ValueFromBigInt(value)
 
 	case constant.Int256:
-		data = interpreter.NewUnmeteredInt256ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt256ValueFromBigInt(value)
 
 	case constant.UInt:
-		data = interpreter.NewUnmeteredUIntValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUIntValueFromBigInt(value)
 
 	case constant.UInt8:
-		data = interpreter.NewUnmeteredUInt8Value(uint8(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt8Value(uint8(value.Uint64()))
 
 	case constant.UInt16:
-		data = interpreter.NewUnmeteredUInt16Value(uint16(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt16Value(uint16(value.Uint64()))
 
 	case constant.UInt32:
-		data = interpreter.NewUnmeteredUInt32Value(uint32(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt32Value(uint32(value.Uint64()))
 
 	case constant.UInt64:
-		data = interpreter.NewUnmeteredUInt64Value(value.Uint64()).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt64Value(value.Uint64())
 
 	case constant.UInt128:
-		data = interpreter.NewUnmeteredUInt128ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt128ValueFromBigInt(value)
 
 	case constant.UInt256:
-		data = interpreter.NewUnmeteredUInt256ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt256ValueFromBigInt(value)
 
 	case constant.Word8:
-		data = interpreter.NewUnmeteredWord8Value(uint8(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord8Value(uint8(value.Uint64()))
 
 	case constant.Word16:
-		data = interpreter.NewUnmeteredWord16Value(uint16(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord16Value(uint16(value.Uint64()))
 
 	case constant.Word32:
-		data = interpreter.NewUnmeteredWord32Value(uint32(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord32Value(uint32(value.Uint64()))
 
 	case constant.Word64:
-		data = interpreter.NewUnmeteredWord64Value(value.Uint64()).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord64Value(value.Uint64())
 
 	case constant.Word128:
-		data = interpreter.NewUnmeteredWord128ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord128ValueFromBigInt(value)
 
 	case constant.Word256:
-		data = interpreter.NewUnmeteredWord256ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord256ValueFromBigInt(value)
 
 	case constant.Address:
-		data = value.Bytes()
+		data = interpreter.NewAddressValueFromBytes(
+			c.Config.MemoryGauge,
+			func() []byte {
+				return value.Bytes()
+			},
+		)
 
 	default:
 		panic(errors.NewUnexpectedError(
@@ -2011,54 +2222,88 @@ func (c *Compiler[_, _]) emitIntegerConstant(value *big.Int, integerType sema.Ty
 		))
 	}
 
-	c.emitGetConstant(c.addConstant(constantKind, data))
+	addedConstant := c.addConstant(
+		constantKind,
+		data,
+		integerConstantKey{
+			constantKind: constantKind,
+			literal:      value.String(),
+		},
+	)
+
+	c.emitGetConstant(addedConstant)
 }
 
 func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
-	// TODO: adjust once/if we support more fixed point types
-
 	fixedPointSubType := c.DesugaredElaboration.FixedPointExpressionType(expression)
+
+	var scale uint
+	switch fixedPointSubType {
+	case sema.Fix128Type, sema.UFix128Type:
+		scale = sema.Fix128Scale
+	default:
+		scale = sema.Fix64Scale
+	}
 
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,
 		expression.UnsignedInteger,
 		expression.Fractional,
 		expression.Scale,
-		sema.Fix64Scale,
+		scale,
 	)
 
-	var constant *Constant
+	var constantValue interpreter.Value
+	var constantKind constant.Kind
 
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
-		constant = c.addFix64Constant(value)
+		constantKind = constant.Fix64
+		constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
 
 	case sema.UFix64Type:
-		constant = c.addUFix64Constant(value)
+		constantKind = constant.UFix64
+		constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
+
+	case sema.Fix128Type:
+		constantKind = constant.Fix128
+		constantValue = interpreter.NewFix128ValueFromBigInt(
+			c.Config.MemoryGauge,
+			value,
+		)
+
+	case sema.UFix128Type:
+		constantKind = constant.UFix128
+		constantValue = interpreter.NewUFix128ValueFromBigInt(
+			c.Config.MemoryGauge,
+			value,
+		)
 
 	case sema.FixedPointType:
 		if expression.Negative {
-			constant = c.addFix64Constant(value)
+			constantKind = constant.Fix64
+			constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
 		} else {
-			constant = c.addUFix64Constant(value)
+			constantKind = constant.UFix64
+			constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
 		}
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	c.emitGetConstant(constant)
+	addedConstant := c.addConstant(
+		constantKind,
+		constantValue,
+		fixedpointConstantKey{
+			constantKind:    constantKind,
+			positiveLiteral: string(expression.PositiveLiteral),
+			isNegative:      expression.Negative,
+		},
+	)
+
+	c.emitGetConstant(addedConstant)
 
 	return
-}
-
-func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *Constant {
-	data := interpreter.NewUnmeteredUFix64Value(value.Uint64()).ToBigEndianBytes()
-	return c.addConstant(constant.UFix64, data)
-}
-
-func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *Constant {
-	data := interpreter.NewUnmeteredFix64Value(value.Int64()).ToBigEndianBytes()
-	return c.addConstant(constant.Fix64, data)
 }
 
 func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
@@ -2075,7 +2320,7 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 
 	for _, expression := range array.Values {
 		c.compileExpression(expression)
-		c.emitTransferAndConvert(elementExpectedType)
+		c.emitTransferIfNotResourceAndConvert(elementExpectedType)
 	}
 
 	c.emit(
@@ -2103,9 +2348,9 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 
 	for _, entry := range dictionary.Entries {
 		c.compileExpression(entry.Key)
-		c.emitTransferAndConvert(dictionaryType.KeyType)
+		c.emitTransferIfNotResourceAndConvert(dictionaryType.KeyType)
 		c.compileExpression(entry.Value)
-		c.emitTransferAndConvert(dictionaryType.ValueType)
+		c.emitTransferIfNotResourceAndConvert(dictionaryType.ValueType)
 	}
 
 	c.emit(
@@ -2153,16 +2398,20 @@ func (c *Compiler[_, _]) emitVariableLoad(name string) {
 }
 
 func (c *Compiler[_, _]) emitGlobalLoad(name string) {
+	// we might need to antialias this name
+	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetGlobal{
-		Global: global.Index,
+		Global: global.GetGlobalInfo().Index,
 	})
 }
 
 func (c *Compiler[_, _]) emitMethodLoad(name string) {
+	// we might need to antialias part of this name
+	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetMethod{
-		Method: global.Index,
+		Method: global.GetGlobalInfo().Index,
 	})
 }
 
@@ -2183,7 +2432,7 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionSetGlobal{
-		Global: global.Index,
+		Global: global.GetGlobalInfo().Index,
 	})
 }
 
@@ -2237,6 +2486,27 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 	return
 }
 
+// maybeApplyAddressQualifierToFunctionName checks if the function is location qualified
+// and returns the location qualified name if it is.
+// Otherwise, returns the type qualified name.
+func (c *Compiler[_, _]) maybeApplyAddressQualifierToFunctionName(
+	functionName string,
+	accessedType sema.Type,
+	typeQualifiedName string,
+) string {
+	// check if this function is location qualified by checking globalRemoveAddressTable
+	addressQualifiedFuncName := commons.QualifiedName(
+		commons.LocationQualifier(accessedType),
+		functionName,
+	)
+	if c.globalRemoveAddressTable != nil {
+		if _, ok := c.globalRemoveAddressTable[addressQualifiedFuncName]; ok {
+			return addressQualifiedFuncName
+		}
+	}
+	return typeQualifiedName
+}
+
 func (c *Compiler[_, _]) compileMethodInvocation(
 	expression *ast.InvocationExpression,
 	memberInfo sema.MemberAccessInfo,
@@ -2248,9 +2518,14 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 	invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 	if invocationType.IsConstructor {
-		funcName = commons.TypeQualifiedName(
-			memberInfo.AccessedType,
+
+		funcName = c.maybeApplyAddressQualifierToFunctionName(
 			invokedExpr.Identifier.Identifier,
+			memberInfo.AccessedType,
+			commons.TypeQualifiedName(
+				memberInfo.AccessedType,
+				invokedExpr.Identifier.Identifier,
+			),
 		)
 
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
@@ -2291,16 +2566,16 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			invokedExpr.Expression,
 			isOptional,
 			func() {
-				// withOptionalChaining already load the receiver onto the stack.
+				// Get the method as a bound function.
+				// withOptionalChaining evaluates the target expression and leave the value on stack.
+				// i.e: the receiver is already loaded.
+				c.compileMemberAccess(invokedExpr)
 
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
-				funcNameConst := c.addStringConst(funcName)
-
 				c.emit(
-					opcode.InstructionInvokeDynamic{
-						Name:     funcNameConst.index,
+					opcode.InstructionInvoke{
 						TypeArgs: typeArgs,
 						ArgCount: argumentCount,
 					},
@@ -2320,9 +2595,13 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	}
 
 	// Load function value.
-	funcName = commons.TypeQualifiedName(
-		accessedType,
+	funcName = c.maybeApplyAddressQualifierToFunctionName(
 		invokedExpr.Identifier.Identifier,
+		accessedType,
+		commons.TypeQualifiedName(
+			accessedType,
+			invokedExpr.Identifier.Identifier,
+		),
 	)
 
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
@@ -2456,11 +2735,16 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTypes sema.InvocationExpressionTypes) {
 	for index, argument := range arguments {
 		c.compileExpression(argument.Expression)
+
+		if invocationTypes.SkipArgumentsTransfer {
+			continue
+		}
+
 		parameterType := invocationTypes.ParameterTypes[index]
 		if parameterType == nil {
 			c.emitTransfer()
 		} else {
-			c.emitTransferAndConvert(parameterType)
+			c.emitTransferIfNotResourceAndConvert(parameterType)
 		}
 	}
 }
@@ -2548,7 +2832,7 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 	identifier := expression.Identifier.Identifier
 
-	constant := c.addStringConst(identifier)
+	constant := c.addRawStringConst(identifier)
 
 	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
@@ -2653,12 +2937,9 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 		c.emit(opcode.InstructionDeref{})
 
 	case ast.OperationMove:
-		// Transfer to the target type.
-		targetType := c.DesugaredElaboration.MoveExpressionTypes(expression)
-		typeIndex := c.getOrAddType(targetType)
-		c.codeGen.Emit(opcode.InstructionTransferAndConvert{
-			Type: typeIndex,
-		})
+		// Transfer.
+		// No need to convert.
+		c.emitTransfer()
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2920,7 +3201,7 @@ func (c *Compiler[_, _]) VisitPathExpression(expression *ast.PathExpression) (_ 
 		panic(errors.NewDefaultUserError("invalid identifier"))
 	}
 
-	identifierConst := c.addStringConst(identifier)
+	identifierConst := c.addRawStringConst(identifier)
 	identifierIndex := identifierConst.index
 
 	c.emit(
@@ -2953,13 +3234,17 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	typeName := commons.TypeQualifier(enclosingType)
 
 	var functionName string
-	if kind == common.CompositeKindContract {
+	switch kind {
+	case common.CompositeKindContract:
 		// For contracts, add the initializer as `init()`.
 		// A global variable with the same name as contract is separately added.
 		// The VM will load the contract and assign to that global variable during imports resolution.
 		identifier := declaration.DeclarationIdentifier().Identifier
 		functionName = commons.QualifiedName(typeName, identifier)
-	} else {
+	case common.CompositeKindEnum:
+		// Match the associated global variable for enums, `Enum.init()`.
+		functionName = commons.TypeQualifiedName(enclosingType, commons.InitFunctionName)
+	default:
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
 		functionName = typeName
@@ -3029,7 +3314,14 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 			)
 		}
 	} else {
-		addressConstant := c.addConstant(constant.Address, address.Bytes())
+		addressValue := interpreter.NewAddressValue(c.Config.MemoryGauge, address)
+		addressConstant := c.addConstant(
+			constant.Address,
+			addressValue,
+			addressConstantKey{
+				content: address,
+			},
+		)
 		c.emit(
 			opcode.InstructionNewCompositeAt{
 				Kind:    kind,
@@ -3054,7 +3346,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		global := c.findGlobal(typeName)
 
 		c.emit(opcode.InstructionSetGlobal{
-			Global: global.Index,
+			Global: global.GetGlobalInfo().Index,
 		})
 	}
 
@@ -3176,28 +3468,9 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 		c.compositeTypeStack.pop()
 	}()
 
-	// Compile members
-	hasInit := false
+	// Compile special function members
 	for _, specialFunc := range declaration.Members.SpecialFunctions() {
-		if specialFunc.Kind == common.DeclarationKindInitializer {
-			hasInit = true
-		}
 		c.compileDeclaration(specialFunc)
-	}
-
-	// If the initializer is not declared, generate
-	// - a synthetic initializer for enum types, otherwise
-	// - an empty initializer
-	if !hasInit {
-		if compositeType.Kind == common.CompositeKindEnum {
-			c.generateEnumInit(compositeType)
-			c.generateEnumLookup(
-				compositeType,
-				declaration.Members.EnumCases(),
-			)
-		} else {
-			c.generateEmptyInit()
-		}
 	}
 
 	// Visit members.
@@ -3271,26 +3544,89 @@ func (c *Compiler[_, _]) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ str
 }
 
 func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
-	resolvedLocations, err := commons.ResolveLocation(
-		c.Config.LocationHandler,
-		declaration.Identifiers,
-		declaration.Location,
-	)
-	if err != nil {
-		panic(err)
+
+	// Resolve and add globals from transitive imports.
+
+	resolvedLocations := c.DesugaredElaboration.elaboration.ImportDeclarationResolvedLocations(declaration)
+
+	// some import declarations are added during desugaring and do not have resolved locations from the elaboration
+	if resolvedLocations == nil {
+		var identifiers []ast.Identifier
+		for _, imp := range declaration.Imports {
+			identifiers = append(identifiers, imp.Identifier)
+		}
+
+		var err error
+		resolvedLocations, err = commons.ResolveLocation(
+			c.Config.LocationHandler,
+			identifiers,
+			declaration.Location,
+		)
+		if err != nil {
+			panic(err)
+		}
+
 	}
 
+	aliases := c.DesugaredElaboration.elaboration.ImportDeclarationAliases(declaration)
+
 	for _, location := range resolvedLocations {
-		c.addGlobalsFromImportedProgram(location.Location)
+		c.addGlobalsFromImportedProgram(location.Location, aliases)
 	}
 
 	return
 }
 
-func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location) {
+// Applies type aliases to a given string.
+// Generalized to support type qualified function names
+// e.g. Foo1.bar -> A.001.Foo.bar
+// Only consider the first part of the name for aliasing
+func (c *Compiler[_, _]) applyTypeAliases(name string) string {
+	if c.globalAliasTable == nil {
+		return name
+	}
+
+	parts := strings.Split(name, ".")
+	part := parts[0]
+	alias, ok := c.globalAliasTable[part]
+
+	// If no alias found, then return the original name.
+	if !ok {
+		return name
+	}
+
+	parts[0] = alias
+	aliasedName := strings.Join(parts, ".")
+	return aliasedName
+}
+
+func (c *Compiler[_, _]) createGlobalAlias(location common.Location, name string, aliases map[string]string, forceQualify bool) string {
+	alias, ok := aliases[name]
+	// if alias exists or we want to force qualify (e.g. for aliased methods)
+	if ok || forceQualify {
+		// we want a table pointing from the alias -> address qualifier (Foo1 -> A.0001.Foo)
+		addressQualifiedName := string(location.TypeID(nil, name))
+		// check if alias exists in case of force qualification
+		if ok {
+			c.globalAliasTable[alias] = addressQualifiedName
+		}
+
+		c.globalRemoveAddressTable[addressQualifiedName] = name
+		return addressQualifiedName
+	}
+	return name
+}
+
+func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location, aliases map[string]string) {
 	// Built-in location has no program.
 	if location == nil {
 		return
+	}
+
+	if len(aliases) != 0 && c.globalAliasTable == nil {
+		// Lazy initialize the alias tables when needed.
+		c.globalAliasTable = make(map[string]string)
+		c.globalRemoveAddressTable = make(map[string]string)
 	}
 
 	importedProgram := c.Config.ImportHandler(location)
@@ -3298,28 +3634,100 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 	// Add a global variable for the imported contract value.
 	contracts := importedProgram.Contracts
 	for _, contract := range contracts {
-		c.addImportedGlobal(location, contract.Name)
+		qualifiedName := c.createGlobalAlias(location, contract.Name, aliases, false)
+		c.addImportedGlobal(location, contract.Name, qualifiedName)
 	}
 
 	for _, variable := range importedProgram.Variables {
-		c.addImportedGlobal(location, variable.Name)
+		name := variable.Name
+		qualifiedName := c.createGlobalAlias(location, name, aliases, false)
+
+		if _, ok := c.Globals[qualifiedName]; !ok {
+			// All global-variables of imports must be initialized when the current program is initialized.
+			// Therefore, add all global **variables** as "used" globals-variables, so they are always added
+			// to the compiled program.
+			// VM will initialize all used globals-variables.
+			//
+			// Only add them if they are not already added.
+			// e.g: Could have more than one path to a transitive import.
+			c.addUsedImportedGlobal(name, qualifiedName, location)
+		}
 	}
 
 	for _, function := range importedProgram.Functions {
-		name := function.QualifiedName
-		c.addImportedGlobal(location, name)
+		qualifiedName := c.createGlobalAlias(location, function.QualifiedName, aliases, len(aliases) > 0)
+		c.addImportedGlobal(location, function.QualifiedName, qualifiedName)
 	}
 
 	// Recursively add transitive imports.
 	for _, impt := range importedProgram.Imports {
-		c.addGlobalsFromImportedProgram(impt.Location)
+		c.addGlobalsFromImportedProgram(impt.Location, aliases)
 	}
 }
 
-func (c *Compiler[_, _]) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) (_ struct{}) {
-	// Transaction declaration are desugared to composite declarations.
-	// So this should never reach.
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) (_ struct{}) {
+
+	if declaration.ParameterList == nil ||
+		declaration.ParameterList.IsEmpty() {
+
+		return
+	}
+
+	transactionTypes := c.DesugaredElaboration.elaboration.TransactionDeclarationType(declaration)
+	if transactionTypes == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	parameterCount := len(transactionTypes.Parameters)
+
+	if parameterCount >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid parameter count"))
+	}
+
+	functionIndex := len(c.functions)
+
+	if functionIndex >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid function index"))
+	}
+
+	functionType := &sema.FunctionType{
+		Parameters:           transactionTypes.Parameters,
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	}
+
+	const functionName = commons.ProgramInitFunctionName
+
+	function := c.addFunction(
+		functionName,
+		functionName,
+		uint16(parameterCount),
+		functionType,
+	)
+
+	func() {
+		c.targetFunction(function)
+		defer c.targetFunction(nil)
+
+		for _, parameter := range declaration.ParameterList.Parameters {
+
+			// Create assignment from param to global var.
+			// i.e: `a = $_param_a`
+			// NOTE: NO transfer, as the argument was already transferred to the parameter.
+
+			modifiedParamName := commons.TransactionGeneratedParamPrefix +
+				parameter.Identifier.Identifier
+
+			local := c.currentFunction.declareLocal(modifiedParamName)
+			c.emitGetLocal(local.index)
+
+			global := c.findGlobal(parameter.Identifier.Identifier)
+			c.emit(opcode.InstructionSetGlobal{
+				Global: global.GetGlobalInfo().Index,
+			})
+		}
+	}()
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struct{}) {
@@ -3357,14 +3765,19 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 
 		constructorName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
 		c.emitGlobalLoad(constructorName)
+
+		indexBigInt := big.NewInt(int64(index))
 		c.emitIntegerConstant(
-			big.NewInt(int64(index)),
+			indexBigInt,
 			compositeType.EnumRawType,
 		)
+
 		c.emit(opcode.InstructionInvoke{
 			ArgCount: 1,
 		})
-		c.emitTransferAndConvertAndReturnValue(compositeType)
+		// NOTE: Do not transfer, as that creates a copy of the enum case value,
+		// which does not match the interpreter's behavior.
+		c.emit(opcode.InstructionReturnValue{})
 	}()
 
 	return
@@ -3395,7 +3808,7 @@ func (c *Compiler[_, _]) VisitAttachExpression(_ *ast.AttachExpression) (_ struc
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_, _]) emitTransferAndConvert(targetType sema.Type) {
+func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
 
 	//lastInstruction := c.codeGen.LastInstruction()
 
@@ -3454,6 +3867,30 @@ func (c *Compiler[_, _]) emitTransferAndConvert(targetType sema.Type) {
 	})
 }
 
+// emitTransferIfNotResourceAndConvert emits code to transfer only non-resource types,
+// followed by a conversion regardless of the type.
+// i.e: If
+//   - Resource: Convert only.
+//   - Non-Resource: Transfer and convert.
+func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(targetType sema.Type) {
+	typeIndex := c.getOrAddType(targetType)
+
+	// Resource-typed values are always used along with the move (<-) unary-operator.
+	// And the unary move operator already does the transfer.
+	// Therefore, do not perform a redundant transfer for resource-types.
+	// Only perform the conversion (e.g: boxing, etc.).
+	if targetType.IsResourceType() {
+		c.emit(opcode.InstructionConvert{
+			Type: typeIndex,
+		})
+		return
+	}
+
+	c.emit(opcode.InstructionTransferAndConvert{
+		Type: typeIndex,
+	})
+}
+
 func (c *Compiler[_, _]) emitTransfer() {
 	c.emit(opcode.InstructionTransfer{})
 }
@@ -3498,51 +3935,6 @@ func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declare
 			c.currentFunction.declareLocal(parameterName)
 		}
 	}
-}
-
-func (c *Compiler[_, _]) generateEmptyInit() {
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		emptyInitializer.FunctionDeclaration,
-		emptyInitializerFuncType,
-	)
-	c.VisitSpecialFunctionDeclaration(emptyInitializer)
-}
-
-func (c *Compiler[_, _]) generateEnumInit(enumType *sema.CompositeType) {
-	enumInitializer := newEnumInitializer(c.Config.MemoryGauge, enumType, c.DesugaredElaboration)
-	enumInitializerFuncType := newEnumInitializerFuncType(enumType.EnumRawType)
-
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		enumInitializer.FunctionDeclaration,
-		enumInitializerFuncType,
-	)
-	c.VisitSpecialFunctionDeclaration(enumInitializer)
-}
-
-func (c *Compiler[_, _]) generateEnumLookup(enumType *sema.CompositeType, enumCases []*ast.EnumCaseDeclaration) {
-	memoryGauge := c.Config.MemoryGauge
-
-	enumLookup := newEnumLookup(
-		memoryGauge,
-		enumType,
-		enumCases,
-		c.DesugaredElaboration,
-	)
-	enumLookupFuncType := newEnumLookupFuncType(memoryGauge, enumType)
-
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		enumLookup,
-		enumLookupFuncType,
-	)
-
-	// TODO: improve
-	previousCompositeTypeStack := c.compositeTypeStack
-	c.compositeTypeStack = &Stack[sema.CompositeKindedType]{}
-	defer func() {
-		c.compositeTypeStack = previousCompositeTypeStack
-	}()
-
-	c.VisitFunctionDeclaration(enumLookup, false)
 }
 
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {

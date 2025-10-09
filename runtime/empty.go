@@ -37,11 +37,6 @@ type EmptyRuntimeInterface struct{}
 
 var _ Interface = EmptyRuntimeInterface{}
 
-func (EmptyRuntimeInterface) MeterMemory(_ common.MemoryUsage) error {
-	// NO-OP
-	return nil
-}
-
 func (EmptyRuntimeInterface) ResolveLocation(_ []Identifier, _ Location) ([]ResolvedLocation, error) {
 	panic("unexpected call to ResolveLocation")
 }
@@ -52,23 +47,6 @@ func (EmptyRuntimeInterface) GetOrLoadProgram(_ Location, _ func() (*Program, er
 
 func (EmptyRuntimeInterface) GetAccountContractCode(_ common.AddressLocation) (code []byte, err error) {
 	panic("unexpected call to GetAccountContractCode")
-}
-
-func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationUsage) error {
-	// NO-OP
-	return nil
-}
-
-func (EmptyRuntimeInterface) ComputationUsed() (uint64, error) {
-	panic("unexpected call to ComputationUsed")
-}
-
-func (EmptyRuntimeInterface) MemoryUsed() (uint64, error) {
-	panic("unexpected call to MemoryUsed")
-}
-
-func (EmptyRuntimeInterface) InteractionUsed() (uint64, error) {
-	panic("unexpected call to InteractionUsed")
 }
 
 func (EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
@@ -234,7 +212,6 @@ func (EmptyRuntimeInterface) RecoverProgram(_ *ast.Program, _ common.Location) (
 
 func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
 	_ interpreter.AccountCapabilityGetValidationContext,
-	_ interpreter.LocationRange,
 	_ interpreter.AddressValue,
 	_ interpreter.PathValue,
 	_ *sema.ReferenceType,
@@ -245,7 +222,6 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
 
 func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
 	_ interpreter.AccountCapabilityPublishValidationContext,
-	_ interpreter.LocationRange,
 	_ interpreter.AddressValue,
 	_ interpreter.PathValue,
 	_ *interpreter.ReferenceStaticType,

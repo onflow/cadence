@@ -233,7 +233,7 @@ func TestRuntimeError(t *testing.T) {
 15 | 				destroy createResource()
    | 				^^^^^^^^^^^^^^^^^^^^^^^^
 
-  --> 0100000000000000000000000000000000000000000000000000000000000000:9:21
+  --> 0100000000000000000000000000000000000000000000000000000000000000:9:11
    |
  9 | 				return <- create Resource(
 10 | 					s: "argument"
@@ -493,7 +493,7 @@ error: overflow
 				" --> 0000000000000002.B:3:30\n"+
 				"  |\n"+
 				"3 |               access(all) fun bar() {\n"+
-				"  |                               ^^^ move this declaration to a contract\n"+
+				"  |                               ^^^ move this declaration into a contract\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `X`\n"+
 				" --> 0000000000000002.B:5:18\n"+
@@ -507,7 +507,7 @@ error: overflow
 				" --> 0000000000000001.A:8:30\n"+
 				"  |\n"+
 				"8 |               access(all) fun foo() {\n"+
-				"  |                               ^^^ move this declaration to a contract\n"+
+				"  |                               ^^^ move this declaration into a contract\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `Y`\n"+
 				"  --> 0000000000000001.A:10:18\n"+

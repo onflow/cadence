@@ -7922,7 +7922,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: func(usage common.MemoryUsage) error {
+			OnGetOrLoadProgram: func(_ Location, _ func() (*Program, error)) (*Program, error) {
 				// panic with a non-error type
 				panic("crasher")
 			},
@@ -7943,7 +7943,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		RequireError(t, err)
 
-		assertRuntimeErrorIsInternalError(t, err)
+		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 }
@@ -8041,17 +8041,19 @@ func TestRuntimeComputationMetering(t *testing.T) {
 			var hits uint
 			var totalIntensity uint64
 
-			meterComputationFunc := func(usage common.ComputationUsage) error {
-				hits++
-				totalIntensity += usage.Intensity
-				if hits >= hitLimit {
-					return computationHitsExceededError{
-						hits:     hits,
-						hitLimit: hitLimit,
+			computationGauge := common.FunctionComputationGauge(
+				func(usage common.ComputationUsage) error {
+					hits++
+					totalIntensity += usage.Intensity
+					if hits >= hitLimit {
+						return computationHitsExceededError{
+							hits:     hits,
+							hitLimit: hitLimit,
+						}
 					}
-				}
-				return nil
-			}
+					return nil
+				},
+			)
 
 			address := common.MustBytesToAddress([]byte{0x1})
 
@@ -8060,7 +8062,6 @@ func TestRuntimeComputationMetering(t *testing.T) {
 				OnGetSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
-				OnMeterComputation: meterComputationFunc,
 			}
 
 			nextTransactionLocation := NewTransactionLocationGenerator()
@@ -8070,9 +8071,10 @@ func TestRuntimeComputationMetering(t *testing.T) {
 					Source: script,
 				},
 				Context{
-					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
-					UseVM:     *compile,
+					Interface:        runtimeInterface,
+					Location:         nextTransactionLocation(),
+					ComputationGauge: computationGauge,
+					UseVM:            *compile,
 				},
 			)
 			if testCase.ok {
@@ -9226,10 +9228,13 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(_ common.ComputationUsage) error {
+		}
+
+		computationGauge := common.FunctionComputationGauge(
+			func(_ common.ComputationUsage) error {
 				return fmt.Errorf("computation limit exceeded")
 			},
-		}
+		)
 
 		nextScriptLocation := NewScriptLocationGenerator()
 
@@ -9238,36 +9243,39 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:        runtimeInterface,
+				Location:         nextScriptLocation(),
+				ComputationGauge: computationGauge,
+				UseVM:            *compile,
 			},
 		)
 
 		require.Error(t, err)
 
-		// Returned error MUST be an external error.
-		// It can NOT be an internal error.
-		assertRuntimeErrorIsExternalError(t, err)
+		var meteringError runtimeErrors.ComputationMeteringError
+		require.ErrorAs(t, err, &meteringError)
 	})
 
 	t.Run("regular error panicked", func(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            access(all) fun foo() {}
+	       access(all) fun foo() {}
 
-            access(all) fun main() {
-                foo()
-            }
-        `)
+	       access(all) fun main() {
+	           foo()
+	       }
+	   `)
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(usage common.ComputationUsage) error {
+		}
+
+		computationGauge := common.FunctionComputationGauge(
+			func(_ common.ComputationUsage) error {
 				panic(fmt.Errorf("computation limit exceeded"))
 			},
-		}
+		)
 
 		nextScriptLocation := NewScriptLocationGenerator()
 
@@ -9276,17 +9284,14 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:        runtimeInterface,
+				Location:         nextScriptLocation(),
+				ComputationGauge: computationGauge,
+				UseVM:            *compile,
 			},
 		)
 
 		require.Error(t, err)
-
-		// Returned error MUST be an external error.
-		// It can NOT be an internal error.
-		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 	t.Run("go runtime error panicked", func(t *testing.T) {
@@ -9302,13 +9307,16 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(usage common.ComputationUsage) error {
+		}
+
+		computationGauge := common.FunctionComputationGauge(
+			func(usage common.ComputationUsage) error {
 				// Cause a runtime error
 				var x any = "hello"
 				_ = x.(int)
 				return nil
 			},
-		}
+		)
 
 		nextScriptLocation := NewScriptLocationGenerator()
 
@@ -9317,9 +9325,10 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:        runtimeInterface,
+				Location:         nextScriptLocation(),
+				ComputationGauge: computationGauge,
+				UseVM:            *compile,
 			},
 		)
 
@@ -9342,7 +9351,10 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnEmitEvent: func(event cadence.Event) (err error) {
+		}
+
+		computationGauge := common.FunctionComputationGauge(
+			func(usage common.ComputationUsage) (err error) {
 
 				// Cause a runtime error. Catch it and return.
 				var x any = "hello"
@@ -9358,7 +9370,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 				return
 			},
-		}
+		)
 
 		nextScriptLocation := NewScriptLocationGenerator()
 
@@ -9367,16 +9379,14 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:        runtimeInterface,
+				Location:         nextScriptLocation(),
+				ComputationGauge: computationGauge,
+				UseVM:            *compile,
 			},
 		)
 
 		require.Error(t, err)
-
-		// Returned error MUST be an internal error.
-		assertRuntimeErrorIsInternalError(t, err)
 	})
 }
 
@@ -9662,34 +9672,37 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: []byte(`
-                import Foo from 0x1
+	for i := 0; i < b.N; i++ {
 
-                transaction {
-                    prepare(signer: auth(Storage) &Account) {
-                        // When the array is loaded from storage, all elements are also loaded.
-                        // So all moves of this resource will check for tracking of all elements aas well.
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  import Foo from 0x1
 
-                        var array1 <- signer.storage.load<@[Foo.R]>(from: /storage/r)!
-                        var array2 <- array1
-                        var array3 <- array2
-                        var array4 <- array3
-                        var array5 <- array4
-                        destroy array5
-                    }
-                }
-            `),
-		},
-		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
-		},
-	)
-	require.NoError(b, err)
+                  transaction {
+                      prepare(signer: auth(Storage) &Account) {
+                          // When the array is loaded from storage, all elements are also loaded.
+                          // So all moves of this resource will check for tracking of all elements aas well.
+
+                          var array1 <- signer.storage.load<@[Foo.R]>(from: /storage/r)!
+                          var array2 <- array1
+                          var array3 <- array2
+                          var array4 <- array3
+                          var array5 <- array4
+                          signer.storage.save(<-array5, to: /storage/r)
+                      }
+                  }
+                `),
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
+				UseVM:       *compile,
+			},
+		)
+		require.NoError(b, err)
+	}
 }
 
 func TestRuntimeTypesAndConversions(t *testing.T) {
@@ -11598,7 +11611,6 @@ func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
 		},
 		OnValidateAccountCapabilitiesGet: func(
 			_ interpreter.AccountCapabilityGetValidationContext,
-			_ interpreter.LocationRange,
 			_ interpreter.AddressValue,
 			path interpreter.PathValue,
 			wantedBorrowType *sema.ReferenceType,
@@ -11689,7 +11701,6 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 		},
 		OnValidateAccountCapabilitiesGet: func(
 			_ interpreter.AccountCapabilityGetValidationContext,
-			_ interpreter.LocationRange,
 			_ interpreter.AddressValue,
 			path interpreter.PathValue,
 			wantedBorrowType *sema.ReferenceType,
@@ -11776,7 +11787,6 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 			},
 			OnValidateAccountCapabilitiesPublish: func(
 				_ interpreter.AccountCapabilityPublishValidationContext,
-				_ interpreter.LocationRange,
 				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
@@ -11835,7 +11845,6 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 			},
 			OnValidateAccountCapabilitiesPublish: func(
 				_ interpreter.AccountCapabilityPublishValidationContext,
-				_ interpreter.LocationRange,
 				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
@@ -11893,7 +11902,6 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 			},
 			OnValidateAccountCapabilitiesPublish: func(
 				_ interpreter.AccountCapabilityPublishValidationContext,
-				_ interpreter.LocationRange,
 				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
@@ -13504,9 +13512,6 @@ func TestRuntimeMetering(t *testing.T) {
 	memoryGauge := newTestMemoryGauge()
 	computationGauge := newTestComputationGauge()
 
-	runtimeInterface.OnMeterMemory = memoryGauge.MeterMemory
-	runtimeInterface.OnMeterComputation = computationGauge.MeterComputation
-
 	_, err = runtime.InvokeContractFunction(
 		common.AddressLocation{
 			Address: addressValue,
@@ -13516,9 +13521,11 @@ func TestRuntimeMetering(t *testing.T) {
 		nil,
 		nil,
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			UseVM:     *compile,
+			Interface:        runtimeInterface,
+			Location:         nextTransactionLocation(),
+			MemoryGauge:      memoryGauge,
+			ComputationGauge: computationGauge,
+			UseVM:            *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -13533,4 +13540,65 @@ func TestRuntimeMetering(t *testing.T) {
 	assert.Equal(t, uint64(30), memoryGauge.getMemory(common.MemoryKindRawString))
 	assert.Equal(t, uint64(2), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
 	assert.Equal(t, uint64(1), computationGauge.getComputation(common.ComputationKindStatement))
+}
+
+func TestRuntimePanicInImportedFunction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	importedScript := []byte(`
+      access(all) fun answer(): Int {
+          panic("42")
+      }
+    `)
+
+	script := []byte(`
+      import "imported"
+
+      access(all) fun main(): Int {
+          return answer()
+      }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return importedScript, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	location := nextScriptLocation()
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  location,
+			UseVM:     *compile,
+		},
+	)
+	var panicErr *stdlib.PanicError
+	require.ErrorAs(t, err, &panicErr)
+
+	assert.Equal(t,
+		common.StringLocation("imported"),
+		panicErr.LocationRange.Location,
+	)
+	assert.Equal(t,
+		ast.Range{
+			StartPos: ast.Position{Offset: 49, Line: 3, Column: 10},
+			EndPos:   ast.Position{Offset: 59, Line: 3, Column: 20},
+		},
+		ast.NewUnmeteredRangeFromPositioned(panicErr.LocationRange),
+	)
 }

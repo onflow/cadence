@@ -260,7 +260,6 @@ func TestInterpretTransactions(t *testing.T) {
 			nil,
 			interpreter.AddressValue{1},
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		err = inter.InvokeTransaction(nil)
@@ -293,7 +292,6 @@ func TestInterpretTransactions(t *testing.T) {
 			nil,
 			interpreter.AddressValue{1},
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		signer2 := stdlib.NewAccountReferenceValue(
@@ -301,7 +299,6 @@ func TestInterpretTransactions(t *testing.T) {
 			nil,
 			interpreter.AddressValue{2},
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		err = inter.InvokeTransaction(nil)
@@ -339,7 +336,6 @@ func TestInterpretTransactions(t *testing.T) {
 			nil,
 			interpreter.AddressValue{1},
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		signer2 := stdlib.NewAccountReferenceValue(
@@ -347,7 +343,6 @@ func TestInterpretTransactions(t *testing.T) {
 			nil,
 			interpreter.AddressValue{2},
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		err = inter.InvokeTransaction(nil, signer1)
@@ -394,7 +389,6 @@ func TestInterpretTransactions(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		err = inter.InvokeTransaction(arguments, signer)
@@ -464,7 +458,6 @@ func TestInterpretTransactions(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		err = inter.InvokeTransaction(arguments, signer)
@@ -534,7 +527,6 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
 		nil,
 		interpreter.AddressValue{1},
 		interpreter.UnauthorizedAccess,
-		interpreter.EmptyLocationRange,
 	)
 
 	err := inter.InvokeTransaction(nil, signer1)

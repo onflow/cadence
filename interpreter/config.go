@@ -58,9 +58,6 @@ type Config struct {
 	OnStatement OnStatementFunc
 	// OnLoopIteration is triggered when a loop iteration is about to be executed
 	OnLoopIteration OnLoopIterationFunc
-	// TracingEnabled determines if tracing is enabled.
-	// Tracing reports certain operations, e.g. composite value transfers
-	TracingEnabled bool
 	// AtreeStorageValidationEnabled determines if the validation of atree storage is enabled
 	AtreeStorageValidationEnabled bool
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled

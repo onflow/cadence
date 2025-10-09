@@ -21,7 +21,6 @@ package vm
 import (
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -99,8 +98,13 @@ func init() {
 		NewNativeFunctionValue(
 			commons.FailPreConditionFunctionName,
 			failConditionFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				messageValue := arguments[0].(*interpreter.StringValue)
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
+				messageValue := args[0].(*interpreter.StringValue)
 				panic(&interpreter.ConditionError{
 					Message:       messageValue.Str,
 					ConditionKind: ast.ConditionKindPre,
@@ -113,8 +117,13 @@ func init() {
 		NewNativeFunctionValue(
 			commons.FailPostConditionFunctionName,
 			failConditionFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				messageValue := arguments[0].(*interpreter.StringValue)
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
+				messageValue := args[0].(*interpreter.StringValue)
 				panic(&interpreter.ConditionError{
 					Message:       messageValue.Str,
 					ConditionKind: ast.ConditionKindPost,
@@ -129,12 +138,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.MetaTypeName,
 			sema.MetaTypeFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, _ Value, _ ...Value) Value {
-				return interpreter.NewTypeValue(
-					context.MemoryGauge,
-					typeArguments[0],
-				)
-			},
+			interpreter.NativeMetaTypeFunction,
 		),
 	)
 
@@ -142,11 +146,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.OptionalTypeFunctionName,
 			sema.OptionalTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-				return interpreter.ConstructOptionalTypeValue(context, typeValue)
-			},
+			interpreter.NativeOptionalTypeFunction,
 		),
 	)
 
@@ -154,14 +154,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.VariableSizedArrayTypeFunctionName,
 			sema.VariableSizedArrayTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-				return interpreter.ConstructVariableSizedArrayTypeValue(
-					context,
-					typeValue,
-				)
-			},
+			interpreter.NativeVariableSizedArrayTypeFunction,
 		),
 	)
 
@@ -169,18 +162,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionName,
 			sema.ConstantSizedArrayTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-				sizeValue := arguments[1].(interpreter.IntValue)
-
-				return interpreter.ConstructConstantSizedArrayTypeValue(
-					context,
-					EmptyLocationRange,
-					typeValue,
-					sizeValue,
-				)
-			},
+			interpreter.NativeConstantSizedArrayTypeFunction,
 		),
 	)
 
@@ -188,17 +170,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.DictionaryTypeFunctionName,
 			sema.DictionaryTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				keyTypeValue := arguments[0].(interpreter.TypeValue)
-				valueTypeValue := arguments[1].(interpreter.TypeValue)
-
-				return interpreter.ConstructDictionaryTypeValue(
-					context,
-					keyTypeValue,
-					valueTypeValue,
-				)
-			},
+			interpreter.NativeDictionaryTypeFunction,
 		),
 	)
 
@@ -206,11 +178,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.CompositeTypeFunctionName,
 			sema.CompositeTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeIDValue := arguments[0].(*interpreter.StringValue)
-				return interpreter.ConstructCompositeTypeValue(context, typeIDValue)
-			},
+			interpreter.NativeCompositeTypeFunction,
 		),
 	)
 
@@ -218,18 +186,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.FunctionTypeFunctionName,
 			sema.FunctionTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				parameterTypeValues := arguments[0].(*interpreter.ArrayValue)
-				returnTypeValue := arguments[1].(interpreter.TypeValue)
-
-				return interpreter.ConstructFunctionTypeValue(
-					context,
-					EmptyLocationRange,
-					parameterTypeValues,
-					returnTypeValue,
-				)
-			},
+			interpreter.NativeFunctionTypeFunction,
 		),
 	)
 
@@ -237,18 +194,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.ReferenceTypeFunctionName,
 			sema.ReferenceTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				entitlementValues := arguments[0].(*interpreter.ArrayValue)
-				typeValue := arguments[1].(interpreter.TypeValue)
-
-				return interpreter.ConstructReferenceTypeValue(
-					context,
-					EmptyLocationRange,
-					entitlementValues,
-					typeValue,
-				)
-			},
+			interpreter.NativeReferenceTypeFunction,
 		),
 	)
 
@@ -256,16 +202,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.IntersectionTypeFunctionName,
 			sema.IntersectionTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				intersectionIDs := arguments[0].(*interpreter.ArrayValue)
-
-				return interpreter.ConstructIntersectionTypeValue(
-					context,
-					EmptyLocationRange,
-					intersectionIDs,
-				)
-			},
+			interpreter.NativeIntersectionTypeFunction,
 		),
 	)
 
@@ -273,12 +210,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.CapabilityTypeFunctionName,
 			sema.CapabilityTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-
-				return interpreter.ConstructCapabilityTypeValue(context, typeValue)
-			},
+			interpreter.NativeCapabilityTypeFunction,
 		),
 	)
 
@@ -286,12 +218,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.InclusiveRangeTypeFunctionName,
 			sema.InclusiveRangeTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-
-				return interpreter.ConstructInclusiveRangeTypeValue(context, typeValue)
-			},
+			interpreter.NativeInclusiveRangeTypeFunction,
 		),
 	)
 
@@ -305,13 +232,7 @@ func init() {
 		function := NewNativeFunctionValue(
 			declaration.Name,
 			functionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				return convert(
-					context.MemoryGauge,
-					arguments[0],
-					EmptyLocationRange,
-				)
-			},
+			interpreter.NativeConverterFunction(convert),
 		)
 		registerBuiltinFunction(function)
 
@@ -354,9 +275,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringType.String(),
 			sema.StringFunctionType,
-			func(_ *Context, _ []bbq.StaticType, _ Value, _ ...Value) Value {
-				return interpreter.EmptyString
-			},
+			interpreter.NativeStringFunction,
 		),
 	)
 
@@ -395,23 +314,14 @@ var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 	NewNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
-		func(context *Context, _ []bbq.StaticType, value Value, arguments ...Value) Value {
-			typeValue, ok := arguments[0].(interpreter.TypeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return interpreter.IsInstance(context, value, typeValue)
-		},
+		interpreter.NativeIsInstanceFunction,
 	),
 
 	// `getType` function
 	NewNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
-		func(context *Context, _ []bbq.StaticType, value Value, arguments ...Value) Value {
-			return interpreter.ValueGetType(context, value)
-		},
+		interpreter.NativeGetTypeFunction,
 	),
 
 	// TODO: add remaining functions
@@ -431,79 +341,49 @@ func registerBuiltinSaturatingArithmeticFunctions() {
 }
 
 func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
+	functionType := sema.SaturatingArithmeticTypeFunctionTypes[t]
 
-	register := func(
-		functionName string,
-		op func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue,
-	) {
+	if t.SupportsSaturatingAdd() {
 		registerBuiltinTypeBoundFunction(
 			commons.TypeQualifier(t),
 			NewNativeFunctionValue(
-				functionName,
-				sema.SaturatingArithmeticTypeFunctionTypes[t],
-				func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
-					this := receiver.(interpreter.NumberValue)
-
-					other, ok := args[0].(interpreter.NumberValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					return op(context, this, other)
-				},
+				sema.NumericTypeSaturatingAddFunctionName,
+				functionType,
+				interpreter.NativeNumberSaturatingAddFunction,
 			),
 		)
 	}
 
-	if t.SupportsSaturatingAdd() {
-		register(
-			sema.NumericTypeSaturatingAddFunctionName,
-			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingPlus(
-					context,
-					other,
-					EmptyLocationRange,
-				)
-			},
-		)
-	}
-
 	if t.SupportsSaturatingSubtract() {
-		register(
-			sema.NumericTypeSaturatingSubtractFunctionName,
-			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingMinus(
-					context,
-					other,
-					EmptyLocationRange,
-				)
-			},
+		registerBuiltinTypeBoundFunction(
+			commons.TypeQualifier(t),
+			NewNativeFunctionValue(
+				sema.NumericTypeSaturatingSubtractFunctionName,
+				functionType,
+				interpreter.NativeNumberSaturatingSubtractFunction,
+			),
 		)
 	}
 
 	if t.SupportsSaturatingMultiply() {
-		register(
-			sema.NumericTypeSaturatingMultiplyFunctionName,
-			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingMul(
-					context,
-					other,
-					EmptyLocationRange,
-				)
-			},
+		registerBuiltinTypeBoundFunction(
+			commons.TypeQualifier(t),
+			NewNativeFunctionValue(
+				sema.NumericTypeSaturatingMultiplyFunctionName,
+				functionType,
+				interpreter.NativeNumberSaturatingMultiplyFunction,
+			),
 		)
 	}
 
 	if t.SupportsSaturatingDivide() {
-		register(
-			sema.NumericTypeSaturatingDivideFunctionName,
-			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingDiv(
-					context,
-					other,
-					EmptyLocationRange,
-				)
-			},
+		registerBuiltinTypeBoundFunction(
+			commons.TypeQualifier(t),
+			NewNativeFunctionValue(
+				sema.NumericTypeSaturatingDivideFunctionName,
+				functionType,
+				interpreter.NativeNumberSaturatingDivideFunction,
+			),
 		)
 	}
 }
@@ -515,13 +395,7 @@ func newFromStringFunction(typedParser interpreter.TypedStringValueParser) *Nati
 	return NewNativeFunctionValue(
 		sema.FromStringFunctionName,
 		functionType,
-		func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-			argument, ok := arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-			return parser(context, argument.Str)
-		},
+		interpreter.NativeFromStringFunction(parser),
 	)
 }
 
@@ -533,24 +407,6 @@ func newFromBigEndianBytesFunction(typedConverter interpreter.TypedBigEndianByte
 	return NewNativeFunctionValue(
 		sema.FromBigEndianBytesFunctionName,
 		functionType,
-		func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-			argument, ok := arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			bytes, err := interpreter.ByteArrayValueToByteSlice(context, argument, EmptyLocationRange)
-			if err != nil {
-				return interpreter.Nil
-			}
-
-			// overflow
-			if byteLength != 0 && uint(len(bytes)) > byteLength {
-				return interpreter.Nil
-			}
-
-			return interpreter.NewSomeValueNonCopying(context, converter(context, bytes))
-		},
+		interpreter.NativeFromBigEndianBytesFunction(byteLength, converter),
 	)
 }

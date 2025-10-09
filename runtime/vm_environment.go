@@ -82,9 +82,9 @@ var _ stdlib.BLSPublicKeyAggregator = &vmEnvironment{}
 var _ stdlib.BLSSignatureAggregator = &vmEnvironment{}
 var _ stdlib.Hasher = &vmEnvironment{}
 var _ ArgumentDecoder = &vmEnvironment{}
-var _ common.MemoryGauge = &vmEnvironment{}
 
 func newVMEnvironment(config Config) *vmEnvironment {
+	// TODO: add support for coverage report
 	env := &vmEnvironment{
 		config:                        config,
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
@@ -136,9 +136,10 @@ func NewScriptVMEnvironment(config Config) Environment {
 
 func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf := vm.NewConfig(nil)
-	conf.MemoryGauge = e
-	conf.ComputationGauge = e
-	conf.TypeLoader = e.loadType
+	conf.CompositeTypeHandler = e.loadCompositeType
+	conf.InterfaceTypeHandler = e.loadInterfaceType
+	conf.EntitlementTypeHandler = e.loadEntitlementType
+	conf.EntitlementMapTypeHandler = e.loadEntitlementMapType
 	conf.BuiltinGlobalsProvider = e.vmBuiltinGlobals
 	conf.ContractValueHandler = e.loadContractValue
 	conf.ImportHandler = e.importProgram
@@ -153,7 +154,7 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf.ElaborationResolver = e.resolveElaboration
 	conf.StackDepthLimit = defaultStackDepthLimit
 
-	if e.config.TracingEnabled {
+	if interpreter.TracingEnabled {
 		conf.Tracer = interpreter.CallbackTracer(newOnRecordTraceHandler(&e.Interface))
 	}
 
@@ -165,9 +166,7 @@ func (e *vmEnvironment) defineValue(name string, value vm.Value) {
 	if e.defaultCompilerBuiltinGlobals.Find(name) == (compiler.GlobalImport{}) {
 		e.defaultCompilerBuiltinGlobals.Set(
 			name,
-			compiler.GlobalImport{
-				Name: name,
-			},
+			compiler.NewGlobalImport(name),
 		)
 	}
 
@@ -193,7 +192,6 @@ func (e *vmEnvironment) loadContractValue(
 
 func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	return &compiler.Config{
-		MemoryGauge:            e,
 		BuiltinGlobalsProvider: e.compilerBuiltinGlobals,
 		LocationHandler:        e.ResolveLocation,
 		ImportHandler:          e.importProgram,
@@ -205,19 +203,21 @@ func (e *vmEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
-	coverageReport *CoverageReport,
+	memoryGauge common.MemoryGauge,
+	computationGauge common.ComputationGauge,
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
 	e.VMConfig.SetStorage(storage)
+	e.VMConfig.MemoryGauge = memoryGauge
+	e.VMConfig.ComputationGauge = computationGauge
+	e.compilerConfig.MemoryGauge = memoryGauge
 
 	e.checkingEnvironment.configure(
 		runtimeInterface,
 		codesAndPrograms,
+		memoryGauge,
 	)
-
-	// TODO: add support for coverage report
-	_ = coverageReport
 
 	configureVersionedFeatures(runtimeInterface)
 }
@@ -237,9 +237,7 @@ func (e *vmEnvironment) declareCompilerValue(valueDeclaration stdlib.StandardLib
 
 	compilerBuiltinGlobals.Set(
 		name,
-		compiler.GlobalImport{
-			Name: name,
-		},
+		compiler.NewGlobalImport(name),
 	)
 
 	for _, function := range compiler.CommonBuiltinTypeBoundFunctions {
@@ -249,9 +247,7 @@ func (e *vmEnvironment) declareCompilerValue(valueDeclaration stdlib.StandardLib
 		)
 		compilerBuiltinGlobals.Set(
 			qualifiedFunctionName,
-			compiler.GlobalImport{
-				Name: qualifiedFunctionName,
-			},
+			compiler.NewGlobalImport(qualifiedFunctionName),
 		)
 	}
 }
@@ -300,13 +296,11 @@ func (e *vmEnvironment) CommitStorageTemporarily(context interpreter.ValueTransf
 
 func (e *vmEnvironment) EmitEvent(
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
 ) {
 	EmitEventFields(
 		context,
-		locationRange,
 		eventType,
 		values,
 		e.Interface.EmitEvent,
@@ -399,7 +393,7 @@ func (e *vmEnvironment) commitStorage(context interpreter.ValueTransferContext) 
 	return CommitStorage(context, e.storage, checkStorageHealth)
 }
 
-func (e *vmEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
+func (e *vmEnvironment) ProgramLog(message string) error {
 	return e.Interface.ProgramLog(message)
 }
 
@@ -446,45 +440,84 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 	return program.compiledProgram.desugaredElaboration, nil
 }
 
-// TODO: Maybe split this to four separate methods like in the interpreter.
-func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+func (e *vmEnvironment) loadCompositeType(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 	ty := e.allDeclaredTypes[typeID]
 	if ty != nil {
-		return ty, nil
+		return ty.(*sema.CompositeType)
 	}
 
 	if _, ok := location.(stdlib.FlowLocation); ok {
-		return stdlib.FlowEventTypes[typeID], nil
+		return stdlib.FlowEventTypes[typeID]
 	}
 
 	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	compositeType := elaboration.CompositeType(typeID)
 	if compositeType != nil {
-		return compositeType, nil
+		return compositeType
+	}
+
+	return nil
+}
+
+func (e *vmEnvironment) loadInterfaceType(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty.(*sema.InterfaceType)
+	}
+
+	elaboration, err := e.loadDesugaredElaboration(location)
+	if err != nil {
+		return nil
 	}
 
 	interfaceType := elaboration.InterfaceType(typeID)
 	if interfaceType != nil {
-		return interfaceType, nil
+		return interfaceType
+	}
+
+	return nil
+}
+
+func (e *vmEnvironment) loadEntitlementType(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty.(*sema.EntitlementType)
+	}
+
+	elaboration, err := e.loadDesugaredElaboration(location)
+	if err != nil {
+		return nil
 	}
 
 	entitlementType := elaboration.EntitlementType(typeID)
 	if entitlementType != nil {
-		return entitlementType, nil
+		return entitlementType
+	}
+
+	return nil
+}
+
+func (e *vmEnvironment) loadEntitlementMapType(location common.Location, typeID interpreter.TypeID) *sema.EntitlementMapType {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty.(*sema.EntitlementMapType)
+	}
+
+	elaboration, err := e.loadDesugaredElaboration(location)
+	if err != nil {
+		return nil
 	}
 
 	entitlementMapType := elaboration.EntitlementMapType(typeID)
 	if entitlementMapType != nil {
-		return entitlementMapType, nil
+		return entitlementMapType
 	}
 
-	return nil, interpreter.TypeLoadingError{
-		TypeID: typeID,
-	}
+	return nil
 }
 
 func (e *vmEnvironment) compileProgram(
@@ -509,7 +542,14 @@ func (e *vmEnvironment) importProgram(location common.Location) *bbq.Instruction
 	if err != nil {
 		panic(fmt.Errorf("failed to load program for imported location %s: %w", location, err))
 	}
-	return program.compiledProgram.program
+
+	// Program could be nil, if the loading failed/returned an error on a previous attempt,
+	// and the program-cache stored the erroneous (nil) program.
+	if program != nil {
+		return program.compiledProgram.program
+	}
+
+	return nil
 }
 
 func (e *vmEnvironment) resolveElaboration(location common.Location) (*sema.Elaboration, error) {

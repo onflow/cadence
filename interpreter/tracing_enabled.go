@@ -1,3 +1,5 @@
+//go:build cadence_tracing
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -15,22 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package interpreter
 
-package vm
-
-import (
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
-)
-
-func GetAccountTypePrivateAddressValue(receiver Value) interpreter.AddressValue {
-	simpleCompositeValue := receiver.(*interpreter.SimpleCompositeValue)
-
-	addressMetaInfo := simpleCompositeValue.PrivateField(interpreter.AccountTypePrivateAddressFieldName)
-	address, ok := addressMetaInfo.(interpreter.AddressValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return address
-}
+const TracingEnabled = true

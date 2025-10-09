@@ -478,16 +478,18 @@ func TestVariableSizedType_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("["),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text("T"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("T"),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("]"),
 			},
 			ty.Doc(),
 		)
@@ -499,16 +501,18 @@ func TestVariableSizedType_Doc(t *testing.T) {
 		ty := &VariableSizedType{}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("["),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text(""),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("]"),
 			},
 			ty.Doc(),
 		)
@@ -612,18 +616,20 @@ func TestConstantSizedType_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("["),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text("T"),
-						prettier.Text("; "),
-						prettier.Text("42"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("T"),
+							prettier.Text("; "),
+							prettier.Text("42"),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("]"),
 			},
 			ty.Doc(),
 		)
@@ -641,18 +647,20 @@ func TestConstantSizedType_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("["),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text(""),
-						prettier.Text("; "),
-						prettier.Text("42"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+							prettier.Text("; "),
+							prettier.Text("42"),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("]"),
 			},
 			ty.Doc(),
 		)
@@ -670,18 +678,20 @@ func TestConstantSizedType_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("["),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text("T"),
-						prettier.Text("; "),
-						prettier.Text(""),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("T"),
+							prettier.Text("; "),
+							prettier.Text(""),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("]"),
 			},
 			ty.Doc(),
 		)
@@ -693,18 +703,20 @@ func TestConstantSizedType_Doc(t *testing.T) {
 		ty := &ConstantSizedType{}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("["),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text(""),
-						prettier.Text("; "),
-						prettier.Text(""),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+							prettier.Text("; "),
+							prettier.Text(""),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("]"),
 			},
 			ty.Doc(),
 		)
@@ -864,18 +876,20 @@ func TestDictionaryType_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("{"),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text("AB"),
-						prettier.Text(": "),
-						prettier.Text("CD"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("AB"),
+							prettier.Text(": "),
+							prettier.Text("CD"),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("}"),
 			},
 			ty.Doc(),
 		)
@@ -893,18 +907,20 @@ func TestDictionaryType_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("{"),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text(""),
-						prettier.Text(": "),
-						prettier.Text("CD"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+							prettier.Text(": "),
+							prettier.Text("CD"),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("}"),
 			},
 			ty.Doc(),
 		)
@@ -922,18 +938,20 @@ func TestDictionaryType_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("{"),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text("AB"),
-						prettier.Text(": "),
-						prettier.Text(""),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("AB"),
+							prettier.Text(": "),
+							prettier.Text(""),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("}"),
 			},
 			ty.Doc(),
 		)
@@ -945,18 +963,20 @@ func TestDictionaryType_Doc(t *testing.T) {
 		ty := &DictionaryType{}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("{"),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text(""),
-						prettier.Text(": "),
-						prettier.Text(""),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+							prettier.Text(": "),
+							prettier.Text(""),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("}"),
 			},
 			ty.Doc(),
 		)
@@ -1136,9 +1156,9 @@ func TestFunctionType_Doc(t *testing.T) {
 		assert.Equal(t,
 			prettier.Concat{
 				prettier.Text("view"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Text("fun"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Group{
 					Doc: prettier.Concat{
 						prettier.Text("("),
@@ -1182,7 +1202,7 @@ func TestFunctionType_Doc(t *testing.T) {
 		assert.Equal(t,
 			prettier.Concat{
 				prettier.Text("fun"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Group{
 					Doc: prettier.Concat{
 						prettier.Text("("),
@@ -1378,7 +1398,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("("),
 				prettier.Text("X"),
 				prettier.Text(")"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1409,7 +1429,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("("),
 				prettier.Text(""),
 				prettier.Text(")"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1443,7 +1463,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("mapping "),
 				prettier.Text("X"),
 				prettier.Text(")"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1473,7 +1493,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("mapping "),
 				prettier.Text(""),
 				prettier.Text(")"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1513,10 +1533,10 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("("),
 				prettier.Text("X"),
 				prettier.Text(","),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Text("Y"),
 				prettier.Text(")"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1556,10 +1576,10 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("("),
 				prettier.Text("X"),
 				prettier.Text(" |"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Text("Y"),
 				prettier.Text(")"),
-				prettier.Line{},
+				prettier.Space,
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1888,15 +1908,17 @@ func TestIntersectionType_Doc(t *testing.T) {
 		ty := &IntersectionType{}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("{"),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("}"),
 			},
 			ty.Doc(),
 		)
@@ -1912,16 +1934,18 @@ func TestIntersectionType_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("{"),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text(""),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("}"),
 			},
 			ty.Doc(),
 		)
@@ -1946,19 +1970,21 @@ func TestIntersectionType_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Concat{
-				prettier.Text("{"),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Text("CD"),
-						prettier.Text(","),
-						prettier.Line{},
-						prettier.Text("EF"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("CD"),
+							prettier.Text(","),
+							prettier.Line{},
+							prettier.Text("EF"),
+						},
 					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
 				},
-				prettier.SoftLine{},
-				prettier.Text("}"),
 			},
 			ty.Doc(),
 		)

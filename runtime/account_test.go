@@ -2785,11 +2785,8 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 
 	inter := NewTestInterpreter(t)
 
-	locationRange := interpreter.EmptyLocationRange
-
 	publicKey := interpreter.NewCompositeValue(
 		inter,
-		locationRange,
 		nil,
 		sema.PublicKeyType.Identifier,
 		common.CompositeKindStructure,
@@ -2798,7 +2795,6 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 				Name: sema.PublicKeyTypePublicKeyFieldName,
 				Value: interpreter.NewArrayValue(
 					inter,
-					locationRange,
 					interpreter.ByteArrayStaticType,
 					common.ZeroAddress,
 					interpreter.NewUnmeteredUInt8Value(1),
@@ -2808,15 +2804,10 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 		common.ZeroAddress,
 	)
 
-	publicKeyArray1 := publicKey.GetMember(
-		inter,
-		locationRange,
-		sema.PublicKeyTypePublicKeyFieldName,
-	)
+	publicKeyArray1 := publicKey.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName)
 
 	publicKey2 := publicKey.Transfer(
 		inter,
-		locationRange,
 		atree.Address{},
 		false,
 		nil,
@@ -2829,14 +2820,10 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 		true, // publicKey is standalone
 	)
 
-	publicKeyArray2 := publicKey2.GetMember(
-		inter,
-		locationRange,
-		sema.PublicKeyTypePublicKeyFieldName,
-	)
+	publicKeyArray2 := publicKey2.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName)
 
 	require.True(t,
 		publicKeyArray2.(interpreter.EquatableValue).
-			Equal(inter, locationRange, publicKeyArray1),
+			Equal(inter, publicKeyArray1),
 	)
 }

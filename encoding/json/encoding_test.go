@@ -30,6 +30,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
@@ -710,6 +711,38 @@ func TestEncodeFix64(t *testing.T) {
 	}...)
 }
 
+func TestEncodeFix128(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(0, 24)),
+			// language=json
+			`{"type":"Fix128","value":"0.000000000000000000000000"}`,
+		},
+		{
+			"789.00123010",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(78_900_123_010, 24-8)),
+			// language=json
+			`{"type":"Fix128","value":"789.001230100000000000000000"}`,
+		},
+		{
+			"1234.056",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(123_405_600_000, 24-8)),
+			// language=json
+			`{"type":"Fix128","value":"1234.056000000000000000000000"}`,
+		},
+		{
+			"-12345.006789",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(-1_234_500_678_900, 24-8)),
+			// language=json
+			`{"type":"Fix128","value":"-12345.006789000000000000000000"}`,
+		},
+	}...)
+}
+
 func TestEncodeUFix64(t *testing.T) {
 
 	t.Parallel()
@@ -732,6 +765,32 @@ func TestEncodeUFix64(t *testing.T) {
 			cadence.UFix64(123_405_600_000),
 			// language=json
 			`{"type":"UFix64","value":"1234.05600000"}`,
+		},
+	}...)
+}
+
+func TestEncodeUFix128(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.UFix128(fixedpoint.Fix128FromIntAndScale(0, 24)),
+			// language=json
+			`{"type":"UFix128","value":"0.000000000000000000000000"}`,
+		},
+		{
+			"789.00123010",
+			cadence.UFix128(fixedpoint.Fix128FromIntAndScale(78_900_123_010, 24-8)),
+			// language=json
+			`{"type":"UFix128","value":"789.001230100000000000000000"}`,
+		},
+		{
+			"1234.056",
+			cadence.UFix128(fixedpoint.Fix128FromIntAndScale(123_405_600_000, 24-8)),
+			// language=json
+			`{"type":"UFix128","value":"1234.056000000000000000000000"}`,
 		},
 	}...)
 }
@@ -1148,7 +1207,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 	result, err := inter.Invoke("main")
 	require.NoError(t, err)
 
-	exported, err := runtime.ExportValue(result, inter, interpreter.EmptyLocationRange)
+	exported, err := runtime.ExportValue(result, inter)
 	require.NoError(t, err)
 
 	return exported

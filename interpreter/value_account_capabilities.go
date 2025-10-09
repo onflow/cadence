@@ -61,7 +61,7 @@ func NewAccountCapabilitiesValue(
 		return nil
 	}
 
-	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
+	computeField := func(name string, _ MemberAccessibleContext) Value {
 		field := computeLazyStoredField(name)
 		if field != nil {
 			fields[name] = field
@@ -101,10 +101,10 @@ func NewAccountCapabilitiesValue(
 	}
 
 	var str string
-	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(context, common.AccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(context, seenReferences, locationRange)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.Capabilities(%s)", addressStr)
 		}
 		return str

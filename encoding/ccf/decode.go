@@ -28,6 +28,8 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	cadenceErrors "github.com/onflow/cadence/errors"
@@ -502,8 +504,14 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	case cadence.Fix64Type:
 		return d.decodeFix64()
 
+	case cadence.Fix128Type:
+		return d.decodeFix128()
+
 	case cadence.UFix64Type:
 		return d.decodeUFix64()
+
+	case cadence.UFix128Type:
+		return d.decodeUFix128()
 
 	case cadence.StoragePathType:
 		return d.decodePath()
@@ -1014,6 +1022,39 @@ func (d *Decoder) decodeFix64() (cadence.Value, error) {
 	return cadence.NewMeteredFix64FromRawFixedPointNumber(d.gauge, i)
 }
 
+// decodeFix64 decodes fix128-value as
+// language=CDDL
+// fix128-value = [
+//
+//	hi: uint64,
+//	low: uint64,
+//
+// ]
+func (d *Decoder) decodeFix128() (cadence.Value, error) {
+	// Decode array head of length 2.
+	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode high-bits.
+	high, err := d.dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode low-bits.
+	low, err := d.dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	common.UseMemory(d.gauge, cadence.Fix128MemoryUsage)
+
+	fix128 := fix.NewFix128(high, low)
+	return cadence.NewFix128(fix128)
+}
+
 // decodeUFix64 decodes ufix64-value as
 // language=CDDL
 // ufix64-value = uint .le 18446744073709551615
@@ -1023,6 +1064,39 @@ func (d *Decoder) decodeUFix64() (cadence.Value, error) {
 		return nil, err
 	}
 	return cadence.NewMeteredUFix64FromRawFixedPointNumber(d.gauge, i)
+}
+
+// decodeUFix64 decodes fix128-value as
+// language=CDDL
+// ufix128-value = [
+//
+//	hi: uint64,
+//	low: uint64,
+//
+// ]
+func (d *Decoder) decodeUFix128() (cadence.Value, error) {
+	// Decode array head of length 2.
+	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode high-bits.
+	high, err := d.dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode low-bits.
+	low, err := d.dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	common.UseMemory(d.gauge, cadence.UFix128MemoryUsage)
+
+	fix128 := fix.NewUFix128(high, low)
+	return cadence.NewUFix128(fix128)
 }
 
 // decodeOptional decodes encoded optional-value as
@@ -2136,7 +2210,7 @@ func (d *Decoder) decodeTypeParameterTypeValues(visited *cadenceTypeByCCFTypeID)
 	})
 
 	for i := 0; i < int(count); i++ {
-		// Decode type parameter.
+		// Decode type argument.
 		typeParam, err := d.decodeTypeParameterTypeValue(visited)
 		if err != nil {
 			return nil, err

@@ -27,9 +27,10 @@ type Program[E, T any] struct {
 	Contracts []*Contract
 	Imports   []Import
 	Functions []Function[E]
-	Constants []constant.Constant
+	Constants []constant.DecodedConstant
 	Variables []Variable[E]
 	Types     []T
+	Globals   []Global
 }
 
 type InstructionProgram = Program[opcode.Instruction, StaticType]

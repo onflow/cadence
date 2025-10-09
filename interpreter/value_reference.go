@@ -29,13 +29,12 @@ type ReferenceValue interface {
 	Value
 	AuthorizedValue
 	isReference()
-	ReferencedValue(context ValueStaticTypeContext, locationRange LocationRange, errorOnFailedDereference bool) *Value
+	ReferencedValue(context ValueStaticTypeContext, errorOnFailedDereference bool) *Value
 	BorrowType() sema.Type
 }
 
 func DereferenceValue(
 	context ValueTransferContext,
-	locationRange LocationRange,
 	value Value,
 ) Value {
 	if _, ok := value.(NilValue); ok {
@@ -54,18 +53,15 @@ func DereferenceValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	referencedValue := *referenceValue.ReferencedValue(context, locationRange, true)
+	referencedValue := *referenceValue.ReferencedValue(context, true)
 
 	// Defensive check: ensure that the referenced value is not a resource
 	if referencedValue.IsResourceKinded(context) {
-		panic(&ResourceReferenceDereferenceError{
-			LocationRange: locationRange,
-		})
+		panic(&ResourceReferenceDereferenceError{})
 	}
 
 	transferredDereferencedValue := referencedValue.Transfer(
 		context,
-		locationRange,
 		atree.Address{},
 		false,
 		nil,

@@ -33,6 +33,7 @@ const (
 	TransferOperationCopy
 	TransferOperationMove
 	TransferOperationMoveForced
+	TransferOperationInternalNoTransfer // internal use only
 )
 
 func TransferOperationCount() int {
@@ -47,6 +48,8 @@ func (k TransferOperation) Operator() string {
 		return "<-"
 	case TransferOperationMoveForced:
 		return "<-!"
+	case TransferOperationInternalNoTransfer:
+		return "$noTransfer"
 	}
 
 	panic(errors.NewUnreachableError())

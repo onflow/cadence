@@ -59,7 +59,7 @@ var blockEndDoc prettier.Doc = prettier.Text("}")
 var blockEmptyDoc prettier.Doc = prettier.Text("{}")
 
 func (b *Block) Doc() prettier.Doc {
-	if b.IsEmpty() {
+	if b == nil || b.IsEmpty() {
 		return blockEmptyDoc
 	}
 
