@@ -195,11 +195,38 @@ func (p *ComputationProfile) InspectProgram(location Location, program *ast.Prog
 
 	var stack []*ast.CompositeDeclaration
 
+	addFunction := func(identifier string, pos ast.HasPosition) {
+		startLine := pos.StartPosition().Line
+		endLine := pos.EndPosition(nil).Line
+
+		interval := intervalst.NewInterval(
+			lineNumber(startLine),
+			lineNumber(endLine),
+		)
+
+		var nameBuilder strings.Builder
+		for _, composite := range stack {
+			nameBuilder.WriteString(composite.Identifier.Identifier)
+			nameBuilder.WriteString(".")
+		}
+		nameBuilder.WriteString(identifier)
+		name := nameBuilder.String()
+
+		function := profiledFunction{
+			location:  location,
+			name:      name,
+			startLine: startLine,
+		}
+
+		functions.Put(interval, function)
+	}
+
 	inspector := ast.NewInspector(program)
 	inspector.Elements(
 		[]ast.Element{
 			(*ast.CompositeDeclaration)(nil),
 			(*ast.FunctionDeclaration)(nil),
+			(*ast.SpecialFunctionDeclaration)(nil),
 		},
 		func(element ast.Element, push bool) bool {
 			if push {
@@ -208,29 +235,16 @@ func (p *ComputationProfile) InspectProgram(location Location, program *ast.Prog
 					stack = append(stack, decl)
 
 				case *ast.FunctionDeclaration:
-					startLine := decl.StartPosition().Line
-					endLine := decl.EndPosition(nil).Line
-
-					interval := intervalst.NewInterval(
-						lineNumber(startLine),
-						lineNumber(endLine),
+					addFunction(
+						decl.Identifier.Identifier,
+						decl,
 					)
 
-					var nameBuilder strings.Builder
-					for _, composite := range stack {
-						nameBuilder.WriteString(composite.Identifier.Identifier)
-						nameBuilder.WriteString(".")
-					}
-					nameBuilder.WriteString(decl.Identifier.Identifier)
-					name := nameBuilder.String()
-
-					function := profiledFunction{
-						location:  location,
-						name:      name,
-						startLine: startLine,
-					}
-
-					functions.Put(interval, function)
+				case *ast.SpecialFunctionDeclaration:
+					addFunction(
+						decl.FunctionDeclaration.Identifier.Identifier,
+						decl.FunctionDeclaration,
+					)
 				}
 			} else {
 				if _, ok := element.(*ast.CompositeDeclaration); ok {
