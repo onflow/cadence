@@ -46,7 +46,7 @@ type encodeTypeFn func(typ cadence.Type, tids ccfTypeIDByCadenceType) error
 // All exported Cadence types need to be supported by this function,
 // including abstract and interface types.
 func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType) error {
-	simpleTypeID, ok := simpleTypeIDByType(typ)
+	simpleTypeID, ok := SimpleTypeIDByType(typ)
 	if ok {
 		return e.encodeSimpleType(simpleTypeID)
 	}

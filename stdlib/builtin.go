@@ -37,6 +37,7 @@ type StandardLibraryHandler interface {
 	BLSPublicKeyAggregator
 	BLSSignatureAggregator
 	Hasher
+	Exporter
 }
 
 var DefaultStandardLibraryTypes = []StandardLibraryType{
@@ -48,6 +49,11 @@ var DefaultStandardLibraryTypes = []StandardLibraryType{
 	{
 		Type: RLPType,
 		Name: RLPTypeName,
+		Kind: common.DeclarationKindContract,
+	},
+	{
+		Type: CCFType,
+		Name: CCFTypeName,
 		Kind: common.DeclarationKindContract,
 	},
 }
@@ -68,6 +74,7 @@ func InterpreterDefaultStandardLibraryValues(handler StandardLibraryHandler) []S
 		NewInterpreterHashAlgorithmConstructor(handler),
 		RLPContract,
 		NewBLSContract(nil, handler),
+		NewCCFContract(nil, handler),
 	}
 }
 
@@ -87,6 +94,7 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		NewVMHashAlgorithmConstructor(handler),
 		RLPContract,
 		NewBLSContract(nil, handler),
+		NewCCFContract(nil, handler),
 	}
 }
 
@@ -137,6 +145,8 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 
 		NewVMBLSAggregatePublicKeysFunction(handler),
 		NewVMBLSAggregateSignaturesFunction(handler),
+
+		NewVMCCFEncodeFunction(handler),
 
 		NewVMHashAlgorithmHashFunction(handler),
 		NewVMHashAlgorithmHashWithTagFunction(handler),

@@ -21,6 +21,7 @@ package runtime
 import (
 	"time"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/activations"
 
 	"github.com/onflow/cadence/common"
@@ -109,6 +110,7 @@ var _ stdlib.BLSPoPVerifier = &InterpreterEnvironment{}
 var _ stdlib.BLSPublicKeyAggregator = &InterpreterEnvironment{}
 var _ stdlib.BLSSignatureAggregator = &InterpreterEnvironment{}
 var _ stdlib.Hasher = &InterpreterEnvironment{}
+var _ stdlib.Exporter = &InterpreterEnvironment{}
 var _ ArgumentDecoder = &InterpreterEnvironment{}
 
 func NewInterpreterEnvironment(config Config) *InterpreterEnvironment {
@@ -574,4 +576,14 @@ func (e *InterpreterEnvironment) getBaseActivation(
 
 func (e *InterpreterEnvironment) ProgramLog(message string) error {
 	return e.Interface.ProgramLog(message)
+}
+
+func (*InterpreterEnvironment) ExportValue(
+	value interpreter.Value,
+	context interpreter.ValueExportContext,
+) (
+	cadence.Value,
+	error,
+) {
+	return ExportValue(value, context)
 }

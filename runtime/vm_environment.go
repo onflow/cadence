@@ -21,6 +21,7 @@ package runtime
 import (
 	"fmt"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -81,6 +82,7 @@ var _ stdlib.BLSPoPVerifier = &vmEnvironment{}
 var _ stdlib.BLSPublicKeyAggregator = &vmEnvironment{}
 var _ stdlib.BLSSignatureAggregator = &vmEnvironment{}
 var _ stdlib.Hasher = &vmEnvironment{}
+var _ stdlib.Exporter = &vmEnvironment{}
 var _ ArgumentDecoder = &vmEnvironment{}
 
 func newVMEnvironment(config Config) *vmEnvironment {
@@ -638,4 +640,11 @@ func (e *vmEnvironment) vmBuiltinGlobals(
 		globals = e.defaultVMBuiltinGlobals
 	}
 	return
+}
+
+func (*vmEnvironment) ExportValue(
+	value interpreter.Value,
+	context interpreter.ValueExportContext,
+) (cadence.Value, error) {
+	return ExportValue(value, context)
 }

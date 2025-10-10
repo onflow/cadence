@@ -27,6 +27,7 @@ func _() {
 	_ = x[ComputationKindSTDLIBRevertibleRandom-1102]
 	_ = x[ComputationKindSTDLIBRLPDecodeString-1108]
 	_ = x[ComputationKindSTDLIBRLPDecodeList-1109]
+	_ = x[ComputationKindSTDLIBCCFEncode-1110]
 }
 
 const (
@@ -37,7 +38,7 @@ const (
 	_ComputationKind_name_4 = "CreateDictionaryValueTransferDictionaryValueDestroyDictionaryValue"
 	_ComputationKind_name_5 = "EncodeValue"
 	_ComputationKind_name_6 = "STDLIBPanicSTDLIBAssertSTDLIBRevertibleRandom"
-	_ComputationKind_name_7 = "STDLIBRLPDecodeStringSTDLIBRLPDecodeList"
+	_ComputationKind_name_7 = "STDLIBRLPDecodeStringSTDLIBRLPDecodeListSTDLIBCCFEncode"
 )
 
 var (
@@ -46,7 +47,7 @@ var (
 	_ComputationKind_index_3 = [...]uint8{0, 16, 34, 51}
 	_ComputationKind_index_4 = [...]uint8{0, 21, 44, 66}
 	_ComputationKind_index_6 = [...]uint8{0, 11, 23, 45}
-	_ComputationKind_index_7 = [...]uint8{0, 21, 40}
+	_ComputationKind_index_7 = [...]uint8{0, 21, 40, 55}
 )
 
 func (i ComputationKind) String() string {
@@ -70,7 +71,7 @@ func (i ComputationKind) String() string {
 	case 1100 <= i && i <= 1102:
 		i -= 1100
 		return _ComputationKind_name_6[_ComputationKind_index_6[i]:_ComputationKind_index_6[i+1]]
-	case 1108 <= i && i <= 1109:
+	case 1108 <= i && i <= 1110:
 		i -= 1108
 		return _ComputationKind_name_7[_ComputationKind_index_7[i]:_ComputationKind_index_7[i+1]]
 	default:

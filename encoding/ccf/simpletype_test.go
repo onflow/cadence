@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package ccf
+package ccf_test
 
 import (
 	"testing"
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/ccf"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
@@ -43,10 +44,10 @@ func TestTypeConversion(t *testing.T) {
 
 			cadenceType := runtime.ExportType(semaType, map[sema.TypeID]cadence.Type{})
 
-			simpleTypeID, ok := simpleTypeIDByType(cadenceType)
+			simpleTypeID, ok := ccf.SimpleTypeIDByType(cadenceType)
 			require.True(t, ok)
 
-			ty2 := typeBySimpleTypeID(simpleTypeID)
+			ty2 := ccf.TypeBySimpleTypeID(simpleTypeID)
 			require.Equal(t, cadence.PrimitiveType(ty), ty2)
 		})
 	}
