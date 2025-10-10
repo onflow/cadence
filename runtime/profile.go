@@ -273,3 +273,10 @@ func (p *ComputationProfile) sourcePathForLocation(location common.Location) str
 
 	return locationSource
 }
+
+// Reset clears the collected profiling information for all locations and inspected locations.
+func (p *ComputationProfile) Reset() {
+	p.currentStackTrace = nil
+	clear(p.stackTraceUsages)
+	clear(p.locationFunctions)
+}
