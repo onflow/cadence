@@ -51,10 +51,11 @@ type profiledFunction struct {
 
 // ComputationProfile collects computation profiling information per location.
 type ComputationProfile struct {
-	locationFunctions map[common.Location]*intervalst.IntervalST[profiledFunction]
-	currentStackTrace profileStackTrace
-	stackTraceUsages  map[string]stackTraceUsage
-	locationMappings  map[string]string
+	locationFunctions  map[common.Location]*intervalst.IntervalST[profiledFunction]
+	currentStackTrace  profileStackTrace
+	stackTraceUsages   map[string]stackTraceUsage
+	locationMappings   map[string]string
+	computationWeights map[common.ComputationKind]uint64
 	// DelegatedComputationGauge is the computation gauge to which
 	// delegated computation metering is reported.
 	// It may be nil, in which case no delegation occurs.
@@ -76,6 +77,13 @@ func (p *ComputationProfile) WithLocationMappings(
 	locationMappings map[string]string,
 ) {
 	p.locationMappings = locationMappings
+}
+
+// WithComputationWeights sets the computation weights for this profile.
+func (p *ComputationProfile) WithComputationWeights(
+	weights map[common.ComputationKind]uint64,
+) {
+	p.computationWeights = weights
 }
 
 type LocationLine struct {
@@ -146,13 +154,6 @@ func (p *ComputationProfile) newOnStatementHandler() interpreter.OnStatementFunc
 
 func (p *ComputationProfile) MeterComputation(computationUsage common.ComputationUsage) error {
 
-	aggregateKey := p.currentStackTrace.aggregateKey()
-	traceUsage := p.stackTraceUsages[aggregateKey]
-	traceUsage.stackTrace = p.currentStackTrace
-	// TODO: apply weight
-	traceUsage.computation += computationUsage.Intensity
-	p.stackTraceUsages[aggregateKey] = traceUsage
-
 	gauge := p.DelegatedComputationGauge
 	if gauge != nil {
 		err := gauge.MeterComputation(computationUsage)
@@ -160,6 +161,18 @@ func (p *ComputationProfile) MeterComputation(computationUsage common.Computatio
 			return err
 		}
 	}
+
+	weight := p.computationWeights[computationUsage.Kind]
+	if weight == 0 {
+		// No need to record zero-weight computation
+		return nil
+	}
+
+	aggregateKey := p.currentStackTrace.aggregateKey()
+	traceUsage := p.stackTraceUsages[aggregateKey]
+	traceUsage.stackTrace = p.currentStackTrace
+	traceUsage.computation += computationUsage.Intensity * weight
+	p.stackTraceUsages[aggregateKey] = traceUsage
 
 	return nil
 }
@@ -259,4 +272,11 @@ func (p *ComputationProfile) sourcePathForLocation(location common.Location) str
 	}
 
 	return locationSource
+}
+
+// Reset clears the collected profiling information for all locations and inspected locations.
+func (p *ComputationProfile) Reset() {
+	p.currentStackTrace = nil
+	clear(p.stackTraceUsages)
+	clear(p.locationFunctions)
 }
