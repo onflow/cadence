@@ -1393,7 +1393,7 @@ func ConvertStaticToSemaType(
 		return sema.NewCapabilityType(context, borrowType), nil
 
 	case FunctionStaticType:
-		return t.Type, nil
+		return t.FunctionType, nil
 
 	case PrimitiveStaticType:
 		return t.SemaType(), nil
@@ -1406,7 +1406,7 @@ func ConvertStaticToSemaType(
 // FunctionStaticType
 
 type FunctionStaticType struct {
-	Type *sema.FunctionType
+	*sema.FunctionType
 }
 
 var _ StaticType = FunctionStaticType{}
@@ -1418,14 +1418,14 @@ func NewFunctionStaticType(
 	common.UseMemory(memoryGauge, common.FunctionStaticTypeMemoryUsage)
 
 	return FunctionStaticType{
-		Type: functionType,
+		FunctionType: functionType,
 	}
 }
 
 func (t FunctionStaticType) ReturnType(gauge common.MemoryGauge) StaticType {
 	var returnType StaticType
-	if t.Type.ReturnTypeAnnotation.Type != nil {
-		returnType = ConvertSemaToStaticType(gauge, t.Type.ReturnTypeAnnotation.Type)
+	if t.FunctionType.ReturnTypeAnnotation.Type != nil {
+		returnType = ConvertSemaToStaticType(gauge, t.ReturnTypeAnnotation.Type)
 	}
 
 	return returnType
@@ -1438,7 +1438,7 @@ func (FunctionStaticType) elementSize() uint {
 }
 
 func (t FunctionStaticType) String() string {
-	return t.Type.String()
+	return t.FunctionType.String()
 }
 
 func (t FunctionStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
@@ -1454,11 +1454,11 @@ func (t FunctionStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
-	return t.Type.Equal(otherFunction.Type)
+	return t.FunctionType.Equal(otherFunction.FunctionType)
 }
 
 func (t FunctionStaticType) ID() TypeID {
-	return t.Type.ID()
+	return t.FunctionType.ID()
 }
 
 func (FunctionStaticType) IsDeprecated() bool {
