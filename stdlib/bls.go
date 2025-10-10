@@ -21,7 +21,6 @@ package stdlib
 //go:generate go run ../sema/gen -p stdlib bls.cdc bls.gen.go
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -36,31 +35,34 @@ type BLSPublicKeyAggregator interface {
 	BLSAggregatePublicKeys(publicKeys []*PublicKey) (*PublicKey, error)
 }
 
+func NativeBLSAggregatePublicKeysFunction(
+	aggregator BLSPublicKeyAggregator,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		publicKeysValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return BLSAggregatePublicKeys(
+			context,
+			publicKeysValue,
+			aggregator,
+		)
+	}
+}
+
 func newInterpreterBLSAggregatePublicKeysFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSPublicKeyAggregator,
 ) *interpreter.HostFunctionValue {
 	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
 	// However, this is not a problem for now, since underlying contract doesn't get moved.
-	return interpreter.NewStaticHostFunctionValue(
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		gauge,
 		BLSTypeAggregatePublicKeysFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			publicKeysValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return BLSAggregatePublicKeys(
-				inter,
-				publicKeysValue,
-				locationRange,
-				aggregator,
-			)
-		},
+		NativeBLSAggregatePublicKeysFunction(aggregator),
 	)
 }
 
@@ -72,20 +74,7 @@ func NewVMBLSAggregatePublicKeysFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			BLSTypeAggregatePublicKeysFunctionName,
 			BLSTypeAggregatePublicKeysFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-
-				publicKeysValue, ok := arguments[0].(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return BLSAggregatePublicKeys(
-					context,
-					publicKeysValue,
-					interpreter.EmptyLocationRange,
-					aggregator,
-				)
-			},
+			NativeBLSAggregatePublicKeysFunction(aggregator),
 		),
 	}
 }
@@ -93,7 +82,6 @@ func NewVMBLSAggregatePublicKeysFunction(
 func BLSAggregatePublicKeys(
 	context interpreter.InvocationContext,
 	publicKeysValue *interpreter.ArrayValue,
-	locationRange interpreter.LocationRange,
 	aggregator BLSPublicKeyAggregator,
 ) interpreter.Value {
 
@@ -101,7 +89,6 @@ func BLSAggregatePublicKeys(
 		context,
 		publicKeysValue,
 		sema.PublicKeyArrayType,
-		locationRange,
 	)
 
 	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
@@ -113,7 +100,7 @@ func BLSAggregatePublicKeys(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
+			publicKey, err := NewPublicKeyFromValue(context, publicKeyValue)
 			if err != nil {
 				panic(err)
 			}
@@ -124,7 +111,6 @@ func BLSAggregatePublicKeys(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	aggregatedPublicKey, err := aggregator.BLSAggregatePublicKeys(publicKeys)
@@ -136,7 +122,6 @@ func BLSAggregatePublicKeys(
 
 	aggregatedPublicKeyValue := NewPublicKeyValue(
 		context,
-		locationRange,
 		aggregatedPublicKey,
 	)
 
@@ -151,31 +136,34 @@ type BLSSignatureAggregator interface {
 	BLSAggregateSignatures(signatures [][]byte) ([]byte, error)
 }
 
+func NativeBLSAggregateSignaturesFunction(
+	aggregator BLSSignatureAggregator,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		signaturesValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return BLSAggregateSignatures(
+			context,
+			signaturesValue,
+			aggregator,
+		)
+	}
+}
+
 func newInterpreterBLSAggregateSignaturesFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSSignatureAggregator,
 ) *interpreter.HostFunctionValue {
 	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
 	// However, this is not a problem for now, since underlying contract doesn't get moved.
-	return interpreter.NewStaticHostFunctionValue(
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		gauge,
 		BLSTypeAggregateSignaturesFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			signaturesValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return BLSAggregateSignatures(
-				inter,
-				signaturesValue,
-				locationRange,
-				aggregator,
-			)
-		},
+		NativeBLSAggregateSignaturesFunction(aggregator),
 	)
 }
 
@@ -187,20 +175,7 @@ func NewVMBLSAggregateSignaturesFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			BLSTypeAggregateSignaturesFunctionName,
 			BLSTypeAggregateSignaturesFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-
-				signaturesValue, ok := arguments[0].(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return BLSAggregateSignatures(
-					context,
-					signaturesValue,
-					interpreter.EmptyLocationRange,
-					aggregator,
-				)
-			},
+			NativeBLSAggregateSignaturesFunction(aggregator),
 		),
 	}
 }
@@ -208,7 +183,6 @@ func NewVMBLSAggregateSignaturesFunction(
 func BLSAggregateSignatures(
 	context interpreter.InvocationContext,
 	signaturesValue *interpreter.ArrayValue,
-	locationRange interpreter.LocationRange,
 	aggregator BLSSignatureAggregator,
 ) interpreter.Value {
 
@@ -216,7 +190,6 @@ func BLSAggregateSignatures(
 		context,
 		signaturesValue,
 		sema.ByteArrayArrayType,
-		locationRange,
 	)
 
 	bytesArray := make([][]byte, 0, signaturesValue.Count())
@@ -228,7 +201,7 @@ func BLSAggregateSignatures(
 				panic(errors.NewUnreachableError())
 			}
 
-			bytes, err := interpreter.ByteArrayValueToByteSlice(context, signature, locationRange)
+			bytes, err := interpreter.ByteArrayValueToByteSlice(context, signature)
 			if err != nil {
 				panic(err)
 			}
@@ -239,7 +212,6 @@ func BLSAggregateSignatures(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	aggregatedSignature, err := aggregator.BLSAggregateSignatures(bytesArray)

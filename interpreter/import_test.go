@@ -19,20 +19,42 @@
 package interpreter_test
 
 import (
+	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
+	"github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
+
+func newAddLogFunction(logs *[]string) interpreter.NativeFunction {
+	return func(
+		_ interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		arguments []interpreter.Value,
+	) interpreter.Value {
+		value := arguments[0]
+		*logs = append(*logs, value.String())
+		return interpreter.Void
+	}
+}
 
 func TestInterpretVirtualImport(t *testing.T) {
 
@@ -99,7 +121,6 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 					value := interpreter.NewCompositeValue(
 						inter,
-						interpreter.EmptyLocationRange,
 						location,
 						"Foo",
 						common.CompositeKindContract,
@@ -876,4 +897,901 @@ func TestInterpretImportAliasOtherMember(t *testing.T) {
 		interpreter.NewUnmeteredIntValueFromInt64(1),
 		value,
 	)
+}
+
+func TestInterpretImportGlobals(t *testing.T) {
+
+	t.Parallel()
+
+	const logFunctionName = "log"
+
+	var logs []string
+
+	if *compile {
+
+		valueDeclaration := stdlib.NewVMStandardLibraryStaticFunction(
+			logFunctionName,
+			stdlib.LogFunctionType,
+			"",
+			newAddLogFunction(&logs),
+		)
+
+		baseValueActivation := sema.NewVariableActivation(nil)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		programs := CompiledPrograms{}
+
+		builtinGlobalsProvider := func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+			activation.Set(
+				logFunctionName,
+				compiler.NewGlobalImport(logFunctionName),
+			)
+
+			return activation
+		}
+		_ = ParseCheckAndCompileCodeWithOptions(t,
+			`
+              let y = log("y")
+              let x = log("x")
+
+              fun dummy() {}
+            `,
+			common.StringLocation("imported"),
+			ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				CompilerConfig: &compiler.Config{
+					BuiltinGlobalsProvider: builtinGlobalsProvider,
+				},
+			},
+			programs,
+		)
+
+		_, err := test.CompileAndInvokeWithOptionsAndPrograms(t,
+			`
+              import dummy from "imported"
+
+              let b = log("b")
+              let a = log("a")
+
+              fun test() {}
+            `,
+			"test",
+			test.CompilerAndVMOptions{
+				VMConfig: &vm.Config{
+					Tracer:          interpreter.NoOpTracer{},
+					StackDepthLimit: math.MaxUint64,
+					BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[vm.Variable] {
+						activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+						logVariable := &interpreter.SimpleVariable{}
+						logVariable.InitializeWithValue(valueDeclaration.Value)
+						activation.Set(
+							logFunctionName,
+							logVariable,
+						)
+
+						return activation
+					},
+				},
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
+							ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+								importedProgram, ok := programs[importedLocation]
+								if !ok {
+									return nil, fmt.Errorf("cannot find program for location %s", importedLocation)
+								}
+
+								return sema.ElaborationImport{
+									Elaboration: importedProgram.DesugaredElaboration.OriginalElaboration(),
+								}, nil
+							},
+						},
+					},
+					CompilerConfig: &compiler.Config{
+						BuiltinGlobalsProvider: builtinGlobalsProvider,
+						ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+							return programs[location].Program
+						},
+						LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+							return []sema.ResolvedLocation{
+								{
+									Location:    location,
+									Identifiers: identifiers,
+								},
+							}, nil
+						},
+					},
+				},
+			},
+			programs,
+		)
+		require.NoError(t, err)
+
+	} else {
+
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			logFunctionName,
+			stdlib.LogFunctionType,
+			"",
+			newAddLogFunction(&logs),
+		)
+
+		baseValueActivation := sema.NewVariableActivation(nil)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+              let y = log("y")
+              let x = log("x")
+            `,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: address,
+					Name:    "",
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              import 0x1
+
+              let b = log("b")
+              let a = log("a")
+
+              fun test() {}
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+							require.Equal(t, importedChecker.Location, importedLocation)
+
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						require.Equal(t, importedChecker.Location, location)
+
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
+
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	}
+
+	require.Equal(t, []string{`"y"`, `"x"`, `"b"`, `"a"`}, logs)
+}
+
+func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
+
+	t.Parallel()
+
+	const logFunctionName = "log"
+
+	var logs []string
+
+	if *compile {
+
+		valueDeclaration := stdlib.NewVMStandardLibraryStaticFunction(
+			logFunctionName,
+			stdlib.LogFunctionType,
+			"",
+			newAddLogFunction(&logs),
+		)
+
+		baseValueActivation := sema.NewVariableActivation(nil)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		programs := CompiledPrograms{}
+
+		builtinGlobalsProvider := func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+			activation.Set(
+				logFunctionName,
+				compiler.NewGlobalImport(logFunctionName),
+			)
+
+			return activation
+		}
+
+		addressA := common.MustBytesToAddress([]byte{0x1})
+		addressB := common.MustBytesToAddress([]byte{0x2})
+
+		_ = ParseCheckAndCompileCodeWithOptions(t,
+			`
+              struct interface I {
+                  fun sayHello()
+              }
+
+              let p = log("p")
+              let q = log("q")
+            `,
+			common.NewAddressLocation(nil, addressA, ""),
+			ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				CompilerConfig: &compiler.Config{
+					BuiltinGlobalsProvider: builtinGlobalsProvider,
+				},
+			},
+			programs,
+		)
+
+		_ = ParseCheckAndCompileCodeWithOptions(t,
+			`
+              import I from 0x1
+
+              struct S: I {
+                  fun sayHello() {}
+              }
+
+              let y = log("y")
+              let x = log("x")
+            `,
+			common.NewAddressLocation(nil, addressB, ""),
+			ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				CompilerConfig: &compiler.Config{
+					BuiltinGlobalsProvider: builtinGlobalsProvider,
+					ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+						return programs[location].Program
+					},
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+						return []sema.ResolvedLocation{
+							{
+								Location:    location,
+								Identifiers: identifiers,
+							},
+						}, nil
+					},
+				},
+			},
+			programs,
+		)
+
+		vmConfig := test.PrepareVMConfig(t, nil, programs)
+
+		vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+			logVariable := &interpreter.SimpleVariable{}
+			logVariable.InitializeWithValue(valueDeclaration.Value)
+			activation.Set(
+				logFunctionName,
+				logVariable,
+			)
+
+			return activation
+		}
+
+		context := vm.NewContext(vmConfig)
+
+		sValue := interpreter.NewCompositeValue(
+			context,
+			common.NewAddressLocation(nil, addressB, ""),
+			"S",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{},
+			common.ZeroAddress,
+		)
+
+		_, err := test.CompileAndInvokeWithOptionsAndPrograms(t,
+			`
+              import I from 0x1
+
+              let b = log("b")
+              let a = log("a")
+
+              fun test(value: {I}) {
+                  value.sayHello()
+              }
+            `,
+			"test",
+			test.CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
+							ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+								importedProgram, ok := programs[importedLocation]
+								if !ok {
+									return nil, fmt.Errorf("cannot find program for location %s", importedLocation)
+								}
+
+								return sema.ElaborationImport{
+									Elaboration: importedProgram.DesugaredElaboration.OriginalElaboration(),
+								}, nil
+							},
+						},
+					},
+					CompilerConfig: &compiler.Config{
+						BuiltinGlobalsProvider: builtinGlobalsProvider,
+						ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+							return programs[location].Program
+						},
+						LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+							return []sema.ResolvedLocation{
+								{
+									Location:    location,
+									Identifiers: identifiers,
+								},
+							}, nil
+						},
+					},
+				},
+			},
+			programs,
+			sValue,
+		)
+		require.NoError(t, err)
+
+	} else {
+
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			logFunctionName,
+			stdlib.LogFunctionType,
+			"",
+			newAddLogFunction(&logs),
+		)
+
+		baseValueActivation := sema.NewVariableActivation(nil)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		// Program A
+		addressA := common.MustBytesToAddress([]byte{0x1})
+
+		importedCheckerA, err := ParseAndCheckWithOptions(t,
+			`
+              struct interface I {
+                  fun sayHello()
+              }
+
+              let p = log("p")
+              let q = log("q")
+            `,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: addressA,
+					Name:    "",
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		// Program B
+
+		addressB := common.MustBytesToAddress([]byte{0x2})
+
+		importedCheckerB, err := ParseAndCheckWithOptions(t,
+			`
+              import I from 0x1
+
+              struct S: I {
+                  fun sayHello() {}
+              }
+
+              let y = log("y")
+              let x = log("x")
+            `,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: addressB,
+					Name:    "",
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						addressLocation := importedLocation.(common.AddressLocation)
+
+						var importedElaboration *sema.Elaboration
+
+						switch addressLocation.Address {
+						case addressA:
+							importedElaboration = importedCheckerA.Elaboration
+						default:
+							panic(fmt.Errorf("unknown address: %s", addressLocation.Address))
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: importedElaboration,
+						}, nil
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		// Program C
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              import I from 0x1
+
+              let b = log("b")
+              let a = log("a")
+
+              fun test(value: {I}) {
+                  value.sayHello()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+							addressLocation := importedLocation.(common.AddressLocation)
+
+							var importedElaboration *sema.Elaboration
+
+							switch addressLocation.Address {
+							case addressA:
+								importedElaboration = importedCheckerA.Elaboration
+							case addressB:
+								importedElaboration = importedCheckerB.Elaboration
+							default:
+								panic(fmt.Errorf("unknown address: %s", addressLocation.Address))
+							}
+
+							return sema.ElaborationImport{
+								Elaboration: importedElaboration,
+							}, nil
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						addressLocation := location.(common.AddressLocation)
+
+						var importedChecker *sema.Checker
+
+						switch addressLocation.Address {
+						case addressA:
+							importedChecker = importedCheckerA
+						case addressB:
+							importedChecker = importedCheckerB
+						default:
+							panic(fmt.Errorf("unknown address: %s", addressLocation.Address))
+						}
+
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
+
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		sValue := interpreter.NewCompositeValue(
+			inter,
+			common.NewAddressLocation(nil, addressB, ""),
+			"S",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{},
+			common.ZeroAddress,
+		)
+
+		_, err = inter.Invoke("test", sValue)
+		require.NoError(t, err)
+	}
+
+	require.Equal(t, []string{`"p"`, `"q"`, `"b"`, `"a"`, `"y"`, `"x"`}, logs)
+}
+
+func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
+
+	t.Parallel()
+
+	const logFunctionName = "log"
+
+	var logs []string
+
+	const codeA = `
+        struct interface I {
+            fun sayHello()
+        }
+
+        let p = log("p")
+        let q = log("q")
+    `
+
+	const codeB = `
+        import I from 0x1
+
+        struct S: I {
+            fun sayHello() {}
+        }
+
+        let y = log("y")
+        let x = log("x")
+    `
+
+	const codeC = `
+        import I from 0x1
+
+        let b = log("b")
+        let a = log("a")
+
+        fun test(value: AnyStruct) {
+            value as! {I}    // Type-cast so that the runtime type will be loaded.
+        }
+    `
+
+	if *compile {
+
+		valueDeclaration := stdlib.NewVMStandardLibraryStaticFunction(
+			logFunctionName,
+			stdlib.LogFunctionType,
+			"",
+			newAddLogFunction(&logs),
+		)
+
+		baseValueActivation := sema.NewVariableActivation(nil)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		programs := CompiledPrograms{}
+
+		builtinGlobalsProvider := func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+			activation.Set(
+				logFunctionName,
+				compiler.NewGlobalImport(logFunctionName),
+			)
+
+			return activation
+		}
+
+		addressA := common.MustBytesToAddress([]byte{0x1})
+		addressB := common.MustBytesToAddress([]byte{0x2})
+
+		_ = ParseCheckAndCompileCodeWithOptions(t,
+			codeA,
+			common.NewAddressLocation(nil, addressA, ""),
+			ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				CompilerConfig: &compiler.Config{
+					BuiltinGlobalsProvider: builtinGlobalsProvider,
+				},
+			},
+			programs,
+		)
+
+		_ = ParseCheckAndCompileCodeWithOptions(t,
+			codeB,
+			common.NewAddressLocation(nil, addressB, ""),
+			ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				CompilerConfig: &compiler.Config{
+					BuiltinGlobalsProvider: builtinGlobalsProvider,
+					ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+						return programs[location].Program
+					},
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+						return []sema.ResolvedLocation{
+							{
+								Location:    location,
+								Identifiers: identifiers,
+							},
+						}, nil
+					},
+				},
+			},
+			programs,
+		)
+
+		vmConfig := test.PrepareVMConfig(t, nil, programs)
+
+		vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+			logVariable := &interpreter.SimpleVariable{}
+			logVariable.InitializeWithValue(valueDeclaration.Value)
+			activation.Set(
+				logFunctionName,
+				logVariable,
+			)
+
+			return activation
+		}
+
+		context := vm.NewContext(vmConfig)
+
+		sValue := interpreter.NewCompositeValue(
+			context,
+			common.NewAddressLocation(nil, addressB, ""),
+			"S",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{},
+			common.ZeroAddress,
+		)
+
+		_, err := test.CompileAndInvokeWithOptionsAndPrograms(t,
+			codeC,
+			"test",
+			test.CompilerAndVMOptions{
+				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
+							ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+								importedProgram, ok := programs[importedLocation]
+								if !ok {
+									return nil, fmt.Errorf("cannot find program for location %s", importedLocation)
+								}
+
+								return sema.ElaborationImport{
+									Elaboration: importedProgram.DesugaredElaboration.OriginalElaboration(),
+								}, nil
+							},
+						},
+					},
+					CompilerConfig: &compiler.Config{
+						BuiltinGlobalsProvider: builtinGlobalsProvider,
+						ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+							return programs[location].Program
+						},
+						LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+							return []sema.ResolvedLocation{
+								{
+									Location:    location,
+									Identifiers: identifiers,
+								},
+							}, nil
+						},
+					},
+				},
+			},
+			programs,
+			sValue,
+		)
+		require.NoError(t, err)
+
+	} else {
+
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			logFunctionName,
+			stdlib.LogFunctionType,
+			"",
+			newAddLogFunction(&logs),
+		)
+
+		baseValueActivation := sema.NewVariableActivation(nil)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		// Program A
+		addressA := common.MustBytesToAddress([]byte{0x1})
+
+		importedCheckerA, err := ParseAndCheckWithOptions(t,
+			codeA,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: addressA,
+					Name:    "",
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		// Program B
+
+		addressB := common.MustBytesToAddress([]byte{0x2})
+
+		importedCheckerB, err := ParseAndCheckWithOptions(t,
+			codeB,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: addressB,
+					Name:    "",
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						addressLocation := importedLocation.(common.AddressLocation)
+
+						var importedElaboration *sema.Elaboration
+
+						switch addressLocation.Address {
+						case addressA:
+							importedElaboration = importedCheckerA.Elaboration
+						default:
+							panic(fmt.Errorf("unknown address: %s", addressLocation.Address))
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: importedElaboration,
+						}, nil
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		// Program C
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			codeC,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+							addressLocation := importedLocation.(common.AddressLocation)
+
+							var importedElaboration *sema.Elaboration
+
+							switch addressLocation.Address {
+							case addressA:
+								importedElaboration = importedCheckerA.Elaboration
+							case addressB:
+								importedElaboration = importedCheckerB.Elaboration
+							default:
+								panic(fmt.Errorf("unknown address: %s", addressLocation.Address))
+							}
+
+							return sema.ElaborationImport{
+								Elaboration: importedElaboration,
+							}, nil
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						addressLocation := location.(common.AddressLocation)
+
+						var importedChecker *sema.Checker
+
+						switch addressLocation.Address {
+						case addressA:
+							importedChecker = importedCheckerA
+						case addressB:
+							importedChecker = importedCheckerB
+						default:
+							panic(fmt.Errorf("unknown address: %s", addressLocation.Address))
+						}
+
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
+
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		sValue := interpreter.NewCompositeValue(
+			inter,
+			common.NewAddressLocation(nil, addressB, ""),
+			"S",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{},
+			common.ZeroAddress,
+		)
+
+		_, err = inter.Invoke("test", sValue)
+		require.NoError(t, err)
+	}
+
+	require.Equal(t, []string{`"p"`, `"q"`, `"b"`, `"a"`, `"y"`, `"x"`}, logs)
 }

@@ -46,14 +46,14 @@ var UFix128MemoryUsage = common.NewNumberMemoryUsage(ufix128Size)
 
 // NewUnmeteredUFix128ValueWithInteger construct a UFix128Value from an uint64.
 // Note that this function uses the default scaling of 24.
-func NewUnmeteredUFix128ValueWithInteger(integer uint64, locationRange LocationRange) UFix128Value {
+func NewUnmeteredUFix128ValueWithInteger(integer uint64) UFix128Value {
 	bigInt := new(big.Int).SetUint64(integer)
 	bigInt = new(big.Int).Mul(
 		bigInt,
 		sema.UFix128FactorIntBig,
 	)
 
-	return NewUFix128ValueFromBigIntWithRangeCheck(nil, bigInt, locationRange)
+	return NewUFix128ValueFromBigIntWithRangeCheck(nil, bigInt)
 }
 
 func NewUnmeteredUFix128ValueWithIntegerAndScale(integer uint64, scale int64) UFix128Value {
@@ -102,17 +102,13 @@ func NewUFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) UFix128Valu
 	)
 }
 
-func NewUFix128ValueFromBigIntWithRangeCheck(gauge common.MemoryGauge, v *big.Int, locationRange LocationRange) UFix128Value {
+func NewUFix128ValueFromBigIntWithRangeCheck(gauge common.MemoryGauge, v *big.Int) UFix128Value {
 	if v.Cmp(fixedpoint.UFix128TypeMinBig) < 0 {
-		panic(&UnderflowError{
-			LocationRange: locationRange,
-		})
+		panic(&UnderflowError{})
 	}
 
 	if v.Cmp(fixedpoint.UFix128TypeMaxBig) > 0 {
-		panic(&OverflowError{
-			LocationRange: locationRange,
-		})
+		panic(&OverflowError{})
 	}
 
 	return NewUFix128ValueFromBigInt(gauge, v)
@@ -129,11 +125,11 @@ var _ MemberAccessibleValue = UFix128Value{}
 
 func (UFix128Value) IsValue() {}
 
-func (v UFix128Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v UFix128Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitUFix128Value(context, v)
 }
 
-func (UFix128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (UFix128Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -141,7 +137,7 @@ func (UFix128Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUFix128)
 }
 
-func (UFix128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (UFix128Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -153,7 +149,10 @@ func (v UFix128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UFix128Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v UFix128Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -163,53 +162,49 @@ func (v UFix128Value) MeteredString(context ValueStringContext, _ SeenReferences
 	return v.String()
 }
 
-func (v UFix128Value) ToInt(locationRange LocationRange) int {
+func (v UFix128Value) ToInt() int {
 	// TODO: Maybe compute this without the use of `big.Int`
 	UFix128BigInt := v.ToBigInt()
 	integerPart := UFix128BigInt.Div(UFix128BigInt, sema.UFix128FactorIntBig)
 
 	if !integerPart.IsInt64() {
-		panic(&OverflowError{
-			LocationRange: locationRange,
-		})
+		panic(&OverflowError{})
 	}
 
 	return int(integerPart.Int64())
 }
 
-func (v UFix128Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
+func (v UFix128Value) Negate(_ NumberValueArithmeticContext) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UFix128Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix128Value) Plus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	valueGetter := func() fix.UFix128 {
 		result, err := fix.UFix128(v).Add(fix.UFix128(o))
 		// Should panic on overflow/underflow
-		handleFixedpointError(err, locationRange)
+		handleFixedpointError(err)
 		return result
 	}
 
 	return NewUFix128Value(context, valueGetter)
 }
 
-func (v UFix128Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix128Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			FunctionName: sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    other.StaticType(context),
 		})
 	}
 
@@ -221,35 +216,33 @@ func (v UFix128Value) SaturatingPlus(context NumberValueArithmeticContext, other
 	return NewUFix128Value(context, valueGetter)
 }
 
-func (v UFix128Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix128Value) Minus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	valueGetter := func() fix.UFix128 {
 		result, err := fix.UFix128(v).Sub(fix.UFix128(o))
 		// Should panic on overflow/underflow
-		handleFixedpointError(err, locationRange)
+		handleFixedpointError(err)
 		return result
 	}
 
 	return NewUFix128Value(context, valueGetter)
 }
 
-func (v UFix128Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix128Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			FunctionName: sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    other.StaticType(context),
 		})
 	}
 
@@ -261,14 +254,13 @@ func (v UFix128Value) SaturatingMinus(context NumberValueArithmeticContext, othe
 	return NewUFix128Value(context, valueGetter)
 }
 
-func (v UFix128Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix128Value) Mul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -278,21 +270,20 @@ func (v UFix128Value) Mul(context NumberValueArithmeticContext, other NumberValu
 			fix.RoundTruncate,
 		)
 		// Should panic on overflow/underflow
-		handleFixedpointError(err, locationRange)
+		handleFixedpointError(err)
 		return result
 	}
 
 	return NewUFix128Value(context, valueGetter)
 }
 
-func (v UFix128Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix128Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			FunctionName: sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    other.StaticType(context),
 		})
 	}
 
@@ -307,14 +298,13 @@ func (v UFix128Value) SaturatingMul(context NumberValueArithmeticContext, other 
 	return NewUFix128Value(context, valueGetter)
 }
 
-func (v UFix128Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix128Value) Div(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -324,21 +314,20 @@ func (v UFix128Value) Div(context NumberValueArithmeticContext, other NumberValu
 			fix.RoundTruncate,
 		)
 		// Should panic on overflow/underflow
-		handleFixedpointError(err, locationRange)
+		handleFixedpointError(err)
 		return result
 	}
 
 	return NewUFix128Value(context, valueGetter)
 }
 
-func (v UFix128Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix128Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			FunctionName: sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    other.StaticType(context),
 		})
 	}
 
@@ -353,35 +342,33 @@ func (v UFix128Value) SaturatingDiv(context NumberValueArithmeticContext, other 
 	return NewUFix128Value(context, valueGetter)
 }
 
-func (v UFix128Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v UFix128Value) Mod(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	valueGetter := func() fix.UFix128 {
 		result, err := fix.UFix128(v).Mod(fix.UFix128(o))
 		// Should panic on overflow/underflow
-		handleFixedpointError(err, locationRange)
+		handleFixedpointError(err)
 		return result
 	}
 
 	return NewUFix128Value(context, valueGetter)
 }
 
-func (v UFix128Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix128Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -391,14 +378,13 @@ func (v UFix128Value) Less(context ValueComparisonContext, other ComparableValue
 	return BoolValue(this.Lt(that))
 }
 
-func (v UFix128Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix128Value) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -408,14 +394,13 @@ func (v UFix128Value) LessEqual(context ValueComparisonContext, other Comparable
 	return BoolValue(this.Lte(that))
 }
 
-func (v UFix128Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix128Value) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -425,14 +410,13 @@ func (v UFix128Value) Greater(context ValueComparisonContext, other ComparableVa
 	return BoolValue(this.Gt(that))
 }
 
-func (v UFix128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v UFix128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -442,19 +426,19 @@ func (v UFix128Value) GreaterEqual(context ValueComparisonContext, other Compara
 	return BoolValue(this.Gte(that))
 }
 
-func (v UFix128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
-	otherFix64, ok := other.(UFix128Value)
+func (v UFix128Value) Equal(_ ValueComparisonContext, other Value) bool {
+	otherFix128, ok := other.(UFix128Value)
 	if !ok {
 		return false
 	}
-	return v == otherFix64
+	return v == otherFix128
 }
 
 // HashInput returns a byte slice containing:
-// - HashInputTypeFix64 (1 byte)
+// - HashInputTypeUFix128 (1 byte)
 // - high 64 bits encoded in big-endian (8 bytes)
 // - low 64 bits encoded in big-endian (8 bytes)
-func (v UFix128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v UFix128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUFix128)
 
 	UFix128 := fix.UFix128(v)
@@ -463,7 +447,7 @@ func (v UFix128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch [
 	return scratch[:17]
 }
 
-func ConvertUFix128(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) UFix128Value {
+func ConvertUFix128(memoryGauge common.MemoryGauge, value Value) UFix128Value {
 	scaledInt := new(big.Int)
 
 	switch value := value.(type) {
@@ -496,37 +480,33 @@ func ConvertUFix128(memoryGauge common.MemoryGauge, value Value, locationRange L
 		)
 
 	case NumberValue:
-		bigInt := new(big.Int).SetInt64(int64(value.ToInt(locationRange)))
+		bigInt := new(big.Int).SetInt64(int64(value.ToInt()))
 		scaledInt = scaledInt.Mul(
 			bigInt,
 			fixedpoint.UFix128FactorAsBigInt,
 		)
 
 	default:
-		panic(fmt.Sprintf("can't convert UFix64: %s", value))
+		panic(fmt.Sprintf("can't convert to UFix128: %s", value))
 	}
 
-	return NewUFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt, locationRange)
+	return NewUFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-func (v UFix128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v UFix128Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v UFix128Value) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	name string,
-) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Fix64Type, locationRange)
+func (v UFix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.UFix128Type)
 }
 
-func (UFix128Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (UFix128Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (UFix128Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (UFix128Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -538,7 +518,6 @@ func (v UFix128Value) ToBigEndianBytes() []byte {
 
 func (v UFix128Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -562,7 +541,6 @@ func (UFix128Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v UFix128Value) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

@@ -368,28 +368,6 @@
   controlEffects:
     - call:
 
-- name: "invokeDynamic"
-  description:
-    Invokes a method with the given name dynamically. 
-    Pops the receiver and the arguments off the stack, invokes the function with the arguments,
-    and then pushes the result back on to the stack.
-  operands:
-    - name: "name"
-      type: "constantIndex"
-    - name: "typeArgs"
-      type: "typeIndices"
-    - name: "argCount"
-      type: "size"
-  valueEffects:
-    pop:
-      - name: "arguments"
-        # TODO: count
-    push:
-      - name: "result"
-        type: "value"
-  controlEffects:
-    - call:
-
 - name: "getMethod"
   description:
     Pops a value off the stack, the receiver,
@@ -480,7 +458,21 @@
 
 - name: "transferAndConvert"
   description:
-    Pops a value off the stack, transfers it to the given type, and then pushes it back on to the stack.
+    Pops a value off the stack, transfer and converts it to the given type, and then pushes it back on to the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "convert"
+  description:
+    Pops a value off the stack, converts it to the given type, and then pushes it back on to the stack.
   operands:
     - name: "type"
       type: "typeIndex"
@@ -958,3 +950,60 @@
     push:
       - name: "string"
         type: "string"
+
+# Attachment instructions
+
+- name: "getTypeIndex"
+  description:
+    Pops a value off the stack, the target,
+    and then pushes the value of the type key at the given index onto the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "removeTypeIndex"
+  description:
+    Pops a value off the stack, the target.
+    Remove the value of the given type key from the target.
+    Additionally destroy if removed type is resource. 
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+
+- name: "setTypeIndex"
+  description:
+    Pops two values off the stack, the target and the value,
+    and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "setAttachmentBase"
+  description:
+    Pops two values off the stack, the attachment and the base, sets the attachment's base value to base.
+  valueEffects:
+    pop:
+      - name: "attachment"
+        type: "value"
+      - name: "base"
+        type: "value"

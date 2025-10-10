@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 )
 
 // LocationCoverage records coverage information for a location.
@@ -265,15 +266,11 @@ func (r *CoverageReport) String() string {
 	return fmt.Sprintf("Coverage: %v of statements", r.Percentage())
 }
 
-// Reset flushes the collected coverage information for all locations
-// and inspected locations. Excluded locations remain intact.
+// Reset clears the collected coverage information for all locations and inspected locations.
+// Excluded locations remain intact.
 func (r *CoverageReport) Reset() {
-	for location := range r.Coverage { // nolint:maprange
-		delete(r.Coverage, location)
-	}
-	for location := range r.Locations { // nolint:maprange
-		delete(r.Locations, location)
-	}
+	clear(r.Coverage)
+	clear(r.Locations)
 }
 
 // Merge adds all the collected coverage information to the
@@ -565,4 +562,17 @@ func (r *CoverageReport) sourcePathForLocation(location common.Location) string 
 	}
 
 	return locationSource
+}
+
+func (r *CoverageReport) newOnStatementHandler() interpreter.OnStatementFunc {
+	return func(inter *interpreter.Interpreter, statement ast.Statement) {
+		location := inter.Location
+		if !r.IsLocationInspected(location) {
+			program := inter.Program.Program
+			r.InspectProgram(location, program)
+		}
+
+		line := statement.StartPosition().Line
+		r.AddLineHit(location, line)
+	}
 }

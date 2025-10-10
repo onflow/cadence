@@ -1451,12 +1451,6 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		t.Parallel()
 
-		// Skip test when compiling, as the VM currently does not have
-		// the resource invalidation defensive check like the interpreter.
-		if *compile {
-			return
-		}
-
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
             resource R {}
@@ -2370,7 +2364,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2449,7 +2442,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *tes
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2526,7 +2518,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *tes
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2599,7 +2590,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2639,8 +2629,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
-		// TODO: requires support for attachments in the VM
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     var i: Int
@@ -2676,7 +2665,6 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						eventFields []interpreter.Value,
 					) error {
@@ -2713,8 +2701,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
-		// TODO: requires support for attachments in the VM
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 contract base {
                     var i: Int
@@ -2743,7 +2730,6 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						eventFields []interpreter.Value,
 					) error {
@@ -2799,7 +2785,6 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -3060,11 +3045,7 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	if *compile {
-		assert.Equal(t, 40, errorStartPos.Column)
-	} else {
-		assert.Equal(t, 58, errorStartPos.Column)
-	}
+	assert.Equal(t, ifCompile(55, 58), errorStartPos.Column)
 }
 
 func TestInterpretMovedResourceInSecondValue(t *testing.T) {
@@ -3110,11 +3091,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	if *compile {
-		assert.Equal(t, 37, errorStartPos.Column)
-	} else {
-		assert.Equal(t, 55, errorStartPos.Column)
-	}
+	assert.Equal(t, ifCompile(52, 55), errorStartPos.Column)
 }
 
 func TestInterpretResourceLoss(t *testing.T) {
@@ -3451,8 +3428,7 @@ func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO: requires support for attachments in the VM
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 		// Victim code starts
 		resource Vault {
 			var balance: UFix64

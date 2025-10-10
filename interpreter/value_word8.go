@@ -70,11 +70,11 @@ func NewWord8ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 
 func (Word8Value) IsValue() {}
 
-func (v Word8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v Word8Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitWord8Value(context, v)
 }
 
-func (Word8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (Word8Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -82,7 +82,7 @@ func (Word8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord8)
 }
 
-func (Word8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (Word8Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -94,7 +94,10 @@ func (v Word8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word8Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v Word8Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -104,22 +107,21 @@ func (v Word8Value) MeteredString(context ValueStringContext, _ SeenReferences, 
 	return v.String()
 }
 
-func (v Word8Value) ToInt(_ LocationRange) int {
+func (v Word8Value) ToInt() int {
 	return int(v)
 }
 
-func (v Word8Value) Negate(NumberValueArithmeticContext, LocationRange) NumberValue {
+func (v Word8Value) Negate(NumberValueArithmeticContext) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Plus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationPlus,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -130,18 +132,17 @@ func (v Word8Value) Plus(context NumberValueArithmeticContext, other NumberValue
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Minus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMinus,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -152,25 +153,22 @@ func (v Word8Value) Minus(context NumberValueArithmeticContext, other NumberValu
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Mod(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	if o == 0 {
-		panic(&DivisionByZeroError{
-			LocationRange: locationRange,
-		})
+		panic(&DivisionByZeroError{})
 	}
 
 	valueGetter := func() uint8 {
@@ -180,14 +178,13 @@ func (v Word8Value) Mod(context NumberValueArithmeticContext, other NumberValue,
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Mul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMul,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -198,25 +195,22 @@ func (v Word8Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingMul(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingMul(NumberValueArithmeticContext, NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+func (v Word8Value) Div(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationDiv,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	if o == 0 {
-		panic(&DivisionByZeroError{
-			LocationRange: locationRange,
-		})
+		panic(&DivisionByZeroError{})
 	}
 
 	valueGetter := func() uint8 {
@@ -226,67 +220,63 @@ func (v Word8Value) Div(context NumberValueArithmeticContext, other NumberValue,
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue, LocationRange) NumberValue {
+func (v Word8Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue) NumberValue {
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationLess,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return v < o
 }
 
-func (v Word8Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationLessEqual,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return v <= o
 }
 
-func (v Word8Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationGreater,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return v > o
 }
 
-func (v Word8Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationGreaterEqual,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
 	return v >= o
 }
 
-func (v Word8Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v Word8Value) Equal(_ ValueComparisonContext, other Value) bool {
 	otherWord8, ok := other.(Word8Value)
 	if !ok {
 		return false
@@ -297,29 +287,28 @@ func (v Word8Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord8 (1 byte)
 // - uint8 value (1 byte)
-func (v Word8Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v Word8Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord8)
 	scratch[1] = byte(v)
 	return scratch[:2]
 }
 
-func ConvertWord8(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Word8Value {
+func ConvertWord8(memoryGauge common.MemoryGauge, value Value) Word8Value {
 	return NewWord8Value(
 		memoryGauge,
 		func() uint8 {
-			return ConvertWord[uint8](memoryGauge, value, locationRange)
+			return ConvertWord[uint8](memoryGauge, value)
 		},
 	)
 }
 
-func (v Word8Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationBitwiseOr,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -330,14 +319,13 @@ func (v Word8Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationBitwiseXor,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -348,14 +336,13 @@ func (v Word8Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValu
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationBitwiseAnd,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -366,14 +353,13 @@ func (v Word8Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValu
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationBitwiseLeftShift,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -384,14 +370,13 @@ func (v Word8Value) BitwiseLeftShift(context ValueStaticTypeContext, other Integ
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
+func (v Word8Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(&InvalidOperandsError{
-			Operation:     ast.OperationBitwiseRightShift,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(context),
+			RightType: other.StaticType(context),
 		})
 	}
 
@@ -402,24 +387,20 @@ func (v Word8Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v Word8Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v Word8Value) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	name string,
-) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Word8Type, locationRange)
+func (v Word8Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.Word8Type)
 }
 
-func (Word8Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (Word8Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word8Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (Word8Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -430,7 +411,6 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 
 func (v Word8Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -454,7 +434,6 @@ func (Word8Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v Word8Value) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

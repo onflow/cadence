@@ -78,7 +78,6 @@ func (v CompiledFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bb
 
 func (v CompiledFunctionValue) Transfer(
 	context interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -99,26 +98,17 @@ func (v CompiledFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ 
 	return interpreter.NonStorable{Value: v}, nil
 }
 
-func (v CompiledFunctionValue) Accept(
-	_ interpreter.ValueVisitContext,
-	_ interpreter.Visitor,
-	_ interpreter.LocationRange,
-) {
+func (v CompiledFunctionValue) Accept(_ interpreter.ValueVisitContext, _ interpreter.Visitor) {
 	// Unused for now
 	panic(errors.NewUnreachableError())
 }
 
-func (v CompiledFunctionValue) Walk(
-	_ interpreter.ValueWalkContext,
-	_ func(interpreter.Value),
-	_ interpreter.LocationRange,
-) {
+func (v CompiledFunctionValue) Walk(_ interpreter.ValueWalkContext, _ func(interpreter.Value)) {
 	// NO-OP
 }
 
 func (v CompiledFunctionValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
-	_ interpreter.LocationRange,
 	_ interpreter.TypeConformanceResults,
 ) bool {
 	return true
@@ -131,7 +121,6 @@ func (v CompiledFunctionValue) RecursiveString(_ interpreter.SeenReferences) str
 func (v CompiledFunctionValue) MeteredString(
 	context interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
-	_ interpreter.LocationRange,
 ) string {
 	return v.Type.MeteredString(context)
 }
@@ -152,7 +141,7 @@ func (v CompiledFunctionValue) Clone(_ interpreter.ValueCloneContext) interprete
 	return v
 }
 
-func (v CompiledFunctionValue) IsImportable(_ interpreter.ValueImportableContext, _ interpreter.LocationRange) bool {
+func (v CompiledFunctionValue) IsImportable(_ interpreter.ValueImportableContext) bool {
 	return false
 }
 
@@ -171,45 +160,14 @@ func (v CompiledFunctionValue) IsNative() bool {
 	return false
 }
 
-type NativeFunction func(
-	context *Context,
-	typeArguments []bbq.StaticType,
-	receiver Value,
-	arguments ...Value,
-) Value
-
 type NativeFunctionValue struct {
 	Name     string
-	Function NativeFunction
+	Function interpreter.NativeFunction
 
 	// A function value can only have either one of `functionType` or `functionTypeGetter`.
 	functionType       *sema.FunctionType
 	functionTypeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
 	fields             map[string]Value
-}
-
-func NewNativeFunctionValue(
-	name string,
-	funcType *sema.FunctionType,
-	function NativeFunction,
-) *NativeFunctionValue {
-	return &NativeFunctionValue{
-		Name:         name,
-		Function:     function,
-		functionType: funcType,
-	}
-}
-
-func NewNativeFunctionValueWithDerivedType(
-	name string,
-	typeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType,
-	function NativeFunction,
-) *NativeFunctionValue {
-	return &NativeFunctionValue{
-		Name:               name,
-		Function:           function,
-		functionTypeGetter: typeGetter,
-	}
 }
 
 var _ Value = &NativeFunctionValue{}
@@ -232,8 +190,8 @@ func (v *NativeFunctionValue) StaticType(context interpreter.ValueStaticTypeCont
 	)
 }
 
-func (v *NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
+func (v *NativeFunctionValue) Transfer(
+	_ interpreter.ValueTransferContext,
 	_ atree.Address,
 	_ bool,
 	_ atree.Storable,
@@ -256,26 +214,17 @@ func (v *NativeFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ u
 	return interpreter.NonStorable{Value: v}, nil
 }
 
-func (v *NativeFunctionValue) Accept(
-	_ interpreter.ValueVisitContext,
-	_ interpreter.Visitor,
-	_ interpreter.LocationRange,
-) {
+func (v *NativeFunctionValue) Accept(_ interpreter.ValueVisitContext, _ interpreter.Visitor) {
 	// Unused for now
 	panic(errors.NewUnreachableError())
 }
 
-func (v *NativeFunctionValue) Walk(
-	_ interpreter.ValueWalkContext,
-	_ func(interpreter.Value),
-	_ interpreter.LocationRange,
-) {
+func (v *NativeFunctionValue) Walk(_ interpreter.ValueWalkContext, _ func(interpreter.Value)) {
 	// NO-OP
 }
 
 func (v *NativeFunctionValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
-	_ interpreter.LocationRange,
 	_ interpreter.TypeConformanceResults,
 ) bool {
 	return true
@@ -288,7 +237,6 @@ func (v *NativeFunctionValue) RecursiveString(_ interpreter.SeenReferences) stri
 func (v *NativeFunctionValue) MeteredString(
 	context interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
-	_ interpreter.LocationRange,
 ) string {
 	if v.HasGenericType() {
 		// If the type is not pre-known, just return the name.
@@ -314,10 +262,7 @@ func (v *NativeFunctionValue) Clone(_ interpreter.ValueCloneContext) interpreter
 	return v
 }
 
-func (v *NativeFunctionValue) IsImportable(
-	_ interpreter.ValueImportableContext,
-	_ interpreter.LocationRange,
-) bool {
+func (v *NativeFunctionValue) IsImportable(_ interpreter.ValueImportableContext) bool {
 	return false
 }
 
@@ -352,51 +297,35 @@ func (v *NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpre
 	)
 }
 
-func (v *NativeFunctionValue) GetMember(
-	context interpreter.MemberAccessibleContext,
-	locationRange interpreter.LocationRange,
-	name string,
-) interpreter.Value {
+func (v *NativeFunctionValue) GetMember(context interpreter.MemberAccessibleContext, name string) interpreter.Value {
 	value, ok := v.fields[name]
 	if ok {
 		return value
 	}
 
-	if function := context.GetMethod(v, name, locationRange); function != nil {
+	if function := context.GetMethod(v, name); function != nil {
 		return function
 	}
 
 	return nil
 }
 
-func (*NativeFunctionValue) RemoveMember(
-	_ interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
-	_ string,
-) interpreter.Value {
+func (*NativeFunctionValue) RemoveMember(_ interpreter.ValueTransferContext, _ string) interpreter.Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (*NativeFunctionValue) SetMember(
-	_ interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
-	_ string,
-	_ interpreter.Value,
-) bool {
+func (*NativeFunctionValue) SetMember(_ interpreter.ValueTransferContext, _ string, _ interpreter.Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *NativeFunctionValue) GetMethod(
-	_ interpreter.MemberAccessibleContext,
-	_ interpreter.LocationRange,
-	_ string,
-) interpreter.FunctionValue {
+func (v *NativeFunctionValue) GetMethod(_ interpreter.MemberAccessibleContext, _ string) interpreter.FunctionValue {
 	// Should never be called, VM should not look up method on value.
 	// See `NativeFunctionValue.GetMember`
 	panic(errors.NewUnreachableError())
 }
 
 func (v *NativeFunctionValue) IsNative() bool {
+	// Native functions are always native.
 	return true
 }
 
@@ -407,6 +336,7 @@ type BoundFunctionValue struct {
 
 	Method       FunctionValue
 	functionType *sema.FunctionType
+	Base         *interpreter.EphemeralReferenceValue
 }
 
 var boundFunctionMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindBoundFunctionVMValue)
@@ -415,6 +345,7 @@ func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
 	receiver interpreter.Value,
 	method FunctionValue,
+	base *interpreter.EphemeralReferenceValue,
 ) FunctionValue {
 
 	common.UseMemory(context, boundFunctionMemoryUsage)
@@ -425,10 +356,17 @@ func NewBoundFunctionValue(
 
 	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver)
 
+	if compositeValue, ok := receiver.(*interpreter.CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
+		// Force the receiver to be a reference if it is an attachment.
+		// This is because self in attachments are always references.
+		receiverIsRef = true
+	}
+
 	return &BoundFunctionValue{
 		Method:              method,
 		ReceiverReference:   receiverRef,
 		receiverIsReference: receiverIsRef,
+		Base:                base,
 	}
 }
 
@@ -456,8 +394,8 @@ func (v *BoundFunctionValue) StaticType(context interpreter.ValueStaticTypeConte
 	return interpreter.NewFunctionStaticType(context, v.functionType)
 }
 
-func (v *BoundFunctionValue) Transfer(_ interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
+func (v *BoundFunctionValue) Transfer(
+	_ interpreter.ValueTransferContext,
 	_ atree.Address,
 	_ bool,
 	_ atree.Storable,
@@ -475,26 +413,17 @@ func (v *BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ ui
 	return interpreter.NonStorable{Value: v}, nil
 }
 
-func (v *BoundFunctionValue) Accept(
-	_ interpreter.ValueVisitContext,
-	_ interpreter.Visitor,
-	_ interpreter.LocationRange,
-) {
+func (v *BoundFunctionValue) Accept(_ interpreter.ValueVisitContext, _ interpreter.Visitor) {
 	// Unused for now
 	panic(errors.NewUnreachableError())
 }
 
-func (v *BoundFunctionValue) Walk(
-	_ interpreter.ValueWalkContext,
-	_ func(interpreter.Value),
-	_ interpreter.LocationRange,
-) {
+func (v *BoundFunctionValue) Walk(_ interpreter.ValueWalkContext, _ func(interpreter.Value)) {
 	// NO-OP
 }
 
 func (v *BoundFunctionValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
-	_ interpreter.LocationRange,
 	_ interpreter.TypeConformanceResults,
 ) bool {
 	return true
@@ -507,7 +436,6 @@ func (v *BoundFunctionValue) RecursiveString(_ interpreter.SeenReferences) strin
 func (v *BoundFunctionValue) MeteredString(
 	context interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
-	_ interpreter.LocationRange,
 ) string {
 	functionType := v.StaticType(context)
 	return functionType.MeteredString(context)
@@ -529,10 +457,7 @@ func (v *BoundFunctionValue) Clone(_ interpreter.ValueCloneContext) interpreter.
 	return v
 }
 
-func (v *BoundFunctionValue) IsImportable(
-	_ interpreter.ValueImportableContext,
-	_ interpreter.LocationRange,
-) bool {
+func (v *BoundFunctionValue) IsImportable(_ interpreter.ValueImportableContext) bool {
 	return false
 }
 
@@ -575,17 +500,17 @@ func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStati
 		v.ReceiverReference,
 		v.receiverIsReference,
 		context,
-		EmptyLocationRange,
 	)
+	return maybeDereferenceReceiver(context, *receiver, v.IsNative())
+}
 
-	return maybeDereference(context, *receiver)
+func (v *BoundFunctionValue) IsNative() bool {
+	// BoundFunctionValue is a wrapper around a function value, which can be either native or compiled.
+	// So, we delegate the call to the underlying function value.
+	return v.Method.IsNative()
 }
 
 func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) ImplicitReferenceValue {
 	receiverValue := v.DereferencedReceiver(context)
 	return NewImplicitReferenceValue(context, receiverValue)
-}
-
-func (v *BoundFunctionValue) IsNative() bool {
-	return v.Method.IsNative()
 }

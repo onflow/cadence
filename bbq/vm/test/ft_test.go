@@ -102,23 +102,17 @@ func compiledFTTransfer(tb testing.TB) {
 
 			activation.Set(
 				stdlib.AssertFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.AssertFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.AssertFunctionName),
 			)
 
 			activation.Set(
 				stdlib.GetAccountFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.GetAccountFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.GetAccountFunctionName),
 			)
 
 			activation.Set(
 				stdlib.PanicFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.PanicFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.PanicFunctionName),
 			)
 
 			return activation
@@ -156,7 +150,6 @@ func compiledFTTransfer(tb testing.TB) {
 	accountHandler := &testAccountHandler{
 		emitEvent: func(
 			_ interpreter.ValueExportContext,
-			_ interpreter.LocationRange,
 			_ *sema.CompositeType,
 			_ []interpreter.Value,
 		) {
@@ -170,7 +163,6 @@ func compiledFTTransfer(tb testing.TB) {
 
 	vmConfig.CapabilityBorrowHandler = func(
 		context interpreter.BorrowCapabilityControllerContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
 		wantedBorrowType *sema.ReferenceType,
@@ -178,7 +170,6 @@ func compiledFTTransfer(tb testing.TB) {
 	) interpreter.ReferenceValue {
 		return stdlib.BorrowCapabilityController(
 			context,
-			locationRange,
 			address,
 			capabilityID,
 			wantedBorrowType,
@@ -189,7 +180,6 @@ func compiledFTTransfer(tb testing.TB) {
 
 	vmConfig.OnEventEmitted = func(
 		_ interpreter.ValueExportContext,
-		_ interpreter.LocationRange,
 		_ *sema.CompositeType,
 		_ []interpreter.Value,
 	) error {
@@ -209,7 +199,6 @@ func compiledFTTransfer(tb testing.TB) {
 			accountHandler,
 			interpreter.NewAddressValue(nil, contractsAddress),
 			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		return map[string]interpreter.Value{
@@ -326,7 +315,6 @@ func compiledFTTransfer(tb testing.TB) {
 			accountHandler,
 			interpreter.AddressValue(address),
 			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
 		)
 		err := setupTxVM.InvokeTransaction(nil, authorizer)
 		require.NoError(tb, err)
@@ -374,7 +362,6 @@ func compiledFTTransfer(tb testing.TB) {
 		accountHandler,
 		interpreter.AddressValue(contractsAddress),
 		authorization,
-		interpreter.EmptyLocationRange,
 	)
 
 	err := mintTxVM.InvokeTransaction(mintTxArgs, mintTxAuthorizer)
@@ -413,7 +400,6 @@ func compiledFTTransfer(tb testing.TB) {
 		accountHandler,
 		interpreter.AddressValue(senderAddress),
 		authorization,
-		interpreter.EmptyLocationRange,
 	)
 
 	var transferCount int
@@ -451,8 +437,6 @@ func compiledFTTransfer(tb testing.TB) {
 		b.StopTimer()
 	}
 
-	vmConfig.Tracer = nil
-
 	// Run validation scripts
 
 	for _, address := range []common.Address{
@@ -483,9 +467,17 @@ func compiledFTTransfer(tb testing.TB) {
 		require.Equal(tb, 0, validationScriptVM.StackSize())
 
 		if address == senderAddress {
-			assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(total-transferAmount*uint64(transferCount)), result)
+			assert.Equal(
+				tb,
+				interpreter.NewUnmeteredUFix64Value(total-transferAmount*uint64(transferCount)),
+				result,
+			)
 		} else {
-			assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(transferAmount*uint64(transferCount)), result)
+			assert.Equal(
+				tb,
+				interpreter.NewUnmeteredUFix64Value(transferAmount*uint64(transferCount)),
+				result,
+			)
 		}
 	}
 }

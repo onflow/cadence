@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -102,9 +101,8 @@ func testTypeAssertFunction(
 			}
 
 			if !condition {
-				panic(AssertionError{
-					Message:       message,
-					LocationRange: invocation.LocationRange,
+				panic(&AssertionError{
+					Message: message,
 				})
 			}
 
@@ -173,17 +171,12 @@ func testTypeAssertEqualFunction(
 					expectedType,
 					actualType,
 				)
-				panic(AssertionError{
-					Message:       message,
-					LocationRange: invocation.LocationRange,
+				panic(&AssertionError{
+					Message: message,
 				})
 			}
 
-			equal := expected.Equal(
-				inter,
-				invocation.LocationRange,
-				actual,
-			)
+			equal := expected.Equal(inter, actual)
 
 			if !equal {
 				message := fmt.Sprintf(
@@ -191,9 +184,8 @@ func testTypeAssertEqualFunction(
 					expected,
 					actual,
 				)
-				panic(AssertionError{
-					Message:       message,
-					LocationRange: invocation.LocationRange,
+				panic(&AssertionError{
+					Message: message,
 				})
 			}
 
@@ -241,9 +233,8 @@ func testTypeFailFunction(
 				message = messageValue.Str
 			}
 
-			panic(AssertionError{
-				Message:       message,
-				LocationRange: invocation.LocationRange,
+			panic(&AssertionError{
+				Message: message,
 			})
 		},
 	)
@@ -303,13 +294,11 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) testContractBoun
 				}
 
 				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
 
 				result := invokeMatcherTest(
 					invocationContext,
 					matcher,
 					value,
-					locationRange,
 				)
 
 				if !result {
@@ -317,9 +306,8 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) testContractBoun
 						"given value is: %s",
 						value,
 					)
-					panic(AssertionError{
-						Message:       message,
-						LocationRange: locationRange,
+					panic(&AssertionError{
+						Message: message,
 					})
 				}
 
@@ -333,13 +321,8 @@ func invokeMatcherTest(
 	context interpreter.InvocationContext,
 	matcher interpreter.MemberAccessibleValue,
 	value interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) bool {
-	testFunc := matcher.GetMember(
-		context,
-		locationRange,
-		matcherTestFieldName,
-	)
+	testFunc := matcher.GetMember(context, matcherTestFieldName)
 
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
 	if !ok {
@@ -561,11 +544,7 @@ func newTestTypeEqualFunction(
 							panic(errors.NewUnreachableError())
 						}
 
-						equal := thisValue.Equal(
-							inter,
-							invocation.LocationRange,
-							otherValue,
-						)
+						equal := thisValue.Equal(inter, otherValue)
 
 						return interpreter.BoolValue(equal)
 					},
@@ -682,9 +661,9 @@ func newTestTypeHaveElementCountFunction(
 						var matchingCount bool
 						switch value := invocation.Arguments[0].(type) {
 						case *interpreter.ArrayValue:
-							matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+							matchingCount = value.Count() == count.ToInt()
 						case *interpreter.DictionaryValue:
-							matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+							matchingCount = value.Count() == count.ToInt()
 						default:
 							panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
 						}
@@ -753,13 +732,11 @@ func newTestTypeContainFunction(
 						case *interpreter.ArrayValue:
 							elementFound = value.Contains(
 								inter,
-								invocation.LocationRange,
 								element,
 							)
 						case *interpreter.DictionaryValue:
 							elementFound = value.ContainsKey(
 								inter,
-								invocation.LocationRange,
 								element,
 							)
 						default:
@@ -829,11 +806,7 @@ func newTestTypeBeGreaterThanFunction(
 							panic(errors.NewUnreachableError())
 						}
 
-						isGreaterThan := thisValue.Greater(
-							inter,
-							otherValue,
-							invocation.LocationRange,
-						)
+						isGreaterThan := thisValue.Greater(inter, otherValue)
 
 						return isGreaterThan
 					},
@@ -979,11 +952,7 @@ func newTestTypeBeLessThanFunction(
 							panic(errors.NewUnreachableError())
 						}
 
-						isLessThan := thisValue.Less(
-							inter,
-							otherValue,
-							invocation.LocationRange,
-						)
+						isLessThan := thisValue.Less(inter, otherValue)
 
 						return isLessThan
 					},
@@ -1293,7 +1262,6 @@ func (t *TestContractType) NewTestContract(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
 	constructor interpreter.FunctionValue,
-	invocationRange ast.Range,
 ) (
 	*interpreter.CompositeValue,
 	error,
@@ -1302,7 +1270,6 @@ func (t *TestContractType) NewTestContract(
 	emulatorBackend := t.emulatorBackendType.newEmulatorBackend(
 		inter,
 		testFramework.EmulatorBackend(),
-		interpreter.EmptyLocationRange,
 	)
 	returnType := constructor.FunctionType(inter).ReturnTypeAnnotation.Type
 	value, err := interpreter.InvokeFunctionValue(
@@ -1312,7 +1279,6 @@ func (t *TestContractType) NewTestContract(
 		initializerTypes,
 		initializerTypes,
 		returnType,
-		invocationRange,
 	)
 	if err != nil {
 		return nil, err

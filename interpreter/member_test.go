@@ -418,7 +418,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke("get", ref)
@@ -471,7 +470,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke("get", ref)
@@ -519,7 +517,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke(
@@ -570,7 +567,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke(
@@ -1064,8 +1060,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("resource reference, attachment", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             attachment A for R {}
@@ -1086,8 +1081,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("attachment nested member", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             attachment A for R {

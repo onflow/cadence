@@ -50,9 +50,3 @@ func (r LocationRange) EndPosition(memoryGauge common.MemoryGauge) ast.Position 
 func (r LocationRange) ImportLocation() common.Location {
 	return r.Location
 }
-
-var EmptyLocationRange = LocationRange{}
-
-func ReturnEmptyRange() ast.Range {
-	return ast.EmptyRange
-}

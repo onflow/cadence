@@ -192,7 +192,7 @@ type Type interface {
 	//
 	Unify(
 		other Type,
-		typeParameters *TypeParameterTypeOrderedMap,
+		typeArguments *TypeParameterTypeOrderedMap,
 		report func(err error),
 		memoryGauge common.MemoryGauge,
 		outerRange ast.HasPosition,
@@ -789,7 +789,7 @@ func (t *OptionalType) RewriteWithIntersectionTypes() (Type, bool) {
 
 func (t *OptionalType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -802,7 +802,7 @@ func (t *OptionalType) Unify(
 
 	return t.Type.Unify(
 		otherOptional.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -1014,13 +1014,13 @@ func (t *GenericType) RewriteWithIntersectionTypes() (result Type, rewritten boo
 
 func (t *GenericType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
 ) bool {
 
-	if unifiedType, ok := typeParameters.Get(t.TypeParameter); ok {
+	if unifiedType, ok := typeArguments.Get(t.TypeParameter); ok {
 
 		// If the type parameter is already unified with a type argument
 		// (either explicit by a type argument, or implicit through an argument's type),
@@ -1040,7 +1040,7 @@ func (t *GenericType) Unify(
 	} else {
 		// If the type parameter is not yet unified to a type argument, unify it.
 
-		typeParameters.Set(t.TypeParameter, other)
+		typeArguments.Set(t.TypeParameter, other)
 
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument's type is a subtype of the type bound.
@@ -3155,7 +3155,7 @@ func (t *VariableSizedType) IndexingType() Type {
 
 func (t *VariableSizedType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -3168,7 +3168,7 @@ func (t *VariableSizedType) Unify(
 
 	return t.Type.Unify(
 		otherArray.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -3343,7 +3343,7 @@ func (t *ConstantSizedType) IndexingType() Type {
 
 func (t *ConstantSizedType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -3360,7 +3360,7 @@ func (t *ConstantSizedType) Unify(
 
 	return t.Type.Unify(
 		otherArray.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -4057,7 +4057,7 @@ func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
 
 func (t *FunctionType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -4088,7 +4088,7 @@ func (t *FunctionType) Unify(
 		otherParameter := otherFunction.Parameters[i]
 		parameterUnified := parameter.TypeAnnotation.Type.Unify(
 			otherParameter.TypeAnnotation.Type,
-			typeParameters,
+			typeArguments,
 			report,
 			memoryGauge,
 			outerRange,
@@ -4100,7 +4100,7 @@ func (t *FunctionType) Unify(
 
 	returnTypeUnified := t.ReturnTypeAnnotation.Type.Unify(
 		otherFunction.ReturnTypeAnnotation.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -6566,7 +6566,7 @@ type DictionaryEntryType struct {
 
 func (t *DictionaryType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -6579,7 +6579,7 @@ func (t *DictionaryType) Unify(
 
 	keyUnified := t.KeyType.Unify(
 		otherDictionary.KeyType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -6587,7 +6587,7 @@ func (t *DictionaryType) Unify(
 
 	valueUnified := t.ValueType.Unify(
 		otherDictionary.ValueType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -6948,7 +6948,7 @@ func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
 
 func (t *InclusiveRangeType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -6960,7 +6960,7 @@ func (t *InclusiveRangeType) Unify(
 
 	return t.MemberType.Unify(
 		otherRange.MemberType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -7232,7 +7232,7 @@ func (t *ReferenceType) IndexingType() Type {
 
 func (t *ReferenceType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -7244,7 +7244,7 @@ func (t *ReferenceType) Unify(
 
 	return t.Type.Unify(
 		otherReference.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -8651,7 +8651,7 @@ func (t *CapabilityType) RewriteWithIntersectionTypes() (Type, bool) {
 
 func (t *CapabilityType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -8667,7 +8667,7 @@ func (t *CapabilityType) Unify(
 
 	return t.BorrowType.Unify(
 		otherCap.BorrowType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,

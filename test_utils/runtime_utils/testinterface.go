@@ -110,7 +110,6 @@ type TestRuntimeInterface struct {
 	OnRecoverProgram                 func(program *ast.Program, location common.Location) ([]byte, error)
 	OnValidateAccountCapabilitiesGet func(
 		context interpreter.AccountCapabilityGetValidationContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
 		wantedBorrowType *sema.ReferenceType,
@@ -118,7 +117,6 @@ type TestRuntimeInterface struct {
 	) (bool, error)
 	OnValidateAccountCapabilitiesPublish func(
 		context interpreter.AccountCapabilityPublishValidationContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
 		capabilityBorrowType *interpreter.ReferenceStaticType,
@@ -546,10 +544,7 @@ func (i *TestRuntimeInterface) onScriptExecutionStart() {
 
 func (i *TestRuntimeInterface) InvalidateUpdatedPrograms() {
 	if i.updatedContractCode {
-		// iteration order does not matter
-		for location := range i.Programs { //nolint:maprange
-			delete(i.Programs, location)
-		}
+		clear(i.Programs)
 		i.updatedContractCode = false
 	}
 }
@@ -563,7 +558,6 @@ func (i *TestRuntimeInterface) RecoverProgram(program *ast.Program, location com
 
 func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
 	context interpreter.AccountCapabilityGetValidationContext,
-	locationRange interpreter.LocationRange,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
 	wantedBorrowType *sema.ReferenceType,
@@ -574,7 +568,6 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
 	}
 	return i.OnValidateAccountCapabilitiesGet(
 		context,
-		locationRange,
 		address,
 		path,
 		wantedBorrowType,
@@ -584,7 +577,6 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
 
 func (i *TestRuntimeInterface) ValidateAccountCapabilitiesPublish(
 	context interpreter.AccountCapabilityPublishValidationContext,
-	locationRange interpreter.LocationRange,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
 	capabilityBorrowType *interpreter.ReferenceStaticType,
@@ -594,7 +586,6 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesPublish(
 	}
 	return i.OnValidateAccountCapabilitiesPublish(
 		context,
-		locationRange,
 		address,
 		path,
 		capabilityBorrowType,

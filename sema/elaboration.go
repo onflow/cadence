@@ -72,6 +72,10 @@ type InvocationExpressionTypes struct {
 	TypeArguments  *TypeParameterTypeOrderedMap
 	ArgumentTypes  []Type
 	ParameterTypes []Type
+
+	// Flag indicating whether to transfer the arguments or not, when calling into this function type.
+	// IMPORTANT: Only for internal use only. User-defined functions must never have this flag on!
+	SkipArgumentsTransfer bool
 }
 
 type ArrayExpressionTypes struct {
@@ -115,6 +119,11 @@ type ForStatementTypes struct {
 	IndexVariableType Type
 	ValueVariableType Type
 	ContainerType     Type
+}
+
+type AttachExpressionTypes struct {
+	AttachType Type
+	BaseType   Type
 }
 
 type Elaboration struct {
@@ -167,14 +176,13 @@ type Elaboration struct {
 	indexExpressionTypes               map[*ast.IndexExpression]IndexExpressionTypes
 	attachmentAccessTypes              map[*ast.IndexExpression]Type
 	attachmentRemoveTypes              map[*ast.RemoveStatement]Type
-	attachTypes                        map[*ast.AttachExpression]*CompositeType
+	attachTypes                        map[*ast.AttachExpression]AttachExpressionTypes
 	forceExpressionTypes               map[*ast.ForceExpression]Type
 	staticCastTypes                    map[*ast.CastingExpression]CastTypes
 	expressionTypes                    map[ast.Expression]ExpressionTypes
 	TransactionTypes                   []*TransactionType
 	semanticAccesses                   map[ast.Access]Access
 	resultVariableTypes                map[ast.Element]Type
-	moveExpressionTypes                map[*ast.UnaryExpression]Type
 	enumLookupFunctionTypes            map[*CompositeType]*FunctionType
 	isChecking                         bool
 	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
@@ -1038,7 +1046,7 @@ func (e *Elaboration) SetAttachmentRemoveTypes(
 func (e *Elaboration) AttachTypes(
 	expr *ast.AttachExpression,
 ) (
-	ty *CompositeType,
+	ty AttachExpressionTypes,
 ) {
 	if e.attachTypes == nil {
 		return
@@ -1048,12 +1056,12 @@ func (e *Elaboration) AttachTypes(
 
 func (e *Elaboration) SetAttachTypes(
 	expr *ast.AttachExpression,
-	ty *CompositeType,
+	types AttachExpressionTypes,
 ) {
 	if e.attachTypes == nil {
-		e.attachTypes = map[*ast.AttachExpression]*CompositeType{}
+		e.attachTypes = map[*ast.AttachExpression]AttachExpressionTypes{}
 	}
-	e.attachTypes[expr] = ty
+	e.attachTypes[expr] = types
 }
 
 func (e *Elaboration) SetExpressionTypes(expression ast.Expression, types ExpressionTypes) {
@@ -1113,20 +1121,6 @@ func (e *Elaboration) ResultVariableType(declaration ast.Element) (typ Type, exi
 	}
 	typ, exist = e.resultVariableTypes[declaration]
 	return
-}
-
-func (e *Elaboration) SetMoveExpressionTypes(expression *ast.UnaryExpression, targetType Type) {
-	if e.moveExpressionTypes == nil {
-		e.moveExpressionTypes = map[*ast.UnaryExpression]Type{}
-	}
-	e.moveExpressionTypes[expression] = targetType
-}
-
-func (e *Elaboration) MoveExpressionTypes(expression *ast.UnaryExpression) Type {
-	if e.moveExpressionTypes == nil {
-		return nil
-	}
-	return e.moveExpressionTypes[expression]
 }
 
 func (e *Elaboration) SetEnumLookupFunctionType(enumType *CompositeType, functionType *FunctionType) {

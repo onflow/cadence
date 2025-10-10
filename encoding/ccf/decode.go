@@ -2210,7 +2210,7 @@ func (d *Decoder) decodeTypeParameterTypeValues(visited *cadenceTypeByCCFTypeID)
 	})
 
 	for i := 0; i < int(count); i++ {
-		// Decode type parameter.
+		// Decode type argument.
 		typeParam, err := d.decodeTypeParameterTypeValue(visited)
 		if err != nil {
 			return nil, err

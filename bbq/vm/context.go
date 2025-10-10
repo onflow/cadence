@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -49,12 +50,19 @@ type Context struct {
 	containerValueIteration       map[atree.ValueID]int
 	destroyedResources            map[atree.ValueID]struct{}
 
-	// semaTypes is a cache-alike for temporary storing sema-types by their ID,
+	// semaTypeCache is a cache-alike for temporary storing sema-types by their ID,
 	// to avoid repeated conversions from static-types to sema-types.
 	// This cache-alike is maintained per execution.
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
-	semaTypes map[sema.TypeID]sema.Type
+	semaTypeCache map[sema.TypeID]sema.Type
+
+	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
+	linkedGlobalsCache map[common.Location]LinkedGlobals
+
+	getLocationRange func() interpreter.LocationRange
+
+	attachmentIterationMap map[*interpreter.CompositeValue]struct{}
 }
 
 var _ interpreter.ReferenceTracker = &Context{}
@@ -69,6 +77,15 @@ func NewContext(config *Config) *Context {
 	return &Context{
 		Config: config,
 	}
+}
+
+func (c *Context) newReusing() *Context {
+	newContext := NewContext(c.Config)
+
+	newContext.semaTypeCache = c.semaTypeCache
+	newContext.linkedGlobalsCache = c.linkedGlobalsCache
+
+	return newContext
 }
 
 func (c *Context) RecordStorageMutation() {
@@ -89,6 +106,11 @@ func (c *Context) SetInStorageIteration(inStorageIteration bool) {
 	c.inStorageIteration = inStorageIteration
 }
 
+func (c *Context) inAttachmentIteration(base *interpreter.CompositeValue) bool {
+	_, ok := c.attachmentIterationMap[base]
+	return ok
+}
+
 func (c *Context) GetCapabilityControllerIterations() map[interpreter.AddressPath]int {
 	if c.CapabilityControllerIterations == nil {
 		c.CapabilityControllerIterations = make(map[interpreter.AddressPath]int)
@@ -105,8 +127,16 @@ func (c *Context) MutationDuringCapabilityControllerIteration() bool {
 }
 
 func (c *Context) SetAttachmentIteration(composite *interpreter.CompositeValue, state bool) bool {
-	//TODO
-	return false
+	oldState := c.inAttachmentIteration(composite)
+	if c.attachmentIterationMap == nil {
+		c.attachmentIterationMap = map[*interpreter.CompositeValue]struct{}{}
+	}
+	if state {
+		c.attachmentIterationMap[composite] = struct{}{}
+	} else {
+		delete(c.attachmentIterationMap, composite)
+	}
+	return oldState
 }
 
 func (c *Context) ReadStored(
@@ -157,6 +187,7 @@ func (c *Context) MaybeValidateAtreeStorage() {
 }
 
 func (c *Context) IsTypeInfoRecovered(location common.Location) bool {
+	c.ensureProgramInitialized(location)
 	elaboration, err := c.ElaborationResolver(location)
 	if err != nil {
 		return false
@@ -190,37 +221,33 @@ func (c *Context) startContainerValueIteration(valueID atree.ValueID) {
 	c.containerValueIteration[valueID]++
 }
 
-func (c *Context) ValidateContainerMutation(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+func (c *Context) ValidateContainerMutation(valueID atree.ValueID) {
 	_, present := c.containerValueIteration[valueID]
 	if !present {
 		return
 	}
-	panic(&interpreter.ContainerMutatedDuringIterationError{
-		LocationRange: locationRange,
-	})
+	panic(&interpreter.ContainerMutatedDuringIterationError{})
 }
 
-func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
+func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue) *interpreter.FunctionOrderedMap {
 	//TODO
 	return nil
 }
 
-func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID) {
 	_, exists := c.destroyedResources[valueID]
 	if exists {
-		panic(&interpreter.DestroyedResourceError{
-			LocationRange: locationRange,
-		})
+		panic(&interpreter.DestroyedResourceError{})
 	}
 }
 
-func (c *Context) GetMemberAccessContextForLocation(_ common.Location) interpreter.MemberAccessibleContext {
-	//TODO
+func (c *Context) GetMemberAccessContextForLocation(location common.Location) interpreter.MemberAccessibleContext {
+	c.ensureProgramInitialized(location)
 	return c
 }
 
-func (c *Context) WithResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange, f func()) {
-	c.EnforceNotResourceDestruction(valueID, locationRange)
+func (c *Context) WithResourceDestruction(valueID atree.ValueID, f func()) {
+	c.EnforceNotResourceDestruction(valueID)
 
 	if c.destroyedResources == nil {
 		c.destroyedResources = make(map[atree.ValueID]struct{})
@@ -258,13 +285,49 @@ func (c *Context) InvokeFunction(
 }
 
 func (c *Context) GetResourceDestructionContextForLocation(location common.Location) interpreter.ResourceDestructionContext {
+	c.ensureProgramInitialized(location)
 	return c
+}
+
+func AttachmentBaseAndSelfValues(
+	c *Context,
+	v *interpreter.CompositeValue,
+	method FunctionValue,
+) (base *interpreter.EphemeralReferenceValue, self *interpreter.EphemeralReferenceValue) {
+	// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to self
+	var unqualifiedName string
+	switch functionValue := method.(type) {
+	case CompiledFunctionValue:
+		unqualifiedName = functionValue.Function.Name
+	case *NativeFunctionValue:
+		unqualifiedName = functionValue.Name
+	}
+
+	fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)
+	// with respect to entitlements, any access inside an attachment that is not an entitlement access
+	// does not provide any entitlements to base and self
+	// E.g. consider:
+	//
+	//    access(E) fun foo() {}
+	//    access(self) fun bar() {
+	//        self.foo()
+	//    }
+	//    access(all) fun baz() {
+	//        self.bar()
+	//    }
+	//
+	// clearly `bar` should be callable within `baz`, but we cannot allow `foo`
+	// to be callable within `bar`, or it will be possible to access `E` entitled
+	// methods on `base`
+	if fnAccess.IsPrimitiveAccess() {
+		fnAccess = sema.UnauthorizedAccess
+	}
+	return interpreter.AttachmentBaseAndSelfValues(c, fnAccess, v)
 }
 
 func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
-	_ interpreter.LocationRange,
 ) interpreter.FunctionValue {
 	staticType := value.StaticType(c)
 
@@ -291,10 +354,17 @@ func (c *Context) GetMethod(
 		return method
 	}
 
+	var base *interpreter.EphemeralReferenceValue
+	// If the value is an attachment, then we must create an authorized reference
+	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
+		base, value = AttachmentBaseAndSelfValues(c, v, method)
+	}
+
 	return NewBoundFunctionValue(
 		c,
 		value,
 		method,
+		base,
 	)
 }
 
@@ -305,49 +375,56 @@ func (c *Context) GetFunction(
 	return c.lookupFunction(location, name)
 }
 
-func (c *Context) DefaultDestroyEvents(
-	resourceValue *interpreter.CompositeValue,
-	locationRange interpreter.LocationRange,
-) []*interpreter.CompositeValue {
-	method := c.GetMethod(
-		resourceValue,
-		commons.ResourceDestroyedEventsFunctionName,
-		EmptyLocationRange,
-	)
+func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue) []*interpreter.CompositeValue {
+	method := c.GetMethod(resourceValue, commons.ResourceDestroyedEventsFunctionName)
 
 	if method == nil {
 		return nil
 	}
 
-	// The generated function takes no arguments.
-	events := c.InvokeFunction(method, nil)
-	eventsArray, ok := events.(*interpreter.ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
+	var arguments []Value
+
+	if resourceValue.Kind == common.CompositeKindAttachment {
+		base, _ := interpreter.AttachmentBaseAndSelfValues(
+			c,
+			sema.UnauthorizedAccess,
+			resourceValue,
+		)
+		arguments = []Value{
+			base,
+		}
 	}
 
-	length := eventsArray.Count()
-	common.UseMemory(c, common.NewGoSliceMemoryUsages(length))
+	eventValues := make([]*interpreter.CompositeValue, 0)
 
-	eventValues := make([]*interpreter.CompositeValue, 0, eventsArray.Count())
-
-	eventsArray.Iterate(
-		c,
-		func(element interpreter.Value) (resume bool) {
-			event := element.(*interpreter.CompositeValue)
-			eventValues = append(eventValues, event)
-			return true
+	collectFunction := NewNativeFunctionValue(
+		"", // anonymous function
+		commons.CollectEventsFunctionType,
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			arguments []interpreter.Value,
+		) interpreter.Value {
+			for _, argument := range arguments {
+				event := argument.(*interpreter.CompositeValue)
+				eventValues = append(eventValues, event)
+			}
+			return interpreter.Void
 		},
-		false,
-		locationRange,
 	)
+
+	arguments = append(arguments, collectFunction)
+
+	// The generated function takes no arguments unless its an attachment, and returns nothing.
+	c.InvokeFunction(method, arguments)
 
 	return eventValues
 }
 
 func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
 	typeID := staticType.ID()
-	semaType, ok := c.semaTypes[typeID]
+	semaType, ok := c.semaTypeCache[typeID]
 	if ok {
 		return semaType
 	}
@@ -355,15 +432,16 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	// TODO: avoid the sema-type conversion
 	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
 
-	if c.semaTypes == nil {
-		c.semaTypes = make(map[sema.TypeID]sema.Type)
+	if c.semaTypeCache == nil {
+		c.semaTypeCache = make(map[sema.TypeID]sema.Type)
 	}
-	c.semaTypes[typeID] = semaType
+	c.semaTypeCache[typeID] = semaType
 
 	return semaType
 }
 
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
+	c.ensureProgramInitialized(contractLocation)
 	return c.ContractValueHandler(c, contractLocation)
 }
 
@@ -382,4 +460,74 @@ func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
 	}
 
 	return member
+}
+
+func (c *Context) ensureProgramInitialized(location common.Location) {
+	if location == nil {
+		return
+	}
+
+	c.linkLocation(location)
+}
+
+func (c *Context) linkLocation(location common.Location) LinkedGlobals {
+	linkedGlobals, ok := c.linkedGlobalsCache[location]
+	if ok {
+		return linkedGlobals
+	}
+
+	program := c.ImportHandler(location)
+	if program == nil {
+		return LinkedGlobals{}
+	}
+
+	return c.linkGlobals(location, program)
+}
+
+func (c *Context) linkGlobals(location common.Location, program *bbq.InstructionProgram) LinkedGlobals {
+	if c.linkedGlobalsCache == nil {
+		c.linkedGlobalsCache = map[common.Location]LinkedGlobals{}
+	}
+
+	return LinkGlobals(
+		c.MemoryGauge,
+		location,
+		program,
+		c,
+		c.linkedGlobalsCache,
+	)
+}
+
+func (c *Context) GetCompositeType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID common.TypeID,
+) (*sema.CompositeType, error) {
+	c.ensureProgramInitialized(location)
+	return c.Config.GetCompositeType(location, qualifiedIdentifier, typeID)
+}
+
+func (c *Context) GetInterfaceType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID common.TypeID,
+) (*sema.InterfaceType, error) {
+	c.ensureProgramInitialized(location)
+	return c.Config.GetInterfaceType(location, qualifiedIdentifier, typeID)
+}
+
+func (c *Context) GetEntitlementType(
+	typeID common.TypeID,
+) (*sema.EntitlementType, error) {
+	return c.Config.GetEntitlementType(typeID, c.ensureProgramInitialized)
+}
+
+func (c *Context) GetEntitlementMapType(
+	typeID common.TypeID,
+) (*sema.EntitlementMapType, error) {
+	return c.Config.GetEntitlementMapType(typeID, c.ensureProgramInitialized)
+}
+
+func (c *Context) LocationRange() interpreter.LocationRange {
+	return c.getLocationRange()
 }

@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -42,31 +41,7 @@ func init() {
 				elementType := interpreter.MustConvertStaticToSemaType(rangeType.ElementType, context)
 				return sema.InclusiveRangeContainsFunctionType(elementType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
-
-				rangeValue, ok := receiver.(*interpreter.CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				needleInteger, ok := args[0].(interpreter.IntegerValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				rangeType, ok := rangeValue.StaticType(context).(interpreter.InclusiveRangeStaticType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return interpreter.InclusiveRangeContains(
-					rangeValue,
-					rangeType,
-					context,
-					EmptyLocationRange,
-					needleInteger,
-				)
-			},
+			interpreter.NativeInclusiveRangeContainsFunction,
 		),
 	)
 }

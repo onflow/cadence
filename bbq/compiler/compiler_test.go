@@ -41,6 +41,21 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
+// assertGlobalsEqual compares GlobalInfo of globals
+func assertGlobalsEqual(t *testing.T, expected map[string]bbq.GlobalInfo, actual map[string]bbq.Global) {
+	// Check that both maps have the same keys
+	assert.Equal(t, len(expected), len(actual), "globals maps have different lengths")
+
+	for key, expectedGlobal := range expected {
+		actualGlobal, exists := actual[key]
+		if !assert.True(t, exists, "expected global %s not found in actual", key) {
+			continue
+		}
+
+		assert.Equal(t, expectedGlobal, actualGlobal.GetGlobalInfo())
+	}
+}
+
 func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
@@ -110,13 +125,13 @@ func TestCompileRecursionFib(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -276,13 +291,13 @@ func TestCompileImperativeFib(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -387,17 +402,17 @@ func TestCompileBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -487,17 +502,17 @@ func TestCompileContinue(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -685,17 +700,17 @@ func TestCompileArray(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -758,29 +773,29 @@ func TestCompileDictionary(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{'a'},
+				Data: interpreter.NewUnmeteredStringValue("a"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{'b'},
+				Data: interpreter.NewUnmeteredStringValue("b"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{'c'},
+				Data: interpreter.NewUnmeteredStringValue("c"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -854,9 +869,9 @@ func TestCompileIfLet(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -955,13 +970,13 @@ func TestCompileIfLetScope(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 		},
@@ -1067,21 +1082,21 @@ func TestCompileSwitch(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -1163,13 +1178,13 @@ func TestSwitchBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -1265,13 +1280,13 @@ func TestWhileSwitchBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -1480,6 +1495,7 @@ func TestCompileNestedLoop(t *testing.T) {
 		// jIndex is the index of the local variable `j`, which is the second local variable
 		jIndex
 	)
+
 	const (
 		// zeroIndex is the index of the constant `0`, which is the first constant
 		zeroIndex = iota
@@ -1574,17 +1590,17 @@ func TestCompileNestedLoop(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0xa},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(10),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -1636,13 +1652,13 @@ func TestCompileAssignLocal(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -1709,13 +1725,13 @@ func TestCompileAssignGlobal(t *testing.T) {
 
 	// Constants
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -1838,11 +1854,12 @@ func TestCompileMember(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 4)
+	require.Len(t, functions, 5)
 
 	const (
 		initFuncIndex = iota
-		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment)
+		_
 		_
 		_
 		getValueFuncIndex
@@ -1855,7 +1872,7 @@ func TestCompileMember(t *testing.T) {
 		const valueIndex = iota
 
 		// localsOffset is the offset of the first local variable.
-		// Initializers do not have a $result variable
+		// Initializers do not have a $_result variable
 		const localsOffset = parameterCount
 
 		const (
@@ -1904,10 +1921,10 @@ func TestCompileMember(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("foo"),
-				Kind: constant.String,
+				Data: "foo",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -2039,9 +2056,9 @@ func TestCompileString(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("Hello, world!"),
+				Data: interpreter.NewUnmeteredStringValue("Hello, world!"),
 				Kind: constant.String,
 			},
 		},
@@ -2053,7 +2070,7 @@ func TestCompilePositiveIntegers(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(integerType sema.Type, expectedData []byte) {
+	test := func(integerType sema.Type, expectedData interpreter.Value) {
 
 		t.Run(integerType.String(), func(t *testing.T) {
 
@@ -2100,7 +2117,7 @@ func TestCompilePositiveIntegers(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(integerType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2111,51 +2128,29 @@ func TestCompilePositiveIntegers(t *testing.T) {
 		})
 	}
 
-	tests := map[sema.Type][]byte{
-		sema.IntType:   {0x2},
-		sema.Int8Type:  {0x2},
-		sema.Int16Type: {0x0, 0x2},
-		sema.Int32Type: {0x0, 0x0, 0x0, 0x2},
-		sema.Int64Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
-		sema.Int128Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.Int256Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.UIntType:   {0x2},
-		sema.UInt8Type:  {0x2},
-		sema.UInt16Type: {0x0, 0x2},
-		sema.UInt32Type: {0x0, 0x0, 0x0, 0x2},
-		sema.UInt64Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
-		sema.UInt128Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.UInt256Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.Word8Type:  {0x2},
-		sema.Word16Type: {0x0, 0x2},
-		sema.Word32Type: {0x0, 0x0, 0x0, 0x2},
-		sema.Word64Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
-		sema.Word128Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.Word256Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
+	tests := map[sema.Type]interpreter.Value{
+		sema.IntType:    interpreter.NewUnmeteredIntValueFromInt64(2),
+		sema.Int8Type:   interpreter.NewUnmeteredInt8Value(2),
+		sema.Int16Type:  interpreter.NewUnmeteredInt16Value(2),
+		sema.Int32Type:  interpreter.NewUnmeteredInt32Value(2),
+		sema.Int64Type:  interpreter.NewUnmeteredInt64Value(2),
+		sema.Int128Type: interpreter.NewUnmeteredInt128ValueFromInt64(2),
+		sema.Int256Type: interpreter.NewUnmeteredInt256ValueFromInt64(2),
+
+		sema.UIntType:    interpreter.NewUnmeteredUIntValueFromUint64(2),
+		sema.UInt8Type:   interpreter.NewUnmeteredUInt8Value(2),
+		sema.UInt16Type:  interpreter.NewUnmeteredUInt16Value(2),
+		sema.UInt32Type:  interpreter.NewUnmeteredUInt32Value(2),
+		sema.UInt64Type:  interpreter.NewUnmeteredUInt64Value(2),
+		sema.UInt128Type: interpreter.NewUnmeteredUInt128ValueFromUint64(2),
+		sema.UInt256Type: interpreter.NewUnmeteredUInt256ValueFromUint64(2),
+
+		sema.Word8Type:   interpreter.NewUnmeteredWord8Value(2),
+		sema.Word16Type:  interpreter.NewUnmeteredWord16Value(2),
+		sema.Word32Type:  interpreter.NewUnmeteredWord32Value(2),
+		sema.Word64Type:  interpreter.NewUnmeteredWord64Value(2),
+		sema.Word128Type: interpreter.NewUnmeteredWord128ValueFromUint64(2),
+		sema.Word256Type: interpreter.NewUnmeteredWord256ValueFromUint64(2),
 	}
 
 	for _, integerType := range common.Concat(
@@ -2176,7 +2171,7 @@ func TestCompileNegativeIntegers(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(integerType sema.Type, expectedData []byte) {
+	test := func(integerType sema.Type, expectedData interpreter.Value) {
 
 		t.Run(integerType.String(), func(t *testing.T) {
 
@@ -2223,7 +2218,7 @@ func TestCompileNegativeIntegers(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(integerType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2234,22 +2229,14 @@ func TestCompileNegativeIntegers(t *testing.T) {
 		})
 	}
 
-	tests := map[sema.Type][]byte{
-		sema.IntType:   {0xfd},
-		sema.Int8Type:  {0xfd},
-		sema.Int16Type: {0xff, 0xfd},
-		sema.Int32Type: {0xff, 0xff, 0xff, 0xfd},
-		sema.Int64Type: {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd},
-		sema.Int128Type: {
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd,
-		},
-		sema.Int256Type: {
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd,
-		},
+	tests := map[sema.Type]interpreter.Value{
+		sema.IntType:    interpreter.NewUnmeteredIntValueFromInt64(-3),
+		sema.Int8Type:   interpreter.NewUnmeteredInt8Value(-3),
+		sema.Int16Type:  interpreter.NewUnmeteredInt16Value(-3),
+		sema.Int32Type:  interpreter.NewUnmeteredInt32Value(-3),
+		sema.Int64Type:  interpreter.NewUnmeteredInt64Value(-3),
+		sema.Int128Type: interpreter.NewUnmeteredInt128ValueFromInt64(-3),
+		sema.Int256Type: interpreter.NewUnmeteredInt256ValueFromInt64(-3),
 	}
 
 	for _, integerType := range sema.AllSignedIntegerTypes {
@@ -2302,9 +2289,9 @@ func TestCompileAddress(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				Kind: constant.Address,
 			},
 		},
@@ -2316,7 +2303,7 @@ func TestCompilePositiveFixedPoint(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(fixedPointType sema.Type, expectedData []byte) {
+	test := func(fixedPointType sema.Type, expectedData interpreter.Value) {
 
 		t.Run(fixedPointType.String(), func(t *testing.T) {
 
@@ -2363,7 +2350,7 @@ func TestCompilePositiveFixedPoint(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(fixedPointType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2374,11 +2361,11 @@ func TestCompilePositiveFixedPoint(t *testing.T) {
 		})
 	}
 
-	tests := map[sema.Type][]byte{
-		sema.Fix64Type:   {0x0, 0x0, 0x0, 0x0, 0x0d, 0xb5, 0x85, 0x80},
-		sema.Fix128Type:  {0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0xe7, 0xb, 0x3f, 0xf5, 0x3d, 0xbc, 0x25, 0x80, 0x0, 0x0},
-		sema.UFix64Type:  {0x0, 0x0, 0x0, 0x0, 0x0d, 0xb5, 0x85, 0x80},
-		sema.UFix128Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0xe7, 0xb, 0x3f, 0xf5, 0x3d, 0xbc, 0x25, 0x80, 0x0, 0x0},
+	tests := map[sema.Type]interpreter.Value{
+		sema.Fix64Type:   interpreter.NewUnmeteredFix64Value(230000000),
+		sema.Fix128Type:  interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(23, sema.Fix128Scale-1),
+		sema.UFix64Type:  interpreter.NewUnmeteredUFix64Value(230000000),
+		sema.UFix128Type: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(23, sema.Fix128Scale-1),
 	}
 
 	for _, fixedPointType := range common.Concat(
@@ -2399,7 +2386,7 @@ func TestCompileNegativeFixedPoint(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(fixedPointType sema.Type, expectedData []byte) {
+	test := func(fixedPointType sema.Type, expectedData interpreter.Value) {
 
 		t.Run(fixedPointType.String(), func(t *testing.T) {
 
@@ -2446,7 +2433,7 @@ func TestCompileNegativeFixedPoint(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(fixedPointType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2457,9 +2444,9 @@ func TestCompileNegativeFixedPoint(t *testing.T) {
 		})
 	}
 
-	tests := map[sema.Type][]byte{
-		sema.Fix64Type:  {0xff, 0xff, 0xff, 0xff, 0xf2, 0x4a, 0x7a, 0x80},
-		sema.Fix128Type: {0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x18, 0xf4, 0xc0, 0xa, 0xc2, 0x43, 0xda, 0x80, 0x0, 0x0},
+	tests := map[sema.Type]interpreter.Value{
+		sema.Fix64Type:  interpreter.NewUnmeteredFix64Value(-230000000),
+		sema.Fix128Type: interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(-23, sema.Fix128Scale-1),
 	}
 
 	for _, fixedPointType := range sema.AllSignedFixedPointTypes {
@@ -2649,13 +2636,13 @@ func TestCompileBinary(t *testing.T) {
 			)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
-						Data: []byte{0x6},
+						Data: interpreter.NewUnmeteredIntValueFromInt64(6),
 						Kind: constant.Int,
 					},
 					{
-						Data: []byte{0x3},
+						Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 						Kind: constant.Int,
 					},
 				},
@@ -2740,9 +2727,9 @@ func TestCompileNilCoalesce(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 		},
@@ -2773,12 +2760,13 @@ func TestCompileMethodInvocation(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 5)
+	require.Len(t, functions, 6)
 
 	const (
 		testFuncIndex = iota
 		initFuncIndex
-		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment)
+		_
 		_
 		_
 		fFuncIndex
@@ -2870,12 +2858,13 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 4)
+	require.Len(t, functions, 5)
 
 	const (
 		testFuncIndex = iota
 		initFuncIndex
-		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		// Next three indexes are for builtin methods (i.e: getType, isInstance)
+		_
 		_
 		_
 	)
@@ -2969,10 +2958,10 @@ func TestCompilePath(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("foo"),
-				Kind: constant.String,
+				Data: "foo",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -3053,17 +3042,17 @@ func TestCompileBlockScope(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -3159,17 +3148,17 @@ func TestCompileBlockScope2(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -3209,15 +3198,17 @@ func TestCompileDefaultFunction(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 7)
+	require.Len(t, functions, 9)
 
 	const (
 		concreteTypeConstructorIndex uint16 = iota
-		// Next two indexes are for builtin methods (i.e: getType, isInstance) for concrete type
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for concrete type
+		_
 		_
 		_
 		concreteTypeFunctionIndex
-		// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for interface type
+		_
 		_
 		_
 		interfaceFunctionIndex
@@ -3230,7 +3221,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 	// `Test` type's `test` function.
 
@@ -3239,7 +3230,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 	// Should be calling into interface's default function.
 	// ```
@@ -3265,7 +3256,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 			},
 
 			// return
-			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionReturnValue{},
 		},
 		concreteTypeTestFunc.Code,
@@ -3278,7 +3269,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].Index)
+	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].GetGlobalInfo().Index)
 
 	// Should contain the implementation.
 	// ```
@@ -3293,7 +3284,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 			// 42
 			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionTransferAndConvert{Type: 6},
 
 			// return
 			opcode.InstructionReturnValue{},
@@ -3302,9 +3293,9 @@ func TestCompileDefaultFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{42},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(42),
 				Kind: constant.Int,
 			},
 		},
@@ -3409,8 +3400,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Would be equivalent to:
 		// fun test(x: Int): Int {
+		//    let $_result
 		//    $_result = 5
-		//    let result = $_result
+		//    let result $noTransfer $_result
 		//    if !(x > 0) {
 		//       $failPostCondition("")
 		//    }
@@ -3423,15 +3415,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -3457,7 +3450,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -3493,8 +3485,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Would be equivalent to:
 		// fun test(x: @AnyResource?): @AnyResource? {
-		//    var $_result <-x
-		//    let result = &$_result
+		//    var $_result <- x
+		//    let result $noTransfer &$_result
 		//    if !(result != nil) {
 		//        $failPostCondition("")
 		//    }
@@ -3504,20 +3496,22 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
 
-				// $_result = x
+				// $_result <- x
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransfer{},
+				opcode.InstructionConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 7},
 
 				// Get the reference and assign to `result`.
-				// i.e: `let result = &$_result`
+				// i.e: `let result $noTransfer &$_result`
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionNewRef{Type: 1},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionNewRef{Type: 2},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -3529,13 +3523,13 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 22},
+				opcode.InstructionJumpIfFalse{Target: 23},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
-				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3543,7 +3537,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -3586,16 +3579,18 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		program := comp.Compile()
 		functions := program.Functions
-		require.Len(t, functions, 6)
+		require.Len(t, functions, 8)
 
 		// Function indexes
 		const (
 			concreteTypeConstructorIndex uint16 = iota
-			// Next two indexes are for builtin methods (i.e: getType, isInstance) for concrete type
+			// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for concrete type
+			_
 			_
 			_
 			concreteTypeFunctionIndex
-			// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
+			// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for interface type
+			_
 			_
 			_
 			failPreConditionFunctionIndex
@@ -3609,7 +3604,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -3633,7 +3628,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -3643,7 +3638,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//        }
 		//
 		//        var $_result = 42
-		//        let result = $_result
+		//        let result $noTransfer $_result
 		//
 		//        if !(y > 0) {
 		//            $failPostCondition("")
@@ -3671,7 +3666,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3684,15 +3679,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 42
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: const42Index},
+				opcode.InstructionTransferAndConvert{Type: 7},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 17},
+				opcode.InstructionJump{Target: 18},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 6},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Inherited post condition
@@ -3712,7 +3708,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3720,7 +3716,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionReturnValue{},
 			},
 			concreteTypeTestFunc.Code,
@@ -3762,16 +3757,18 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		program := comp.Compile()
 		functions := program.Functions
-		require.Len(t, functions, 6)
+		require.Len(t, functions, 8)
 
 		// Function indexes
 		const (
 			concreteTypeConstructorIndex uint16 = iota
-			// Next two indexes are for builtin methods (i.e: getType, isInstance) for concrete type
+			// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for concrete type
+			_
 			_
 			_
 			concreteTypeFunctionIndex
-			// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
+			// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment) for interface type
+			_
 			_
 			_
 			failPostConditionFunctionIndex
@@ -3784,7 +3781,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -3808,7 +3805,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -3816,7 +3813,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//    fun test(x: Int): Int {
 		//        var $before_0 = x
 		//        var $_result = 42
-		//        let result = $_result
+		//        let result $noTransfer $_result
 		//        if !($before_0 < x) {
 		//            $failPostCondition("")
 		//        }
@@ -3832,7 +3829,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// var $before_0 = x
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionSetLocal{Local: beforeVarIndex},
 
 				// Function body
@@ -3842,15 +3839,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 42
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: const42Index},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 9},
+				opcode.InstructionJump{Target: 10},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Inherited post condition
@@ -3870,7 +3868,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransferAndConvert{Type: 6},
+				opcode.InstructionTransferAndConvert{Type: 7},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3878,7 +3876,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionReturnValue{},
 			},
 			concreteTypeTestFunc.Code,
@@ -3953,9 +3950,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 						activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 						activation.Set(
 							stdlib.LogFunctionName,
-							compiler.GlobalImport{
-								Name: stdlib.LogFunctionName,
-							},
+							compiler.NewGlobalImport(stdlib.LogFunctionName),
 						)
 						return activation
 					},
@@ -4035,12 +4030,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 
 		dProgram := ParseCheckAndCompile(t, dContract, dLocation, programs)
-		require.Len(t, dProgram.Functions, 8)
+		require.Len(t, dProgram.Functions, 9)
 
 		// Function indexes
 		const (
-			concreteTypeFunctionIndex     = 7
-			failPreConditionFunctionIndex = 11
+			concreteTypeFunctionIndex     = 8
+			failPreConditionFunctionIndex = 12
 		)
 
 		// `D.Vault` type's `getBalance` function.
@@ -4075,11 +4070,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 
 				// Load receiver `A.TestStruct()`
-				opcode.InstructionGetGlobal{Global: 9},
+				opcode.InstructionGetGlobal{Global: 10},
 				opcode.InstructionInvoke{ArgCount: 0},
 
 				// Get function value `A.TestStruct.test()`
-				opcode.InstructionGetMethod{Method: 10},
+				opcode.InstructionGetMethod{Method: 11},
 				opcode.InstructionInvoke{
 					ArgCount: 0,
 				},
@@ -4092,7 +4087,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: panicMessageIndex},
-				opcode.InstructionTransferAndConvert{Type: 9},
+				opcode.InstructionTransferAndConvert{Type: 10},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -4185,7 +4180,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//     }
 		//
 		//     $_result = 5
-		//     let result = $_result
+		//     let result $noTransfer $_result
 		//
 		//     // Post-conditions
 		//     if !(exp_0 < x) {
@@ -4231,15 +4226,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 21},
+				opcode.InstructionJump{Target: 22},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Post conditions
@@ -4264,7 +4260,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -4419,13 +4414,13 @@ func TestForLoop(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte{0xff},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(-1),
 					Kind: constant.Int,
 				},
 				{
-					Data: []byte{0x1},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 					Kind: constant.Int,
 				},
 			},
@@ -4728,17 +4723,17 @@ func TestCompileIf(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -4793,13 +4788,13 @@ func TestCompileConditional(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -4913,23 +4908,24 @@ func TestCompileTransaction(t *testing.T) {
 
 	checker, err := ParseAndCheckWithOptions(t,
 		`
-            transaction {
+            transaction(n: Int) {
+
                 var count: Int
 
                 prepare() {
-                    self.count = 2
+                    self.count = 1 + n
                 }
 
                 pre {
-                    self.count == 2
+                    self.count == 2 + n: "pre failed"
                 }
 
                 execute {
-                    self.count = 10
+                    self.count = 3 + n
                 }
 
                 post {
-                    self.count == 10
+                    self.count == 4 + n: "post failed"
                 }
             }
         `,
@@ -4955,18 +4951,79 @@ func TestCompileTransaction(t *testing.T) {
 
 	program := comp.Compile()
 	functions := program.Functions
-	require.Len(t, functions, 5)
+	require.Len(t, functions, 7)
+
+	// constant indexes
+	const (
+		oneConstIndex = iota
+		fieldNameConstIndex
+		twoConstIndex
+		preErrorMessageConstIndex
+		threeConstIndex
+		fourConstIndex
+		postErrorMessageConstIndex
+	)
+
+	assert.Equal(t,
+		[]constant.DecodedConstant{
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+				Kind: constant.Int,
+			},
+			{
+				Data: "count",
+				Kind: constant.RawString,
+			},
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+				Kind: constant.Int,
+			},
+			{
+				Data: interpreter.NewUnmeteredStringValue("pre failed"),
+				Kind: constant.String,
+			},
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
+				Kind: constant.Int,
+			},
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(4),
+				Kind: constant.Int,
+			},
+			{
+				Data: interpreter.NewUnmeteredStringValue("post failed"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
 
 	// Function indexes
 	const (
 		transactionInitFunctionIndex uint16 = iota
-		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		// Next three indexes are for builtin methods (i.e: getType, isInstance, forEachAttachment)
+		_
 		_
 		_
 		prepareFunctionIndex
 		executeFunctionIndex
-		failPreConditionFunctionIndex
-		failPostConditionFunctionIndex
+		programInitFunctionIndex
+	)
+
+	const transactionParameterCount = 1
+
+	const (
+		nGlobalIndex = iota
+		// Next 7 indexes are for functions, see above
+		_
+		_
+		_
+		_
+		_
+		_
+		_
+		failPreConditionGlobalIndex
+		failPostConditionGlobalIndex
 	)
 
 	// Transaction constructor
@@ -4979,8 +5036,8 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
-		transactionInitFunctionIndex,
-		comp.Globals[commons.TransactionWrapperCompositeName].Index,
+		transactionParameterCount+transactionInitFunctionIndex,
+		comp.Globals[commons.TransactionWrapperCompositeName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -4994,14 +5051,6 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionReturnValue{},
 		},
 		constructor.Code,
-	)
-
-	// constant indexes
-	const (
-		const2Index = iota
-		constFieldNameIndex
-		constErrorMsgIndex
-		const10Index
 	)
 
 	// Prepare function.
@@ -5018,18 +5067,23 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
-		prepareFunctionIndex,
-		comp.Globals[commons.TransactionPrepareFunctionName].Index,
+		transactionParameterCount+prepareFunctionIndex,
+		comp.Globals[commons.TransactionPrepareFunctionName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			// self.count = 2
+			// self.count = 1 + n
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetConstant{Constant: const2Index},
-			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
+			opcode.InstructionGetConstant{Constant: oneConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
+			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionSetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
 
 			// return
 			opcode.InstructionReturn{},
@@ -5041,15 +5095,15 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Would be equivalent to:
 	//    fun execute {
-	//        if !(self.count == 2) {
-	//            $failPreCondition("")
+	//        if !(self.count == 2 + n) {
+	//            $failPreCondition("pre failed")
 	//        }
 	//
 	//        var $_result
-	//        self.count = 10
+	//        self.count = 3 + n
 	//
-	//        if !(self.count == 10) {
-	//            $failPostCondition("")
+	//        if !(self.count == 4 + n) {
+	//            $failPostCondition("post failed")
 	//        }
 	//        return
 	//    }
@@ -5058,56 +5112,74 @@ func TestCompileTransaction(t *testing.T) {
 	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].Index)
+	assert.Equal(t,
+		transactionParameterCount+executeFunctionIndex,
+		comp.Globals[commons.TransactionExecuteFunctionName].GetGlobalInfo().Index,
+	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// Pre condition
-			// `self.count == 2`
+			// `self.count == 2 + n: "pre failed"`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
-			opcode.InstructionGetConstant{Constant: const2Index},
+			opcode.InstructionGetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
+			opcode.InstructionGetConstant{Constant: twoConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionEqual{},
 
 			// if !<condition>
 			opcode.InstructionNot{},
-			opcode.InstructionJumpIfFalse{Target: 13},
+			opcode.InstructionJumpIfFalse{Target: 15},
 
-			// $failPreCondition("")
+			// $failPreCondition("pre failed")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
-			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
-			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionGetGlobal{Global: failPreConditionGlobalIndex},
+			opcode.InstructionGetConstant{Constant: preErrorMessageConstIndex},
+			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
 
-			// self.count = 10
+			// self.count = 3 + n
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetConstant{Constant: const10Index},
-			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
+			opcode.InstructionGetConstant{Constant: threeConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
+			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionSetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
 
 			// Post condition
-			// `self.count == 10`
+			// `self.count == 4 + n: "post failed"`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
-			opcode.InstructionGetConstant{Constant: const10Index},
+			opcode.InstructionGetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
+			opcode.InstructionGetConstant{Constant: fourConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionEqual{},
 
 			// if !<condition>
 			opcode.InstructionNot{},
-			opcode.InstructionJumpIfFalse{Target: 31},
+			opcode.InstructionJumpIfFalse{Target: 37},
 
-			// $failPostCondition("")
+			// $failPostCondition("post failed")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
-			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
-			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionGetGlobal{Global: failPostConditionGlobalIndex},
+			opcode.InstructionGetConstant{Constant: postErrorMessageConstIndex},
+			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
 
 			// Drop since it's a statement-expression
@@ -5118,6 +5190,23 @@ func TestCompileTransaction(t *testing.T) {
 		},
 		executeFunction.Code,
 	)
+
+	// Program init function
+	initFunction := program.Functions[programInitFunctionIndex]
+	require.Equal(t,
+		commons.ProgramInitFunctionName,
+		initFunction.QualifiedName,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// n = $_param_n
+			opcode.InstructionGetLocal{Local: 0},
+			// NOTE: no transfer, intentional to avoid copy
+			opcode.InstructionSetGlobal{Global: nGlobalIndex},
+		},
+		initFunction.Code,
+	)
 }
 
 func TestCompileForce(t *testing.T) {
@@ -5125,6 +5214,8 @@ func TestCompileForce(t *testing.T) {
 	t.Parallel()
 
 	t.Run("optional", func(t *testing.T) {
+
+		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
             fun test(x: Int?): Int {
@@ -5159,6 +5250,7 @@ func TestCompileForce(t *testing.T) {
 	})
 
 	t.Run("non-optional", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
             fun test(x: Int): Int {
@@ -5260,6 +5352,42 @@ func TestCompileReturns(t *testing.T) {
 		)
 	})
 
+	t.Run("resource value return", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(x: @AnyResource): @AnyResource {
+                return <- x
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const xIndex = 0
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return <- x
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: xIndex},
+				// There should be only one transfer
+				opcode.InstructionTransfer{},
+				opcode.InstructionConvert{Type: 1},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+
 	t.Run("empty return with post condition", func(t *testing.T) {
 		t.Parallel()
 
@@ -5347,15 +5475,16 @@ func TestCompileReturns(t *testing.T) {
 				// $_result = a
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: aIndex},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// Jump to post conditions
-				opcode.InstructionJump{Target: 9},
+				opcode.InstructionJump{Target: 10},
 
-				// result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// Post condition
@@ -5372,8 +5501,9 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionDrop{},
 
 				// return $_result
+				// Note: no transfer/convert, since the value is already
+				// transferred/converted when assigning to `$_result`.
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
@@ -5508,17 +5638,17 @@ func TestCompileFunctionExpression(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -5596,17 +5726,17 @@ func TestCompileInnerFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -5781,13 +5911,13 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -5903,13 +6033,13 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -6179,29 +6309,29 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x4},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(4),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x5},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(5),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x6},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(6),
 				Kind: constant.Int,
 			},
 		},
@@ -6247,9 +6377,9 @@ func TestCompileTransferConstant(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte{0x1},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 					Kind: constant.Int,
 				},
 			},
@@ -6291,9 +6421,9 @@ func TestCompileTransferConstant(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte{0x1},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 					Kind: constant.Int,
 				},
 			},
@@ -6344,10 +6474,10 @@ func TestCompileTransferNewPath(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("foo"),
-					Kind: constant.String,
+					Data: "foo",
+					Kind: constant.RawString,
 				},
 			},
 			program.Constants,
@@ -6391,10 +6521,10 @@ func TestCompileTransferNewPath(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("foo"),
-					Kind: constant.String,
+					Data: "foo",
+					Kind: constant.RawString,
 				},
 			},
 			program.Constants,
@@ -7024,7 +7154,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 4)
+		require.Len(t, functions, 5)
 
 		const (
 			fooIndex = iota
@@ -7069,10 +7199,10 @@ func TestCompileOptionalChaining(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("bar"),
-					Kind: constant.String,
+					Data: "bar",
+					Kind: constant.RawString,
 				},
 			},
 			program.Constants,
@@ -7103,7 +7233,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 5)
+		require.Len(t, functions, 6)
 
 		const (
 			fooIndex = iota
@@ -7135,7 +7265,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 				opcode.InstructionUnwrap{},
 
 				// Load `Foo.bar` function
-				opcode.InstructionGetMethod{Method: 4},
+				opcode.InstructionGetMethod{Method: 5},
 				opcode.InstructionInvoke{ArgCount: 0},
 				opcode.InstructionWrap{},
 				opcode.InstructionJump{Target: 16},
@@ -7181,7 +7311,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 4)
+		require.Len(t, functions, 5)
 
 		const (
 			xIndex = iota
@@ -7262,7 +7392,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 4)
+		require.Len(t, functions, 5)
 
 		const (
 			xIndex = iota
@@ -7287,7 +7417,8 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionTransfer{},
+				opcode.InstructionConvert{Type: 1},
 				opcode.InstructionNewDictionary{Type: 2, Size: 1, IsResource: true},
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
@@ -7372,7 +7503,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 7)
+		require.Len(t, functions, 9)
 
 		const (
 			xIndex = iota
@@ -7385,7 +7516,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 			[]opcode.Instruction{
 				// let x: @R <- create R()
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 4},
+				opcode.InstructionGetGlobal{Global: 5},
 				opcode.InstructionInvoke{ArgCount: 0},
 				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: xIndex},
@@ -7465,7 +7596,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
-		require.Len(t, functions, 4)
+		require.Len(t, functions, 5)
 
 		const (
 			xIndex = iota
@@ -7604,7 +7735,7 @@ func TestCompileEnum(t *testing.T) {
 		const rawValueIndex = iota
 
 		// localsOffset is the offset of the first local variable.
-		// Initializers do not have a $result variable
+		// Initializers do not have a $_result variable
 		const localsOffset = parameterCount
 
 		const (
@@ -7740,7 +7871,6 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testAVarIndex].Getter.Code,
@@ -7751,7 +7881,6 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testBVarIndex].Getter.Code,
@@ -7762,29 +7891,28 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testCVarIndex].Getter.Code,
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredUInt8Value(0),
 				Kind: constant.UInt8,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredUInt8Value(1),
 				Kind: constant.UInt8,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredUInt8Value(2),
 				Kind: constant.UInt8,
 			},
 			{
-				Data: []byte("rawValue"),
-				Kind: constant.String,
+				Data: "rawValue",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -7822,9 +7950,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,
-					compiler.GlobalImport{
-						Name: stdlib.AssertFunctionName,
-					},
+					compiler.NewGlobalImport(stdlib.AssertFunctionName),
 				)
 				return activation
 			},
@@ -7865,9 +7991,9 @@ func TestCompileOptionalArgument(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("hello"),
+					Data: interpreter.NewUnmeteredStringValue("hello"),
 					Kind: constant.String,
 				},
 			},
@@ -7961,33 +8087,33 @@ func TestCompileOptionalArgument(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte{0x1},
+					Data: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					Kind: constant.Address,
 				},
 				{
-					Data: []byte("account"),
+					Data: "account",
+					Kind: constant.RawString,
+				},
+				{
+					Data: "contracts",
+					Kind: constant.RawString,
+				},
+				{
+					Data: interpreter.NewUnmeteredStringValue("Foo"),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte("contracts"),
+					Data: interpreter.NewUnmeteredStringValue(" contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}"),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte("Foo"),
-					Kind: constant.String,
+					Data: "utf8",
+					Kind: constant.RawString,
 				},
 				{
-					Data: []byte(" contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}"),
-					Kind: constant.String,
-				},
-				{
-					Data: []byte("utf8"),
-					Kind: constant.String,
-				},
-				{
-					Data: []byte("Optional arg"),
+					Data: interpreter.NewUnmeteredStringValue("Optional arg"),
 					Kind: constant.String,
 				},
 			},
@@ -8062,18 +8188,18 @@ func TestCompileContract(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				Kind: constant.Address,
 			},
 			{
-				Data: []byte{1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte("x"),
-				Kind: constant.String,
+				Data: "x",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -8155,13 +8281,13 @@ func TestCompileSwapIdentifiers(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -8198,7 +8324,7 @@ func TestCompileSwapMembers(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 4)
+	require.Len(t, functions, 5)
 
 	const (
 		sIndex = iota
@@ -8251,21 +8377,21 @@ func TestCompileSwapMembers(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("x"),
-				Kind: constant.String,
+				Data: "x",
+				Kind: constant.RawString,
 			},
 			{
-				Data: []byte("y"),
-				Kind: constant.String,
+				Data: "y",
+				Kind: constant.RawString,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -8364,21 +8490,21 @@ func TestCompileSwapIndex(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("a"),
+				Data: interpreter.NewUnmeteredStringValue("a"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte("b"),
+				Data: interpreter.NewUnmeteredStringValue("b"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -8413,14 +8539,14 @@ func TestCompileStringTemplate(t *testing.T) {
 			[]opcode.Instruction{
 				// let str = "2+2=\(2+2)"
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x0},
-				opcode.InstructionGetConstant{Constant: 0x1},
-				opcode.InstructionGetConstant{Constant: 0x2},
-				opcode.InstructionGetConstant{Constant: 0x2},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionGetConstant{Constant: 2},
 				opcode.InstructionAdd{},
-				opcode.InstructionTemplateString{ExprSize: 0x1},
-				opcode.InstructionTransferAndConvert{Type: 0x1},
-				opcode.InstructionSetLocal{Local: 0x0},
+				opcode.InstructionTemplateString{ExprSize: 1},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 0},
 
 				// Return
 				opcode.InstructionReturn{},
@@ -8429,18 +8555,18 @@ func TestCompileStringTemplate(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("2+2="),
+					Data: interpreter.NewUnmeteredStringValue("2+2="),
 					Kind: constant.String,
 				},
 
 				{
-					Data: []byte(""),
+					Data: interpreter.NewUnmeteredStringValue(""),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte{0x2},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 					Kind: constant.Int,
 				},
 			},
@@ -8474,60 +8600,60 @@ func TestCompileStringTemplate(t *testing.T) {
 			[]opcode.Instruction{
 				// let a = "A"
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x0},
-				opcode.InstructionTransferAndConvert{Type: 0x1},
-				opcode.InstructionSetLocal{Local: 0x0},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 0},
 				// let b = "B"
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x1},
-				opcode.InstructionTransferAndConvert{Type: 0x1},
-				opcode.InstructionSetLocal{Local: 0x1},
+				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 1},
 				// let c = 4
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x2},
-				opcode.InstructionTransferAndConvert{Type: 0x2},
-				opcode.InstructionSetLocal{Local: 0x2},
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionSetLocal{Local: 2},
 				// let str = "\(a) + \(b) = \(c)"
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x3},
-				opcode.InstructionGetConstant{Constant: 0x4},
-				opcode.InstructionGetConstant{Constant: 0x5},
-				opcode.InstructionGetConstant{Constant: 0x3},
-				opcode.InstructionGetLocal{Local: 0x0},
-				opcode.InstructionGetLocal{Local: 0x1},
-				opcode.InstructionGetLocal{Local: 0x2},
-				opcode.InstructionTemplateString{ExprSize: 0x3},
-				opcode.InstructionTransferAndConvert{Type: 0x1},
-				opcode.InstructionSetLocal{Local: 0x3},
+				opcode.InstructionGetConstant{Constant: 3},
+				opcode.InstructionGetConstant{Constant: 4},
+				opcode.InstructionGetConstant{Constant: 5},
+				opcode.InstructionGetConstant{Constant: 3},
+				opcode.InstructionGetLocal{Local: 0},
+				opcode.InstructionGetLocal{Local: 1},
+				opcode.InstructionGetLocal{Local: 2},
+				opcode.InstructionTemplateString{ExprSize: 3},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 3},
 				opcode.InstructionReturn{},
 			},
 			functions[0].Code,
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("A"),
+					Data: interpreter.NewUnmeteredStringValue("A"),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte("B"),
+					Data: interpreter.NewUnmeteredStringValue("B"),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte{0x4},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(4),
 					Kind: constant.Int,
 				},
 				{
-					Data: []byte(""),
+					Data: interpreter.NewUnmeteredStringValue(""),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte(" + "),
+					Data: interpreter.NewUnmeteredStringValue(" + "),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte(" = "),
+					Data: interpreter.NewUnmeteredStringValue(" = "),
 					Kind: constant.String,
 				},
 			},
@@ -8816,7 +8942,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		// Would be equivalent to:
 		// fun test(x: Int): Int {
 		//    $_result = 5
-		//    let result = $_result
+		//    let result $noTransfer $_result
 		//    if !(x > 0) {
 		//        $failPostCondition("")
 		//    }
@@ -8829,15 +8955,16 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -8863,7 +8990,6 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionReturnValue{},
 			},
 			functions[anonymousFunctionIndex].Code,
@@ -9006,7 +9132,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		// Would be equivalent to:
 		// fun test(x: Int): Int {
 		//    $_result = 5
-		//    let result = $_result
+		//    let result $noTransfer $_result
 		//    if !(x > 0) {
 		//        $failPostCondition("")
 		//    }
@@ -9019,15 +9145,16 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
-				// let result = $_result
+				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
+				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -9053,7 +9180,6 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionReturnValue{},
 			},
 			functions[anonymousFunctionIndex].Code,
@@ -9155,6 +9281,156 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 }
 
+func TestCompileAttachments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct S {}
+			attachment A for S {
+				let x: Int
+				init(x: Int) {
+					self.x = x
+				}
+				fun foo(): Int { return self.x }
+			}
+			fun test(): Int {
+				var s = S()
+				s = attach A(x: 3) to s
+				return s[A]?.foo()!
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 9)
+
+		// global functions
+		const (
+			sConstructorGlobalIndex = 1
+			aConstructorGlobalIndex = 5
+		)
+
+		// local variables
+		const (
+			sLocalIndex = iota
+			sTmpLocalIndex
+			sRefLocalIndex
+			attachmentLocalIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// STATEMENT: var s = S()
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: sConstructorGlobalIndex},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: sLocalIndex},
+
+				// STATEMENT: s = attach A(x:3) to s
+				opcode.InstructionStatement{},
+				// get s on stack
+				opcode.InstructionGetLocal{Local: sLocalIndex},
+				// store s in a separate local, put on stack
+				opcode.InstructionSetLocal{Local: sTmpLocalIndex},
+				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
+				// create a reference to s and store locally
+				opcode.InstructionNewRef{Type: 2, IsImplicit: false},
+				opcode.InstructionSetLocal{Local: sRefLocalIndex},
+				// get A constructor
+				opcode.InstructionGetGlobal{Global: aConstructorGlobalIndex},
+				// get 3
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 3},
+				// get s reference
+				opcode.InstructionGetLocal{Local: sRefLocalIndex},
+				// invoke A constructor with &s as arg, puts A on stack
+				opcode.InstructionInvoke{TypeArgs: []uint16{1}, ArgCount: 2},
+				// get s back on stack
+				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
+				// attachment operation, attach A to s-copy
+				opcode.InstructionSetTypeIndex{Type: 4},
+				// return value is s-copy
+				opcode.InstructionTransferAndConvert{Type: 1},
+				// finish assignment of s
+				opcode.InstructionSetLocal{Local: sLocalIndex},
+
+				// STATEMENT: return s[A]?.foo()!
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: sLocalIndex},
+				// access A on s: s[A], returns attachment reference as optional
+				opcode.InstructionGetTypeIndex{Type: 4},
+				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionJumpIfNil{Target: 32},
+				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionUnwrap{},
+				// call foo if not nil
+				opcode.InstructionGetMethod{Method: 8},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionWrap{},
+				opcode.InstructionJump{Target: 33},
+				opcode.InstructionNil{},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+
+		// local variables
+		const (
+			xLocalIndex = iota
+			baseLocalIndex
+			selfLocalIndex
+			returnLocalIndex
+		)
+
+		// `A` init
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// create attachment
+				opcode.InstructionNewComposite{Kind: 6, Type: 4},
+				// set returnLocalIndex to attachment
+				opcode.InstructionSetLocal{Local: returnLocalIndex},
+				// set base to be the attachment
+				opcode.InstructionGetLocal{Local: baseLocalIndex},
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
+				opcode.InstructionSetAttachmentBase{},
+				// get a reference to attachment
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
+				// set self to be the reference
+				opcode.InstructionNewRef{Type: 10, IsImplicit: false},
+				opcode.InstructionSetLocal{Local: selfLocalIndex},
+
+				// self.x = x
+				opcode.InstructionStatement{},
+				// get self
+				opcode.InstructionGetLocal{Local: selfLocalIndex},
+				// get x
+				opcode.InstructionGetLocal{Local: xLocalIndex},
+				opcode.InstructionTransferAndConvert{Type: 3},
+				// set self.x = x
+				opcode.InstructionSetField{FieldName: 1, AccessedType: 10},
+				// return created attachment (returnLocalIndex)
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[5].Code,
+		)
+	})
+}
+
 func TestCompileImportEnumCase(t *testing.T) {
 
 	t.Parallel()
@@ -9241,7 +9517,7 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 3)
+	require.Len(t, functions, 4)
 
 	const (
 		siIndex = iota
@@ -9254,27 +9530,30 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 			opcode.InstructionGetLocal{Local: siIndex},
 			opcode.InstructionSetLocal{Local: tempIndex},
 			opcode.InstructionGetLocal{Local: tempIndex},
-			opcode.InstructionJumpIfNil{Target: 10},
+			opcode.InstructionJumpIfNil{Target: 11},
 			opcode.InstructionGetLocal{Local: tempIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionInvokeDynamic{
-				Name:     0,
+			opcode.InstructionGetField{
+				FieldName:    0,
+				AccessedType: 1,
+			},
+			opcode.InstructionInvoke{
 				ArgCount: 0,
 			},
 			opcode.InstructionWrap{},
-			opcode.InstructionJump{Target: 11},
+			opcode.InstructionJump{Target: 12},
 			opcode.InstructionNil{},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("answer"),
-				Kind: constant.String,
+				Data: "answer",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -9367,15 +9646,11 @@ func TestCompileInjectedContract(t *testing.T) {
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				"B",
-				compiler.GlobalImport{
-					Name: "B",
-				},
+				compiler.NewGlobalImport("B"),
 			)
 			activation.Set(
 				"B.c",
-				compiler.GlobalImport{
-					Name: "B.c",
-				},
+				compiler.NewGlobalImport("B.c"),
 			)
 			return activation
 		},
@@ -9393,7 +9668,7 @@ func TestCompileInjectedContract(t *testing.T) {
 
 	aTestFunction := functions[3]
 
-	require.Equal(t, aTestFunction.Name, "A.test")
+	require.Equal(t, aTestFunction.QualifiedName, "A.test")
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -9418,10 +9693,10 @@ func TestCompileInjectedContract(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("d"),
-				Kind: constant.String,
+				Data: "d",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -9557,9 +9832,9 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	)
 
 	functions := barProgram.Functions
-	require.Len(t, functions, 7)
+	require.Len(t, functions, 8)
 
-	defaultDestroyEventConstructor := functions[4]
+	defaultDestroyEventConstructor := functions[5]
 	require.Equal(t, "Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.Name)
 
 	const (
@@ -9570,7 +9845,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// Create a `Bar.XYZ.ResourceDestroyed` event value.
-			opcode.InstructionNewComposite{Kind: 4, Type: 3},
+			opcode.InstructionNewComposite{Kind: 4, Type: 4},
 			opcode.InstructionSetLocal{Local: selfIndex},
 			opcode.InstructionStatement{},
 
@@ -9578,10 +9853,10 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 			//  `self.x = x`
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionTransferAndConvert{Type: 4},
+			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionSetField{
 				FieldName:    0,
-				AccessedType: 3,
+				AccessedType: 4,
 			},
 
 			// Return the constructed event value.
@@ -9602,6 +9877,8 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
             resource ABC: Bar.XYZ {
                 var x: Int
 
+                event ResourceDestroyed(x: Int = self.x)
+
                 init() {
                     self.x = 6
                 }
@@ -9618,33 +9895,44 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
 	functions = fooProgram.Functions
-	require.Len(t, functions, 8)
+	require.Len(t, functions, 12)
 
-	defaultDestroyEventEmittingFunction := functions[7]
-	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.Name)
+	defaultDestroyEventEmittingFunction := functions[8]
+	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.QualifiedName)
 
-	const inheritedEventConstructorIndex = 9
+	const inheritedEventConstructorIndex = 10
+	const selfDefinedABCEventConstructorIndex = 13
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 
+			// Get the `collectEvents` parameter for invocation.
+			opcode.InstructionGetLocal{Local: 1},
+
 			// Construct the inherited event
 			// Bar.XYZ.ResourceDestroyed(self.x)
 			opcode.InstructionGetGlobal{Global: inheritedEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionGetField{FieldName: 2, AccessedType: 8},
+			opcode.InstructionGetField{FieldName: 2, AccessedType: 5},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
 
-			// Create the array with the above event.
-			// `[Bar.XYZ.ResourceDestroyed(self.x)]`
-			opcode.InstructionTransferAndConvert{Type: 9},
-			opcode.InstructionNewArray{Type: 7, Size: 1, IsResource: false},
-			opcode.InstructionTransferAndConvert{Type: 7},
+			// Construct the self defined event
+			// Foo.ABC.ResourceDestroyed(self.x)
+			opcode.InstructionGetGlobal{Global: selfDefinedABCEventConstructorIndex},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionGetField{FieldName: 2, AccessedType: 9},
+			opcode.InstructionTransferAndConvert{Type: 6},
+			opcode.InstructionInvoke{ArgCount: 1},
 
-			// return the array
-			opcode.InstructionReturnValue{},
+			// Invoke `collectEvents` with the above event.
+			// `collectEvents(...)`
+			opcode.InstructionInvoke{ArgCount: 2},
+			opcode.InstructionDrop{},
+
+			// Return
+			opcode.InstructionReturn{},
 		},
 		defaultDestroyEventEmittingFunction.Code,
 	)
@@ -9656,7 +9944,12 @@ func TestCompileImportAlias(t *testing.T) {
 
 	t.Run("simple alias", func(t *testing.T) {
 
-		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "")
+		t.Parallel()
+
+		importLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "Foo",
+		}
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -9688,7 +9981,9 @@ func TestCompileImportAlias(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					LocationHandler: SingleIdentifierLocationResolver(t),
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, importedChecker.Location, location)
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil
@@ -9703,6 +9998,7 @@ func TestCompileImportAlias(t *testing.T) {
 			checker.Location,
 		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, importLocation, location)
 			return importedProgram
 		}
 
@@ -9724,23 +10020,26 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// Imported types are location qualified.
-		assert.Equal(
+		assertGlobalsEqual(
 			t,
-			map[string]*compiler.Global{
+			map[string]bbq.GlobalInfo{
 				"test": {
-					Location: nil,
-					Name:     "test",
-					Index:    0,
+					Location:      nil,
+					Name:          "test",
+					QualifiedName: "test",
+					Index:         0,
 				},
 				"A.0000000000000001.Foo": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo",
-					Index:    1,
+					Location:      importLocation,
+					Name:          "Foo",
+					QualifiedName: "A.0000000000000001.Foo",
+					Index:         1,
 				},
 				"A.0000000000000001.Foo.hello": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo.hello",
-					Index:    2,
+					Location:      importLocation,
+					Name:          "Foo.hello",
+					QualifiedName: "A.0000000000000001.Foo.hello",
+					Index:         2,
 				},
 			},
 			comp.Globals,
@@ -9750,7 +10049,12 @@ func TestCompileImportAlias(t *testing.T) {
 
 	t.Run("interface", func(t *testing.T) {
 
-		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "")
+		t.Parallel()
+
+		importLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "FooInterface",
+		}
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -9786,7 +10090,9 @@ func TestCompileImportAlias(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					LocationHandler: SingleIdentifierLocationResolver(t),
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, importedChecker.Location, location)
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil
@@ -9826,38 +10132,50 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// only imported function is a location qualified global.
-		assert.Equal(
+		assertGlobalsEqual(
 			t,
-			map[string]*compiler.Global{
+			map[string]bbq.GlobalInfo{
 				"Bar": {
-					Location: nil,
-					Name:     "Bar",
-					Index:    0,
+					Location:      nil,
+					Name:          "Bar",
+					QualifiedName: "Bar",
+					Index:         0,
 				},
 				"Bar.getType": {
-					Location: nil,
-					Name:     "Bar.getType",
-					Index:    1,
+					Location:      nil,
+					Name:          "Bar.getType",
+					QualifiedName: "Bar.getType",
+					Index:         1,
 				},
 				"Bar.hello": {
-					Location: nil,
-					Name:     "Bar.hello",
-					Index:    3,
+					Location:      nil,
+					Name:          "Bar.hello",
+					QualifiedName: "Bar.hello",
+					Index:         4,
 				},
 				"Bar.isInstance": {
-					Location: nil,
-					Name:     "Bar.isInstance",
-					Index:    2,
+					Location:      nil,
+					Name:          "Bar.isInstance",
+					QualifiedName: "Bar.isInstance",
+					Index:         2,
 				},
 				"Bar.defaultHello": {
-					Location: nil,
-					Name:     "Bar.defaultHello",
-					Index:    4,
+					Location:      nil,
+					Name:          "Bar.defaultHello",
+					QualifiedName: "Bar.defaultHello",
+					Index:         5,
 				},
 				"A.0000000000000001.FooInterface.defaultHello": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.FooInterface.defaultHello",
-					Index:    5,
+					Location:      importLocation,
+					Name:          "FooInterface.defaultHello",
+					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
+					Index:         6,
+				},
+				"Bar.forEachAttachment": {
+					Location:      nil,
+					Name:          "Bar.forEachAttachment",
+					QualifiedName: "Bar.forEachAttachment",
+					Index:         3,
 				},
 			},
 			comp.Globals,

@@ -325,11 +325,7 @@ func (d *Desugar) tempResultVariable(
 		// We just need the variable to be defined. Value is assigned later.
 		nil,
 
-		ast.NewTransfer(
-			d.memoryGauge,
-			ast.TransferOperationCopy, // TODO: determine based on return value (if resource, this should be a move)
-			pos,
-		),
+		nil,
 		pos,
 		nil,
 		nil,
@@ -357,8 +353,8 @@ func (d *Desugar) declareResultVariable(
 	pos := funcBlock.EndPosition(d.memoryGauge)
 	resultVarType, exist := d.elaboration.ResultVariableType(funcBlock)
 
-	// Declare 'result' variable as needed, and assign the temp-result to it.
-	// i.e: `let result = $_result`
+	// Declare 'result' variable and assign the temp-result to it, if needed.
+	// i.e: `let result $noTransfer $_result`
 	if !exist || resultVarType == sema.VoidType {
 		return modifiedStatements
 	}
@@ -389,9 +385,8 @@ func (d *Desugar) declareResultVariable(
 		returnValueExpr,
 		ast.NewTransfer(
 			d.memoryGauge,
-			// This is always a copy.
-			// Because result becomes a reference, if the return type is resource.
-			ast.TransferOperationCopy,
+			// NOTE: Use the internal "no transfer" operator, so no additional transfer occurs.
+			ast.TransferOperationInternalNoTransfer,
 			pos,
 		),
 		pos,
@@ -907,7 +902,94 @@ func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFuncti
 }
 
 func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) ast.Declaration {
-	return declaration
+	// See `VisitCompositeDeclaration`
+	compositeType := d.elaboration.CompositeDeclarationType(declaration)
+
+	// Recursively de-sugar nested declarations (functions, types, etc.)
+
+	prevInheritedFuncsWithConditions := d.inheritedFuncsWithConditions
+	prevInheritedEvents := d.inheritedEvents
+	prevEnclosingInterfaceType := d.enclosingInterfaceType
+
+	d.inheritedFuncsWithConditions, d.inheritedEvents = d.inheritedFunctionsWithConditionsAndEvents(compositeType)
+	d.enclosingInterfaceType = nil
+
+	defer func() {
+		d.inheritedFuncsWithConditions = prevInheritedFuncsWithConditions
+		d.inheritedEvents = prevInheritedEvents
+		d.enclosingInterfaceType = prevEnclosingInterfaceType
+	}()
+
+	var desugaredMembers []ast.Declaration
+	membersDesugared := false
+
+	// visit and desugar members.
+	existingMembers := declaration.Members.Declarations()
+	for _, member := range existingMembers {
+		desugaredMember, desugared := d.desugarDeclaration(member)
+		if desugaredMember == nil {
+			continue
+		}
+
+		membersDesugared = membersDesugared || desugared
+		desugaredMembers = append(desugaredMembers, desugaredMember)
+	}
+
+	// Add inherited default functions.
+	existingFunctions := declaration.Members.FunctionsByIdentifier()
+	inheritedDefaultFuncs := d.inheritedDefaultFunctions(
+		compositeType,
+		existingFunctions,
+		declaration.StartPos,
+		declaration.Range,
+	)
+
+	hasInit := false
+	for _, member := range desugaredMembers {
+		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok && member.Kind == common.DeclarationKindInitializer {
+			hasInit = true
+			break
+		}
+	}
+
+	if !hasInit {
+		membersDesugared = true
+		d.addEmptyInitializer(&desugaredMembers)
+	}
+
+	// Optimization: If none of the existing members got updated or,
+	// if there are no inherited members, then return the same declaration as-is.
+	if !membersDesugared && len(inheritedDefaultFuncs) == 0 {
+		return declaration
+	}
+
+	desugaredMembers = append(desugaredMembers, inheritedDefaultFuncs...)
+
+	// Generate a getter-function, that will construct and return
+	// all resource-destroyed events, including the inherited ones.
+	destroyEventsReturningFunction := d.generateResourceDestroyedEventsGetterFunction(
+		compositeType,
+		declaration,
+	)
+	if destroyEventsReturningFunction != nil {
+		desugaredMembers = append(desugaredMembers, destroyEventsReturningFunction)
+	}
+
+	modifiedDecl := ast.NewAttachmentDeclaration(
+		d.memoryGauge,
+		declaration.Access,
+		declaration.Identifier,
+		declaration.BaseType,
+		declaration.Conformances,
+		ast.NewMembers(d.memoryGauge, desugaredMembers),
+		declaration.DocString,
+		declaration.Range,
+	)
+
+	// Update elaboration. Type info is needed for later steps.
+	d.elaboration.SetCompositeDeclarationType(modifiedDecl, compositeType)
+
+	return modifiedDecl
 }
 
 func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Declaration {
@@ -1500,16 +1582,11 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	// An initializer is generated to set parameters to above generated global variables.
 
 	var varDeclarations []ast.Declaration
-	var initFunction *ast.FunctionDeclaration
-
-	transactionTypes := d.elaboration.TransactionDeclarationType(transaction)
 
 	if transaction.ParameterList != nil {
 		varDeclarations = make([]ast.Declaration, 0, len(transaction.ParameterList.Parameters))
-		statements := make([]ast.Statement, 0, len(transaction.ParameterList.Parameters))
-		parameters := make([]*ast.Parameter, 0, len(transaction.ParameterList.Parameters))
 
-		for index, parameter := range transaction.ParameterList.Parameters {
+		for _, parameter := range transaction.ParameterList.Parameters {
 			// Create global variables
 			// i.e: `var a: Type`
 			variableDecl := ast.NewVariableDeclaration(
@@ -1527,80 +1604,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 			)
 
 			varDeclarations = append(varDeclarations, variableDecl)
-
-			// Create assignment from param to global var.
-			// i.e: `a = $param_a`
-			modifiedParamName := commons.TransactionGeneratedParamPrefix + parameter.Identifier.Identifier
-
-			modifiedParameter := ast.NewParameter(
-				d.memoryGauge,
-				"",
-				ast.NewIdentifier(
-					d.memoryGauge,
-					modifiedParamName,
-					parameter.StartPos,
-				),
-				parameter.TypeAnnotation,
-				nil,
-				parameter.StartPos,
-			)
-
-			parameters = append(parameters, modifiedParameter)
-
-			assignment := ast.NewAssignmentStatement(
-				d.memoryGauge,
-				ast.NewIdentifierExpression(
-					d.memoryGauge,
-					parameter.Identifier,
-				),
-				ast.NewTransfer(
-					d.memoryGauge,
-					ast.TransferOperationCopy,
-					parameter.StartPos,
-				),
-				ast.NewIdentifierExpression(
-					d.memoryGauge,
-					ast.NewIdentifier(
-						d.memoryGauge,
-						modifiedParamName,
-						parameter.StartPos,
-					),
-				),
-			)
-
-			statements = append(statements, assignment)
-
-			paramType := transactionTypes.Parameters[index].TypeAnnotation.Type
-			assignmentTypes := sema.AssignmentStatementTypes{
-				ValueType:  paramType,
-				TargetType: paramType,
-			}
-
-			d.elaboration.SetAssignmentStatementTypes(assignment, assignmentTypes)
 		}
-
-		// Create an init function.
-		// func $init($param_a: Type, $param_b: Type, ...) {
-		//     a = $param_a
-		//     b = $param_b
-		//     ...
-		// }
-		initFunction = simpleFunctionDeclaration(
-			d.memoryGauge,
-			commons.ProgramInitFunctionName,
-			parameters,
-			statements,
-			transaction.StartPos,
-			transaction.Range,
-		)
-
-		initFunctionType := sema.NewSimpleFunctionType(
-			sema.FunctionPurityImpure,
-			transactionTypes.Parameters,
-			sema.VoidTypeAnnotation,
-		)
-
-		d.elaboration.SetFunctionDeclarationFunctionType(initFunction, initFunctionType)
 	}
 
 	var members []ast.Declaration
@@ -1673,9 +1677,10 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	// We can only return one declaration.
 	// So manually add the rest of the declarations.
 	d.modifiedDeclarations = append(d.modifiedDeclarations, varDeclarations...)
-	if initFunction != nil {
-		d.modifiedDeclarations = append(d.modifiedDeclarations, initFunction)
-	}
+
+	// We still re-add the transaction declaration,
+	// so that we can generate a transaction init function in the compiler.
+	d.modifiedDeclarations = append(d.modifiedDeclarations, transaction)
 
 	return compositeDecl
 }
@@ -2195,21 +2200,21 @@ func (d *Desugar) transactionCompositeType() *sema.CompositeType {
 // associated with the given composite type, as an array.
 func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	compositeType sema.Type,
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeLikeDeclaration ast.CompositeLikeDeclaration,
 ) *ast.FunctionDeclaration {
 
 	// Generate a function:
 	// ```
-	//   func $ResourceDestroyed(): [AnyStruct] {
-	//      return [
-	//          R.$ResourceDestroyed(args...),
-	//          I.$ResourceDestroyed(args...),
+	//   func $ResourceDestroyed(collectEvents: fun(events...)) {
+	//      collectEvents(
+	//          R.ResourceDestroyed(args...),
+	//          I.ResourceDestroyed(args...),
 	//          ...,
-	//      ]
+	//      )
 	//   }
 	// ```
 
-	eventConstructorInvocations := make([]ast.Expression, 0)
+	eventConstructorInvocations := make(ast.Arguments, 0)
 	eventTypes := make([]sema.Type, 0)
 
 	addEventConstructorInvocation := func(
@@ -2301,7 +2306,16 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 
 		d.elaboration.SetInvocationExpressionTypes(eventConstructorInvocation, invocationTypes)
 
-		eventConstructorInvocations = append(eventConstructorInvocations, eventConstructorInvocation)
+		eventConstructorInvocations = append(
+			eventConstructorInvocations,
+			ast.NewArgument(
+				d.memoryGauge,
+				"",
+				&startPos,
+				&startPos,
+				eventConstructorInvocation,
+			),
+		)
 		eventTypes = append(eventTypes, eventType)
 	}
 
@@ -2310,7 +2324,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	// is to be equivalent to the interpreter.
 
 	// Construct self defined event
-	defaultDestroyEventDeclaration := d.elaboration.DefaultDestroyDeclaration(compositeDeclaration)
+	defaultDestroyEventDeclaration := d.elaboration.DefaultDestroyDeclaration(compositeLikeDeclaration)
 	if defaultDestroyEventDeclaration != nil {
 		eventType := d.elaboration.CompositeDeclarationType(defaultDestroyEventDeclaration)
 		addEventConstructorInvocation(
@@ -2337,41 +2351,79 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 		return nil
 	}
 
-	astRange := compositeDeclaration.Range
-	startPos := compositeDeclaration.StartPos
+	var astRange ast.Range
+	var startPos ast.Position
+	switch v := compositeLikeDeclaration.(type) {
+	case *ast.CompositeDeclaration:
+		astRange = v.Range
+		startPos = v.StartPos
+	case *ast.AttachmentDeclaration:
+		astRange = v.Range
+		startPos = v.StartPos
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
-	// Put all the events in an array.
-	arrayExpression := ast.NewArrayExpression(
+	// Invoke the 'collectEvents' parameter
+
+	invocation := ast.NewInvocationExpression(
 		d.memoryGauge,
+		ast.NewIdentifierExpression(
+			d.memoryGauge,
+			ast.NewIdentifier(
+				d.memoryGauge,
+				commons.CollectEventsParamName,
+				startPos,
+			),
+		),
+		nil,
 		eventConstructorInvocations,
-		astRange,
+		startPos,
+		startPos,
 	)
 
-	d.elaboration.SetArrayExpressionTypes(
-		arrayExpression,
-		sema.ArrayExpressionTypes{
-			ArrayType:     semaAnyStructArrayType,
-			ArgumentTypes: eventTypes,
+	d.elaboration.SetInvocationExpressionTypes(
+		invocation,
+		sema.InvocationExpressionTypes{
+			ReturnType:            sema.VoidType,
+			ArgumentTypes:         eventTypes,
+			ParameterTypes:        eventTypes,
+			SkipArgumentsTransfer: true,
 		},
 	)
 
-	// Return the array.
-	returnStatement := ast.NewReturnStatement(
-		d.memoryGauge,
-		arrayExpression,
-		astRange,
-	)
-	d.elaboration.SetReturnStatementTypes(
-		returnStatement,
-		sema.ReturnStatementTypes{
-			ValueType:  semaAnyStructArrayType,
-			ReturnType: semaAnyStructArrayType,
-		},
-	)
+	expressionStmt := ast.NewExpressionStatement(d.memoryGauge, invocation)
 
 	functionName := commons.ResourceDestroyedEventsFunctionName
 
 	// Generate the function declaration.
+
+	parameter := ast.NewParameter(
+		d.memoryGauge,
+		sema.ArgumentLabelNotRequired,
+		ast.NewIdentifier(
+			d.memoryGauge,
+			commons.CollectEventsParamName,
+			startPos,
+		),
+		ast.NewTypeAnnotation(
+			d.memoryGauge,
+			false,
+			ast.NewFunctionType(
+				d.memoryGauge,
+				ast.FunctionPurityUnspecified,
+				[]*ast.TypeAnnotation{
+					anyStructTypeAnnotation,
+				},
+				nil,
+				astRange,
+			),
+			ast.EmptyPosition,
+		),
+		nil,
+		ast.EmptyPosition,
+	)
+
 	eventEmittingFunction := ast.NewFunctionDeclaration(
 		d.memoryGauge,
 		ast.AccessNotSpecified,
@@ -2384,18 +2436,17 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			startPos,
 		),
 		nil,
-		nil,
-		ast.NewTypeAnnotation(
+		ast.NewParameterList(
 			d.memoryGauge,
-			false,
-			astAnyStructArrayType,
-			startPos,
+			[]*ast.Parameter{parameter},
+			astRange,
 		),
+		nil,
 		ast.NewFunctionBlock(
 			d.memoryGauge,
 			ast.NewBlock(
 				d.memoryGauge,
-				[]ast.Statement{returnStatement},
+				[]ast.Statement{expressionStmt},
 				astRange,
 			),
 			nil,
@@ -2549,17 +2600,21 @@ var executeFuncType = sema.NewSimpleFunctionType(
 	sema.VoidTypeAnnotation,
 )
 
-var eventEmittingFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityImpure,
-	nil,
-	sema.VoidTypeAnnotation,
-)
-
-var semaAnyStructArrayType = &sema.VariableSizedType{
-	Type: sema.AnyStructType,
+var eventEmittingFunctionType = &sema.FunctionType{
+	Purity:               sema.FunctionPurityImpure,
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	Parameters: []sema.Parameter{
+		{
+			TypeAnnotation: sema.TypeAnnotation{
+				Type: commons.CollectEventsFunctionType,
+			},
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: commons.CollectEventsParamName,
+		},
+	},
 }
 
-var astAnyStructArrayType = &ast.VariableSizedType{
+var anyStructTypeAnnotation = &ast.TypeAnnotation{
 	Type: &ast.NominalType{
 		Identifier: ast.Identifier{
 			Identifier: sema.AnyStructType.Name,

@@ -33,4 +33,6 @@ type Config struct {
 	ResourceOwnerChangeHandlerEnabled bool
 	// CoverageReport enables and collects coverage reporting metrics
 	CoverageReport *CoverageReport
+	// ComputationProfile enables and collects computation profiling metrics
+	ComputationProfile *ComputationProfile
 }

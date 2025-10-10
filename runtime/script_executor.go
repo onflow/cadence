@@ -132,7 +132,6 @@ func (executor *scriptExecutor) preprocess() (err error) {
 		storage,
 		context.MemoryGauge,
 		context.ComputationGauge,
-		context.CoverageReport,
 	)
 	executor.environment = environment
 
@@ -257,11 +256,7 @@ func (executor *scriptExecutor) executeWithInterpreter(
 		return nil, err
 	}
 
-	return ExportValue(
-		value,
-		inter,
-		interpreter.EmptyLocationRange,
-	)
+	return ExportValue(value, inter)
 }
 
 func (executor *scriptExecutor) executeWithVM(
@@ -286,7 +281,6 @@ func (executor *scriptExecutor) executeWithVM(
 	values, err := importValidatedArguments(
 		context,
 		executor.environment,
-		interpreter.EmptyLocationRange,
 		executor.script.Arguments,
 		executor.functionEntryPointType.Parameters,
 	)
@@ -302,7 +296,7 @@ func (executor *scriptExecutor) executeWithVM(
 		return nil, err
 	}
 
-	return ExportValue(value, context, interpreter.EmptyLocationRange)
+	return ExportValue(value, context)
 }
 
 func (executor *scriptExecutor) scriptExecutionFunction() interpretFunc {
@@ -319,7 +313,6 @@ func (executor *scriptExecutor) scriptExecutionFunction() interpretFunc {
 		values, err := importValidatedArguments(
 			inter,
 			executor.environment,
-			interpreter.EmptyLocationRange,
 			executor.script.Arguments,
 			executor.functionEntryPointType.Parameters,
 		)
