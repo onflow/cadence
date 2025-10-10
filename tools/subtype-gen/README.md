@@ -75,7 +75,7 @@ Example 2:
 equals:
   source: sub
   target:
-    oneOfTypes: [PrivatePathType, PublicPathType]
+    oneOf: [PrivatePathType, PublicPathType]
 ```
 
 ### Subtype Predicate (`subtype`)
@@ -97,7 +97,7 @@ Example 2:
 equals:
   source: sub
   target:
-    oneOfTypes: [PrivatePathType, PublicPathType]
+    oneOf: [PrivatePathType, PublicPathType]
 ```
 
 ### Type-assertion Predicate (`mustType`)
@@ -314,7 +314,7 @@ e.g:
       - equals:
           source: super.KeyType
           target:
-            oneOfTypes: [Int, String, Bool]  # Says the `keyType` field/property of `DictionaryType`.
-                                             # can be one of Int, String, Bool.
+            oneOf: [Int, String, Bool]  # Says the `keyType` field/property of `DictionaryType`.
+                                        # can be one of Int, String, Bool.
 
 ```

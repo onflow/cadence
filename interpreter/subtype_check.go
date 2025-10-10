@@ -85,19 +85,19 @@ func IsIntersectionSubset(superType *IntersectionStaticType, subType StaticType)
 }
 
 func AreTypeParamsEqual(source, target FunctionStaticType) bool {
-	return sema.AreTypeParamsEqual(source.Type, target.Type)
+	return sema.AreTypeParamsEqual(source.FunctionType, target.FunctionType)
 }
 
 func AreParamsContravariant(source, target FunctionStaticType) bool {
-	return sema.AreParamsContravariant(source.Type, target.Type)
+	return sema.AreParamsContravariant(source.FunctionType, target.FunctionType)
 }
 
 func AreReturnsCovariant(source, target FunctionStaticType) bool {
-	return sema.AreReturnsCovariant(source.Type, target.Type)
+	return sema.AreReturnsCovariant(source.FunctionType, target.FunctionType)
 }
 
 func AreConstructorsEqual(source, target FunctionStaticType) bool {
-	return sema.AreConstructorsEqual(source.Type, target.Type)
+	return sema.AreConstructorsEqual(source.FunctionType, target.FunctionType)
 }
 
 func IsParameterizedSubType(source, target StaticType) bool {

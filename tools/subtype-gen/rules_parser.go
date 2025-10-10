@@ -400,7 +400,7 @@ func parseExpression(expr any) (Expression, error) {
 		key, value := singleKeyValueFromMap(expr)
 
 		switch key {
-		case "oneOfTypes":
+		case "oneOf":
 			list, ok := value.([]any)
 			if !ok {
 				return nil, fmt.Errorf("expected a list of predicates, got %T", value)

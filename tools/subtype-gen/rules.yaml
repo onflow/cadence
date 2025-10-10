@@ -57,8 +57,8 @@ rules:
         super:
           # Maybe use 'or' predicate here instead?
           # The difference is 'or' is a predicate containing zero or more inner predicates.
-          # Whereas, 'oneOfTypes' contains zero or more types, not predicates.
-          oneOfTypes: [StoragePathType, CapabilityPathType]
+          # Whereas, 'oneOf' contains zero or more values, not predicates.
+          oneOf: [StoragePathType, CapabilityPathType]
 
   - super: StorableType
     predicate:
@@ -69,7 +69,7 @@ rules:
       equals:
         source: sub
         target:
-          oneOfTypes: [PrivatePathType, PublicPathType]
+          oneOf: [PrivatePathType, PublicPathType]
 
   - super: NumberType
     predicate:
@@ -77,12 +77,12 @@ rules:
         - equals:
             source: sub
             target:
-              oneOfTypes: [NumberType, SignedNumberType]
+              oneOf: [NumberType, SignedNumberType]
 
         - subtype:
             sub: sub
             super:
-              oneOfTypes: [IntegerType, FixedPointType]
+              oneOf: [IntegerType, FixedPointType]
 
   - super: SignedNumberType
     predicate:
@@ -94,7 +94,7 @@ rules:
         - subtype:
             sub: sub
             super:
-              oneOfTypes: [SignedIntegerType, SignedFixedPointType]
+              oneOf: [SignedIntegerType, SignedFixedPointType]
 
   - super: IntegerType
     predicate:
@@ -102,26 +102,26 @@ rules:
         - equals:
             source: sub
             target:
-              oneOfTypes: [IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType, UIntType]
+              oneOf: [IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType, UIntType]
 
         - subtype:
             sub: sub
             super:
-              oneOfTypes: [SignedIntegerType, FixedSizeUnsignedIntegerType]
+              oneOf: [SignedIntegerType, FixedSizeUnsignedIntegerType]
 
   - super: SignedIntegerType
     predicate:
       equals:
         source: sub
         target:
-          oneOfTypes: [SignedIntegerType, IntType, Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type]
+          oneOf: [SignedIntegerType, IntType, Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type]
 
   - super: FixedSizeUnsignedIntegerType
     predicate:
       equals:
         source: sub
         target:
-          oneOfTypes: [UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
+          oneOf: [UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
                   Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type]
 
   - super: FixedPointType
@@ -130,19 +130,19 @@ rules:
         - equals:
             source: sub
             target:
-              oneOfTypes: [FixedPointType, SignedFixedPointType, UFix64Type, UFix128Type]
+              oneOf: [FixedPointType, SignedFixedPointType, UFix64Type, UFix128Type]
 
         - subtype:
             sub: sub
             super:
-              oneOfTypes: [SignedFixedPointType]
+              oneOf: [SignedFixedPointType]
 
   - super: SignedFixedPointType
     predicate:
       equals:
         source: sub
         target:
-          oneOfTypes: [SignedFixedPointType, Fix64Type, Fix128Type]
+          oneOf: [SignedFixedPointType, Fix64Type, Fix128Type]
 
   - super: OptionalType
     predicate:
@@ -218,7 +218,7 @@ rules:
               equals:
                 source: sub.LegacyType
                 target:
-                  oneOfTypes: [nil, AnyResourceType, AnyStructType, AnyType]
+                  oneOf: [nil, AnyResourceType, AnyStructType, AnyType]
           - mustType:
               source: sub.LegacyType
               type: CompositeType
@@ -272,13 +272,13 @@ rules:
           - equals:
               source: super.LegacyType
               target:
-                oneOfTypes: [nil, AnyType, AnyStructType, AnyResourceType]
+                oneOf: [nil, AnyType, AnyStructType, AnyResourceType]
           - and:
             - not:
                 equals:
                   source: sub
                   target:
-                    oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
+                    oneOf: [AnyType, AnyStructType, AnyResourceType]
             - or:
               - and:
                 - mustType:
@@ -297,7 +297,7 @@ rules:
                       - equals:
                           source: sub.LegacyType
                           target:
-                            oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
+                            oneOf: [AnyType, AnyStructType, AnyResourceType]
 
                       # Below two combination is repeated several times below.
                       # Maybe combine them to produce a single predicate.
@@ -348,7 +348,7 @@ rules:
               equals:
                 source: sub.LegacyType
                 target:
-                  oneOfTypes: [ nil, AnyType, AnyStructType, AnyResourceType ]
+                  oneOf: [ nil, AnyType, AnyStructType, AnyResourceType ]
           - mustType:
               source: sub.LegacyType
               type: CompositeType
@@ -366,7 +366,7 @@ rules:
             equals:
               source: sub
               target:
-                oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
+                oneOf: [AnyType, AnyStructType, AnyResourceType]
         - isParameterizedSubtype:
             sub: sub
             super: super
@@ -380,7 +380,7 @@ rules:
         - equals:
             source: sub.Purity
             target:
-              oneOfTypes: [super.Purity, FunctionPurityView]
+              oneOf: [super.Purity, FunctionPurityView]
         - typeParamsEqual:
             source: sub
             target: super
