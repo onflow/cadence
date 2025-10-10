@@ -118,11 +118,7 @@ func (e *PProfExporter) exportSamples() {
 
 			function, ok := e.ComputationProfile.functionAtLine(locationLine)
 			if !ok {
-				panic(fmt.Errorf(
-					"missing profile function at %s:%d",
-					location,
-					line,
-				))
+				continue
 			}
 
 			pprofFunction, ok := e.functions[function]
