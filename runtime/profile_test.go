@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"testing"
 
-	profile2 "github.com/google/pprof/profile"
+	pprof "github.com/google/pprof/profile"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -129,7 +129,7 @@ func TestRuntimeProfile(t *testing.T) {
 
 	assert.Equal(
 		t,
-		[]profile2.Line{{
+		[]pprof.Line{{
 			Function: profile.Function[1], // main
 			Line:     5,
 		}},
@@ -137,7 +137,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		[]profile2.Line{{
+		[]pprof.Line{{
 			Function: profile.Function[0], // factorial
 			Line:     12,
 		}},
@@ -145,7 +145,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		[]profile2.Line{{
+		[]pprof.Line{{
 			Function: profile.Function[0], // factorial
 			Line:     16,
 		}},
@@ -153,7 +153,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		[]profile2.Line{{
+		[]pprof.Line{{
 			Function: profile.Function[0], // factorial
 			Line:     13,
 		}},
@@ -161,7 +161,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		[]profile2.Line{{
+		[]pprof.Line{{
 			Function: profile.Function[0], // factorial
 			Line:     4,
 		}},
@@ -169,7 +169,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		[]profile2.Line{{
+		[]pprof.Line{{
 			Function: profile.Function[0], // factorial
 			Line:     8,
 		}},
@@ -177,7 +177,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		[]profile2.Line{{
+		[]pprof.Line{{
 			Function: profile.Function[1], // main
 			Line:     6,
 		}},
@@ -194,7 +194,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[0].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[0],
 		},
 		profile.Sample[0].Location,
@@ -205,7 +205,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[1].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[1],
 			profile.Location[0],
 		},
@@ -217,7 +217,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[2].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[2],
 			profile.Location[0],
 		},
@@ -229,7 +229,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[3].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[1],
 			profile.Location[2],
 			profile.Location[0],
@@ -242,7 +242,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[4].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[2],
 			profile.Location[2],
 			profile.Location[0],
@@ -255,7 +255,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[5].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[1],
 			profile.Location[2],
 			profile.Location[2],
@@ -269,7 +269,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[6].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[3],
 			profile.Location[2],
 			profile.Location[2],
@@ -283,7 +283,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[7].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[4],
 			profile.Location[2],
 			profile.Location[2],
@@ -297,7 +297,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[8].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[5],
 			profile.Location[2],
 			profile.Location[2],
@@ -311,7 +311,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[9].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[4],
 			profile.Location[2],
 			profile.Location[0],
@@ -324,7 +324,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[10].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[5],
 			profile.Location[2],
 			profile.Location[0],
@@ -337,7 +337,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[11].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[4],
 			profile.Location[0],
 		},
@@ -349,7 +349,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[12].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[5],
 			profile.Location[0],
 		},
@@ -361,7 +361,7 @@ func TestRuntimeProfile(t *testing.T) {
 		profile.Sample[13].Value,
 	)
 	assert.Equal(t,
-		[]*profile2.Location{
+		[]*pprof.Location{
 			profile.Location[6],
 		},
 		profile.Sample[13].Location,
