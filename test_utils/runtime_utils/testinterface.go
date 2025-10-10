@@ -544,10 +544,7 @@ func (i *TestRuntimeInterface) onScriptExecutionStart() {
 
 func (i *TestRuntimeInterface) InvalidateUpdatedPrograms() {
 	if i.updatedContractCode {
-		// iteration order does not matter
-		for location := range i.Programs { //nolint:maprange
-			delete(i.Programs, location)
-		}
+		clear(i.Programs)
 		i.updatedContractCode = false
 	}
 }
