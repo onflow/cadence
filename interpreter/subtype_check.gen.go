@@ -182,7 +182,7 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		switch typedSubType := subType.(type) {
 		case *ReferenceStaticType:
 			return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
-				IsSubType(typeConverter, typedSubType.Type, typedSuperType.Type)
+				IsSubType(typeConverter, typedSubType.ReferencedType, typedSuperType.ReferencedType)
 		}
 
 		return false

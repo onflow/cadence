@@ -204,8 +204,8 @@ rules:
             super: super.Authorization
             sub: sub.Authorization
         - subtype:
-            super: super.Type
-            sub: sub.Type
+            super: super.ReferencedType
+            sub: sub.ReferencedType
 
   - super: CompositeType
     predicate:

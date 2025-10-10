@@ -32,6 +32,8 @@ const (
 	TypePlaceholderParameterized = "Parameterized"
 	TypePlaceholderConforming    = "Conforming"
 
+	FieldNameReferencedType = "ReferencedType"
+
 	subtypeCheckFuncName = "checkSubTypeWithoutEquality_gen"
 	subTypeVarName       = "subType"
 	superTypeVarName     = "superType"

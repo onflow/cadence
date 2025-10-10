@@ -55,6 +55,7 @@ type Config struct {
 	ExtraParams     []ExtraParam
 	SkipTypes       map[string]struct{}
 	NonPointerTypes map[string]struct{}
+	NameMapping     map[string]string
 
 	ArrayElementTypeMethodArgs []any
 }
@@ -1026,7 +1027,7 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression, ignoreNegation boo
 
 	switch expr := expr.(type) {
 	case IdentifierExpression:
-		return dst.NewIdent(expr.Name)
+		return gen.newIdentifier(expr.Name)
 
 	case TypeExpression:
 		return gen.qualifiedTypeIdentifier(expr.Type)
@@ -1034,7 +1035,7 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression, ignoreNegation boo
 	case MemberExpression:
 		selectorExpr := &dst.SelectorExpr{
 			X:   gen.expressionIgnoreNegation(expr.Parent),
-			Sel: dst.NewIdent(expr.MemberName),
+			Sel: gen.newIdentifier(expr.MemberName),
 		}
 
 		switch expr.MemberName {
@@ -1427,4 +1428,12 @@ func (gen *SubTypeCheckGenerator) isParameterizedSubtype(p IsParameterizedSubtyp
 			args...,
 		),
 	}
+}
+
+func (gen *SubTypeCheckGenerator) newIdentifier(name string) *dst.Ident {
+	if mappedName, ok := gen.config.NameMapping[name]; ok {
+		return dst.NewIdent(mappedName)
+	}
+
+	return dst.NewIdent(name)
 }

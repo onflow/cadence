@@ -99,3 +99,8 @@ func AreReturnsCovariant(source, target FunctionStaticType) bool {
 func AreConstructorsEqual(source, target FunctionStaticType) bool {
 	return sema.AreConstructorsEqual(source.Type, target.Type)
 }
+
+func IsParameterizedSubType(source, target StaticType) bool {
+	// TODO:
+	return false
+}

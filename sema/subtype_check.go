@@ -127,10 +127,13 @@ func AreTypeArgumentsEqual(source, target ParameterizedType) bool {
 }
 
 func IsParameterizedSubType(subType Type, superType Type) bool {
-	if typedSubType, ok := subType.(ParameterizedType); ok {
-		if baseType := typedSubType.BaseType(); baseType != nil {
-			return IsSubType(baseType, superType)
-		}
+	typedSubType, ok := subType.(ParameterizedType)
+	if !ok {
+		return false
+	}
+
+	if baseType := typedSubType.BaseType(); baseType != nil {
+		return IsSubType(baseType, superType)
 	}
 
 	return false

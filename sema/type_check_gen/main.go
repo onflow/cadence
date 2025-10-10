@@ -59,6 +59,10 @@ func main() {
 			subtypegen.TypePlaceholderParameterized: {},
 			subtypegen.TypePlaceholderConforming:    {},
 		},
+
+		NameMapping: map[string]string{
+			subtypegen.FieldNameReferencedType: "Type",
+		},
 	}
 
 	// Generate code using the comprehensive generator
