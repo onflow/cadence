@@ -33,6 +33,10 @@ type lineNumber int
 var _ intervalst.Position = lineNumber(0)
 
 func (l lineNumber) Compare(other intervalst.Position) int {
+	if _, ok := other.(intervalst.MinPosition); ok {
+		return 1
+	}
+
 	otherLine := other.(lineNumber)
 	if l < otherLine {
 		return -1
