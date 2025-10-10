@@ -1,8 +1,8 @@
 module github.com/onflow/cadence/tools/compatibility_check
 
-go 1.24
+go 1.24.0
 
-toolchain go1.24.2
+toolchain go1.24.3
 
 require (
 	github.com/onflow/cadence v1.1.1-0.20241018202510-7f1b6fbc57c2
@@ -80,7 +80,7 @@ require (
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
