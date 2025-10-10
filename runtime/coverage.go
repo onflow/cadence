@@ -266,15 +266,11 @@ func (r *CoverageReport) String() string {
 	return fmt.Sprintf("Coverage: %v of statements", r.Percentage())
 }
 
-// Reset flushes the collected coverage information for all locations
-// and inspected locations. Excluded locations remain intact.
+// Reset clears the collected coverage information for all locations and inspected locations.
+// Excluded locations remain intact.
 func (r *CoverageReport) Reset() {
-	for location := range r.Coverage { // nolint:maprange
-		delete(r.Coverage, location)
-	}
-	for location := range r.Locations { // nolint:maprange
-		delete(r.Locations, location)
-	}
+	clear(r.Coverage)
+	clear(r.Locations)
 }
 
 // Merge adds all the collected coverage information to the

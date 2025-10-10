@@ -54,10 +54,7 @@ func (om *OrderedMap[K, V]) Clear() {
 	}
 
 	om.list.Init()
-	// NOTE: Range over map is safe, as it is only used to delete entries
-	for key := range om.pairs { //nolint:maprange
-		delete(om.pairs, key)
-	}
+	clear(om.pairs)
 }
 
 // Get returns the value associated with the given key.
