@@ -11,6 +11,8 @@ Cadence is a resource-oriented programming language that introduces new features
 to smart contract programming that help developers ensure that their code is
 safe, secure, clear, and approachable.
 
+<!-- This is a test comment for verification purposes -->
+
 Some of these features are:
 
 - Type safety and a strong static type system
