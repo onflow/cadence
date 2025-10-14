@@ -26,6 +26,7 @@ import (
 	"io"
 	"math/big"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 	_ "unsafe"
 
@@ -35,6 +36,29 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
+
+// pathElement represents an element in the decoding context path
+type pathElement interface {
+	Append(io.Writer)
+}
+
+// indexPathElement represents an array index in the path
+type indexPathElement int
+
+var _ pathElement = indexPathElement(0)
+
+func (e indexPathElement) Append(w io.Writer) {
+	_, _ = fmt.Fprintf(w, "array[%d]", int(e))
+}
+
+// fieldPathElement represents a struct/resource field name in the path
+type fieldPathElement string
+
+var _ pathElement = fieldPathElement("")
+
+func (e fieldPathElement) Append(w io.Writer) {
+	_, _ = fmt.Fprintf(w, "field[%s]", string(e))
+}
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
 type Decoder struct {
@@ -46,7 +70,7 @@ type Decoder struct {
 	// backwardsCompatible controls if the decoder can decode old versions of the JSON encoding
 	backwardsCompatible bool
 	// contextPath tracks the current path in JSON structure for better error messages
-	contextPath []string
+	contextPath []pathElement
 }
 
 type Option func(*Decoder)
@@ -696,7 +720,7 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 		func() ([]cadence.Value, error) {
 			values := make([]cadence.Value, len(v))
 			for i, val := range v {
-				d.pushContext(fmt.Sprintf("array[%d]", i))
+				d.pushContext(indexPathElement(i))
 				values[i] = d.DecodeJSON(val)
 				d.popContext()
 			}
@@ -799,7 +823,7 @@ func (d *Decoder) decodeCompositeField(valueJSON any) (cadence.Value, cadence.Fi
 
 	name := obj.GetStringWithDecoder(d, nameKey)
 
-	d.pushContext(fmt.Sprintf("field[%s]", name))
+	d.pushContext(fieldPathElement(name))
 	value := obj.GetValueWithDecoder(d, valueKey)
 	d.popContext()
 
@@ -1494,8 +1518,8 @@ func (obj jsonObject) GetWithDecoder(d *Decoder, key string) any {
 }
 
 // Context path management methods
-func (d *Decoder) pushContext(path string) {
-	d.contextPath = append(d.contextPath, path)
+func (d *Decoder) pushContext(element pathElement) {
+	d.contextPath = append(d.contextPath, element)
 }
 
 func (d *Decoder) popContext() {
@@ -1504,17 +1528,20 @@ func (d *Decoder) popContext() {
 	}
 }
 
-// joinPath creates a readable path string from context path segments
-func joinPath(path []string) string {
-	result := ""
-	for i, segment := range path {
-		if i == 0 {
-			result = segment
-		} else {
-			result += "." + segment
-		}
+// joinPath creates a readable path string from context path elements
+func joinPath(path []pathElement) string {
+	if len(path) == 0 {
+		return ""
 	}
-	return result
+
+	var builder strings.Builder
+	for i, element := range path {
+		if i > 0 {
+			builder.WriteByte('.')
+		}
+		element.Append(&builder)
+	}
+	return builder.String()
 }
 
 func (obj jsonObject) GetBool(key string) bool {
