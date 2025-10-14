@@ -1002,6 +1002,27 @@ func parseCompositeKind(p *parser) common.CompositeKind {
 	return common.CompositeKindUnknown
 }
 
+func checkAndReportFieldInitialization(p *parser) {
+	if p.current.Type == lexer.TokenSpace {
+		p.next()
+	}
+
+	if p.current.Is(lexer.TokenEqual) {
+		equalPos := p.current.StartPos
+		p.nextSemanticToken()
+
+		initExpression, err := parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return
+		}
+
+		p.report(&FieldInitializationError{
+			StartPos: equalPos,
+			EndPos:   initExpression.EndPosition(p.memoryGauge),
+		})
+	}
+}
+
 // parseFieldWithVariableKind parses a field which has a variable kind.
 //
 //	variableKind : 'var' | 'let'
@@ -1055,24 +1076,7 @@ func parseFieldWithVariableKind(
 		return nil, err
 	}
 
-	if p.current.Type == lexer.TokenSpace {
-		p.next()
-	}
-
-	if p.current.Is(lexer.TokenEqual) {
-		equalPos := p.current.StartPos
-		p.nextSemanticToken()
-
-		initExpression, err := parseExpression(p, lowestBindingPower)
-		if err != nil {
-			return nil, err
-		}
-
-		p.report(&FieldInitializationError{
-			StartPos: equalPos,
-			EndPos:   initExpression.EndPosition(p.memoryGauge),
-		})
-	}
+	checkAndReportFieldInitialization(p)
 
 	return ast.NewFieldDeclaration(
 		p.memoryGauge,
@@ -1916,24 +1920,7 @@ func parseFieldDeclarationWithoutVariableKind(
 		return nil, err
 	}
 
-	if p.current.Type == lexer.TokenSpace {
-		p.next()
-	}
-
-	if p.current.Is(lexer.TokenEqual) {
-		equalPos := p.current.StartPos
-		p.nextSemanticToken()
-
-		initExpression, err := parseExpression(p, lowestBindingPower)
-		if err != nil {
-			return nil, err
-		}
-
-		p.report(&FieldInitializationError{
-			StartPos: equalPos,
-			EndPos:   initExpression.EndPosition(p.memoryGauge),
-		})
-	}
+	checkAndReportFieldInitialization(p)
 
 	return ast.NewFieldDeclaration(
 		p.memoryGauge,
