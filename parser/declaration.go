@@ -1015,8 +1015,10 @@ func checkAndReportFieldInitialization(p *parser) {
 		}
 
 		p.report(&FieldInitializationError{
-			StartPos: equalPos,
-			EndPos:   initExpression.EndPosition(p.memoryGauge),
+			Range: ast.Range{
+				StartPos: equalPos,
+				EndPos:   initExpression.EndPosition(p.memoryGauge),
+			},
 		})
 	}
 }

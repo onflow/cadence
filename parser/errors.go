@@ -3327,8 +3327,7 @@ func (e *MissingColonAfterFieldNameError) SuggestFixes(code string) []errors.Sug
 }
 
 type FieldInitializationError struct {
-	StartPos ast.Position
-	EndPos   ast.Position
+	ast.Range
 }
 
 var _ ParseError = &FieldInitializationError{}
@@ -3339,14 +3338,6 @@ var _ errors.HasDocumentationLink = &FieldInitializationError{}
 func (*FieldInitializationError) isParseError() {}
 
 func (*FieldInitializationError) IsUserError() {}
-
-func (e *FieldInitializationError) StartPosition() ast.Position {
-	return e.StartPos
-}
-
-func (e *FieldInitializationError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.EndPos
-}
 
 func (*FieldInitializationError) Error() string {
 	return "field declarations cannot have initial values"

@@ -4139,8 +4139,10 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&FieldInitializationError{
-					StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-					EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+					},
 				},
 			},
 			errs,
@@ -4156,8 +4158,10 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&FieldInitializationError{
-					StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-					EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
 				},
 			},
 			errs,
@@ -4173,8 +4177,10 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&FieldInitializationError{
-					StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-					EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+					},
 				},
 			},
 			errs,
