@@ -93,6 +93,12 @@ func generateErrors() []namedError {
 				Pos: placeholderPosition,
 			},
 		},
+		{"parser.FieldInitializationError",
+			&parser.FieldInitializationError{
+				StartPos: placeholderPosition,
+				EndPos:   placeholderPosition,
+			},
+		},
 		{"parser.InvalidAccessModifierError",
 			&parser.InvalidAccessModifierError{
 				Pos:             placeholderPosition,
