@@ -1055,6 +1055,25 @@ func parseFieldWithVariableKind(
 		return nil, err
 	}
 
+	if p.current.Type == lexer.TokenSpace {
+		p.next()
+	}
+
+	if p.current.Is(lexer.TokenEqual) {
+		equalPos := p.current.StartPos
+		p.nextSemanticToken()
+
+		initExpression, err := parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+
+		p.report(&FieldInitializationError{
+			StartPos: equalPos,
+			EndPos:   initExpression.EndPosition(p.memoryGauge),
+		})
+	}
+
 	return ast.NewFieldDeclaration(
 		p.memoryGauge,
 		access,
@@ -1895,6 +1914,25 @@ func parseFieldDeclarationWithoutVariableKind(
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {
 		return nil, err
+	}
+
+	if p.current.Type == lexer.TokenSpace {
+		p.next()
+	}
+
+	if p.current.Is(lexer.TokenEqual) {
+		equalPos := p.current.StartPos
+		p.nextSemanticToken()
+
+		initExpression, err := parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+
+		p.report(&FieldInitializationError{
+			StartPos: equalPos,
+			EndPos:   initExpression.EndPosition(p.memoryGauge),
+		})
 	}
 
 	return ast.NewFieldDeclaration(
