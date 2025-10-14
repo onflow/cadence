@@ -2835,6 +2835,61 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
+	t.Run("with static attachment", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.NewAttachmentType(
+					TestLocation,
+					"A",
+					cadence.IntType,
+					[]cadence.Field{
+						{Identifier: "foo", Type: cadence.StringType},
+					},
+					[][]cadence.Parameter{
+						{{Label: "foo", Identifier: "bar", Type: cadence.IntType}},
+					},
+				),
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Attachment",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "typeID": "S.test.A",
+                    "fields": [
+                      {
+                        "id": "foo",
+                        "type": {
+                          "kind": "String"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "foo",
+                          "id": "bar",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
+		)
+
+	})
+
 	t.Run("without static type", func(t *testing.T) {
 
 		t.Parallel()
