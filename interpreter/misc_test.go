@@ -11281,6 +11281,145 @@ func TestInterpretArrayMap(t *testing.T) {
 	})
 }
 
+func TestInterpretArrayReduce(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with variable sized array - sum", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let xs = [1, 2, 3, 4, 5]
+
+			let sum =
+				fun (acc: Int, x: Int): Int {
+					return acc + x
+				}
+
+			fun reduce(): Int {
+				return xs.reduce(initial: 0, sum)
+			}
+		`)
+
+		val, err := inter.Invoke("reduce")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(15),
+			val,
+		)
+	})
+
+	t.Run("with variable sized array - product", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let xs = [1, 2, 3, 4]
+
+			let product =
+				fun (acc: Int, x: Int): Int {
+					return acc * x
+				}
+
+			fun reduce(): Int {
+				return xs.reduce(initial: 1, product)
+			}
+		`)
+
+		val, err := inter.Invoke("reduce")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(24),
+			val,
+		)
+	})
+
+	t.Run("with empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let xs: [Int] = []
+
+			let sum =
+				fun (acc: Int, x: Int): Int {
+					return acc + x
+				}
+
+			fun reduce(): Int {
+				return xs.reduce(initial: 42, sum)
+			}
+		`)
+
+		val, err := inter.Invoke("reduce")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+			val,
+		)
+	})
+
+	t.Run("with fixed sized array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let xs: [Int; 4] = [10, 20, 30, 40]
+
+			let sum =
+				fun (acc: Int, x: Int): Int {
+					return acc + x
+				}
+
+			fun reduce(): Int {
+				return xs.reduce(initial: 0, sum)
+			}
+		`)
+
+		val, err := inter.Invoke("reduce")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+			val,
+		)
+	})
+
+	t.Run("with type conversion", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let xs = [1, 2, 3]
+
+			let concat =
+				fun (acc: String, x: Int): String {
+					return acc.concat(x.toString())
+				}
+
+			fun reduce(): String {
+				return xs.reduce(initial: "", concat)
+			}
+		`)
+
+		val, err := inter.Invoke("reduce")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("123"),
+			val,
+		)
+	})
+}
+
 func TestInterpretArrayToVariableSized(t *testing.T) {
 	t.Parallel()
 

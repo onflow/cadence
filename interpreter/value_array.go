@@ -988,6 +988,16 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			NativeArrayMapFunction,
 		)
 
+	case sema.ArrayTypeReduceFunctionName:
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			sema.ArrayReduceFunctionType(
+				v.SemaType(context).ElementType(false),
+			),
+			NativeArrayReduceFunction,
+		)
+
 	case sema.ArrayTypeToVariableSizedFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
@@ -1696,6 +1706,50 @@ func (v *ArrayValue) Map(
 	)
 }
 
+func (v *ArrayValue) Reduce(
+	context InvocationContext,
+	initial Value,
+	reducer FunctionValue,
+) Value {
+
+	elementType := v.SemaType(context).ElementType(false)
+
+	reducerFunctionType := reducer.FunctionType(context)
+	parameterTypes := reducerFunctionType.ParameterTypes()
+	returnType := reducerFunctionType.ReturnTypeAnnotation.Type
+
+	accumulator := initial
+
+	v.Iterate(
+		context,
+		func(element Value) (resume bool) {
+
+			// Meter computation for iterating the array.
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
+
+			argumentTypes := []sema.Type{returnType, elementType}
+
+			accumulator = invokeFunctionValue(
+				context,
+				reducer,
+				[]Value{accumulator, element},
+				argumentTypes,
+				parameterTypes,
+				returnType,
+				nil,
+			)
+
+			return true
+		},
+		false,
+	)
+
+	return accumulator
+}
+
 func (v *ArrayValue) ForEach(
 	context IterableValueForeachContext,
 	_ sema.Type,
@@ -2046,6 +2100,21 @@ var NativeArrayMapFunction = NativeFunction(
 		funcValue := AssertValueOfType[FunctionValue](args[0])
 
 		return thisArray.Map(context, funcValue)
+	},
+)
+
+var NativeArrayReduceFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		initial := args[0]
+		funcValue := AssertValueOfType[FunctionValue](args[1])
+
+		return thisArray.Reduce(context, initial, funcValue)
 	},
 )
 
