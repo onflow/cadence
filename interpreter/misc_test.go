@@ -11281,6 +11281,146 @@ func TestInterpretArrayMap(t *testing.T) {
 	})
 }
 
+func TestInterpretArrayReduce(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with variable sized array of Ints to Int", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let vals = [1, 2, 3]
+
+			let sumFunction =
+				fun (_ acc: Int, _ x: Int): Int {
+					return acc + x
+				}
+
+			fun sum(): Int {
+				return vals.reduce(0, sumFunction)
+			}
+
+			fun original(): [Int] {
+				return vals
+			}
+		`)
+
+		// Sum should be 6 (1 + 2 + 3)
+		val, err := inter.Invoke("sum")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(6),
+			val,
+		)
+
+		// Original array remains unchanged
+		origVal, err := inter.Invoke("original")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+			origVal,
+		)
+	})
+
+	t.Run("with fixed sized array of Ints to Int", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let vals: [Int; 3] = [1, 2, 3]
+
+			let sumFunction =
+				fun (_ acc: Int, _ x: Int): Int {
+					return acc + x
+				}
+
+			fun sum(): Int {
+				return vals.reduce(0, sumFunction)
+			}
+		`)
+
+		// Sum should be 6 (1 + 2 + 3)
+		val, err := inter.Invoke("sum")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(6),
+			val,
+		)
+	})
+
+	t.Run("with empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let vals: [Int] = []
+
+			let sumFunction =
+				fun (_ acc: Int, _ x: Int): Int {
+					return acc + x
+				}
+
+			fun sum(): Int {
+				return vals.reduce(100, sumFunction)
+			}
+		`)
+
+		// Sum should be 100 (initial value)
+		val, err := inter.Invoke("sum")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+			val,
+		)
+	})
+
+	t.Run("with array of different types", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let vals = [1, 2, 3]
+
+			let concatFunction =
+				fun (_ acc: String, _ x: Int): String {
+					return acc.concat(x.toString())
+				}
+
+			fun concat(): String {
+				return vals.reduce("", concatFunction)
+			}
+		`)
+
+		// Result should be "123"
+		val, err := inter.Invoke("concat")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("123"),
+			val,
+		)
+	})
+}
+
 func TestInterpretArrayToVariableSized(t *testing.T) {
 	t.Parallel()
 

@@ -2260,6 +2260,12 @@ const arrayTypeMapFunctionDocString = `
 Returns a new array whose elements are produced by applying the mapper function on each element of the original array.
 `
 
+const ArrayTypeReduceFunctionName = "reduce"
+
+const arrayTypeReduceFunctionDocString = `
+Reduces the array down to a single value by applying a function on each element of the original array.
+`
+
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
@@ -2450,6 +2456,36 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					ArrayMapFunctionType(memoryGauge, arrayType),
 					arrayTypeMapFunctionDocString,
+				)
+			},
+		},
+		ArrayTypeReduceFunctionName: {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
+				elementType := arrayType.ElementType(false)
+
+				// TODO: maybe allow for resource element type as a reference.
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayReduceFunctionType(memoryGauge, elementType),
+					arrayTypeReduceFunctionDocString,
 				)
 			},
 		},
@@ -3016,6 +3052,53 @@ func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(returnArrayType),
+	}
+}
+
+func ArrayReduceFunctionType(memoryGauge common.MemoryGauge, elementType Type) *FunctionType {
+	// For [T] with element type T
+	// fun reduce<U>(initial: U, _ f: fun (U, T): U): U
+
+	typeParameter := &TypeParameter{
+		Name: "U",
+	}
+
+	typeU := &GenericType{
+		TypeParameter: typeParameter,
+	}
+
+	// reduceFuncType: (U, T) -> U
+	reduceFuncType := &FunctionType{
+		Parameters: []Parameter{
+			{
+				Identifier:     "acc",
+				TypeAnnotation: NewTypeAnnotation(typeU),
+			},
+			{
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(typeU),
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "initial",
+				TypeAnnotation: NewTypeAnnotation(typeU),
+			},
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "f",
+				TypeAnnotation: NewTypeAnnotation(reduceFuncType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(typeU),
 	}
 }
 

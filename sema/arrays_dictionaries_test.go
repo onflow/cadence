@@ -1329,6 +1329,102 @@ func TestCheckResourceArrayMapInvalid(t *testing.T) {
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 }
 
+func TestCheckArrayReduce(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x = [1, 2, 3]
+			let sumFunction =
+				fun (_ acc: Int, _ element: Int): Int {
+					return acc + element
+				}
+
+			let y: Int = x.reduce(0, sumFunction)
+		}
+
+		fun testFixedSize() {
+			let x : [Int; 5] = [1, 2, 3, 21, 30]
+			let sumFunction =
+				fun (_ acc: Int, _ element: Int): Int {
+					return acc + element
+				}
+
+			let y: Int = x.reduce(0, sumFunction)
+		}
+	`)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayReduceInvalidArgs(t *testing.T) {
+
+	t.Parallel()
+
+	testInvalidArgs := func(code string, expectedErrors []sema.SemanticError) {
+		_, err := ParseAndCheck(t, code)
+
+		errs := RequireCheckerErrors(t, err, len(expectedErrors))
+
+		for i, e := range expectedErrors {
+			assert.IsType(t, e, errs[i])
+		}
+	}
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [1, 2, 3]
+			let y = x.reduce(0, 100)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.TypeMismatchError{}, // since we're not passing a function.
+		},
+	)
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [1, 2, 3]
+			let badFunction =
+				fun (_ x: String): Int {
+					return 0
+				}
+			let y = x.reduce(0, badFunction)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.TypeMismatchError{}, // since function signature doesn't match.
+		},
+	)
+}
+
+func TestCheckResourceArrayReduceInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource X {}
+
+		fun test(): Int {
+			let xs <- [<-create X()]
+			let sumFunction =
+				fun (_ acc: Int, _ x: @X): Int {
+					destroy x
+					return acc + 1
+				}
+
+			let sum: Int = xs.reduce(0, sumFunction)
+			destroy xs
+			return sum
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+}
+
 func TestCheckArrayContains(t *testing.T) {
 
 	t.Parallel()

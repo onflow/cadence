@@ -93,6 +93,18 @@ func init() {
 				interpreter.NativeArrayMapFunction,
 			),
 		)
+
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeReduceFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					elementType := arrayElementTypeFromValue(receiver, context)
+					return sema.ArrayReduceFunctionType(context, elementType)
+				},
+				interpreter.NativeArrayReduceFunction,
+			),
+		)
 	}
 
 	// Functions available only for variable-sized arrays.

@@ -988,6 +988,17 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			NativeArrayMapFunction,
 		)
 
+	case sema.ArrayTypeReduceFunctionName:
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			sema.ArrayReduceFunctionType(
+				context,
+				v.SemaType(context).ElementType(false),
+			),
+			NativeArrayReduceFunction,
+		)
+
 	case sema.ArrayTypeToVariableSizedFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
@@ -1696,6 +1707,69 @@ func (v *ArrayValue) Map(
 	)
 }
 
+func (v *ArrayValue) Reduce(
+	context InvocationContext,
+	initial Value,
+	procedure FunctionValue,
+) Value {
+
+	elementType := v.SemaType(context).ElementType(false)
+	
+	argumentTypes := []sema.Type{MustSemaTypeOfValue(initial, context), elementType}
+	
+	procedureFunctionType := procedure.FunctionType(context)
+	parameterTypes := procedureFunctionType.ParameterTypes()
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
+
+	accumulator := initial
+
+	// TODO: Use ReadOnlyIterator here if procedure doesn't change array values.
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	for {
+		// Meter computation for iterating the array.
+		common.UseComputation(
+			context,
+			common.LoopComputationUsage,
+		)
+
+		atreeValue, err := iterator.Next()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+
+		if atreeValue == nil {
+			break
+		}
+
+		value := MustConvertStoredValue(context, atreeValue)
+
+		result := invokeFunctionValue(
+			context,
+			procedure,
+			[]Value{accumulator, value},
+			argumentTypes,
+			parameterTypes,
+			returnType,
+			nil,
+		)
+
+		accumulator = result.Transfer(
+			context,
+			atree.Address{},
+			false,
+			nil,
+			nil,
+			false, // value has a parent container because it is from iterator.
+		)
+	}
+
+	return accumulator
+}
+
 func (v *ArrayValue) ForEach(
 	context IterableValueForeachContext,
 	_ sema.Type,
@@ -2046,6 +2120,21 @@ var NativeArrayMapFunction = NativeFunction(
 		funcValue := AssertValueOfType[FunctionValue](args[0])
 
 		return thisArray.Map(context, funcValue)
+	},
+)
+
+var NativeArrayReduceFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		initial := args[0]
+		funcValue := AssertValueOfType[FunctionValue](args[1])
+
+		return thisArray.Reduce(context, initial, funcValue)
 	},
 )
 
