@@ -850,7 +850,7 @@ func (d StorableDecoder) decodeFix64() (Fix64Value, error) {
 	}
 
 	// Already metered at `decodeInt64`
-	return NewUnmeteredFix64Value(value), nil
+	return NewUnmeteredFix64Value(fix.Fix64(value)), nil
 }
 
 func (d StorableDecoder) decodeFix128() (Fix128Value, error) {
@@ -906,13 +906,13 @@ func (d StorableDecoder) decodeUFix64() (UFix64Value, error) {
 	value, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return UFix64Value{}, errors.NewUnexpectedError("unknown UFix64 encoding: %s", e.ActualType.String())
+			return 0, errors.NewUnexpectedError("unknown UFix64 encoding: %s", e.ActualType.String())
 		}
-		return UFix64Value{}, err
+		return 0, err
 	}
 
 	// Already metered at `decodeUint64`
-	return NewUnmeteredUFix64Value(value), nil
+	return NewUnmeteredUFix64Value(fix.UFix64(value)), nil
 }
 
 func (d StorableDecoder) decodeUFix128() (UFix128Value, error) {

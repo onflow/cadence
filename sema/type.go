@@ -2059,6 +2059,8 @@ var (
 
 	// UFix64
 
+	UFix64FactorIntBig = new(big.Int).SetUint64(uint64(Fix64Factor))
+
 	UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
 	UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
 

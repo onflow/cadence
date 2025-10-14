@@ -26,6 +26,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -473,7 +475,7 @@ func newAccountBalanceGetFunction(
 	address := addressValue.ToAddress()
 
 	return func() interpreter.UFix64Value {
-		return interpreter.NewUFix64Value(gauge, func() uint64 {
+		return interpreter.NewUFix64Value(gauge, func() fix.UFix64 {
 			balance, err := provider.GetAccountBalance(address)
 			if err != nil {
 				panic(err)
@@ -499,7 +501,7 @@ func newAccountAvailableBalanceGetFunction(
 	address := addressValue.ToAddress()
 
 	return func() interpreter.UFix64Value {
-		return interpreter.NewUFix64Value(gauge, func() uint64 {
+		return interpreter.NewUFix64Value(gauge, func() fix.UFix64 {
 			balance, err := provider.GetAccountAvailableBalance(address)
 			if err != nil {
 				panic(err)

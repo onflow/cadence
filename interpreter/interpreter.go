@@ -34,6 +34,8 @@ import (
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -3002,8 +3004,8 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 					return NilOptionalValue
 				}
 
-				val := NewFix64Value(memoryGauge, n.Int64)
-				return NewSomeValueNonCopying(memoryGauge, val)
+			val := NewFix64Value(memoryGauge, func() fix.Fix64 { return fix.Fix64(n.Int64()) })
+			return NewSomeValueNonCopying(memoryGauge, val)
 
 			},
 		},
@@ -3030,8 +3032,8 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 				if err != nil {
 					return NilOptionalValue
 				}
-				val := NewUFix64Value(memoryGauge, n.Uint64)
-				return NewSomeValueNonCopying(memoryGauge, val)
+			val := NewUFix64Value(memoryGauge, func() fix.UFix64 { return fix.UFix64(n.Uint64()) })
+			return NewSomeValueNonCopying(memoryGauge, val)
 			},
 		},
 		{
@@ -3420,8 +3422,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		Convert: func(gauge common.MemoryGauge, value Value) Value {
 			return ConvertFix64(gauge, value)
 		},
-		Min: NewUnmeteredFix64Value(math.MinInt64),
-		Max: NewUnmeteredFix64Value(math.MaxInt64),
+		Min: NewUnmeteredFix64Value(fix.Fix64Min),
+		Max: NewUnmeteredFix64Value(fix.Fix64Max),
 	},
 	{
 		Name: sema.Fix128TypeName,
