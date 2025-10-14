@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"strconv"
@@ -44,6 +45,8 @@ type Decoder struct {
 	allowUnstructuredStaticTypes bool
 	// backwardsCompatible controls if the decoder can decode old versions of the JSON encoding
 	backwardsCompatible bool
+	// contextPath tracks the current path in JSON structure for better error messages
+	contextPath []string
 }
 
 type Option func(*Decoder)
@@ -163,7 +166,7 @@ const (
 func (d *Decoder) DecodeJSON(v any) cadence.Value {
 	obj := toObject(v)
 
-	typeStr := obj.GetString(typeKey)
+	typeStr := obj.GetStringWithDecoder(d, typeKey)
 
 	// void is a special case, does not have "value" field
 	if typeStr == voidTypeStr {
@@ -175,7 +178,7 @@ func (d *Decoder) DecodeJSON(v any) cadence.Value {
 		panic(errors.NewDefaultUserError("expected JSON object with keys `%s` and `%s`", typeKey, valueKey))
 	}
 
-	valueJSON := obj.Get(valueKey)
+	valueJSON := obj.GetWithDecoder(d, valueKey)
 
 	switch typeStr {
 	case optionalTypeStr:
@@ -693,7 +696,9 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 		func() ([]cadence.Value, error) {
 			values := make([]cadence.Value, len(v))
 			for i, val := range v {
+				d.pushContext(fmt.Sprintf("array[%d]", i))
 				values[i] = d.DecodeJSON(val)
+				d.popContext()
 			}
 			return values, nil
 		},
@@ -792,8 +797,11 @@ func (d *Decoder) decodeComposite(valueJSON any) composite {
 func (d *Decoder) decodeCompositeField(valueJSON any) (cadence.Value, cadence.Field) {
 	obj := toObject(valueJSON)
 
-	name := obj.GetString(nameKey)
-	value := obj.GetValue(d, valueKey)
+	name := obj.GetStringWithDecoder(d, nameKey)
+	
+	d.pushContext(fmt.Sprintf("field[%s]", name))
+	value := obj.GetValueWithDecoder(d, valueKey)
+	d.popContext()
 
 	// Unmetered because decodeCompositeField is metered in decodeComposite and called nowhere else
 	// Type is still metered.
@@ -1471,6 +1479,44 @@ func (obj jsonObject) Get(key string) any {
 	return v
 }
 
+// GetWithDecoder gets a property and includes decoder context in error messages
+func (obj jsonObject) GetWithDecoder(d *Decoder, key string) any {
+	v, hasKey := obj[key]
+	if !hasKey {
+		contextStr := ""
+		if len(d.contextPath) > 0 {
+			contextStr = " at " + joinPath(d.contextPath)
+		}
+		panic(errors.NewDefaultUserError("missing property: %s%s", key, contextStr))
+	}
+
+	return v
+}
+
+// Context path management methods
+func (d *Decoder) pushContext(path string) {
+	d.contextPath = append(d.contextPath, path)
+}
+
+func (d *Decoder) popContext() {
+	if len(d.contextPath) > 0 {
+		d.contextPath = d.contextPath[:len(d.contextPath)-1]
+	}
+}
+
+// joinPath creates a readable path string from context path segments
+func joinPath(path []string) string {
+	result := ""
+	for i, segment := range path {
+		if i == 0 {
+			result = segment
+		} else {
+			result += "." + segment
+		}
+	}
+	return result
+}
+
 func (obj jsonObject) GetBool(key string) bool {
 	v := obj.Get(key)
 	return toBool(v)
@@ -1481,6 +1527,11 @@ func (obj jsonObject) GetString(key string) string {
 	return toString(v)
 }
 
+func (obj jsonObject) GetStringWithDecoder(d *Decoder, key string) string {
+	v := obj.GetWithDecoder(d, key)
+	return toString(v)
+}
+
 func (obj jsonObject) GetSlice(key string) []any {
 	v := obj.Get(key)
 	return toSlice(v)
@@ -1488,6 +1539,11 @@ func (obj jsonObject) GetSlice(key string) []any {
 
 func (obj jsonObject) GetValue(d *Decoder, key string) cadence.Value {
 	v := obj.Get(key)
+	return d.DecodeJSON(v)
+}
+
+func (obj jsonObject) GetValueWithDecoder(d *Decoder, key string) cadence.Value {
+	v := obj.GetWithDecoder(d, key)
 	return d.DecodeJSON(v)
 }
 

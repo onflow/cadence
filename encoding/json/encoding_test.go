@@ -4024,3 +4024,40 @@ func TestSimpleTypes(t *testing.T) {
 		test(cadenceType, semaType)
 	}
 }
+
+func TestDecodeMissingPropertyError(t *testing.T) {
+	t.Parallel()
+
+	t.Run("missing type property in root", func(t *testing.T) {
+		t.Parallel()
+
+		// JSON without 'type' field
+		invalidJSON := `{"value":"42"}`
+
+		_, err := Decode(nil, []byte(invalidJSON))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "missing property: type")
+		
+		// The error should eventually contain more context about where the missing property occurred
+	})
+
+	t.Run("missing type property in nested object", func(t *testing.T) {
+		t.Parallel()
+
+		// JSON with nested structure missing 'type' in array element
+		invalidJSON := `{
+			"type": "Array",
+			"value": [
+				{"type": "Int", "value": "1"},
+				{"value": "2"}
+			]
+		}`
+
+		_, err := Decode(nil, []byte(invalidJSON))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "missing property: type")
+		require.Contains(t, err.Error(), "at array[1]")
+	})
+
+
+}
