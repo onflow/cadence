@@ -279,6 +279,78 @@ func newTestTypeExpectFunctionType(matcherType *sema.CompositeType) *sema.Functi
 	}
 }
 
+func formatValueForTestOutput(
+	context interpreter.InvocationContext,
+	value interpreter.Value,
+) string {
+	return formatValueForTestOutputHelper(context, value, interpreter.SeenReferences{})
+}
+
+func formatValueForTestOutputHelper(
+	context interpreter.InvocationContext,
+	value interpreter.Value,
+	seenReferences interpreter.SeenReferences,
+) string {
+	if value == nil {
+		return "nil"
+	}
+
+	if someValue, ok := value.(*interpreter.SomeValue); ok {
+		innerValue := someValue.InnerValue()
+		return formatValueForTestOutputHelper(context, innerValue, seenReferences)
+	}
+
+	compositeValue, ok := value.(*interpreter.CompositeValue)
+	if !ok {
+		return value.String()
+	}
+
+	typeID := compositeValue.TypeID()
+
+	if strings.HasSuffix(string(typeID), ".Test.Error") {
+		messageField := compositeValue.GetMember(context, "message")
+		if messageField != nil {
+			if stringValue, ok := messageField.(*interpreter.StringValue); ok {
+				var builder strings.Builder
+				builder.WriteString(string(typeID))
+				builder.WriteByte('(')
+				builder.WriteString("message: ")
+				builder.WriteString(stringValue.Str)
+				builder.WriteByte(')')
+				return builder.String()
+			}
+		}
+	}
+
+	if strings.HasSuffix(string(typeID), ".Test.ScriptResult") ||
+		strings.HasSuffix(string(typeID), ".Test.TransactionResult") {
+		var builder strings.Builder
+		builder.WriteString(string(typeID))
+		builder.WriteByte('(')
+
+		first := true
+		compositeValue.ForEachField(
+			context,
+			func(fieldName string, fieldValue interpreter.Value) (resume bool) {
+				if !first {
+					builder.WriteString(", ")
+				}
+				first = false
+				builder.WriteString(fieldName)
+				builder.WriteString(": ")
+				formattedFieldValue := formatValueForTestOutputHelper(context, fieldValue, seenReferences)
+				builder.WriteString(formattedFieldValue)
+				return true
+			},
+		)
+
+		builder.WriteByte(')')
+		return builder.String()
+	}
+
+	return value.String()
+}
+
 func newTestTypeExpectFunction(functionType *sema.FunctionType) testContractBoundFunctionGenerator {
 	return func(context interpreter.FunctionCreationContext, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
 		return interpreter.NewUnmeteredBoundHostFunctionValue(
@@ -302,9 +374,10 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) testContractBoun
 				)
 
 				if !result {
+					formattedValue := formatValueForTestOutput(invocationContext, value)
 					message := fmt.Sprintf(
 						"given value is: %s",
-						value,
+						formattedValue,
 					)
 					panic(&AssertionError{
 						Message: message,
