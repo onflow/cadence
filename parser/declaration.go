@@ -1003,7 +1003,9 @@ func parseCompositeKind(p *parser) common.CompositeKind {
 }
 
 func checkAndReportFieldInitialization(p *parser) {
-    p.skipSpaceAndComments()
+	if p.current.Type == lexer.TokenSpace {
+		p.next()
+	}
 
 	if p.current.Is(lexer.TokenEqual) {
 		equalPos := p.current.StartPos
