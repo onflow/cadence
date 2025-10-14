@@ -170,6 +170,8 @@ func linkImportedGlobal(
 				context,
 				linkedGlobalsCache,
 			)
+
+			// TODO: Potentially add the imported program's sema type cache to the context's sema type cache
 		}
 
 		indexedGlobals = linkedGlobals.indexedGlobals

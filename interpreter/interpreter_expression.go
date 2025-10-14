@@ -391,6 +391,7 @@ func CheckMemberAccessTargetTypeStatic(
 			return
 		}
 
+		// transactions have empty type ID
 		if expectedType.TypeID == "" {
 			return
 		}
