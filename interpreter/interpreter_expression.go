@@ -380,60 +380,6 @@ func CheckMemberAccessTargetType(
 	}
 }
 
-func CheckMemberAccessTargetTypeStatic(
-	context ValueStaticTypeContext,
-	target Value,
-	expectedType StaticType,
-) {
-	switch expectedType := expectedType.(type) {
-	case *CompositeStaticType:
-		if expectedType.Location == nil {
-			return
-		}
-
-		// transactions have empty type ID
-		if expectedType.TypeID == "" {
-			return
-		}
-	}
-
-	// NOTE: accesses of (optional) storage reference values
-	// are already checked in StorageReferenceValue.dereference
-	_, isStorageReference := target.(*StorageReferenceValue)
-	if !isStorageReference {
-		if optional, ok := target.(*SomeValue); ok {
-			_, isStorageReference = optional.value.(*StorageReferenceValue)
-		}
-	}
-	if isStorageReference {
-		return
-	}
-
-	targetStaticType := target.StaticType(context)
-
-	if _, ok := expectedType.(*OptionalStaticType); ok {
-		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
-			expectedSemaType := MustConvertStaticToSemaType(expectedType, context)
-
-			panic(&MemberAccessTypeError{
-				ExpectedType: expectedSemaType,
-				ActualType:   targetSemaType,
-			})
-		}
-	}
-
-	if !IsSubType(context, targetStaticType, expectedType) {
-		targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
-		expectedSemaType := MustConvertStaticToSemaType(expectedType, context)
-
-		panic(&MemberAccessTypeError{
-			ExpectedType: expectedSemaType,
-			ActualType:   targetSemaType,
-		})
-	}
-}
-
 func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) Value {
 	name := expression.Identifier.Identifier
 	variable := interpreter.FindVariable(name)

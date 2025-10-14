@@ -1070,10 +1070,13 @@ func checkMemberAccessTargetType(
 
 	context := vm.context
 
-	interpreter.CheckMemberAccessTargetTypeStatic(
+	// TODO: Avoid sema type conversion
+	accessedSemaType := context.SemaTypeFromStaticType(accessedType)
+
+	interpreter.CheckMemberAccessTargetType(
 		context,
 		accessedValue,
-		accessedType,
+		accessedSemaType,
 	)
 }
 
