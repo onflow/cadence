@@ -1539,6 +1539,104 @@ func TestMemberExpression_String(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
+	t.Run("comprehensive force expression tests", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Test the exact issue from the GitHub issue
+		// let ref = self.nftProviderCapability.borrow()!.borrowNFT(self.details.nftID)
+		
+		selfExpr := &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "self",
+			},
+		}
+
+		// Build the complete expression from the GitHub issue
+		nftProviderCapExpr := &MemberExpression{
+			Expression: selfExpr,
+			Identifier: Identifier{
+				Identifier: "nftProviderCapability",
+			},
+		}
+
+		borrowExpr := &InvocationExpression{
+			InvokedExpression: &MemberExpression{
+				Expression: nftProviderCapExpr,
+				Identifier: Identifier{
+					Identifier: "borrow",
+				},
+			},
+			Arguments: []*Argument{},
+		}
+
+		forceExpr := &ForceExpression{
+			Expression: borrowExpr,
+		}
+
+		borrowNFTExpr := &MemberExpression{
+			Expression: forceExpr,
+			Identifier: Identifier{
+				Identifier: "borrowNFT",
+			},
+		}
+
+		detailsExpr := &MemberExpression{
+			Expression: selfExpr,
+			Identifier: Identifier{
+				Identifier: "details",
+			},
+		}
+
+		nftIDExpr := &MemberExpression{
+			Expression: detailsExpr,
+			Identifier: Identifier{
+				Identifier: "nftID",
+			},
+		}
+
+		finalExpr := &InvocationExpression{
+			InvokedExpression: borrowNFTExpr,
+			Arguments: []*Argument{
+				{
+					Expression: nftIDExpr,
+				},
+			},
+		}
+
+		// This should NOT have extra parentheses around the force expression
+		expected := "self.nftProviderCapability.borrow()!.borrowNFT(self.details.nftID)"
+		actual := finalExpr.String()
+		assert.Equal(t, expected, actual, "GitHub issue example should not have extra parentheses")
+
+		// Verify that parentheses are still added when needed for lower precedence
+		binaryExpr := &BinaryExpression{
+			Operation: OperationPlus,
+			Left: &IdentifierExpression{
+				Identifier: Identifier{Identifier: "a"},
+			},
+			Right: &IdentifierExpression{
+				Identifier: Identifier{Identifier: "b"},
+			},
+		}
+
+		binaryForceExpr := &ForceExpression{
+			Expression: binaryExpr,
+		}
+
+		memberAfterBinaryForce := &MemberExpression{
+			Expression: binaryForceExpr,
+			Identifier: Identifier{
+				Identifier: "member",
+			},
+		}
+
+		// This SHOULD have parentheses because binary + has lower precedence than force
+		expectedWithParens := "(a + b)!.member"
+		actualWithParens := memberAfterBinaryForce.String()
+		assert.Equal(t, expectedWithParens, actualWithParens, "Lower precedence expressions should still get parentheses")
+	})
+
 }
 
 func TestIndexExpression_MarshalJSON(t *testing.T) {
