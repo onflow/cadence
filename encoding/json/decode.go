@@ -22,9 +22,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 	_ "unsafe"
 
@@ -35,6 +37,34 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+type pathElement interface {
+	Append(w io.Writer)
+}
+
+type indexPathElement int
+
+var _ pathElement = indexPathElement(0)
+
+func (e indexPathElement) Append(w io.Writer) {
+	_, _ = fmt.Fprintf(w, "array[%d]", int(e))
+}
+
+type fieldPathElement string
+
+var _ pathElement = fieldPathElement("")
+
+func (e fieldPathElement) Append(w io.Writer) {
+	_, _ = fmt.Fprintf(w, "field:%s", string(e))
+}
+
+type staticPathElement string
+
+var _ pathElement = staticPathElement("")
+
+func (e staticPathElement) Append(w io.Writer) {
+	_, _ = io.WriteString(w, string(e))
+}
+
 // A Decoder decodes JSON-encoded representations of Cadence values.
 type Decoder struct {
 	dec   *json.Decoder
@@ -44,7 +74,7 @@ type Decoder struct {
 	allowUnstructuredStaticTypes bool
 	// backwardsCompatible controls if the decoder can decode old versions of the JSON encoding
 	backwardsCompatible bool
-	pathContext         []string
+	pathContext         []pathElement
 }
 
 type Option func(*Decoder)
@@ -93,7 +123,7 @@ func NewDecoder(gauge common.MemoryGauge, r io.Reader) *Decoder {
 	return &Decoder{
 		dec:         json.NewDecoder(r),
 		gauge:       gauge,
-		pathContext: make([]string, 0, 8),
+		pathContext: make([]pathElement, 0, 8),
 	}
 }
 
@@ -162,8 +192,8 @@ const (
 	stepKey              = "step"
 )
 
-func (d *Decoder) pushPath(segment string) {
-	d.pathContext = append(d.pathContext, segment)
+func (d *Decoder) pushPath(element pathElement) {
+	d.pathContext = append(d.pathContext, element)
 }
 
 func (d *Decoder) popPath() {
@@ -176,15 +206,14 @@ func (d *Decoder) getPathString() string {
 	if len(d.pathContext) == 0 {
 		return ""
 	}
-	var result string
-	for i, segment := range d.pathContext {
-		if i == 0 {
-			result = segment
-		} else {
-			result = result + "." + segment
+	var builder strings.Builder
+	for i, element := range d.pathContext {
+		if i > 0 {
+			builder.WriteByte('.')
 		}
+		element.Append(&builder)
 	}
-	return result
+	return builder.String()
 }
 
 func (d *Decoder) DecodeJSON(v any) cadence.Value {
@@ -720,7 +749,7 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 		func() ([]cadence.Value, error) {
 			values := make([]cadence.Value, len(v))
 			for i, val := range v {
-				d.pushPath("array[" + strconv.Itoa(i) + "]")
+				d.pushPath(indexPathElement(i))
 				values[i] = d.DecodeJSON(val)
 				d.popPath()
 			}
@@ -822,7 +851,7 @@ func (d *Decoder) decodeCompositeField(valueJSON any) (cadence.Value, cadence.Fi
 	obj := toObject(valueJSON)
 
 	name := obj.GetStringWithContext(d, nameKey)
-	d.pushPath("field:" + name)
+	d.pushPath(fieldPathElement(name))
 	defer d.popPath()
 	value := obj.GetValueWithContext(d, valueKey)
 
@@ -1327,7 +1356,7 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 	}
 
 	obj := toObject(valueJSON)
-	d.pushPath("type")
+	d.pushPath(staticPathElement("type"))
 	defer d.popPath()
 	kindValue := toString(obj.GetWithContext(d, kindKey))
 
