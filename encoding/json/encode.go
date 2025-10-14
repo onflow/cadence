@@ -974,6 +974,14 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Kind: "Capability",
 			Type: PrepareType(typ.BorrowType, results),
 		}
+	case *cadence.AttachmentType:
+		return jsonNominalType{
+			Kind:         "Attachment",
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
+			Fields:       prepareFields(getCompositeTypeFields(typ), results),
+			Initializers: prepareInitializers(typ.Initializers, results),
+			Type:         PrepareType(typ.BaseType, results),
+		}
 	case *cadence.EnumType:
 		return jsonNominalType{
 			Kind:         "Enum",
