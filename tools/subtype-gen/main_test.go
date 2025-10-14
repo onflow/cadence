@@ -19,47 +19,50 @@
 package subtype_gen
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/dave/dst"
-	"github.com/dave/dst/decorator"
-	"github.com/dave/dst/decorator/resolver/guess"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestGen(t *testing.T) {
-	// Read and parse YAML rules
+func TestParsingRules(t *testing.T) {
+	t.Parallel()
+
 	rules, err := ParseRules()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading YAML rules: %v\n", err)
-		os.Exit(1)
-	}
+	require.NoError(t, err)
+	assert.Len(t, rules, 26)
+}
 
-	const pkgPath = "github.com/onflow/cadence/sema"
+func TestGeneratingCode(t *testing.T) {
+	t.Parallel()
 
-	config := Config{
-		SimpleTypePrefix:  "PrimitiveStaticType",
-		ComplexTypeSuffix: "StaticType",
-	}
+	rules, err := ParseRules()
+	require.NoError(t, err)
 
-	// Generate code using the comprehensive generator
-	gen := NewSubTypeCheckGenerator(config)
+	gen := NewSubTypeCheckGenerator(Config{})
 	decls := gen.GenerateCheckSubTypeWithoutEqualityFunction(rules)
 
-	resolver := guess.New()
-	restorer := decorator.NewRestorerWithImports(pkgPath, resolver)
+	require.Len(t, decls, 1)
+	decl := decls[0]
 
-	packageName, err := resolver.ResolvePackage(pkgPath)
-	if err != nil {
-		panic(err)
-	}
+	require.IsType(t, &dst.FuncDecl{}, decl)
+	funcDecl := decl.(*dst.FuncDecl)
 
-	err = restorer.Fprint(
-		os.Stdout,
-		&dst.File{
-			Name:  dst.NewIdent(packageName),
-			Decls: decls,
-		},
-	)
+	// Assert function name
+	assert.Equal(t, subtypeCheckFuncName, funcDecl.Name.Name)
+
+	// Assert function body
+	statements := funcDecl.Body.List
+	require.Len(t, statements, 4)
+
+	// If check for never type
+	require.IsType(t, &dst.IfStmt{}, statements[0])
+	// Switch statement for simple types
+	require.IsType(t, &dst.SwitchStmt{}, statements[1])
+	// Type-switch for complex types
+	require.IsType(t, &dst.TypeSwitchStmt{}, statements[2])
+	// The final return
+	require.IsType(t, &dst.ReturnStmt{}, statements[3])
 }

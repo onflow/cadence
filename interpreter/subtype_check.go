@@ -20,8 +20,9 @@ package interpreter
 
 import "github.com/onflow/cadence/sema"
 
-//go:generate go run ./type_check_gen subtype_check.gen.go
+// TODO: go:generate go run ./type_check_gen subtype_check.gen.go
 
+// nolint:unused
 func isAttachmentType(t StaticType) bool {
 	switch t {
 	case PrimitiveStaticTypeAnyResourceAttachment, PrimitiveStaticTypeAnyStructAttachment:
@@ -39,6 +40,7 @@ func isAttachmentType(t StaticType) bool {
 	}
 }
 
+// nolint:unused
 func IsHashableStructType(typeConverter TypeConverter, typ StaticType) bool {
 	switch typ {
 	case PrimitiveStaticTypeNever,
@@ -61,6 +63,7 @@ func IsHashableStructType(typeConverter TypeConverter, typ StaticType) bool {
 	}
 }
 
+// nolint:unused
 func IsResourceType(typ StaticType) bool {
 	switch typ := typ.(type) {
 	case PrimitiveStaticType:
@@ -74,32 +77,39 @@ func IsResourceType(typ StaticType) bool {
 	}
 }
 
+// nolint:unused
 func PermitsAccess(superTypeAccess, subtypeAccess Authorization) bool {
 	// TODO:
 	return false
 }
 
+// nolint:unused
 func IsIntersectionSubset(superType *IntersectionStaticType, subType StaticType) bool {
 	// TODO:
 	return false
 }
 
+// nolint:unused
 func AreTypeParamsEqual(source, target FunctionStaticType) bool {
 	return sema.AreTypeParamsEqual(source.FunctionType, target.FunctionType)
 }
 
+// nolint:unused
 func AreParamsContravariant(source, target FunctionStaticType) bool {
 	return sema.AreParamsContravariant(source.FunctionType, target.FunctionType)
 }
 
+// nolint:unused
 func AreReturnsCovariant(source, target FunctionStaticType) bool {
 	return sema.AreReturnsCovariant(source.FunctionType, target.FunctionType)
 }
 
+// nolint:unused
 func AreConstructorsEqual(source, target FunctionStaticType) bool {
 	return sema.AreConstructorsEqual(source.FunctionType, target.FunctionType)
 }
 
+// nolint:unused
 func IsParameterizedSubType(source, target StaticType) bool {
 	// TODO:
 	return false

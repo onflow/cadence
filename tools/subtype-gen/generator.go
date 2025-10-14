@@ -468,97 +468,121 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		panic(fmt.Errorf("generated node is nil"))
 
 	case dst.Expr:
-		// Previous nodes ended with an expression.
-		// Then either merge the nested ones using a:
-		//  - Binary expression: for nested expressions.
-		//  - If statement: for nested statement.
-
-		conditionalExpr := lastNode
-		var block *dst.BlockStmt
-
-		for _, nestedNode := range nestedNodes {
-			switch nestedNode := nestedNode.(type) {
-			case nil:
-				// Skip empty node.
-				// Ideally shouldn't reach here.
-
-			case dst.Expr:
-				conditionalExpr = gen.binaryExpression(
-					conditionalExpr,
-					nestedNode,
-					token.LAND,
-				)
-			case dst.Stmt:
-				if block == nil {
-					block = &dst.BlockStmt{}
-				}
-
-				block.List = append(block.List, nestedNode)
-
-			default:
-				panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
-			}
-		}
-
-		if block == nil {
-			// Only expressions were generated.
-			result = append(result, conditionalExpr)
-		} else {
-			// There are both expressions and statements generated.
-			result = append(
-				result,
-				&dst.IfStmt{
-					Cond: conditionalExpr,
-					Body: block,
-					Decs: dst.IfStmtDecorations{
-						NodeDecs: dst.NodeDecs{
-							Before: dst.NewLine,
-							After:  dst.EmptyLine,
-						},
-					},
-				},
-			)
-		}
+		result = gen.combineNestedNodesWithExpression(lastNode, nestedNodes, result)
 
 	case *dst.TypeSwitchStmt:
-		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
-
-		// TODO: Validate length
-		lastCase := lastNode.Body.List[0]
-		caseStmt := lastCase.(*dst.CaseClause)
-
-		if len(caseStmt.Body) == 0 {
-			caseStmt.Body = append(caseStmt.Body, stmts...)
-			result = append(result, lastNode)
-		} else {
-			result = append(result, lastNode)
-			for _, stmt := range stmts {
-				result = append(result, stmt)
-			}
-		}
+		result = gen.combineNestedNodeWithSwitchStatement(
+			nestedNodes,
+			combineAsAnd,
+			lastNode,
+			lastNode.Body,
+			result,
+		)
 
 	case *dst.SwitchStmt:
-		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
-
-		// TODO: Validate length
-		lastCase := lastNode.Body.List[0]
-		caseStmt := lastCase.(*dst.CaseClause)
-
-		if len(caseStmt.Body) == 0 {
-			caseStmt.Body = append(caseStmt.Body, stmts...)
-			result = append(result, lastNode)
-		} else {
-			result = append(result, lastNode)
-			for _, stmt := range stmts {
-				result = append(result, stmt)
-			}
-		}
+		result = gen.combineNestedNodeWithSwitchStatement(
+			nestedNodes,
+			combineAsAnd,
+			lastNode,
+			lastNode.Body,
+			result,
+		)
 
 	default:
 		panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
 	}
 
 	return
+}
+
+func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
+	lastNode dst.Expr,
+	nestedNodes []dst.Node,
+	result []dst.Node,
+) []dst.Node {
+	// Previous nodes ended with an expression.
+	// Then either merge the nested ones using a:
+	//  - Binary expression: for nested expressions.
+	//  - If statement: for nested statement.
+
+	conditionalExpr := lastNode
+	var block *dst.BlockStmt
+
+	for _, nestedNode := range nestedNodes {
+		switch nestedNode := nestedNode.(type) {
+		case nil:
+			// Skip empty node.
+			// Ideally shouldn't reach here.
+
+		case dst.Expr:
+			conditionalExpr = gen.binaryExpression(
+				conditionalExpr,
+				nestedNode,
+				token.LAND,
+			)
+		case dst.Stmt:
+			if block == nil {
+				block = &dst.BlockStmt{}
+			}
+
+			block.List = append(block.List, nestedNode)
+
+		default:
+			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
+		}
+	}
+
+	if block == nil {
+		// Only expressions were generated.
+		result = append(result, conditionalExpr)
+	} else {
+		// There are both expressions and statements generated.
+		// Convert the conditional-expressions into a statement,
+		// by putting them as the condition of an if-statement.
+		result = append(
+			result,
+			&dst.IfStmt{
+				Cond: conditionalExpr,
+				Body: block,
+				Decs: dst.IfStmtDecorations{
+					NodeDecs: dst.NodeDecs{
+						Before: dst.NewLine,
+						After:  dst.EmptyLine,
+					},
+				},
+			},
+		)
+	}
+	return result
+}
+
+func (gen *SubTypeCheckGenerator) combineNestedNodeWithSwitchStatement(
+	nestedNodes []dst.Node,
+	combineAsAnd bool,
+	switchStmt dst.Stmt,
+	switchStmtBody *dst.BlockStmt,
+	combinedNodes []dst.Node,
+) []dst.Node {
+	stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
+
+	// TODO: Validate length
+	lastCase := switchStmtBody.List[0]
+	caseStmt := lastCase.(*dst.CaseClause)
+
+	if len(caseStmt.Body) == 0 {
+		// If the case statement is empty, then include the nested nodes
+		// inside the case-body.
+		caseStmt.Body = append(caseStmt.Body, stmts...)
+		combinedNodes = append(combinedNodes, switchStmt)
+	} else {
+		// If the case statement is empty, that means it's probably negated and a return is added.
+		// Then the nested-conditions must be included after the switch statement.
+		combinedNodes = append(combinedNodes, switchStmt)
+		for _, stmt := range stmts {
+			combinedNodes = append(combinedNodes, stmt)
+		}
+	}
+	return combinedNodes
 }
 
 func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, combineAsAnd bool) []dst.Stmt {
@@ -1189,7 +1213,7 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 		typedVariableName,
 	)
 	// Note: Popping scope must be done after visiting all nested predicates.
-	// Therefore, it is done in
+	// Therefore, it is done in `generatePredicate` method.
 
 	// Generate case condition
 	caseExpr := gen.parseCaseCondition(typeAssertion.Type)

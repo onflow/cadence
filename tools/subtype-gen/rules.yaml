@@ -77,6 +77,7 @@ rules:
         - equals:
             source: sub
             target:
+              # TODO: Maybe remove `NumberType`, since these predicates only need to check for strict-subtyping, without the "equality".
               oneOf: [NumberType, SignedNumberType]
 
         - subtype:
@@ -87,6 +88,7 @@ rules:
   - super: SignedNumberType
     predicate:
       or:
+        # TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
         - equals:
             source: sub
             target: SignedNumberType
@@ -102,6 +104,11 @@ rules:
         - equals:
             source: sub
             target:
+              # TODO: remove `SignedIntegerType` and `FixedSizeUnsignedIntegerType` from here,
+              # since they are already included in below subtype-predicate.
+              # Also remove `IntegerType`, since these predicates only need to check
+              # for strict-subtyping, without the "equality".
+              # Currently above are included here to match the existing implementation.
               oneOf: [IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType, UIntType]
 
         - subtype:
@@ -114,6 +121,7 @@ rules:
       equals:
         source: sub
         target:
+          # TODO: Maybe remove `SignedIntegerType`, since these predicates only need to check for strict-subtyping, without the "equality".
           oneOf: [SignedIntegerType, IntType, Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type]
 
   - super: FixedSizeUnsignedIntegerType
@@ -130,6 +138,8 @@ rules:
         - equals:
             source: sub
             target:
+              # TODO: Maybe remove `FixedPointType`, since these predicates only need to check for strict-subtyping, without the "equality".
+              ## Also remove `SignedFixedPointType` since it is already included in the below subtype check.
               oneOf: [FixedPointType, SignedFixedPointType, UFix64Type, UFix128Type]
 
         - subtype:
@@ -142,6 +152,7 @@ rules:
       equals:
         source: sub
         target:
+          # TODO: Maybe remove `SignedFixedPointType`, since these predicates only need to check for strict-subtyping, without the "equality".
           oneOf: [SignedFixedPointType, Fix64Type, Fix128Type]
 
   - super: OptionalType
@@ -158,12 +169,12 @@ rules:
             super: super.Type
             sub: sub
 
-  - super: Dictionary
+  - super: DictionaryType
     predicate:
       and:
         - mustType:
             source: sub
-            type: Dictionary
+            type: DictionaryType
         - subtype:
             super: super.ValueType
             sub: sub.ValueType
