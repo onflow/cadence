@@ -4037,7 +4037,7 @@ func TestDecodeMissingPropertyError(t *testing.T) {
 		_, err := Decode(nil, []byte(invalidJSON))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing property: type")
-		
+
 		// The error should eventually contain more context about where the missing property occurred
 	})
 
@@ -4058,6 +4058,4 @@ func TestDecodeMissingPropertyError(t *testing.T) {
 		require.Contains(t, err.Error(), "missing property: type")
 		require.Contains(t, err.Error(), "at array[1]")
 	})
-
-
 }

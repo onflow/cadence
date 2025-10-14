@@ -798,7 +798,7 @@ func (d *Decoder) decodeCompositeField(valueJSON any) (cadence.Value, cadence.Fi
 	obj := toObject(valueJSON)
 
 	name := obj.GetStringWithDecoder(d, nameKey)
-	
+
 	d.pushContext(fmt.Sprintf("field[%s]", name))
 	value := obj.GetValueWithDecoder(d, valueKey)
 	d.popContext()
