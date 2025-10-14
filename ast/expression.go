@@ -1268,6 +1268,12 @@ func parenthesizedExpressionDoc(e Expression, parentPrecedence precedence) prett
 	if parentPrecedence <= subPrecedence {
 		return doc
 	}
+
+	// Special case: when the parent has access precedence and the expression is a ForceExpression,
+	if parentPrecedence == precedenceAccess && subPrecedence == precedenceUnaryPostfix {
+		return doc
+	}
+
 	return prettier.WrapParentheses(
 		doc,
 		prettier.SoftLine{},
