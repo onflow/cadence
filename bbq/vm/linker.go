@@ -49,7 +49,7 @@ func LinkGlobals(
 	globals := make([]Variable, len(program.Globals))
 	indexedGlobals := activations.NewActivation[Variable](memoryGauge, nil)
 
-	var visitedLocations map[common.Location]struct{}
+	visitedLocations := map[common.Location]struct{}{}
 
 	// NOTE: ensure both the context and the mapping are updated
 
@@ -178,7 +178,7 @@ func linkImportedGlobal(
 			if _, ok := visitedLocations[importLocation]; !ok {
 				// add the imported program's sema type cache to the context's sema type cache
 				// TODO: Maybe this is excessive, balance size and performance
-				for typeID, semaType := range importedProgram.SemaTypeCache {
+				for typeID, semaType := range importedProgram.SemaTypeCache { //nolint:maprange
 					if _, ok := context.semaTypeCache[typeID]; ok {
 						continue
 					}
