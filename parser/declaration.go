@@ -1006,14 +1006,14 @@ func checkAndReportFieldInitialization(p *parser) {
 	// NOTE: We cannot use `skipSpaceAndComments` here because it would consume the docstring comments
 	// for the next field declaration.
 	//
-    // After parsing a field's type annotation, we're at the end of that field's declaration.
-    // The next tokens might be: space, then `=` (for invalid initialization), then newline, 
-    // then docstring comment for the next field.
-    //
-    // If we call `skipSpaceAndComments`, it skips the space AND the newline AND the docstring comment.
-    // This causes `parseMembersAndNestedDeclarations` to miss the docstring 
-    // when it calls `parseTrivia` for the next field.
-    
+	// After parsing a field's type annotation, we're at the end of that field's declaration.
+	// The next tokens might be: space, then `=` (for invalid initialization), then newline,
+	// then docstring comment for the next field.
+	//
+	// If we call `skipSpaceAndComments`, it skips the space AND the newline AND the docstring comment.
+	// This causes `parseMembersAndNestedDeclarations` to miss the docstring
+	// when it calls `parseTrivia` for the next field.
+
 	if p.current.Type == lexer.TokenSpace {
 		p.next()
 	}
