@@ -22,6 +22,7 @@ package stdlib
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2033,6 +2034,128 @@ func TestTestExpect(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+}
+
+func TestTestAssertNoError(t *testing.T) {
+	
+	t.Parallel()
+
+	t.Run("successful result", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            access(all)
+            fun test() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.succeeded,
+                    returnValue: 42,
+                    error: nil
+                )
+
+                Test.assertNoError(result)
+            }
+        `
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("failed result with error", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            access(all)
+            fun test() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.failed,
+                    returnValue: nil,
+                    error: Test.Error("Something went wrong")
+                )
+
+                Test.assertNoError(result)
+            }
+        `
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Something went wrong")
+	})
+
+	t.Run("transaction result with error", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            access(all)
+            fun test() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.failed,
+                    error: Test.Error("Transaction execution failed")
+                )
+
+                Test.assertNoError(result)
+            }
+        `
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Transaction execution failed")
+	})
+}
+
+func TestErrorMessageFormatting(t *testing.T) {
+	t.Parallel()
+
+	// Test the error message formatting function
+	t.Run("short error message", func(t *testing.T) {
+		err := errors.New("Simple error")
+		formatted := formatErrorMessageForTest(err)
+		assert.Equal(t, "Simple error", formatted)
+	})
+
+	t.Run("long error with execution failed", func(t *testing.T) {
+		longError := `Execution failed:
+error: cannot deploy invalid contract
+ --> 751d5fec3fe39dfac9e27973430720b5fcf70588d93503e349d5f4b88f80e0e4:4:16
+  |
+4 |                 signer.contracts.add(name: "FiatToken", code: "696d706f...")
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+error: resource FiatToken.Admin does not conform to resource interface OnChainMultiSig.PublicSigner`
+		
+		formatted := formatErrorMessageForTest(errors.New(longError))
+		
+		// Debug: print the formatted output
+		t.Logf("Formatted error: %q", formatted)
+		
+		// Should extract the key error messages
+		assert.Contains(t, formatted, "cannot deploy invalid contract")
+		assert.Contains(t, formatted, "does not conform")
+		// Should not contain code excerpts
+		assert.NotContains(t, formatted, "696d706f")
+	})
+
+	t.Run("very long error truncation", func(t *testing.T) {
+		veryLongError := strings.Repeat("This is a very long error message. ", 100)
+		formatted := formatErrorMessageForTest(errors.New(veryLongError))
+		
+		// Should be truncated
+		assert.True(t, len(formatted) <= 503) // 500 + "..."
+		assert.Contains(t, formatted, "...")
 	})
 }
 

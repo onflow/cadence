@@ -215,6 +215,28 @@ var testTypeFailFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 0, Max: 1},
 }
 
+// 'Test.assertNoError' function
+
+const testTypeAssertNoErrorFunctionDocString = `
+Fails the test-case if the given result has an error.
+This function provides better formatted error messages for test failures.
+`
+
+const testTypeAssertNoErrorFunctionName = "assertNoError"
+
+var testTypeAssertNoErrorFunctionType = &sema.FunctionType{
+	Parameters: []sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "result",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				sema.AnyStructType,
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+}
+
 func testTypeFailFunction(
 	inter *interpreter.Interpreter,
 	testContractValue *interpreter.CompositeValue,
@@ -236,6 +258,48 @@ func testTypeFailFunction(
 			panic(&AssertionError{
 				Message: message,
 			})
+		},
+	)
+}
+
+func testTypeAssertNoErrorFunction(
+	inter *interpreter.Interpreter,
+	testContractValue *interpreter.CompositeValue,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewUnmeteredBoundHostFunctionValue(
+		inter,
+		testContractValue,
+		testTypeAssertNoErrorFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			result := invocation.Arguments[0]
+			
+			// Get the error field from the result
+			if resultValue, ok := result.(interpreter.MemberAccessibleValue); ok {
+				errorFieldValue := resultValue.GetMember(invocation.InvocationContext, "error")
+				
+				// Check if error is not nil
+				if errorFieldValue != interpreter.Nil {
+					// Extract error message
+					if errorValue, ok := errorFieldValue.(*interpreter.CompositeValue); ok {
+						messageValue := errorValue.GetMember(invocation.InvocationContext, "message")
+						if messageString, ok := messageValue.(*interpreter.StringValue); ok {
+							// Use formatted error message
+							formattedMessage := formatErrorMessageForTest(fmt.Errorf("%s", messageString.Str))
+							panic(&AssertionError{
+								Message: formattedMessage,
+							})
+						}
+					}
+					
+					// Fallback if we can't extract the message - use string representation
+					errorString := errorFieldValue.String()
+					panic(&AssertionError{
+						Message: fmt.Sprintf("error: %s", errorString),
+					})
+				}
+			}
+
+			return interpreter.Void
 		},
 	)
 }
@@ -1067,6 +1131,17 @@ func newTestContractType() *TestContractType {
 		),
 	)
 
+	// Test.assertNoError()
+	compositeType.Members.Set(
+		testTypeAssertNoErrorFunctionName,
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testTypeAssertNoErrorFunctionName,
+			testTypeAssertNoErrorFunctionType,
+			testTypeAssertNoErrorFunctionDocString,
+		),
+	)
+
 	// Test.readFile()
 	compositeType.Members.Set(
 		testTypeReadFileFunctionName,
@@ -1290,6 +1365,7 @@ func (t *TestContractType) NewTestContract(
 	compositeValue.Functions.Set(testTypeAssertFunctionName, testTypeAssertFunction(inter, compositeValue))
 	compositeValue.Functions.Set(testTypeAssertEqualFunctionName, testTypeAssertEqualFunction(inter, compositeValue))
 	compositeValue.Functions.Set(testTypeFailFunctionName, testTypeFailFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeAssertNoErrorFunctionName, testTypeAssertNoErrorFunction(inter, compositeValue))
 	compositeValue.Functions.Set(testTypeExpectFunctionName, t.expectFunction(inter, compositeValue))
 	compositeValue.Functions.Set(
 		testTypeReadFileFunctionName,
