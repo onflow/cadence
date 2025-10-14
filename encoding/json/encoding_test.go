@@ -4024,3 +4024,119 @@ func TestSimpleTypes(t *testing.T) {
 		test(cadenceType, semaType)
 	}
 }
+
+func TestDecodeErrorContext(t *testing.T) {
+	t.Parallel()
+
+	t.Run("missing type at root", func(t *testing.T) {
+		t.Parallel()
+
+		msg := `{"value": "test"}`
+		_, err := Decode(nil, []byte(msg))
+		require.Error(t, err)
+		require.ErrorContains(t, err, "missing property: type")
+	})
+
+	t.Run("missing type in array element", func(t *testing.T) {
+		t.Parallel()
+
+		msg := `{
+			"type": "Array",
+			"value": [
+				{
+					"value": "test"
+				}
+			]
+		}`
+		_, err := Decode(nil, []byte(msg))
+		require.Error(t, err)
+		require.ErrorContains(t, err, "missing property: type")
+		require.ErrorContains(t, err, "at array[0]")
+	})
+
+	t.Run("missing type in nested array element", func(t *testing.T) {
+		t.Parallel()
+
+		msg := `{
+			"type": "Array",
+			"value": [
+				{
+					"type": "Array",
+					"value": [
+						{
+							"value": "test"
+						}
+					]
+				}
+			]
+		}`
+		_, err := Decode(nil, []byte(msg))
+		require.Error(t, err)
+		require.ErrorContains(t, err, "missing property: type")
+		require.ErrorContains(t, err, "at array[0].array[0]")
+	})
+
+	t.Run("missing type in struct field", func(t *testing.T) {
+		t.Parallel()
+
+		msg := `{
+			"type": "Struct",
+			"value": {
+				"id": "S.test.MyStruct",
+				"fields": [
+					{
+						"name": "myField",
+						"value": {
+							"value": "test"
+						}
+					}
+				]
+			}
+		}`
+		_, err := Decode(nil, []byte(msg))
+		require.Error(t, err)
+		require.ErrorContains(t, err, "missing property: type")
+		require.ErrorContains(t, err, "at field:myField")
+	})
+
+	t.Run("missing kind in type", func(t *testing.T) {
+		t.Parallel()
+
+		msg := `{
+			"type": "Type",
+			"value": {
+				"staticType": {
+				}
+			}
+		}`
+		_, err := Decode(nil, []byte(msg))
+		require.Error(t, err)
+		require.ErrorContains(t, err, "missing property: kind")
+		require.ErrorContains(t, err, "at type")
+	})
+
+	t.Run("missing value in array element field", func(t *testing.T) {
+		t.Parallel()
+
+		msg := `{
+			"type": "Array",
+			"value": [
+				{
+					"type": "Struct",
+					"value": {
+						"id": "S.test.MyStruct",
+						"fields": [
+							{
+								"name": "nested"
+							}
+						]
+					}
+				}
+			]
+		}`
+		_, err := Decode(nil, []byte(msg))
+		require.Error(t, err)
+		require.ErrorContains(t, err, "missing property: value")
+		require.ErrorContains(t, err, "at array[0].field:nested")
+	})
+}
