@@ -481,7 +481,7 @@ func newAccountBalanceGetFunction(
 				panic(err)
 			}
 
-			return balance
+			return fix.UFix64(balance)
 		})
 	}
 }
@@ -507,7 +507,7 @@ func newAccountAvailableBalanceGetFunction(
 				panic(err)
 			}
 
-			return balance
+			return fix.UFix64(balance)
 		})
 	}
 }
