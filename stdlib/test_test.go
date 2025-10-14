@@ -2038,7 +2038,7 @@ func TestTestExpect(t *testing.T) {
 }
 
 func TestTestAssertNoError(t *testing.T) {
-	
+
 	t.Parallel()
 
 	t.Run("successful result", func(t *testing.T) {
@@ -2136,12 +2136,12 @@ error: cannot deploy invalid contract
 4 |                 signer.contracts.add(name: "FiatToken", code: "696d706f...")
   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 error: resource FiatToken.Admin does not conform to resource interface OnChainMultiSig.PublicSigner`
-		
+
 		formatted := formatErrorMessageForTest(errors.New(longError))
-		
+
 		// Debug: print the formatted output
 		t.Logf("Formatted error: %q", formatted)
-		
+
 		// Should extract the key error messages
 		assert.Contains(t, formatted, "cannot deploy invalid contract")
 		assert.Contains(t, formatted, "does not conform")
@@ -2152,7 +2152,7 @@ error: resource FiatToken.Admin does not conform to resource interface OnChainMu
 	t.Run("very long error truncation", func(t *testing.T) {
 		veryLongError := strings.Repeat("This is a very long error message. ", 100)
 		formatted := formatErrorMessageForTest(errors.New(veryLongError))
-		
+
 		// Should be truncated
 		assert.True(t, len(formatted) <= 503) // 500 + "..."
 		assert.Contains(t, formatted, "...")

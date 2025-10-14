@@ -358,31 +358,31 @@ func formatErrorMessageForTest(err error) string {
 		lines := strings.Split(message, "\n")
 		var relevantLines []string
 		inCodeExcerpt := false
-		
+
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
 			if line == "" {
 				continue
 			}
-			
+
 			// Skip the "Execution failed:" prefix
 			if strings.HasPrefix(line, "Execution failed:") {
 				continue
 			}
-			
+
 			// Mark code excerpt sections (starts with -->)
 			if strings.HasPrefix(line, "--> ") {
 				inCodeExcerpt = true
 				continue
 			}
-			
+
 			// Skip line numbers and code content within excerpts
 			if inCodeExcerpt {
 				// Skip lines that are part of code excerpts
-				if strings.HasPrefix(line, "|") || 
-				   strings.Contains(line, "^^^") ||
-				   strings.Contains(line, "~~~") ||
-				   (len(line) > 0 && (line[0] >= '0' && line[0] <= '9')) {
+				if strings.HasPrefix(line, "|") ||
+					strings.Contains(line, "^^^") ||
+					strings.Contains(line, "~~~") ||
+					(len(line) > 0 && (line[0] >= '0' && line[0] <= '9')) {
 					continue
 				}
 				// If we encounter another error line, reset the flag
@@ -392,24 +392,24 @@ func formatErrorMessageForTest(err error) string {
 					continue
 				}
 			}
-			
+
 			// Include error descriptions but limit length
-			if strings.HasPrefix(line, "error:") || 
-			   strings.Contains(line, "error occurred:") ||
-			   strings.Contains(line, "cannot deploy") ||
-			   strings.Contains(line, "does not conform") {
+			if strings.HasPrefix(line, "error:") ||
+				strings.Contains(line, "error occurred:") ||
+				strings.Contains(line, "cannot deploy") ||
+				strings.Contains(line, "does not conform") {
 				if len(line) > 200 {
 					line = line[:200] + "..."
 				}
 				relevantLines = append(relevantLines, line)
 			}
 		}
-		
+
 		if len(relevantLines) > 0 {
 			return strings.Join(relevantLines, "\n")
 		}
 	}
-	
+
 	// For other long error messages, truncate and provide context
 	if len(message) > 500 {
 		return message[:500] + "..."

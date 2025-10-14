@@ -272,11 +272,11 @@ func testTypeAssertNoErrorFunction(
 		testTypeAssertNoErrorFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			result := invocation.Arguments[0]
-			
+
 			// Get the error field from the result
 			if resultValue, ok := result.(interpreter.MemberAccessibleValue); ok {
 				errorFieldValue := resultValue.GetMember(invocation.InvocationContext, "error")
-				
+
 				// Check if error is not nil
 				if errorFieldValue != interpreter.Nil {
 					// Extract error message
@@ -290,7 +290,7 @@ func testTypeAssertNoErrorFunction(
 							})
 						}
 					}
-					
+
 					// Fallback if we can't extract the message - use string representation
 					errorString := errorFieldValue.String()
 					panic(&AssertionError{
