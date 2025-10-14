@@ -1714,9 +1714,9 @@ func (v *ArrayValue) Reduce(
 ) Value {
 
 	elementType := v.SemaType(context).ElementType(false)
-	
+
 	argumentTypes := []sema.Type{MustSemaTypeOfValue(initial, context), elementType}
-	
+
 	procedureFunctionType := procedure.FunctionType(context)
 	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
