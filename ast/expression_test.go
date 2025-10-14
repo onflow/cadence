@@ -1432,6 +1432,113 @@ func TestMemberExpression_String(t *testing.T) {
 		)
 	})
 
+	t.Run("force member access chain", func(t *testing.T) {
+
+		t.Parallel()
+
+		// self.nftProviderCapability.borrow()!.borrowNFT
+		// This should not add extra parentheses around (self.nftProviderCapability.borrow()!)
+
+		selfExpr := &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "self",
+			},
+		}
+
+		// self.nftProviderCapability
+		nftProviderCapExpr := &MemberExpression{
+			Expression: selfExpr,
+			Identifier: Identifier{
+				Identifier: "nftProviderCapability",
+			},
+		}
+
+		// self.nftProviderCapability.borrow()
+		borrowExpr := &InvocationExpression{
+			InvokedExpression: &MemberExpression{
+				Expression: nftProviderCapExpr,
+				Identifier: Identifier{
+					Identifier: "borrow",
+				},
+			},
+			Arguments: []*Argument{},
+		}
+
+		// self.nftProviderCapability.borrow()!
+		forceExpr := &ForceExpression{
+			Expression: borrowExpr,
+		}
+
+		// self.nftProviderCapability.borrow()!.borrowNFT
+		expr := &MemberExpression{
+			Expression: forceExpr,
+			Identifier: Identifier{
+				Identifier: "borrowNFT",
+			},
+		}
+
+		// Check the string representation - should NOT have extra parentheses
+		expected := "self.nftProviderCapability.borrow()!.borrowNFT"
+		actual := expr.String()
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("force index access", func(t *testing.T) {
+
+		t.Parallel()
+
+		// array!.get[index] -> array![index] 
+		arrayExpr := &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "array",
+			},
+		}
+
+		forceExpr := &ForceExpression{
+			Expression: arrayExpr,
+		}
+
+		indexExpr := &IndexExpression{
+			TargetExpression:   forceExpr,
+			IndexingExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "index",
+				},
+			},
+		}
+
+		// Should not have extra parentheses
+		expected := "array![index]"
+		actual := indexExpr.String()
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("force invocation", func(t *testing.T) {
+
+		t.Parallel()
+
+		// func!() should not have extra parentheses
+		funcExpr := &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "func",
+			},
+		}
+
+		forceExpr := &ForceExpression{
+			Expression: funcExpr,
+		}
+
+		invocationExpr := &InvocationExpression{
+			InvokedExpression: forceExpr,
+			Arguments:         []*Argument{},
+		}
+
+		// Should not have extra parentheses
+		expected := "func!()"
+		actual := invocationExpr.String()
+		assert.Equal(t, expected, actual)
+	})
+
 }
 
 func TestIndexExpression_MarshalJSON(t *testing.T) {
