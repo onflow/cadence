@@ -44,6 +44,7 @@ type Decoder struct {
 	allowUnstructuredStaticTypes bool
 	// backwardsCompatible controls if the decoder can decode old versions of the JSON encoding
 	backwardsCompatible bool
+	pathContext         []string
 }
 
 type Option func(*Decoder)
@@ -90,8 +91,9 @@ func Decode(gauge common.MemoryGauge, b []byte, options ...Option) (cadence.Valu
 // given io.Reader.
 func NewDecoder(gauge common.MemoryGauge, r io.Reader) *Decoder {
 	return &Decoder{
-		dec:   json.NewDecoder(r),
-		gauge: gauge,
+		dec:         json.NewDecoder(r),
+		gauge:       gauge,
+		pathContext: make([]string, 0, 8),
 	}
 }
 
@@ -160,10 +162,35 @@ const (
 	stepKey              = "step"
 )
 
+func (d *Decoder) pushPath(segment string) {
+	d.pathContext = append(d.pathContext, segment)
+}
+
+func (d *Decoder) popPath() {
+	if len(d.pathContext) > 0 {
+		d.pathContext = d.pathContext[:len(d.pathContext)-1]
+	}
+}
+
+func (d *Decoder) getPathString() string {
+	if len(d.pathContext) == 0 {
+		return ""
+	}
+	var result string
+	for i, segment := range d.pathContext {
+		if i == 0 {
+			result = segment
+		} else {
+			result = result + "." + segment
+		}
+	}
+	return result
+}
+
 func (d *Decoder) DecodeJSON(v any) cadence.Value {
 	obj := toObject(v)
 
-	typeStr := obj.GetString(typeKey)
+	typeStr := obj.GetStringWithContext(d, typeKey)
 
 	// void is a special case, does not have "value" field
 	if typeStr == voidTypeStr {
@@ -175,7 +202,7 @@ func (d *Decoder) DecodeJSON(v any) cadence.Value {
 		panic(errors.NewDefaultUserError("expected JSON object with keys `%s` and `%s`", typeKey, valueKey))
 	}
 
-	valueJSON := obj.Get(valueKey)
+	valueJSON := obj.GetWithContext(d, valueKey)
 
 	switch typeStr {
 	case optionalTypeStr:
@@ -693,7 +720,9 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 		func() ([]cadence.Value, error) {
 			values := make([]cadence.Value, len(v))
 			for i, val := range v {
+				d.pushPath("array[" + strconv.Itoa(i) + "]")
 				values[i] = d.DecodeJSON(val)
+				d.popPath()
 			}
 			return values, nil
 		},
@@ -792,8 +821,10 @@ func (d *Decoder) decodeComposite(valueJSON any) composite {
 func (d *Decoder) decodeCompositeField(valueJSON any) (cadence.Value, cadence.Field) {
 	obj := toObject(valueJSON)
 
-	name := obj.GetString(nameKey)
-	value := obj.GetValue(d, valueKey)
+	name := obj.GetStringWithContext(d, nameKey)
+	d.pushPath("field:" + name)
+	defer d.popPath()
+	value := obj.GetValueWithContext(d, valueKey)
 
 	// Unmetered because decodeCompositeField is metered in decodeComposite and called nowhere else
 	// Type is still metered.
@@ -1296,7 +1327,9 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 	}
 
 	obj := toObject(valueJSON)
-	kindValue := toString(obj.Get(kindKey))
+	d.pushPath("type")
+	defer d.popPath()
+	kindValue := toString(obj.GetWithContext(d, kindKey))
 
 	switch kindValue {
 	case "Function":
@@ -1471,8 +1504,26 @@ func (obj jsonObject) Get(key string) any {
 	return v
 }
 
+func (obj jsonObject) GetWithContext(d *Decoder, key string) any {
+	v, hasKey := obj[key]
+	if !hasKey {
+		path := d.getPathString()
+		if path != "" {
+			panic(errors.NewDefaultUserError("missing property: %s (at %s)", key, path))
+		}
+		panic(errors.NewDefaultUserError("missing property: %s", key))
+	}
+
+	return v
+}
+
 func (obj jsonObject) GetBool(key string) bool {
 	v := obj.Get(key)
+	return toBool(v)
+}
+
+func (obj jsonObject) GetBoolWithContext(d *Decoder, key string) bool {
+	v := obj.GetWithContext(d, key)
 	return toBool(v)
 }
 
@@ -1481,13 +1532,28 @@ func (obj jsonObject) GetString(key string) string {
 	return toString(v)
 }
 
+func (obj jsonObject) GetStringWithContext(d *Decoder, key string) string {
+	v := obj.GetWithContext(d, key)
+	return toString(v)
+}
+
 func (obj jsonObject) GetSlice(key string) []any {
 	v := obj.Get(key)
 	return toSlice(v)
 }
 
+func (obj jsonObject) GetSliceWithContext(d *Decoder, key string) []any {
+	v := obj.GetWithContext(d, key)
+	return toSlice(v)
+}
+
 func (obj jsonObject) GetValue(d *Decoder, key string) cadence.Value {
 	v := obj.Get(key)
+	return d.DecodeJSON(v)
+}
+
+func (obj jsonObject) GetValueWithContext(d *Decoder, key string) cadence.Value {
+	v := obj.GetWithContext(d, key)
 	return d.DecodeJSON(v)
 }
 
