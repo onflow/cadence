@@ -4129,6 +4129,50 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
+
+	t.Run("field initialization", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("let x: Int = 42")
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&FieldInitializationError{
+					EqualToken: lexer.Token{
+						Type: lexer.TokenEqual,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("var field initialization", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("var y: String = \"hello\"")
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&FieldInitializationError{
+					EqualToken: lexer.Token{
+						Type: lexer.TokenEqual,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseField(t *testing.T) {

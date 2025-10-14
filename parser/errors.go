@@ -3326,6 +3326,40 @@ func (e *MissingColonAfterFieldNameError) SuggestFixes(code string) []errors.Sug
 	}
 }
 
+// FieldInitializationError is reported when trying to initialize a field with a value.
+type FieldInitializationError struct {
+	EqualToken lexer.Token
+}
+
+var _ ParseError = &FieldInitializationError{}
+var _ errors.UserError = &FieldInitializationError{}
+var _ errors.SecondaryError = &FieldInitializationError{}
+var _ errors.HasDocumentationLink = &FieldInitializationError{}
+
+func (*FieldInitializationError) isParseError() {}
+
+func (*FieldInitializationError) IsUserError() {}
+
+func (e *FieldInitializationError) StartPosition() ast.Position {
+	return e.EqualToken.StartPos
+}
+
+func (e *FieldInitializationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.EqualToken.EndPos
+}
+
+func (e *FieldInitializationError) Error() string {
+	return "field initialization is not supported"
+}
+
+func (*FieldInitializationError) SecondaryError() string {
+	return "fields cannot be initialized with a value; use an initializer function instead"
+}
+
+func (*FieldInitializationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
+}
+
 // MissingTransferError is reported when a transfer is missing in a variable declaration.
 type MissingTransferError struct {
 	Pos ast.Position
