@@ -2843,12 +2843,19 @@ func TestEncodeType(t *testing.T) {
 				StaticType: cadence.NewAttachmentType(
 					TestLocation,
 					"A",
-					cadence.IntType,
+					cadence.NewResourceType(
+						TestLocation,
+						"R",
+						[]cadence.Field{
+							{Identifier: "foo", Type: cadence.IntType},
+						},
+						[][]cadence.Parameter{},
+					),
 					[]cadence.Field{
-						{Identifier: "foo", Type: cadence.StringType},
+						{Identifier: "bar", Type: cadence.StringType},
 					},
 					[][]cadence.Parameter{
-						{{Label: "foo", Identifier: "bar", Type: cadence.IntType}},
+						{{Label: "bar", Identifier: "baz", Type: cadence.StringType}},
 					},
 				),
 			},
@@ -2860,12 +2867,23 @@ func TestEncodeType(t *testing.T) {
                   "staticType": {
                     "kind": "Attachment",
                     "type": {
-                      "kind": "Int"
+                      "kind": "Resource",
+                      "type": "",
+                      "typeID": "S.test.R",
+                      "fields": [
+                        {
+                          "id": "foo",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      "initializers": []
                     },
                     "typeID": "S.test.A",
                     "fields": [
                       {
-                        "id": "foo",
+                        "id": "bar",
                         "type": {
                           "kind": "String"
                         }
@@ -2874,10 +2892,10 @@ func TestEncodeType(t *testing.T) {
                     "initializers": [
                       [
                         {
-                          "label": "foo",
-                          "id": "bar",
+                          "label": "bar",
+                          "id": "baz",
                           "type": {
-                            "kind": "Int"
+                            "kind": "String"
                           }
                         }
                       ]
