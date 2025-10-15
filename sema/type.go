@@ -7716,7 +7716,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			AreReturnsCovariant(typedSubType, typedSuperType) &&
 
 			// Constructors?
-			AreConstructorsEqual(typedSubType, typedSuperType)
+			typedSubType.IsConstructor == typedSuperType.IsConstructor
 
 	case *IntersectionType:
 
