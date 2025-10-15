@@ -1724,21 +1724,21 @@ func (v *ArrayValue) Reduce(
 		context,
 		func(element Value) (resume bool) {
 
-		// Meter computation for iterating the array.
-		common.UseComputation(
-			context,
-			common.LoopComputationUsage,
-		)
+			// Meter computation for iterating the array.
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
-		accumulator = invokeFunctionValue(
-			context,
-			reducer,
-			[]Value{accumulator, element},
-			[]sema.Type{returnType, elementType},
-			parameterTypes,
-			returnType,
-			nil,
-		)
+			accumulator = invokeFunctionValue(
+				context,
+				reducer,
+				[]Value{accumulator, element},
+				[]sema.Type{returnType, elementType},
+				parameterTypes,
+				returnType,
+				nil,
+			)
 
 			return true
 		},
