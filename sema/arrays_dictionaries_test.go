@@ -1353,6 +1353,27 @@ func TestCheckArrayReduce(t *testing.T) {
 
 			let y: Int = x.reduce(initial: 1, product)
 		}
+
+		struct S {
+			var index: Int
+
+			init(index: Int) {
+				self.index = index
+			}
+		}
+
+		fun testStructArrayReduce() {
+			let structs = [S(index: 1), S(index: 2), S(index: 3)]
+			let ref = &structs as &[S]
+
+			let reducer =
+				fun (acc: Int, x: S): Int {
+					x.index = x.index + 1
+					return acc + x.index
+				}
+
+			let y: Int = ref.reduce(initial: 0, reducer)
+		}
 	`)
 
 	require.NoError(t, err)
@@ -1418,7 +1439,7 @@ func TestCheckArrayReduceInvalidArgs(t *testing.T) {
 		fun test() {
 			let x = [[1], [2]]
 			let reducer =
-				fun (acc: [Int], inner: &[Int]): [Int] {
+				fun (acc: [Int], inner: auth(Mutate) &[Int]): [Int] {
 					inner.append(1)
 					return acc
 				}
@@ -1426,7 +1447,6 @@ func TestCheckArrayReduceInvalidArgs(t *testing.T) {
 		}
 	`,
 		[]sema.SemanticError{
-			&sema.InvalidAccessError{},
 			&sema.TypeAnnotationRequiredError{},
 		},
 	)
