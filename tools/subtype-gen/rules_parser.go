@@ -119,19 +119,31 @@ func parsePredicate(predicate any) (Predicate, error) {
 		switch key {
 
 		case "isResource":
-			expr := parseSimpleExpression(value)
+			expr, err := parseExpression(value)
+			if err != nil {
+				return nil, err
+			}
 			return IsResourcePredicate{Expression: expr}, nil
 
 		case "isAttachment":
-			expr := parseSimpleExpression(value)
+			expr, err := parseExpression(value)
+			if err != nil {
+				return nil, err
+			}
 			return IsAttachmentPredicate{Expression: expr}, nil
 
 		case "isHashableStruct":
-			expr := parseSimpleExpression(value)
+			expr, err := parseExpression(value)
+			if err != nil {
+				return nil, err
+			}
 			return IsHashableStructPredicate{Expression: expr}, nil
 
 		case "isStorable":
-			expr := parseSimpleExpression(value)
+			expr, err := parseExpression(value)
+			if err != nil {
+				return nil, err
+			}
 			return IsStorablePredicate{Expression: expr}, nil
 
 		case "equals":
@@ -218,12 +230,15 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			// Get source
-			data, ok := keyValues["source"]
+			source, ok := keyValues["source"]
 			if !ok {
 				return nil, fmt.Errorf("cannot find `source` property for `mustType` predicate")
 			}
 
-			sourceExpr := parseSimpleExpression(data)
+			sourceExpr, err := parseExpression(source)
+			if err != nil {
+				return nil, err
+			}
 
 			// Get target
 			typ, ok := keyValues["type"]
@@ -250,7 +265,10 @@ func parsePredicate(predicate any) (Predicate, error) {
 				return nil, fmt.Errorf("cannot find `set` property for `setContains` predicate")
 			}
 
-			setExpr := parseSimpleExpression(set)
+			setExpr, err := parseExpression(set)
+			if err != nil {
+				return nil, err
+			}
 
 			// Get element
 			element, ok := keyValues["element"]
@@ -354,7 +372,10 @@ func parseSourceAndTarget(predicateName string, value any) (Expression, Expressi
 		return nil, nil, fmt.Errorf("cannot find `source` property for %#q predicate", predicateName)
 	}
 
-	sourceExpr := parseSimpleExpression(source)
+	sourceExpr, err := parseExpression(source)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Get target
 	target, ok := keyValues["target"]
@@ -393,7 +414,11 @@ func parseSuperAndSubExpressions(predicateName string, value any) (Expression, E
 		return nil, nil, fmt.Errorf("cannot find `sub` property for %#q predicate", predicateName)
 	}
 
-	subType := parseSimpleExpression(sub)
+	subType, err := parseExpression(sub)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return superType, subType, nil
 }
 
@@ -425,10 +450,12 @@ func parseExpression(expr any) (Expression, error) {
 
 			var expressions []Expression
 			for _, item := range list {
-				expressions = append(
-					expressions,
-					parseSimpleExpression(item),
-				)
+				itemExpr, err := parseExpression(item)
+				if err != nil {
+					return nil, err
+				}
+
+				expressions = append(expressions, itemExpr)
 			}
 
 			return OneOfExpression{Expressions: expressions}, nil
