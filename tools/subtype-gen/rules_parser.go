@@ -54,7 +54,16 @@ func ParseRules() ([]Rule, error) {
 
 // parseType parses a type with just a name.
 func parseType(typePlaceHolder string) Type {
-	typeName := strings.TrimSuffix(typePlaceHolder, "Type")
+	if !strings.HasSuffix(typePlaceHolder, TypePlaceholderSuffix) {
+		panic(fmt.Errorf(
+			"type name %#[1]q is not suffixed with %#[2]q."+
+				" Replace the type-name with `%[1]s%[2]s`",
+			typePlaceHolder,
+			TypePlaceholderSuffix,
+		))
+	}
+
+	typeName := strings.TrimSuffix(typePlaceHolder, TypePlaceholderSuffix)
 
 	switch typeName {
 	case TypePlaceholderOptional,
@@ -433,9 +442,8 @@ func parseSimpleExpression(expr any) Expression {
 			identifier := parts[0]
 
 			if strings.HasSuffix(identifier, "Type") {
-				typePlaceHolder := strings.TrimSuffix(identifier, "Type")
 				return TypeExpression{
-					Type: parseType(typePlaceHolder),
+					Type: parseType(identifier),
 				}
 			}
 

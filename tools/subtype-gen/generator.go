@@ -34,7 +34,6 @@ var neverType = SimpleType{
 var interfaceType = ComplexType{}
 
 var super = IdentifierExpression{Name: "super"}
-var sub = IdentifierExpression{Name: "sub"}
 
 type SubTypeCheckGenerator struct {
 	config Config
@@ -47,16 +46,34 @@ type SubTypeCheckGenerator struct {
 }
 
 type Config struct {
+	// Prefixes and the suffixes to be added to the type-placeholder
+	// to customize the type-names to match the naming conventions.
+	// e.g: `PrimitiveStaticTypeString` at runtime, vs `StringType` at checking time.
 	SimpleTypePrefix  string
 	SimpleTypeSuffix  string
 	ComplexTypePrefix string
 	ComplexTypeSuffix string
 
-	ExtraParams     []ExtraParam
-	SkipTypes       map[string]struct{}
-	NonPointerTypes map[string]struct{}
-	NameMapping     map[string]string
+	// Extra parameters to be added to the generated function signatures,
+	// other than the common parameters.
+	// For e.g: runtime generated function takes a `TypeConverter` as an extra argument.
+	ExtraParams []ExtraParam
 
+	// Types to be skipped from generating a subtype-check.
+	// For e.g: Runtime doesn't have a `StorableType`
+	SkipTypes map[string]struct{}
+
+	// A set indicating what complex types needed to be treated as
+	// non-pointer types in the generated Go code.
+	NonPointerTypes map[string]struct{}
+
+	// A mapping to customize the generated names.
+	// For e.g: A field named `Foo` in the `rules.yaml`,
+	// can be generated as `Bar` in the generated Go code,
+	// by adding a mapping from `Foo -> Bar`.
+	NameMapping map[string]string
+
+	// List of arguments to be passed on to the `ElementType` method on array-type.
 	ArrayElementTypeMethodArgs []any
 }
 
@@ -99,6 +116,7 @@ func (gen *SubTypeCheckGenerator) findInScope(expr Expression) (string, bool) {
 // GenerateCheckSubTypeWithoutEqualityFunction generates the complete checkSubTypeWithoutEquality function.
 func (gen *SubTypeCheckGenerator) GenerateCheckSubTypeWithoutEqualityFunction(rules []Rule) []dst.Decl {
 	gen.pushScope()
+	defer gen.popScope()
 
 	checkSubTypeFunction := gen.createCheckSubTypeFunction(rules)
 	return []dst.Decl{
@@ -130,6 +148,23 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 		IdentifierExpression{Name: "super"},
 		superTypeVarName,
 	)
+
+	params := make([]*dst.Field, 0)
+	for _, param := range gen.config.ExtraParams {
+		extraParam := &dst.Field{
+			Names: []*dst.Ident{
+				dst.NewIdent(param.Name),
+			},
+			Type: &dst.Ident{
+				Name: param.Type,
+				Path: param.PkgPath,
+			},
+		}
+
+		params = append(params, extraParam)
+	}
+
+	params = append(params, subTypeParam, superTypeParam)
 
 	// Create function body
 	var stmts []dst.Stmt
@@ -173,23 +208,6 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 			gen.booleanExpression(false),
 		},
 	})
-
-	params := make([]*dst.Field, 0)
-	for _, param := range gen.config.ExtraParams {
-		extraParam := &dst.Field{
-			Names: []*dst.Ident{
-				dst.NewIdent(param.Name),
-			},
-			Type: &dst.Ident{
-				Name: param.Type,
-				Path: param.PkgPath,
-			},
-		}
-
-		params = append(params, extraParam)
-	}
-
-	params = append(params, subTypeParam, superTypeParam)
 
 	return &dst.FuncDecl{
 		Name: dst.NewIdent(subtypeCheckFuncName),
@@ -279,7 +297,7 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 	}
 }
 
-// createCaseStatementForRule creates a case statement for a rule
+// createCaseStatementForRule creates a case statement for a rule.
 func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpleTypes bool) dst.Stmt {
 	// Parse types
 	superType := parseType(rule.Super)
@@ -302,7 +320,7 @@ func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpl
 
 	predicate, err := parsePredicate(rule.Predicate)
 	if err != nil {
-		panic(fmt.Errorf("error parsing rule predicate: %w", err))
+		panic(fmt.Errorf("error parsing predicate: %w", err))
 	}
 
 	bodyStmts := gen.generatePredicateStatements(predicate)
@@ -338,26 +356,26 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 
 	lastIndex := len(nodes) - 1
 	lastNode := nodes[lastIndex]
+	remainingNodes := nodes[:lastIndex]
 
 	var stmts []dst.Stmt
 
-	if len(nodes) > 1 {
-		for _, node := range nodes[:lastIndex] {
-			switch node := node.(type) {
-			case dst.Expr:
-				panic("predicate should produce at most one expression")
-			case dst.Stmt:
-				stmts = append(stmts, node)
-			default:
-				panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", node))
-			}
+	for _, node := range remainingNodes {
+		switch node := node.(type) {
+		case dst.Expr:
+			panic("predicate should produce at most one expression")
+		case dst.Stmt:
+			stmts = append(stmts, node)
+		default:
+			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", node))
 		}
 	}
 
-	//Make sure the last statement always returns.
+	// Make sure the last statement always returns.
 	switch lastNode := lastNode.(type) {
 	case dst.Expr:
-		stmts = append(stmts,
+		stmts = append(
+			stmts,
 			&dst.ReturnStmt{
 				Results: []dst.Expr{lastNode},
 			},
@@ -368,7 +386,8 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 		// If the last statement is a switch-case, then
 		// append a return statement.
 		stmts = append(stmts, lastNode)
-		stmts = append(stmts,
+		stmts = append(
+			stmts,
 			&dst.ReturnStmt{
 				Results: []dst.Expr{
 					gen.booleanExpression(false),
@@ -392,16 +411,14 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 
 	prevNodes := gen.generatePredicateInternal(predicate)
 
-	// If there are chained/nested predicates (originating from AND),
-	// then they should be generated instead of the return.
-	// However, if there is a negate, then do not nest,
-	// but rather early exit by adding a return.
+	// If there are no chained/nested predicates (originating from AND),
+	// then add a return and complete the statements.
+	// Also, if there is a negation, then do not nest, but rather early exit by adding a return.
 	if gen.negate ||
 		gen.nestedPredicates == nil ||
 		!gen.nestedPredicates.hasMore() {
 
 		// Add a return for switch statements, since they were generated without a return.
-		// TODO: Also for if-statements?
 
 		if len(prevNodes) > 0 {
 			lastIndex := len(prevNodes) - 1
@@ -409,6 +426,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 
 			var body *dst.BlockStmt
 
+			// TODO: Also for if-statements?
 			switch lastNode := lastNode.(type) {
 			case *dst.TypeSwitchStmt:
 				body = lastNode.Body
@@ -418,12 +436,19 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 			}
 
 			if body != nil {
-				// TODO: Validate length
-				lastCase := body.List[0]
-				caseStmt := lastCase.(*dst.CaseClause)
-				if len(caseStmt.Body) == 0 {
-					caseStmt.Body = append(
-						caseStmt.Body,
+				caseClauses := body.List
+				if len(caseClauses) == 0 {
+					panic("switch-statement must have at-least one cases clause")
+				}
+
+				lastCase := caseClauses[len(caseClauses)-1]
+				caseClause := lastCase.(*dst.CaseClause)
+
+				// Only add the return if the body is empty.
+				// Non-empty body means a return is already present.
+				if len(caseClause.Body) == 0 {
+					caseClause.Body = append(
+						caseClause.Body,
 						&dst.ReturnStmt{
 							Results: []dst.Expr{
 								gen.booleanExpression(true),
@@ -436,6 +461,9 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 
 		return prevNodes
 	}
+
+	// If there are chained/nested predicates (originating from AND),
+	// then they should be generated instead of the return.
 
 	nextPredicate := gen.nestedPredicates.next()
 	nestedNodes := gen.generatePredicate(nextPredicate)
@@ -468,24 +496,28 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		panic(fmt.Errorf("generated node is nil"))
 
 	case dst.Expr:
-		result = gen.combineNestedNodesWithExpression(lastNode, nestedNodes, result)
+		result = gen.combineNestedNodesWithExpression(
+			result,
+			lastNode,
+			nestedNodes,
+		)
 
 	case *dst.TypeSwitchStmt:
 		result = gen.combineNestedNodeWithSwitchStatement(
-			nestedNodes,
-			combineAsAnd,
+			result,
 			lastNode,
 			lastNode.Body,
-			result,
+			nestedNodes,
+			combineAsAnd,
 		)
 
 	case *dst.SwitchStmt:
 		result = gen.combineNestedNodeWithSwitchStatement(
-			nestedNodes,
-			combineAsAnd,
+			result,
 			lastNode,
 			lastNode.Body,
-			result,
+			nestedNodes,
+			combineAsAnd,
 		)
 
 	default:
@@ -496,17 +528,16 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 }
 
 func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
-	lastNode dst.Expr,
-	nestedNodes []dst.Node,
 	result []dst.Node,
+	expr dst.Expr,
+	nestedNodes []dst.Node,
 ) []dst.Node {
 	// Previous nodes ended with an expression.
 	// Then either merge the nested ones using a:
 	//  - Binary expression: for nested expressions.
 	//  - If statement: for nested statement.
 
-	conditionalExpr := lastNode
-	var block *dst.BlockStmt
+	var stmts []dst.Stmt
 
 	for _, nestedNode := range nestedNodes {
 		switch nestedNode := nestedNode.(type) {
@@ -515,35 +546,33 @@ func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
 			// Ideally shouldn't reach here.
 
 		case dst.Expr:
-			conditionalExpr = gen.binaryExpression(
-				conditionalExpr,
+			expr = gen.binaryExpression(
+				expr,
 				nestedNode,
 				token.LAND,
 			)
 		case dst.Stmt:
-			if block == nil {
-				block = &dst.BlockStmt{}
-			}
-
-			block.List = append(block.List, nestedNode)
+			stmts = append(stmts, nestedNode)
 
 		default:
-			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
+			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", expr))
 		}
 	}
 
-	if block == nil {
+	if stmts == nil {
 		// Only expressions were generated.
-		result = append(result, conditionalExpr)
+		result = append(result, expr)
 	} else {
 		// There are both expressions and statements generated.
-		// Convert the conditional-expressions into a statement,
+		// Convert the conditional-expression into a statement,
 		// by putting them as the condition of an if-statement.
 		result = append(
 			result,
 			&dst.IfStmt{
-				Cond: conditionalExpr,
-				Body: block,
+				Cond: expr,
+				Body: &dst.BlockStmt{
+					List: stmts,
+				},
 				Decs: dst.IfStmtDecorations{
 					NodeDecs: dst.NodeDecs{
 						Before: dst.NewLine,
@@ -557,25 +586,36 @@ func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
 }
 
 func (gen *SubTypeCheckGenerator) combineNestedNodeWithSwitchStatement(
-	nestedNodes []dst.Node,
-	combineAsAnd bool,
+	combinedNodes []dst.Node,
 	switchStmt dst.Stmt,
 	switchStmtBody *dst.BlockStmt,
-	combinedNodes []dst.Node,
+	nestedNodes []dst.Node,
+	combineAsAnd bool,
 ) []dst.Node {
 	stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
 
-	// TODO: Validate length
-	lastCase := switchStmtBody.List[0]
-	caseStmt := lastCase.(*dst.CaseClause)
+	caseClauses := switchStmtBody.List
+	if len(caseClauses) == 0 {
+		panic("switch-statement must have at-least one cases clause")
+	}
 
-	if len(caseStmt.Body) == 0 {
+	lastCase := caseClauses[len(caseClauses)-1]
+	caseClause := lastCase.(*dst.CaseClause)
+
+	if len(caseClause.Body) == 0 {
 		// If the case statement is empty, then include the nested nodes
 		// inside the case-body.
-		caseStmt.Body = append(caseStmt.Body, stmts...)
+		caseClause.Body = append(caseClause.Body, stmts...)
 		combinedNodes = append(combinedNodes, switchStmt)
 	} else {
-		// If the case statement is empty, that means it's probably negated and a return is added.
+		// If the case statement is non-empty, that means it's probably a rule with negation,
+		// and a return must have been added as an early-exit strategy.
+		// Verify this.
+		lastStmtInsideCase := caseClause.Body[len(caseClause.Body)-1]
+		if _, isReturnStmt := lastStmtInsideCase.(*dst.ReturnStmt); !isReturnStmt {
+			panic("last statement of a case-clause must be a return statement")
+		}
+
 		// Then the nested-conditions must be included after the switch statement.
 		combinedNodes = append(combinedNodes, switchStmt)
 		for _, stmt := range stmts {
@@ -1152,8 +1192,8 @@ func (gen *SubTypeCheckGenerator) extraArguments() []dst.Expr {
 	return args
 }
 
-// qualifiedTypeIdentifier creates a qualified type identifier, by
-// prepending the package-qualifier,prefix, and appending `Type` suffix.
+// qualifiedTypeIdentifier creates a qualified type identifier,
+// by prepending the package-qualifier,prefix, and appending `Type` suffix.
 func (gen *SubTypeCheckGenerator) qualifiedTypeIdentifier(typ Type) dst.Expr {
 	var typeName string
 	if _, ok := typ.(SimpleType); ok {

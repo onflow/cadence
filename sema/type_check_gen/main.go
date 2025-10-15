@@ -35,7 +35,7 @@ func main() {
 	flag.Parse()
 	argumentCount := flag.NArg()
 	if argumentCount < 1 {
-		panic("Missing path to input Cadence file")
+		panic("Missing path to output Go file")
 	}
 
 	outPath := flag.Arg(0)

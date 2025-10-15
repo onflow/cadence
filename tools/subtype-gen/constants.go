@@ -19,6 +19,8 @@
 package subtype_gen
 
 const (
+	TypePlaceholderSuffix = "Type"
+
 	TypePlaceholderStorable      = "Storable"
 	TypePlaceholderOptional      = "Optional"
 	TypePlaceholderReference     = "Reference"
