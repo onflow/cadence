@@ -5801,3 +5801,228 @@ func TestExportNil(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, actual)
 }
+
+func TestRuntimeImportAttachmentValue(t *testing.T) {
+	t.Parallel()
+
+	program := interpreter.Program{
+		Elaboration: sema.NewElaboration(nil),
+	}
+
+	inter := NewTestInterpreter(t)
+	inter.Program = &program
+
+	baseType := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: "R",
+		Kind:       common.CompositeKindResource,
+		Members:    &sema.StringMemberOrderedMap{},
+		Fields:     []string{},
+	}
+
+	program.Elaboration.SetCompositeType(
+		baseType.ID(),
+		baseType,
+	)
+
+	attachmentSemaType := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: "A",
+		Kind:       common.CompositeKindAttachment,
+		Members:    &sema.StringMemberOrderedMap{},
+		Fields:     []string{"x"},
+	}
+
+	attachmentSemaType.Members.Set(
+		"x",
+		sema.NewUnmeteredPublicConstantFieldMember(
+			attachmentSemaType,
+			"x",
+			sema.IntType,
+			"",
+		),
+	)
+
+	program.Elaboration.SetCompositeType(
+		attachmentSemaType.ID(),
+		attachmentSemaType,
+	)
+
+	attachmentCadenceType := cadence.NewAttachmentType(
+		TestLocation,
+		"A",
+		cadence.NewResourceType(
+			TestLocation,
+			"R",
+			[]cadence.Field{},
+			[][]cadence.Parameter{},
+		),
+		[]cadence.Field{
+			{
+				Identifier: "x",
+				Type:       cadence.IntType,
+			},
+		},
+		[][]cadence.Parameter{},
+	)
+
+	attachmentValue := cadence.NewAttachment(
+		[]cadence.Value{
+			cadence.NewInt(42),
+		},
+	).WithType(attachmentCadenceType)
+
+	imported, err := ImportValue(
+		inter,
+		nil,
+		nil,
+		attachmentValue,
+		attachmentSemaType,
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, imported)
+
+	compositeValue, ok := imported.(*interpreter.CompositeValue)
+	require.True(t, ok)
+	assert.Equal(t, common.CompositeKindAttachment, compositeValue.Kind)
+	assert.Equal(t, TestLocation, compositeValue.Location)
+	assert.Equal(t, "A", compositeValue.QualifiedIdentifier)
+}
+
+func TestRuntimeImportAttachmentType(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+	location := common.NewAddressLocation(nil, address, "Test")
+
+	baseType := cadence.NewResourceType(
+		location,
+		"Test.R",
+		[]cadence.Field{
+			{
+				Identifier: "foo",
+				Type:       cadence.IntType,
+			},
+		},
+		[][]cadence.Parameter{},
+	)
+
+	attachmentType := cadence.NewAttachmentType(
+		location,
+		"Test.A",
+		baseType,
+		[]cadence.Field{
+			{
+				Identifier: "bar",
+				Type:       cadence.StringType,
+			},
+		},
+		[][]cadence.Parameter{
+			{
+				{
+					Label:      "bar",
+					Identifier: "baz",
+					Type:       cadence.StringType,
+				},
+			},
+		},
+	)
+
+	imported := ImportType(nil, attachmentType)
+
+	require.NotNil(t, imported)
+
+	compositeType, ok := imported.(*interpreter.CompositeStaticType)
+	require.True(t, ok)
+	assert.Equal(t, location, compositeType.Location)
+	assert.Equal(t, "Test.A", compositeType.QualifiedIdentifier)
+}
+
+func TestRuntimeImportTypeValueOfAttachmentType(t *testing.T) {
+	t.Parallel()
+
+	program := interpreter.Program{
+		Elaboration: sema.NewElaboration(nil),
+	}
+
+	inter := NewTestInterpreter(t)
+	inter.Program = &program
+
+	baseType := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: "R",
+		Kind:       common.CompositeKindResource,
+		Members:    &sema.StringMemberOrderedMap{},
+		Fields:     []string{},
+	}
+
+	program.Elaboration.SetCompositeType(
+		baseType.ID(),
+		baseType,
+	)
+
+	attachmentSemaType := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: "A",
+		Kind:       common.CompositeKindAttachment,
+		Members:    &sema.StringMemberOrderedMap{},
+		Fields:     []string{"x"},
+	}
+
+	attachmentSemaType.Members.Set(
+		"x",
+		sema.NewUnmeteredPublicConstantFieldMember(
+			attachmentSemaType,
+			"x",
+			sema.IntType,
+			"",
+		),
+	)
+
+	program.Elaboration.SetCompositeType(
+		attachmentSemaType.ID(),
+		attachmentSemaType,
+	)
+
+	baseTypeCadence := cadence.NewResourceType(
+		TestLocation,
+		"R",
+		[]cadence.Field{},
+		[][]cadence.Parameter{},
+	)
+
+	attachmentTypeCadence := cadence.NewAttachmentType(
+		TestLocation,
+		"A",
+		baseTypeCadence,
+		[]cadence.Field{
+			{
+				Identifier: "x",
+				Type:       cadence.IntType,
+			},
+		},
+		[][]cadence.Parameter{},
+	)
+
+	typeValue := cadence.NewTypeValue(attachmentTypeCadence)
+
+	imported, err := ImportValue(
+		inter,
+		nil,
+		nil,
+		typeValue,
+		nil,
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, imported)
+
+	importedTypeValue, ok := imported.(interpreter.TypeValue)
+	require.True(t, ok)
+
+	compositeType, ok := importedTypeValue.Type.(*interpreter.CompositeStaticType)
+	require.True(t, ok)
+	assert.Equal(t, TestLocation, compositeType.Location)
+	assert.Equal(t, "A", compositeType.QualifiedIdentifier)
+}

@@ -900,6 +900,14 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			getCompositeTypeFields(v.EnumType),
 			getCompositeFieldValues(v),
 		)
+	case cadence.Attachment:
+		return i.importCompositeValue(
+			common.CompositeKindAttachment,
+			v.AttachmentType.Location,
+			v.AttachmentType.QualifiedIdentifier,
+			getCompositeTypeFields(v.AttachmentType),
+			getCompositeFieldValues(v),
+		)
 	case *cadence.InclusiveRange:
 		return i.importInclusiveRangeValue(v, expectedType)
 	case cadence.TypeValue:

@@ -737,6 +737,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		)
 	case *cadence.StructType,
 		*cadence.ResourceType,
+		*cadence.AttachmentType,
 		*cadence.EventType,
 		*cadence.ContractType,
 		*cadence.EnumType:
