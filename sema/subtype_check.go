@@ -104,10 +104,6 @@ func AreReturnsCovariant(source, target *FunctionType) bool {
 	return true
 }
 
-func AreConstructorsEqual(source, target *FunctionType) bool {
-	return source.IsConstructor == target.IsConstructor
-}
-
 func AreTypeArgumentsEqual(source, target ParameterizedType) bool {
 	subTypeTypeArguments := source.TypeArguments()
 	superTypeTypeArguments := target.TypeArguments()

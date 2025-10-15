@@ -160,16 +160,6 @@ var _ Predicate = ReturnCovariantPredicate{}
 
 func (r ReturnCovariantPredicate) isPredicate() {}
 
-// ConstructorEqualPredicate represents a constructor equality check.
-type ConstructorEqualPredicate struct {
-	Source Expression `yaml:"source"`
-	Target Expression `yaml:"target"`
-}
-
-var _ Predicate = ConstructorEqualPredicate{}
-
-func (c ConstructorEqualPredicate) isPredicate() {}
-
 // TypeAssertionPredicate represents a type assertion.
 type TypeAssertionPredicate struct {
 	Source Expression `yaml:"source"`

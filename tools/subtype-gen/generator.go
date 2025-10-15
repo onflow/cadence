@@ -776,9 +776,6 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case ReturnCovariantPredicate:
 		return gen.returnsCovariantCheck(p)
 
-	case ConstructorEqualPredicate:
-		return gen.constructorsEqualCheck(p)
-
 	case TypeArgumentsEqualPredicate:
 		return gen.typeAegumentsEqualCheck(p)
 
@@ -1447,20 +1444,6 @@ func (gen *SubTypeCheckGenerator) returnsCovariantCheck(p ReturnCovariantPredica
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("AreReturnsCovariant"),
-			args...,
-		),
-	}
-}
-
-func (gen *SubTypeCheckGenerator) constructorsEqualCheck(p ConstructorEqualPredicate) []dst.Node {
-	args := []dst.Expr{
-		gen.expressionIgnoreNegation(p.Source),
-		gen.expressionIgnoreNegation(p.Target),
-	}
-
-	return []dst.Node{
-		gen.callExpression(
-			dst.NewIdent("AreConstructorsEqual"),
 			args...,
 		),
 	}

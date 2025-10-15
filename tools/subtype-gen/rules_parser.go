@@ -312,17 +312,6 @@ func parsePredicate(predicate any) (Predicate, error) {
 				Target: targetExpr,
 			}, nil
 
-		case "constructorEqual":
-			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
-			if err != nil {
-				return nil, err
-			}
-
-			return ConstructorEqualPredicate{
-				Source: sourceExpr,
-				Target: targetExpr,
-			}, nil
-
 		case "typeArgumentsEqual":
 			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
 			if err != nil {

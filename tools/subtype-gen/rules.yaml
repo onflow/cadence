@@ -401,9 +401,9 @@ rules:
         - returnCovariant:
             source: sub
             target: super
-        - constructorEqual:
-            source: sub
-            target: super
+        - equals:
+            source: sub.IsConstructor
+            target: super.IsConstructor
 
   - super: ParameterizedType
     predicate:

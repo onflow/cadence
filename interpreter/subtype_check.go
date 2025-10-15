@@ -105,11 +105,6 @@ func AreReturnsCovariant(source, target FunctionStaticType) bool {
 }
 
 // nolint:unused
-func AreConstructorsEqual(source, target FunctionStaticType) bool {
-	return sema.AreConstructorsEqual(source.FunctionType, target.FunctionType)
-}
-
-// nolint:unused
 func IsParameterizedSubType(source, target StaticType) bool {
 	// TODO:
 	return false
