@@ -33,6 +33,10 @@ type lineNumber int
 var _ intervalst.Position = lineNumber(0)
 
 func (l lineNumber) Compare(other intervalst.Position) int {
+	if _, ok := other.(intervalst.MinPosition); ok {
+		return 1
+	}
+
 	otherLine := other.(lineNumber)
 	if l < otherLine {
 		return -1
@@ -51,10 +55,11 @@ type profiledFunction struct {
 
 // ComputationProfile collects computation profiling information per location.
 type ComputationProfile struct {
-	locationFunctions map[common.Location]*intervalst.IntervalST[profiledFunction]
-	currentStackTrace profileStackTrace
-	stackTraceUsages  map[string]stackTraceUsage
-	locationMappings  map[string]string
+	locationFunctions  map[common.Location]*intervalst.IntervalST[profiledFunction]
+	currentStackTrace  profileStackTrace
+	stackTraceUsages   map[string]stackTraceUsage
+	locationMappings   map[string]string
+	computationWeights map[common.ComputationKind]uint64
 	// DelegatedComputationGauge is the computation gauge to which
 	// delegated computation metering is reported.
 	// It may be nil, in which case no delegation occurs.
@@ -76,6 +81,13 @@ func (p *ComputationProfile) WithLocationMappings(
 	locationMappings map[string]string,
 ) {
 	p.locationMappings = locationMappings
+}
+
+// WithComputationWeights sets the computation weights for this profile.
+func (p *ComputationProfile) WithComputationWeights(
+	weights map[common.ComputationKind]uint64,
+) {
+	p.computationWeights = weights
 }
 
 type LocationLine struct {
@@ -146,13 +158,6 @@ func (p *ComputationProfile) newOnStatementHandler() interpreter.OnStatementFunc
 
 func (p *ComputationProfile) MeterComputation(computationUsage common.ComputationUsage) error {
 
-	aggregateKey := p.currentStackTrace.aggregateKey()
-	traceUsage := p.stackTraceUsages[aggregateKey]
-	traceUsage.stackTrace = p.currentStackTrace
-	// TODO: apply weight
-	traceUsage.computation += computationUsage.Intensity
-	p.stackTraceUsages[aggregateKey] = traceUsage
-
 	gauge := p.DelegatedComputationGauge
 	if gauge != nil {
 		err := gauge.MeterComputation(computationUsage)
@@ -160,6 +165,18 @@ func (p *ComputationProfile) MeterComputation(computationUsage common.Computatio
 			return err
 		}
 	}
+
+	weight := p.computationWeights[computationUsage.Kind]
+	if weight == 0 {
+		// No need to record zero-weight computation
+		return nil
+	}
+
+	aggregateKey := p.currentStackTrace.aggregateKey()
+	traceUsage := p.stackTraceUsages[aggregateKey]
+	traceUsage.stackTrace = p.currentStackTrace
+	traceUsage.computation += computationUsage.Intensity * weight
+	p.stackTraceUsages[aggregateKey] = traceUsage
 
 	return nil
 }
@@ -178,11 +195,38 @@ func (p *ComputationProfile) InspectProgram(location Location, program *ast.Prog
 
 	var stack []*ast.CompositeDeclaration
 
+	addFunction := func(identifier string, pos ast.HasPosition) {
+		startLine := pos.StartPosition().Line
+		endLine := pos.EndPosition(nil).Line
+
+		interval := intervalst.NewInterval(
+			lineNumber(startLine),
+			lineNumber(endLine),
+		)
+
+		var nameBuilder strings.Builder
+		for _, composite := range stack {
+			nameBuilder.WriteString(composite.Identifier.Identifier)
+			nameBuilder.WriteString(".")
+		}
+		nameBuilder.WriteString(identifier)
+		name := nameBuilder.String()
+
+		function := profiledFunction{
+			location:  location,
+			name:      name,
+			startLine: startLine,
+		}
+
+		functions.Put(interval, function)
+	}
+
 	inspector := ast.NewInspector(program)
 	inspector.Elements(
 		[]ast.Element{
 			(*ast.CompositeDeclaration)(nil),
 			(*ast.FunctionDeclaration)(nil),
+			(*ast.SpecialFunctionDeclaration)(nil),
 		},
 		func(element ast.Element, push bool) bool {
 			if push {
@@ -191,29 +235,16 @@ func (p *ComputationProfile) InspectProgram(location Location, program *ast.Prog
 					stack = append(stack, decl)
 
 				case *ast.FunctionDeclaration:
-					startLine := decl.StartPosition().Line
-					endLine := decl.EndPosition(nil).Line
-
-					interval := intervalst.NewInterval(
-						lineNumber(startLine),
-						lineNumber(endLine),
+					addFunction(
+						decl.Identifier.Identifier,
+						decl,
 					)
 
-					var nameBuilder strings.Builder
-					for _, composite := range stack {
-						nameBuilder.WriteString(composite.Identifier.Identifier)
-						nameBuilder.WriteString(".")
-					}
-					nameBuilder.WriteString(decl.Identifier.Identifier)
-					name := nameBuilder.String()
-
-					function := profiledFunction{
-						location:  location,
-						name:      name,
-						startLine: startLine,
-					}
-
-					functions.Put(interval, function)
+				case *ast.SpecialFunctionDeclaration:
+					addFunction(
+						decl.FunctionDeclaration.Identifier.Identifier,
+						decl.FunctionDeclaration,
+					)
 				}
 			} else {
 				if _, ok := element.(*ast.CompositeDeclaration); ok {
@@ -259,4 +290,11 @@ func (p *ComputationProfile) sourcePathForLocation(location common.Location) str
 	}
 
 	return locationSource
+}
+
+// Reset clears the collected profiling information for all locations and inspected locations.
+func (p *ComputationProfile) Reset() {
+	p.currentStackTrace = nil
+	clear(p.stackTraceUsages)
+	clear(p.locationFunctions)
 }

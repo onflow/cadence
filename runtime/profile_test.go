@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	pprof "github.com/google/pprof/profile"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -58,7 +59,7 @@ func TestRuntimeProfile(t *testing.T) {
 	  import "imported"
 
 	  access(all) fun main(): Int {
-	    factorial(5)
+	    factorial(2)
 	    return 42
 	  }
 	`)
@@ -68,6 +69,13 @@ func TestRuntimeProfile(t *testing.T) {
 		map[string]string{
 			"imported":                   "imported.cdc",
 			common.ScriptLocation{}.ID(): "script.cdc",
+		},
+	)
+	computationProfile.WithComputationWeights(
+		map[common.ComputationKind]uint64{
+			common.ComputationKindStatement:          2,
+			common.ComputationKindLoop:               2,
+			common.ComputationKindFunctionInvocation: 2,
 		},
 	)
 
@@ -102,8 +110,6 @@ func TestRuntimeProfile(t *testing.T) {
 	profile, err := NewPProfExporter(computationProfile).Export()
 	require.NoError(t, err)
 
-	assert.Len(t, profile.Sample, 26)
-
 	require.Len(t, profile.Function, 2)
 
 	factorialFunction := profile.Function[0]
@@ -118,31 +124,246 @@ func TestRuntimeProfile(t *testing.T) {
 
 	assert.Len(t, profile.Location, 7)
 
-	for _, location := range profile.Location {
-		require.Len(t, location.Line, 1)
-		line := location.Line[0]
+	// Locations. NOT in execution  or appearance order,
+	// but lexically ordered aggregate key of stack trace
 
-		switch line.Function {
+	assert.Equal(
+		t,
+		[]pprof.Line{{
+			Function: profile.Function[1], // main
+			Line:     5,
+		}},
+		profile.Location[0].Line,
+	)
+	assert.Equal(
+		t,
+		[]pprof.Line{{
+			Function: profile.Function[0], // factorial
+			Line:     12,
+		}},
+		profile.Location[1].Line,
+	)
+	assert.Equal(
+		t,
+		[]pprof.Line{{
+			Function: profile.Function[0], // factorial
+			Line:     16,
+		}},
+		profile.Location[2].Line,
+	)
+	assert.Equal(
+		t,
+		[]pprof.Line{{
+			Function: profile.Function[0], // factorial
+			Line:     13,
+		}},
+		profile.Location[3].Line,
+	)
+	assert.Equal(
+		t,
+		[]pprof.Line{{
+			Function: profile.Function[0], // factorial
+			Line:     4,
+		}},
+		profile.Location[4].Line,
+	)
+	assert.Equal(
+		t,
+		[]pprof.Line{{
+			Function: profile.Function[0], // factorial
+			Line:     8,
+		}},
+		profile.Location[5].Line,
+	)
+	assert.Equal(
+		t,
+		[]pprof.Line{{
+			Function: profile.Function[1], // main
+			Line:     6,
+		}},
+		profile.Location[6].Line,
+	)
 
-		case profile.Function[0]: // factorial
-			switch line.Line {
-			case 4, 8, 12, 13, 16:
-				// valid lines
-			default:
-				t.Fatalf("unexpected line number for factorial: %d", line.Line)
-			}
+	// Samples. NOT in execution / appearance order,
+	// but lexically ordered aggregate key of stack trace
 
-		case profile.Function[1]: // main
-			switch line.Line {
-			case 5, 6:
-				// valid lines
-			default:
-				t.Fatalf("unexpected line number for main: %d", line.Line)
-			}
+	require.Len(t, profile.Sample, 14)
 
-		default:
-			t.Fatalf("unexpected function for location: %s", line.Function.Name)
-		}
-	}
+	assert.Equal(t,
+		[]int64{4},
+		profile.Sample[0].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[0],
+		},
+		profile.Sample[0].Location,
+	)
 
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[1].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[1],
+			profile.Location[0],
+		},
+		profile.Sample[1].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{4},
+		profile.Sample[2].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[2],
+			profile.Location[0],
+		},
+		profile.Sample[2].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[3].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[1],
+			profile.Location[2],
+			profile.Location[0],
+		},
+		profile.Sample[3].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{4},
+		profile.Sample[4].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[2],
+			profile.Location[2],
+			profile.Location[0],
+		},
+		profile.Sample[4].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[5].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[1],
+			profile.Location[2],
+			profile.Location[2],
+			profile.Location[0],
+		},
+		profile.Sample[5].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[6].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[3],
+			profile.Location[2],
+			profile.Location[2],
+			profile.Location[0],
+		},
+		profile.Sample[6].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[7].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[4],
+			profile.Location[2],
+			profile.Location[2],
+			profile.Location[0],
+		},
+		profile.Sample[7].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[8].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[5],
+			profile.Location[2],
+			profile.Location[2],
+			profile.Location[0],
+		},
+		profile.Sample[8].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[9].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[4],
+			profile.Location[2],
+			profile.Location[0],
+		},
+		profile.Sample[9].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[10].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[5],
+			profile.Location[2],
+			profile.Location[0],
+		},
+		profile.Sample[10].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[11].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[4],
+			profile.Location[0],
+		},
+		profile.Sample[11].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[12].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[5],
+			profile.Location[0],
+		},
+		profile.Sample[12].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[13].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[6],
+		},
+		profile.Sample[13].Location,
+	)
 }
