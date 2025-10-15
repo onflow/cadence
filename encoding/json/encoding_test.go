@@ -2835,6 +2835,79 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
+	t.Run("with static attachment", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.NewAttachmentType(
+					TestLocation,
+					"A",
+					cadence.NewResourceType(
+						TestLocation,
+						"R",
+						[]cadence.Field{
+							{Identifier: "foo", Type: cadence.IntType},
+						},
+						[][]cadence.Parameter{},
+					),
+					[]cadence.Field{
+						{Identifier: "bar", Type: cadence.StringType},
+					},
+					[][]cadence.Parameter{
+						{{Label: "bar", Identifier: "baz", Type: cadence.StringType}},
+					},
+				),
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Attachment",
+                    "type": {
+                      "kind": "Resource",
+                      "type": "",
+                      "typeID": "S.test.R",
+                      "fields": [
+                        {
+                          "id": "foo",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      "initializers": []
+                    },
+                    "typeID": "S.test.A",
+                    "fields": [
+                      {
+                        "id": "bar",
+                        "type": {
+                          "kind": "String"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "bar",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            `,
+		)
+
+	})
+
 	t.Run("without static type", func(t *testing.T) {
 
 		t.Parallel()

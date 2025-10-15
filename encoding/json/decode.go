@@ -1215,6 +1215,16 @@ func (d *Decoder) decodeNominalType(
 			inits,
 		)
 		result = compositeType
+	case "Attachment":
+		compositeType = cadence.NewMeteredAttachmentType(
+			d.gauge,
+			location,
+			qualifiedIdentifier,
+			d.decodeType(obj.Get(typeKey), results),
+			nil,
+			inits,
+		)
+		result = compositeType
 	default:
 		panic(errors.NewDefaultUserError("invalid kind: %s", kind))
 	}
