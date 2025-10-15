@@ -3055,7 +3055,6 @@ func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *
 }
 
 func ArrayReduceFunctionType(elementType Type) *FunctionType {
-	// For [T]
 	// fun reduce<U>(initial: U, _ f: fun (U, T): U): U
 
 	typeParameter := &TypeParameter{
