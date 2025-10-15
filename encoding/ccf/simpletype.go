@@ -35,7 +35,7 @@ import (
 // When new simple cadence.Type is added,
 // - ADD new ID to the end of existing IDs,
 // - ADD new simple cadence.Type and its ID
-//   to simpleTypeIDByType *and* typeBySimpleTypeID
+//   to SimpleTypeIDByType *and* TypeBySimpleTypeID
 
 type SimpleType uint64
 
@@ -156,7 +156,7 @@ const ( // Cadence simple type IDs
 	SimpleType_Count
 )
 
-// NOTE: cadence.FunctionType isn't included in simpleTypeIDByType
+// NOTE: cadence.FunctionType isn't included in SimpleTypeIDByType
 // because this function is used by both inline-type and type-value.
 // cadence.FunctionType needs to be handled differently when this
 // function is used by inline-type and type-value.
@@ -278,7 +278,7 @@ func initSimpleTypeIDBiMap() (m *bimap.BiMap[cadence.PrimitiveType, SimpleType])
 
 var simpleTypeIDBiMap *bimap.BiMap[cadence.PrimitiveType, SimpleType] = initSimpleTypeIDBiMap()
 
-func simpleTypeIDByType(typ cadence.Type) (SimpleType, bool) {
+func SimpleTypeIDByType(typ cadence.Type) (SimpleType, bool) {
 	switch typ := typ.(type) {
 	case cadence.BytesType:
 		return SimpleTypeBytes, true
@@ -289,7 +289,7 @@ func simpleTypeIDByType(typ cadence.Type) (SimpleType, bool) {
 	return 0, false
 }
 
-func typeBySimpleTypeID(simpleTypeID SimpleType) cadence.Type {
+func TypeBySimpleTypeID(simpleTypeID SimpleType) cadence.Type {
 	if simpleTypeID == SimpleTypeBytes {
 		return cadence.TheBytesType
 	}
