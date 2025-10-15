@@ -181,8 +181,8 @@ var _ Predicate = TypeAssertionPredicate{}
 func (e TypeAssertionPredicate) isPredicate() {}
 
 type SetContainsPredicate struct {
-	Source Expression `yaml:"source"`
-	Target Expression `yaml:"target"`
+	Set     Expression `yaml:"set"`
+	Element Expression `yaml:"element"`
 }
 
 var _ Predicate = SetContainsPredicate{}

@@ -256,22 +256,22 @@ rules:
               source: sub.Kind
               target: super.CompositeKind
           - setContains:
-              source: sub.EffectiveInterfaceConformanceSet
-              target: super
+              set: sub.EffectiveInterfaceConformanceSet
+              element: super
         - and:
           - mustType:
               source: sub
               type: IntersectionType
           - setContains:
-              source: sub.EffectiveIntersectionSet
-              target: super
+              set: sub.EffectiveIntersectionSet
+              element: super
         - and:
           - mustType:
               source: sub
               type: InterfaceType
           - setContains:
-              source: sub.EffectiveInterfaceConformanceSet
-              target: super
+              set: sub.EffectiveInterfaceConformanceSet
+              element: super
         - isParameterizedSubtype:
             sub: sub
             super: super

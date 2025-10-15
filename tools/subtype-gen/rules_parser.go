@@ -239,14 +239,33 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}, nil
 
 		case "setContains":
-			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			keyValues, ok := value.(KeyValues)
+			if !ok {
+				return nil, fmt.Errorf("expected KeyValues, got %T", value)
+			}
+
+			// Get the set
+			set, ok := keyValues["set"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `set` property for `setContains` predicate")
+			}
+
+			setExpr := parseSimpleExpression(set)
+
+			// Get element
+			element, ok := keyValues["element"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `element` property for `setContains` predicate")
+			}
+
+			elementExpr, err := parseExpression(element)
 			if err != nil {
 				return nil, err
 			}
 
 			return SetContainsPredicate{
-				Source: sourceExpr,
-				Target: targetExpr,
+				Set:     setExpr,
+				Element: elementExpr,
 			}, nil
 
 		case "isIntersectionSubset":

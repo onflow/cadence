@@ -1381,12 +1381,12 @@ func (gen *SubTypeCheckGenerator) newTypedVariableNameFor(source Expression) str
 
 func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node {
 	selectExpr := &dst.SelectorExpr{
-		X:   gen.expressionIgnoreNegation(p.Source),
+		X:   gen.expressionIgnoreNegation(p.Set),
 		Sel: dst.NewIdent("Contains"),
 	}
 
 	args := []dst.Expr{
-		gen.expressionIgnoreNegation(p.Target),
+		gen.expressionIgnoreNegation(p.Element),
 	}
 
 	callExpr := gen.callExpression(selectExpr, args...)
