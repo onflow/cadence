@@ -1398,6 +1398,38 @@ func TestCheckArrayReduceInvalidArgs(t *testing.T) {
 			&sema.TypeMismatchError{},
 		},
 	)
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [1, 2, 3]
+			let sum =
+				fun (acc: Int, x: Int): Int {
+					return acc + x
+				}
+			let y = x.reduce(initial: "0", sum)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.TypeMismatchError{},
+		},
+	)
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [[1], [2]]
+			let reducer =
+				fun (acc: [Int], inner: &[Int]): [Int] {
+					inner.append(1)
+					return acc
+				}
+			let y = x.reduce(initial: [], reducer)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.InvalidAccessError{},
+			&sema.TypeAnnotationRequiredError{},
+		},
+	)
 }
 
 func TestCheckResourceArrayReduceInvalid(t *testing.T) {
