@@ -1604,7 +1604,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:     "Function",
 			semaType: testFunctionType,
 			staticType: FunctionStaticType{
-				Type: testFunctionType,
+				FunctionType: testFunctionType,
 			},
 		},
 		{
