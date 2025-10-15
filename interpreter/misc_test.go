@@ -11418,6 +11418,28 @@ func TestInterpretArrayReduce(t *testing.T) {
 			val,
 		)
 	})
+
+	t.Run("mutation during reduce", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			let xs = [1, 2, 3]
+			let xRef = &xs as auth(Mutate) &[Int]
+			let sum =
+				fun (acc: Int, x: Int): Int {
+					xRef.remove(at: 0)
+					return acc + x
+				}
+
+			fun reduce(): Int {
+				return xRef.reduce(initial: 0, sum)
+			}
+		`)
+
+		_, err := inter.Invoke("reduce")
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
 }
 
 func TestInterpretArrayToVariableSized(t *testing.T) {
