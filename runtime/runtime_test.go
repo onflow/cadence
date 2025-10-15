@@ -7045,6 +7045,10 @@ func TestRuntimeOnGetOrLoadProgramHits(t *testing.T) {
 				Address: Address{0x1},
 				Name:    "HelloWorld",
 			},
+			common.AddressLocation{
+				Address: Address{0x1},
+				Name:    "HelloWorld",
+			},
 		}
 	} else {
 		expectedHits = []common.Location{
