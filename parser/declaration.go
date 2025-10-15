@@ -1061,16 +1061,14 @@ func parseFieldWithVariableKind(
 		p.report(&FieldInitializationError{
 			EqualToken: p.current,
 		})
-		
+
 		// Skip the equal sign and try to parse the expression to consume the tokens
 		// This prevents cascading errors from the unparsed expression
 		p.nextSemanticToken()
-		_, expressionErr := parseExpression(p, lowestBindingPower)
-		if expressionErr != nil {
-			// We don't return the expression error since the field initialization
-			// is the primary issue we want to report
-			// The expression parsing is just to consume tokens
-		}
+		_, _ = parseExpression(p, lowestBindingPower)
+		// We ignore the expression error since field initialization
+		// is the primary issue we want to report, and expression parsing
+		// is just to consume tokens
 	}
 
 	return ast.NewFieldDeclaration(
