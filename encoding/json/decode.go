@@ -1147,13 +1147,13 @@ func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorizati
 		return cadence.UnauthorizedAccess
 	case "EntitlementMapAuthorization":
 		entitlements := toSlice(obj.GetWithContext(d, entitlementsKey))
-		m := toString(toObject(entitlements[0]).Get("typeID"))
+		m := toString(toObject(entitlements[0]).GetWithContext(d, "typeID"))
 		return cadence.NewEntitlementMapAuthorization(d.gauge, common.TypeID(m))
 	case "EntitlementConjunctionSet":
 		var typeIDs []common.TypeID
 		entitlements := toSlice(obj.GetWithContext(d, entitlementsKey))
 		for _, entitlement := range entitlements {
-			id := toString(toObject(entitlement).Get("typeID"))
+			id := toString(toObject(entitlement).GetWithContext(d, "typeID"))
 			typeIDs = append(typeIDs, common.TypeID(id))
 		}
 		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Conjunction)
@@ -1161,7 +1161,7 @@ func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorizati
 		var typeIDs []common.TypeID
 		entitlements := toSlice(obj.GetWithContext(d, entitlementsKey))
 		for _, entitlement := range entitlements {
-			id := toString(toObject(entitlement).Get("typeID"))
+			id := toString(toObject(entitlement).GetWithContext(d, "typeID"))
 			typeIDs = append(typeIDs, common.TypeID(id))
 		}
 		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Disjunction)
@@ -1388,7 +1388,7 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		}
 
 		restrictionsValue := obj.GetWithContext(d, restrictionsKey)
-		typeValue := obj.Get(typeKey)
+		typeValue := obj.GetWithContext(d, typeKey)
 		return d.decodeDeprecatedRestrictedType(
 			typeValue,
 			toSlice(restrictionsValue),
@@ -1524,15 +1524,6 @@ func (d *Decoder) decodeDeprecatedRestrictedType(
 
 type jsonObject map[string]any
 
-func (obj jsonObject) Get(key string) any {
-	v, hasKey := obj[key]
-	if !hasKey {
-		panic(errors.NewDefaultUserError("missing property: %s", key))
-	}
-
-	return v
-}
-
 func (obj jsonObject) GetWithContext(d *Decoder, key string) any {
 	v, hasKey := obj[key]
 	if !hasKey {
@@ -1546,19 +1537,9 @@ func (obj jsonObject) GetWithContext(d *Decoder, key string) any {
 	return v
 }
 
-func (obj jsonObject) GetBool(key string) bool {
-	v := obj.Get(key)
-	return toBool(v)
-}
-
 func (obj jsonObject) GetBoolWithContext(d *Decoder, key string) bool {
 	v := obj.GetWithContext(d, key)
 	return toBool(v)
-}
-
-func (obj jsonObject) GetString(key string) string {
-	v := obj.Get(key)
-	return toString(v)
 }
 
 func (obj jsonObject) GetStringWithContext(d *Decoder, key string) string {
@@ -1566,19 +1547,9 @@ func (obj jsonObject) GetStringWithContext(d *Decoder, key string) string {
 	return toString(v)
 }
 
-func (obj jsonObject) GetSlice(key string) []any {
-	v := obj.Get(key)
-	return toSlice(v)
-}
-
 func (obj jsonObject) GetSliceWithContext(d *Decoder, key string) []any {
 	v := obj.GetWithContext(d, key)
 	return toSlice(v)
-}
-
-func (obj jsonObject) GetValue(d *Decoder, key string) cadence.Value {
-	v := obj.Get(key)
-	return d.DecodeJSON(v)
 }
 
 func (obj jsonObject) GetValueWithContext(d *Decoder, key string) cadence.Value {
