@@ -46,23 +46,15 @@ type indexPathElement int
 var _ pathElement = indexPathElement(0)
 
 func (e indexPathElement) Append(w io.Writer) {
-	_, _ = fmt.Fprintf(w, "array[%d]", int(e))
+	_, _ = fmt.Fprintf(w, "[%d]", int(e))
 }
 
-type fieldPathElement string
+type propertyPathElement string
 
-var _ pathElement = fieldPathElement("")
+var _ pathElement = propertyPathElement("")
 
-func (e fieldPathElement) Append(w io.Writer) {
-	_, _ = fmt.Fprintf(w, "field:%s", string(e))
-}
-
-type staticPathElement string
-
-var _ pathElement = staticPathElement("")
-
-func (e staticPathElement) Append(w io.Writer) {
-	_, _ = io.WriteString(w, string(e))
+func (e propertyPathElement) Append(w io.Writer) {
+	_, _ = fmt.Fprintf(w, ".%s", e)
 }
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
@@ -148,11 +140,18 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 				panic(r)
 			}
 
-			err = errors.NewDefaultUserError("failed to decode JSON-Cadence value: %w", panicErr)
+			format := "failed to decode JSON-Cadence value: %w"
+
+			path := d.getPathString()
+			if path != "" {
+				format += fmt.Sprintf(" (at %s)", path)
+			}
+
+			err = errors.NewDefaultUserError(format, panicErr)
 		}
 	}()
 
-	value = d.DecodeJSON(jsonMap)
+	value = d.decodeValue(jsonMap)
 	return value, nil
 }
 
@@ -206,20 +205,18 @@ func (d *Decoder) getPathString() string {
 	if len(d.pathContext) == 0 {
 		return ""
 	}
+
 	var builder strings.Builder
-	for i, element := range d.pathContext {
-		if i > 0 {
-			builder.WriteByte('.')
-		}
+	for _, element := range d.pathContext {
 		element.Append(&builder)
 	}
 	return builder.String()
 }
 
-func (d *Decoder) DecodeJSON(v any) cadence.Value {
+func (d *Decoder) decodeValue(v any) cadence.Value {
 	obj := toObject(v)
 
-	typeStr := obj.GetStringWithContext(d, typeKey)
+	typeStr := get(d, obj, typeKey, toString)
 
 	// void is a special case, does not have "value" field
 	if typeStr == voidTypeStr {
@@ -228,103 +225,107 @@ func (d *Decoder) DecodeJSON(v any) cadence.Value {
 
 	// object should only contain two keys: "type", "value"
 	if len(obj) != 2 {
-		panic(errors.NewDefaultUserError("expected JSON object with keys `%s` and `%s`", typeKey, valueKey))
+		panic(errors.NewDefaultUserError(
+			"expected JSON object with keys `%s` and `%s`",
+			typeKey,
+			valueKey,
+		))
 	}
 
-	valueJSON := obj.GetWithContext(d, valueKey)
+	return get(d, obj, valueKey, func(valueJSON any) cadence.Value {
+		switch typeStr {
+		case optionalTypeStr:
+			return d.decodeOptional(valueJSON)
+		case boolTypeStr:
+			return d.decodeBool(valueJSON)
+		case characterTypeStr:
+			return d.decodeCharacter(valueJSON)
+		case stringTypeStr:
+			return d.decodeString(valueJSON)
+		case addressTypeStr:
+			return d.decodeAddress(valueJSON)
+		case intTypeStr:
+			return d.decodeInt(valueJSON)
+		case int8TypeStr:
+			return d.decodeInt8(valueJSON)
+		case int16TypeStr:
+			return d.decodeInt16(valueJSON)
+		case int32TypeStr:
+			return d.decodeInt32(valueJSON)
+		case int64TypeStr:
+			return d.decodeInt64(valueJSON)
+		case int128TypeStr:
+			return d.decodeInt128(valueJSON)
+		case int256TypeStr:
+			return d.decodeInt256(valueJSON)
+		case uintTypeStr:
+			return d.decodeUInt(valueJSON)
+		case uint8TypeStr:
+			return d.decodeUInt8(valueJSON)
+		case uint16TypeStr:
+			return d.decodeUInt16(valueJSON)
+		case uint32TypeStr:
+			return d.decodeUInt32(valueJSON)
+		case uint64TypeStr:
+			return d.decodeUInt64(valueJSON)
+		case uint128TypeStr:
+			return d.decodeUInt128(valueJSON)
+		case uint256TypeStr:
+			return d.decodeUInt256(valueJSON)
+		case word8TypeStr:
+			return d.decodeWord8(valueJSON)
+		case word16TypeStr:
+			return d.decodeWord16(valueJSON)
+		case word32TypeStr:
+			return d.decodeWord32(valueJSON)
+		case word64TypeStr:
+			return d.decodeWord64(valueJSON)
+		case word128TypeStr:
+			return d.decodeWord128(valueJSON)
+		case word256TypeStr:
+			return d.decodeWord256(valueJSON)
+		case fix64TypeStr:
+			return d.decodeFix64(valueJSON)
+		case fix128TypeStr:
+			return d.decodeFix128(valueJSON)
+		case ufix64TypeStr:
+			return d.decodeUFix64(valueJSON)
+		case ufix128TypeStr:
+			return d.decodeUFix128(valueJSON)
+		case arrayTypeStr:
+			return d.decodeArray(valueJSON)
+		case dictionaryTypeStr:
+			return d.decodeDictionary(valueJSON)
+		case resourceTypeStr:
+			return d.decodeResource(valueJSON)
+		case structTypeStr:
+			return d.decodeStruct(valueJSON)
+		case eventTypeStr:
+			return d.decodeEvent(valueJSON)
+		case contractTypeStr:
+			return d.decodeContract(valueJSON)
+		case inclusiveRangeTypeStr:
+			return d.decodeInclusiveRange(valueJSON)
+		case pathTypeStr:
+			return d.decodePath(valueJSON)
+		case typeTypeStr:
+			return d.decodeTypeValue(valueJSON)
+		case capabilityTypeStr:
+			return d.decodeCapability(valueJSON)
+		case enumTypeStr:
+			return d.decodeEnum(valueJSON)
+		case functionTypeStr:
+			return d.decodeFunction(valueJSON)
+		}
 
-	switch typeStr {
-	case optionalTypeStr:
-		return d.decodeOptional(valueJSON)
-	case boolTypeStr:
-		return d.decodeBool(valueJSON)
-	case characterTypeStr:
-		return d.decodeCharacter(valueJSON)
-	case stringTypeStr:
-		return d.decodeString(valueJSON)
-	case addressTypeStr:
-		return d.decodeAddress(valueJSON)
-	case intTypeStr:
-		return d.decodeInt(valueJSON)
-	case int8TypeStr:
-		return d.decodeInt8(valueJSON)
-	case int16TypeStr:
-		return d.decodeInt16(valueJSON)
-	case int32TypeStr:
-		return d.decodeInt32(valueJSON)
-	case int64TypeStr:
-		return d.decodeInt64(valueJSON)
-	case int128TypeStr:
-		return d.decodeInt128(valueJSON)
-	case int256TypeStr:
-		return d.decodeInt256(valueJSON)
-	case uintTypeStr:
-		return d.decodeUInt(valueJSON)
-	case uint8TypeStr:
-		return d.decodeUInt8(valueJSON)
-	case uint16TypeStr:
-		return d.decodeUInt16(valueJSON)
-	case uint32TypeStr:
-		return d.decodeUInt32(valueJSON)
-	case uint64TypeStr:
-		return d.decodeUInt64(valueJSON)
-	case uint128TypeStr:
-		return d.decodeUInt128(valueJSON)
-	case uint256TypeStr:
-		return d.decodeUInt256(valueJSON)
-	case word8TypeStr:
-		return d.decodeWord8(valueJSON)
-	case word16TypeStr:
-		return d.decodeWord16(valueJSON)
-	case word32TypeStr:
-		return d.decodeWord32(valueJSON)
-	case word64TypeStr:
-		return d.decodeWord64(valueJSON)
-	case word128TypeStr:
-		return d.decodeWord128(valueJSON)
-	case word256TypeStr:
-		return d.decodeWord256(valueJSON)
-	case fix64TypeStr:
-		return d.decodeFix64(valueJSON)
-	case fix128TypeStr:
-		return d.decodeFix128(valueJSON)
-	case ufix64TypeStr:
-		return d.decodeUFix64(valueJSON)
-	case ufix128TypeStr:
-		return d.decodeUFix128(valueJSON)
-	case arrayTypeStr:
-		return d.decodeArray(valueJSON)
-	case dictionaryTypeStr:
-		return d.decodeDictionary(valueJSON)
-	case resourceTypeStr:
-		return d.decodeResource(valueJSON)
-	case structTypeStr:
-		return d.decodeStruct(valueJSON)
-	case eventTypeStr:
-		return d.decodeEvent(valueJSON)
-	case contractTypeStr:
-		return d.decodeContract(valueJSON)
-	case inclusiveRangeTypeStr:
-		return d.decodeInclusiveRange(valueJSON)
-	case pathTypeStr:
-		return d.decodePath(valueJSON)
-	case typeTypeStr:
-		return d.decodeTypeValue(valueJSON)
-	case capabilityTypeStr:
-		return d.decodeCapability(valueJSON)
-	case enumTypeStr:
-		return d.decodeEnum(valueJSON)
-	case functionTypeStr:
-		return d.decodeFunction(valueJSON)
-	}
-
-	panic(errors.NewDefaultUserError("invalid type: %s", typeStr))
+		panic(errors.NewDefaultUserError("invalid type: %s", typeStr))
+	})
 }
 
 func (d *Decoder) decodeVoid(m map[string]any) cadence.Void {
 	// object should not contain fields other than "type"
 	if len(m) != 1 {
-		panic(errors.NewDefaultUserError("invalid additional fields in void value"))
+		panic(errors.NewDefaultUserError("invalid additional fields in Void value"))
 	}
 
 	return cadence.NewMeteredVoid(d.gauge)
@@ -335,7 +336,7 @@ func (d *Decoder) decodeOptional(valueJSON any) cadence.Optional {
 		return cadence.NewMeteredOptional(d.gauge, nil)
 	}
 
-	return cadence.NewMeteredOptional(d.gauge, d.DecodeJSON(valueJSON))
+	return cadence.NewMeteredOptional(d.gauge, d.decodeValue(valueJSON))
 }
 
 func (d *Decoder) decodeBool(valueJSON any) cadence.Bool {
@@ -748,11 +749,13 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 		len(v),
 		func() ([]cadence.Value, error) {
 			values := make([]cadence.Value, len(v))
+
 			for i, val := range v {
 				d.pushPath(indexPathElement(i))
-				values[i] = d.DecodeJSON(val)
+				values[i] = d.decodeValue(val)
 				d.popPath()
 			}
+
 			return values, nil
 		},
 	)
@@ -773,7 +776,9 @@ func (d *Decoder) decodeDictionary(valueJSON any) cadence.Dictionary {
 			pairs := make([]cadence.KeyValuePair, len(v))
 
 			for i, val := range v {
+				d.pushPath(indexPathElement(i))
 				pairs[i] = d.decodeKeyValuePair(val)
+				d.popPath()
 			}
 
 			return pairs, nil
@@ -790,8 +795,8 @@ func (d *Decoder) decodeDictionary(valueJSON any) cadence.Dictionary {
 func (d *Decoder) decodeKeyValuePair(valueJSON any) cadence.KeyValuePair {
 	obj := toObject(valueJSON)
 
-	key := obj.GetValueWithContext(d, keyKey)
-	value := obj.GetValueWithContext(d, valueKey)
+	key := get(d, obj, keyKey, d.decodeValue)
+	value := get(d, obj, valueKey, d.decodeValue)
 
 	return cadence.NewMeteredKeyValuePair(
 		d.gauge,
@@ -800,21 +805,37 @@ func (d *Decoder) decodeKeyValuePair(valueJSON any) cadence.KeyValuePair {
 	)
 }
 
-type composite struct {
+type compositeTypeID struct {
+	typeID              string
 	location            common.Location
 	qualifiedIdentifier string
-	fieldValues         []cadence.Value
-	fieldTypes          []cadence.Field
+}
+
+type compositeFields struct {
+	fieldValues []cadence.Value
+	fieldTypes  []cadence.Field
+}
+
+type composite struct {
+	compositeTypeID
+	compositeFields
 }
 
 func (d *Decoder) decodeComposite(valueJSON any) composite {
 	obj := toObject(valueJSON)
 
-	typeID := obj.GetStringWithContext(d, idKey)
-	location, qualifiedIdentifier, err := common.DecodeTypeID(d.gauge, typeID)
+	return composite{
+		compositeTypeID: get(d, obj, idKey, d.decodeCompositeTypeID),
+		compositeFields: get(d, obj, fieldsKey, d.decodeCompositeFields),
+	}
+}
 
+func (d *Decoder) decodeCompositeTypeID(valueJSON any) compositeTypeID {
+	typeID := toString(valueJSON)
+
+	location, qualifiedIdentifier, err := common.DecodeTypeID(d.gauge, typeID)
 	if err != nil {
-		panic(errors.NewDefaultUserError("invalid type ID `%s`: %w", typeID, err))
+		panic(errors.NewDefaultUserError("invalid type ID `%s`: %s", typeID, err.Error()))
 	} else if location == nil && sema.NativeCompositeTypes[typeID] == nil {
 
 		// If the location is nil, and there is no native composite type with this ID, then it's an invalid type.
@@ -822,7 +843,15 @@ func (d *Decoder) decodeComposite(valueJSON any) composite {
 		panic(errors.NewDefaultUserError("invalid type ID for built-in: `%s`", typeID))
 	}
 
-	fields := obj.GetSliceWithContext(d, fieldsKey)
+	return compositeTypeID{
+		typeID:              typeID,
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+	}
+}
+
+func (d *Decoder) decodeCompositeFields(valueJSON any) compositeFields {
+	fields := toSlice(valueJSON)
 
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceField,
@@ -833,27 +862,25 @@ func (d *Decoder) decodeComposite(valueJSON any) composite {
 	fieldTypes := make([]cadence.Field, len(fields))
 
 	for i, field := range fields {
+		d.pushPath(indexPathElement(i))
 		value, fieldType := d.decodeCompositeField(field)
+		d.popPath()
 
 		fieldValues[i] = value
 		fieldTypes[i] = fieldType
 	}
 
-	return composite{
-		location:            location,
-		qualifiedIdentifier: qualifiedIdentifier,
-		fieldValues:         fieldValues,
-		fieldTypes:          fieldTypes,
+	return compositeFields{
+		fieldValues: fieldValues,
+		fieldTypes:  fieldTypes,
 	}
 }
 
 func (d *Decoder) decodeCompositeField(valueJSON any) (cadence.Value, cadence.Field) {
 	obj := toObject(valueJSON)
 
-	name := obj.GetStringWithContext(d, nameKey)
-	d.pushPath(fieldPathElement(name))
-	defer d.popPath()
-	value := obj.GetValueWithContext(d, valueKey)
+	name := get(d, obj, nameKey, toString)
+	value := get(d, obj, valueKey, d.decodeValue)
 
 	// Unmetered because decodeCompositeField is metered in decodeComposite and called nowhere else
 	// Type is still metered.
@@ -872,7 +899,6 @@ func (d *Decoder) decodeStruct(valueJSON any) cadence.Struct {
 			return comp.fieldValues, nil
 		},
 	)
-
 	if err != nil {
 		panic(errors.NewDefaultUserError("invalid struct: %w", err))
 	}
@@ -896,10 +922,10 @@ func (d *Decoder) decodeResource(valueJSON any) cadence.Resource {
 			return comp.fieldValues, nil
 		},
 	)
-
 	if err != nil {
 		panic(errors.NewDefaultUserError("invalid resource: %w", err))
 	}
+
 	return resource.WithType(cadence.NewMeteredResourceType(
 		d.gauge,
 		comp.location,
@@ -919,7 +945,6 @@ func (d *Decoder) decodeEvent(valueJSON any) cadence.Event {
 			return comp.fieldValues, nil
 		},
 	)
-
 	if err != nil {
 		panic(errors.NewDefaultUserError("invalid event: %w", err))
 	}
@@ -985,9 +1010,9 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 func (d *Decoder) decodeInclusiveRange(valueJSON any) *cadence.InclusiveRange {
 	obj := toObject(valueJSON)
 
-	start := obj.GetValueWithContext(d, startKey)
-	end := obj.GetValueWithContext(d, endKey)
-	step := obj.GetValueWithContext(d, stepKey)
+	start := get(d, obj, startKey, d.decodeValue)
+	end := get(d, obj, endKey, d.decodeValue)
+	step := get(d, obj, stepKey, d.decodeValue)
 
 	value := cadence.NewMeteredInclusiveRange(
 		d.gauge,
@@ -1005,9 +1030,11 @@ func (d *Decoder) decodeInclusiveRange(valueJSON any) *cadence.InclusiveRange {
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	obj := toObject(valueJSON)
 
-	domain := common.PathDomainFromIdentifier(obj.GetStringWithContext(d, domainKey))
+	domain := get(d, obj, domainKey, func(valueJSON any) common.PathDomain {
+		return common.PathDomainFromIdentifier(toString(valueJSON))
+	})
 
-	identifier := obj.GetStringWithContext(d, identifierKey)
+	identifier := get(d, obj, identifierKey, toString)
 	common.UseMemory(d.gauge, common.NewRawStringMemoryUsage(len(identifier)))
 
 	path, err := cadence.NewMeteredPath(
@@ -1024,10 +1051,14 @@ func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 func (d *Decoder) decodeFunction(valueJSON any) cadence.Function {
 	obj := toObject(valueJSON)
 
-	functionType, ok := d.decodeType(obj.GetWithContext(d, functionTypeKey), typeDecodingResults{}).(*cadence.FunctionType)
-	if !ok {
-		panic(errors.NewDefaultUserError("invalid function: invalid function type"))
-	}
+	functionType := get(d, obj, functionTypeKey, func(valueJSON any) *cadence.FunctionType {
+		functionType, ok := d.decodeType(valueJSON, typeDecodingResults{}).(*cadence.FunctionType)
+		if !ok {
+			panic(errors.NewDefaultUserError("invalid function: invalid function type"))
+		}
+
+		return functionType
+	})
 
 	return cadence.NewMeteredFunction(
 		d.gauge,
@@ -1037,28 +1068,39 @@ func (d *Decoder) decodeFunction(valueJSON any) cadence.Function {
 
 func (d *Decoder) decodeTypeParameter(valueJSON any, results typeDecodingResults) cadence.TypeParameter {
 	obj := toObject(valueJSON)
+
+	name := get(d, obj, nameKey, toString)
+
 	// Unmetered because decodeTypeParameter is metered in decodeTypeParameters and called nowhere else
-	typeBoundObj, ok := obj[typeBoundKey]
+	// TODO: getOpt
 	var typeBound cadence.Type
+	typeBoundObj, ok := obj[typeBoundKey]
 	if ok {
+		d.pushPath(propertyPathElement(typeBoundKey))
 		typeBound = d.decodeType(typeBoundObj, results)
+		d.popPath()
 	}
 
 	return cadence.NewTypeParameter(
-		toString(obj.GetWithContext(d, nameKey)),
+		name,
 		typeBound,
 	)
 }
 
-func (d *Decoder) decodeTypeParameters(typeParams []any, results typeDecodingResults) []cadence.TypeParameter {
+func (d *Decoder) decodeTypeParameters(valueJSON any, results typeDecodingResults) []cadence.TypeParameter {
+	typeParams := toSlice(valueJSON)
+
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceTypeParameter,
 		Amount: uint64(len(typeParams)),
 	})
-	typeParameters := make([]cadence.TypeParameter, 0, len(typeParams))
 
-	for _, param := range typeParams {
-		typeParameters = append(typeParameters, d.decodeTypeParameter(param, results))
+	typeParameters := make([]cadence.TypeParameter, len(typeParams))
+
+	for i, param := range typeParams {
+		d.pushPath(indexPathElement(i))
+		typeParameters[i] = d.decodeTypeParameter(param, results)
+		d.popPath()
 	}
 
 	return typeParameters
@@ -1066,38 +1108,69 @@ func (d *Decoder) decodeTypeParameters(typeParams []any, results typeDecodingRes
 
 func (d *Decoder) decodeParameter(valueJSON any, results typeDecodingResults) cadence.Parameter {
 	obj := toObject(valueJSON)
+
+	label := get(d, obj, labelKey, toString)
+	id := get(d, obj, idKey, toString)
+	ty := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+
 	// Unmetered because decodeParameter is metered in decodeParameters and called nowhere else
 	return cadence.NewParameter(
-		toString(obj.GetWithContext(d, labelKey)),
-		toString(obj.GetWithContext(d, idKey)),
-		d.decodeType(obj.GetWithContext(d, typeKey), results),
+		label,
+		id,
+		ty,
 	)
 }
 
-func (d *Decoder) decodeParameters(params []any, results typeDecodingResults) []cadence.Parameter {
+func (d *Decoder) decodeParameters(valueJSON any, results typeDecodingResults) []cadence.Parameter {
+	params := toSlice(valueJSON)
+
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceParameter,
 		Amount: uint64(len(params)),
 	})
-	parameters := make([]cadence.Parameter, 0, len(params))
 
-	for _, param := range params {
-		parameters = append(parameters, d.decodeParameter(param, results))
+	parameters := make([]cadence.Parameter, len(params))
+
+	for i, param := range params {
+		d.pushPath(indexPathElement(i))
+		parameters[i] = d.decodeParameter(param, results)
+		d.popPath()
 	}
 
 	return parameters
 }
 
-func (d *Decoder) decodeFieldTypes(fs []any, results typeDecodingResults) []cadence.Field {
+func (d *Decoder) decodeInitializers(valueJSON any, results typeDecodingResults) [][]cadence.Parameter {
+	initializers := toSlice(valueJSON)
+
+	// Unmetered because this is created as an array of nil arrays, not Parameter structs
+	inits := make([][]cadence.Parameter, len(initializers))
+
+	for i, params := range initializers {
+		d.pushPath(indexPathElement(i))
+		inits[i] = d.decodeParameters(params, results)
+		d.popPath()
+	}
+
+	return inits
+}
+
+func (d *Decoder) decodeFieldTypes(valueJSON any, results typeDecodingResults) []cadence.Field {
+	fs := toSlice(valueJSON)
+
 	common.UseMemory(d.gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceField,
 		Amount: uint64(len(fs)),
 	})
 
-	fields := make([]cadence.Field, 0, len(fs))
+	fields := make([]cadence.Field, len(fs))
 
-	for _, field := range fs {
-		fields = append(fields, d.decodeFieldType(field, results))
+	for i, field := range fs {
+		d.pushPath(indexPathElement(i))
+		fields[i] = d.decodeFieldType(field, results)
+		d.popPath()
 	}
 
 	return fields
@@ -1105,11 +1178,14 @@ func (d *Decoder) decodeFieldTypes(fs []any, results typeDecodingResults) []cade
 
 func (d *Decoder) decodeFieldType(valueJSON any, results typeDecodingResults) cadence.Field {
 	obj := toObject(valueJSON)
+
+	id := get(d, obj, idKey, toString)
+	ty := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+
 	// Unmetered because decodeFieldType is metered in decodeFieldTypes and called nowhere else
-	return cadence.NewField(
-		toString(obj.GetWithContext(d, idKey)),
-		d.decodeType(obj.GetWithContext(d, typeKey), results),
-	)
+	return cadence.NewField(id, ty)
 }
 
 func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
@@ -1120,14 +1196,32 @@ func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
 	return cadence.FunctionPurityImpure
 }
 
-func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, returnValue any, purity any, results typeDecodingResults) cadence.Type {
-	var typeParameters []cadence.TypeParameter
-	if typeParametersValue != nil {
-		typeParameters = d.decodeTypeParameters(toSlice(typeParametersValue), results)
+func (d *Decoder) decodeFunctionType(obj jsonObject, results typeDecodingResults) cadence.Type {
+	// TODO: getOpt
+	functionPurity := cadence.FunctionPurityImpure
+	purity, ok := obj[purityKey]
+	if ok {
+		d.pushPath(propertyPathElement(purityKey))
+		functionPurity = d.decodePurity(purity)
+		d.popPath()
 	}
-	parameters := d.decodeParameters(toSlice(parametersValue), results)
-	returnType := d.decodeType(returnValue, results)
-	functionPurity := d.decodePurity(purity)
+
+	// TODO: getOpt
+	var typeParameters []cadence.TypeParameter
+	typeParametersValue := obj[typeParametersKey]
+	if typeParametersValue != nil {
+		d.pushPath(propertyPathElement(typeParametersKey))
+		typeParameters = d.decodeTypeParameters(typeParametersValue, results)
+		d.popPath()
+	}
+
+	parameters := get(d, obj, parametersKey, func(valueJSON any) []cadence.Parameter {
+		return d.decodeParameters(valueJSON, results)
+	})
+
+	returnType := get(d, obj, returnKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
@@ -1140,34 +1234,75 @@ func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, retur
 
 func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorization {
 	obj := toObject(authorizationJSON)
-	kind := obj.GetWithContext(d, kindKey)
+
+	kind := get(d, obj, kindKey, toString)
 
 	switch kind {
 	case "Unauthorized":
 		return cadence.UnauthorizedAccess
+
 	case "EntitlementMapAuthorization":
-		entitlements := toSlice(obj.GetWithContext(d, entitlementsKey))
-		m := toString(toObject(entitlements[0]).GetWithContext(d, "typeID"))
-		return cadence.NewEntitlementMapAuthorization(d.gauge, common.TypeID(m))
+		return d.decodeEntitlementMapAuthorization(obj)
+
 	case "EntitlementConjunctionSet":
-		var typeIDs []common.TypeID
-		entitlements := toSlice(obj.GetWithContext(d, entitlementsKey))
-		for _, entitlement := range entitlements {
-			id := toString(toObject(entitlement).GetWithContext(d, "typeID"))
-			typeIDs = append(typeIDs, common.TypeID(id))
-		}
-		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Conjunction)
+		return d.decodeEntitlementConjunctionSetAuthorization(obj)
+
 	case "EntitlementDisjunctionSet":
-		var typeIDs []common.TypeID
-		entitlements := toSlice(obj.GetWithContext(d, entitlementsKey))
-		for _, entitlement := range entitlements {
-			id := toString(toObject(entitlement).GetWithContext(d, "typeID"))
-			typeIDs = append(typeIDs, common.TypeID(id))
-		}
-		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Disjunction)
+		return d.decodeEntitlementDisjunctionSetAuthorization(obj)
 	}
 
 	panic(errors.NewDefaultUserError("invalid kind in authorization: %s", kind))
+}
+
+func (d *Decoder) decodeEntitlementMapAuthorization(obj jsonObject) cadence.Authorization {
+	typeIDs := get(d, obj, entitlementsKey, d.decodeEntitlementTypeIDs)
+	if len(typeIDs) != 1 {
+		panic(errors.NewDefaultUserError(
+			"invalid entitlement map authorization: exactly one entitlement type ID expected",
+		))
+	}
+
+	return cadence.NewEntitlementMapAuthorization(d.gauge, typeIDs[0])
+}
+
+func (d *Decoder) decodeEntitlementConjunctionSetAuthorization(obj jsonObject) cadence.Authorization {
+	typeIDs := get(d, obj, entitlementsKey, d.decodeEntitlementTypeIDs)
+
+	return cadence.NewEntitlementSetAuthorization(
+		d.gauge,
+		typeIDs,
+		cadence.Conjunction,
+	)
+}
+
+func (d *Decoder) decodeEntitlementDisjunctionSetAuthorization(obj jsonObject) cadence.Authorization {
+	typeIDs := get(d, obj, entitlementsKey, d.decodeEntitlementTypeIDs)
+
+	return cadence.NewEntitlementSetAuthorization(
+		d.gauge,
+		typeIDs,
+		cadence.Disjunction,
+	)
+}
+
+func (d *Decoder) decodeEntitlementTypeIDs(valueJSON any) []common.TypeID {
+	entitlements := toSlice(valueJSON)
+
+	typeIDs := make([]common.TypeID, len(entitlements))
+
+	for i, entitlement := range entitlements {
+		d.pushPath(indexPathElement(i))
+		typeIDs[i] = d.decodeEntitlementTypeID(entitlement)
+		d.popPath()
+	}
+
+	return typeIDs
+}
+
+func (d *Decoder) decodeEntitlementTypeID(valueJSON any) common.TypeID {
+	obj := toObject(valueJSON)
+	id := get(d, obj, typeIDKey, toString)
+	return common.TypeID(id)
 }
 
 //go:linkname setCompositeTypeFields github.com/onflow/cadence.setCompositeTypeFields
@@ -1176,26 +1311,13 @@ func setCompositeTypeFields(cadence.CompositeType, []cadence.Field)
 //go:linkname setInterfaceTypeFields github.com/onflow/cadence.setInterfaceTypeFields
 func setInterfaceTypeFields(cadence.InterfaceType, []cadence.Field)
 
-func (d *Decoder) decodeNominalType(
-	obj jsonObject,
-	kind, typeID string,
-	fs, initializers []any,
-	results typeDecodingResults,
-) cadence.Type {
+func (d *Decoder) decodeNominalType(obj jsonObject, kind string, results typeDecodingResults) cadence.Type {
 
-	// Unmetered because this is created as an array of nil arrays, not Parameter structs
-	inits := make([][]cadence.Parameter, 0, len(initializers))
-	for _, params := range initializers {
-		inits = append(
-			inits,
-			d.decodeParameters(toSlice(params), results),
-		)
-	}
+	inits := get(d, obj, initializersKey, func(valueJSON any) [][]cadence.Parameter {
+		return d.decodeInitializers(valueJSON, results)
+	})
 
-	location, qualifiedIdentifier, err := common.DecodeTypeID(d.gauge, typeID)
-	if err != nil {
-		panic(errors.NewDefaultUserError("invalid type ID in nominal type: %w", err))
-	}
+	compositeTypeID := get(d, obj, typeIDKey, d.decodeCompositeTypeID)
 
 	var result cadence.Type
 	var interfaceType cadence.InterfaceType
@@ -1205,83 +1327,104 @@ func (d *Decoder) decodeNominalType(
 	case "Struct":
 		compositeType = cadence.NewMeteredStructType(
 			d.gauge,
-			location,
-			qualifiedIdentifier,
+			compositeTypeID.location,
+			compositeTypeID.qualifiedIdentifier,
 			nil,
 			inits,
 		)
 		result = compositeType
+
 	case "Resource":
 		compositeType = cadence.NewMeteredResourceType(
 			d.gauge,
-			location,
-			qualifiedIdentifier,
+			compositeTypeID.location,
+			compositeTypeID.qualifiedIdentifier,
 			nil,
 			inits,
 		)
 		result = compositeType
+
 	case "Event":
+		if len(inits) != 1 {
+			panic(errors.NewDefaultUserError(
+				"invalid event: exactly one initializer expected, got %d",
+				len(inits),
+			))
+		}
+
 		compositeType = cadence.NewMeteredEventType(
 			d.gauge,
-			location,
-			qualifiedIdentifier,
+			compositeTypeID.location,
+			compositeTypeID.qualifiedIdentifier,
 			nil,
 			inits[0],
 		)
 		result = compositeType
+
 	case "Contract":
 		compositeType = cadence.NewMeteredContractType(
 			d.gauge,
-			location,
-			qualifiedIdentifier,
+			compositeTypeID.location,
+			compositeTypeID.qualifiedIdentifier,
 			nil,
 			inits,
 		)
 		result = compositeType
+
 	case "StructInterface":
 		interfaceType = cadence.NewMeteredStructInterfaceType(
 			d.gauge,
-			location,
-			qualifiedIdentifier,
+			compositeTypeID.location,
+			compositeTypeID.qualifiedIdentifier,
 			nil,
 			inits,
 		)
 		result = interfaceType
+
 	case "ResourceInterface":
 		interfaceType = cadence.NewMeteredResourceInterfaceType(
 			d.gauge,
-			location,
-			qualifiedIdentifier,
+			compositeTypeID.location,
+			compositeTypeID.qualifiedIdentifier,
 			nil,
 			inits,
 		)
 		result = interfaceType
+
 	case "ContractInterface":
 		interfaceType = cadence.NewMeteredContractInterfaceType(
 			d.gauge,
-			location,
-			qualifiedIdentifier,
+			compositeTypeID.location,
+			compositeTypeID.qualifiedIdentifier,
 			nil,
 			inits,
 		)
 		result = interfaceType
+
 	case "Enum":
+		rawType := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+			return d.decodeType(valueJSON, results)
+		})
+
 		compositeType = cadence.NewMeteredEnumType(
 			d.gauge,
-			location,
-			qualifiedIdentifier,
-			d.decodeType(obj.GetWithContext(d, typeKey), results),
+			compositeTypeID.location,
+			compositeTypeID.qualifiedIdentifier,
+			rawType,
 			nil,
 			inits,
 		)
 		result = compositeType
+
 	default:
 		panic(errors.NewDefaultUserError("invalid kind: %s", kind))
 	}
 
-	results[typeID] = result
+	results[compositeTypeID.typeID] = result
 
-	fields := d.decodeFieldTypes(fs, results)
+	fields := get(d, obj, fieldsKey, func(valueJSON any) []cadence.Field {
+		return d.decodeFieldTypes(valueJSON, results)
+	})
 
 	switch {
 	case compositeType != nil:
@@ -1294,18 +1437,31 @@ func (d *Decoder) decodeNominalType(
 }
 
 func (d *Decoder) decodeIntersectionType(
-	intersectionValue []any,
+	obj jsonObject,
 	results typeDecodingResults,
 ) cadence.Type {
-	types := make([]cadence.Type, 0, len(intersectionValue))
-	for _, typ := range intersectionValue {
-		types = append(types, d.decodeType(typ, results))
-	}
+	types := get(d, obj, intersectionTypesKey, func(valueJSON any) []cadence.Type {
+		return d.decodeTypes(valueJSON, results)
+	})
 
 	return cadence.NewMeteredIntersectionType(
 		d.gauge,
 		types,
 	)
+}
+
+func (d *Decoder) decodeTypes(valueJSON any, results typeDecodingResults) []cadence.Type {
+	v := toSlice(valueJSON)
+
+	types := make([]cadence.Type, len(v))
+
+	for i, typ := range v {
+		d.pushPath(indexPathElement(i))
+		types[i] = d.decodeType(typ, results)
+		d.popPath()
+	}
+
+	return types
 }
 
 type typeDecodingResults map[string]cadence.Type
@@ -1356,166 +1512,204 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 	}
 
 	obj := toObject(valueJSON)
-	d.pushPath(staticPathElement("type"))
-	defer d.popPath()
-	kindValue := toString(obj.GetWithContext(d, kindKey))
+	kindValue := get(d, obj, kindKey, toString)
 
 	switch kindValue {
 	case "Function":
-		typeParametersValue := obj[typeParametersKey]
-		parametersValue := obj.GetWithContext(d, parametersKey)
-		returnValue := obj.GetWithContext(d, returnKey)
-		purity, hasPurity := obj[purityKey]
-		if !hasPurity {
-			purity = "impure"
-		}
-		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, purity, results)
+		return d.decodeFunctionType(obj, results)
+
 	case "Intersection":
-		intersectionValue := obj.GetWithContext(d, intersectionTypesKey)
-		return d.decodeIntersectionType(
-			toSlice(intersectionValue),
-			results,
-		)
+		return d.decodeIntersectionType(obj, results)
+
 	case "Optional":
-		return cadence.NewMeteredOptionalType(
-			d.gauge,
-			d.decodeType(obj.GetWithContext(d, typeKey), results),
-		)
+		return d.decodeOptionalType(obj, results)
+
 	case "Restriction":
-		// Backwards-compatibility for format <v1.0.0:
-		if !d.backwardsCompatible {
-			panic("Restriction kind is not supported")
-		}
+		return d.decodeDeprecatedRestrictedType(obj, results)
 
-		restrictionsValue := obj.GetWithContext(d, restrictionsKey)
-		typeValue := obj.GetWithContext(d, typeKey)
-		return d.decodeDeprecatedRestrictedType(
-			typeValue,
-			toSlice(restrictionsValue),
-			results,
-		)
 	case "VariableSizedArray":
-		return cadence.NewMeteredVariableSizedArrayType(
-			d.gauge,
-			d.decodeType(obj.GetWithContext(d, typeKey), results),
-		)
-	case "Capability":
-		return cadence.NewMeteredCapabilityType(
-			d.gauge,
-			d.decodeType(obj.GetWithContext(d, typeKey), results),
-		)
-	case "Dictionary":
-		return cadence.NewMeteredDictionaryType(
-			d.gauge,
-			d.decodeType(obj.GetWithContext(d, keyKey), results),
-			d.decodeType(obj.GetWithContext(d, valueKey), results),
-		)
-	case "InclusiveRange":
-		return cadence.NewMeteredInclusiveRangeType(
-			d.gauge,
-			d.decodeType(obj.GetWithContext(d, elementKey), results),
-		)
-	case "ConstantSizedArray":
-		size := toUInt(obj.GetWithContext(d, sizeKey))
-		return cadence.NewMeteredConstantSizedArrayType(
-			d.gauge,
-			size,
-			d.decodeType(obj.GetWithContext(d, typeKey), results),
-		)
-	case "Reference":
-		// Backwards-compatibility for format <v1.0.0:
-		if d.backwardsCompatible {
-			if _, hasKey := obj[authorizedKey]; hasKey {
-				return cadence.NewDeprecatedMeteredReferenceType(
-					d.gauge,
-					obj.GetBoolWithContext(d, authorizedKey),
-					d.decodeType(obj.GetWithContext(d, typeKey), results),
-				)
-			}
-		}
+		return d.decodeVariableSizedArrayType(obj, results)
 
-		return cadence.NewMeteredReferenceType(
-			d.gauge,
-			d.decodeAuthorization(obj.GetWithContext(d, authorizationKey)),
-			d.decodeType(obj.GetWithContext(d, typeKey), results),
-		)
+	case "Capability":
+		return d.decodeCapabilityType(obj, results)
+
+	case "Dictionary":
+		return d.decodeDictionaryType(obj, results)
+
+	case "InclusiveRange":
+		return d.decodeInclusiveRangeType(obj, results)
+
+	case "ConstantSizedArray":
+		return d.decodeConstantSizedArrayType(obj, results)
+
+	case "Reference":
+		return d.decodeReferenceType(obj, results)
+
 	default:
 		simpleType, ok := simpleTypes[kindValue]
 		if ok {
 			return simpleType
 		}
 
-		fieldsValue := obj.GetWithContext(d, fieldsKey)
-		typeIDValue := toString(obj.GetWithContext(d, typeIDKey))
-		initValue := obj.GetWithContext(d, initializersKey)
-		return d.decodeNominalType(
-			obj,
-			kindValue,
-			typeIDValue,
-			toSlice(fieldsValue),
-			toSlice(initValue),
-			results,
-		)
+		return d.decodeNominalType(obj, kindValue, results)
 	}
+}
+
+func (d *Decoder) decodeReferenceType(obj jsonObject, results typeDecodingResults) cadence.Type {
+
+	ty := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+
+	// Backwards-compatibility for format <v1.0.0:
+	if d.backwardsCompatible {
+		if _, ok := obj[authorizedKey]; ok {
+			authorized := get(d, obj, authorizedKey, toBool)
+
+			return cadence.NewDeprecatedMeteredReferenceType(
+				d.gauge,
+				authorized,
+				ty,
+			)
+		}
+	}
+
+	authorization := get(d, obj, authorizationKey, d.decodeAuthorization)
+
+	return cadence.NewMeteredReferenceType(
+		d.gauge,
+		authorization,
+		ty,
+	)
+}
+
+func (d *Decoder) decodeConstantSizedArrayType(obj jsonObject, results typeDecodingResults) cadence.Type {
+	size := get(d, obj, sizeKey, toUInt)
+	ty := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+
+	return cadence.NewMeteredConstantSizedArrayType(
+		d.gauge,
+		size,
+		ty,
+	)
+}
+
+func (d *Decoder) decodeInclusiveRangeType(obj jsonObject, results typeDecodingResults) cadence.Type {
+	elementType := get(d, obj, elementKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+	return cadence.NewMeteredInclusiveRangeType(d.gauge, elementType)
+}
+
+func (d *Decoder) decodeDictionaryType(obj jsonObject, results typeDecodingResults) cadence.Type {
+	keyType := get(d, obj, keyKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+	valueType := get(d, obj, valueKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+	return cadence.NewMeteredDictionaryType(
+		d.gauge,
+		keyType,
+		valueType,
+	)
+}
+
+func (d *Decoder) decodeCapabilityType(obj jsonObject, results typeDecodingResults) cadence.Type {
+	ty := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+	return cadence.NewMeteredCapabilityType(d.gauge, ty)
+}
+
+func (d *Decoder) decodeVariableSizedArrayType(obj jsonObject, results typeDecodingResults) cadence.Type {
+	ty := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+	return cadence.NewMeteredVariableSizedArrayType(d.gauge, ty)
+}
+
+func (d *Decoder) decodeOptionalType(obj jsonObject, results typeDecodingResults) cadence.Type {
+	ty := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+	return cadence.NewMeteredOptionalType(d.gauge, ty)
 }
 
 func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 	obj := toObject(valueJSON)
 
-	return cadence.NewMeteredTypeValue(
-		d.gauge,
-		d.decodeType(obj.GetWithContext(d, staticTypeKey), typeDecodingResults{}),
-	)
+	ty := get(d, obj, staticTypeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, typeDecodingResults{})
+	})
+
+	return cadence.NewMeteredTypeValue(d.gauge, ty)
 }
 
 func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
+	address := get(d, obj, addressKey, d.decodeAddress)
+	borrowType := get(d, obj, borrowTypeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, typeDecodingResults{})
+	})
+
 	if d.backwardsCompatible {
-		if _, hasKey := obj[idKey]; !hasKey {
-			path, ok := d.DecodeJSON(obj.GetWithContext(d, pathKey)).(cadence.Path)
-			if !ok {
-				panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
-			}
+		if _, ok := obj[idKey]; !ok {
+			path := get(d, obj, pathKey, func(valueJSON any) cadence.Path {
+				path, ok := d.decodeValue(valueJSON).(cadence.Path)
+				if !ok {
+					panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
+				}
+
+				return path
+			})
 
 			return cadence.NewDeprecatedMeteredPathCapability(
 				d.gauge,
-				d.decodeAddress(obj.GetWithContext(d, addressKey)),
+				address,
 				path,
-				d.decodeType(obj.GetWithContext(d, borrowTypeKey), typeDecodingResults{}),
+				borrowType,
 			)
 		}
-	} else {
-		if _, hasKey := obj[pathKey]; hasKey {
-			panic(errors.NewDefaultUserError("invalid capability: path is not supported"))
-		}
+	} else if _, ok := obj[pathKey]; ok {
+		panic(errors.NewDefaultUserError("invalid capability: path is not supported"))
 	}
+
+	id := get(d, obj, idKey, d.decodeUInt64)
 
 	return cadence.NewMeteredCapability(
 		d.gauge,
-		d.decodeUInt64(obj.GetWithContext(d, idKey)),
-		d.decodeAddress(obj.GetWithContext(d, addressKey)),
-		d.decodeType(obj.GetWithContext(d, borrowTypeKey), typeDecodingResults{}),
+		id,
+		address,
+		borrowType,
 	)
 }
 
 // Deprecated: do not use in new code, only for backwards compatibility
 // Restricted types got removed in v1.0.0
 func (d *Decoder) decodeDeprecatedRestrictedType(
-	typeValue any,
-	restrictionsValue []any,
+	obj jsonObject,
 	results typeDecodingResults,
 ) cadence.Type {
-	typ := d.decodeType(typeValue, results)
-
-	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
-	for _, restriction := range restrictionsValue {
-		restrictions = append(restrictions, d.decodeType(restriction, results))
+	// Backwards-compatibility for format <v1.0.0:
+	if !d.backwardsCompatible {
+		panic("Restriction kind is not supported")
 	}
+
+	ty := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+		return d.decodeType(valueJSON, results)
+	})
+
+	restrictions := get(d, obj, restrictionsKey, func(valueJSON any) []cadence.Type {
+		return d.decodeTypes(valueJSON, results)
+	})
 
 	return cadence.NewDeprecatedMeteredRestrictedType(
 		d.gauge,
-		typ,
+		ty,
 		restrictions,
 	)
 }
@@ -1524,44 +1718,23 @@ func (d *Decoder) decodeDeprecatedRestrictedType(
 
 type jsonObject map[string]any
 
-func (obj jsonObject) GetWithContext(d *Decoder, key string) any {
-	v, hasKey := obj[key]
-	if !hasKey {
-		path := d.getPathString()
-		if path != "" {
-			panic(errors.NewDefaultUserError("missing property: %s (at %s)", key, path))
-		}
+func get[T any](d *Decoder, obj jsonObject, key string, f func(valueJSON any) T) T {
+	v, ok := obj[key]
+	if !ok {
 		panic(errors.NewDefaultUserError("missing property: %s", key))
 	}
 
-	return v
-}
-
-func (obj jsonObject) GetBoolWithContext(d *Decoder, key string) bool {
-	v := obj.GetWithContext(d, key)
-	return toBool(v)
-}
-
-func (obj jsonObject) GetStringWithContext(d *Decoder, key string) string {
-	v := obj.GetWithContext(d, key)
-	return toString(v)
-}
-
-func (obj jsonObject) GetSliceWithContext(d *Decoder, key string) []any {
-	v := obj.GetWithContext(d, key)
-	return toSlice(v)
-}
-
-func (obj jsonObject) GetValueWithContext(d *Decoder, key string) cadence.Value {
-	v := obj.GetWithContext(d, key)
-	return d.DecodeJSON(v)
+	d.pushPath(propertyPathElement(key))
+	result := f(v)
+	d.popPath()
+	return result
 }
 
 // JSON conversion helpers
 
 func toBool(valueJSON any) bool {
-	v, isBool := valueJSON.(bool)
-	if !isBool {
+	v, ok := valueJSON.(bool)
+	if !ok {
 		panic(errors.NewDefaultUserError("expected JSON bool, got %s", valueJSON))
 	}
 
@@ -1569,8 +1742,8 @@ func toBool(valueJSON any) bool {
 }
 
 func toUInt(valueJSON any) uint {
-	v, isNum := valueJSON.(float64)
-	if !isNum {
+	v, ok := valueJSON.(float64)
+	if !ok {
 		panic(errors.NewDefaultUserError("expected JSON number, got %s", valueJSON))
 	}
 
@@ -1578,18 +1751,17 @@ func toUInt(valueJSON any) uint {
 }
 
 func toString(valueJSON any) string {
-	v, isString := valueJSON.(string)
-	if !isString {
+	v, ok := valueJSON.(string)
+	if !ok {
 		panic(errors.NewDefaultUserError("expected JSON string, got %s", valueJSON))
-
 	}
 
 	return v
 }
 
 func toSlice(valueJSON any) []any {
-	v, isSlice := valueJSON.([]any)
-	if !isSlice {
+	v, ok := valueJSON.([]any)
+	if !ok {
 		panic(errors.NewDefaultUserError("expected JSON array, got %s", valueJSON))
 	}
 
@@ -1597,9 +1769,9 @@ func toSlice(valueJSON any) []any {
 }
 
 func toObject(valueJSON any) jsonObject {
-	v, isMap := valueJSON.(map[string]any)
-	if !isMap {
-		panic(errors.NewDefaultUserError("expecte JSON object, got %s", valueJSON))
+	v, ok := valueJSON.(map[string]any)
+	if !ok {
+		panic(errors.NewDefaultUserError("expected JSON object, got %s", valueJSON))
 	}
 
 	return v
