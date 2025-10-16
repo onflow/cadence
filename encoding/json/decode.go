@@ -835,7 +835,7 @@ func (d *Decoder) decodeCompositeTypeID(valueJSON any) compositeTypeID {
 
 	location, qualifiedIdentifier, err := common.DecodeTypeID(d.gauge, typeID)
 	if err != nil {
-		panic(errors.NewDefaultUserError("invalid type ID `%s`: %s", typeID, err.Error()))
+		panic(errors.NewDefaultUserError("invalid type ID `%s`: %w", typeID, err))
 	} else if location == nil && sema.NativeCompositeTypes[typeID] == nil {
 
 		// If the location is nil, and there is no native composite type with this ID, then it's an invalid type.
