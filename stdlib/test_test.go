@@ -1942,6 +1942,38 @@ func TestTestExpect(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("error message with newlines", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+           import Test
+
+           access(all)
+           fun test() {
+               let result = Test.ScriptResult(
+                   status: Test.ResultStatus.failed,
+                   returnValue: nil,
+                   error: Test.Error("error: line 1\nerror: line 2\n\ttab indented line")
+               )
+               Test.expect(result, Test.beSucceeded())
+           }
+        `
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		var assertionErr *AssertionError
+		require.ErrorAs(t, err, &assertionErr)
+		assert.Contains(t, assertionErr.Message, "error: line 1")
+		assert.Contains(t, assertionErr.Message, "error: line 2")
+		assert.Contains(t, assertionErr.Message, "\ttab indented line")
+		assert.NotContains(t, assertionErr.Message, "\\n")
+		assert.NotContains(t, assertionErr.Message, "\\t")
+	})
+
 	t.Run("mismatching types", func(t *testing.T) {
 		t.Parallel()
 
