@@ -99,7 +99,8 @@ func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
           }
 
           struct Bar {
-              var foo: Foo
+              let foo: Foo
+
               init() {
                   self.foo = Foo()
               }
@@ -147,7 +148,8 @@ func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
           }
 
           struct Bar {
-              var foo: Foo
+              let foo: Foo
+
               init() {
                   self.foo = Foo()
               }
@@ -179,14 +181,15 @@ func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
           }
 
           struct Bar {
-              var foo: Foo
+              let foo: Foo
+
               init() {
                   self.foo = Foo()
               }
           }
 
           struct Foo {
-              var id: String
+              let id: String
 
               init() {
                   self.id = ""
@@ -233,14 +236,15 @@ func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
           }
 
           struct Bar {
-              var foo: Foo
+              let foo: Foo
+
               init() {
                   self.foo = Foo()
               }
           }
 
           struct Foo {
-              var id: String
+              let id: String
 
               init() {
                   self.id = ""
@@ -336,6 +340,7 @@ func TestCheckInvalidOptionalChainingFieldAssignment(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       struct Test {
           var x: Int
+
           init(x: Int) {
               self.x = x
           }
@@ -511,7 +516,6 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-
 		assert.NotContains(t,
 			memberErr.SecondaryError(),
 			"did you mean",
@@ -542,7 +546,6 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-
 		assert.NotContains(t,
 			memberErr.SecondaryError(),
 			"did you mean",
@@ -559,7 +562,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct Test {
-                var x: [Int]
+                let x: [Int]
                 init() {
                     self.x = []
                 }
@@ -567,7 +570,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
             fun test() {
                 let test = Test()
-                var x: [Int] = test.x
+                let x: [Int] = test.x
             }
         `)
 
@@ -586,7 +589,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
             fun test() {
                 let test = Test()
-                var foo: (fun(): Int) = test.foo
+                let foo: (fun(): Int) = test.foo
             }
         `)
 
@@ -598,7 +601,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct Test {
-                var x: [Int]
+                let x: [Int]
                 init() {
                     self.x = []
                 }
@@ -607,7 +610,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let test = Test()
                 let testRef = &test as &Test
-                var x: &[Int] = testRef.x
+                let x: &[Int] = testRef.x
             }
         `)
 
@@ -619,7 +622,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct Test {
-                var x: [Int]?
+                let x: [Int]?
                 init() {
                     self.x = []
                 }
@@ -628,7 +631,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let test = Test()
                 let testRef = &test as &Test
-                var x: &[Int]? = testRef.x
+                let x: &[Int]? = testRef.x
             }
         `)
 
@@ -640,7 +643,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct Test {
-                var x: Int
+                let x: Int
                 init() {
                     self.x = 1
                 }
@@ -649,7 +652,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let test = Test()
                 let testRef = &test as &Test
-                var x: Int = testRef.x
+                let x: Int = testRef.x
             }
         `)
 
@@ -665,11 +668,12 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let test = Test()
                 let testRef = &test as &Test
-                var x: Int = testRef.x
+                let x: Int = testRef.x
             }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
+
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
 	})
@@ -687,7 +691,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let test = Test()
                 let testRef = &test as &Test
-                var foo: (fun(): Int) = testRef.foo
+                let foo: (fun(): Int) = testRef.foo
             }
         `)
 
@@ -700,7 +704,7 @@ func TestCheckMemberAccess(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
-                var x: [Int] = array[0]
+                let x: [Int] = array[0]
             }
         `)
 
@@ -714,7 +718,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let array: [[Int]] = [[1, 2]]
                 let arrayRef = &array as &[[Int]]
-                var x: &[Int] = arrayRef[0]
+                let x: &[Int] = arrayRef[0]
             }
         `)
 
@@ -732,13 +736,14 @@ func TestCheckMemberAccess(t *testing.T) {
                 let arrayRef = &array as auth(A) &[[Int]]
 
                 // Must be a. err: returns an unauthorized reference.
-                var x: auth(A) &[Int] = arrayRef[0]
+                let x: auth(A) &[Int] = arrayRef[0]
             }
         `)
 
-		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
-		require.ErrorAs(t, errors[0], &typeMismatchError)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
 	})
 
 	t.Run("array reference, optional typed element", func(t *testing.T) {
@@ -748,7 +753,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let array: [[Int]?] = [[1, 2]]
                 let arrayRef = &array as &[[Int]?]
-                var x: &[Int]? = arrayRef[0]
+                let x: &[Int]? = arrayRef[0]
             }
         `)
 
@@ -762,7 +767,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let array: [Int] = [1, 2]
                 let arrayRef = &array as &[Int]
-                var x: Int = arrayRef[0]
+                let x: Int = arrayRef[0]
             }
         `)
 
@@ -774,9 +779,12 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             fun test() {
-                let array: [&[Int]] = [&[1] as &[Int], &[2] as &[Int]]
+                let array: [&[Int]] = [
+                    &[1] as &[Int],
+                    &[2] as &[Int]
+                ]
                 let arrayRef = &array as &[&[Int]]
-                var x: &[Int] = arrayRef[0]
+                let x: &[Int] = arrayRef[0]
             }
         `)
 
@@ -788,33 +796,23 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             fun test() {
-                let array: [auth(Mutate) &[Int]] = [&[1] as auth(Mutate) &[Int], &[2] as auth(Mutate) &[Int]]
+                let array: [auth(Mutate) &[Int]] = [
+                    &[1] as auth(Mutate) &[Int],
+                    &[2] as auth(Mutate) &[Int]
+                ]
                 let arrayRef = &array as &[auth(Mutate) &[Int]]
 
                 // Must be an unauthorized reference.
-                var x: &[Int] = arrayRef[0]
+                let x: auth(Mutate) &[Int] = arrayRef[0]
+                let y: &[Int] = arrayRef[0]
             }
         `)
 
-		require.NoError(t, err)
-	})
+		errs := RequireCheckerErrors(t, err, 1)
 
-	t.Run("array reference, authorized reference typed element, invalid expected type", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            fun test() {
-                let array: [auth(Mutate) &[Int]] = [&[1] as auth(Mutate) &[Int], &[2] as auth(Mutate) &[Int]]
-                let arrayRef = &array as &[auth(Mutate) &[Int]]
-
-                // Must be an unauthorized reference.
-                var x: auth(Mutate) &[Int] = arrayRef[0]
-            }
-        `)
-
-		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
-		require.ErrorAs(t, errors[0], &typeMismatchError)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 10, typeMismatchError.StartPos.Line)
 	})
 
 	t.Run("dictionary, value", func(t *testing.T) {
@@ -823,7 +821,7 @@ func TestCheckMemberAccess(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let dict: {String: {String: Int}} = {"one": {"two": 2}}
-                var x: {String: Int}? = dict["one"]
+                let x: {String: Int}? = dict["one"]
             }
         `)
 
@@ -837,7 +835,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
                 let dictRef = &dict as &{String: {String: Int}}
-                var x: &{String: Int}? = dictRef["one"]
+                let x: &{String: Int}? = dictRef["one"]
             }
         `)
 
@@ -854,14 +852,17 @@ func TestCheckMemberAccess(t *testing.T) {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
                 let dictRef = &dict as auth(A) &{String: {String: Int}}
 
-                // Must be a. err: returns an unauthorized reference.
-                var x: auth(A) &{String: Int}? = dictRef["one"]
+                // Must be an unauthorized reference.
+                let x: auth(A) &{String: Int}? = dictRef["one"]
+                let y: &{String: Int}? = dictRef["one"]
             }
         `)
 
-		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
-		require.ErrorAs(t, errors[0], &typeMismatchError)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 9, typeMismatchError.StartPos.Line)
 	})
 
 	t.Run("dictionary reference, optional typed value", func(t *testing.T) {
@@ -871,7 +872,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let dict: {String: {String: Int}?} = {"one": {"two": 2}}
                 let dictRef = &dict as &{String: {String: Int}?}
-                var x: (&{String: Int})?? = dictRef["one"]
+                let x: (&{String: Int})?? = dictRef["one"]
             }
         `)
 
@@ -887,13 +888,14 @@ func TestCheckMemberAccess(t *testing.T) {
                 let dictRef = &dict as &{String: {String: Int}?}
 
                 // Must return an optional reference, not a reference to an optional
-                var x: &({String: Int}??) = dictRef["one"]
+                let x: &({String: Int}??) = dictRef["one"]
             }
         `)
 
-		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
-		require.ErrorAs(t, errors[0], &typeMismatchError)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
 	})
 
 	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
@@ -903,11 +905,52 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let dict: {String: Int} = {"one": 1}
                 let dictRef = &dict as &{String: Int}
-                var x: Int? = dictRef["one"]
+                let x: Int? = dictRef["one"]
             }
         `)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, unauthorized reference typed element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: &{String: Int}} = {
+                    "a": &{"c": 1} as &{String: Int},
+                    "b": &{"d": 2} as &{String: Int}
+                }
+                let dictRef = &dict as &{String: &{String: Int}}
+                let x: &{String: Int}? = dictRef["a"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, authorized reference typed element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: auth(Mutate) &{String: Int}} = {
+                    "a": &{"c": 1} as auth(Mutate) &{String: Int},
+                    "b": &{"d": 2} as auth(Mutate) &{String: Int}
+                }
+                let dictRef = &dict as &{String: auth(Mutate) &{String: Int}}
+
+                // Must be an unauthorized reference.
+                let x: (auth(Mutate) &{String: Int})? = dictRef["a"]
+                let y: &{String: Int}? = dictRef["a"]
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 10, typeMismatchError.StartPos.Line)
 	})
 
 	t.Run("resource reference, attachment", func(t *testing.T) {
@@ -922,7 +965,7 @@ func TestCheckMemberAccess(t *testing.T) {
                 let r <- create R()
                 let rRef = &r as &R
 
-                var a: &A? = rRef[A]
+                let a: &A? = rRef[A]
                 destroy r
             }
         `)
@@ -950,7 +993,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let s = S()
                 let sRef = &s as auth(A) &S
-                var foo: auth(B) &[String] = sRef.foo
+                let foo: auth(B) &[String] = sRef.foo
             }
         `)
 
@@ -998,9 +1041,10 @@ func TestCheckMemberAccess(t *testing.T) {
             }
         `)
 
-		errors := RequireCheckerErrors(t, err, 1)
-		invalidAccessError := &sema.InvalidAccessError{}
-		require.ErrorAs(t, errors[0], &invalidAccessError)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var invalidAccessError *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessError)
 	})
 
 	t.Run("entitlement map access nested", func(t *testing.T) {
@@ -1052,9 +1096,10 @@ func TestCheckMemberAccess(t *testing.T) {
             }
         `)
 
-		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
-		require.ErrorAs(t, errors[0], &typeMismatchError)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
 	})
 
 	t.Run("anyresource swap on reference", func(t *testing.T) {
@@ -1074,6 +1119,7 @@ func TestCheckMemberAccess(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 4)
+
 		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
@@ -1086,7 +1132,7 @@ func TestCheckMemberAccess(t *testing.T) {
 		test := func(t *testing.T, typeName string) {
 			code := fmt.Sprintf(`
                 struct Foo {
-                    var a: %[1]s?
+                    let a: %[1]s?
 
                     init() {
                         self.a = nil
@@ -1100,7 +1146,7 @@ func TestCheckMemberAccess(t *testing.T) {
                 fun test() {
                     let foo = Foo()
                     let fooRef = &foo as &Foo
-                    var a: &%[1]s? = fooRef.a
+                    let a: &%[1]s? = fooRef.a
                 }`,
 
 				typeName,
@@ -1144,7 +1190,8 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct Test {
-                var status: Status
+                let status: Status
+
                 init() {
                     self.status = Status.Off
                 }
@@ -1158,7 +1205,7 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let test = Test()
                 let testRef = &test as &Test
-                var x: Status = testRef.status
+                let x: Status = testRef.status
             }
         `)
 
@@ -1172,7 +1219,7 @@ func TestCheckContractFieldAccessInSameContract(t *testing.T) {
 	_, err := ParseAndCheck(t, `
         contract Foo {
 
-            var array: [Int]
+            let array: [Int]
 
             init() {
                 self.array = []
@@ -1180,7 +1227,7 @@ func TestCheckContractFieldAccessInSameContract(t *testing.T) {
 
             access(all) fun bar() {
                 // Should return the concrete value, not a reference.
-                var foo: [Int] = Foo.array
+                let foo: [Int] = Foo.array
             }
         }`,
 	)
