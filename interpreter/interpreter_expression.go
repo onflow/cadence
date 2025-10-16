@@ -1413,6 +1413,10 @@ func CreateReferenceValue(
 				}
 
 				return value
+			} else {
+				panic(&NestedReferenceError{
+					Value: value,
+				})
 			}
 
 			// break

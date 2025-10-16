@@ -1300,6 +1300,7 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
                 let arr: [AnyStruct] = [&t1 as auth(E) &T, &t2 as auth(E) &T]
                 let arrRef = &arr as &[AnyStruct]
                 let tRef = arrRef[0]
+                let authTRef = tRef as! &T
             }
             
         `)

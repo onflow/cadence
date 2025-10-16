@@ -86,18 +86,32 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	return memberType
 }
 
-// getReferenceType Returns a reference type to a given type.
+// getReferenceTypeForChild Returns a reference type to a given type of the child (member/element).
 // Reference to an optional should return an optional reference.
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getReferenceType(typ Type, authorization Access) Type {
-	if optionalType, ok := typ.(*OptionalType); ok {
-		innerType := checker.getReferenceType(optionalType.Type, authorization)
+func (checker *Checker) getReferenceTypeForChild(typ Type, authorization Access) Type {
+	switch typ := typ.(type) {
+	case *OptionalType:
+		innerType := checker.getReferenceTypeForChild(typ.Type, authorization)
 		return NewOptionalType(checker.memoryGauge, innerType)
-	}
+	case *ReferenceType:
+		if authorization != UnauthorizedAccess {
+			checker.report(
+				&InvalidMemberReferenceError{
+					ExpectedAuthorization: UnauthorizedAccess,
+					ActualAuthorization:   typ.Authorization,
+				},
+			)
+		}
 
-	return NewReferenceType(checker.memoryGauge, authorization, typ)
+		// Strip off any authorization. Same as returning with the expected authorization.
+		return NewReferenceType(checker.memoryGauge, authorization, typ.Type)
+	default:
+		return NewReferenceType(checker.memoryGauge, authorization, typ)
+
+	}
 }
 
 func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
@@ -107,6 +121,11 @@ func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool 
 
 	if _, isReference := MaybeReferenceType(parentType); !isReference {
 		return false
+	}
+
+	// If the member is already a reference, then a reference must be returned.
+	if _, isReference := memberType.(*ReferenceType); isReference {
+		return true
 	}
 
 	return memberType.ContainFieldsOrElements()
@@ -370,7 +389,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
 		}
 
-		resultingType = checker.getReferenceType(resultingType, authorization)
+		resultingType = checker.getReferenceTypeForChild(resultingType, authorization)
 		returnReference = true
 	}
 

@@ -769,6 +769,54 @@ func TestCheckMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("array reference, unauthorized reference typed element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [&[Int]] = [&[1] as &[Int], &[2] as &[Int]]
+                let arrayRef = &array as &[&[Int]]
+                var x: &[Int] = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, authorized reference typed element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [auth(Mutate) &[Int]] = [&[1] as auth(Mutate) &[Int], &[2] as auth(Mutate) &[Int]]
+                let arrayRef = &array as &[auth(Mutate) &[Int]]
+
+                // Must be an unauthorized reference.
+                var x: &[Int] = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, authorized reference typed element, invalid expected type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [auth(Mutate) &[Int]] = [&[1] as auth(Mutate) &[Int], &[2] as auth(Mutate) &[Int]]
+                let arrayRef = &array as &[auth(Mutate) &[Int]]
+
+                // Must be an unauthorized reference.
+                var x: auth(Mutate) &[Int] = arrayRef[0]
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
 	t.Run("dictionary, value", func(t *testing.T) {
 		t.Parallel()
 
