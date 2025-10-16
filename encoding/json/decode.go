@@ -1416,6 +1416,21 @@ func (d *Decoder) decodeNominalType(obj jsonObject, kind string, results typeDec
 		)
 		result = compositeType
 
+	case "Attachment":
+		baseType := get(d, obj, typeKey, func(valueJSON any) cadence.Type {
+			return d.decodeType(valueJSON, results)
+		})
+
+		compositeType = cadence.NewMeteredAttachmentType(
+			d.gauge,
+			compositeTypeID.location,
+			compositeTypeID.qualifiedIdentifier,
+			baseType,
+			nil,
+			inits,
+		)
+		result = compositeType
+
 	default:
 		panic(errors.NewDefaultUserError("invalid kind: %s", kind))
 	}

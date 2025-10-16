@@ -1002,6 +1002,40 @@ func parseCompositeKind(p *parser) common.CompositeKind {
 	return common.CompositeKindUnknown
 }
 
+func checkAndReportFieldInitialization(p *parser) {
+	// NOTE: We cannot use `skipSpaceAndComments` here because it would consume the docstring comments
+	// for the next field declaration.
+	//
+	// After parsing a field's type annotation, we're at the end of that field's declaration.
+	// The next tokens might be: space, then `=` (for invalid initialization), then newline,
+	// then docstring comment for the next field.
+	//
+	// If we call `skipSpaceAndComments`, it skips the space AND the newline AND the docstring comment.
+	// This causes `parseMembersAndNestedDeclarations` to miss the docstring
+	// when it calls `parseTrivia` for the next field.
+
+	if p.current.Type == lexer.TokenSpace {
+		p.next()
+	}
+
+	if p.current.Is(lexer.TokenEqual) {
+		equalPos := p.current.StartPos
+		p.nextSemanticToken()
+
+		initExpression, err := parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return
+		}
+
+		p.report(&FieldInitializationError{
+			Range: ast.Range{
+				StartPos: equalPos,
+				EndPos:   initExpression.EndPosition(p.memoryGauge),
+			},
+		})
+	}
+}
+
 // parseFieldWithVariableKind parses a field which has a variable kind.
 //
 //	variableKind : 'var' | 'let'
@@ -1054,6 +1088,8 @@ func parseFieldWithVariableKind(
 	if err != nil {
 		return nil, err
 	}
+
+	checkAndReportFieldInitialization(p)
 
 	return ast.NewFieldDeclaration(
 		p.memoryGauge,
@@ -1896,6 +1932,8 @@ func parseFieldDeclarationWithoutVariableKind(
 	if err != nil {
 		return nil, err
 	}
+
+	checkAndReportFieldInitialization(p)
 
 	return ast.NewFieldDeclaration(
 		p.memoryGauge,
