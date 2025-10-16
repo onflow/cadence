@@ -1211,6 +1211,37 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("composite reference, reference field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Inner {}
+
+            struct Outer {
+                let innerRef: auth(Mutate) &Inner
+
+                init() {
+                    self.innerRef = &Inner() as auth(Mutate) &Inner
+                }
+            }
+
+            fun test() {
+                let outer = Outer()
+                let outerRef = &outer as &Outer
+
+				// Must be an unauthorized reference.
+                let x: auth(Mutate) &Inner = outerRef.innerRef
+				let y: &Inner = outerRef.innerRef
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 17, typeMismatchError.StartPos.Line)
+	})
 }
 
 func TestCheckContractFieldAccessInSameContract(t *testing.T) {
