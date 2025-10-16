@@ -67,6 +67,7 @@ func NewVM(
 	vm.configureContext()
 
 	context.recoverErrors = vm.RecoverErrors
+	context.semaTypeCache = program.SemaTypeCache
 
 	// Link global variables and functions.
 	linkedGlobals := context.linkGlobals(
@@ -1069,7 +1070,7 @@ func checkMemberAccessTargetType(
 
 	context := vm.context
 
-	// TODO: Avoid sema type conversion.
+	// TODO: Avoid sema type conversion
 	accessedSemaType := context.SemaTypeFromStaticType(accessedType)
 
 	interpreter.CheckMemberAccessTargetType(
