@@ -124,7 +124,7 @@ func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool 
 	}
 
 	// If the member is already a reference, then a reference must be returned.
-	if _, isReference := memberType.(*ReferenceType); isReference {
+	if _, isReference := MaybeReferenceType(memberType); isReference {
 		return true
 	}
 
