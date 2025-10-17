@@ -21,11 +21,12 @@ package interpreter
 import (
 	"encoding/binary"
 	"fmt"
-	"math"
 	"math/big"
 	"unsafe"
 
 	"github.com/onflow/atree"
+
+	fix "github.com/onflow/fixed-point"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -37,51 +38,83 @@ import (
 )
 
 // Fix64Value
-type Fix64Value int64
-
-const Fix64MaxValue = math.MaxInt64
-const Fix64MinValue = math.MinInt64
+type Fix64Value fix.Fix64
 
 const fix64Size = int(unsafe.Sizeof(Fix64Value(0)))
 
 var fix64MemoryUsage = common.NewNumberMemoryUsage(fix64Size)
+
+// Note that this function uses the default scaling of 8.
+func NewUnmeteredFix64ValueWithInteger(integer int64) Fix64Value {
+	bigInt := big.NewInt(integer)
+	bigInt = new(big.Int).Mul(
+		bigInt,
+		sema.Fix64FactorBig,
+	)
+
+	return NewFix64ValueFromBigIntWithRangeCheck(nil, bigInt)
+}
+
+func NewUnmeteredFix64ValueWithIntegerAndScale(integer int64, scale int64) Fix64Value {
+	bigInt := big.NewInt(integer)
+
+	bigInt = new(big.Int).Mul(
+		bigInt,
+		// To remove the fractional, multiply it by the given scale.
+		new(big.Int).Exp(
+			big.NewInt(10),
+			big.NewInt(scale),
+			nil,
+		),
+	)
+
+	return NewFix64ValueFromBigInt(nil, bigInt)
+}
 
 func NewFix64ValueWithInteger(gauge common.MemoryGauge, constructor func() int64) Fix64Value {
 	common.UseMemory(gauge, fix64MemoryUsage)
 	return NewUnmeteredFix64ValueWithInteger(constructor())
 }
 
-func NewUnmeteredFix64ValueWithInteger(integer int64) Fix64Value {
-
-	if integer < sema.Fix64TypeMinInt {
-		panic(&UnderflowError{})
-	}
-
-	if integer > sema.Fix64TypeMaxInt {
-		panic(&OverflowError{})
-	}
-
-	return NewUnmeteredFix64Value(integer * sema.Fix64Factor)
-}
-
-func NewFix64Value(gauge common.MemoryGauge, valueGetter func() int64) Fix64Value {
+func NewFix64Value(gauge common.MemoryGauge, valueGetter func() fix.Fix64) Fix64Value {
 	common.UseMemory(gauge, fix64MemoryUsage)
 	return NewUnmeteredFix64Value(valueGetter())
 }
 
-func NewUnmeteredFix64Value(integer int64) Fix64Value {
-	return Fix64Value(integer)
+func NewUnmeteredFix64Value(fix64 fix.Fix64) Fix64Value {
+	return Fix64Value(fix64)
 }
 
 func NewFix64ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 	return NewFix64Value(
 		gauge,
-		func() int64 {
+		func() fix.Fix64 {
 			bytes := padWithZeroes(b, 8)
-			val := binary.BigEndian.Uint64(bytes)
-			return int64(val)
+			val := int64(binary.BigEndian.Uint64(bytes))
+			return fix.Fix64(val)
 		},
 	)
+}
+
+func NewFix64ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) Fix64Value {
+	return NewFix64Value(
+		gauge,
+		func() fix.Fix64 {
+			return fixedpoint.Fix64FromBigInt(v)
+		},
+	)
+}
+
+func NewFix64ValueFromBigIntWithRangeCheck(gauge common.MemoryGauge, v *big.Int) Fix64Value {
+	if v.Cmp(fixedpoint.Fix64TypeMin) == -1 {
+		panic(&UnderflowError{})
+	}
+
+	if v.Cmp(fixedpoint.Fix64TypeMax) == 1 {
+		panic(&OverflowError{})
+	}
+
+	return NewFix64ValueFromBigInt(gauge, v)
 }
 
 var _ Value = Fix64Value(0)
@@ -133,17 +166,22 @@ func (v Fix64Value) MeteredString(
 }
 
 func (v Fix64Value) ToInt() int {
-	return int(v / sema.Fix64Factor)
-}
+	// TODO: Maybe compute this without the use of `big.Int`
+	fix64BigInt := v.ToBigInt()
+	integerPart := fix64BigInt.Div(fix64BigInt, sema.Fix64FactorBig)
 
-func (v Fix64Value) Negate(context NumberValueArithmeticContext) NumberValue {
-	// INT32-C
-	if v == math.MinInt64 {
+	if !integerPart.IsInt64() {
 		panic(&OverflowError{})
 	}
 
-	valueGetter := func() int64 {
-		return int64(-v)
+	return int(integerPart.Int64())
+}
+
+func (v Fix64Value) Negate(context NumberValueArithmeticContext) NumberValue {
+	valueGetter := func() fix.Fix64 {
+		neg, err := fix.Fix64(v).Neg()
+		handleFixedpointError(err)
+		return neg
 	}
 
 	return NewFix64Value(context, valueGetter)
@@ -159,8 +197,11 @@ func (v Fix64Value) Plus(context NumberValueArithmeticContext, other NumberValue
 		})
 	}
 
-	valueGetter := func() int64 {
-		return safeAddInt64(int64(v), int64(o))
+	valueGetter := func() fix.Fix64 {
+		result, err := fix.Fix64(v).Add(fix.Fix64(o))
+		// Should panic on overflow/underflow
+		handleFixedpointError(err)
+		return result
 	}
 
 	return NewFix64Value(context, valueGetter)
@@ -176,14 +217,9 @@ func (v Fix64Value) SaturatingPlus(context NumberValueArithmeticContext, other N
 		})
 	}
 
-	valueGetter := func() int64 {
-		// INT32-C
-		if (o > 0) && (v > (math.MaxInt64 - o)) {
-			return math.MaxInt64
-		} else if (o < 0) && (v < (math.MinInt64 - o)) {
-			return math.MinInt64
-		}
-		return int64(v + o)
+	valueGetter := func() fix.Fix64 {
+		result, err := fix.Fix64(v).Add(fix.Fix64(o))
+		return fix64SaturationArithmaticResult(result, err)
 	}
 
 	return NewFix64Value(context, valueGetter)
@@ -199,15 +235,11 @@ func (v Fix64Value) Minus(context NumberValueArithmeticContext, other NumberValu
 		})
 	}
 
-	valueGetter := func() int64 {
-		// INT32-C
-		if (o > 0) && (v < (math.MinInt64 + o)) {
-			panic(&UnderflowError{})
-		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-			panic(&OverflowError{})
-		}
-
-		return int64(v - o)
+	valueGetter := func() fix.Fix64 {
+		result, err := fix.Fix64(v).Sub(fix.Fix64(o))
+		// Should panic on overflow/underflow
+		handleFixedpointError(err)
+		return result
 	}
 
 	return NewFix64Value(context, valueGetter)
@@ -223,21 +255,13 @@ func (v Fix64Value) SaturatingMinus(context NumberValueArithmeticContext, other 
 		})
 	}
 
-	valueGetter := func() int64 {
-		// INT32-C
-		if (o > 0) && (v < (math.MinInt64 + o)) {
-			return math.MinInt64
-		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-			return math.MaxInt64
-		}
-		return int64(v - o)
+	valueGetter := func() fix.Fix64 {
+		result, err := fix.Fix64(v).Sub(fix.Fix64(o))
+		return fix64SaturationArithmaticResult(result, err)
 	}
 
 	return NewFix64Value(context, valueGetter)
 }
-
-var minInt64Big = big.NewInt(math.MinInt64)
-var maxInt64Big = big.NewInt(math.MaxInt64)
 
 func (v Fix64Value) Mul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
 	o, ok := other.(Fix64Value)
@@ -249,20 +273,15 @@ func (v Fix64Value) Mul(context NumberValueArithmeticContext, other NumberValue)
 		})
 	}
 
-	a := new(big.Int).SetInt64(int64(v))
-	b := new(big.Int).SetInt64(int64(o))
+	valueGetter := func() fix.Fix64 {
+		result, err := fix.Fix64(v).Mul(
+			fix.Fix64(o),
+			fix.RoundTruncate,
+		)
 
-	valueGetter := func() int64 {
-		result := new(big.Int).Mul(a, b)
-		result.Quo(result, sema.Fix64FactorBig)
-
-		if result.Cmp(minInt64Big) < 0 {
-			panic(&UnderflowError{})
-		} else if result.Cmp(maxInt64Big) > 0 {
-			panic(&OverflowError{})
-		}
-
-		return result.Int64()
+		// Should panic on overflow/underflow
+		handleFixedpointError(err)
+		return result
 	}
 
 	return NewFix64Value(context, valueGetter)
@@ -278,20 +297,13 @@ func (v Fix64Value) SaturatingMul(context NumberValueArithmeticContext, other Nu
 		})
 	}
 
-	a := new(big.Int).SetInt64(int64(v))
-	b := new(big.Int).SetInt64(int64(o))
+	valueGetter := func() fix.Fix64 {
+		result, err := fix.Fix64(v).Mul(
+			fix.Fix64(o),
+			fix.RoundTruncate,
+		)
 
-	valueGetter := func() int64 {
-		result := new(big.Int).Mul(a, b)
-		result.Quo(result, sema.Fix64FactorBig)
-
-		if result.Cmp(minInt64Big) < 0 {
-			return math.MinInt64
-		} else if result.Cmp(maxInt64Big) > 0 {
-			return math.MaxInt64
-		}
-
-		return result.Int64()
+		return fix64SaturationArithmaticResult(result, err)
 	}
 
 	return NewFix64Value(context, valueGetter)
@@ -307,20 +319,14 @@ func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue)
 		})
 	}
 
-	a := new(big.Int).SetInt64(int64(v))
-	b := new(big.Int).SetInt64(int64(o))
-
-	valueGetter := func() int64 {
-		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
-		result.Quo(result, b)
-
-		if result.Cmp(minInt64Big) < 0 {
-			panic(&UnderflowError{})
-		} else if result.Cmp(maxInt64Big) > 0 {
-			panic(&OverflowError{})
-		}
-
-		return result.Int64()
+	valueGetter := func() fix.Fix64 {
+		result, err := fix.Fix64(v).Div(
+			fix.Fix64(o),
+			fix.RoundTruncate,
+		)
+		// Should panic on overflow/underflow
+		handleFixedpointError(err)
+		return result
 	}
 
 	return NewFix64Value(context, valueGetter)
@@ -336,20 +342,12 @@ func (v Fix64Value) SaturatingDiv(context NumberValueArithmeticContext, other Nu
 		})
 	}
 
-	a := new(big.Int).SetInt64(int64(v))
-	b := new(big.Int).SetInt64(int64(o))
-
-	valueGetter := func() int64 {
-		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
-		result.Quo(result, b)
-
-		if result.Cmp(minInt64Big) < 0 {
-			return math.MinInt64
-		} else if result.Cmp(maxInt64Big) > 0 {
-			return math.MaxInt64
-		}
-
-		return result.Int64()
+	valueGetter := func() fix.Fix64 {
+		result, err := fix.Fix64(v).Div(
+			fix.Fix64(o),
+			fix.RoundTruncate,
+		)
+		return fix64SaturationArithmaticResult(result, err)
 	}
 
 	return NewFix64Value(context, valueGetter)
@@ -365,24 +363,14 @@ func (v Fix64Value) Mod(context NumberValueArithmeticContext, other NumberValue)
 		})
 	}
 
-	// v - int(v/o) * o
-	quotient, ok := v.Div(context, o).(Fix64Value)
-	if !ok {
-		panic(&InvalidOperandsError{
-			Operation: ast.OperationMod,
-			LeftType:  v.StaticType(context),
-			RightType: other.StaticType(context),
-		})
+	valueGetter := func() fix.Fix64 {
+		result, err := fix.Fix64(v).Mod(fix.Fix64(o))
+		// Should panic on overflow/underflow
+		handleFixedpointError(err)
+		return result
 	}
 
-	truncatedQuotient := NewFix64Value(
-		context,
-		func() int64 {
-			return (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
-		},
-	)
-
-	return v.Minus(context, truncatedQuotient.Mul(context, o))
+	return NewFix64Value(context, valueGetter)
 }
 
 func (v Fix64Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -395,7 +383,10 @@ func (v Fix64Value) Less(context ValueComparisonContext, other ComparableValue) 
 		})
 	}
 
-	return v < o
+	this := fix.Fix64(v)
+	that := fix.Fix64(o)
+
+	return BoolValue(this.Lt(that))
 }
 
 func (v Fix64Value) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -408,7 +399,10 @@ func (v Fix64Value) LessEqual(context ValueComparisonContext, other ComparableVa
 		})
 	}
 
-	return v <= o
+	this := fix.Fix64(v)
+	that := fix.Fix64(o)
+
+	return BoolValue(this.Lte(that))
 }
 
 func (v Fix64Value) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -421,7 +415,10 @@ func (v Fix64Value) Greater(context ValueComparisonContext, other ComparableValu
 		})
 	}
 
-	return v > o
+	this := fix.Fix64(v)
+	that := fix.Fix64(o)
+
+	return BoolValue(this.Gt(that))
 }
 
 func (v Fix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -434,7 +431,10 @@ func (v Fix64Value) GreaterEqual(context ValueComparisonContext, other Comparabl
 		})
 	}
 
-	return v >= o
+	this := fix.Fix64(v)
+	that := fix.Fix64(o)
+
+	return BoolValue(this.Gte(that))
 }
 
 func (v Fix64Value) Equal(_ ValueComparisonContext, other Value) bool {
@@ -455,63 +455,41 @@ func (v Fix64Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 }
 
 func ConvertFix64(memoryGauge common.MemoryGauge, value Value) Fix64Value {
+	scaledInt := new(big.Int)
+
 	switch value := value.(type) {
 	case Fix64Value:
 		return value
 
 	case UFix64Value:
-		if value.UFix64Value > Fix64MaxValue {
-			panic(&OverflowError{})
-		}
-		return NewFix64Value(
-			memoryGauge,
-			func() int64 {
-				return int64(value.UFix64Value)
-			},
-		)
+		bigInt := UFix64ToBigInt(value)
+		scaledInt = bigInt
 
 	case Fix128Value:
-		return fix128BigIntToFix64(
-			memoryGauge,
-			value.ToBigInt(),
-		)
+		scaledInt = value.ToBigInt()
 
 	case UFix128Value:
-		return fix128BigIntToFix64(
-			memoryGauge,
-			value.ToBigInt(),
-		)
+		scaledInt = value.ToBigInt()
 
 	case BigNumberValue:
-		converter := func() int64 {
-			v := value.ToBigInt(memoryGauge)
-
-			// First, check if the value is at least in the int64 range.
-			// The integer range for Fix64 is smaller, but this test at least
-			// allows us to call `v.Int64()` safely.
-
-			if !v.IsInt64() {
-				panic(&OverflowError{})
-			}
-
-			return v.Int64()
-		}
-
-		// Now check that the integer value fits the range of Fix64
-		return NewFix64ValueWithInteger(memoryGauge, converter)
+		bigInt := value.ToBigInt(memoryGauge)
+		scaledInt = scaledInt.Mul(
+			bigInt,
+			fixedpoint.Fix64FactorAsBigInt,
+		)
 
 	case NumberValue:
-		// Check that the integer value fits the range of Fix64
-		return NewFix64ValueWithInteger(
-			memoryGauge,
-			func() int64 {
-				return int64(value.ToInt())
-			},
+		bigInt := new(big.Int).SetInt64(int64(value.ToInt()))
+		scaledInt = scaledInt.Mul(
+			bigInt,
+			fixedpoint.Fix64FactorAsBigInt,
 		)
 
 	default:
 		panic(fmt.Sprintf("can't convert to Fix64: %s", value))
 	}
+
+	return NewFix64ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
 func (v Fix64Value) GetMember(context MemberAccessibleContext, name string) Value {
@@ -596,11 +574,27 @@ func (Fix64Value) ChildStorables() []atree.Storable {
 }
 
 func (v Fix64Value) IntegerPart() NumberValue {
-	return UInt64Value(v / sema.Fix64Factor)
+	// TODO: Maybe compute this without the use of `big.Int`
+	fix64BigInt := v.ToBigInt()
+	integerPart := fix64BigInt.Div(fix64BigInt, sema.Fix64FactorBig)
+
+	if !integerPart.IsInt64() {
+		panic(&OverflowError{})
+	}
+
+	return UInt64Value(integerPart.Uint64())
 }
 
 func (Fix64Value) Scale() int {
 	return sema.Fix64Scale
+}
+
+func (v Fix64Value) ToBigInt() *big.Int {
+	return fixedpoint.Fix64ToBigInt(fix.Fix64(v))
+}
+
+func UFix64ToBigInt(value UFix64Value) *big.Int {
+	return fixedpoint.UFix64ToBigInt(fix.UFix64(uint64(value)))
 }
 
 func fix128BigIntToFix64(
@@ -615,12 +609,18 @@ func fix128BigIntToFix64(
 	}
 
 	bigInt = bigInt.Div(bigInt, fixedpoint.Fix64ToFix128FactorAsBigInt)
-	return NewFix64Value(
-		memoryGauge,
-		func() int64 {
-			// Already checked the bounds above.
-			// So safe to directly convert to int64.
-			return bigInt.Int64()
-		},
-	)
+	return NewFix64ValueFromBigInt(memoryGauge, bigInt)
+}
+
+func fix64SaturationArithmaticResult(result fix.Fix64, err error) fix.Fix64 {
+	switch err.(type) {
+	case nil:
+		return result
+	case fix.PositiveOverflowError:
+		return fix.Fix64Max
+	case fix.NegativeOverflowError:
+		return fix.Fix64Min
+	default:
+		panic(err)
+	}
 }

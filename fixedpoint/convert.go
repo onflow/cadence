@@ -151,3 +151,19 @@ func UFix128ToBigInt(value fix.UFix128) *big.Int {
 func UFix128ToBigEndianBytes(fix128 fix.UFix128) []byte {
 	return Fix128ToBigEndianBytes(fix.Fix128(fix128))
 }
+
+func Fix64FromBigInt(value *big.Int) fix.Fix64 {
+	return fix.Fix64(value.Int64())
+}
+
+func Fix64ToBigInt(value fix.Fix64) *big.Int {
+	return big.NewInt(int64(value))
+}
+
+func UFix64FromBigInt(value *big.Int) fix.UFix64 {
+	return fix.UFix64(value.Uint64())
+}
+
+func UFix64ToBigInt(value fix.UFix64) *big.Int {
+	return new(big.Int).SetUint64(uint64(value))
+}

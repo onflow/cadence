@@ -25,6 +25,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -842,20 +844,20 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
-		return NewFix64Value(interpreter, value.Int64)
+		return NewFix64Value(interpreter, func() fix.Fix64 { return fix.Fix64(value.Int64()) })
 	case sema.Fix128Type:
 		// No need to check ranges here again, as the checker already does that.
 		return NewFix128ValueFromBigInt(interpreter, value)
 	case sema.UFix64Type:
-		return NewUFix64Value(interpreter, value.Uint64)
+		return NewUFix64Value(interpreter, func() fix.UFix64 { return fix.UFix64(value.Uint64()) })
 	case sema.UFix128Type:
 		// No need to check ranges here again, as the checker already does that.
 		return NewUFix128ValueFromBigInt(interpreter, value)
 	case sema.FixedPointType:
 		if expression.Negative {
-			return NewFix64Value(interpreter, value.Int64)
+			return NewFix64Value(interpreter, func() fix.Fix64 { return fix.Fix64(value.Int64()) })
 		} else {
-			return NewUFix64Value(interpreter, value.Uint64)
+			return NewUFix64Value(interpreter, func() fix.UFix64 { return fix.UFix64(value.Uint64()) })
 		}
 	default:
 		panic(errors.NewUnreachableError())

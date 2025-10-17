@@ -460,7 +460,7 @@ func ConvertUFix128(memoryGauge common.MemoryGauge, value Value) UFix128Value {
 		)
 
 	case UFix64Value:
-		bigInt := new(big.Int).SetUint64(uint64(value.UFix64Value))
+		bigInt := new(big.Int).SetUint64(uint64(uint64(value)))
 		scaledInt = scaledInt.Mul(
 			bigInt,
 			fixedpoint.Fix64ToFix128FactorAsBigInt,

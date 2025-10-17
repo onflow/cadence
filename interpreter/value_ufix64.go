@@ -21,160 +21,149 @@ package interpreter
 import (
 	"encoding/binary"
 	"fmt"
-	"math"
 	"math/big"
+	"unsafe"
 
 	"github.com/onflow/atree"
+
+	fix "github.com/onflow/fixed-point"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/values"
 )
 
 // UFix64Value
+type UFix64Value fix.UFix64
 
-type UFix64Value struct {
-	values.UFix64Value
+const ufix64Size = int(unsafe.Sizeof(UFix64Value(0)))
+
+var UFix64MemoryUsage = common.NewNumberMemoryUsage(ufix64Size)
+
+// Note that this function uses the default scaling of 8.
+func NewUnmeteredUFix64ValueWithInteger(integer uint64) UFix64Value {
+	bigInt := new(big.Int).SetUint64(integer)
+	bigInt = new(big.Int).Mul(
+		bigInt,
+		sema.UFix64FactorIntBig,
+	)
+
+	return NewUFix64ValueFromBigIntWithRangeCheck(nil, bigInt)
 }
 
-const UFix64MaxValue = math.MaxUint64
+func NewUnmeteredUFix64ValueWithIntegerAndScale(integer uint64, scale int64) UFix64Value {
+	bigInt := new(big.Int).SetUint64(integer)
+
+	bigInt = new(big.Int).Mul(
+		bigInt,
+		// To remove the fractional, multiply it by the given scale.
+		new(big.Int).Exp(
+			big.NewInt(10),
+			big.NewInt(scale),
+			nil,
+		),
+	)
+
+	return NewUFix64ValueFromBigInt(nil, bigInt)
+}
 
 func NewUFix64ValueWithInteger(gauge common.MemoryGauge, constructor func() uint64) UFix64Value {
-	ufix64Value, err := values.NewUFix64ValueWithInteger(gauge, func() (uint64, error) {
-		return constructor(), nil
-	})
-	if err != nil {
-		if _, ok := err.(values.OverflowError); ok {
-			panic(&OverflowError{})
-		}
-		panic(err)
-	}
-	return UFix64Value{
-		UFix64Value: ufix64Value,
-	}
+	common.UseMemory(gauge, UFix64MemoryUsage)
+	return NewUnmeteredUFix64ValueWithInteger(constructor())
 }
 
-func NewUnmeteredUFix64ValueWithInteger(integer uint64) UFix64Value {
-	ufix64Value, err := values.NewUnmeteredUFix64ValueWithInteger(integer)
-	if err != nil {
-		if _, ok := err.(values.OverflowError); ok {
-			panic(&OverflowError{})
-		}
-		panic(err)
-	}
-	return UFix64Value{
-		UFix64Value: ufix64Value,
-	}
+func NewUFix64Value(gauge common.MemoryGauge, valueGetter func() fix.UFix64) UFix64Value {
+	common.UseMemory(gauge, UFix64MemoryUsage)
+	return NewUnmeteredUFix64Value(valueGetter())
 }
 
-func NewUFix64Value(gauge common.MemoryGauge, constructor func() uint64) UFix64Value {
-	ufix64Value, err := values.NewUFix64Value(gauge, func() (uint64, error) {
-		return constructor(), nil
-	})
-	if err != nil {
-		panic(err)
-	}
-	return UFix64Value{
-		UFix64Value: ufix64Value,
-	}
-}
-
-func NewUnmeteredUFix64Value(integer uint64) UFix64Value {
-	return UFix64Value{
-		UFix64Value: values.NewUnmeteredUFix64Value(integer),
-	}
+func NewUnmeteredUFix64Value(ufix64 fix.UFix64) UFix64Value {
+	return UFix64Value(ufix64)
 }
 
 func NewUFix64ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 	return NewUFix64Value(
 		gauge,
-		func() uint64 {
+		func() fix.UFix64 {
 			bytes := padWithZeroes(b, 8)
 			val := binary.BigEndian.Uint64(bytes)
-			return val
+			return fix.UFix64(val)
 		},
 	)
 }
 
+func NewUFix64ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) UFix64Value {
+	return NewUFix64Value(
+		gauge,
+		func() fix.UFix64 {
+			return fixedpoint.UFix64FromBigInt(v)
+		},
+	)
+}
+
+func NewUFix64ValueFromBigIntWithRangeCheck(gauge common.MemoryGauge, v *big.Int) UFix64Value {
+	if v.Sign() < 0 {
+		panic(&UnderflowError{})
+	}
+
+	if v.Cmp(fixedpoint.UFix64TypeMaxIntBig) > 0 {
+		panic(&OverflowError{})
+	}
+
+	return NewUFix64ValueFromBigInt(gauge, v)
+}
+
 func ConvertUFix64(memoryGauge common.MemoryGauge, value Value) UFix64Value {
+	scaledInt := new(big.Int)
+
 	switch value := value.(type) {
+
+	case Fix64Value:
+		bigInt := value.ToBigInt()
+		scaledInt = bigInt
+
 	case UFix64Value:
 		return value
 
-	case Fix64Value:
-		if value < 0 {
-			panic(&UnderflowError{})
-		}
-		return NewUFix64Value(
-			memoryGauge,
-			func() uint64 {
-				return uint64(value)
-			},
-		)
-
 	case Fix128Value:
-		return fix128BigIntToUFix64(
-			memoryGauge,
-			value.ToBigInt(),
-		)
+		scaledInt = value.ToBigInt()
 
 	case UFix128Value:
-		return fix128BigIntToUFix64(
-			memoryGauge,
-			value.ToBigInt(),
-		)
+		scaledInt = value.ToBigInt()
 
 	case BigNumberValue:
-		converter := func() uint64 {
-			v := value.ToBigInt(memoryGauge)
-
-			if v.Sign() < 0 {
-				panic(&UnderflowError{})
-			}
-
-			// First, check if the value is at least in the uint64 range.
-			// The integer range for UFix64 is smaller, but this test at least
-			// allows us to call `v.UInt64()` safely.
-
-			if !v.IsUint64() {
-				panic(&OverflowError{})
-			}
-
-			return v.Uint64()
-		}
-
-		// Now check that the integer value fits the range of UFix64
-		return NewUFix64ValueWithInteger(memoryGauge, converter)
+		bigInt := value.ToBigInt(memoryGauge)
+		scaledInt = scaledInt.Mul(
+			bigInt,
+			fixedpoint.UFix64FactorAsBigInt,
+		)
 
 	case NumberValue:
-		converter := func() uint64 {
-			v := value.ToInt()
-			if v < 0 {
-				panic(&UnderflowError{})
-			}
-
-			return uint64(v)
-		}
-
-		// Check that the integer value fits the range of UFix64
-		return NewUFix64ValueWithInteger(memoryGauge, converter)
+		bigInt := new(big.Int).SetInt64(int64(value.ToInt()))
+		scaledInt = scaledInt.Mul(
+			bigInt,
+			fixedpoint.UFix64FactorAsBigInt,
+		)
 
 	default:
 		panic(fmt.Sprintf("can't convert to UFix64: %s", value))
 	}
+
+	return NewUFix64ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-var _ Value = UFix64Value{}
-var _ atree.Storable = UFix64Value{}
-var _ NumberValue = UFix64Value{}
-var _ FixedPointValue = UFix64Value{}
-var _ EquatableValue = UFix64Value{}
-var _ ComparableValue = UFix64Value{}
-var _ HashableValue = UFix64Value{}
-var _ MemberAccessibleValue = UFix64Value{}
+var _ Value = UFix64Value(0)
+var _ atree.Storable = UFix64Value(0)
+var _ NumberValue = UFix64Value(0)
+var _ FixedPointValue = UFix64Value(0)
+var _ EquatableValue = UFix64Value(0)
+var _ ComparableValue = UFix64Value(0)
+var _ HashableValue = UFix64Value(0)
+var _ MemberAccessibleValue = UFix64Value(0)
 
 func (UFix64Value) IsValue() {}
 
@@ -192,6 +181,10 @@ func (UFix64Value) StaticType(context ValueStaticTypeContext) StaticType {
 
 func (UFix64Value) IsImportable(_ ValueImportableContext) bool {
 	return true
+}
+
+func (v UFix64Value) String() string {
+	return format.UFix64(uint64(v))
 }
 
 func (v UFix64Value) RecursiveString(_ SeenReferences) string {
@@ -212,11 +205,15 @@ func (v UFix64Value) MeteredString(
 }
 
 func (v UFix64Value) ToInt() int {
-	result, err := v.UFix64Value.ToInt()
-	if err != nil {
-		panic(err)
+	// TODO: Maybe compute this without the use of `big.Int`
+	ufix64BigInt := v.ToBigInt()
+	integerPart := ufix64BigInt.Div(ufix64BigInt, sema.Fix64FactorBig)
+
+	if !integerPart.IsInt64() {
+		panic(&OverflowError{})
 	}
-	return result
+
+	return int(integerPart.Int64())
 }
 
 func (v UFix64Value) Negate(NumberValueArithmeticContext) NumberValue {
@@ -232,10 +229,14 @@ func (v UFix64Value) Plus(context NumberValueArithmeticContext, other NumberValu
 			RightType: other.StaticType(context),
 		})
 	}
-	result, err := v.UFix64Value.Plus(context, o.UFix64Value)
-	handleFix64Error(err)
 
-	return UFix64Value{UFix64Value: result}
+	valueGetter := func() fix.UFix64 {
+		result, err := fix.UFix64(v).Add(fix.UFix64(o))
+		handleFixedpointError(err)
+		return result
+	}
+
+	return NewUFix64Value(context, valueGetter)
 }
 
 func (v UFix64Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
@@ -248,10 +249,12 @@ func (v UFix64Value) SaturatingPlus(context NumberValueArithmeticContext, other 
 		})
 	}
 
-	result, err := v.UFix64Value.SaturatingPlus(context, o.UFix64Value)
-	handleFix64Error(err)
+	valueGetter := func() fix.UFix64 {
+		result, err := fix.UFix64(v).Add(fix.UFix64(o))
+		return ufix64SaturationArithmaticResult(result, err)
+	}
 
-	return UFix64Value{UFix64Value: result}
+	return NewUFix64Value(context, valueGetter)
 }
 
 func (v UFix64Value) Minus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
@@ -264,10 +267,13 @@ func (v UFix64Value) Minus(context NumberValueArithmeticContext, other NumberVal
 		})
 	}
 
-	result, err := v.UFix64Value.Minus(context, o.UFix64Value)
-	handleFix64Error(err)
+	valueGetter := func() fix.UFix64 {
+		result, err := fix.UFix64(v).Sub(fix.UFix64(o))
+		handleFixedpointError(err)
+		return result
+	}
 
-	return UFix64Value{UFix64Value: result}
+	return NewUFix64Value(context, valueGetter)
 }
 
 func (v UFix64Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue) NumberValue {
@@ -280,10 +286,12 @@ func (v UFix64Value) SaturatingMinus(context NumberValueArithmeticContext, other
 		})
 	}
 
-	result, err := v.UFix64Value.SaturatingMinus(context, o.UFix64Value)
-	handleFix64Error(err)
+	valueGetter := func() fix.UFix64 {
+		result, err := fix.UFix64(v).Sub(fix.UFix64(o))
+		return ufix64SaturationArithmaticResult(result, err)
+	}
 
-	return UFix64Value{UFix64Value: result}
+	return NewUFix64Value(context, valueGetter)
 }
 
 func (v UFix64Value) Mul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
@@ -296,10 +304,16 @@ func (v UFix64Value) Mul(context NumberValueArithmeticContext, other NumberValue
 		})
 	}
 
-	result, err := v.UFix64Value.Mul(context, o.UFix64Value)
-	handleFix64Error(err)
+	valueGetter := func() fix.UFix64 {
+		result, err := fix.UFix64(v).Mul(
+			fix.UFix64(o),
+			fix.RoundTruncate,
+		)
+		handleFixedpointError(err)
+		return result
+	}
 
-	return UFix64Value{UFix64Value: result}
+	return NewUFix64Value(context, valueGetter)
 }
 
 func (v UFix64Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue) NumberValue {
@@ -312,10 +326,15 @@ func (v UFix64Value) SaturatingMul(context NumberValueArithmeticContext, other N
 		})
 	}
 
-	result, err := v.UFix64Value.SaturatingMul(context, o.UFix64Value)
-	handleFix64Error(err)
+	valueGetter := func() fix.UFix64 {
+		result, err := fix.UFix64(v).Mul(
+			fix.UFix64(o),
+			fix.RoundTruncate,
+		)
+		return ufix64SaturationArithmaticResult(result, err)
+	}
 
-	return UFix64Value{UFix64Value: result}
+	return NewUFix64Value(context, valueGetter)
 }
 
 func (v UFix64Value) Div(context NumberValueArithmeticContext, other NumberValue) NumberValue {
@@ -328,14 +347,19 @@ func (v UFix64Value) Div(context NumberValueArithmeticContext, other NumberValue
 		})
 	}
 
-	result, err := v.UFix64Value.Div(context, o.UFix64Value)
-	handleFix64Error(err)
+	valueGetter := func() fix.UFix64 {
+		result, err := fix.UFix64(v).Div(
+			fix.UFix64(o),
+			fix.RoundTruncate,
+		)
+		handleFixedpointError(err)
+		return result
+	}
 
-	return UFix64Value{UFix64Value: result}
+	return NewUFix64Value(context, valueGetter)
 }
 
 func (v UFix64Value) SaturatingDiv(_ NumberValueArithmeticContext, _ NumberValue) NumberValue {
-	// UFix64 does not have a saturating division operation, see sema.UFix64Type
 	panic(errors.NewUnreachableError())
 }
 
@@ -349,10 +373,13 @@ func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue
 		})
 	}
 
-	result, err := v.UFix64Value.Mod(context, o.UFix64Value)
-	handleFix64Error(err)
+	valueGetter := func() fix.UFix64 {
+		result, err := fix.UFix64(v).Mod(fix.UFix64(o))
+		handleFixedpointError(err)
+		return result
+	}
 
-	return UFix64Value{UFix64Value: result}
+	return NewUFix64Value(context, valueGetter)
 }
 
 func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -365,7 +392,10 @@ func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue)
 		})
 	}
 
-	return BoolValue(v.UFix64Value.Less(o.UFix64Value))
+	this := fix.UFix64(v)
+	that := fix.UFix64(o)
+
+	return BoolValue(this.Lt(that))
 }
 
 func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -378,7 +408,10 @@ func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	return BoolValue(v.UFix64Value.LessEqual(o.UFix64Value))
+	this := fix.UFix64(v)
+	that := fix.UFix64(o)
+
+	return BoolValue(this.Lte(that))
 }
 
 func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -391,7 +424,10 @@ func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	return BoolValue(v.UFix64Value.Greater(o.UFix64Value))
+	this := fix.UFix64(v)
+	that := fix.UFix64(o)
+
+	return BoolValue(this.Gt(that))
 }
 
 func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -404,7 +440,10 @@ func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other Comparab
 		})
 	}
 
-	return BoolValue(v.UFix64Value.GreaterEqual(o.UFix64Value))
+	this := fix.UFix64(v)
+	that := fix.UFix64(o)
+
+	return BoolValue(this.Gte(that))
 }
 
 func (v UFix64Value) Equal(_ ValueComparisonContext, other Value) bool {
@@ -412,8 +451,7 @@ func (v UFix64Value) Equal(_ ValueComparisonContext, other Value) bool {
 	if !ok {
 		return false
 	}
-
-	return v.UFix64Value.Equal(otherUFix64.UFix64Value)
+	return v == otherUFix64
 }
 
 // HashInput returns a byte slice containing:
@@ -421,7 +459,7 @@ func (v UFix64Value) Equal(_ ValueComparisonContext, other Value) bool {
 // - uint64 value encoded in big-endian (8 bytes)
 func (v UFix64Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUFix64)
-	binary.BigEndian.PutUint64(scratch[1:], uint64(v.UFix64Value))
+	binary.BigEndian.PutUint64(scratch[1:], uint64(uint64(v)))
 	return scratch[:9]
 }
 
@@ -481,7 +519,66 @@ func (UFix64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 }
 
 func (v UFix64Value) IntegerPart() NumberValue {
-	return UInt64Value(v.UFix64Value.IntegerPart())
+	// TODO: Maybe compute this without the use of `big.Int`
+	ufix64BigInt := v.ToBigInt()
+	integerPart := ufix64BigInt.Div(ufix64BigInt, sema.Fix64FactorBig)
+
+	if !integerPart.IsUint64() {
+		panic(&OverflowError{})
+	}
+
+	return UInt64Value(integerPart.Uint64())
+}
+
+func (v UFix64Value) ToBigInt() *big.Int {
+	return fixedpoint.UFix64ToBigInt(fix.UFix64(v))
+}
+
+func (v UFix64Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
+}
+
+func (v UFix64Value) ByteSize() uint32 {
+	return values.CBORTagSize + values.GetUintCBORSize(uint64(v))
+}
+
+func (v UFix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (UFix64Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
+func (UFix64Value) IsStorable() bool {
+	return true
+}
+
+func (v UFix64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return v, nil
+}
+
+func (UFix64Value) Scale() int {
+	return sema.Fix64Scale
+}
+
+// Encode encodes UFix64Value as
+//
+//	cbor.Tag{
+//			Number:  CBORTagUFix64Value,
+//			Content: uint64(v),
+//	}
+func (v UFix64Value) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, values.CBORTagUFix64Value,
+	})
+	if err != nil {
+		return err
+	}
+	return e.CBOR.EncodeUint64(uint64(v))
 }
 
 func fix128BigIntToUFix64(
@@ -496,25 +593,17 @@ func fix128BigIntToUFix64(
 	}
 
 	bigInt = bigInt.Div(bigInt, fixedpoint.Fix64ToFix128FactorAsBigInt)
-
-	return NewUFix64Value(
-		memoryGauge,
-		func() uint64 {
-			// Already checked the bounds above.
-			// So safe to directly convert to uint64.
-			return bigInt.Uint64()
-		},
-	)
+	return NewUFix64ValueFromBigInt(memoryGauge, bigInt)
 }
 
-func handleFix64Error(err error) {
+func ufix64SaturationArithmaticResult(result fix.UFix64, err error) fix.UFix64 {
 	switch err.(type) {
 	case nil:
-		return
-	case values.OverflowError:
-		panic(&OverflowError{})
-	case values.UnderflowError:
-		panic(&UnderflowError{})
+		return result
+	case fix.PositiveOverflowError:
+		return fix.UFix64Max
+	case fix.NegativeOverflowError:
+		return fix.UFix64Zero
 	default:
 		panic(err)
 	}

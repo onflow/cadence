@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"strings"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
@@ -2297,11 +2299,11 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
 		constantKind = constant.Fix64
-		constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
+		constantValue = interpreter.NewUnmeteredFix64Value(fix.Fix64(value.Int64()))
 
 	case sema.UFix64Type:
 		constantKind = constant.UFix64
-		constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
+		constantValue = interpreter.NewUnmeteredUFix64Value(fix.UFix64(value.Uint64()))
 
 	case sema.Fix128Type:
 		constantKind = constant.Fix128
@@ -2320,10 +2322,10 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 	case sema.FixedPointType:
 		if expression.Negative {
 			constantKind = constant.Fix64
-			constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
+			constantValue = interpreter.NewUnmeteredFix64Value(fix.Fix64(value.Int64()))
 		} else {
 			constantKind = constant.UFix64
-			constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
+			constantValue = interpreter.NewUnmeteredUFix64Value(fix.UFix64(value.Uint64()))
 		}
 	default:
 		panic(errors.NewUnreachableError())

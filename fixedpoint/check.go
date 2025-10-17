@@ -55,6 +55,8 @@ var Fix64TypeMaxScaledTo128 = new(big.Int).Mul(
 	Fix64ToFix128FactorAsBigInt,
 )
 
+var Fix64FactorAsBigInt = new(big.Int).SetInt64(Fix64Factor)
+
 // Fix128
 
 const (
@@ -133,6 +135,8 @@ var UFix64TypeMaxScaledTo128 = new(big.Int).Mul(
 	new(big.Int).SetUint64(math.MaxUint64),
 	Fix64ToFix128FactorAsBigInt,
 )
+
+var UFix64FactorAsBigInt = new(big.Int).SetInt64(Fix64Factor)
 
 // UFix128
 
