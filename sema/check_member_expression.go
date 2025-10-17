@@ -91,23 +91,36 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getReferenceTypeForChild(typ Type, authorization Access) Type {
+func (checker *Checker) getReferenceTypeForChild(
+	typ Type,
+	authorization Access,
+	authorizationPos ast.HasPosition,
+) Type {
 	switch typ := typ.(type) {
 	case *OptionalType:
-		innerType := checker.getReferenceTypeForChild(typ.Type, authorization)
+		innerType := checker.getReferenceTypeForChild(
+			typ.Type,
+			authorization,
+			authorizationPos,
+		)
 		return NewOptionalType(checker.memoryGauge, innerType)
+
 	case *ReferenceType:
 		if authorization != UnauthorizedAccess {
 			checker.report(
 				&InvalidMemberReferenceError{
 					ExpectedAuthorization: UnauthorizedAccess,
-					ActualAuthorization:   typ.Authorization,
+					ActualAuthorization:   authorization,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						authorizationPos,
+					),
 				},
 			)
 		}
 
-		// Strip off any authorization. Same as returning with the expected authorization.
 		return NewReferenceType(checker.memoryGauge, authorization, typ.Type)
+
 	default:
 		return NewReferenceType(checker.memoryGauge, authorization, typ)
 
@@ -384,12 +397,18 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 		shouldReturnReference(accessedType, resultingType, isAssignment) &&
 		member.DeclarationKind == common.DeclarationKindField {
 
+		var pos ast.HasPosition = expression
+
 		authorization := UnauthorizedAccess
 		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
-			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
+			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
 		}
 
-		resultingType = checker.getReferenceTypeForChild(resultingType, authorization)
+		resultingType = checker.getReferenceTypeForChild(
+			resultingType,
+			authorization,
+			pos,
+		)
 		returnReference = true
 	}
 

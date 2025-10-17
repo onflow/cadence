@@ -142,7 +142,11 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 		// Case (a): Element type is a container type.
 		// Then the loop-var must also be a reference type.
 		if shouldReturnReference(valueType, referencedIterableElementType, false) {
-			return checker.getReferenceTypeForChild(referencedIterableElementType, UnauthorizedAccess)
+			return checker.getReferenceTypeForChild(
+				referencedIterableElementType,
+				UnauthorizedAccess,
+				nil,
+			)
 		}
 
 		// Case (b): Element type is a primitive type.

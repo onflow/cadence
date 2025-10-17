@@ -1360,7 +1360,7 @@ func CreateReferenceValue(
 
 			innerValue := value.InnerValue()
 
-			referenceValue := CreateReferenceValue(context, innerType, innerValue, false)
+			referenceValue := CreateReferenceValue(context, innerType, innerValue, isImplicit)
 
 			// Wrap the reference with an optional (since an optional is expected).
 			return NewSomeValueNonCopying(context, referenceValue)
@@ -1387,7 +1387,7 @@ func CreateReferenceValue(
 			// Case (3.a): target type is non-optional, actual value is optional.
 			innerValue := value.InnerValue()
 
-			return CreateReferenceValue(context, typ, innerValue, false)
+			return CreateReferenceValue(context, typ, innerValue, isImplicit)
 
 		case NilValue:
 			// Case (3.b) value is nil.
