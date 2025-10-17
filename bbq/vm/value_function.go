@@ -57,26 +57,26 @@ type CompiledFunctionValue struct {
 	Type       interpreter.FunctionStaticType
 }
 
-var _ Value = CompiledFunctionValue{}
-var _ FunctionValue = CompiledFunctionValue{}
+var _ Value = &CompiledFunctionValue{}
+var _ FunctionValue = &CompiledFunctionValue{}
 
-func (CompiledFunctionValue) IsValue() {}
+func (*CompiledFunctionValue) IsValue() {}
 
-func (v CompiledFunctionValue) IsFunctionValue() {}
+func (v *CompiledFunctionValue) IsFunctionValue() {}
 
-func (v CompiledFunctionValue) HasGenericType() bool {
+func (v *CompiledFunctionValue) HasGenericType() bool {
 	return false
 }
 
-func (v CompiledFunctionValue) ResolvedFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v *CompiledFunctionValue) ResolvedFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	return v.FunctionType(context)
 }
 
-func (v CompiledFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
+func (v *CompiledFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
 	return v.Type
 }
 
-func (v CompiledFunctionValue) Transfer(
+func (v *CompiledFunctionValue) Transfer(
 	context interpreter.ValueTransferContext,
 	_ atree.Address,
 	remove bool,
@@ -90,73 +90,73 @@ func (v CompiledFunctionValue) Transfer(
 	return v
 }
 
-func (v CompiledFunctionValue) String() string {
+func (v *CompiledFunctionValue) String() string {
 	return v.Type.String()
 }
 
-func (v CompiledFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *CompiledFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return interpreter.NonStorable{Value: v}, nil
 }
 
-func (v CompiledFunctionValue) Accept(_ interpreter.ValueVisitContext, _ interpreter.Visitor) {
+func (v *CompiledFunctionValue) Accept(_ interpreter.ValueVisitContext, _ interpreter.Visitor) {
 	// Unused for now
 	panic(errors.NewUnreachableError())
 }
 
-func (v CompiledFunctionValue) Walk(_ interpreter.ValueWalkContext, _ func(interpreter.Value)) {
+func (v *CompiledFunctionValue) Walk(_ interpreter.ValueWalkContext, _ func(interpreter.Value)) {
 	// NO-OP
 }
 
-func (v CompiledFunctionValue) ConformsToStaticType(
+func (v *CompiledFunctionValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
 	_ interpreter.TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v CompiledFunctionValue) RecursiveString(_ interpreter.SeenReferences) string {
+func (v *CompiledFunctionValue) RecursiveString(_ interpreter.SeenReferences) string {
 	return v.String()
 }
 
-func (v CompiledFunctionValue) MeteredString(
+func (v *CompiledFunctionValue) MeteredString(
 	context interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
 ) string {
 	return v.Type.MeteredString(context)
 }
 
-func (v CompiledFunctionValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
+func (v *CompiledFunctionValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
 	return false
 }
 
-func (v CompiledFunctionValue) NeedsStoreTo(_ atree.Address) bool {
+func (v *CompiledFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v CompiledFunctionValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
+func (v *CompiledFunctionValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v CompiledFunctionValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
+func (v *CompiledFunctionValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
 	return v
 }
 
-func (v CompiledFunctionValue) IsImportable(_ interpreter.ValueImportableContext) bool {
+func (v *CompiledFunctionValue) IsImportable(_ interpreter.ValueImportableContext) bool {
 	return false
 }
 
-func (v CompiledFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v *CompiledFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	return v.Type.Type
 }
 
-func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
+func (v *CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
 	return invocation.InvocationContext.InvokeFunction(
 		v,
 		invocation.Arguments,
 	)
 }
 
-func (v CompiledFunctionValue) IsNative() bool {
+func (v *CompiledFunctionValue) IsNative() bool {
 	return false
 }
 

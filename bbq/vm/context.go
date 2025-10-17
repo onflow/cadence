@@ -297,7 +297,7 @@ func AttachmentBaseAndSelfValues(
 	// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to self
 	var unqualifiedName string
 	switch functionValue := method.(type) {
-	case CompiledFunctionValue:
+	case *CompiledFunctionValue:
 		unqualifiedName = functionValue.Function.Name
 	case *NativeFunctionValue:
 		unqualifiedName = functionValue.Name

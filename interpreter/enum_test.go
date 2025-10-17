@@ -43,7 +43,7 @@ func TestInterpretEnum(t *testing.T) {
 
 	var expectedType interpreter.Value
 	if *compile {
-		expectedType = vm.CompiledFunctionValue{}
+		expectedType = &vm.CompiledFunctionValue{}
 	} else {
 		expectedType = &interpreter.HostFunctionValue{}
 	}
