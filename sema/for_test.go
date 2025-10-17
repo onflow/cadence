@@ -399,7 +399,7 @@ func TestCheckReferencesInForLoop(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             fun main() {
-                let array: [auth(Mutate) &[Int]] = [
+                let array: [&[Int]] = [
                     &[1] as &[Int],
                     &[2] as &[Int]
                 ]
