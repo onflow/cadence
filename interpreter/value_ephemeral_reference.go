@@ -132,22 +132,35 @@ func (v *EphemeralReferenceValue) ReferencedValue(_ ValueStaticTypeContext, _ bo
 }
 
 func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
-	var result Value
+	referencedValue := v.Value
 
-	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, name)
+	var member Value
+
+	// First, *before* looking up the member on the referenced value,
+	// check whether the member is available via special handling
+	// for reference values (e.g. array higher-order functions)
+
+	member = getReferenceValueMember(context, v, referencedValue, name)
+	if member != nil {
+		return member
 	}
 
-	if result == nil {
+	// Next, look up the member on the referenced value
+
+	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
+		member = memberAccessibleValue.GetMember(context, name)
+	}
+
+	if member == nil {
 		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
-		result = context.GetMethod(v, name)
+		member = context.GetMethod(v, name)
 	}
 
-	return result
+	return member
 }
 
 func (v *EphemeralReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getBuiltinFunctionMember(context, v.Value, name)
+	return getReferenceValueMethod(context, v, v.Value, name)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {

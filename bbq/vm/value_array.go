@@ -75,8 +75,17 @@ func init() {
 			NewNativeFunctionValueWithDerivedType(
 				sema.ArrayTypeFilterFunctionName,
 				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-					elementType := arrayElementTypeFromValue(receiver, context)
-					return sema.ArrayFilterFunctionType(context, elementType)
+					arrayType := arrayTypeFromValue(receiver, context)
+					elementType := arrayType.ElementType(false)
+					return sema.ArrayFilterFunctionType(
+						context,
+						arrayType,
+						elementType,
+						func(err error) {
+							// TODO:
+							panic(err)
+						},
+					)
 				},
 				interpreter.NativeArrayFilterFunction,
 			),
@@ -88,7 +97,15 @@ func init() {
 				sema.ArrayTypeMapFunctionName,
 				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 					arrayType := arrayTypeFromValue(receiver, context)
-					return sema.ArrayMapFunctionType(context, arrayType)
+					return sema.ArrayMapFunctionType(
+						context,
+						arrayType,
+						arrayType,
+						func(err error) {
+							// TODO:
+							panic(err)
+						},
+					)
 				},
 				interpreter.NativeArrayMapFunction,
 			),

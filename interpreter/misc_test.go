@@ -7376,7 +7376,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 	require.NoError(t, err)
 
 	dictionaryStaticType := interpreter.NewDictionaryStaticType(
-		nil,
+		inter,
 		interpreter.PrimitiveStaticTypeInt,
 		interpreter.PrimitiveStaticTypeString,
 	)
@@ -7388,7 +7388,10 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("answer"),
 	)
 
-	arrayStaticType := interpreter.NewVariableSizedStaticType(nil, dictionaryStaticType)
+	arrayStaticType := interpreter.NewVariableSizedStaticType(
+		inter,
+		dictionaryStaticType,
+	)
 
 	arrayValue := interpreter.NewArrayValue(
 		inter,
@@ -10773,6 +10776,69 @@ func TestInterpretArrayFilter(t *testing.T) {
 		array := value.(*interpreter.ArrayValue)
 		require.Equal(t, 0, array.Count())
 	})
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&[Int]] {
+              let array = [[1]]
+              let ref: &[[Int]] = &array
+
+              return ref.filter(view fun(s: &[Int]): Bool {
+                  return true
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Check outer array
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		expectedType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
+		)
+		assert.Equal(t, expectedType, arrayValue.StaticType(inter))
+
+		require.Equal(t, 1, arrayValue.Count())
+		element := arrayValue.Get(inter, 0)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, element)
+		referenceValue := element.(*interpreter.EphemeralReferenceValue)
+
+		assert.Equal(t,
+			expectedType.ElementType(),
+			referenceValue.StaticType(inter),
+		)
+
+		require.IsType(t, &interpreter.ArrayValue{}, referenceValue.Value)
+		innerArray := referenceValue.Value.(*interpreter.ArrayValue)
+
+		expectedInnerArrayType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+		assert.Equal(t, expectedInnerArrayType, innerArray.StaticType(inter))
+
+		require.Equal(t, 1, innerArray.Count())
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			innerArray.Get(inter, 0),
+		)
+	})
 }
 
 func TestInterpretArrayMap(t *testing.T) {
@@ -11264,21 +11330,56 @@ func TestInterpretArrayMap(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.NewVariableSizedStaticType(
-					nil,
+					inter,
 					interpreter.NewOptionalStaticType(
-						nil,
+						inter,
 						interpreter.PrimitiveStaticTypeString,
 					),
 				),
 				common.ZeroAddress,
 				interpreter.NewSomeValueNonCopying(
-					nil,
+					inter,
 					interpreter.NewUnmeteredStringValue("Optional.map"),
 				),
 			),
 			value,
 		)
 	})
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+
+          fun test(): [Int] {
+              let array = [S()]
+              let ref: &[S] = &array
+
+              return ref.map(fun(s: &S): Int {
+                  return 42
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(42),
+			),
+			value,
+		)
+	})
+
 }
 
 func TestInterpretArrayToVariableSized(t *testing.T) {
@@ -11446,7 +11547,7 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 				inter,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.NewCompositeStaticType(
-						nil,
+						inter,
 						common.Location(common.StringLocation("test")),
 						"TestStruct",
 						"S.test.TestStruct",
@@ -11656,7 +11757,7 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 					inter,
 					&interpreter.ConstantSizedStaticType{
 						Type: interpreter.NewCompositeStaticType(
-							nil,
+							inter,
 							common.Location(common.StringLocation("test")),
 							"TestStruct",
 							"S.test.TestStruct",

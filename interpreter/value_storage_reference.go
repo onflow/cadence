@@ -194,6 +194,17 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name 
 
 	var member Value
 
+	// First, *before* looking up the member on the referenced value,
+	// check whether the member is available via special handling
+	// for reference values (e.g. array higher-order functions)
+
+	member = getReferenceValueMember(context, v, referencedValue, name)
+	if member != nil {
+		return member
+	}
+
+	// Next, look up the member on the referenced value
+
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
 		member = memberAccessibleValue.GetMember(context, name)
 	}
@@ -233,7 +244,8 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name 
 
 func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	referencedValue := v.mustReferencedValue(context)
-	return getBuiltinFunctionMember(context, referencedValue, name)
+	return getReferenceValueMethod(context, v, referencedValue, name)
+
 }
 
 func (v *StorageReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {

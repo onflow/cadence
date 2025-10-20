@@ -75,3 +75,67 @@ func DereferenceValue(
 		return transferredDereferencedValue
 	}
 }
+
+func getReferenceValueMember(
+	context MemberAccessibleContext,
+	v ReferenceValue,
+	referencedValue Value,
+	name string,
+) FunctionValue {
+
+	switch referencedValue := referencedValue.(type) {
+	case *ArrayValue:
+		refType := context.SemaTypeFromStaticType(v.StaticType(context))
+
+		arrayType := referencedValue.SemaType(context)
+
+		switch name {
+		case sema.ArrayTypeFilterFunctionName:
+			return NewBoundHostFunctionValue(
+				context,
+				v,
+				sema.ArrayFilterFunctionType(
+					context,
+					refType,
+					arrayType.ElementType(false),
+					func(err error) {
+						// TODO:
+						panic(err)
+					},
+				),
+				NativeArrayFilterFunction,
+			)
+
+		case sema.ArrayTypeMapFunctionName:
+			return NewBoundHostFunctionValue(
+				context,
+				v,
+				sema.ArrayMapFunctionType(
+					context,
+					refType,
+					arrayType,
+					func(err error) {
+						// TODO:
+						panic(err)
+					},
+				),
+				NativeArrayMapFunction,
+			)
+		}
+	}
+
+	return nil
+}
+
+func getReferenceValueMethod(
+	context MemberAccessibleContext,
+	v ReferenceValue,
+	referencedValue Value,
+	name string,
+) FunctionValue {
+	method := getReferenceValueMember(context, v, referencedValue, name)
+	if method != nil {
+		return method
+	}
+	return getBuiltinFunctionMember(context, referencedValue, name)
+}
