@@ -303,10 +303,35 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			switch typedSubType.Purity {
 			case typedSuperType.Purity,
 				FunctionPurityView:
-				return AreTypeParamsEqual(typedSubType, typedSuperType) &&
-					(AreParamsContravariant(typedSubType, typedSuperType) &&
-						(AreReturnsCovariant(typedSubType, typedSuperType) &&
-							typedSubType.IsConstructor == typedSuperType.IsConstructor))
+				typedSubTypeTypeParameters := typedSubType.TypeParameters
+				typedSuperTypeTypeParameters := typedSuperType.TypeParameters
+				if len(typedSubTypeTypeParameters) != len(typedSuperTypeTypeParameters) {
+					return false
+				}
+
+				for i, source := range typedSubTypeTypeParameters {
+					target := typedSuperTypeTypeParameters[i]
+					if source != target {
+						return false
+					}
+				}
+
+				typedSubTypeParameters := typedSubType.Parameters
+				typedSuperTypeParameters := typedSuperType.Parameters
+				if len(typedSubTypeParameters) != len(typedSuperTypeParameters) {
+					return false
+				}
+
+				for i, source := range typedSubTypeParameters {
+					target := typedSuperTypeParameters[i]
+					if !(IsSubType(target.TypeAnnotation.Type, source.TypeAnnotation.Type)) {
+						return false
+					}
+				}
+
+				return typedSubType.Arity == typedSuperType.Arity &&
+					(AreReturnsCovariant(typedSubType, typedSuperType) &&
+						typedSubType.IsConstructor == typedSuperType.IsConstructor)
 			}
 
 		}
@@ -317,9 +342,26 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		if typedSuperType.BaseType() != nil {
 			switch typedSubType := subType.(type) {
 			case ParameterizedType:
-				return typedSubType.BaseType() != nil &&
-					(IsSubType(typedSubType.BaseType(), typedSuperType.BaseType()) &&
-						AreTypeArgumentsEqual(typedSubType, typedSuperType))
+				if typedSubType.BaseType() != nil {
+					if IsSubType(typedSubType.BaseType(), typedSuperType.BaseType()) {
+						typedSubTypeTypeArguments := typedSubType.TypeArguments()
+						typedSuperTypeTypeArguments := typedSuperType.TypeArguments()
+						if len(typedSubTypeTypeArguments) != len(typedSuperTypeTypeArguments) {
+							return false
+						}
+
+						for i, source := range typedSubTypeTypeArguments {
+							target := typedSuperTypeTypeArguments[i]
+							if !(IsSubType(source, target)) {
+								return false
+							}
+						}
+
+						return true
+					}
+
+				}
+
 			}
 
 		}
