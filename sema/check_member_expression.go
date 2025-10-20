@@ -91,38 +91,42 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getReferenceTypeForChild(
+func getReferenceTypeForChild(
+	memoryGauge common.MemoryGauge,
 	typ Type,
 	authorization Access,
 	authorizationPos ast.HasPosition,
+	report func(error),
 ) Type {
 	switch typ := typ.(type) {
 	case *OptionalType:
-		innerType := checker.getReferenceTypeForChild(
+		innerType := getReferenceTypeForChild(
+			memoryGauge,
 			typ.Type,
 			authorization,
 			authorizationPos,
+			report,
 		)
-		return NewOptionalType(checker.memoryGauge, innerType)
+		return NewOptionalType(memoryGauge, innerType)
 
 	case *ReferenceType:
 		if authorization != UnauthorizedAccess {
-			checker.report(
+			report(
 				&InvalidMemberReferenceError{
 					ExpectedAuthorization: UnauthorizedAccess,
 					ActualAuthorization:   authorization,
 					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
+						memoryGauge,
 						authorizationPos,
 					),
 				},
 			)
 		}
 
-		return NewReferenceType(checker.memoryGauge, authorization, typ.Type)
+		return NewReferenceType(memoryGauge, authorization, typ.Type)
 
 	default:
-		return NewReferenceType(checker.memoryGauge, authorization, typ)
+		return NewReferenceType(memoryGauge, authorization, typ)
 
 	}
 }
@@ -404,10 +408,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
 		}
 
-		resultingType = checker.getReferenceTypeForChild(
+		resultingType = getReferenceTypeForChild(
+			checker.memoryGauge,
 			resultingType,
 			authorization,
 			pos,
+			checker.report,
 		)
 		returnReference = true
 	}

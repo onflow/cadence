@@ -387,10 +387,12 @@ func (checker *Checker) visitIndexExpression(
 		returnReference := false
 		if shouldReturnReference(valueIndexedType, elementType, isAssignment) {
 			// For index expressions, element are un-authorized.
-			elementType = checker.getReferenceTypeForChild(
+			elementType = getReferenceTypeForChild(
+				checker.memoryGauge,
 				elementType,
 				UnauthorizedAccess,
 				nil,
+				checker.report,
 			)
 
 			// Store the result in elaboration, so the interpreter can re-use this.
