@@ -311,7 +311,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 				for i, source := range typedSubTypeTypeParameters {
 					target := typedSuperTypeTypeParameters[i]
-					if source != target {
+					if !(deepEquals(source.TypeBound, target.TypeBound)) {
 						return false
 					}
 				}
@@ -329,7 +329,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 					}
 				}
 
-				return typedSubType.Arity == typedSuperType.Arity &&
+				return deepEquals(typedSubType.Arity, typedSuperType.Arity) &&
 					(AreReturnsCovariant(typedSubType, typedSuperType) &&
 						typedSubType.IsConstructor == typedSuperType.IsConstructor)
 			}

@@ -780,6 +780,9 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case EqualsPredicate:
 		return gen.equalsPredicate(p)
 
+	case DeepEqualsPredicate:
+		return gen.deepEqualsPredicate(p)
+
 	case SubtypePredicate:
 		return gen.isSubTypePredicate(p)
 
@@ -1078,6 +1081,22 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 					},
 				},
 			},
+		}
+	default:
+		panic(fmt.Errorf("unknown target type %t in `equals` rule", target))
+	}
+}
+
+// deepEqualsPredicate generates AST for deep-equals predicate
+func (gen *SubTypeCheckGenerator) deepEqualsPredicate(equals DeepEqualsPredicate) []dst.Node {
+	switch target := equals.Target.(type) {
+	case TypeExpression, MemberExpression, IdentifierExpression:
+		return []dst.Node{
+			gen.callExpression(
+				dst.NewIdent("deepEquals"),
+				gen.expressionIgnoreNegation(equals.Source),
+				gen.expressionIgnoreNegation(target),
+			),
 		}
 	default:
 		panic(fmt.Errorf("unknown target type %t in `equals` rule", target))
@@ -1540,7 +1559,7 @@ func (gen *SubTypeCheckGenerator) forAllPredicate(p ForAllPredicate) []dst.Node 
 		gen.nestedPredicates = prevPredicateChain
 	}()
 
-	// We want to return is the inner predicate fails.
+	// We want to return if the inner predicate fails.
 	// Therefore, negate the inner predicate when generating.
 	innerPredicates := gen.generateNegatedPredicate(p.Predicate)
 

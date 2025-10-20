@@ -159,6 +159,17 @@ func parsePredicate(predicate any) (Predicate, error) {
 				Target: targetExpr,
 			}, nil
 
+		case "deepEquals":
+			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return DeepEqualsPredicate{
+				Source: sourceExpr,
+				Target: targetExpr,
+			}, nil
+
 		case "subtype":
 			superType, subType, err := parseSuperAndSubExpressions(key, value)
 			if err != nil {

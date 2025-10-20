@@ -73,7 +73,7 @@ var _ Predicate = IsStorablePredicate{}
 
 func (i IsStorablePredicate) isPredicate() {}
 
-// EqualsPredicate represents an equality check.
+// EqualsPredicate represents an equality check using `==` operator.
 type EqualsPredicate struct {
 	Source Expression `yaml:"source"`
 	Target Expression `yaml:"target"`
@@ -82,6 +82,16 @@ type EqualsPredicate struct {
 var _ Predicate = EqualsPredicate{}
 
 func (e EqualsPredicate) isPredicate() {}
+
+// DeepEqualsPredicate represents a deep equality check, defined with `Equals` method.
+type DeepEqualsPredicate struct {
+	Source Expression `yaml:"source"`
+	Target Expression `yaml:"target"`
+}
+
+var _ Predicate = DeepEqualsPredicate{}
+
+func (e DeepEqualsPredicate) isPredicate() {}
 
 // SubtypePredicate represents a subtype check.
 type SubtypePredicate struct {

@@ -396,9 +396,9 @@ rules:
             source: sub.TypeParameters
             target: super.TypeParameters
             predicate:
-              equals:
-                source: source
-                target: target
+              deepEquals:
+                source: source.TypeBound
+                target: target.TypeBound
         - forAll:
             source: sub.Parameters
             target: super.Parameters
@@ -408,7 +408,7 @@ rules:
                 # because the parameters are contravariant.
                 super: source.TypeAnnotation.Type
                 sub: target.TypeAnnotation.Type
-        - equals:
+        - deepEquals:
             source: sub.Arity
             target: super.Arity
         - returnCovariant:
