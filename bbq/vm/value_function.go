@@ -32,20 +32,23 @@ import (
 type FunctionValue interface {
 	interpreter.FunctionValue
 
-	// HasGenericType returns whether this function has a derived-type.
-	// A function is said to have a derived-typed if the type of the function
-	// is dependent on the receiver.
-	// for e.g: `Integer.toBigEndianBytes()` functions type is always `fun(): [UInt8]`.
-	// Hence it does not have a derived type.
-	// On the other hand, `[T].append()` function's type is `fun(T): Void`,
+	// HasComputedFunctionType returns whether this function has a computed function type.
+	//
+	// For most functions, the function type is pre-known/computed ahead of time.
+	// For example, the type of function `Integer.toBigEndianBytes()` is always `fun(): [UInt8]`.
+	//
+	// However, some functions have a type that depends on the receiver's type.
+	// For example, the type of the function `[T].append()` is `fun(T): Void`,
 	// where the parameter type `T` always depends on the receiver's type.
-	// Hence, the array-append function is said to have a derived type.
-	HasGenericType() bool
+	HasComputedFunctionType() bool
 
-	// ResolvedFunctionType returns the resolved type of the function using the provided receiver value,
-	// if the function has a generic type. This would panic if the function is not a generic function.
-	// Use `HasGenericType` to determine whether this method should be called or not.
-	ResolvedFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
+	// ComputeFunctionType computes the type of the function using the provided receiver value,
+	// if the function has a computed type.
+	// This function panics if the function does not have a computed function type.
+	// Use `HasComputedFunctionType` to determine whether this method should be called or not.
+	ComputeFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
+
+	DereferenceReceiver() bool
 
 	IsNative() bool
 }
@@ -64,12 +67,16 @@ func (CompiledFunctionValue) IsValue() {}
 
 func (v CompiledFunctionValue) IsFunctionValue() {}
 
-func (v CompiledFunctionValue) HasGenericType() bool {
+func (v CompiledFunctionValue) HasComputedFunctionType() bool {
 	return false
 }
 
-func (v CompiledFunctionValue) ResolvedFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v CompiledFunctionValue) ComputeFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	return v.FunctionType(context)
+}
+
+func (v CompiledFunctionValue) DereferenceReceiver() bool {
+	return true
 }
 
 func (v CompiledFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
@@ -167,7 +174,9 @@ type NativeFunctionValue struct {
 	// A function value can only have either one of `functionType` or `functionTypeGetter`.
 	functionType       *sema.FunctionType
 	functionTypeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
-	fields             map[string]Value
+
+	fields              map[string]Value
+	dereferenceReceiver bool
 }
 
 var _ Value = &NativeFunctionValue{}
@@ -202,7 +211,7 @@ func (v *NativeFunctionValue) Transfer(
 }
 
 func (v *NativeFunctionValue) String() string {
-	if v.HasGenericType() {
+	if v.HasComputedFunctionType() {
 		// If the type is not pre-known, just return the name.
 		return v.Name
 	}
@@ -238,7 +247,7 @@ func (v *NativeFunctionValue) MeteredString(
 	context interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
 ) string {
-	if v.HasGenericType() {
+	if v.HasComputedFunctionType() {
 		// If the type is not pre-known, just return the name.
 		return v.Name
 	}
@@ -275,19 +284,23 @@ func (v *NativeFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *
 	return v.functionType
 }
 
-func (v *NativeFunctionValue) ResolvedFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v *NativeFunctionValue) ComputeFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	if v.functionTypeGetter == nil {
-		// ResolvedFunctionType shouldn't get called for functions where the type is pre-know.
+		// ComputeFunctionType shouldn't get called for functions where the type is pre-know.
 		panic(errors.NewUnreachableError())
 	}
 
 	// Important: Never store the result of the `functionTypeGetter`,
-	// because the `NativeFunctionValue` would be reused.
+	// because the native function value is reused across different receivers.
 	return v.functionTypeGetter(receiver, context)
 }
 
-func (v *NativeFunctionValue) HasGenericType() bool {
+func (v *NativeFunctionValue) HasComputedFunctionType() bool {
 	return v.functionTypeGetter != nil
+}
+
+func (v *NativeFunctionValue) DereferenceReceiver() bool {
+	return v.dereferenceReceiver
 }
 
 func (v *NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
@@ -327,6 +340,11 @@ func (v *NativeFunctionValue) GetMethod(_ interpreter.MemberAccessibleContext, _
 func (v *NativeFunctionValue) IsNative() bool {
 	// Native functions are always native.
 	return true
+}
+
+func (v *NativeFunctionValue) WithDereferenceReceiver(dereferenceReceiver bool) *NativeFunctionValue {
+	v.dereferenceReceiver = dereferenceReceiver
+	return v
 }
 
 // BoundFunctionValue is a function-wrapper which captures the receivers of an object-method.
@@ -377,12 +395,16 @@ func (*BoundFunctionValue) IsValue() {}
 
 func (v *BoundFunctionValue) IsFunctionValue() {}
 
-func (v *BoundFunctionValue) HasGenericType() bool {
-	return v.Method.HasGenericType()
+func (v *BoundFunctionValue) HasComputedFunctionType() bool {
+	return v.Method.HasComputedFunctionType()
 }
 
-func (v *BoundFunctionValue) ResolvedFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v *BoundFunctionValue) ComputeFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	return v.FunctionType(context)
+}
+
+func (v *BoundFunctionValue) DereferenceReceiver() bool {
+	return v.Method.DereferenceReceiver()
 }
 
 func (v *BoundFunctionValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
@@ -471,11 +493,11 @@ func (v *BoundFunctionValue) FunctionType(context interpreter.ValueStaticTypeCon
 
 func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueStaticTypeContext) {
 	method := v.Method
-	// The type of the native function could be either pre-known (e.g: `Integer.toBigEndianBytes()`),
-	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
-	if method.HasGenericType() {
-		v.functionType = method.ResolvedFunctionType(
-			v.DereferencedReceiver(context),
+	// The type of the function could be either pre-known (e.g: `Integer.toBigEndianBytes()`),
+	// or needs to be computed (e.g: `[Int8].append()`).
+	if method.HasComputedFunctionType() {
+		v.functionType = method.ComputeFunctionType(
+			v.maybeDereferencedReceiver(context),
 			context,
 		)
 	} else {
@@ -495,13 +517,16 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 	)
 }
 
-func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
-	receiver := interpreter.GetReceiver(
+func (v *BoundFunctionValue) maybeDereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
+	receiver := *interpreter.GetReceiver(
 		v.ReceiverReference,
 		v.receiverIsReference,
 		context,
 	)
-	return maybeDereferenceReceiver(context, *receiver, v.IsNative())
+	if v.DereferenceReceiver() {
+		receiver = maybeDereferenceReceiver(context, receiver, v.IsNative())
+	}
+	return receiver
 }
 
 func (v *BoundFunctionValue) IsNative() bool {
@@ -511,6 +536,6 @@ func (v *BoundFunctionValue) IsNative() bool {
 }
 
 func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) ImplicitReferenceValue {
-	receiverValue := v.DereferencedReceiver(context)
+	receiverValue := v.maybeDereferencedReceiver(context)
 	return NewImplicitReferenceValue(context, receiverValue)
 }

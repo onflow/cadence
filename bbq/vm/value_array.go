@@ -88,7 +88,7 @@ func init() {
 					)
 				},
 				interpreter.NativeArrayFilterFunction,
-			),
+			).WithDereferenceReceiver(false),
 		)
 
 		registerBuiltinTypeBoundFunction(
@@ -108,7 +108,7 @@ func init() {
 					)
 				},
 				interpreter.NativeArrayMapFunction,
-			),
+			).WithDereferenceReceiver(false),
 		)
 	}
 

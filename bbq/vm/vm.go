@@ -877,7 +877,7 @@ func invokeFunction(
 	case *NativeFunctionValue:
 		if isBoundFunction {
 			// For built-in functions, pass the dereferenced receiver.
-			receiver = boundFunction.DereferencedReceiver(context)
+			receiver = boundFunction.maybeDereferencedReceiver(context)
 		}
 
 		if interpreter.TracingEnabled {
