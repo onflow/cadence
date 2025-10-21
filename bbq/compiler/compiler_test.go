@@ -10183,3 +10183,67 @@ func TestCompileImportAlias(t *testing.T) {
 
 	})
 }
+
+func TestCompileReferenceMethod(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(array: &[Int]): [Int] {
+            return array.map(fun (element: Int): Int {
+                return element * 2
+            })
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 2)
+
+	const (
+		// arrayIndex is the index of the parameter `array`, which is the first parameter
+		arrayIndex = iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return array.map(...)
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: arrayIndex},
+			opcode.InstructionGetMethod{Method: 1},
+			opcode.InstructionNewClosure{Function: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionInvoke{
+				TypeArgs: []uint16{1},
+				ArgCount: 1,
+			},
+			opcode.InstructionTransferAndConvert{Type: 3},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	const (
+		// elementIndex is the index of the parameter `element`, which is the first parameter
+		elementIndex = iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return element * 2
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: elementIndex},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionMultiply{},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[1].Code,
+	)
+}
