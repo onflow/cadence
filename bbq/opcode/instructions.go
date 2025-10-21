@@ -2874,6 +2874,64 @@ func (i InstructionSetAttachmentBase) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionInitLocalFromConst
+//
+// Pops a constant, a type, and a local index off the stack, and then initializes the local at the given index to the constant with the given type.
+type InstructionInitLocalFromConst struct {
+	Constant uint16
+	Type     uint16
+	Local    uint16
+}
+
+var _ Instruction = InstructionInitLocalFromConst{}
+
+func (InstructionInitLocalFromConst) Opcode() Opcode {
+	return InitLocalFromConst
+}
+
+func (i InstructionInitLocalFromConst) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionInitLocalFromConst) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "constant", i.Constant, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
+}
+
+func (i InstructionInitLocalFromConst) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "constant", constants[i.Constant], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
+}
+
+func (i InstructionInitLocalFromConst) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Constant)
+	emitUint16(code, i.Type)
+	emitUint16(code, i.Local)
+}
+
+func DecodeInitLocalFromConst(ip *uint16, code []byte) (i InstructionInitLocalFromConst) {
+	i.Constant = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
+	i.Local = decodeUint16(ip, code)
+	return i
+}
+
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	switch Opcode(decodeByte(ip, code)) {
 	case Unknown:
@@ -3030,6 +3088,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeSetTypeIndex(ip, code)
 	case SetAttachmentBase:
 		return InstructionSetAttachmentBase{}
+	case InitLocalFromConst:
+		return DecodeInitLocalFromConst(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())

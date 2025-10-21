@@ -1539,6 +1539,45 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	}
 }
 
+func opInitLocalFromConst(vm *VM, ins opcode.InstructionInitLocalFromConst) {
+	// equivalent to opGetConstant, opTransferAndConvert, opSetLocal
+	// TODO: given we know its a constant can we optimize anything here
+
+	constantIndex := ins.Constant
+	typeIndex := ins.Type
+	localIndex := ins.Local
+
+	frame := vm.callFrame
+	context := vm.context
+
+	executable := frame.function.Executable
+	c := executable.Constants[constantIndex]
+	if c == nil {
+		// Constants referred-to by `InstructionGetConstant`
+		// are always value-typed constants.
+		c = vm.initializeValueTypedConstant(constantIndex)
+	}
+
+	targetType := vm.loadType(typeIndex)
+
+	valueType := c.StaticType(context)
+	transferredValue := interpreter.TransferAndConvert(
+		context,
+		c,
+		context.SemaTypeFromStaticType(valueType),
+		context.SemaTypeFromStaticType(targetType),
+	)
+
+	absoluteIndex := frame.localsOffset + localIndex
+
+	existingValue := vm.locals[absoluteIndex]
+	if existingValue != nil {
+		interpreter.CheckResourceLoss(vm.context, existingValue)
+	}
+
+	vm.locals[absoluteIndex] = transferredValue
+}
+
 func (vm *VM) run() {
 
 	entryPointCallStackSize := len(vm.callstack)
@@ -1720,6 +1759,8 @@ func (vm *VM) run() {
 			opRemoveTypeIndex(vm, ins)
 		case opcode.InstructionSetAttachmentBase:
 			opSetAttachmentBase(vm)
+		case opcode.InstructionInitLocalFromConst:
+			opInitLocalFromConst(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}

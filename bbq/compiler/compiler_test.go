@@ -10183,3 +10183,60 @@ func TestCompileImportAlias(t *testing.T) {
 
 	})
 }
+
+func TestPeepholeOptimizer(t *testing.T) {
+	t.Parallel()
+
+	t.Run("variable initialization", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test(): Int {
+				let x = 32
+				return x
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionSetLocal{Local: 0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+			functions[0].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.EnablePeepholeOptimizations = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionInitLocalFromConst{Constant: 0, Type: 1, Local: 0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		}, functions2[0].Code)
+	})
+}

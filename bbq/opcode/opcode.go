@@ -135,7 +135,7 @@ const (
 	SetTypeIndex
 	RemoveTypeIndex
 	SetAttachmentBase
-	_
+	InitLocalFromConst
 	_
 
 	// Invocations

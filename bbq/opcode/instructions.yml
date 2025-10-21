@@ -1007,3 +1007,17 @@
         type: "value"
       - name: "base"
         type: "value"
+
+# Combined "peephole" instructions
+
+- name: "initLocalFromConst"
+  description:
+    Pops a constant, a type, and a local index off the stack,
+    and then initializes the local at the given index to the constant with the given type.
+  operands:
+    - name: "constant"
+      type: "constantIndex"
+    - name: "type"
+      type: "typeIndex"
+    - name: "local"
+      type: "localIndex"
