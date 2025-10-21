@@ -1486,12 +1486,10 @@ func (gen *SubTypeCheckGenerator) newIdentifier(name string) *dst.Ident {
 }
 
 func (gen *SubTypeCheckGenerator) forAllPredicate(p ForAllPredicate) []dst.Node {
-	var (
-		sourceListVarName = gen.newTypedVariableNameFor(p.Source)
-		targetListVarName = gen.newTypedVariableNameFor(p.Target)
-	)
+	sourceListVarName := gen.newTypedVariableNameFor(p.Source)
+	targetListVarName := gen.newTypedVariableNameFor(p.Target)
 
-	sourceVar := &dst.AssignStmt{
+	sourceListVar := &dst.AssignStmt{
 		Lhs: []dst.Expr{
 			gen.newIdentifier(sourceListVarName),
 		},
@@ -1501,7 +1499,7 @@ func (gen *SubTypeCheckGenerator) forAllPredicate(p ForAllPredicate) []dst.Node 
 		},
 	}
 
-	targetVar := &dst.AssignStmt{
+	targetListVar := &dst.AssignStmt{
 		Lhs: []dst.Expr{
 			gen.newIdentifier(targetListVarName),
 		},
@@ -1511,6 +1509,10 @@ func (gen *SubTypeCheckGenerator) forAllPredicate(p ForAllPredicate) []dst.Node 
 		},
 	}
 
+	// Generate:
+	//   if len(sourceList) != len(targetList) {
+	//       return false
+	//   }
 	lengthCheck := &dst.IfStmt{
 		Cond: &dst.BinaryExpr{
 			X: &dst.CallExpr{
@@ -1538,6 +1540,8 @@ func (gen *SubTypeCheckGenerator) forAllPredicate(p ForAllPredicate) []dst.Node 
 		},
 	}
 
+	// Generate:
+	//   target := targetList[i]
 	targetElement := &dst.AssignStmt{
 		Lhs: []dst.Expr{
 			gen.newIdentifier(targetVarName),
@@ -1622,8 +1626,8 @@ func (gen *SubTypeCheckGenerator) forAllPredicate(p ForAllPredicate) []dst.Node 
 	}
 
 	return []dst.Node{
-		sourceVar,
-		targetVar,
+		sourceListVar,
+		targetListVar,
 		lengthCheck,
 		forLoop,
 		ifAllMatches,
