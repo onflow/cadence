@@ -392,6 +392,11 @@ rules:
             source: sub.Purity
             target:
               oneOf: [super.Purity, FunctionPurityView]
+
+        # Type parameters must be equivalent. This is because for subtyping of functions,
+        # parameters must be *contravariant/supertypes*, whereas, return types must be *covariant/subtypes*.
+        # Since type parameters can be used in both parameters and return types, inorder to satisfies both above
+        # conditions, bound type of type parameters can only be strictly equal, but not subtypes/supertypes of one another.
         - forAll:
             source: sub.TypeParameters
             target: super.TypeParameters
@@ -399,6 +404,8 @@ rules:
               deepEquals:
                 source: source.TypeBound
                 target: target.TypeBound
+
+        # Functions are contravariant in their parameter types.
         - forAll:
             source: sub.Parameters
             target: super.Parameters
@@ -408,9 +415,12 @@ rules:
                 # because the parameters are contravariant.
                 super: source.TypeAnnotation.Type
                 sub: target.TypeAnnotation.Type
+
         - deepEquals:
             source: sub.Arity
             target: super.Arity
+
+        # Functions are covariant in their return type.
         - returnCovariant:
             source: sub
             target: super

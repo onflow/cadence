@@ -73,7 +73,8 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			IsSubType(subType, FixedPointType)
 
 	case SignedNumberType:
-		return subType == SignedNumberType ||
+		return subType == // TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
+			SignedNumberType ||
 			(IsSubType(subType, SignedIntegerType) ||
 				IsSubType(subType, SignedFixedPointType))
 
@@ -249,7 +250,9 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				case AnyType,
 					AnyStructType,
 					AnyResourceType:
-					return (typedSuperType.LegacyType == nil ||
+					return ( // Below two combination is repeated several times below.
+					// Maybe combine them to produce a single predicate.
+					typedSuperType.LegacyType == nil ||
 						IsSubType(typedSubType.LegacyType, typedSuperType.LegacyType)) &&
 						IsIntersectionSubset(typedSuperType, typedSubType)
 				}
@@ -303,6 +306,11 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			switch typedSubType.Purity {
 			case typedSuperType.Purity,
 				FunctionPurityView:
+
+				// Type parameters must be equivalent. This is because for subtyping of functions,
+				// parameters must be *contravariant/supertypes*, whereas, return types must be *covariant/subtypes*.
+				// Since type parameters can be used in both parameters and return types, inorder to satisfies both above
+				// conditions, bound type of type parameters can only be strictly equal, but not subtypes/supertypes of one another.
 				typedSubTypeTypeParameters := typedSubType.TypeParameters
 				typedSuperTypeTypeParameters := typedSuperType.TypeParameters
 				if len(typedSubTypeTypeParameters) != len(typedSuperTypeTypeParameters) {
@@ -316,6 +324,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 					}
 				}
 
+				// Functions are contravariant in their parameter types.
 				typedSubTypeParameters := typedSubType.Parameters
 				typedSuperTypeParameters := typedSuperType.Parameters
 				if len(typedSubTypeParameters) != len(typedSuperTypeParameters) {
@@ -330,6 +339,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				}
 
 				return deepEquals(typedSubType.Arity, typedSuperType.Arity) &&
+					// Functions are covariant in their return type.
 					(AreReturnsCovariant(typedSubType, typedSuperType) &&
 						typedSubType.IsConstructor == typedSuperType.IsConstructor)
 			}

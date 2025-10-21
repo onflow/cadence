@@ -31,8 +31,8 @@ var subtypeCheckingRules string
 
 // Rule represents a single subtype rule
 type Rule struct {
-	Super     string `yaml:"super"`
-	Predicate any    `yaml:"predicate"`
+	Super     string    `yaml:"super"`
+	Predicate yaml.Node `yaml:"predicate"`
 }
 
 // RulesConfig represents the entire YAML configuration
@@ -40,7 +40,7 @@ type RulesConfig struct {
 	Rules []Rule `yaml:"rules"`
 }
 
-type KeyValues = map[string]any
+type KeyValues = map[string]*yaml.Node
 
 // ParseRules reads and parses the YAML rules file
 func ParseRules() ([]Rule, error) {
@@ -104,19 +104,27 @@ func parseMemberExpression(names []string) Expression {
 }
 
 // parsePredicate parses a predicate from the YAML
-func parsePredicate(predicate any) (Predicate, error) {
-	switch v := predicate.(type) {
-	case string:
-		switch v {
+func parsePredicate(predicate *yaml.Node) (Predicate, error) {
+
+	description := description(predicate.HeadComment)
+
+	switch predicate.Kind {
+	case yaml.ScalarNode:
+		switch predicate.Value {
 		case "always":
-			return AlwaysPredicate{}, nil
+			return AlwaysPredicate{
+				description: description,
+			}, nil
 		case "never":
-			return NeverPredicate{}, nil
+			return NeverPredicate{
+				description: description,
+			}, nil
 		default:
-			return nil, fmt.Errorf("unsupported string rule: %s", v)
+			return nil, fmt.Errorf("unsupported string rule: %s", predicate.Value)
 		}
-	case KeyValues:
-		key, value := singleKeyValueFromMap(v)
+	case yaml.MappingNode:
+
+		key, value := singleKeyValueFromMap(predicate)
 
 		switch key {
 
@@ -125,28 +133,40 @@ func parsePredicate(predicate any) (Predicate, error) {
 			if err != nil {
 				return nil, err
 			}
-			return IsResourcePredicate{Expression: expr}, nil
+			return IsResourcePredicate{
+				description: description,
+				Expression:  expr,
+			}, nil
 
 		case "isAttachment":
 			expr, err := parseExpression(value)
 			if err != nil {
 				return nil, err
 			}
-			return IsAttachmentPredicate{Expression: expr}, nil
+			return IsAttachmentPredicate{
+				description: description,
+				Expression:  expr,
+			}, nil
 
 		case "isHashableStruct":
 			expr, err := parseExpression(value)
 			if err != nil {
 				return nil, err
 			}
-			return IsHashableStructPredicate{Expression: expr}, nil
+			return IsHashableStructPredicate{
+				description: description,
+				Expression:  expr,
+			}, nil
 
 		case "isStorable":
 			expr, err := parseExpression(value)
 			if err != nil {
 				return nil, err
 			}
-			return IsStorablePredicate{Expression: expr}, nil
+			return IsStorablePredicate{
+				description: description,
+				Expression:  expr,
+			}, nil
 
 		case "equals":
 			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
@@ -155,8 +175,9 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return EqualsPredicate{
-				Source: sourceExpr,
-				Target: targetExpr,
+				description: description,
+				Source:      sourceExpr,
+				Target:      targetExpr,
 			}, nil
 
 		case "deepEquals":
@@ -166,8 +187,9 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return DeepEqualsPredicate{
-				Source: sourceExpr,
-				Target: targetExpr,
+				description: description,
+				Source:      sourceExpr,
+				Target:      targetExpr,
 			}, nil
 
 		case "subtype":
@@ -177,18 +199,19 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return SubtypePredicate{
-				Sub:   subType,
-				Super: superType,
+				description: description,
+				Sub:         subType,
+				Super:       superType,
 			}, nil
 
 		case "and":
-			and, ok := value.([]any)
-			if !ok {
-				return nil, fmt.Errorf("expected []any, got %T", value)
+			innerPredicates, err := nodeAsList(value)
+			if err != nil {
+				return nil, err
 			}
 
 			var predicates []Predicate
-			for _, cond := range and {
+			for _, cond := range innerPredicates {
 				predicate, err := parsePredicate(cond)
 				if err != nil {
 					return nil, err
@@ -196,16 +219,19 @@ func parsePredicate(predicate any) (Predicate, error) {
 				predicates = append(predicates, predicate)
 			}
 
-			return AndPredicate{Predicates: predicates}, nil
+			return AndPredicate{
+				description: description,
+				Predicates:  predicates,
+			}, nil
 
 		case "or":
-			or, ok := value.([]any)
-			if !ok {
-				return nil, fmt.Errorf("expected a list of predicates, got %T", value)
+			innerPredicates, err := nodeAsList(value)
+			if err != nil {
+				return nil, err
 			}
 
 			var predicates []Predicate
-			for _, cond := range or {
+			for _, cond := range innerPredicates {
 				predicate, err := parsePredicate(cond)
 				if err != nil {
 					return nil, err
@@ -213,7 +239,10 @@ func parsePredicate(predicate any) (Predicate, error) {
 				predicates = append(predicates, predicate)
 			}
 
-			return OrPredicate{Predicates: predicates}, nil
+			return OrPredicate{
+				description: description,
+				Predicates:  predicates,
+			}, nil
 
 		case "not":
 			innerPredicate, err := parsePredicate(value)
@@ -222,7 +251,8 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return NotPredicate{
-				Predicate: innerPredicate,
+				description: description,
+				Predicate:   innerPredicate,
 			}, nil
 
 		case "permits":
@@ -232,14 +262,15 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return PermitsPredicate{
-				Sub:   subType,
-				Super: superType,
+				description: description,
+				Sub:         subType,
+				Super:       superType,
 			}, nil
 
 		case "mustType":
-			keyValues, ok := value.(KeyValues)
-			if !ok {
-				return nil, fmt.Errorf("expected KeyValues, got %T", value)
+			keyValues, err := nodeAsKeyValues(value)
+			if err != nil {
+				return nil, err
 			}
 
 			// Get source
@@ -259,17 +290,22 @@ func parsePredicate(predicate any) (Predicate, error) {
 				return nil, fmt.Errorf("cannot find `target` property for `mustType` predicate")
 			}
 
-			expectedType := parseType(typ.(string))
+			if typ.Kind != yaml.ScalarNode {
+				return nil, fmt.Errorf("type placeholder must be a string, got %s", typ.Tag)
+			}
+
+			expectedType := parseType(typ.Value)
 
 			return TypeAssertionPredicate{
-				Source: sourceExpr,
-				Type:   expectedType,
+				description: description,
+				Source:      sourceExpr,
+				Type:        expectedType,
 			}, nil
 
 		case "setContains":
-			keyValues, ok := value.(KeyValues)
-			if !ok {
-				return nil, fmt.Errorf("expected KeyValues, got %T", value)
+			keyValues, err := nodeAsKeyValues(value)
+			if err != nil {
+				return nil, err
 			}
 
 			// Get the set
@@ -295,8 +331,9 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return SetContainsPredicate{
-				Set:     setExpr,
-				Element: elementExpr,
+				description: description,
+				Set:         setExpr,
+				Element:     elementExpr,
 			}, nil
 
 		case "isIntersectionSubset":
@@ -306,8 +343,9 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return IsIntersectionSubsetPredicate{
-				Sub:   subType,
-				Super: superType,
+				description: description,
+				Sub:         subType,
+				Super:       superType,
 			}, nil
 
 		case "returnCovariant":
@@ -317,8 +355,9 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return ReturnCovariantPredicate{
-				Source: sourceExpr,
-				Target: targetExpr,
+				description: description,
+				Source:      sourceExpr,
+				Target:      targetExpr,
 			}, nil
 
 		case "isParameterizedSubtype":
@@ -328,14 +367,15 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return IsParameterizedSubtypePredicate{
-				Sub:   subType,
-				Super: superType,
+				description: description,
+				Sub:         subType,
+				Super:       superType,
 			}, nil
 
 		case "forAll":
-			keyValues, ok := value.(KeyValues)
-			if !ok {
-				return nil, fmt.Errorf("expected KeyValues, got %T", value)
+			keyValues, err := nodeAsKeyValues(value)
+			if err != nil {
+				return nil, err
 			}
 
 			// Get source
@@ -372,9 +412,10 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return ForAllPredicate{
-				Source:    sourceExpr,
-				Target:    targetExpr,
-				Predicate: innerPredicate,
+				description: description,
+				Source:      sourceExpr,
+				Target:      targetExpr,
+				Predicate:   innerPredicate,
 			}, nil
 		default:
 			return nil, fmt.Errorf("unsupported predicate: %s", key)
@@ -385,10 +426,36 @@ func parsePredicate(predicate any) (Predicate, error) {
 	}
 }
 
-func parseSourceAndTarget(predicateName string, value any) (Expression, Expression, error) {
-	keyValues, ok := value.(KeyValues)
-	if !ok {
-		return nil, nil, fmt.Errorf("expected KeyValues, got %T", value)
+func nodeAsKeyValues(node *yaml.Node) (KeyValues, error) {
+	if node.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("expected KeyValues, got %s", node.Tag)
+	}
+
+	size := len(node.Content)
+	keyValues := make(KeyValues, size/2)
+
+	for i := 0; i < size; i += 2 {
+		key := node.Content[i]
+		value := node.Content[i+1]
+
+		keyValues[key.Value] = value
+	}
+
+	return keyValues, nil
+}
+
+func nodeAsList(node *yaml.Node) ([]*yaml.Node, error) {
+	if node.Kind != yaml.SequenceNode {
+		return nil, fmt.Errorf("expected a list, got %s", node.Tag)
+	}
+
+	return node.Content, nil
+}
+
+func parseSourceAndTarget(predicateName string, value *yaml.Node) (Expression, Expression, error) {
+	keyValues, err := nodeAsKeyValues(value)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Get source
@@ -416,10 +483,10 @@ func parseSourceAndTarget(predicateName string, value any) (Expression, Expressi
 	return sourceExpr, targetExpr, nil
 }
 
-func parseSuperAndSubExpressions(predicateName string, value any) (Expression, Expression, error) {
-	keyValues, ok := value.(KeyValues)
-	if !ok {
-		return nil, nil, fmt.Errorf("expected KeyValues, got %T", value)
+func parseSuperAndSubExpressions(predicateName string, value *yaml.Node) (Expression, Expression, error) {
+	keyValues, err := nodeAsKeyValues(value)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Get super type
@@ -447,34 +514,34 @@ func parseSuperAndSubExpressions(predicateName string, value any) (Expression, E
 	return superType, subType, nil
 }
 
-func singleKeyValueFromMap(v KeyValues) (string, any) {
-	if len(v) != 1 {
+func singleKeyValueFromMap(node *yaml.Node) (string, *yaml.Node) {
+	keyValues := node.Content
+
+	if len(keyValues) != 2 {
 		panic(fmt.Errorf("expected exactly one key value pair"))
 	}
 
-	for key, value := range v {
-		return key, value
-	}
+	key := keyValues[0]
+	value := keyValues[1]
 
-	return "", nil
+	return key.Value, value
 }
 
-func parseExpression(expr any) (Expression, error) {
-	switch expr := expr.(type) {
-	case string:
-		return parseSimpleExpression(expr), nil
-	case KeyValues:
+func parseExpression(expr *yaml.Node) (Expression, error) {
+	switch expr.Kind {
+	case yaml.ScalarNode:
+		return parseSimpleExpression(expr.Value), nil
+	case yaml.MappingNode:
 		key, value := singleKeyValueFromMap(expr)
 
 		switch key {
 		case "oneOf":
-			list, ok := value.([]any)
-			if !ok {
-				return nil, fmt.Errorf("expected a list of predicates, got %T", value)
+			if value.Kind != yaml.SequenceNode {
+				return nil, fmt.Errorf("expected a list of predicates, got %s", value.Tag)
 			}
 
 			var expressions []Expression
-			for _, item := range list {
+			for _, item := range value.Content {
 				itemExpr, err := parseExpression(item)
 				if err != nil {
 					return nil, err
@@ -489,31 +556,26 @@ func parseExpression(expr any) (Expression, error) {
 		}
 
 	default:
-		return nil, fmt.Errorf("unsupported expression: %s", expr)
+		return nil, fmt.Errorf("unsupported expression: %v", expr)
 	}
 }
 
 // parseSimpleExpression parses an expression that is represented as a string data in YAML.
-func parseSimpleExpression(expr any) Expression {
-	switch v := expr.(type) {
-	case string:
-		parts := strings.Split(v, ".")
-		if len(parts) == 1 {
-			identifier := parts[0]
+func parseSimpleExpression(expr string) Expression {
+	parts := strings.Split(expr, ".")
+	if len(parts) == 1 {
+		identifier := parts[0]
 
-			if strings.HasSuffix(identifier, "Type") {
-				return TypeExpression{
-					Type: parseType(identifier),
-				}
-			}
-
-			return IdentifierExpression{
-				Name: identifier,
+		if strings.HasSuffix(identifier, "Type") {
+			return TypeExpression{
+				Type: parseType(identifier),
 			}
 		}
 
-		return parseMemberExpression(parts)
-	default:
-		panic(fmt.Errorf("unsupported expression type: %T", expr))
+		return IdentifierExpression{
+			Name: identifier,
+		}
 	}
+
+	return parseMemberExpression(parts)
 }

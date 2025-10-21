@@ -318,7 +318,7 @@ func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpl
 
 	// Generate statements for the predicate.
 
-	predicate, err := parsePredicate(rule.Predicate)
+	predicate, err := parsePredicate(&rule.Predicate)
 	if err != nil {
 		panic(fmt.Errorf("error parsing predicate: %w", err))
 	}
@@ -403,6 +403,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 
 // generatePredicate recursively generates one or more expression/statement for a given predicate.
 func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result []dst.Node) {
+
 	// Pop the scope, for TypeAssertionPredicates.
 	switch predicate.(type) {
 	case TypeAssertionPredicate:
@@ -410,6 +411,16 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	}
 
 	prevNodes := gen.generatePredicateInternal(predicate)
+
+	defer func() {
+		description := predicate.Description()
+		if len(result) > 0 && description != "" {
+			firstNodeDecs := result[0].Decorations()
+			description = strings.ReplaceAll(description, "# ", "// ")
+			firstNodeDecs.Before = dst.EmptyLine
+			firstNodeDecs.Start.Append(description)
+		}
+	}()
 
 	// If there are no chained/nested predicates (originating from AND),
 	// then add a return and complete the statements.
