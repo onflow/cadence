@@ -722,7 +722,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	}
 
 	if c.Config.EnablePeepholeOptimizations {
-		optimizer := NewPeepholeOptimizer[E]()
+		optimizer := NewPeepholeOptimizer(c)
 
 		for i, function := range functions {
 			functions[i].Code = optimizer.Optimize(function.Code)
