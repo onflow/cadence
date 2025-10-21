@@ -10246,4 +10246,37 @@ func TestCompileReferenceMethod(t *testing.T) {
 		},
 		functions[1].Code,
 	)
+
+	assert.Equal(t,
+		[]constant.DecodedConstant{
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
+
+	assert.Equal(t,
+		[]bbq.Global{
+			&bbq.FunctionGlobal[opcode.Instruction]{
+				GlobalInfo: bbq.GlobalInfo{
+					Index:         0,
+					Location:      nil,
+					Name:          "test",
+					QualifiedName: "test",
+				},
+				Function: &functions[0],
+			},
+			&bbq.ImportedGlobal{
+				GlobalInfo: bbq.GlobalInfo{
+					Index:         1,
+					Location:      nil,
+					Name:          "$ArrayVariableSized.map",
+					QualifiedName: "$ArrayVariableSized.map",
+				},
+			},
+		},
+		program.Globals,
+	)
 }
