@@ -28,11 +28,14 @@ import (
 
 func init() {
 
-	// Methods available for both types of arrays (constant-sized and variable-sized).
+	// Methods available for both types of arrays (constant-sized and variable-sized),
+	// and references to them.
 
 	for _, typeQualifier := range []string{
 		commons.TypeQualifierArrayVariableSized,
 		commons.TypeQualifierArrayConstantSized,
+		commons.TypeQualifierArrayVariableSizedRef,
+		commons.TypeQualifierArrayConstantSizedRef,
 	} {
 		registerBuiltinTypeBoundFunction(
 			typeQualifier,
@@ -69,7 +72,14 @@ func init() {
 				interpreter.NativeArrayReverseFunction,
 			),
 		)
+	}
 
+	// Methods available for both types of arrays (constant-sized and variable-sized).
+
+	for _, typeQualifier := range []string{
+		commons.TypeQualifierArrayVariableSized,
+		commons.TypeQualifierArrayConstantSized,
+	} {
 		registerBuiltinTypeBoundFunction(
 			typeQualifier,
 			NewNativeFunctionValueWithDerivedType(
@@ -112,129 +122,221 @@ func init() {
 		)
 	}
 
-	// Functions available only for variable-sized arrays.
+	// Methods available for references to both types of arrays (constant-sized and variable-sized).
 
-	registerBuiltinTypeBoundFunction(
-		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeAppendFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArrayAppendFunctionType(elementType)
-			},
-			interpreter.NativeArrayAppendFunction,
-		),
-	)
+	for _, typeQualifier := range []string{
+		commons.TypeQualifierArrayVariableSizedRef,
+		commons.TypeQualifierArrayConstantSizedRef,
+	} {
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeFilterFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					arrayType := arrayTypeFromValue(receiver, context)
+					arrayRefType := sema.NewReferenceType(
+						context,
+						sema.UnauthorizedAccess,
+						arrayType,
+					)
+					elementType := arrayType.ElementType(false)
 
-	registerBuiltinTypeBoundFunction(
-		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeAppendAllFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				arrayType := arrayTypeFromValue(receiver, context)
-				return sema.ArrayAppendAllFunctionType(arrayType)
-			},
-			interpreter.NativeArrayAppendAllFunction,
-		),
-	)
+					return sema.ArrayFilterFunctionType(
+						context,
+						arrayRefType,
+						elementType,
+						func(err error) {
+							// TODO:
+							panic(err)
+						},
+					)
+				},
+				func(
+					context interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					receiver Value,
+					args []Value,
+				) Value {
+					array := interpreter.AssertValueOfType[*interpreter.ArrayValue](receiver)
+					funcValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
 
-	registerBuiltinTypeBoundFunction(
-		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeConcatFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				arrayType := arrayTypeFromValue(receiver, context)
-				return sema.ArrayConcatFunctionType(arrayType)
-			},
-			interpreter.NativeArrayConcatFunction,
-		),
-	)
+					return array.Filter(context, funcValue, true)
+				},
+			),
+		)
 
-	registerBuiltinTypeBoundFunction(
-		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeInsertFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArrayInsertFunctionType(elementType)
-			},
-			interpreter.NativeArrayInsertFunction,
-		),
-	)
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeMapFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					arrayType := arrayTypeFromValue(receiver, context)
+					arrayRefType := sema.NewReferenceType(
+						context,
+						sema.UnauthorizedAccess,
+						arrayType,
+					)
 
-	registerBuiltinTypeBoundFunction(
-		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeRemoveFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArrayRemoveFunctionType(elementType)
-			},
-			interpreter.NativeArrayRemoveFunction,
-		),
-	)
+					return sema.ArrayMapFunctionType(
+						context,
+						arrayRefType,
+						arrayType,
+						func(err error) {
+							// TODO:
+							panic(err)
+						},
+					)
+				},
+				func(
+					context interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					receiver Value,
+					args []Value,
+				) Value {
+					array := interpreter.AssertValueOfType[*interpreter.ArrayValue](receiver)
+					funcValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
 
-	registerBuiltinTypeBoundFunction(
-		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeRemoveFirstFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArrayRemoveFirstFunctionType(elementType)
-			},
-			interpreter.NativeArrayRemoveFirstFunction,
-		),
-	)
+					return array.Map(context, funcValue, true)
+				},
+			),
+		)
+	}
 
-	registerBuiltinTypeBoundFunction(
-		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeRemoveLastFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArrayRemoveLastFunctionType(elementType)
-			},
-			interpreter.NativeArrayRemoveLastFunction,
-		),
-	)
+	// Methods available only for variable-sized arrays,
+	// and references to them.
 
-	registerBuiltinTypeBoundFunction(
+	for _, typeQualifier := range []string{
 		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeSliceFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArraySliceFunctionType(elementType)
-			},
-			interpreter.NativeArraySliceFunction,
-		),
-	)
+		commons.TypeQualifierArrayVariableSizedRef,
+	} {
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeAppendFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					elementType := arrayElementTypeFromValue(receiver, context)
+					return sema.ArrayAppendFunctionType(elementType)
+				},
+				interpreter.NativeArrayAppendFunction,
+			),
+		)
 
-	registerBuiltinTypeBoundFunction(
-		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeToConstantSizedFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArrayToConstantSizedFunctionType(elementType)
-			},
-			interpreter.NativeArrayToConstantSizedFunction,
-		),
-	)
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeAppendAllFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					arrayType := arrayTypeFromValue(receiver, context)
+					return sema.ArrayAppendAllFunctionType(arrayType)
+				},
+				interpreter.NativeArrayAppendAllFunction,
+			),
+		)
+
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeConcatFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					arrayType := arrayTypeFromValue(receiver, context)
+					return sema.ArrayConcatFunctionType(arrayType)
+				},
+				interpreter.NativeArrayConcatFunction,
+			),
+		)
+
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeInsertFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					elementType := arrayElementTypeFromValue(receiver, context)
+					return sema.ArrayInsertFunctionType(elementType)
+				},
+				interpreter.NativeArrayInsertFunction,
+			),
+		)
+
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeRemoveFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					elementType := arrayElementTypeFromValue(receiver, context)
+					return sema.ArrayRemoveFunctionType(elementType)
+				},
+				interpreter.NativeArrayRemoveFunction,
+			),
+		)
+
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeRemoveFirstFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					elementType := arrayElementTypeFromValue(receiver, context)
+					return sema.ArrayRemoveFirstFunctionType(elementType)
+				},
+				interpreter.NativeArrayRemoveFirstFunction,
+			),
+		)
+
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeRemoveLastFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					elementType := arrayElementTypeFromValue(receiver, context)
+					return sema.ArrayRemoveLastFunctionType(elementType)
+				},
+				interpreter.NativeArrayRemoveLastFunction,
+			),
+		)
+
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeSliceFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					elementType := arrayElementTypeFromValue(receiver, context)
+					return sema.ArraySliceFunctionType(elementType)
+				},
+				interpreter.NativeArraySliceFunction,
+			),
+		)
+
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeToConstantSizedFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					elementType := arrayElementTypeFromValue(receiver, context)
+					return sema.ArrayToConstantSizedFunctionType(elementType)
+				},
+				interpreter.NativeArrayToConstantSizedFunction,
+			),
+		)
+	}
 
 	// Methods available only for constant-sized arrays.
+	// and references to them.
 
-	registerBuiltinTypeBoundFunction(
+	for _, typeQualifier := range []string{
 		commons.TypeQualifierArrayConstantSized,
-		NewNativeFunctionValueWithDerivedType(
-			sema.ArrayTypeToVariableSizedFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				elementType := arrayElementTypeFromValue(receiver, context)
-				return sema.ArrayToVariableSizedFunctionType(elementType)
-			},
-			interpreter.NativeArrayToVariableSizedFunction,
-		),
-	)
+		commons.TypeQualifierArrayConstantSizedRef,
+	} {
+		registerBuiltinTypeBoundFunction(
+			typeQualifier,
+			NewNativeFunctionValueWithDerivedType(
+				sema.ArrayTypeToVariableSizedFunctionName,
+				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+					elementType := arrayElementTypeFromValue(receiver, context)
+					return sema.ArrayToVariableSizedFunctionType(elementType)
+				},
+				interpreter.NativeArrayToVariableSizedFunction,
+			),
+		)
+	}
 }
 
 func arrayTypeFromValue(receiver Value, context interpreter.ValueStaticTypeContext) sema.ArrayType {

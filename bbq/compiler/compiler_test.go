@@ -10272,8 +10272,8 @@ func TestCompileReferenceMethod(t *testing.T) {
 				GlobalInfo: bbq.GlobalInfo{
 					Index:         1,
 					Location:      nil,
-					Name:          "$ArrayVariableSized.map",
-					QualifiedName: "$ArrayVariableSized.map",
+					Name:          "$ArrayVariableSizedRef.map",
+					QualifiedName: "$ArrayVariableSizedRef.map",
 				},
 			},
 		},
