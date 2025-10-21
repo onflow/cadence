@@ -89,15 +89,17 @@ func parseType(typePlaceHolder string) Type {
 
 func parseMemberExpression(names []string) Expression {
 	size := len(names)
-	if size != 2 {
-		panic(fmt.Errorf("invalid number of nested levels for member: expected 2, found %d", size))
+	if size == 1 {
+		return IdentifierExpression{
+			Name: names[0],
+		}
 	}
 
+	lastIndex := len(names) - 1
+
 	return MemberExpression{
-		Parent: IdentifierExpression{
-			Name: names[0],
-		},
-		MemberName: names[1],
+		Parent:     parseMemberExpression(names[:lastIndex]),
+		MemberName: names[lastIndex],
 	}
 }
 
@@ -153,6 +155,17 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return EqualsPredicate{
+				Source: sourceExpr,
+				Target: targetExpr,
+			}, nil
+
+		case "deepEquals":
+			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return DeepEqualsPredicate{
 				Source: sourceExpr,
 				Target: targetExpr,
 			}, nil
@@ -297,28 +310,6 @@ func parsePredicate(predicate any) (Predicate, error) {
 				Super: superType,
 			}, nil
 
-		case "typeParamsEqual":
-			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
-			if err != nil {
-				return nil, err
-			}
-
-			return TypeParamsEqualPredicate{
-				Source: sourceExpr,
-				Target: targetExpr,
-			}, nil
-
-		case "paramsContravariant":
-			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
-			if err != nil {
-				return nil, err
-			}
-
-			return ParamsContravariantPredicate{
-				Source: sourceExpr,
-				Target: targetExpr,
-			}, nil
-
 		case "returnCovariant":
 			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
 			if err != nil {
@@ -326,17 +317,6 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return ReturnCovariantPredicate{
-				Source: sourceExpr,
-				Target: targetExpr,
-			}, nil
-
-		case "typeArgumentsEqual":
-			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
-			if err != nil {
-				return nil, err
-			}
-
-			return TypeArgumentsEqualPredicate{
 				Source: sourceExpr,
 				Target: targetExpr,
 			}, nil
@@ -350,6 +330,51 @@ func parsePredicate(predicate any) (Predicate, error) {
 			return IsParameterizedSubtypePredicate{
 				Sub:   subType,
 				Super: superType,
+			}, nil
+
+		case "forAll":
+			keyValues, ok := value.(KeyValues)
+			if !ok {
+				return nil, fmt.Errorf("expected KeyValues, got %T", value)
+			}
+
+			// Get source
+			source, ok := keyValues["source"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `source` property for %#q predicate", key)
+			}
+
+			sourceExpr, err := parseExpression(source)
+			if err != nil {
+				return nil, err
+			}
+
+			// Get target
+			target, ok := keyValues["target"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `target` property for %#q predicate", key)
+			}
+
+			targetExpr, err := parseExpression(target)
+			if err != nil {
+				return nil, err
+			}
+
+			// Get inner predicate
+			predicate, ok := keyValues["predicate"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `predicate` property for %#q predicate", key)
+			}
+
+			innerPredicate, err := parsePredicate(predicate)
+			if err != nil {
+				return nil, err
+			}
+
+			return ForAllPredicate{
+				Source:    sourceExpr,
+				Target:    targetExpr,
+				Predicate: innerPredicate,
 			}, nil
 		default:
 			return nil, fmt.Errorf("unsupported predicate: %s", key)

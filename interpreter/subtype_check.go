@@ -90,16 +90,6 @@ func IsIntersectionSubset(superType *IntersectionStaticType, subType StaticType)
 }
 
 // nolint:unused
-func AreTypeParamsEqual(source, target FunctionStaticType) bool {
-	return sema.AreTypeParamsEqual(source.FunctionType, target.FunctionType)
-}
-
-// nolint:unused
-func AreParamsContravariant(source, target FunctionStaticType) bool {
-	return sema.AreParamsContravariant(source.FunctionType, target.FunctionType)
-}
-
-// nolint:unused
 func AreReturnsCovariant(source, target FunctionStaticType) bool {
 	return sema.AreReturnsCovariant(source.FunctionType, target.FunctionType)
 }

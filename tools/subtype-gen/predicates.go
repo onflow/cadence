@@ -73,7 +73,7 @@ var _ Predicate = IsStorablePredicate{}
 
 func (i IsStorablePredicate) isPredicate() {}
 
-// EqualsPredicate represents an equality check.
+// EqualsPredicate represents an equality check using `==` operator.
 type EqualsPredicate struct {
 	Source Expression `yaml:"source"`
 	Target Expression `yaml:"target"`
@@ -82,6 +82,16 @@ type EqualsPredicate struct {
 var _ Predicate = EqualsPredicate{}
 
 func (e EqualsPredicate) isPredicate() {}
+
+// DeepEqualsPredicate represents a deep equality check, defined with `Equals` method.
+type DeepEqualsPredicate struct {
+	Source Expression `yaml:"source"`
+	Target Expression `yaml:"target"`
+}
+
+var _ Predicate = DeepEqualsPredicate{}
+
+func (e DeepEqualsPredicate) isPredicate() {}
 
 // SubtypePredicate represents a subtype check.
 type SubtypePredicate struct {
@@ -130,26 +140,6 @@ var _ Predicate = PermitsPredicate{}
 
 func (p PermitsPredicate) isPredicate() {}
 
-// TypeParamsEqualPredicate represents a type parameters equality check.
-type TypeParamsEqualPredicate struct {
-	Source Expression `yaml:"source"`
-	Target Expression `yaml:"target"`
-}
-
-var _ Predicate = TypeParamsEqualPredicate{}
-
-func (t TypeParamsEqualPredicate) isPredicate() {}
-
-// ParamsContravariantPredicate represents a params contravariant check.
-type ParamsContravariantPredicate struct {
-	Source Expression `yaml:"source"`
-	Target Expression `yaml:"target"`
-}
-
-var _ Predicate = ParamsContravariantPredicate{}
-
-func (p ParamsContravariantPredicate) isPredicate() {}
-
 // ReturnCovariantPredicate represents a return covariant check.
 type ReturnCovariantPredicate struct {
 	Source Expression `yaml:"source"`
@@ -188,15 +178,6 @@ var _ Predicate = IsIntersectionSubsetPredicate{}
 
 func (p IsIntersectionSubsetPredicate) isPredicate() {}
 
-type TypeArgumentsEqualPredicate struct {
-	Source Expression `yaml:"source"`
-	Target Expression `yaml:"target"`
-}
-
-var _ Predicate = TypeArgumentsEqualPredicate{}
-
-func (c TypeArgumentsEqualPredicate) isPredicate() {}
-
 type IsParameterizedSubtypePredicate struct {
 	Sub   Expression `yaml:"sub"`
 	Super Expression `yaml:"super"`
@@ -205,6 +186,16 @@ type IsParameterizedSubtypePredicate struct {
 var _ Predicate = IsParameterizedSubtypePredicate{}
 
 func (c IsParameterizedSubtypePredicate) isPredicate() {}
+
+type ForAllPredicate struct {
+	Source    Expression `yaml:"source"`
+	Target    Expression `yaml:"target"`
+	Predicate Predicate  `yaml:"predicate"`
+}
+
+var _ Predicate = ForAllPredicate{}
+
+func (c ForAllPredicate) isPredicate() {}
 
 // Predicates is a collection of predicates.
 type Predicates struct {

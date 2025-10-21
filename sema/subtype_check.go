@@ -134,3 +134,15 @@ func IsParameterizedSubType(subType Type, superType Type) bool {
 
 	return false
 }
+
+type Equatable[T any] interface {
+	Equal(other T) bool
+}
+
+func deepEquals[T Equatable[T]](source, target T) bool {
+	if source == nil {
+		return target == nil
+	}
+
+	return source.Equal(target)
+}

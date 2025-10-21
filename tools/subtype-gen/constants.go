@@ -39,4 +39,6 @@ const (
 	subtypeCheckFuncName = "checkSubTypeWithoutEquality_gen"
 	subTypeVarName       = "subType"
 	superTypeVarName     = "superType"
+	sourceVarName        = "source"
+	targetVarName        = "target"
 )
