@@ -6336,6 +6336,84 @@ func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
 	return member
 }
 
+func (interpreter *Interpreter) GetReferenceValueMember(
+	v ReferenceValue,
+	referencedValue Value,
+	name string,
+) Value {
+
+	// First, *before* looking up the member on the referenced value,
+	// check whether the member is available via special handling
+	// for reference values (e.g. array higher-order functions)
+	value := getReferenceValueHigherOrderFunction(interpreter, v, referencedValue, name)
+	if value != nil {
+		return value
+	}
+
+	// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
+	value = interpreter.GetMethod(v, name)
+	if value != nil {
+		return value
+	}
+
+	// If not found on the reference, then look-up the member on the referenced-value.
+	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
+		return memberAccessibleValue.GetMember(interpreter, name)
+	}
+
+	return nil
+}
+
+func getReferenceValueHigherOrderFunction(
+	context MemberAccessibleContext,
+	v ReferenceValue,
+	referencedValue Value,
+	name string,
+) FunctionValue {
+	switch referencedValue := referencedValue.(type) {
+	case *ArrayValue:
+		refType := context.SemaTypeFromStaticType(v.StaticType(context))
+
+		arrayType := referencedValue.SemaType(context)
+
+		switch name {
+		case sema.ArrayTypeFilterFunctionName:
+			return NewBoundHostFunctionValue(
+				context,
+				v,
+				sema.ArrayFilterFunctionType(
+					context,
+					refType,
+					arrayType.ElementType(false),
+					func(err error) {
+						// TODO:
+						panic(err)
+					},
+				),
+				NativeArrayFilterFunction,
+			)
+
+		case sema.ArrayTypeMapFunctionName:
+			return NewBoundHostFunctionValue(
+				context,
+				v,
+				sema.ArrayMapFunctionType(
+					context,
+					refType,
+					arrayType,
+					func(err error) {
+						// TODO:
+						panic(err)
+					},
+				),
+				NativeArrayMapFunction,
+			)
+		}
+	}
+
+	return nil
+}
+
 func StorageReference(
 	context ValueStaticTypeContext,
 	storageReference *StorageReferenceValue,

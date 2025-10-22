@@ -192,27 +192,11 @@ func (v *StorageReferenceValue) mustReferencedValue(
 func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
 	referencedValue := v.mustReferencedValue(context)
 
-	var member Value
-
-	// First, *before* looking up the member on the referenced value,
-	// check whether the member is available via special handling
-	// for reference values (e.g. array higher-order functions)
-
-	member = getReferenceValueMember(context, v, referencedValue, name)
-	if member != nil {
-		return member
-	}
-
-	// Next, look up the member on the referenced value
-
-	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
-		member = memberAccessibleValue.GetMember(context, name)
-	}
-
-	if member == nil {
-		// NOTE: Must call the `GetMethod` of the `StorageReferenceValue`, not of the referenced-value.
-		member = context.GetMethod(v, name)
-	}
+	member := context.GetReferenceValueMember(
+		v,
+		referencedValue,
+		name,
+	)
 
 	// If the member is a function, it is always a bound-function.
 	// By default, bound functions create and hold an ephemeral reference

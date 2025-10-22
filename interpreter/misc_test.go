@@ -10785,7 +10785,8 @@ func TestInterpretArrayFilter(t *testing.T) {
               let array = [[1]]
               let ref: &[[Int]] = &array
 
-              return ref.filter(view fun(s: &[Int]): Bool {
+              let filter = ref.filter
+              return filter(view fun(s: &[Int]): Bool {
                   return true
               })
           }

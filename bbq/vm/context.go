@@ -531,3 +531,36 @@ func (c *Context) GetEntitlementMapType(
 func (c *Context) LocationRange() interpreter.LocationRange {
 	return c.getLocationRange()
 }
+
+func (c *Context) GetReferenceValueMember(
+	v interpreter.ReferenceValue,
+	referencedValue interpreter.Value,
+	name string,
+) interpreter.Value {
+
+	// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
+	member := c.GetMethod(v, name)
+	if member != nil {
+		return member
+	}
+
+	// If not found, look up the member on the referenced value
+	if memberAccessibleValue, ok := referencedValue.(interpreter.MemberAccessibleValue); ok {
+		member := memberAccessibleValue.GetMember(c, name)
+
+		// The member was obtained from the referenced-value.
+		// However, this was accessed via a reference.
+		// Therefore, update the receiver to the reference.
+		if boundFunction, isBoundFunction := member.(*BoundFunctionValue); isBoundFunction {
+			// Note: We shouldn't reach here, since ideally the methods must have been found
+			// by calling the `GetMethod` function above.
+			// TODO: Maybe just panic?
+			boundFunction.ReceiverReference = v
+			boundFunction.receiverIsReference = true
+		}
+
+		return member
+	}
+
+	return nil
+}

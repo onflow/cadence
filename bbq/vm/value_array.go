@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -75,11 +76,13 @@ func init() {
 			NewNativeFunctionValueWithDerivedType(
 				sema.ArrayTypeFilterFunctionName,
 				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-					arrayType := arrayTypeFromValue(receiver, context)
-					elementType := arrayType.ElementType(false)
+					accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
+					valueIndexableType := accessedType.(sema.ValueIndexableType)
+					elementType := valueIndexableType.ElementType(false)
+
 					return sema.ArrayFilterFunctionType(
 						context,
-						arrayType,
+						accessedType,
 						elementType,
 						func(err error) {
 							// TODO:
@@ -96,10 +99,12 @@ func init() {
 			NewNativeFunctionValueWithDerivedType(
 				sema.ArrayTypeMapFunctionName,
 				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-					arrayType := arrayTypeFromValue(receiver, context)
+					accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
+					arrayType := arrayTypeFromSemaType(accessedType)
+
 					return sema.ArrayMapFunctionType(
 						context,
-						arrayType,
+						accessedType,
 						arrayType,
 						func(err error) {
 							// TODO:
@@ -235,6 +240,17 @@ func init() {
 			interpreter.NativeArrayToVariableSizedFunction,
 		),
 	)
+}
+
+func arrayTypeFromSemaType(accessedType sema.Type) sema.ArrayType {
+	switch accessedType := accessedType.(type) {
+	case sema.ArrayType:
+		return accessedType
+	case *sema.ReferenceType:
+		return arrayTypeFromSemaType(accessedType.Type)
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func arrayTypeFromValue(receiver Value, context interpreter.ValueStaticTypeContext) sema.ArrayType {
