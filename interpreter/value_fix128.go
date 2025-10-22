@@ -463,7 +463,7 @@ func (v Fix128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Valu
 // - HashInputTypeFix128 (1 byte)
 // - high 64 bits encoded in big-endian (8 bytes)
 // - low 64 bits encoded in big-endian (8 bytes)
-func (v Fix128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v Fix128Value) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeFix128)
 
 	fix128 := fix.Fix128(v)

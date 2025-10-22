@@ -22,9 +22,9 @@ import "github.com/onflow/cadence/common"
 
 type IntegerValue[T Value] interface {
 	NumberValue[T]
-	BitwiseOr(gauge common.MemoryGauge, other T) (T, error)
-	BitwiseXor(gauge common.MemoryGauge, other T) (T, error)
-	BitwiseAnd(gauge common.MemoryGauge, other T) (T, error)
-	BitwiseLeftShift(gauge common.MemoryGauge, other T) (T, error)
-	BitwiseRightShift(gauge common.MemoryGauge, other T) (T, error)
+	BitwiseOr(gauge common.Gauge, other T) (T, error)
+	BitwiseXor(gauge common.Gauge, other T) (T, error)
+	BitwiseAnd(gauge common.Gauge, other T) (T, error)
+	BitwiseLeftShift(gauge common.Gauge, other T) (T, error)
+	BitwiseRightShift(gauge common.Gauge, other T) (T, error)
 }

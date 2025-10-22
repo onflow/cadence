@@ -192,6 +192,11 @@ func (v UIntValue) Plus(context NumberValueArithmeticContext, other NumberValue,
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewPlusBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -229,6 +234,11 @@ func (v UIntValue) Minus(context NumberValueArithmeticContext, other NumberValue
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -257,6 +267,11 @@ func (v UIntValue) SaturatingMinus(context NumberValueArithmeticContext, other N
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewMinusBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -282,6 +297,11 @@ func (v UIntValue) Mod(context NumberValueArithmeticContext, other NumberValue, 
 			LocationRange: locationRange,
 		})
 	}
+
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
 
 	return NewUIntValueFromBigInt(
 		context,
@@ -310,6 +330,11 @@ func (v UIntValue) Mul(context NumberValueArithmeticContext, other NumberValue, 
 			LocationRange: locationRange,
 		})
 	}
+
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
 
 	return NewUIntValueFromBigInt(
 		context,
@@ -348,6 +373,11 @@ func (v UIntValue) Div(context NumberValueArithmeticContext, other NumberValue, 
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewDivBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -380,6 +410,15 @@ func (v UIntValue) SaturatingDiv(context NumberValueArithmeticContext, other Num
 	return v.Div(context, other, locationRange)
 }
 
+func (v UIntValue) compare(context ValueComparisonContext, o UIntValue) int {
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
+	return v.BigInt.Cmp(o.BigInt)
+}
+
 func (v UIntValue) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
@@ -391,8 +430,7 @@ func (v UIntValue) Less(context ValueComparisonContext, other ComparableValue, l
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return v.compare(context, o) == -1
 }
 
 func (v UIntValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -406,8 +444,7 @@ func (v UIntValue) LessEqual(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return v.compare(context, o) <= 0
 }
 
 func (v UIntValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -421,8 +458,7 @@ func (v UIntValue) Greater(context ValueComparisonContext, other ComparableValue
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return v.compare(context, o) == 1
 }
 
 func (v UIntValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -436,23 +472,22 @@ func (v UIntValue) GreaterEqual(context ValueComparisonContext, other Comparable
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return v.compare(context, o) >= 0
 }
 
-func (v UIntValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
-	otherUInt, ok := other.(UIntValue)
+func (v UIntValue) Equal(context ValueComparisonContext, _ LocationRange, other Value) bool {
+	o, ok := other.(UIntValue)
 	if !ok {
 		return false
 	}
-	cmp := v.BigInt.Cmp(otherUInt.BigInt)
-	return cmp == 0
+
+	return v.compare(context, o) == 0
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeUInt (1 byte)
 // - big int value encoded in big-endian (n bytes)
-func (v UIntValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v UIntValue) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
@@ -479,6 +514,11 @@ func (v UIntValue) BitwiseOr(context ValueStaticTypeContext, other IntegerValue,
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -500,6 +540,11 @@ func (v UIntValue) BitwiseXor(context ValueStaticTypeContext, other IntegerValue
 		})
 	}
 
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
+
 	return NewUIntValueFromBigInt(
 		context,
 		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, o.BigInt),
@@ -520,6 +565,11 @@ func (v UIntValue) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue
 			LocationRange: locationRange,
 		})
 	}
+
+	common.UseComputation(
+		context,
+		common.NewBigIntsWordSliceOperation(v.BigInt, o.BigInt),
+	)
 
 	return NewUIntValueFromBigInt(
 		context,

@@ -38,7 +38,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := NewInterpreter(
 		nil,
@@ -92,7 +92,7 @@ func TestInclusiveRangeStorage(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := NewInterpreter(
 		nil,
@@ -161,7 +161,7 @@ func TestArrayStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -228,7 +228,7 @@ func TestArrayStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -295,7 +295,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -352,7 +352,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -402,7 +402,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -451,7 +451,7 @@ func TestDictionaryStorage(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -502,7 +502,7 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	t.Run("overwrite inlined value with inlined value", func(t *testing.T) {
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -615,7 +615,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -792,7 +792,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,

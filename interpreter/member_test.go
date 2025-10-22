@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -379,7 +380,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 		})
 	})
 
-	t.Run("reference", func(t *testing.T) {
+	t.Run("ephemeral reference", func(t *testing.T) {
 
 		t.Run("non-optional", func(t *testing.T) {
 
@@ -584,6 +585,113 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
+		})
+	})
+
+	t.Run("storage reference", func(t *testing.T) {
+
+		t.Run("valid", func(t *testing.T) {
+
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(t,
+				address,
+				true,
+				nil,
+				`
+                struct S {
+                    var foo: Int
+
+                    init() {
+                        self.foo = 1
+                    }
+                }
+
+                fun getStorageRef(): auth(Mutate) &S {
+                    account.storage.save(S(), to: /storage/x)
+                    return account.storage.borrow<auth(Mutate) &S>(from: /storage/x)!
+                }
+
+                fun get(ref: &S) {
+                    ref.foo
+                }
+
+                fun set(ref: &S) {
+                    ref.foo = 2
+                }
+            `,
+				sema.Config{},
+			)
+
+			storageRef, err := inter.Invoke("getStorageRef")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.StorageReferenceValue{}, storageRef)
+
+			_, err = inter.Invoke("get", storageRef)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("set", storageRef)
+			require.NoError(t, err)
+		})
+
+		t.Run("invalid", func(t *testing.T) {
+
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				nil,
+				`
+                struct S {
+                    var foo: Int
+
+                    init() {
+                        self.foo = 1
+                    }
+                }
+
+                struct S2 {
+                    var foo: Int
+
+                    init() {
+                        self.foo = 2
+                    }
+                }
+
+                fun getStorageRef(): auth(Mutate) &S2 {
+                    account.storage.save(S2(), to: /storage/x)
+                    return account.storage.borrow<auth(Mutate) &S2>(from: /storage/x)!
+                }
+
+                fun get(ref: &S) {
+                    ref.foo
+                }
+
+                fun set(ref: &S) {
+                    ref.foo = 3
+                }
+                `,
+				sema.Config{},
+			)
+
+			storageRef, err := inter.Invoke("getStorageRef")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.StorageReferenceValue{}, storageRef)
+
+			_, err = inter.Invoke("get", storageRef)
+			RequireError(t, err)
+			var memberAccessTypeError *interpreter.MemberAccessTypeError
+			require.ErrorAs(t, err, &memberAccessTypeError)
+
+			_, err = inter.Invoke("set", storageRef)
+			RequireError(t, err)
+			require.ErrorAs(t, err, &memberAccessTypeError)
 		})
 	})
 }
