@@ -943,6 +943,13 @@ func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value 
 		return typedValue.Value
 	case *interpreter.StorageReferenceValue:
 		referencedValue := typedValue.ReferencedValue(context, true)
+
+		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
+		// If nil, that means the value has been moved out of storage.
+		if referencedValue == nil {
+			panic(&interpreter.ReferencedValueChangedError{})
+		}
+
 		return *referencedValue
 	default:
 		return value
