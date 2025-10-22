@@ -80,7 +80,15 @@ func (v IntValue) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v IntValue) Negate(gauge common.MemoryGauge) IntValue {
+func (v IntValue) Negate(gauge common.Gauge) IntValue {
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindWordSliceOperation,
+			Intensity: uint64(len(v.BigInt.Bits())),
+		},
+	)
+
 	return NewIntValueFromBigInt(
 		gauge,
 		common.NewNegateBigIntMemoryUsage(v.BigInt),
@@ -90,7 +98,12 @@ func (v IntValue) Negate(gauge common.MemoryGauge) IntValue {
 	)
 }
 
-func (v IntValue) Plus(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) Plus(gauge common.Gauge, other IntValue) (IntValue, error) {
+	common.UseComputation(
+		gauge,
+		common.NewBigIntsWordSliceOperation(v.BigInt, other.BigInt),
+	)
+
 	return NewIntValueFromBigInt(
 		gauge,
 		common.NewPlusBigIntMemoryUsage(v.BigInt, other.BigInt),
@@ -101,11 +114,16 @@ func (v IntValue) Plus(gauge common.MemoryGauge, other IntValue) (IntValue, erro
 	), nil
 }
 
-func (v IntValue) SaturatingPlus(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) SaturatingPlus(gauge common.Gauge, other IntValue) (IntValue, error) {
 	return v.Plus(gauge, other)
 }
 
-func (v IntValue) Minus(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) Minus(gauge common.Gauge, other IntValue) (IntValue, error) {
+	common.UseComputation(
+		gauge,
+		common.NewBigIntsWordSliceOperation(v.BigInt, other.BigInt),
+	)
+
 	return NewIntValueFromBigInt(
 		gauge,
 		common.NewMinusBigIntMemoryUsage(v.BigInt, other.BigInt),
@@ -116,15 +134,20 @@ func (v IntValue) Minus(gauge common.MemoryGauge, other IntValue) (IntValue, err
 	), nil
 }
 
-func (v IntValue) SaturatingMinus(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) SaturatingMinus(gauge common.Gauge, other IntValue) (IntValue, error) {
 	return v.Minus(gauge, other)
 }
 
-func (v IntValue) Mod(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) Mod(gauge common.Gauge, other IntValue) (IntValue, error) {
 	// INT33-C
 	if other.BigInt.Sign() == 0 {
 		return IntValue{}, DivisionByZeroError{}
 	}
+
+	common.UseComputation(
+		gauge,
+		common.NewBigIntsWordSliceOperation(v.BigInt, other.BigInt),
+	)
 
 	return NewIntValueFromBigInt(
 		gauge,
@@ -136,7 +159,12 @@ func (v IntValue) Mod(gauge common.MemoryGauge, other IntValue) (IntValue, error
 	), nil
 }
 
-func (v IntValue) Mul(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) Mul(gauge common.Gauge, other IntValue) (IntValue, error) {
+	common.UseComputation(
+		gauge,
+		common.NewBigIntsWordSliceOperation(v.BigInt, other.BigInt),
+	)
+
 	return NewIntValueFromBigInt(
 		gauge,
 		common.NewMulBigIntMemoryUsage(v.BigInt, other.BigInt),
@@ -147,15 +175,20 @@ func (v IntValue) Mul(gauge common.MemoryGauge, other IntValue) (IntValue, error
 	), nil
 }
 
-func (v IntValue) SaturatingMul(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) SaturatingMul(gauge common.Gauge, other IntValue) (IntValue, error) {
 	return v.Mul(gauge, other)
 }
 
-func (v IntValue) Div(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) Div(gauge common.Gauge, other IntValue) (IntValue, error) {
 	// INT33-C
 	if other.BigInt.Sign() == 0 {
 		return IntValue{}, DivisionByZeroError{}
 	}
+
+	common.UseComputation(
+		gauge,
+		common.NewBigIntsWordSliceOperation(v.BigInt, other.BigInt),
+	)
 
 	return NewIntValueFromBigInt(
 		gauge,
@@ -167,41 +200,50 @@ func (v IntValue) Div(gauge common.MemoryGauge, other IntValue) (IntValue, error
 	), nil
 }
 
-func (v IntValue) SaturatingDiv(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) SaturatingDiv(gauge common.Gauge, other IntValue) (IntValue, error) {
 	return v.Div(gauge, other)
 }
 
-func (v IntValue) Less(other IntValue) bool {
-	cmp := v.BigInt.Cmp(other.BigInt)
-	return cmp == -1
+func (v IntValue) compare(gauge common.ComputationGauge, other IntValue) int {
+	common.UseComputation(
+		gauge,
+		common.NewBigIntsWordSliceOperation(v.BigInt, other.BigInt),
+	)
+
+	return v.BigInt.Cmp(other.BigInt)
 }
 
-func (v IntValue) LessEqual(other IntValue) bool {
-	cmp := v.BigInt.Cmp(other.BigInt)
-	return cmp <= 0
+func (v IntValue) Less(gauge common.Gauge, other IntValue) bool {
+	return v.compare(gauge, other) == -1
 }
 
-func (v IntValue) Greater(other IntValue) bool {
-	cmp := v.BigInt.Cmp(other.BigInt)
-	return cmp == 1
-
+func (v IntValue) LessEqual(gauge common.Gauge, other IntValue) bool {
+	return v.compare(gauge, other) <= 0
 }
 
-func (v IntValue) GreaterEqual(other IntValue) bool {
-	cmp := v.BigInt.Cmp(other.BigInt)
-	return cmp >= 0
+func (v IntValue) Greater(gauge common.Gauge, other IntValue) bool {
+	return v.compare(gauge, other) == 1
 }
 
-func (v IntValue) Equal(other Value) bool {
+func (v IntValue) GreaterEqual(gauge common.Gauge, other IntValue) bool {
+	return v.compare(gauge, other) >= 0
+}
+
+func (v IntValue) Equal(gauge common.Gauge, other Value) bool {
 	otherInt, ok := other.(IntValue)
 	if !ok {
 		return false
 	}
-	cmp := v.BigInt.Cmp(otherInt.BigInt)
-	return cmp == 0
+
+	return v.compare(gauge, otherInt) == 0
 }
 
-func (v IntValue) BitwiseOr(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) BitwiseOr(gauge common.Gauge, other IntValue) (IntValue, error) {
+	common.UseComputation(
+		gauge,
+		common.NewBigIntsWordSliceOperation(v.BigInt, other.BigInt),
+	)
+
 	return NewIntValueFromBigInt(
 		gauge,
 		common.NewBitwiseOrBigIntMemoryUsage(v.BigInt, other.BigInt),
@@ -212,7 +254,12 @@ func (v IntValue) BitwiseOr(gauge common.MemoryGauge, other IntValue) (IntValue,
 	), nil
 }
 
-func (v IntValue) BitwiseXor(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) BitwiseXor(gauge common.Gauge, other IntValue) (IntValue, error) {
+	common.UseComputation(
+		gauge,
+		common.NewBigIntsWordSliceOperation(v.BigInt, other.BigInt),
+	)
+
 	return NewIntValueFromBigInt(
 		gauge,
 		common.NewBitwiseXorBigIntMemoryUsage(v.BigInt, other.BigInt),
@@ -223,7 +270,12 @@ func (v IntValue) BitwiseXor(gauge common.MemoryGauge, other IntValue) (IntValue
 	), nil
 }
 
-func (v IntValue) BitwiseAnd(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) BitwiseAnd(gauge common.Gauge, other IntValue) (IntValue, error) {
+	common.UseComputation(
+		gauge,
+		common.NewBigIntsWordSliceOperation(v.BigInt, other.BigInt),
+	)
+
 	return NewIntValueFromBigInt(
 		gauge,
 		common.NewBitwiseAndBigIntMemoryUsage(v.BigInt, other.BigInt),
@@ -234,7 +286,7 @@ func (v IntValue) BitwiseAnd(gauge common.MemoryGauge, other IntValue) (IntValue
 	), nil
 }
 
-func (v IntValue) BitwiseLeftShift(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) BitwiseLeftShift(gauge common.Gauge, other IntValue) (IntValue, error) {
 	if other.BigInt.Sign() < 0 {
 		return IntValue{}, NegativeShiftError{}
 	}
@@ -253,7 +305,7 @@ func (v IntValue) BitwiseLeftShift(gauge common.MemoryGauge, other IntValue) (In
 	), nil
 }
 
-func (v IntValue) BitwiseRightShift(gauge common.MemoryGauge, other IntValue) (IntValue, error) {
+func (v IntValue) BitwiseRightShift(gauge common.Gauge, other IntValue) (IntValue, error) {
 	if other.BigInt.Sign() < 0 {
 		return IntValue{}, NegativeShiftError{}
 	}

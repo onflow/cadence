@@ -34,6 +34,7 @@ linters:
         - github.com/onflow/cadence/test_utils/common_utils
         - github.com/onflow/cadence/test_utils/sema_utils
         - github.com/onflow/cadence/test_utils/runtime_utils
+        - github.com/onflow/cadence/test_utils/interpreter_utils
       checks:
         - all
         - '-S1016' # should convert ... (type ...) to ... instead of using struct literal

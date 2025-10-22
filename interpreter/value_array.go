@@ -85,7 +85,8 @@ func NewArrayValueWithIterator(
 	address common.Address,
 	countOverestimate uint64,
 	values func() Value,
-) *ArrayValue {
+) (v *ArrayValue) {
+
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
@@ -93,8 +94,6 @@ func NewArrayValueWithIterator(
 			Intensity: 1,
 		},
 	)
-
-	var v *ArrayValue
 
 	if TracingEnabled {
 		startTime := time.Now()
@@ -120,49 +119,59 @@ func NewArrayValueWithIterator(
 		}()
 	}
 
-	constructor := func() (array *atree.Array) {
+	return newArrayValueFromConstructor(
+		context,
+		arrayType,
+		countOverestimate,
+		func() (array *atree.Array) {
 
-		if TracingEnabled {
-			startTime := time.Now()
+			if TracingEnabled {
+				startTime := time.Now()
 
-			defer func() {
-				// NOTE: in defer, as array is only initialized at the end of the function,
-				// if there was no error during construction
-				if array == nil {
-					return
-				}
+				defer func() {
+					// NOTE: in defer, as array is only initialized at the end of the function,
+					// if there was no error during construction
+					if array == nil {
+						return
+					}
 
-				valueID := array.ValueID().String()
-				var typeID string
-				if arrayType != nil {
-					typeID = string(arrayType.ID())
-				}
+					valueID := array.ValueID().String()
+					var typeID string
+					if arrayType != nil {
+						typeID = string(arrayType.ID())
+					}
 
-				context.ReportAtreeNewArrayFromBatchDataTrace(
-					valueID,
-					typeID,
-					time.Since(startTime),
-				)
-			}()
-		}
+					context.ReportAtreeNewArrayFromBatchDataTrace(
+						valueID,
+						typeID,
+						time.Since(startTime),
+					)
+				}()
+			}
 
-		var err error
-		array, err = atree.NewArrayFromBatchData(
-			context.Storage(),
-			atree.Address(address),
-			arrayType,
-			func() (atree.Value, error) {
-				return values(), nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-		return array
-	}
-	// must assign to v here for tracing to work properly
-	v = newArrayValueFromConstructor(context, arrayType, countOverestimate, constructor)
-	return v
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeArrayBatchConstruction,
+					Intensity: countOverestimate,
+				},
+			)
+
+			var err error
+			array, err = atree.NewArrayFromBatchData(
+				context.Storage(),
+				atree.Address(address),
+				arrayType,
+				func() (atree.Value, error) {
+					return values(), nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+			return array
+		},
+	)
 }
 
 func ArrayElementSize(staticType ArrayStaticType) uint {
@@ -276,6 +285,15 @@ func (v *ArrayValue) iterate(
 ) {
 	iterate := func() {
 		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeArrayReadIteration,
+					Intensity: 1,
+				},
+			)
+
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 			elementValue := MustConvertStoredValue(context, element)
@@ -305,18 +323,8 @@ func (v *ArrayValue) iterate(
 	context.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
-func (v *ArrayValue) Iterator(_ ValueStaticTypeContext) ValueIterator {
-	valueID := v.array.ValueID()
-
-	arrayIterator, err := v.array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
-	return &ArrayIterator{
-		valueID:       valueID,
-		atreeIterator: arrayIterator,
-	}
+func (v *ArrayValue) Iterator(context ValueStaticTypeContext) ValueIterator {
+	return NewArrayIterator(context, v)
 }
 
 func (v *ArrayValue) Walk(context ValueWalkContext, walkChild func(Value)) {
@@ -431,22 +439,28 @@ func (v *ArrayValue) Concat(context ValueTransferContext, other *ArrayValue) Val
 
 	elementType := v.Type.ElementType()
 
+	newCount := v.array.Count() + other.array.Count()
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: newCount,
+		},
+	)
+
 	return NewArrayValueWithIterator(
 		context,
 		v.Type,
 		common.ZeroAddress,
-		v.array.Count()+other.array.Count(),
+		newCount,
 		func() Value {
-
-			// Meter computation for iterating the two arrays.
-			common.UseComputation(
-				context,
-				common.LoopComputationUsage,
-			)
 
 			var value Value
 
 			if first {
+				// Computation was already metered above
+
 				atreeValue, err := firstIterator.Next()
 				if err != nil {
 					panic(errors.NewExternalError(err))
@@ -460,6 +474,8 @@ func (v *ArrayValue) Concat(context ValueTransferContext, other *ArrayValue) Val
 			}
 
 			if !first {
+				// Computation was already metered above
+
 				atreeValue, err := secondIterator.Next()
 				if err != nil {
 					panic(errors.NewExternalError(err))
@@ -488,7 +504,7 @@ func (v *ArrayValue) Concat(context ValueTransferContext, other *ArrayValue) Val
 	)
 }
 
-func (v *ArrayValue) GetKey(context ValueComparisonContext, key Value) Value {
+func (v *ArrayValue) GetKey(context ContainerReadContext, key Value) Value {
 	index := key.(NumberValue).ToInt()
 	return v.Get(context, index)
 }
@@ -503,7 +519,7 @@ func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int) {
 	}
 }
 
-func (v *ArrayValue) Get(gauge common.MemoryGauge, index int) Value {
+func (v *ArrayValue) Get(gauge common.Gauge, index int) Value {
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -514,6 +530,13 @@ func (v *ArrayValue) Get(gauge common.MemoryGauge, index int) Value {
 			Size:  v.Count(),
 		})
 	}
+
+	common.UseComputation(
+		gauge, common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayGet,
+			Intensity: 1,
+		},
+	)
 
 	storedValue, err := v.array.Get(uint64(index))
 	if err != nil {
@@ -557,6 +580,14 @@ func (v *ArrayValue) Set(context ContainerMutationContext, index int, element Va
 			v.ValueID(): {},
 		},
 		true, // standalone element doesn't have a parent container yet.
+	)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArraySet,
+			Intensity: 1,
+		},
 	)
 
 	existingStorable, err := v.array.Set(uint64(index), element)
@@ -642,6 +673,14 @@ func (v *ArrayValue) Append(context ValueTransferContext, element Value) {
 		true, // standalone element doesn't have a parent container yet.
 	)
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayAppend,
+			Intensity: 1,
+		},
+	)
+
 	err := v.array.Append(element)
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -691,6 +730,14 @@ func (v *ArrayValue) InsertWithoutTransfer(
 	common.UseMemory(context, dataSlabs)
 	common.UseMemory(context, metaDataSlabs)
 	common.UseMemory(context, common.AtreeArrayElementOverhead)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayInsert,
+			Intensity: 1,
+		},
+	)
 
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
@@ -749,6 +796,14 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 			Size:  v.Count(),
 		})
 	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayRemove,
+			Intensity: 1,
+		},
+	)
 
 	storable, err := v.array.Remove(uint64(index))
 	if err != nil {
@@ -1148,11 +1203,13 @@ func (v *ArrayValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
+	count := v.Count()
+
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindTransferArrayValue,
-			Intensity: uint64(v.Count()),
+			Intensity: uint64(count),
 		},
 	)
 
@@ -1220,11 +1277,30 @@ func (v *ArrayValue) Transfer(
 				}()
 			}
 
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeArrayBatchConstruction,
+					Intensity: uint64(count),
+				},
+			)
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeArrayReadIteration,
+					Intensity: uint64(count),
+				},
+			)
+
 			array, err = atree.NewArrayFromBatchData(
 				context.Storage(),
 				address,
 				v.array.Type(),
 				func() (atree.Value, error) {
+
+					// Computation was already metered above
+
 					value, err := iterator.Next()
 					if err != nil {
 						return nil, err
@@ -1252,6 +1328,15 @@ func (v *ArrayValue) Transfer(
 		}()
 
 		if remove {
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeArrayPopIteration,
+					Intensity: v.array.Count(),
+				},
+			)
+
 			err = v.array.PopIterate(func(storable atree.Storable) {
 				RemoveReferencedSlab(context, storable)
 			})
@@ -1362,6 +1447,14 @@ func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer
 
 	storage := v.array.Storage
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayPopIteration,
+			Intensity: v.array.Count(),
+		},
+	)
+
 	err := v.array.PopIterate(func(storable atree.Storable) {
 		value := StoredValue(context, storable, storage)
 		value.DeepRemove(context, false) // existingValue is an element of v.array because it is from PopIterate() callback.
@@ -1456,15 +1549,24 @@ func (v *ArrayValue) Slice(
 		panic(errors.NewExternalError(err))
 	}
 
+	newCount := uint64(toIndex - fromIndex)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: newCount,
+		},
+	)
+
 	return NewArrayValueWithIterator(
 		context,
 		NewVariableSizedStaticType(context, v.Type.ElementType()),
 		common.ZeroAddress,
-		uint64(toIndex-fromIndex),
+		newCount,
 		func() Value {
 
-			// Meter computation for iterating the array.
-			common.UseComputation(context, common.LoopComputationUsage)
+			// Computation was already metered above
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1507,12 +1609,6 @@ func (v *ArrayValue) Reverse(
 			if index < 0 {
 				return nil
 			}
-
-			// Meter computation for iterating the array.
-			common.UseComputation(
-				context,
-				common.LoopComputationUsage,
-			)
 
 			value := v.Get(context, index)
 			index--
@@ -1558,10 +1654,12 @@ func (v *ArrayValue) Filter(
 			var value Value
 
 			for {
-				// Meter computation for iterating the array.
 				common.UseComputation(
 					context,
-					common.LoopComputationUsage,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeArrayReadIteration,
+						Intensity: 1,
+					},
 				)
 
 				atreeValue, err := iterator.Next()
@@ -1616,6 +1714,7 @@ func (v *ArrayValue) Map(
 	context InvocationContext,
 	procedure FunctionValue,
 ) Value {
+	count := v.Count()
 
 	elementType := v.SemaType(context).ElementType(false)
 
@@ -1638,7 +1737,7 @@ func (v *ArrayValue) Map(
 		returnArrayStaticType = NewConstantSizedStaticType(
 			context,
 			returnStaticType,
-			int64(v.Count()),
+			int64(count),
 		)
 	default:
 		panic(errors.NewUnreachableError())
@@ -1650,18 +1749,22 @@ func (v *ArrayValue) Map(
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	return NewArrayValueWithIterator(
 		context,
 		returnArrayStaticType,
 		common.ZeroAddress,
-		uint64(v.Count()),
+		uint64(count),
 		func() Value {
 
-			// Meter computation for iterating the array.
-			common.UseComputation(
-				context,
-				common.LoopComputationUsage,
-			)
+			// Computation was already metered above
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1708,6 +1811,7 @@ func (v *ArrayValue) ForEach(
 func (v *ArrayValue) ToVariableSized(
 	context ArrayCreationContext,
 ) Value {
+	count := v.Count()
 
 	// Convert the constant-sized array type to a variable-sized array type.
 
@@ -1729,18 +1833,22 @@ func (v *ArrayValue) ToVariableSized(
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	return NewArrayValueWithIterator(
 		context,
 		variableSizedType,
 		common.ZeroAddress,
-		uint64(v.Count()),
+		uint64(count),
 		func() Value {
 
-			// Meter computation for iterating the array.
-			common.UseComputation(
-				context,
-				common.LoopComputationUsage,
-			)
+			// Computation was already metered above
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1799,6 +1907,14 @@ func (v *ArrayValue) ToConstantSized(
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	constantSizedArray := NewArrayValueWithIterator(
 		context,
 		constantSizedType,
@@ -1806,11 +1922,7 @@ func (v *ArrayValue) ToConstantSized(
 		uint64(count),
 		func() Value {
 
-			// Meter computation for iterating the array.
-			common.UseComputation(
-				context,
-				common.LoopComputationUsage,
-			)
+			// Computation was already metered above
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1861,10 +1973,40 @@ type ArrayIterator struct {
 
 var _ ValueIterator = &ArrayIterator{}
 
-func (i *ArrayIterator) HasNext() bool {
+func NewArrayIterator(gauge common.MemoryGauge, v *ArrayValue) ValueIterator {
+	common.UseMemory(
+		gauge,
+		common.MemoryUsage{
+			Kind:   common.MemoryKindArrayIterator,
+			Amount: 1,
+		},
+	)
+
+	valueID := v.array.ValueID()
+
+	arrayIterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return &ArrayIterator{
+		valueID:       valueID,
+		atreeIterator: arrayIterator,
+	}
+}
+
+func (i *ArrayIterator) HasNext(context ValueIteratorContext) bool {
 	if i.next != nil {
 		return true
 	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeArrayReadIteration,
+			Intensity: 1,
+		},
+	)
 
 	var err error
 	i.next, err = i.atreeIterator.Next()
@@ -1885,6 +2027,14 @@ func (i *ArrayIterator) Next(context ValueIteratorContext) Value {
 		// Clear the cached `next`.
 		i.next = nil
 	} else {
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeArrayReadIteration,
+				Intensity: 1,
+			},
+		)
+
 		var err error
 		atreeValue, err = i.atreeIterator.Next()
 		if err != nil {

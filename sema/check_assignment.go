@@ -190,7 +190,7 @@ func isWriteableInViewContext(t Type) bool {
 	return !isReference && !t.IsResourceType()
 }
 
-func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target ast.Expression) {
+func (checker *Checker) enforceViewAssignment(statement ast.Statement, target ast.Expression) {
 	if !checker.CurrentPurityScope().EnforcePurity {
 		return
 	}
@@ -201,7 +201,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 	// whether or not it is a local struct-kinded variable. E.g. in the case of `(b ? s1 : s2).x`, we can't
 	// know whether `s1` or `s2` is being accessed here
 	if baseVariable == nil {
-		checker.ObserveImpureOperation(assignment)
+		checker.ObserveImpureOperation(statement)
 		return
 	}
 
@@ -216,7 +216,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 	// They will still need a view annotation though (e.g. view init(...)).
 	if baseVariable.DeclarationKind == common.DeclarationKindSelf {
 		if checker.functionActivations.Current().InitializationInfo == nil {
-			checker.ObserveImpureOperation(assignment)
+			checker.ObserveImpureOperation(statement)
 		}
 		return
 	}
@@ -224,7 +224,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 	// Check that all the types in the access chain are not resources or references
 	for _, t := range accessChain {
 		if !isWriteableInViewContext(t) {
-			checker.ObserveImpureOperation(assignment)
+			checker.ObserveImpureOperation(statement)
 			return
 		}
 	}
@@ -234,7 +234,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 	// to the depth at which the current purity scope was created;
 	// i.e. if it is a parameter to the current function or was created within it
 	if checker.CurrentPurityScope().ActivationDepth > baseVariable.ActivationDepth {
-		checker.ObserveImpureOperation(assignment)
+		checker.ObserveImpureOperation(statement)
 	}
 }
 func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {

@@ -44,17 +44,24 @@ func (assumeValidPublicKeyValidator) ValidatePublicKey(_ *stdlib.PublicKey) erro
 }
 
 type testMemoryGauge struct {
-	meter map[common.MemoryKind]uint64
+	meter   map[common.MemoryKind]uint64
+	kindSet map[common.MemoryKind]struct{}
+	usages  []common.MemoryUsage
 }
 
-func newTestMemoryGauge() *testMemoryGauge {
-	return &testMemoryGauge{
-		meter: make(map[common.MemoryKind]uint64),
-	}
-}
+var _ common.MemoryGauge = &testMemoryGauge{}
 
 func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
+	if g.meter == nil {
+		g.meter = make(map[common.MemoryKind]uint64)
+	}
 	g.meter[usage.Kind] += usage.Amount
+
+	_, ok := g.kindSet[usage.Kind]
+	if g.kindSet == nil || ok {
+		g.usages = append(g.usages, usage)
+	}
+
 	return nil
 }
 
@@ -67,6 +74,23 @@ func ifTracing[T any](tracingValue, nonTracingValue T) T {
 		return tracingValue
 	}
 	return nonTracingValue
+}
+
+func newTestMemoryGauge(
+	kinds ...common.MemoryKind,
+) *testMemoryGauge {
+
+	var kindSet map[common.MemoryKind]struct{}
+	if len(kinds) > 0 {
+		kindSet = make(map[common.MemoryKind]struct{}, len(kinds))
+		for _, kind := range kinds {
+			kindSet[kind] = struct{}{}
+		}
+	}
+
+	return &testMemoryGauge{
+		kindSet: kindSet,
+	}
 }
 
 func parseCheckAndPrepareWithMemoryMetering(
@@ -127,7 +151,7 @@ func newMeteredLogFunction(meter *testMemoryGauge, loggedString *string) stdlib.
 	)
 }
 
-func TestInterpretArrayMetering(t *testing.T) {
+func TestInterpretMemoryMeteringArray(t *testing.T) {
 
 	t.Parallel()
 
@@ -479,7 +503,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretDictionaryMetering(t *testing.T) {
+func TestInterpretMemoryMeteringDictionary(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -714,7 +738,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretCompositeMetering(t *testing.T) {
+func TestInterpretMemoryMeteringComposite(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -803,7 +827,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretSimpleCompositeMetering(t *testing.T) {
+func TestInterpretMemoryMeteringSimpleComposite(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Account", func(t *testing.T) {
@@ -834,7 +858,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretCompositeFieldMetering(t *testing.T) {
+func TestInterpretMemoryMeteringCompositeField(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
@@ -929,7 +953,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretInterpretedFunctionMetering(t *testing.T) {
+func TestInterpretMemoryMeteringInterpretedFunction(t *testing.T) {
 	t.Parallel()
 
 	t.Run("top level function", func(t *testing.T) {
@@ -1064,7 +1088,7 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretHostFunctionMetering(t *testing.T) {
+func TestInterpretMemoryMeteringHostFunction(t *testing.T) {
 	t.Parallel()
 
 	// HostFunctionValue is only used in the interpreter, not the compiler/VM.
@@ -1346,7 +1370,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretBoundFunctionMetering(t *testing.T) {
+func TestInterpretMemoryMeteringBoundFunction(t *testing.T) {
 	t.Parallel()
 
 	// BoundFunctionValue is only used in the interpreter, not the compiler/VM.
@@ -1427,7 +1451,7 @@ func TestInterpretBoundFunctionMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretOptionalValueMetering(t *testing.T) {
+func TestInterpretMemoryMeteringOptionalValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("simple optional value", func(t *testing.T) {
@@ -1526,7 +1550,7 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretIntMetering(t *testing.T) {
+func TestInterpretMemoryMeteringInt(t *testing.T) {
 
 	t.Parallel()
 
@@ -1772,7 +1796,7 @@ func TestInterpretIntMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretUIntMetering(t *testing.T) {
+func TestInterpretMemoryMeteringUInt(t *testing.T) {
 
 	t.Parallel()
 
@@ -2039,7 +2063,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretUInt8Metering(t *testing.T) {
+func TestInterpretMemoryMeteringUInt8(t *testing.T) {
 
 	t.Parallel()
 
@@ -2352,7 +2376,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretUInt16Metering(t *testing.T) {
+func TestInterpretMemoryMeteringUInt16(t *testing.T) {
 
 	t.Parallel()
 
@@ -2664,7 +2688,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretUInt32Metering(t *testing.T) {
+func TestInterpretMemoryMeteringUInt32(t *testing.T) {
 
 	t.Parallel()
 
@@ -2976,7 +3000,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretUInt64Metering(t *testing.T) {
+func TestInterpretMemoryMeteringUInt64(t *testing.T) {
 
 	t.Parallel()
 
@@ -3288,7 +3312,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretUInt128Metering(t *testing.T) {
+func TestInterpretMemoryMeteringUInt128(t *testing.T) {
 
 	t.Parallel()
 
@@ -3601,7 +3625,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretUInt256Metering(t *testing.T) {
+func TestInterpretMemoryMeteringUInt256(t *testing.T) {
 
 	t.Parallel()
 
@@ -3913,7 +3937,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretInt8Metering(t *testing.T) {
+func TestInterpretMemoryMeteringInt8(t *testing.T) {
 
 	t.Parallel()
 
@@ -4274,7 +4298,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 
 }
 
-func TestInterpretInt16Metering(t *testing.T) {
+func TestInterpretMemoryMeteringInt16(t *testing.T) {
 
 	t.Parallel()
 
@@ -4634,7 +4658,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretInt32Metering(t *testing.T) {
+func TestInterpretMemoryMeteringInt32(t *testing.T) {
 
 	t.Parallel()
 
@@ -4994,7 +5018,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretInt64Metering(t *testing.T) {
+func TestInterpretMemoryMeteringInt64(t *testing.T) {
 
 	t.Parallel()
 
@@ -5354,7 +5378,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretInt128Metering(t *testing.T) {
+func TestInterpretMemoryMeteringInt128(t *testing.T) {
 
 	t.Parallel()
 
@@ -5740,7 +5764,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretInt256Metering(t *testing.T) {
+func TestInterpretMemoryMeteringInt256(t *testing.T) {
 
 	t.Parallel()
 
@@ -6100,7 +6124,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretWord8Metering(t *testing.T) {
+func TestInterpretMemoryMeteringWord8(t *testing.T) {
 
 	t.Parallel()
 
@@ -6347,7 +6371,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretWord16Metering(t *testing.T) {
+func TestInterpretMemoryMeteringWord16(t *testing.T) {
 
 	t.Parallel()
 
@@ -6593,7 +6617,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretWord32Metering(t *testing.T) {
+func TestInterpretMemoryMeteringWord32(t *testing.T) {
 
 	t.Parallel()
 
@@ -6839,7 +6863,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretWord64Metering(t *testing.T) {
+func TestInterpretMemoryMeteringWord64(t *testing.T) {
 
 	t.Parallel()
 
@@ -7085,7 +7109,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretStorageReferenceValueMetering(t *testing.T) {
+func TestInterpretMemoryMeteringStorageReferenceValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7128,7 +7152,7 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
+func TestInterpretMemoryMeteringEphemeralReferenceValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7178,7 +7202,7 @@ func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretStringMetering(t *testing.T) {
+func TestInterpretMemoryMeteringString(t *testing.T) {
 
 	t.Parallel()
 
@@ -7279,9 +7303,47 @@ func TestInterpretStringMetering(t *testing.T) {
 		// 1 + 4 (max UTF8 encoding)
 		assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindStringValue))
 	})
+
+	t.Run("length", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            fun main() {
+                let x = "abc".length
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter, err := parseCheckAndPrepareWithMemoryMetering(t, script, meter)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
+	})
+
+	t.Run("decodeHex", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            fun main() {
+                let x = "0D15EA5E".decodeHex()
+            }
+        `
+		meter := newTestMemoryGauge()
+		inter, err := parseCheckAndPrepareWithMemoryMetering(t, script, meter)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
+	})
 }
 
-func TestInterpretCharacterMetering(t *testing.T) {
+func TestInterpretMemoryMeteringCharacter(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7343,7 +7405,7 @@ func TestInterpretCharacterMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretAddressValueMetering(t *testing.T) {
+func TestInterpretMemoryMeteringAddressValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7383,7 +7445,7 @@ func TestInterpretAddressValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretPathValueMetering(t *testing.T) {
+func TestInterpretMemoryMeteringPathValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7423,7 +7485,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretCapabilityValueMetering(t *testing.T) {
+func TestInterpretMemoryMeteringCapabilityValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -7437,7 +7499,7 @@ func TestInterpretCapabilityValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretTypeValueMetering(t *testing.T) {
+func TestInterpretMemoryMeteringTypeValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("static constructor", func(t *testing.T) {
@@ -7497,7 +7559,7 @@ func TestInterpretTypeValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretVariableMetering(t *testing.T) {
+func TestInterpretMemoryMeteringVariable(t *testing.T) {
 	t.Parallel()
 
 	t.Run("globals", func(t *testing.T) {
@@ -7593,7 +7655,7 @@ func TestInterpretVariableMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretFix64Metering(t *testing.T) {
+func TestInterpretMemoryMeteringFix64(t *testing.T) {
 
 	t.Parallel()
 
@@ -7905,7 +7967,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretFix128Metering(t *testing.T) {
+func TestInterpretMemoryMeteringFix128(t *testing.T) {
 
 	t.Parallel()
 
@@ -8197,7 +8259,7 @@ func TestInterpretFix128Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretUFix64Metering(t *testing.T) {
+func TestInterpretMemoryMeteringUFix64(t *testing.T) {
 
 	t.Parallel()
 
@@ -8484,7 +8546,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretUFix128Metering(t *testing.T) {
+func TestInterpretMemoryMeteringUFix128(t *testing.T) {
 
 	t.Parallel()
 
@@ -8751,7 +8813,7 @@ func TestInterpretUFix128Metering(t *testing.T) {
 	})
 }
 
-func TestInterpretTokenMetering(t *testing.T) {
+func TestInterpretMemoryMeteringToken(t *testing.T) {
 	t.Parallel()
 
 	t.Run("identifier tokens", func(t *testing.T) {
@@ -8850,7 +8912,7 @@ func TestInterpretTokenMetering(t *testing.T) {
 	})
 }
 
-func TestInterpreterStringLocationMetering(t *testing.T) {
+func TestInterpretMemoryMeteringerStringLocation(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -8902,7 +8964,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretIdentifierMetering(t *testing.T) {
+func TestInterpretMemoryMeteringIdentifier(t *testing.T) {
 	t.Parallel()
 
 	t.Run("variable", func(t *testing.T) {
@@ -9131,7 +9193,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 	})
 }
 
-func TestInterpretVariableActivationMetering(t *testing.T) {
+func TestInterpretMemoryMeteringVariableActivation(t *testing.T) {
 	t.Parallel()
 
 	t.Run("single function", func(t *testing.T) {
@@ -9208,7 +9270,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretStaticTypeConversionMetering(t *testing.T) {
+func TestInterpretMemoryMeteringStaticTypeConversion(t *testing.T) {
 	t.Parallel()
 
 	t.Run("primitive static types", func(t *testing.T) {
@@ -9245,7 +9307,7 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretStorageMapMetering(t *testing.T) {
+func TestInterpretMemoryMeteringStorageMap(t *testing.T) {
 	t.Parallel()
 
 	script := `
@@ -9795,7 +9857,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 	})
 }
 
-func TestInterpretBytesMetering(t *testing.T) {
+func TestInterpretMemoryMeteringBytes(t *testing.T) {
 
 	t.Parallel()
 
@@ -9814,6 +9876,29 @@ func TestInterpretBytesMetering(t *testing.T) {
 	_, err = inter.Invoke("test", stringValue)
 	require.NoError(t, err)
 
-	// 1 + 3
-	assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindBytes))
+	// Does not allocate intermediate slice, directly creates array
+	assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindBytes))
+}
+
+func TestInterpretStringTemplate(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+      fun test(x: String) {
+          let x2 = "\(x)yy\(x)"
+      }
+    `
+
+	meter := newTestMemoryGauge()
+	inter, err := parseCheckAndPrepareWithMemoryMetering(t, code, meter)
+	require.NoError(t, err)
+
+	stringValue := interpreter.NewUnmeteredStringValue("abc")
+
+	_, err = inter.Invoke("test", stringValue)
+	require.NoError(t, err)
+
+	// 1 + 3 + 2 + 3
+	assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindStringValue))
 }

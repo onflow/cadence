@@ -186,6 +186,14 @@ func NewCompositeValue(
 			}()
 		}
 
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapConstruction,
+				Intensity: 1,
+			},
+		)
+
 		var err error
 		dictionary, err = atree.NewMap(
 			context.Storage(),
@@ -687,6 +695,14 @@ func (v *CompositeValue) RemoveMember(context ValueTransferContext, name string)
 		}()
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
+
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
@@ -751,6 +767,14 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 			)
 		}()
 	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapSet,
+			Intensity: 1,
+		},
+	)
 
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeValueComparator,
@@ -887,7 +911,16 @@ func formatComposite(
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) Value {
+func (v *CompositeValue) GetField(gauge common.Gauge, name string) Value {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapGet,
+			Intensity: 1,
+		},
+	)
+
 	storedValue, err := v.dictionary.Get(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -901,7 +934,7 @@ func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) V
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(memoryGauge, storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
 func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool {
@@ -923,6 +956,14 @@ func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool
 	}
 
 	for {
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: 1,
+			},
+		)
+
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -948,13 +989,13 @@ func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool
 // - HashInputTypeEnum (1 byte)
 // - type id (n bytes)
 // - hash input of raw value field name (n bytes)
-func (v *CompositeValue) HashInput(memoryGauge common.MemoryGauge, scratch []byte) []byte {
+func (v *CompositeValue) HashInput(gauge common.Gauge, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(memoryGauge, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(gauge, sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
-			HashInput(memoryGauge, scratch)
+			HashInput(gauge, scratch)
 
 		length := 1 + len(typeID) + len(rawValueHashInput)
 		if length <= len(scratch) {
@@ -1196,11 +1237,13 @@ func (v *CompositeValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
+	count := v.FieldCount()
+
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindTransferCompositeValue,
-			Intensity: 1,
+			Intensity: uint64(count),
 		},
 	)
 
@@ -1283,6 +1326,22 @@ func (v *CompositeValue) Transfer(
 				}()
 			}
 
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapBatchConstruction,
+					Intensity: uint64(count),
+				},
+			)
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapReadIteration,
+					Intensity: uint64(count),
+				},
+			)
+
 			dictionary, err = atree.NewMapFromBatchData(
 				context.Storage(),
 				address,
@@ -1292,6 +1351,8 @@ func (v *CompositeValue) Transfer(
 				StringAtreeValueHashInput,
 				seed,
 				func() (atree.Value, atree.Value, error) {
+
+					// Computation was already metered above
 
 					atreeKey, atreeValue, err := iterator.Next()
 					if err != nil {
@@ -1331,6 +1392,15 @@ func (v *CompositeValue) Transfer(
 		}()
 
 		if remove {
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapPopIteration,
+					Intensity: v.dictionary.Count(),
+				},
+			)
+
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 				RemoveReferencedSlab(context, nameStorable)
 				RemoveReferencedSlab(context, valueStorable)
@@ -1485,6 +1555,14 @@ func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentConta
 
 	storage := v.dictionary.Storage
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapPopIteration,
+			Intensity: v.dictionary.Count(),
+		},
+	)
+
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 		// NOTE: key / field name is stringAtreeValue,
 		// and not a Value, so no need to deep remove
@@ -1511,6 +1589,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 // ForEachFieldName iterates over all field names of the composite value.
 // It does NOT iterate over computed fields and functions!
 func (v *CompositeValue) ForEachFieldName(
+	gauge common.ComputationGauge,
 	f func(fieldName string) (resume bool),
 ) {
 	iterate := func(fn atree.MapElementIterationFunc) error {
@@ -1523,14 +1602,24 @@ func (v *CompositeValue) ForEachFieldName(
 			fn,
 		)
 	}
-	v.forEachFieldName(iterate, f)
+	v.forEachFieldName(gauge, iterate, f)
 }
 
 func (v *CompositeValue) forEachFieldName(
+	gauge common.ComputationGauge,
 	atreeIterate func(fn atree.MapElementIterationFunc) error,
 	f func(fieldName string) (resume bool),
 ) {
 	err := atreeIterate(func(key atree.Value) (resume bool, err error) {
+
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: 1,
+			},
+		)
+
 		resume = f(
 			string(key.(StringAtreeValue)),
 		)
@@ -1612,6 +1701,14 @@ func (v *CompositeValue) RemoveField(
 	context ValueRemoveContext,
 	name string,
 ) {
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
 
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
 		StringAtreeValueComparator,
