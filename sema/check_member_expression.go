@@ -86,12 +86,12 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	return memberType
 }
 
-// getReferenceTypeForChild Returns a reference type to a given type of the child (member/element).
+// GetReferenceTypeForChild Returns a reference type to a given type of the child (member/element).
 // Reference to an optional should return an optional reference.
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func getReferenceTypeForChild(
+func GetReferenceTypeForChild(
 	memoryGauge common.MemoryGauge,
 	typ Type,
 	authorization Access,
@@ -100,7 +100,7 @@ func getReferenceTypeForChild(
 ) Type {
 	switch typ := typ.(type) {
 	case *OptionalType:
-		innerType := getReferenceTypeForChild(
+		innerType := GetReferenceTypeForChild(
 			memoryGauge,
 			typ.Type,
 			authorization,
@@ -131,7 +131,7 @@ func getReferenceTypeForChild(
 	}
 }
 
-func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
+func ShouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
 	if isAssignment {
 		return false
 	}
@@ -398,7 +398,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	// i.e: `accessedSelfMember == nil`
 
 	if accessedSelfMember == nil &&
-		shouldReturnReference(accessedType, resultingType, isAssignment) &&
+		ShouldReturnReference(accessedType, resultingType, isAssignment) &&
 		member.DeclarationKind == common.DeclarationKindField {
 
 		var pos ast.HasPosition = expression
@@ -408,7 +408,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
 		}
 
-		resultingType = getReferenceTypeForChild(
+		resultingType = GetReferenceTypeForChild(
 			checker.memoryGauge,
 			resultingType,
 			authorization,

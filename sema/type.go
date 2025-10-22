@@ -2980,8 +2980,8 @@ func ArrayFilterFunctionType(
 	report func(error),
 ) *FunctionType {
 
-	if shouldReturnReference(accessedType, elementType, false) {
-		elementType = getReferenceTypeForChild(
+	if ShouldReturnReference(accessedType, elementType, false) {
+		elementType = GetReferenceTypeForChild(
 			memoryGauge,
 			elementType,
 			UnauthorizedAccess,
@@ -3049,8 +3049,8 @@ func ArrayMapFunctionType(
 
 	elementType := arrayType.ElementType(false)
 
-	if shouldReturnReference(accessedType, elementType, false) {
-		elementType = getReferenceTypeForChild(
+	if ShouldReturnReference(accessedType, elementType, false) {
+		elementType = GetReferenceTypeForChild(
 			memoryGauge,
 			elementType,
 			UnauthorizedAccess,

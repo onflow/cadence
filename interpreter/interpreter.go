@@ -6350,7 +6350,7 @@ func (interpreter *Interpreter) GetReferenceValueMember(
 		return value
 	}
 
-	// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
+	// NOTE: Must call the `GetMethod` of the reference, not of the referenced-value.
 	value = interpreter.GetMethod(v, name)
 	if value != nil {
 		return value

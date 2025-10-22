@@ -534,7 +534,7 @@ func (c *Context) GetReferenceValueMember(
 	name string,
 ) interpreter.Value {
 
-	// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
+	// NOTE: Must call the `GetMethod` of the reference, not of the referenced-value.
 	member := c.GetMethod(v, name)
 	if member != nil {
 		return member

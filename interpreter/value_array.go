@@ -1550,10 +1550,12 @@ func (v *ArrayValue) Filter(
 	elementType := v.SemaType(context).ElementType(false)
 	argumentType := elementType
 	if asReference {
-		argumentType = sema.NewReferenceType(
+		argumentType = sema.GetReferenceTypeForChild(
 			context,
+			argumentType,
 			sema.UnauthorizedAccess,
-			elementType,
+			nil,
+			func(_ error) {},
 		)
 	}
 	argumentTypes := []sema.Type{argumentType}
@@ -1567,16 +1569,7 @@ func (v *ArrayValue) Filter(
 		panic(errors.NewExternalError(err))
 	}
 
-	elementStaticType := v.Type.ElementType()
-
-	resultElementStaticType := elementStaticType
-	if asReference {
-		resultElementStaticType = NewReferenceStaticType(
-			context,
-			UnauthorizedAccess,
-			elementStaticType,
-		)
-	}
+	resultElementStaticType := ConvertSemaToStaticType(context, argumentType)
 
 	return NewArrayValueWithIterator(
 		context,
@@ -1659,10 +1652,12 @@ func (v *ArrayValue) Map(
 	elementType := v.SemaType(context).ElementType(false)
 	argumentType := elementType
 	if asReference {
-		argumentType = sema.NewReferenceType(
+		argumentType = sema.GetReferenceTypeForChild(
 			context,
+			argumentType,
 			sema.UnauthorizedAccess,
-			elementType,
+			nil,
+			func(_ error) {},
 		)
 	}
 	argumentTypes := []sema.Type{argumentType}
@@ -2082,8 +2077,8 @@ var NativeArrayFilterFunction = NativeFunction(
 		args []Value,
 	) Value {
 		var (
-			array       *ArrayValue
-			asReference bool
+			array      *ArrayValue
+			parentType sema.Type
 		)
 
 		switch receiver := receiver.(type) {
@@ -2091,20 +2086,32 @@ var NativeArrayFilterFunction = NativeFunction(
 			array = receiver
 
 		case *StorageReferenceValue:
-			asReference = true
 			referencedValue := receiver.mustReferencedValue(context)
 			array = AssertValueOfType[*ArrayValue](referencedValue)
+			parentType = MustConvertStaticToSemaType(
+				receiver.StaticType(context),
+				context,
+			)
 
 		case *EphemeralReferenceValue:
-			asReference = true
 			referencedValue := receiver.Value
 			array = AssertValueOfType[*ArrayValue](referencedValue)
+			parentType = MustConvertStaticToSemaType(
+				receiver.StaticType(context),
+				context,
+			)
 
 		default:
 			panic(errors.NewUnreachableError())
 		}
 
 		funcValue := AssertValueOfType[FunctionValue](args[0])
+
+		asReference := sema.ShouldReturnReference(
+			parentType,
+			array.semaType.ElementType(false),
+			false,
+		)
 
 		return array.Filter(context, funcValue, asReference)
 	},
@@ -2118,29 +2125,43 @@ var NativeArrayMapFunction = NativeFunction(
 		args []Value,
 	) Value {
 		var (
-			array       *ArrayValue
-			asReference bool
+			array      *ArrayValue
+			parentType sema.Type
 		)
 
 		switch receiver := receiver.(type) {
 		case *ArrayValue:
 			array = receiver
+			parentType = receiver.semaType
 
 		case *StorageReferenceValue:
-			asReference = true
 			referencedValue := receiver.mustReferencedValue(context)
 			array = AssertValueOfType[*ArrayValue](referencedValue)
 
+			parentType = MustConvertStaticToSemaType(
+				receiver.StaticType(context),
+				context,
+			)
+
 		case *EphemeralReferenceValue:
-			asReference = true
 			referencedValue := receiver.Value
 			array = AssertValueOfType[*ArrayValue](referencedValue)
 
+			parentType = MustConvertStaticToSemaType(
+				receiver.StaticType(context),
+				context,
+			)
 		default:
 			panic(errors.NewUnreachableError())
 		}
 
 		funcValue := AssertValueOfType[FunctionValue](args[0])
+
+		asReference := sema.ShouldReturnReference(
+			parentType,
+			array.semaType.ElementType(false),
+			false,
+		)
 
 		return array.Map(context, funcValue, asReference)
 	},
