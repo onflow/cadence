@@ -825,12 +825,7 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
-	var base *interpreter.EphemeralReferenceValue
-	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
-		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
-			base, receiver = AttachmentBaseAndSelfValues(vm.context, refValue, method)
-		}
-	}
+	base, receiver := baseAndReceiver(vm.context, receiver, method)
 
 	boundFunction := NewBoundFunctionValue(
 		vm.context,
@@ -840,6 +835,21 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	)
 
 	vm.push(boundFunction)
+}
+
+func baseAndReceiver(
+	context interpreter.StaticTypeAndReferenceContext,
+	receiver Value,
+	method FunctionValue,
+) (base *interpreter.EphemeralReferenceValue, self Value) {
+
+	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
+			base, receiver = AttachmentBaseAndSelfValues(context, refValue, method)
+		}
+	}
+
+	return base, receiver
 }
 
 func invokeFunction(

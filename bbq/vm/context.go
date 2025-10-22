@@ -290,7 +290,7 @@ func (c *Context) GetResourceDestructionContextForLocation(location common.Locat
 }
 
 func AttachmentBaseAndSelfValues(
-	c *Context,
+	context interpreter.StaticTypeAndReferenceContext,
 	v *interpreter.CompositeValue,
 	method FunctionValue,
 ) (base *interpreter.EphemeralReferenceValue, self *interpreter.EphemeralReferenceValue) {
@@ -303,7 +303,7 @@ func AttachmentBaseAndSelfValues(
 		unqualifiedName = functionValue.Name
 	}
 
-	fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)
+	fnAccess := interpreter.GetAccessOfMember(context, v, unqualifiedName)
 	// with respect to entitlements, any access inside an attachment that is not an entitlement access
 	// does not provide any entitlements to base and self
 	// E.g. consider:
@@ -322,7 +322,7 @@ func AttachmentBaseAndSelfValues(
 	if fnAccess.IsPrimitiveAccess() {
 		fnAccess = sema.UnauthorizedAccess
 	}
-	return interpreter.AttachmentBaseAndSelfValues(c, fnAccess, v)
+	return interpreter.AttachmentBaseAndSelfValues(context, fnAccess, v)
 }
 
 func (c *Context) GetMethod(
@@ -354,15 +354,11 @@ func (c *Context) GetMethod(
 		return method
 	}
 
-	var base *interpreter.EphemeralReferenceValue
-	// If the value is an attachment, then we must create an authorized reference
-	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
-		base, value = AttachmentBaseAndSelfValues(c, v, method)
-	}
+	base, receiver := baseAndReceiver(c, value, method)
 
 	return NewBoundFunctionValue(
 		c,
-		value,
+		receiver,
 		method,
 		base,
 	)
