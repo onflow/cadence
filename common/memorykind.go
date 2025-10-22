@@ -259,6 +259,11 @@ const (
 	MemoryKindOrderedMapEntryList
 	MemoryKindOrderedMapEntry
 
+	// iterators
+	MemoryKindArrayIterator
+	MemoryKindDictionaryKeyIterator
+	MemoryKindStringIterator
+
 	// Go allocations
 
 	MemoryKindGoSliceLength

@@ -26,20 +26,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
-	. "github.com/onflow/cadence/bbq/test_utils"
-	"github.com/onflow/cadence/bbq/vm"
 )
 
 type testAccountHandler struct {
@@ -504,7 +504,7 @@ func CompileAndInvokeWithLogs(
 		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndLog,
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 	vmConfig := vm.NewConfig(storage)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(&logs)
@@ -578,7 +578,7 @@ func CompileAndInvokeWithConditionLogs(
 		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 	vmConfig := vm.NewConfig(storage)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
@@ -818,7 +818,7 @@ func PrepareVMConfig(
 ) *vm.Config {
 
 	if config == nil {
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 		config = vm.NewConfig(storage)
 	}
 

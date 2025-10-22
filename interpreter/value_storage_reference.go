@@ -99,12 +99,7 @@ func (v *StorageReferenceValue) MeteredString(context ValueStringContext, _ Seen
 }
 
 func (v *StorageReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	referencedValue, err := v.dereference(context, EmptyLocationRange)
-	if err != nil {
-		panic(err)
-	}
-
-	self := *referencedValue
+	self := v.mustReferencedValue(context, EmptyLocationRange)
 
 	return NewReferenceStaticType(
 		context,
@@ -146,7 +141,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
 			semaType := context.SemaTypeFromStaticType(staticType)
 
-			return nil, &ForceCastTypeMismatchError{
+			return nil, &StoredValueTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
 				ActualType:    semaType,
 				LocationRange: locationRange,
@@ -166,7 +161,7 @@ func (v *StorageReferenceValue) ReferencedValue(
 	if err == nil {
 		return referencedValue
 	}
-	if forceCastErr, ok := err.(*ForceCastTypeMismatchError); ok {
+	if forceCastErr, ok := err.(*StoredValueTypeMismatchError); ok {
 		if errorOnFailedDereference {
 			// relay the type mismatch error with a dereference error context
 			panic(&DereferenceError{
@@ -268,7 +263,7 @@ func (v *StorageReferenceValue) SetMember(context ValueTransferContext, location
 	)
 }
 
-func (v *StorageReferenceValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
+func (v *StorageReferenceValue) GetKey(context ContainerReadContext, locationRange LocationRange, key Value) Value {
 	self := v.mustReferencedValue(context, locationRange)
 
 	return self.(ValueIndexableValue).

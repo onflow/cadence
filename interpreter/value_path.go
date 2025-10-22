@@ -177,21 +177,32 @@ func (v PathValue) ConformsToStaticType(
 	return true
 }
 
-func (v PathValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v PathValue) Equal(context ValueComparisonContext, _ LocationRange, other Value) bool {
 	otherPath, ok := other.(PathValue)
 	if !ok {
 		return false
 	}
 
-	return otherPath.Identifier == v.Identifier &&
-		otherPath.Domain == v.Domain
+	if otherPath.Domain != v.Domain {
+		return false
+	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindStringComparison,
+			Intensity: uint64(minStringLength(v.Identifier, otherPath.Identifier)),
+		},
+	)
+
+	return otherPath.Identifier == v.Identifier
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypePath (1 byte)
 // - domain (1 byte)
 // - identifier (n bytes)
-func (v PathValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v PathValue) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	length := 1 + 1 + len(v.Identifier)
 	var buffer []byte
 	if length <= len(scratch) {

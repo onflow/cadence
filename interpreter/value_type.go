@@ -354,7 +354,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // HashInput returns a byte slice containing:
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
-func (v TypeValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v TypeValue) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)

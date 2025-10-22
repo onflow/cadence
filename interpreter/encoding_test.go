@@ -56,7 +56,7 @@ var testOwner = common.MustBytesToAddress([]byte{0x42})
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 	if test.storage == nil {
-		test.storage = newUnmeteredInMemoryStorage()
+		test.storage = NewUnmeteredInMemoryStorage()
 	}
 
 	var encoded []byte
@@ -3174,7 +3174,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		// Only test encoding here because decoding requires extra data section which is encoded in slab header.
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		storable, err := expected.Storable(
 			storage,
 			atree.Address(testOwner),
@@ -3232,7 +3232,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		// Only test encoding here because decoding requires extra data section which is encoded in slab header.
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		storable, err := expected.Storable(
 			storage,
 			atree.Address(testOwner),
@@ -3386,7 +3386,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		// Only test encoding here because decoding requires extra data section which is encoded in slab header.
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		storable, err := expected.Storable(
 			storage,
 			atree.Address(testOwner),

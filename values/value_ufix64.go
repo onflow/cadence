@@ -81,11 +81,11 @@ func (v UFix64Value) String() string {
 	return format.UFix64(uint64(v))
 }
 
-func (v UFix64Value) Negate(_ common.MemoryGauge) UFix64Value {
+func (v UFix64Value) Negate(_ common.Gauge) UFix64Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v UFix64Value) Plus(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
+func (v UFix64Value) Plus(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
 
 	valueGetter := func() (uint64, error) {
 		return SafeAddUint64(uint64(v), uint64(other))
@@ -94,7 +94,7 @@ func (v UFix64Value) Plus(gauge common.MemoryGauge, other UFix64Value) (UFix64Va
 	return NewUFix64Value(gauge, valueGetter)
 }
 
-func (v UFix64Value) SaturatingPlus(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
+func (v UFix64Value) SaturatingPlus(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
 	valueGetter := func() (uint64, error) {
 		sum := v + other
 		// INT30-C
@@ -107,7 +107,7 @@ func (v UFix64Value) SaturatingPlus(gauge common.MemoryGauge, other UFix64Value)
 	return NewUFix64Value(gauge, valueGetter)
 }
 
-func (v UFix64Value) Minus(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
+func (v UFix64Value) Minus(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
 	valueGetter := func() (uint64, error) {
 		diff := v - other
 
@@ -121,7 +121,7 @@ func (v UFix64Value) Minus(gauge common.MemoryGauge, other UFix64Value) (UFix64V
 	return NewUFix64Value(gauge, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMinus(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
+func (v UFix64Value) SaturatingMinus(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
 	valueGetter := func() (uint64, error) {
 		diff := v - other
 
@@ -135,7 +135,7 @@ func (v UFix64Value) SaturatingMinus(gauge common.MemoryGauge, other UFix64Value
 	return NewUFix64Value(gauge, valueGetter)
 }
 
-func (v UFix64Value) Mul(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
+func (v UFix64Value) Mul(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(other))
@@ -154,7 +154,7 @@ func (v UFix64Value) Mul(gauge common.MemoryGauge, other UFix64Value) (UFix64Val
 	return NewUFix64Value(gauge, valueGetter)
 }
 
-func (v UFix64Value) SaturatingMul(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
+func (v UFix64Value) SaturatingMul(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(other))
@@ -173,7 +173,7 @@ func (v UFix64Value) SaturatingMul(gauge common.MemoryGauge, other UFix64Value) 
 	return NewUFix64Value(gauge, valueGetter)
 }
 
-func (v UFix64Value) Div(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
+func (v UFix64Value) Div(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(other))
@@ -192,12 +192,12 @@ func (v UFix64Value) Div(gauge common.MemoryGauge, other UFix64Value) (UFix64Val
 	return NewUFix64Value(gauge, valueGetter)
 }
 
-func (v UFix64Value) SaturatingDiv(_ common.MemoryGauge, _ UFix64Value) (UFix64Value, error) {
+func (v UFix64Value) SaturatingDiv(_ common.Gauge, _ UFix64Value) (UFix64Value, error) {
 	// UFix64 does not have a saturating division operation, see sema.UFix64Type
 	panic(errors.NewUnreachableError())
 }
 
-func (v UFix64Value) Mod(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
+func (v UFix64Value) Mod(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
 	// v - int(v/o) * o
 	quotient, err := v.Div(gauge, other)
 	if err != nil {
@@ -222,27 +222,28 @@ func (v UFix64Value) Mod(gauge common.MemoryGauge, other UFix64Value) (UFix64Val
 	return v.Minus(gauge, subtrahend)
 }
 
-func (v UFix64Value) Less(other UFix64Value) bool {
+func (v UFix64Value) Less(_ common.Gauge, other UFix64Value) bool {
 	return v < other
 }
 
-func (v UFix64Value) LessEqual(other UFix64Value) bool {
+func (v UFix64Value) LessEqual(_ common.Gauge, other UFix64Value) bool {
 	return v <= other
 }
 
-func (v UFix64Value) Greater(other UFix64Value) bool {
+func (v UFix64Value) Greater(_ common.Gauge, other UFix64Value) bool {
 	return v > other
 }
 
-func (v UFix64Value) GreaterEqual(other UFix64Value) bool {
+func (v UFix64Value) GreaterEqual(_ common.Gauge, other UFix64Value) bool {
 	return v >= other
 }
 
-func (v UFix64Value) Equal(other Value) bool {
+func (v UFix64Value) Equal(_ common.Gauge, other Value) bool {
 	otherUFix64, ok := other.(UFix64Value)
 	if !ok {
 		return false
 	}
+
 	return v == otherUFix64
 }
 

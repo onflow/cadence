@@ -2244,7 +2244,7 @@ func TestTransaction(t *testing.T) {
 			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
 		}
 
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 
 		var logs []string
 
@@ -2313,7 +2313,7 @@ func TestTransaction(t *testing.T) {
 			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
 		}
 
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 
 		var logs []string
 
@@ -2378,7 +2378,7 @@ func TestTransaction(t *testing.T) {
 			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
 		}
 
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 
 		var logs []string
 
@@ -2460,7 +2460,7 @@ func TestTransaction(t *testing.T) {
 			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
 		}
 
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 
 		var logs []string
 
@@ -3456,7 +3456,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 
 		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
@@ -3582,7 +3582,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 
 		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
@@ -3699,7 +3699,7 @@ func TestDefaultFunctions(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 
 		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
@@ -4089,7 +4089,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 
 		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
@@ -5113,7 +5113,7 @@ func TestEmit(t *testing.T) {
 
 	var eventEmitted bool
 
-	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 	vmConfig.OnEventEmitted = func(
 		context interpreter.ValueExportContext,
 		locationRange interpreter.LocationRange,
@@ -7235,7 +7235,7 @@ func TestEmitInContract(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 
 		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
@@ -7371,7 +7371,7 @@ func TestInheritedConditions(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 
 		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
@@ -7525,7 +7525,7 @@ func TestInheritedConditions(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 
 		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
@@ -7696,7 +7696,7 @@ func TestInheritedConditions(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 
 		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
@@ -8381,7 +8381,7 @@ func TestGlobalVariables(t *testing.T) {
 		compilerConfig := &compiler.Config{
 			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndLog,
 		}
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 		vmConfig := vm.NewConfig(storage)
 
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(&logs)
@@ -8780,7 +8780,7 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 		},
 	)
 
-	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 		activation := activations.NewActivation[vm.Variable](nil, vm.DefaultBuiltinGlobals())
 		variable := &interpreter.SimpleVariable{}
@@ -9107,7 +9107,7 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		}
 
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
@@ -9160,7 +9160,7 @@ func TestGetAuthAccount(t *testing.T) {
 		compilerConfig := &compiler.Config{}
 		// NOTE: default globals do not include `getAuthAccount`
 
-		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		// NOTE: default globals do not include `getAuthAccount`
 
 		var recovered any
@@ -9364,7 +9364,7 @@ func TestInjectedContract(t *testing.T) {
 		},
 	)
 
-	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 	vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
 		assert.Equal(t, TestLocation, location)
 		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
@@ -9476,7 +9476,7 @@ func TestNestedLoops(t *testing.T) {
 func TestInheritedDefaultDestroyEvent(t *testing.T) {
 	t.Parallel()
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 
 	programs := map[common.Location]*CompiledProgram{}
 	contractValues := map[common.Location]*interpreter.CompositeValue{}
@@ -9684,7 +9684,7 @@ func TestFunctionInclusiveRangeConstruction(t *testing.T) {
 			return activation
 		},
 	}
-	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 		activation := activations.NewActivation[vm.Variable](nil, vm.DefaultBuiltinGlobals())
 		variable := &interpreter.SimpleVariable{}

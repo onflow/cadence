@@ -4385,7 +4385,7 @@ func getStorageCapabilityControllerIDsIterator(
 		}, 0
 	}
 
-	iterator := capabilityIDSet.Iterator()
+	iterator := capabilityIDSet.Iterator(context)
 
 	count = uint64(capabilityIDSet.Count())
 	nextCapabilityID = func() (uint64, bool) {
@@ -4479,11 +4479,11 @@ func getAccountCapabilityControllerIDsIterator(
 		}, 0
 	}
 
-	iterator := storageMap.Iterator(context)
+	iterator := storageMap.Iterator()
 
 	count = storageMap.Count()
 	nextCapabilityID = func() (uint64, bool) {
-		keyValue := iterator.NextKey()
+		keyValue := iterator.NextKey(context)
 		if keyValue == nil {
 			return 0, false
 		}

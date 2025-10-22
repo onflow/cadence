@@ -709,9 +709,9 @@ func testAccountWithErrorHandlerWithCompiler(
 		accountValues := make(map[storageKey]interpreter.Value)
 
 		for storageMapKey, accountStorage := range storage.(interpreter.InMemoryStorage).DomainStorageMaps {
-			iterator := accountStorage.Iterator(invokable)
+			iterator := accountStorage.Iterator()
 			for {
-				key, value := iterator.Next()
+				key, value := iterator.Next(invokable)
 				if key == nil {
 					break
 				}
@@ -969,8 +969,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadR2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1047,8 +1047,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadS2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1134,8 +1134,8 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 		_, err = inter.Invoke("copyS2")
 		RequireError(t, err)
 
-		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+		var typeMismatchError *interpreter.StoredValueTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
 
 		// NOTE: check loaded value was *not* removed from storage
 		require.Len(t, getAccountValues(), 1)
@@ -1295,8 +1295,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowR2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1475,8 +1475,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowS2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
