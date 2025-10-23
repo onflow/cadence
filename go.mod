@@ -19,7 +19,6 @@ require (
 	github.com/leanovate/gopter v0.2.11
 	github.com/logrusorgru/aurora/v4 v4.0.0
 	github.com/onflow/atree v0.11.0
-	github.com/onflow/cadence/tools/subtype-gen v0.0.0-00010101000000-000000000000
 	github.com/onflow/crypto v0.25.3
 	github.com/onflow/fixed-point v0.1.1
 	github.com/rivo/uniseg v0.4.7
@@ -35,6 +34,7 @@ require (
 	golang.org/x/text v0.28.0
 	golang.org/x/tools v0.37.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -61,7 +61,4 @@ require (
 	golang.org/x/term v0.34.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/onflow/cadence/tools/subtype-gen => ./tools/subtype-gen
