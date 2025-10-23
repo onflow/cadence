@@ -1630,7 +1630,7 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 	require.IsType(t, interpreter.TypeValue{}, loadType)
 	assert.Equal(t,
 		interpreter.FunctionStaticType{
-			Type: sema.Account_StorageTypeLoadFunctionType,
+			FunctionType: sema.Account_StorageTypeLoadFunctionType,
 		},
 		loadType.(interpreter.TypeValue).Type,
 	)
@@ -1640,7 +1640,7 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 	require.IsType(t, interpreter.TypeValue{}, copyType)
 	assert.Equal(t,
 		interpreter.FunctionStaticType{
-			Type: sema.Account_StorageTypeCopyFunctionType,
+			FunctionType: sema.Account_StorageTypeCopyFunctionType,
 		},
 		copyType.(interpreter.TypeValue).Type,
 	)
