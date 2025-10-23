@@ -59,7 +59,7 @@ or:
 
 ### Equals Predicate (`equals`)
 
-Checks the equality between two values.
+Checks the equality between two values using the `==` operator.
 Consist of two properties, `source` and `target`, both of which can be any [expression](#Expressions).
 
 Example 1:

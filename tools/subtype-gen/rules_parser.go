@@ -111,7 +111,7 @@ func parsePredicate(predicate any) (Predicate, error) {
 		case "never":
 			return NeverPredicate{}, nil
 		default:
-			return nil, fmt.Errorf("unsupported string rule: %s", v)
+			return nil, fmt.Errorf("unsupported string predicate: %s", v)
 		}
 	case KeyValues:
 		key, value := singleKeyValueFromMap(v)
@@ -159,7 +159,7 @@ func parsePredicate(predicate any) (Predicate, error) {
 		case "and":
 			and, ok := value.([]any)
 			if !ok {
-				return nil, fmt.Errorf("expected []any, got %T", value)
+				return nil, fmt.Errorf("expected a list of predicates, got %T", value)
 			}
 
 			var predicates []Predicate
