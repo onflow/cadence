@@ -21,17 +21,28 @@ package subtype_gen
 // Predicate represents different types of predicates in rules.
 type Predicate interface {
 	isPredicate()
+	Description() string
+}
+
+type description string
+
+func (p description) Description() string {
+	return string(p)
 }
 
 // AlwaysPredicate represents an always-true condition.
-type AlwaysPredicate struct{}
+type AlwaysPredicate struct {
+	description `yaml:"description,omitempty"`
+}
 
 var _ Predicate = AlwaysPredicate{}
 
 func (a AlwaysPredicate) isPredicate() {}
 
 // NeverPredicate represents a never-true condition.
-type NeverPredicate struct{}
+type NeverPredicate struct {
+	description `yaml:"description,omitempty"`
+}
 
 var _ Predicate = NeverPredicate{}
 
@@ -39,7 +50,8 @@ func (a NeverPredicate) isPredicate() {}
 
 // IsResourcePredicate represents a resource type check.
 type IsResourcePredicate struct {
-	Expression Expression `yaml:"isResource"`
+	description `yaml:"description,omitempty"`
+	Expression  Expression `yaml:"isResource"`
 }
 
 var _ Predicate = IsResourcePredicate{}
@@ -48,7 +60,8 @@ func (i IsResourcePredicate) isPredicate() {}
 
 // IsAttachmentPredicate represents an attachment type check.
 type IsAttachmentPredicate struct {
-	Expression Expression `yaml:"isAttachment"`
+	description `yaml:"description,omitempty"`
+	Expression  Expression `yaml:"isAttachment"`
 }
 
 var _ Predicate = IsAttachmentPredicate{}
@@ -57,7 +70,8 @@ func (i IsAttachmentPredicate) isPredicate() {}
 
 // IsHashableStructPredicate represents a hashable struct type check.
 type IsHashableStructPredicate struct {
-	Expression Expression `yaml:"isHashableStruct"`
+	description `yaml:"description,omitempty"`
+	Expression  Expression `yaml:"isHashableStruct"`
 }
 
 var _ Predicate = IsHashableStructPredicate{}
@@ -66,7 +80,8 @@ func (i IsHashableStructPredicate) isPredicate() {}
 
 // IsStorablePredicate represents a storable type check.
 type IsStorablePredicate struct {
-	Expression Expression `yaml:"isStorable"`
+	description `yaml:"description,omitempty"`
+	Expression  Expression `yaml:"isStorable"`
 }
 
 var _ Predicate = IsStorablePredicate{}
@@ -75,8 +90,9 @@ func (i IsStorablePredicate) isPredicate() {}
 
 // EqualsPredicate represents an equality check using `==` operator.
 type EqualsPredicate struct {
-	Source Expression `yaml:"source"`
-	Target Expression `yaml:"target"`
+	description `yaml:"description,omitempty"`
+	Source      Expression `yaml:"source"`
+	Target      Expression `yaml:"target"`
 }
 
 var _ Predicate = EqualsPredicate{}
@@ -85,8 +101,9 @@ func (e EqualsPredicate) isPredicate() {}
 
 // DeepEqualsPredicate represents a deep equality check, defined with `Equals` method.
 type DeepEqualsPredicate struct {
-	Source Expression `yaml:"source"`
-	Target Expression `yaml:"target"`
+	description `yaml:"description,omitempty"`
+	Source      Expression `yaml:"source"`
+	Target      Expression `yaml:"target"`
 }
 
 var _ Predicate = DeepEqualsPredicate{}
@@ -95,8 +112,9 @@ func (e DeepEqualsPredicate) isPredicate() {}
 
 // SubtypePredicate represents a subtype check.
 type SubtypePredicate struct {
-	Sub   Expression `yaml:"sub"`
-	Super Expression `yaml:"super"`
+	description `yaml:"description,omitempty"`
+	Sub         Expression `yaml:"sub"`
+	Super       Expression `yaml:"super"`
 }
 
 var _ Predicate = SubtypePredicate{}
@@ -105,7 +123,8 @@ func (s SubtypePredicate) isPredicate() {}
 
 // AndPredicate represents a logical AND predicate.
 type AndPredicate struct {
-	Predicates []Predicate `yaml:"and"`
+	description `yaml:"description,omitempty"`
+	Predicates  []Predicate `yaml:"and"`
 }
 
 var _ Predicate = AndPredicate{}
@@ -114,7 +133,8 @@ func (a AndPredicate) isPredicate() {}
 
 // OrPredicate represents a logical OR predicate.
 type OrPredicate struct {
-	Predicates []Predicate `yaml:"or"`
+	description `yaml:"description,omitempty"`
+	Predicates  []Predicate `yaml:"or"`
 }
 
 var _ Predicate = OrPredicate{}
@@ -123,7 +143,8 @@ func (o OrPredicate) isPredicate() {}
 
 // NotPredicate represents a logical NOT predicate.
 type NotPredicate struct {
-	Predicate Predicate `yaml:"not"`
+	description `yaml:"description,omitempty"`
+	Predicate   Predicate `yaml:"not"`
 }
 
 var _ Predicate = NotPredicate{}
@@ -132,8 +153,9 @@ func (n NotPredicate) isPredicate() {}
 
 // PermitsPredicate represents a permits check.
 type PermitsPredicate struct {
-	Sub   Expression `yaml:"sub"`
-	Super Expression `yaml:"super"`
+	description `yaml:"description,omitempty"`
+	Sub         Expression `yaml:"sub"`
+	Super       Expression `yaml:"super"`
 }
 
 var _ Predicate = PermitsPredicate{}
@@ -142,8 +164,9 @@ func (p PermitsPredicate) isPredicate() {}
 
 // ReturnCovariantPredicate represents a return covariant check.
 type ReturnCovariantPredicate struct {
-	Source Expression `yaml:"source"`
-	Target Expression `yaml:"target"`
+	description `yaml:"description,omitempty"`
+	Source      Expression `yaml:"source"`
+	Target      Expression `yaml:"target"`
 }
 
 var _ Predicate = ReturnCovariantPredicate{}
@@ -152,8 +175,9 @@ func (r ReturnCovariantPredicate) isPredicate() {}
 
 // TypeAssertionPredicate represents a type assertion.
 type TypeAssertionPredicate struct {
-	Source Expression `yaml:"source"`
-	Type   Type       `yaml:"type"`
+	description `yaml:"description,omitempty"`
+	Source      Expression `yaml:"source"`
+	Type        Type       `yaml:"type"`
 }
 
 var _ Predicate = TypeAssertionPredicate{}
@@ -161,8 +185,9 @@ var _ Predicate = TypeAssertionPredicate{}
 func (e TypeAssertionPredicate) isPredicate() {}
 
 type SetContainsPredicate struct {
-	Set     Expression `yaml:"set"`
-	Element Expression `yaml:"element"`
+	description `yaml:"description,omitempty"`
+	Set         Expression `yaml:"set"`
+	Element     Expression `yaml:"element"`
 }
 
 var _ Predicate = SetContainsPredicate{}
@@ -170,8 +195,9 @@ var _ Predicate = SetContainsPredicate{}
 func (e SetContainsPredicate) isPredicate() {}
 
 type IsIntersectionSubsetPredicate struct {
-	Sub   Expression `yaml:"sub"`
-	Super Expression `yaml:"super"`
+	description `yaml:"description,omitempty"`
+	Sub         Expression `yaml:"sub"`
+	Super       Expression `yaml:"super"`
 }
 
 var _ Predicate = IsIntersectionSubsetPredicate{}
@@ -179,8 +205,9 @@ var _ Predicate = IsIntersectionSubsetPredicate{}
 func (p IsIntersectionSubsetPredicate) isPredicate() {}
 
 type IsParameterizedSubtypePredicate struct {
-	Sub   Expression `yaml:"sub"`
-	Super Expression `yaml:"super"`
+	description `yaml:"description,omitempty"`
+	Sub         Expression `yaml:"sub"`
+	Super       Expression `yaml:"super"`
 }
 
 var _ Predicate = IsParameterizedSubtypePredicate{}
@@ -188,9 +215,10 @@ var _ Predicate = IsParameterizedSubtypePredicate{}
 func (c IsParameterizedSubtypePredicate) isPredicate() {}
 
 type ForAllPredicate struct {
-	Source    Expression `yaml:"source"`
-	Target    Expression `yaml:"target"`
-	Predicate Predicate  `yaml:"predicate"`
+	description `yaml:"description,omitempty"`
+	Source      Expression `yaml:"source"`
+	Target      Expression `yaml:"target"`
+	Predicate   Predicate  `yaml:"predicate"`
 }
 
 var _ Predicate = ForAllPredicate{}

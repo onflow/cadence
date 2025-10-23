@@ -318,7 +318,7 @@ func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpl
 
 	// Generate statements for the predicate.
 
-	predicate, err := parsePredicate(rule.Predicate)
+	predicate, err := parsePredicate(&rule.Predicate)
 	if err != nil {
 		panic(fmt.Errorf("error parsing predicate: %w", err))
 	}
@@ -376,9 +376,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 	case dst.Expr:
 		stmts = append(
 			stmts,
-			&dst.ReturnStmt{
-				Results: []dst.Expr{lastNode},
-			},
+			returnStatementWith(lastNode),
 		)
 	case dst.Stmt:
 		// Switch statements are generated without the default return,
@@ -403,6 +401,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 
 // generatePredicate recursively generates one or more expression/statement for a given predicate.
 func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result []dst.Node) {
+
 	// Pop the scope, for TypeAssertionPredicates.
 	switch predicate.(type) {
 	case TypeAssertionPredicate:
@@ -410,6 +409,16 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	}
 
 	prevNodes := gen.generatePredicateInternal(predicate)
+
+	defer func() {
+		description := predicate.Description()
+		if len(result) > 0 && description != "" {
+			firstNodeDecs := result[0].Decorations()
+			description = descriptionAsLineComments(description)
+			firstNodeDecs.Before = dst.EmptyLine
+			firstNodeDecs.Start.Append(description)
+		}
+	}()
 
 	// If there are no chained/nested predicates (originating from AND),
 	// then add a return and complete the statements.
@@ -555,6 +564,10 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	return
 }
 
+func descriptionAsLineComments(description string) string {
+	return strings.ReplaceAll(description, "# ", "// ")
+}
+
 func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
 	result []dst.Node,
 	expr dst.Expr,
@@ -693,9 +706,7 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 	// Only expressions were generated.
 	if stmts == nil {
 		return []dst.Stmt{
-			&dst.ReturnStmt{
-				Results: []dst.Expr{conditionalExpr},
-			},
+			returnStatementWith(conditionalExpr),
 		}
 	}
 
@@ -725,7 +736,9 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 					Body: &dst.BlockStmt{
 						List: []dst.Stmt{
 							&dst.ReturnStmt{
-								Results: []dst.Expr{gen.booleanExpression(true)},
+								Results: []dst.Expr{
+									gen.booleanExpression(true),
+								},
 							},
 						},
 					},
@@ -741,6 +754,22 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 
 	// Only statements were generated
 	return stmts
+}
+
+func returnStatementWith(returnValue dst.Expr) *dst.ReturnStmt {
+	returnStmt := &dst.ReturnStmt{
+		Results: []dst.Expr{
+			returnValue,
+		},
+	}
+
+	comments := returnValue.Decorations().Start
+	if len(comments) > 0 {
+		returnStmt.Decorations().Start.Append(comments...)
+		returnValue.Decorations().Start.Clear()
+		returnStmt.Decs.Before = dst.EmptyLine
+	}
+	return returnStmt
 }
 
 // generatePredicate recursively generates one or more expression/statement for a given predicate.
