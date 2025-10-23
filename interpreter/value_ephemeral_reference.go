@@ -162,7 +162,7 @@ func (v *EphemeralReferenceValue) SetMember(context ValueTransferContext, name s
 	return setMember(context, v.Value, name, value)
 }
 
-func (v *EphemeralReferenceValue) GetKey(context ValueComparisonContext, key Value) Value {
+func (v *EphemeralReferenceValue) GetKey(context ContainerReadContext, key Value) Value {
 	return v.Value.(ValueIndexableValue).
 		GetKey(context, key)
 }
@@ -345,8 +345,8 @@ func (i *ReferenceValueIterator) Next(context ValueIteratorContext) Value {
 	return i.iterator.Next(context)
 }
 
-func (i *ReferenceValueIterator) HasNext() bool {
-	return i.iterator.HasNext()
+func (i *ReferenceValueIterator) HasNext(context ValueIteratorContext) bool {
+	return i.iterator.HasNext(context)
 }
 
 func (i *ReferenceValueIterator) ValueID() (atree.ValueID, bool) {

@@ -365,7 +365,7 @@ func (v UInt8Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeUInt8 (1 byte)
 // - uint8 value (1 byte)
-func (v UInt8Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v UInt8Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUInt8)
 	scratch[1] = byte(v)
 	return scratch[:2]

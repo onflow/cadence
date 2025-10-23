@@ -27,13 +27,13 @@ import (
 // HashableValue is an immutable value that can be hashed
 type HashableValue interface {
 	Value
-	HashInput(memoryGauge common.MemoryGauge, scratch []byte) []byte
+	HashInput(gauge common.Gauge, scratch []byte) []byte
 }
 
-func newHashInputProvider(memoryGauge common.MemoryGauge) atree.HashInputProvider {
+func newHashInputProvider(gauge common.Gauge) atree.HashInputProvider {
 	return func(value atree.Value, scratch []byte) ([]byte, error) {
-		hashInput := MustConvertStoredValue(memoryGauge, value).(HashableValue).
-			HashInput(memoryGauge, scratch)
+		hashInput := MustConvertStoredValue(gauge, value).(HashableValue).
+			HashInput(gauge, scratch)
 		return hashInput, nil
 	}
 }

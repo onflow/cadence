@@ -226,7 +226,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("impure function call error", func(t *testing.T) {
+	t.Run("invalid impure function call", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -239,18 +239,19 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 66, Line: 5, Column: 14},
 				EndPos:   ast.Position{Offset: 70, Line: 5, Column: 18},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("impure method call error", func(t *testing.T) {
+	t.Run("invalid impure method call", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -265,14 +266,15 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 109, Line: 7, Column: 14},
 				EndPos:   ast.Position{Offset: 115, Line: 7, Column: 20},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
@@ -292,7 +294,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("impure function call nested", func(t *testing.T) {
+	t.Run("invalid impure function call nested", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -307,18 +309,19 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 100, Line: 6, Column: 18},
 				EndPos:   ast.Position{Offset: 104, Line: 6, Column: 22},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("view function call nested failure", func(t *testing.T) {
+	t.Run("invalid view function call nested", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -334,14 +337,15 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 136, Line: 8, Column: 14},
 				EndPos:   ast.Position{Offset: 138, Line: 8, Column: 16},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
@@ -358,11 +362,12 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("external write", func(t *testing.T) {
+	t.Run("invalid external assignment", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           var a = 3
+
           view fun foo() {
               a = 4
           }
@@ -370,18 +375,54 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
-				StartPos: ast.Position{Offset: 62, Line: 4, Column: 14},
-				EndPos:   ast.Position{Offset: 66, Line: 4, Column: 18},
+				StartPos: ast.Position{Offset: 63, Line: 5, Column: 14},
+				EndPos:   ast.Position{Offset: 67, Line: 5, Column: 18},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("external array write", func(t *testing.T) {
+	t.Run("invalid external swap", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          var a = 2
+          var b = 3
+
+          view fun foo() {
+              a <-> b
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var purityError *sema.PurityError
+
+		require.ErrorAs(t, errs[0], &purityError)
+		assert.Equal(t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 83, Line: 6, Column: 14},
+				EndPos:   ast.Position{Offset: 89, Line: 6, Column: 20},
+			},
+			purityError.Range,
+		)
+
+		require.ErrorAs(t, errs[1], &purityError)
+		assert.Equal(t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 83, Line: 6, Column: 14},
+				EndPos:   ast.Position{Offset: 89, Line: 6, Column: 20},
+			},
+			purityError.Range,
+		)
+	})
+
+	t.Run("invalid external array assignment", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -394,18 +435,53 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 65, Line: 5, Column: 14},
 				EndPos:   ast.Position{Offset: 72, Line: 5, Column: 21},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("internal write", func(t *testing.T) {
+	t.Run("invalid external array swap", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          var a = [2, 3]
+
+          view fun foo() {
+              a[0] <-> a[1]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var purityError *sema.PurityError
+
+		require.ErrorAs(t, errs[0], &purityError)
+		assert.Equal(t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 68, Line: 5, Column: 14},
+				EndPos:   ast.Position{Offset: 80, Line: 5, Column: 26},
+			},
+			purityError.Range,
+		)
+
+		require.ErrorAs(t, errs[1], &purityError)
+		assert.Equal(t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 68, Line: 5, Column: 14},
+				EndPos:   ast.Position{Offset: 80, Line: 5, Column: 26},
+			},
+			purityError.Range,
+		)
+	})
+
+	t.Run("internal assignment", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -417,7 +493,20 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("internal array write", func(t *testing.T) {
+	t.Run("internal swap", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          view fun foo() {
+              var a = 2
+              var b = 3
+              a <-> b
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("internal array assignment", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -429,7 +518,19 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("internal param write", func(t *testing.T) {
+	t.Run("internal array swap", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          view fun foo() {
+              var a = [2, 3]
+              a[0] <-> a[1]
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("internal param assignment", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -440,7 +541,18 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("struct external write", func(t *testing.T) {
+	t.Run("internal param swap", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          view fun foo(_ a: [Int]) {
+              a[0] <-> a[1]
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid struct external write", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -464,14 +576,15 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 282, Line: 16, Column: 14},
 				EndPos:   ast.Position{Offset: 290, Line: 16, Column: 22},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
@@ -534,7 +647,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("indeterminate append", func(t *testing.T) {
+	t.Run("invalid indeterminate append", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -549,18 +662,19 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 132, Line: 7, Column: 14},
 				EndPos:   ast.Position{Offset: 145, Line: 7, Column: 27},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("nested write", func(t *testing.T) {
+	t.Run("invalid nested write", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -576,14 +690,15 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 135, Line: 6, Column: 22},
 				EndPos:   ast.Position{Offset: 139, Line: 6, Column: 26},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
@@ -616,7 +731,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("reference write", func(t *testing.T) {
+	t.Run("invalid reference write", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -634,18 +749,19 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 178, Line: 9, Column: 18},
 				EndPos:   ast.Position{Offset: 184, Line: 9, Column: 24},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("reference write, nested", func(t *testing.T) {
+	t.Run("invalid reference write, nested", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -663,18 +779,20 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 182, Line: 9, Column: 18},
 				EndPos:   ast.Position{Offset: 191, Line: 9, Column: 27},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("missing variable write", func(t *testing.T) {
+	t.Run("invalid missing variable write", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -693,18 +811,20 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-		require.IsType(t, &sema.PurityError{}, errs[1])
+
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[1], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 175, Line: 10, Column: 14},
 				EndPos:   ast.Position{Offset: 181, Line: 10, Column: 20},
 			},
-			errs[1].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("bound function", func(t *testing.T) {
+	t.Run("invalid bound function", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -720,14 +840,15 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 129, Line: 8, Column: 14},
 				EndPos:   ast.Position{Offset: 131, Line: 8, Column: 16},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
@@ -752,7 +873,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 func TestCheckResourceWritePurity(t *testing.T) {
 	t.Parallel()
 
-	t.Run("resource param write", func(t *testing.T) {
+	t.Run("invalid resource param write", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -772,18 +893,19 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 185, Line: 10, Column: 18},
 				EndPos:   ast.Position{Offset: 191, Line: 10, Column: 24},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("destroy", func(t *testing.T) {
+	t.Run("invalid destroy", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -796,18 +918,19 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 73, Line: 5, Column: 14},
 				EndPos:   ast.Position{Offset: 81, Line: 5, Column: 22},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("resource param nested write", func(t *testing.T) {
+	t.Run("invalid resource param nested write", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -831,18 +954,19 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 256, Line: 12, Column: 26},
 				EndPos:   ast.Position{Offset: 262, Line: 12, Column: 32},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("internal resource write", func(t *testing.T) {
+	t.Run("invalid internal resource write", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -863,18 +987,19 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 225, Line: 11, Column: 18},
 				EndPos:   ast.Position{Offset: 231, Line: 11, Column: 24},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("external resource move", func(t *testing.T) {
+	t.Run("invalid external resource move", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -895,18 +1020,19 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 214, Line: 11, Column: 18},
 				EndPos:   ast.Position{Offset: 220, Line: 11, Column: 24},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("resource array", func(t *testing.T) {
+	t.Run("invalid resource array", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -926,18 +1052,19 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 201, Line: 10, Column: 18},
 				EndPos:   ast.Position{Offset: 210, Line: 10, Column: 27},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("nested resource array", func(t *testing.T) {
+	t.Run("invalid nested resource array", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -957,14 +1084,15 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 205, Line: 10, Column: 18},
 				EndPos:   ast.Position{Offset: 217, Line: 10, Column: 30},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
@@ -992,7 +1120,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 func TestCheckCompositeWritePurity(t *testing.T) {
 	t.Parallel()
 
-	t.Run("self struct modification", func(t *testing.T) {
+	t.Run("invalid self struct modification", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -1011,14 +1139,15 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 172, Line: 10, Column: 18},
 				EndPos:   ast.Position{Offset: 181, Line: 10, Column: 27},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
@@ -1079,7 +1208,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("impure struct init", func(t *testing.T) {
+	t.Run("invalid impure struct init", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -1101,18 +1230,19 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(
 			t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 123, Line: 8, Column: 18},
 				EndPos:   ast.Position{Offset: 130, Line: 8, Column: 25},
 			},
-			errs[0].(*sema.PurityError).Range,
+			purityError.Range,
 		)
 	})
 
-	t.Run("impure resource init", func(t *testing.T) {
+	t.Run("invalid impure resource init", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -1134,13 +1264,14 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.PurityError{}, errs[0])
+		var purityError *sema.PurityError
+		require.ErrorAs(t, errs[0], &purityError)
 		assert.Equal(t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 125, Line: 8, Column: 18},
 				EndPos:   ast.Position{Offset: 132, Line: 8, Column: 25},
 			},
-			errs[0].(*sema.PurityError).Range)
+			purityError.Range)
 	})
 }
 

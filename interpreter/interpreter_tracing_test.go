@@ -35,13 +35,14 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 func prepareWithTracingCallBack(
 	t *testing.T,
 	tracingCallback func(opName string),
 ) Invokable {
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	onRecordTrace := func(
 		operationName string,

@@ -288,7 +288,7 @@ func (v Word16Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord16 (1 byte)
 // - uint16 value encoded in big-endian (2 bytes)
-func (v Word16Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Word16Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
 	return scratch[:3]

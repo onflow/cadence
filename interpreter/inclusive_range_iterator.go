@@ -39,7 +39,7 @@ type InclusiveRangeIterator struct {
 var _ ValueIterator = &InclusiveRangeIterator{}
 
 type InclusiveRangeIteratorContext interface {
-	common.MemoryGauge
+	common.Gauge
 	NumberValueArithmeticContext
 }
 
@@ -98,7 +98,7 @@ func (i *InclusiveRangeIterator) validate(
 	return element
 }
 
-func (i *InclusiveRangeIterator) HasNext() bool {
+func (i *InclusiveRangeIterator) HasNext(_ ValueIteratorContext) bool {
 	return i.next != nil
 }
 
