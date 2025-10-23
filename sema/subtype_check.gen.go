@@ -149,11 +149,14 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 	switch typedSuperType := superType.(type) {
 	case *OptionalType:
+
+		// Optionals are covariant: T? <: U? if T <: U
 		switch typedSubType := subType.(type) {
 		case *OptionalType:
 			return IsSubType(typedSubType.Type, typedSuperType.Type)
 		}
 
+		// T <: U? if T <: U
 		return IsSubType(subType, typedSuperType.Type)
 
 	case *DictionaryType:
@@ -185,7 +188,10 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 	case *ReferenceType:
 		switch typedSubType := subType.(type) {
 		case *ReferenceType:
+
+			// The authorization of the subtype reference must be usable in all situations where the supertype reference is usable.
 			return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
+				// References are covariant in their referenced type
 				IsSubType(typedSubType.Type, typedSuperType.Type)
 		}
 
@@ -250,9 +256,10 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				case AnyType,
 					AnyStructType,
 					AnyResourceType:
-					return ( // Below two combination is repeated several times below.
+
+					// Below two combination is repeated several times below.
 					// Maybe combine them to produce a single predicate.
-					typedSuperType.LegacyType == nil ||
+					return (typedSuperType.LegacyType == nil ||
 						IsSubType(typedSubType.LegacyType, typedSuperType.LegacyType)) &&
 						IsIntersectionSubset(typedSuperType, typedSubType)
 				}
@@ -272,6 +279,8 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 		}
 
+		// An intersection type `T{Us}`
+		// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
 		switch typedSubType := subType.(type) {
 		case *IntersectionType:
 			switch typedSubType.LegacyType {
@@ -284,6 +293,10 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 			case *CompositeType:
+
+				// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
+				// `Us` and `Ws` do *not* have to be subsets:
+				// The owner may freely restrict and unrestrict.
 				return typedSubTypeLegacyType == typedSuperType.LegacyType
 			}
 
@@ -291,6 +304,9 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return IsSubType(typedSubType, typedSuperType.LegacyType)
 		}
 
+		// A type `T`
+		// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+		// not statically.
 		switch subType {
 		case AnyType,
 			AnyStructType,
@@ -303,6 +319,8 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 	case *FunctionType:
 		switch typedSubType := subType.(type) {
 		case *FunctionType:
+
+			// View functions are subtypes of impure functions
 			switch typedSubType.Purity {
 			case typedSuperType.Purity,
 				FunctionPurityView:

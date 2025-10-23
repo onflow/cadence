@@ -376,9 +376,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 	case dst.Expr:
 		stmts = append(
 			stmts,
-			&dst.ReturnStmt{
-				Results: []dst.Expr{lastNode},
-			},
+			returnStatementWith(lastNode),
 		)
 	case dst.Stmt:
 		// Switch statements are generated without the default return,
@@ -416,7 +414,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		description := predicate.Description()
 		if len(result) > 0 && description != "" {
 			firstNodeDecs := result[0].Decorations()
-			description = strings.ReplaceAll(description, "# ", "// ")
+			description = descriptionAsLineComments(description)
 			firstNodeDecs.Before = dst.EmptyLine
 			firstNodeDecs.Start.Append(description)
 		}
@@ -566,6 +564,10 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	return
 }
 
+func descriptionAsLineComments(description string) string {
+	return strings.ReplaceAll(description, "# ", "// ")
+}
+
 func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
 	result []dst.Node,
 	expr dst.Expr,
@@ -704,9 +706,7 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 	// Only expressions were generated.
 	if stmts == nil {
 		return []dst.Stmt{
-			&dst.ReturnStmt{
-				Results: []dst.Expr{conditionalExpr},
-			},
+			returnStatementWith(conditionalExpr),
 		}
 	}
 
@@ -736,7 +736,9 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 					Body: &dst.BlockStmt{
 						List: []dst.Stmt{
 							&dst.ReturnStmt{
-								Results: []dst.Expr{gen.booleanExpression(true)},
+								Results: []dst.Expr{
+									gen.booleanExpression(true),
+								},
 							},
 						},
 					},
@@ -752,6 +754,22 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 
 	// Only statements were generated
 	return stmts
+}
+
+func returnStatementWith(returnValue dst.Expr) *dst.ReturnStmt {
+	returnStmt := &dst.ReturnStmt{
+		Results: []dst.Expr{
+			returnValue,
+		},
+	}
+
+	comments := returnValue.Decorations().Start
+	if len(comments) > 0 {
+		returnStmt.Decorations().Start.Append(comments...)
+		returnValue.Decorations().Start.Clear()
+		returnStmt.Decs.Before = dst.EmptyLine
+	}
+	return returnStmt
 }
 
 // generatePredicate recursively generates one or more expression/statement for a given predicate.
