@@ -1065,10 +1065,6 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 	}
 }
 
-func (gen *SubTypeCheckGenerator) expressionWithNegation(expr Expression) dst.Expr {
-	return gen.expression(expr, false)
-}
-
 func (gen *SubTypeCheckGenerator) expressionIgnoreNegation(expr Expression) dst.Expr {
 	return gen.expression(expr, true)
 }

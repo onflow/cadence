@@ -394,7 +394,7 @@ func singleKeyValueFromMap(v KeyValues) (string, any) {
 		panic(fmt.Errorf("expected exactly one key value pair"))
 	}
 
-	for key, value := range v {
+	for key, value := range v { //nolint:maprange
 		return key, value
 	}
 
