@@ -1,0 +1,433 @@
+# $schema: ./rules.schema.json
+#
+# Cadence - The resource-oriented smart contract programming language
+#
+# Copyright Flow Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+rules:
+  - super: AnyType
+    predicate:
+      always
+
+  - super: AnyStructType
+    predicate:
+      and:
+        - not:
+            isResource: sub
+        - not:
+            equals:
+              source: sub
+              target: AnyType
+
+  - super: AnyResourceType
+    predicate:
+      isResource: sub
+
+  - super: AnyResourceAttachmentType
+    predicate:
+      and:
+        - isAttachment: sub
+        - isResource: sub
+
+  - super: AnyStructAttachmentType
+    predicate:
+      and:
+        - isAttachment: sub
+        - not:
+            isResource: sub
+
+  - super: HashableStructType
+    predicate:
+      isHashableStruct: sub
+
+  - super: PathType
+    predicate:
+      subtype:
+        sub: sub
+        super:
+          # Maybe use 'or' predicate here instead?
+          # The difference is 'or' is a predicate containing zero or more inner predicates.
+          # Whereas, 'oneOf' contains zero or more values, not predicates.
+          oneOf: [StoragePathType, CapabilityPathType]
+
+  - super: StorableType
+    predicate:
+      isStorable: sub
+
+  - super: CapabilityPathType
+    predicate:
+      equals:
+        source: sub
+        target:
+          oneOf: [PrivatePathType, PublicPathType]
+
+  - super: NumberType
+    predicate:
+      or:
+        - equals:
+            source: sub
+            target:
+              # TODO: Maybe remove `NumberType`, since these predicates only need to check for strict-subtyping, without the "equality".
+              oneOf: [NumberType, SignedNumberType]
+
+        - subtype:
+            sub: sub
+            super:
+              oneOf: [IntegerType, FixedPointType]
+
+  - super: SignedNumberType
+    predicate:
+      or:
+        # TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
+        - equals:
+            source: sub
+            target: SignedNumberType
+
+        - subtype:
+            sub: sub
+            super:
+              oneOf: [SignedIntegerType, SignedFixedPointType]
+
+  - super: IntegerType
+    predicate:
+      or:
+        - equals:
+            source: sub
+            target:
+              # TODO: remove `SignedIntegerType` and `FixedSizeUnsignedIntegerType` from here,
+              # since they are already included in below subtype-predicate.
+              # Also remove `IntegerType`, since these predicates only need to check
+              # for strict-subtyping, without the "equality".
+              # Currently above are included here to match the existing implementation.
+              oneOf: [IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType, UIntType]
+
+        - subtype:
+            sub: sub
+            super:
+              oneOf: [SignedIntegerType, FixedSizeUnsignedIntegerType]
+
+  - super: SignedIntegerType
+    predicate:
+      equals:
+        source: sub
+        target:
+          # TODO: Maybe remove `SignedIntegerType`, since these predicates only need to check for strict-subtyping, without the "equality".
+          oneOf: [SignedIntegerType, IntType, Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type]
+
+  - super: FixedSizeUnsignedIntegerType
+    predicate:
+      equals:
+        source: sub
+        target:
+          oneOf: [UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
+                  Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type]
+
+  - super: FixedPointType
+    predicate:
+      or:
+        - equals:
+            source: sub
+            target:
+              # TODO: Maybe remove `FixedPointType`, since these predicates only need to check for strict-subtyping, without the "equality".
+              ## Also remove `SignedFixedPointType` since it is already included in the below subtype check.
+              oneOf: [FixedPointType, SignedFixedPointType, UFix64Type, UFix128Type]
+
+        - subtype:
+            sub: sub
+            super:
+              oneOf: [SignedFixedPointType]
+
+  - super: SignedFixedPointType
+    predicate:
+      equals:
+        source: sub
+        target:
+          # TODO: Maybe remove `SignedFixedPointType`, since these predicates only need to check for strict-subtyping, without the "equality".
+          oneOf: [SignedFixedPointType, Fix64Type, Fix128Type]
+
+  - super: OptionalType
+    predicate:
+      or:
+        - and:
+            - mustType:
+                source: sub
+                type: OptionalType
+            - subtype:
+                super: super.Type
+                sub: sub.Type
+        - subtype:
+            super: super.Type
+            sub: sub
+
+  - super: DictionaryType
+    predicate:
+      and:
+        - mustType:
+            source: sub
+            type: DictionaryType
+        - subtype:
+            super: super.ValueType
+            sub: sub.ValueType
+        - subtype:
+            super: super.KeyType
+            sub: sub.KeyType
+
+  - super: VariableSizedType
+    predicate:
+      and:
+        - mustType:
+            source: sub
+            type: VariableSizedType
+        - subtype:
+            super: super.ElementType
+            sub: sub.ElementType
+
+  - super: ConstantSizedType
+    predicate:
+      and:
+        - mustType:
+            source: sub
+            type: ConstantSizedType
+        - equals:
+            source: super.Size
+            target: sub.Size
+        - subtype:
+            super: super.ElementType
+            sub: sub.ElementType
+
+  - super: ReferenceType
+    predicate:
+      and:
+        - mustType:
+            source: sub
+            type: ReferenceType
+        - permits:
+            super: super.Authorization
+            sub: sub.Authorization
+        - subtype:
+            super: super.ReferencedType
+            sub: sub.ReferencedType
+
+  - super: CompositeType
+    predicate:
+      or:
+        - and:
+          - mustType:
+              source: sub
+              type: IntersectionType
+          - not:
+              equals:
+                source: sub.LegacyType
+                target:
+                  oneOf: [nil, AnyResourceType, AnyStructType, AnyType]
+          - mustType:
+              source: sub.LegacyType
+              type: CompositeType
+          - equals:
+              source: sub.LegacyType
+              target: super
+        - and:
+            - mustType:
+                source: sub
+                type: CompositeType
+            - never
+        - isParameterizedSubtype:
+            sub: sub
+            super: super
+
+  - super: InterfaceType
+    predicate:
+      or:
+        - and:
+          - mustType:
+              source: sub
+              type: CompositeType
+          - equals:
+              source: sub.Kind
+              target: super.CompositeKind
+          - setContains:
+              source: sub.EffectiveInterfaceConformanceSet
+              target: super
+        - and:
+          - mustType:
+              source: sub
+              type: IntersectionType
+          - setContains:
+              source: sub.EffectiveIntersectionSet
+              target: super
+        - and:
+          - mustType:
+              source: sub
+              type: InterfaceType
+          - setContains:
+              source: sub.EffectiveInterfaceConformanceSet
+              target: super
+        - isParameterizedSubtype:
+            sub: sub
+            super: super
+
+  - super: IntersectionType
+    predicate:
+      or:
+        - and:
+          - equals:
+              source: super.LegacyType
+              target:
+                oneOf: [nil, AnyType, AnyStructType, AnyResourceType]
+          - and:
+            - not:
+                equals:
+                  source: sub
+                  target:
+                    oneOf: [AnyType, AnyStructType, AnyResourceType]
+            - or:
+              - and:
+                - mustType:
+                    source: sub
+                    type: IntersectionType
+                - or:
+                    - and:
+                      - equals:
+                          source: sub.LegacyType
+                          target: nil
+                      - isIntersectionSubset:
+                          super: super
+                          sub: sub
+
+                    - and:
+                      - equals:
+                          source: sub.LegacyType
+                          target:
+                            oneOf: [AnyType, AnyStructType, AnyResourceType]
+
+                      # Below two combination is repeated several times below.
+                      # Maybe combine them to produce a single predicate.
+                      - or:
+                        - equals:
+                            source: super.LegacyType
+                            target: nil
+                        - subtype:
+                            super: super.LegacyType
+                            sub: sub.LegacyType
+                      - isIntersectionSubset:
+                          super: super
+                          sub: sub
+
+                    - and:
+                        - mustType:
+                            source: sub.LegacyType
+                            type: CompositeType
+                        - or:
+                            - equals:
+                                source: super.LegacyType
+                                target: nil
+                            - subtype:
+                                super: super.LegacyType
+                                sub: sub.LegacyType
+                        - isIntersectionSubset:
+                            super: super
+                            sub: sub.LegacyType
+              - and:
+                - mustType:
+                    source: sub
+                    type: ConformingType
+                - or:
+                    - equals:
+                        source: super.LegacyType
+                        target: nil
+                    - subtype:
+                        super: super.LegacyType
+                        sub: sub
+                - isIntersectionSubset:
+                    super: super
+                    sub: sub
+        - and:
+          - mustType:
+              source: sub
+              type: IntersectionType
+          - not:
+              equals:
+                source: sub.LegacyType
+                target:
+                  oneOf: [ nil, AnyType, AnyStructType, AnyResourceType ]
+          - mustType:
+              source: sub.LegacyType
+              type: CompositeType
+          - equals:
+              source: sub.LegacyType
+              target: super.LegacyType
+        - and:
+          - mustType:
+              source: sub
+              type: CompositeType
+          - subtype:
+              super: super.LegacyType
+              sub: sub
+        - not:
+            equals:
+              source: sub
+              target:
+                oneOf: [AnyType, AnyStructType, AnyResourceType]
+        - isParameterizedSubtype:
+            sub: sub
+            super: super
+
+  - super: FunctionType
+    predicate:
+      and:
+        - mustType:
+            source: sub
+            type: FunctionType
+        - equals:
+            source: sub.Purity
+            target:
+              oneOf: [super.Purity, FunctionPurityView]
+        - typeParamsEqual:
+            source: sub
+            target: super
+        - paramsContravariant:
+            source: sub
+            target: super
+        - returnCovariant:
+            source: sub
+            target: super
+        - constructorEqual:
+            source: sub
+            target: super
+
+  - super: ParameterizedType
+    predicate:
+      or:
+        - and:
+          - not:
+              equals:
+                source: super.BaseType
+                target: nil
+          - mustType:
+              source: sub
+              type: ParameterizedType
+          - not:
+              equals:
+                source: sub.BaseType
+                target: nil
+          - subtype:
+              super: super.BaseType
+              sub: sub.BaseType
+          - typeArgumentsEqual:
+              source: sub
+              target: super
+        - isParameterizedSubtype:
+            sub: sub
+            super: super
