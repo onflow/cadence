@@ -306,7 +306,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				return AreTypeParamsEqual(typedSubType, typedSuperType) &&
 					(AreParamsContravariant(typedSubType, typedSuperType) &&
 						(AreReturnsCovariant(typedSubType, typedSuperType) &&
-							AreConstructorsEqual(typedSubType, typedSuperType)))
+							typedSubType.IsConstructor == typedSuperType.IsConstructor))
 			}
 
 		}

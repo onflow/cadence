@@ -119,8 +119,8 @@ e.g:
 
 ```yaml
 - setContains:
-    source: super.EffectiveInterfaceConformanceSet
-    target: sub
+    set: super.EffectiveInterfaceConformanceSet
+    element: sub
 ```
 
 ### Permits Predicate (`permits`)
