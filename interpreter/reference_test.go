@@ -3562,3 +3562,28 @@ func TestInterpretCreatingCircularDependentResource(t *testing.T) {
 		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
+
+func TestInterpretReferenceCasting(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("authorized", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test() {
+                let v: Int8? = 5
+                let authRef: auth(Mutate) &Int8?  = &v as auth(Mutate) &Int8?
+                let ref: &Int8? = authRef
+
+                let castDownRef: auth(Mutate) &Int8?  = ref as! auth(Mutate) &Int8
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
+}

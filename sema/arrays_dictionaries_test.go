@@ -1328,6 +1328,46 @@ func TestCheckArrayMap(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("reference, auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(): [String] {
+                let array: [auth(Mutate) &Int8] = [&5 as auth(Mutate) &Int8]
+                let ref: &[auth(Mutate) &Int8] = &array
+
+                return ref.map(fun(v: auth(Mutate) &Int8): String {
+                    return v.toString()
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 6, typeMismatchError.StartPos.Line)
+	})
+
+	t.Run("reference, optional auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(): [String] {
+                let v: Int8? = 5
+                let array: [auth(Mutate) &Int8?] = [&v as auth(Mutate) &Int8?]
+                let ref: &[auth(Mutate) &Int8?] = &array
+
+                return ref.map(fun(v: auth(Mutate) &Int8?): String {
+                    return v!.toString()
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 7, typeMismatchError.StartPos.Line)
+	})
 }
 
 func TestCheckArrayMapInvalidArgs(t *testing.T) {

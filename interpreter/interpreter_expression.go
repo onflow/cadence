@@ -1381,7 +1381,6 @@ func CreateReferenceValue(
 		}
 
 	case *sema.ReferenceType:
-
 		switch value := value.(type) {
 		case *SomeValue:
 			// Case (3.a): target type is non-optional, actual value is optional.
@@ -1399,20 +1398,27 @@ func CreateReferenceValue(
 		case ReferenceValue:
 			if isImplicit {
 				// During implicit reference creation (e.g: member/index access on a reference),
-				// if the value is already a reference then return the same reference.
+				// if the value is already a reference then return the same reference, with entitlements stripped-off.
 				// However, we need to make sure that this reference is actually a subtype of the resultType,
 				// since the checker may not be aware that we are "short-circuiting" in this case.
 				// Additionally, it is only safe to "compress" reference types like this when the desired
-				// result reference type is unauthorized
+				// result reference type is unauthorized.
 				staticType := value.StaticType(context)
-				if typ.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(context, staticType, typ) {
+				valueSemaType := MustConvertStaticToSemaType(staticType, context)
+
+				if typ.Authorization != sema.UnauthorizedAccess || !sema.IsSubType(valueSemaType, typ) {
 					panic(&InvalidMemberReferenceError{
 						ExpectedType: typ,
 						ActualType:   MustConvertStaticToSemaType(staticType, context),
 					})
 				}
 
-				return value
+				return convertReference(
+					context,
+					value,
+					valueSemaType,
+					typ,
+				)
 			} else {
 				panic(&NestedReferenceError{
 					Value: value,

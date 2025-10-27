@@ -11004,7 +11004,51 @@ func TestInterpretArrayFilter(t *testing.T) {
 		)
 	})
 
-	// TODO: Add test for an array of authorized references
+	t.Run("reference, auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&Int] {
+              let array: [auth(Mutate) &Int] = [&5 as auth(Mutate) &Int]
+              let ref: &[auth(Mutate) &Int] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: &Int): Bool {
+                  var typedArg = s as! auth(Mutate) &Int
+                  return true
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
+
+	t.Run("reference, optional auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&Int?]? {
+              let v: Int? = 5
+              let array: [auth(Mutate) &Int?]? = [&v as auth(Mutate) &Int?]
+              let ref: &[auth(Mutate) &Int?]? = &array
+
+              return ref?.filter(view fun(s: &Int?): Bool {
+                  var typedArg = s as! auth(Mutate) &Int
+                  return true
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
 }
 
 func TestInterpretArrayMap(t *testing.T) {
@@ -11550,8 +11594,6 @@ func TestInterpretArrayMap(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
-          struct S {}
-
           fun test(): [String] {
               let array: [Int8] = [5]
               let ref: &[Int8] = &array
@@ -11584,8 +11626,6 @@ func TestInterpretArrayMap(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
-          struct S {}
-
           fun test(): [String] {
               let array: [&Int8] = [&5 as &Int8]
               let ref: &[&Int8] = &array
@@ -11649,7 +11689,50 @@ func TestInterpretArrayMap(t *testing.T) {
 		)
 	})
 
-	// TODO: Add test for an array of authorized references
+	t.Run("reference, auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String] {
+              let array: [auth(Mutate) &Int8] = [&5 as auth(Mutate) &Int8]
+              let ref: &[auth(Mutate) &Int8] = &array
+
+              return ref.map(fun(v: &Int8): String {
+                  var typedArg = v as! auth(Mutate) &Int8
+                  return v.toString()
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
+
+	t.Run("reference, optional auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String?]? {
+              let v: Int8? = 5
+              let array: [auth(Mutate) &Int8?]? = [&v as auth(Mutate) &Int8?]
+              let ref: &[auth(Mutate) &Int8?]? = &array
+
+              return ref?.map(fun(v: &Int8?): String? {
+                  var typedArg = v as! auth(Mutate) &Int8
+                  return v?.toString()
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
 }
 
 func TestInterpretArrayToVariableSized(t *testing.T) {

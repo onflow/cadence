@@ -2328,34 +2328,50 @@ func convert(
 		}
 
 	case *sema.ReferenceType:
-		targetAuthorization := ConvertSemaAccessToStaticAuthorization(context, unwrappedTargetType.Authorization)
-		switch ref := value.(type) {
-		case *EphemeralReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
-				checkMappedEntitlements(unwrappedTargetType)
-				return NewEphemeralReferenceValue(
-					context,
-					targetAuthorization,
-					ref.Value,
-					unwrappedTargetType.Type,
-				)
-			}
+		return convertReference(
+			context,
+			value,
+			valueType,
+			unwrappedTargetType,
+		)
+	}
 
-		case *StorageReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
-				checkMappedEntitlements(unwrappedTargetType)
-				return NewStorageReferenceValue(
-					context,
-					targetAuthorization,
-					ref.TargetStorageAddress,
-					ref.TargetPath,
-					unwrappedTargetType.Type,
-				)
-			}
+	return value
+}
 
-		default:
-			panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
+func convertReference(
+	context ReferenceCreationContext,
+	value Value,
+	valueType sema.Type,
+	targetType *sema.ReferenceType,
+) Value {
+	targetAuthorization := ConvertSemaAccessToStaticAuthorization(context, targetType.Authorization)
+	switch ref := value.(type) {
+	case *EphemeralReferenceValue:
+		if shouldConvertReference(ref, valueType, targetType, targetAuthorization) {
+			checkMappedEntitlements(targetType)
+			return NewEphemeralReferenceValue(
+				context,
+				targetAuthorization,
+				ref.Value,
+				targetType.Type,
+			)
 		}
+
+	case *StorageReferenceValue:
+		if shouldConvertReference(ref, valueType, targetType, targetAuthorization) {
+			checkMappedEntitlements(targetType)
+			return NewStorageReferenceValue(
+				context,
+				targetAuthorization,
+				ref.TargetStorageAddress,
+				ref.TargetPath,
+				targetType.Type,
+			)
+		}
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 	}
 
 	return value
