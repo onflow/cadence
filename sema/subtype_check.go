@@ -140,8 +140,8 @@ type Equatable[T any] interface {
 }
 
 func deepEquals[T Equatable[T]](source, target T) bool {
-	if source == nil {
-		return target == nil
+	if any(source) == nil {
+		return any(target) == nil
 	}
 
 	return source.Equal(target)
