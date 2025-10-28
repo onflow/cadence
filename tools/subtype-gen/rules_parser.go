@@ -23,7 +23,8 @@ import (
 	"fmt"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 //go:embed rules.yaml
@@ -31,20 +32,20 @@ var subtypeCheckingRules string
 
 // Rule represents a single subtype rule
 type Rule struct {
-	Super     string    `yaml:"super"`
-	Predicate yaml.Node `yaml:"predicate"`
+	Super     string   `yaml:"super"`
+	Predicate ast.Node `yaml:"predicate"`
 }
 
-// RulesConfig represents the entire YAML configuration
-type RulesConfig struct {
+// RulesFile represents the entire YAML configuration
+type RulesFile struct {
 	Rules []Rule `yaml:"rules"`
 }
 
-type KeyValues = map[string]*yaml.Node
+type KeyValues = map[string]ast.Node
 
 // ParseRules reads and parses the YAML rules file
 func ParseRules() ([]Rule, error) {
-	var config RulesConfig
+	var config RulesFile
 	if err := yaml.Unmarshal([]byte(subtypeCheckingRules), &config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
@@ -104,12 +105,13 @@ func parseMemberExpression(names []string) Expression {
 }
 
 // parsePredicate parses a predicate from the YAML
-func parsePredicate(predicate *yaml.Node) (Predicate, error) {
+func parsePredicate(predicate ast.Node) (Predicate, error) {
 
-	description := description(predicate.HeadComment)
+	description := nodeDescription(predicate)
 
-	switch predicate.Kind {
-	case yaml.ScalarNode:
+	switch predicate := predicate.(type) {
+
+	case *ast.StringNode:
 		switch predicate.Value {
 		case "always":
 			return AlwaysPredicate{
@@ -122,9 +124,12 @@ func parsePredicate(predicate *yaml.Node) (Predicate, error) {
 		default:
 			return nil, fmt.Errorf("unsupported string predicate: %s", predicate.Value)
 		}
-	case yaml.MappingNode:
 
-		key, value := singleKeyValueFromMap(predicate)
+	case *ast.MappingNode:
+		key, value, err := singleKeyValueFromMap(predicate)
+		if err != nil {
+			return nil, err
+		}
 
 		switch key {
 
@@ -290,11 +295,12 @@ func parsePredicate(predicate *yaml.Node) (Predicate, error) {
 				return nil, fmt.Errorf("cannot find `target` property for `mustType` predicate")
 			}
 
-			if typ.Kind != yaml.ScalarNode {
-				return nil, fmt.Errorf("type placeholder must be a string, got %s", typ.Tag)
+			typeStr, ok := typ.(*ast.StringNode)
+			if !ok {
+				return nil, fmt.Errorf("type placeholder must be a string, got %s", typ)
 			}
 
-			expectedType := parseType(typ.Value)
+			expectedType := parseType(typeStr.Value)
 
 			return TypeAssertionPredicate{
 				description: description,
@@ -426,33 +432,58 @@ func parsePredicate(predicate *yaml.Node) (Predicate, error) {
 	}
 }
 
-func nodeAsKeyValues(node *yaml.Node) (KeyValues, error) {
-	if node.Kind != yaml.MappingNode {
-		return nil, fmt.Errorf("expected KeyValues, got %s", node.Tag)
+func nodeDescription(predicate ast.Node) description {
+	comment := predicate.GetComment()
+	if comment == nil {
+		return ""
 	}
 
-	size := len(node.Content)
-	keyValues := make(KeyValues, size/2)
+	// TODO: improve
+	return description(comment.String())
+}
 
-	for i := 0; i < size; i += 2 {
-		key := node.Content[i]
-		value := node.Content[i+1]
+func nodeAsKeyValues(node ast.Node) (KeyValues, error) {
+	mappingNode, ok := node.(*ast.MappingNode)
+	if !ok {
+		return nil, fmt.Errorf("expected KeyValues, got %s", node.Type())
+	}
 
-		keyValues[key.Value] = value
+	values := mappingNode.Values
+	keyValues := make(KeyValues, len(values))
+
+	for _, pair := range values {
+		strKey, value, err := stringKeyAndValueFromPair(pair)
+		if err != nil {
+			return nil, err
+		}
+
+		keyValues[strKey] = value
 	}
 
 	return keyValues, nil
 }
 
-func nodeAsList(node *yaml.Node) ([]*yaml.Node, error) {
-	if node.Kind != yaml.SequenceNode {
-		return nil, fmt.Errorf("expected a list, got %s", node.Tag)
+func stringKeyAndValueFromPair(pair *ast.MappingValueNode) (string, ast.Node, error) {
+	key := pair.Key
+	strKey, ok := key.(*ast.StringNode)
+	if !ok {
+		return "", nil, fmt.Errorf("expected string-type key, got %s", key.Type())
 	}
 
-	return node.Content, nil
+	value := pair.Value
+	return strKey.Value, value, nil
 }
 
-func parseSourceAndTarget(predicateName string, value *yaml.Node) (Expression, Expression, error) {
+func nodeAsList(node ast.Node) ([]ast.Node, error) {
+	sequenceNode, ok := node.(*ast.SequenceNode)
+	if !ok {
+		return nil, fmt.Errorf("expected a list, got %s", node.Type())
+	}
+
+	return sequenceNode.Values, nil
+}
+
+func parseSourceAndTarget(predicateName string, value ast.Node) (Expression, Expression, error) {
 	keyValues, err := nodeAsKeyValues(value)
 	if err != nil {
 		return nil, nil, err
@@ -483,7 +514,7 @@ func parseSourceAndTarget(predicateName string, value *yaml.Node) (Expression, E
 	return sourceExpr, targetExpr, nil
 }
 
-func parseSuperAndSubExpressions(predicateName string, value *yaml.Node) (Expression, Expression, error) {
+func parseSuperAndSubExpressions(predicateName string, value ast.Node) (Expression, Expression, error) {
 	keyValues, err := nodeAsKeyValues(value)
 	if err != nil {
 		return nil, nil, err
@@ -514,34 +545,34 @@ func parseSuperAndSubExpressions(predicateName string, value *yaml.Node) (Expres
 	return superType, subType, nil
 }
 
-func singleKeyValueFromMap(node *yaml.Node) (string, *yaml.Node) {
-	keyValues := node.Content
-
-	if len(keyValues) != 2 {
-		panic(fmt.Errorf("expected exactly one key value pair"))
+func singleKeyValueFromMap(mappingNode *ast.MappingNode) (string, ast.Node, error) {
+	keyValuePairs := mappingNode.Values
+	if len(keyValuePairs) != 1 {
+		return "", nil, fmt.Errorf("expected exactly one key value pair")
 	}
 
-	key := keyValues[0]
-	value := keyValues[1]
-
-	return key.Value, value
+	return stringKeyAndValueFromPair(keyValuePairs[0])
 }
 
-func parseExpression(expr *yaml.Node) (Expression, error) {
-	switch expr.Kind {
-	case yaml.ScalarNode:
+func parseExpression(expr ast.Node) (Expression, error) {
+	switch expr := expr.(type) {
+	case *ast.StringNode:
 		return parseSimpleExpression(expr.Value), nil
-	case yaml.MappingNode:
-		key, value := singleKeyValueFromMap(expr)
+	case *ast.MappingNode:
+		key, value, err := singleKeyValueFromMap(expr)
+		if err != nil {
+			return nil, err
+		}
 
 		switch key {
 		case "oneOf":
-			if value.Kind != yaml.SequenceNode {
-				return nil, fmt.Errorf("expected a list of predicates, got %s", value.Tag)
+			list, ok := value.(*ast.SequenceNode)
+			if !ok {
+				return nil, fmt.Errorf("expected a list of predicates, got %s", value.Type())
 			}
 
 			var expressions []Expression
-			for _, item := range value.Content {
+			for _, item := range list.Values {
 				itemExpr, err := parseExpression(item)
 				if err != nil {
 					return nil, err

@@ -318,7 +318,7 @@ func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpl
 
 	// Generate statements for the predicate.
 
-	predicate, err := parsePredicate(&rule.Predicate)
+	predicate, err := parsePredicate(rule.Predicate)
 	if err != nil {
 		panic(fmt.Errorf("error parsing predicate: %w", err))
 	}
