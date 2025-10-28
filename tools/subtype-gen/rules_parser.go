@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/parser"
 )
 
 //go:embed rules.yaml
@@ -32,8 +32,8 @@ var subtypeCheckingRules string
 
 // Rule represents a single subtype rule
 type Rule struct {
-	Super     string   `yaml:"super"`
-	Predicate ast.Node `yaml:"predicate"`
+	SuperType Type      `yaml:"super"`
+	Predicate Predicate `yaml:"predicate"`
 }
 
 // RulesFile represents the entire YAML configuration
@@ -45,12 +45,87 @@ type KeyValues = map[string]ast.Node
 
 // ParseRules reads and parses the YAML rules file
 func ParseRules() ([]Rule, error) {
-	var config RulesFile
-	if err := yaml.Unmarshal([]byte(subtypeCheckingRules), &config); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	file, err := parser.ParseBytes(
+		[]byte(subtypeCheckingRules),
+		parser.ParseComments,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %v", err)
 	}
 
-	return config.Rules, nil
+	docs := file.Docs
+	if len(docs) != 1 {
+		return nil, fmt.Errorf("failed to parse YAML: expected one document, found %d", len(docs))
+	}
+
+	doc := docs[0]
+	rules, ok := doc.Body.(*ast.MappingNode)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse YAML: expected a mapping, found %T", doc.Body)
+	}
+
+	// Should contain `rules: ...`
+	key, value, err := singleKeyValueFromMap(rules)
+	if err != nil {
+		return nil, err
+	}
+	if key != "rules" {
+		return nil, fmt.Errorf("failed to parse YAML: expected key 'rules', found '%s'", key)
+	}
+
+	// Value must be a list of rules
+	rulesList, ok := value.(*ast.SequenceNode)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse YAML: expected a list of rules, found %T", value)
+	}
+
+	var parsedRules []Rule
+
+	for _, rule := range rulesList.Values {
+		ruleProperties, ok := rule.(*ast.MappingNode)
+		if !ok {
+			return nil, fmt.Errorf("failed to parse YAML: expected a mapping, found %T", rule)
+		}
+
+		var typ Type
+		var predicate Predicate
+
+		for _, property := range ruleProperties.Values {
+			propertyName, propertyValue, err := stringKeyAndValueFromPair(property)
+			if err != nil {
+				return nil, err
+			}
+
+			switch propertyName {
+			case "super":
+				stringNode, ok := propertyValue.(*ast.StringNode)
+				if !ok {
+					return nil, fmt.Errorf("failed to parse YAML: expected a string key, found %T", propertyValue)
+				}
+
+				typ = parseType(stringNode.Value)
+
+			case "predicate":
+				predicate, err = parsePredicate(propertyValue)
+				if err != nil {
+					return nil, err
+				}
+
+			default:
+				return nil, fmt.Errorf("failed to parse YAML: property '%s' is unsupported", property)
+			}
+		}
+
+		parsedRules = append(
+			parsedRules,
+			Rule{
+				SuperType: typ,
+				Predicate: predicate,
+			},
+		)
+	}
+
+	return parsedRules, nil
 }
 
 // parseType parses a type with just a name.
@@ -107,7 +182,7 @@ func parseMemberExpression(names []string) Expression {
 // parsePredicate parses a predicate from the YAML
 func parsePredicate(predicate ast.Node) (Predicate, error) {
 
-	description := nodeDescription(predicate)
+	description := description(nodeComments(predicate))
 
 	switch predicate := predicate.(type) {
 
@@ -174,10 +249,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "equals":
-			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			sourceExpr, targetExpr, comments, err := parseSourceAndTarget(key, value)
 			if err != nil {
 				return nil, err
 			}
+
+			description = description.Append(comments)
 
 			return EqualsPredicate{
 				description: description,
@@ -186,10 +263,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "deepEquals":
-			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			sourceExpr, targetExpr, comments, err := parseSourceAndTarget(key, value)
 			if err != nil {
 				return nil, err
 			}
+
+			description = description.Append(comments)
 
 			return DeepEqualsPredicate{
 				description: description,
@@ -198,10 +277,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "subtype":
-			superType, subType, err := parseSuperAndSubExpressions(key, value)
+			superType, subType, comments, err := parseSuperAndSubExpressions(key, value)
 			if err != nil {
 				return nil, err
 			}
+
+			description = description.Append(comments)
 
 			return SubtypePredicate{
 				description: description,
@@ -261,10 +342,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "permits":
-			superType, subType, err := parseSuperAndSubExpressions(key, value)
+			superType, subType, comments, err := parseSuperAndSubExpressions(key, value)
 			if err != nil {
 				return nil, err
 			}
+
+			description = description.Append(comments)
 
 			return PermitsPredicate{
 				description: description,
@@ -273,10 +356,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "mustType":
-			keyValues, err := nodeAsKeyValues(value)
+			keyValues, comments, err := nodeAsKeyValues(value)
 			if err != nil {
 				return nil, err
 			}
+
+			description = description.Append(comments)
 
 			// Get source
 			source, ok := keyValues["source"]
@@ -309,10 +394,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "setContains":
-			keyValues, err := nodeAsKeyValues(value)
+			keyValues, comments, err := nodeAsKeyValues(value)
 			if err != nil {
 				return nil, err
 			}
+
+			description = description.Append(comments)
 
 			// Get the set
 			set, ok := keyValues["set"]
@@ -343,10 +430,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "isIntersectionSubset":
-			superType, subType, err := parseSuperAndSubExpressions(key, value)
+			superType, subType, comments, err := parseSuperAndSubExpressions(key, value)
 			if err != nil {
 				return nil, err
 			}
+
+			description = description.Append(comments)
 
 			return IsIntersectionSubsetPredicate{
 				description: description,
@@ -355,10 +444,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "returnCovariant":
-			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			sourceExpr, targetExpr, comments, err := parseSourceAndTarget(key, value)
 			if err != nil {
 				return nil, err
 			}
+
+			description = description.Append(comments)
 
 			return ReturnCovariantPredicate{
 				description: description,
@@ -367,10 +458,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "isParameterizedSubtype":
-			superType, subType, err := parseSuperAndSubExpressions(key, value)
+			superType, subType, comments, err := parseSuperAndSubExpressions(key, value)
 			if err != nil {
 				return nil, err
 			}
+
+			description = description.Append(comments)
 
 			return IsParameterizedSubtypePredicate{
 				description: description,
@@ -379,10 +472,11 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			}, nil
 
 		case "forAll":
-			keyValues, err := nodeAsKeyValues(value)
+			keyValues, comments, err := nodeAsKeyValues(value)
 			if err != nil {
 				return nil, err
 			}
+			description = description.Append(comments)
 
 			// Get source
 			source, ok := keyValues["source"]
@@ -432,35 +526,39 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 	}
 }
 
-func nodeDescription(predicate ast.Node) description {
+func nodeComments(predicate ast.Node) string {
 	comment := predicate.GetComment()
 	if comment == nil {
 		return ""
 	}
 
 	// TODO: improve
-	return description(comment.String())
+	return comment.String()
 }
 
-func nodeAsKeyValues(node ast.Node) (KeyValues, error) {
+func nodeAsKeyValues(node ast.Node) (keyValues KeyValues, comments string, err error) {
 	mappingNode, ok := node.(*ast.MappingNode)
 	if !ok {
-		return nil, fmt.Errorf("expected KeyValues, got %s", node.Type())
+		return nil, "", fmt.Errorf("expected KeyValues, got %s", node.Type())
 	}
 
+	comments += nodeComments(node)
+
 	values := mappingNode.Values
-	keyValues := make(KeyValues, len(values))
+	keyValues = make(KeyValues, len(values))
 
 	for _, pair := range values {
 		strKey, value, err := stringKeyAndValueFromPair(pair)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
+
+		comments += nodeComments(pair)
 
 		keyValues[strKey] = value
 	}
 
-	return keyValues, nil
+	return keyValues, comments, nil
 }
 
 func stringKeyAndValueFromPair(pair *ast.MappingValueNode) (string, ast.Node, error) {
@@ -480,69 +578,89 @@ func nodeAsList(node ast.Node) ([]ast.Node, error) {
 		return nil, fmt.Errorf("expected a list, got %s", node.Type())
 	}
 
-	return sequenceNode.Values, nil
+	// Comments of the list should belong to the
+	// first element of the list.
+	list := sequenceNode.Values
+	if len(list) > 0 {
+		err := list[0].SetComment(node.GetComment())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return list, nil
 }
 
-func parseSourceAndTarget(predicateName string, value ast.Node) (Expression, Expression, error) {
-	keyValues, err := nodeAsKeyValues(value)
+func parseSourceAndTarget(predicateName string, value ast.Node) (
+	Expression,
+	Expression,
+	string,
+	error,
+) {
+	keyValues, comments, err := nodeAsKeyValues(value)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	// Get source
 	source, ok := keyValues["source"]
 	if !ok {
-		return nil, nil, fmt.Errorf("cannot find `source` property for %#q predicate", predicateName)
+		return nil, nil, "", fmt.Errorf("cannot find `source` property for %#q predicate", predicateName)
 	}
 
 	sourceExpr, err := parseExpression(source)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	// Get target
 	target, ok := keyValues["target"]
 	if !ok {
-		return nil, nil, fmt.Errorf("cannot find `target` property for %#q predicate", predicateName)
+		return nil, nil, "", fmt.Errorf("cannot find `target` property for %#q predicate", predicateName)
 	}
 
 	targetExpr, err := parseExpression(target)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
-	return sourceExpr, targetExpr, nil
+	return sourceExpr, targetExpr, comments, nil
 }
 
-func parseSuperAndSubExpressions(predicateName string, value ast.Node) (Expression, Expression, error) {
-	keyValues, err := nodeAsKeyValues(value)
+func parseSuperAndSubExpressions(predicateName string, value ast.Node) (
+	Expression,
+	Expression,
+	string,
+	error,
+) {
+	keyValues, comments, err := nodeAsKeyValues(value)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	// Get super type
 	super, ok := keyValues["super"]
 	if !ok {
-		return nil, nil, fmt.Errorf("cannot find `super` property for %#q predicate", predicateName)
+		return nil, nil, "", fmt.Errorf("cannot find `super` property for %#q predicate", predicateName)
 	}
 
 	superType, err := parseExpression(super)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	// Get subtype
 	sub, ok := keyValues["sub"]
 	if !ok {
-		return nil, nil, fmt.Errorf("cannot find `sub` property for %#q predicate", predicateName)
+		return nil, nil, "", fmt.Errorf("cannot find `sub` property for %#q predicate", predicateName)
 	}
 
 	subType, err := parseExpression(sub)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
-	return superType, subType, nil
+	return superType, subType, comments, nil
 }
 
 func singleKeyValueFromMap(mappingNode *ast.MappingNode) (string, ast.Node, error) {

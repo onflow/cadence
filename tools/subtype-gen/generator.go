@@ -300,7 +300,7 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 // createCaseStatementForRule creates a case statement for a rule.
 func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpleTypes bool) dst.Stmt {
 	// Parse types
-	superType := parseType(rule.Super)
+	superType := rule.SuperType
 
 	// Skip the given types.
 	// Some types are only exist during type-checking, but not at runtime. e.g: Storable type
@@ -317,13 +317,7 @@ func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpl
 	caseExpr := gen.parseCaseCondition(superType)
 
 	// Generate statements for the predicate.
-
-	predicate, err := parsePredicate(rule.Predicate)
-	if err != nil {
-		panic(fmt.Errorf("error parsing predicate: %w", err))
-	}
-
-	bodyStmts := gen.generatePredicateStatements(predicate)
+	bodyStmts := gen.generatePredicateStatements(rule.Predicate)
 
 	return &dst.CaseClause{
 		List: []dst.Expr{caseExpr},

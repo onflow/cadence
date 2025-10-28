@@ -30,6 +30,10 @@ func (p description) Description() string {
 	return string(p)
 }
 
+func (p description) Append(comments string) description {
+	return description(string(p) + comments)
+}
+
 // AlwaysPredicate represents an always-true condition.
 type AlwaysPredicate struct {
 	description `yaml:"description,omitempty"`
