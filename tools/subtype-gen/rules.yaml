@@ -294,6 +294,16 @@ rules:
                 oneOf: [nil, AnyType, AnyStructType, AnyResourceType]
           - and:
             - not:
+                # `Any` is a subtype of an intersection type
+                #  - `Any{Us}: not statically.`
+                #  - `AnyStruct{Us}`: never;
+                #  - `AnyResource{Us}`: never;
+                #
+                # `AnyStruct` is a subtype of an intersection type
+                #  - `AnyStruct{Us}`: not statically.
+                #  - `AnyResource{Us}`: never;
+                #  - `Any{Us}`: not statically.
+                #
                 # `AnyResource` is a subtype of an intersection type
                 #  - `AnyResource{Us}`: not statically;
                 #  - `AnyStruct{Us}`: never.
@@ -305,11 +315,15 @@ rules:
             - or:
               - and:
                 - mustType:
+                    # An intersection type `T{Us}`
+                    # is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
                     source: sub
                     type: IntersectionType
                 - or:
                     - and:
                       - equals:
+                          # An intersection type `{Us}` is a subtype of an intersection type `{Vs}` / `{Vs}` / `{Vs}`:
+                          # when `Vs` is a subset of `Us`.
                           source: sub.LegacyType
                           target: nil
                       - isIntersectionSubset:
@@ -318,6 +332,10 @@ rules:
 
                     - and:
                       - equals:
+                          # When `T == AnyResource || T == AnyStruct || T == Any`:
+                          # if the intersection type of the subtype
+                          # is a subtype of the intersection supertype,
+                          # and `Vs` is a subset of `Us`.
                           source: sub.LegacyType
                           target:
                             oneOf: [AnyType, AnyStructType, AnyResourceType]
@@ -337,6 +355,11 @@ rules:
 
                     - and:
                         - mustType:
+                           # When `T != AnyResource && T != AnyStruct && T != Any`:
+                           # if the intersection type of the subtype
+                           # is a subtype of the intersection supertype,
+                           # and `T` conforms to `Vs`.
+                           # `Us` and `Vs` do *not* have to be subsets.
                             source: sub.LegacyType
                             type: CompositeType
                         - or:
@@ -367,7 +390,7 @@ rules:
         - and:
           - mustType:
               # An intersection type `T{Us}`
-              # is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+              # is a subtype of an intersection type `V{Ws}`:
               source: sub
               type: IntersectionType
 

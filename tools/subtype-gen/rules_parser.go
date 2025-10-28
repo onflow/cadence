@@ -45,6 +45,8 @@ type KeyValues = map[string]ast.Node
 
 // ParseRules reads and parses the YAML rules file
 func ParseRules() ([]Rule, error) {
+	// Use the parser API, since the unmarshalar API
+	// doesn't correctly retain comments: https://github.com/goccy/go-yaml/issues/709
 	file, err := parser.ParseBytes(
 		[]byte(subtypeCheckingRules),
 		parser.ParseComments,
@@ -65,7 +67,8 @@ func ParseRules() ([]Rule, error) {
 	}
 
 	// Should contain `rules: ...`
-	key, value, err := singleKeyValueFromMap(rules)
+	// TODO: Support comments
+	key, value, _, err := singleKeyValueFromMap(rules)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +94,8 @@ func ParseRules() ([]Rule, error) {
 		var predicate Predicate
 
 		for _, property := range ruleProperties.Values {
-			propertyName, propertyValue, err := stringKeyAndValueFromPair(property)
+			// TODO: Support comments
+			propertyName, propertyValue, _, err := stringKeyAndValueFromPair(property)
 			if err != nil {
 				return nil, err
 			}
@@ -201,10 +205,12 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 		}
 
 	case *ast.MappingNode:
-		key, value, err := singleKeyValueFromMap(predicate)
+		key, value, comments, err := singleKeyValueFromMap(predicate)
 		if err != nil {
 			return nil, err
 		}
+
+		description = description.Append(comments)
 
 		switch key {
 
@@ -548,12 +554,12 @@ func nodeAsKeyValues(node ast.Node) (keyValues KeyValues, comments string, err e
 	keyValues = make(KeyValues, len(values))
 
 	for _, pair := range values {
-		strKey, value, err := stringKeyAndValueFromPair(pair)
+		strKey, value, nestedComments, err := stringKeyAndValueFromPair(pair)
 		if err != nil {
 			return nil, "", err
 		}
 
-		comments += nodeComments(pair)
+		comments += nestedComments
 
 		keyValues[strKey] = value
 	}
@@ -561,15 +567,23 @@ func nodeAsKeyValues(node ast.Node) (keyValues KeyValues, comments string, err e
 	return keyValues, comments, nil
 }
 
-func stringKeyAndValueFromPair(pair *ast.MappingValueNode) (string, ast.Node, error) {
-	key := pair.Key
-	strKey, ok := key.(*ast.StringNode)
+func stringKeyAndValueFromPair(pair *ast.MappingValueNode) (
+	key string,
+	value ast.Node,
+	comments string,
+	err error,
+) {
+	keyNode := pair.Key
+	strKey, ok := keyNode.(*ast.StringNode)
 	if !ok {
-		return "", nil, fmt.Errorf("expected string-type key, got %s", key.Type())
+		return "", nil, "", fmt.Errorf("expected string-type key, got %s", keyNode.Type())
 	}
 
-	value := pair.Value
-	return strKey.Value, value, nil
+	valueNode := pair.Value
+	return strKey.Value,
+		valueNode,
+		nodeComments(pair),
+		nil
 }
 
 func nodeAsList(node ast.Node) ([]ast.Node, error) {
@@ -586,6 +600,8 @@ func nodeAsList(node ast.Node) ([]ast.Node, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		_ = node.SetComment(nil)
 	}
 
 	return list, nil
@@ -663,13 +679,20 @@ func parseSuperAndSubExpressions(predicateName string, value ast.Node) (
 	return superType, subType, comments, nil
 }
 
-func singleKeyValueFromMap(mappingNode *ast.MappingNode) (string, ast.Node, error) {
+func singleKeyValueFromMap(mappingNode *ast.MappingNode) (
+	key string,
+	value ast.Node,
+	comments string,
+	err error,
+) {
 	keyValuePairs := mappingNode.Values
 	if len(keyValuePairs) != 1 {
-		return "", nil, fmt.Errorf("expected exactly one key value pair")
+		return "", nil, "", fmt.Errorf("expected exactly one key value pair")
 	}
 
-	return stringKeyAndValueFromPair(keyValuePairs[0])
+	key, value, comments, err = stringKeyAndValueFromPair(keyValuePairs[0])
+
+	return
 }
 
 func parseExpression(expr ast.Node) (Expression, error) {
@@ -677,7 +700,8 @@ func parseExpression(expr ast.Node) (Expression, error) {
 	case *ast.StringNode:
 		return parseSimpleExpression(expr.Value), nil
 	case *ast.MappingNode:
-		key, value, err := singleKeyValueFromMap(expr)
+		// TODO: Support comments
+		key, value, _, err := singleKeyValueFromMap(expr)
 		if err != nil {
 			return nil, err
 		}

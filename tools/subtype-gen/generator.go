@@ -559,7 +559,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 }
 
 func descriptionAsLineComments(description string) string {
-	return strings.ReplaceAll(description, "# ", "// ")
+	return strings.ReplaceAll(description, "#", "//")
 }
 
 func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
@@ -601,23 +601,37 @@ func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
 		// There are both expressions and statements generated.
 		// Convert the conditional-expression into a statement,
 		// by putting them as the condition of an if-statement.
+		ifStmt := mergeUsingIfStatement(expr, stmts)
+
 		result = append(
 			result,
-			&dst.IfStmt{
-				Cond: expr,
-				Body: &dst.BlockStmt{
-					List: stmts,
-				},
-				Decs: dst.IfStmtDecorations{
-					NodeDecs: dst.NodeDecs{
-						Before: dst.NewLine,
-						After:  dst.EmptyLine,
-					},
-				},
-			},
+			ifStmt,
 		)
 	}
 	return result
+}
+
+func mergeUsingIfStatement(expr dst.Expr, stmts []dst.Stmt) *dst.IfStmt {
+	ifStmt := &dst.IfStmt{
+		Cond: expr,
+		Body: &dst.BlockStmt{
+			List: stmts,
+		},
+		Decs: dst.IfStmtDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.EmptyLine,
+			},
+		},
+	}
+
+	conditionDecs := expr.Decorations()
+	if conditionDecs != nil {
+		ifStmt.Decorations().Start = conditionDecs.Start
+		conditionDecs.Start = nil
+	}
+
+	return ifStmt
 }
 
 func (gen *SubTypeCheckGenerator) combineNestedNodeWithSwitchStatement(
@@ -706,38 +720,22 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 
 	// Both expressions and statements were generated.
 	if conditionalExpr != nil {
-		nodeDecs := dst.IfStmtDecorations{
-			NodeDecs: dst.NodeDecs{
-				Before: dst.NewLine,
-				After:  dst.EmptyLine,
-			},
-		}
-
 		if combineAsAnd {
 			return []dst.Stmt{
-				&dst.IfStmt{
-					Cond: conditionalExpr,
-					Body: &dst.BlockStmt{
-						List: stmts,
-					},
-					Decs: nodeDecs,
-				},
+				mergeUsingIfStatement(conditionalExpr, stmts),
 			}
 		} else {
 			combined := []dst.Stmt{
-				&dst.IfStmt{
-					Cond: conditionalExpr,
-					Body: &dst.BlockStmt{
-						List: []dst.Stmt{
-							&dst.ReturnStmt{
-								Results: []dst.Expr{
-									gen.booleanExpression(true),
-								},
+				mergeUsingIfStatement(
+					conditionalExpr,
+					[]dst.Stmt{
+						&dst.ReturnStmt{
+							Results: []dst.Expr{
+								gen.booleanExpression(true),
 							},
 						},
 					},
-					Decs: nodeDecs,
-				},
+				),
 			}
 
 			// TODO: Does the order matter?
