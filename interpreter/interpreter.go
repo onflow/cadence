@@ -6001,7 +6001,7 @@ func NativeCapabilityBorrowFunction(
 		var addressValue AddressValue
 
 		if capabilityBorrowTypePointer == nil {
-			// vm does not provide the borrow type
+			// VM does not provide the borrow type
 			var idCapabilityValue *IDCapabilityValue
 
 			switch capabilityValue := receiver.(type) {
@@ -6108,7 +6108,7 @@ func NativeCapabilityCheckFunction(
 		var addressValue AddressValue
 
 		if capabilityBorrowTypePointer == nil {
-			// vm does not provide the borrow type
+			// VM does not provide the borrow type
 			var idCapabilityValue *IDCapabilityValue
 
 			switch capabilityValue := receiver.(type) {
