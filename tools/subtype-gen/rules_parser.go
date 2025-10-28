@@ -120,7 +120,7 @@ func parsePredicate(predicate *yaml.Node) (Predicate, error) {
 				description: description,
 			}, nil
 		default:
-			return nil, fmt.Errorf("unsupported string rule: %s", predicate.Value)
+			return nil, fmt.Errorf("unsupported string predicate: %s", predicate.Value)
 		}
 	case yaml.MappingNode:
 
