@@ -27,26 +27,6 @@ var VariableInitializationPattern = PeepholePattern{
 	},
 }
 
-var AddPattern = PeepholePattern{
-	Name:    "ConstantFoldingAdd",
-	Opcodes: []opcode.Opcode{opcode.GetConstant, opcode.GetConstant, opcode.Add},
-	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
-		getConstant1 := instructions[0].(opcode.InstructionGetConstant)
-		getConstant2 := instructions[1].(opcode.InstructionGetConstant)
-
-		c1 := compiler.constants[getConstant1.Constant].data.(interpreter.NumberValue)
-		c2 := compiler.constants[getConstant2.Constant].data.(interpreter.NumberValue)
-
-		// TODO: how can we run this arithmetic operation
-		// code below is just a placeholder
-		compiler.emitIntConst(int64(c1.Plus(nil, c2).ToInt()))
-
-		return []opcode.Instruction{opcode.InstructionGetConstant{
-			Constant: getConstant1.Constant + getConstant2.Constant,
-		}}
-	},
-}
-
 func (p *PeepholePattern) Match(instructions []opcode.Instruction) bool {
 	for i, opcode := range p.Opcodes {
 		if instructions[i].Opcode() != opcode {

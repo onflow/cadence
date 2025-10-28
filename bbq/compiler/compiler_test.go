@@ -10240,13 +10240,19 @@ func TestPeepholeOptimizer(t *testing.T) {
 		}, functions2[0].Code)
 	})
 
-	t.Run("constant add", func(t *testing.T) {
+	t.Run("patch jumps", func(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
 			fun test(): Int {
-				let x = 2 + 3
-				return x
+				var x = 0
+				var y = 0
+				if x > 0 {
+					y = 32
+				} else {
+					y = 64
+				}
+				return y
 			}
 		`)
 		require.NoError(t, err)
@@ -10263,16 +10269,67 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0x0},
-			opcode.InstructionGetConstant{Constant: 0x1},
-			opcode.InstructionAdd{},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x0},
 			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionGreater{},
+			opcode.InstructionJumpIfFalse{Target: 18},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionJump{Target: 22},
+			// 18
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x2},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			// 22
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x1},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionReturnValue{},
 		},
 			functions[0].Code,
 		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.EnablePeepholeOptimizations = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionInitLocalFromConst{Constant: 0x0, Type: 0x1, Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionInitLocalFromConst{Constant: 0x0, Type: 0x1, Local: 0x1},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionGreater{},
+			opcode.InstructionJumpIfFalse{Target: 12},
+			opcode.InstructionStatement{},
+			opcode.InstructionInitLocalFromConst{Constant: 0x1, Type: 0x1, Local: 0x1},
+			opcode.InstructionJump{Target: 14},
+			// 12
+			opcode.InstructionStatement{},
+			opcode.InstructionInitLocalFromConst{Constant: 0x2, Type: 0x1, Local: 0x1},
+			// 14
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		}, functions2[0].Code)
 	})
 }
