@@ -499,14 +499,14 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		panic(fmt.Errorf("generated node is nil"))
 
 	case dst.Expr:
-		result = gen.combineNestedNodesWithExpression(
+		result = gen.mergeNestedNodesWithExpression(
 			result,
 			lastNode,
 			nestedNodes,
 		)
 
 	case *dst.TypeSwitchStmt:
-		result = gen.combineNestedNodeWithSwitchStatement(
+		result = gen.mergeNestedNodeWithSwitchStatement(
 			result,
 			lastNode,
 			lastNode.Body,
@@ -515,7 +515,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		)
 
 	case *dst.SwitchStmt:
-		result = gen.combineNestedNodeWithSwitchStatement(
+		result = gen.mergeNestedNodeWithSwitchStatement(
 			result,
 			lastNode,
 			lastNode.Body,
@@ -524,7 +524,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		)
 
 	case *dst.RangeStmt:
-		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
+		stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
 		result = append(result, lastNode)
 		for _, stmt := range stmts {
 			result = append(result, stmt)
@@ -536,7 +536,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		//    since the result will always be false. This should never occur.
 		//  - If the return value is `true`, then we can simply ignore the return,
 		//    and append the nested statements.
-		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
+		stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
 		if len(lastNode.Results) != 1 {
 			panic(fmt.Errorf("error generating predicate AST: expected only one return value"))
 		}
@@ -562,7 +562,7 @@ func descriptionAsLineComments(description string) string {
 	return strings.ReplaceAll(description, "#", "//")
 }
 
-func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
+func (gen *SubTypeCheckGenerator) mergeNestedNodesWithExpression(
 	result []dst.Node,
 	expr dst.Expr,
 	nestedNodes []dst.Node,
@@ -634,14 +634,14 @@ func mergeUsingIfStatement(expr dst.Expr, stmts []dst.Stmt) *dst.IfStmt {
 	return ifStmt
 }
 
-func (gen *SubTypeCheckGenerator) combineNestedNodeWithSwitchStatement(
+func (gen *SubTypeCheckGenerator) mergeNestedNodeWithSwitchStatement(
 	combinedNodes []dst.Node,
 	switchStmt dst.Stmt,
 	switchStmtBody *dst.BlockStmt,
 	nestedNodes []dst.Node,
 	combineAsAnd bool,
 ) []dst.Node {
-	stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
+	stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
 
 	caseClauses := switchStmtBody.List
 	if len(caseClauses) == 0 {
@@ -674,7 +674,7 @@ func (gen *SubTypeCheckGenerator) combineNestedNodeWithSwitchStatement(
 	return combinedNodes
 }
 
-func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, combineAsAnd bool) []dst.Stmt {
+func (gen *SubTypeCheckGenerator) mergeNodesAsStatements(nodes []dst.Node, combineAsAnd bool) []dst.Stmt {
 	var conditionalExpr dst.Expr
 	var stmts []dst.Stmt
 
@@ -755,10 +755,12 @@ func returnStatementWith(returnValue dst.Expr) *dst.ReturnStmt {
 		},
 	}
 
-	comments := returnValue.Decorations().Start
+	returnValueDecs := returnValue.Decorations()
+	comments := returnValueDecs.Start
+
 	if len(comments) > 0 {
 		returnStmt.Decorations().Start.Append(comments...)
-		returnValue.Decorations().Start.Clear()
+		returnValueDecs.Start.Clear()
 		returnStmt.Decs.Before = dst.EmptyLine
 	}
 	return returnStmt
