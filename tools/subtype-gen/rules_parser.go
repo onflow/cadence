@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
 )
 
 //go:embed rules.yaml
@@ -113,7 +113,7 @@ func parsePredicate(predicate any) (Predicate, error) {
 		case "never":
 			return NeverPredicate{}, nil
 		default:
-			return nil, fmt.Errorf("unsupported string rule: %s", v)
+			return nil, fmt.Errorf("unsupported string predicate: %s", v)
 		}
 	case KeyValues:
 		key, value := singleKeyValueFromMap(v)
@@ -184,7 +184,7 @@ func parsePredicate(predicate any) (Predicate, error) {
 		case "and":
 			and, ok := value.([]any)
 			if !ok {
-				return nil, fmt.Errorf("expected []any, got %T", value)
+				return nil, fmt.Errorf("expected a list of predicates, got %T", value)
 			}
 
 			var predicates []Predicate
@@ -452,7 +452,7 @@ func singleKeyValueFromMap(v KeyValues) (string, any) {
 		panic(fmt.Errorf("expected exactly one key value pair"))
 	}
 
-	for key, value := range v {
+	for key, value := range v { //nolint:maprange
 		return key, value
 	}
 

@@ -1,8 +1,9 @@
 # Rules
 
 A rules file contains zero or more rules.
-A single rule consist of the two properties: The super-type (`super`) for which this rule applies to,
-and a predicate (`predicate`) defining the conditions that needs to be satisfied by a type to be a subtype of this super-type.
+Each rule consists of two properties:
+- The super-type (`super`) for which this rule applies to, and
+- The predicate (`predicate`) defining the conditions that needs to be satisfied by a type to be a subtype of this super-type.
 
 ```yaml
 rules :
@@ -34,7 +35,7 @@ Negates a nested predicate.
 
 ### And Predicate (`and`)
 
-Represent a list of nested predicate that needs to be satisfied.
+Represent a list of nested predicates that needs to be satisfied.
 An `and` predicate becomes true only if all of its nested predicates are also true.
 e.g:
 
@@ -47,18 +48,18 @@ and:
 ### Or Predicate (`or`)
 
 Represent a list of nested predicate that could be satisfied.
-An `or` predicate becomes true if at-least one of its nested predicates are also true.
+An `or` predicate becomes true if at least one of its nested predicates are also true.
 e.g:
 
 ```yaml
-and:
+or:
   - P1
   - P2
 ```
 
 ### Equals Predicate (`equals`)
 
-Checks the equality between two values.
+Checks the equality between two values using the `==` operator.
 Consist of two properties, `source` and `target`, both of which can be any [expression](#Expressions).
 
 Example 1:
@@ -180,13 +181,6 @@ e.g:
 isStorable: sub
 ```
 
-#### isStorable
-
-Checks whether the type provided is a storable type.
-e.g:
-```yaml
-isStorable: sub
-```
 
 ## Variables
 
@@ -241,7 +235,7 @@ For example:
         target: nil
 ```
 
-In the above, `super` variable inside `equals` predicate contains a type-value of the root type `Type`.
+In the above, `sub` variable inside `equals` predicate contains a type-value of the root type `Type`.
 
 However, if `sub` was used inside a type-assertion predicate (`mustType`) having `target` type as `R`,
 then any subsequent predicates that are combined with this type-assertion (using an `and` predicate),
@@ -262,7 +256,7 @@ would see the type of `super` as `R`.
 
 ## Expressions
 
-Predicates have properties/fields, and these properties sometimes requires to refer to different values, types,
+Predicates have properties/fields, and these properties sometimes require referring to different values, types,
 functions, fields, to properly define the subtyping rules.
 Expressions can be used to represent/access such information.
 
