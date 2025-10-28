@@ -1,10 +1,13 @@
 package compiler
 
-import "github.com/onflow/cadence/bbq/opcode"
+import (
+	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/interpreter"
+)
 
 type PeepholeOptimizer[E, T any] struct {
 	PatternsByOpcode map[opcode.Opcode][]PeepholePattern
-	compiler         *Compiler[opcode.Instruction, any]
+	compiler         *Compiler[opcode.Instruction, interpreter.StaticType]
 }
 
 func NewPeepholeOptimizer[E, T any](compiler *Compiler[E, T]) *PeepholeOptimizer[E, T] {
@@ -17,7 +20,7 @@ func NewPeepholeOptimizer[E, T any](compiler *Compiler[E, T]) *PeepholeOptimizer
 	}
 	// restrict the compiler to opcode.Instruction and any
 	// so patterns can ignore generics
-	if c, ok := any(compiler).(*Compiler[opcode.Instruction, any]); ok {
+	if c, ok := any(compiler).(*Compiler[opcode.Instruction, interpreter.StaticType]); ok {
 		return &PeepholeOptimizer[E, T]{
 			PatternsByOpcode: patternsByOpcode,
 			compiler:         c,

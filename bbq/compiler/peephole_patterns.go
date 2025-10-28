@@ -8,13 +8,13 @@ import (
 type PeepholePattern struct {
 	Name        string
 	Opcodes     []opcode.Opcode
-	Replacement func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, any]) []opcode.Instruction
+	Replacement func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction
 }
 
 var VariableInitializationPattern = PeepholePattern{
 	Name:    "VariableInitialization",
 	Opcodes: []opcode.Opcode{opcode.GetConstant, opcode.TransferAndConvert, opcode.SetLocal},
-	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, any]) []opcode.Instruction {
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
 		getConstant := instructions[0].(opcode.InstructionGetConstant)
 		transferAndConvert := instructions[1].(opcode.InstructionTransferAndConvert)
 		setLocal := instructions[2].(opcode.InstructionSetLocal)
@@ -30,7 +30,7 @@ var VariableInitializationPattern = PeepholePattern{
 var AddPattern = PeepholePattern{
 	Name:    "ConstantFoldingAdd",
 	Opcodes: []opcode.Opcode{opcode.GetConstant, opcode.GetConstant, opcode.Add},
-	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, any]) []opcode.Instruction {
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
 		getConstant1 := instructions[0].(opcode.InstructionGetConstant)
 		getConstant2 := instructions[1].(opcode.InstructionGetConstant)
 
