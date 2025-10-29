@@ -73,8 +73,8 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			IsSubType(subType, FixedPointType)
 
 	case SignedNumberType:
-		return subType == // TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
-			SignedNumberType ||
+		return subType ==// TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
+		SignedNumberType ||
 			(IsSubType(subType, SignedIntegerType) ||
 				IsSubType(subType, SignedFixedPointType))
 

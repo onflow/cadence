@@ -408,9 +408,9 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		description := predicate.Description()
 		if len(result) > 0 && description != "" {
 			firstNodeDecs := result[0].Decorations()
-			description = descriptionAsLineComments(description)
+			lineComments := descriptionAsLineComments(description)
 			firstNodeDecs.Before = dst.EmptyLine
-			firstNodeDecs.Start.Append(description)
+			firstNodeDecs.Start.Append(lineComments...)
 		}
 	}()
 
@@ -558,8 +558,9 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	return
 }
 
-func descriptionAsLineComments(description string) string {
-	return strings.ReplaceAll(description, "#", "//")
+func descriptionAsLineComments(description string) []string {
+	description = strings.ReplaceAll(description, "#", "//")
+	return strings.Split(description, "\n")
 }
 
 func (gen *SubTypeCheckGenerator) mergeNestedNodesWithExpression(
