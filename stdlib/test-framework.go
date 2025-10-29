@@ -80,6 +80,8 @@ type Blockchain interface {
 	CreateSnapshot(string) error
 
 	LoadSnapshot(string) error
+
+	LoadFork(network string, height *uint64) error
 }
 
 type ScriptResult struct {

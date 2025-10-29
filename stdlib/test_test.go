@@ -2936,6 +2936,7 @@ type mockedBlockchain struct {
 	moveTime           func(int64)
 	createSnapshot     func(string) error
 	loadSnapshot       func(string) error
+	loadFork           func(string, *uint64) error
 }
 
 var _ Blockchain = &mockedBlockchain{}
@@ -3068,4 +3069,12 @@ func (m mockedBlockchain) LoadSnapshot(name string) error {
 	}
 
 	return m.loadSnapshot(name)
+}
+
+func (m mockedBlockchain) LoadFork(network string, height *uint64) error {
+	if m.loadFork == nil {
+		panic("'LoadFork' is not implemented")
+	}
+
+	return m.loadFork(network, height)
 }
