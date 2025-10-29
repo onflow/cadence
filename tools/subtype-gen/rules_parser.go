@@ -32,14 +32,14 @@ var subtypeCheckingRules string
 
 // Rule represents a single subtype rule
 type Rule struct {
-	description `yaml:"description"`
+	description `yaml:"description,omitempty"`
 	SuperType   Type      `yaml:"super"`
 	Predicate   Predicate `yaml:"predicate"`
 }
 
 // RulesFile represents the entire YAML configuration
 type RulesFile struct {
-	description `yaml:"description"`
+	description `yaml:"description,omitempty"`
 	Rules       []Rule `yaml:"rules"`
 }
 
@@ -82,6 +82,9 @@ func parseRulesFromDocument(doc *ast.DocumentNode) (RulesFile, error) {
 
 	// Value must be a list of rules
 	rulesList, err := nodeAsList(value)
+	if err != nil {
+		return RulesFile{}, err
+	}
 
 	var parsedRules []Rule
 
@@ -546,7 +549,6 @@ func nodeComments(node ast.Node) string {
 		return ""
 	}
 
-	// TODO: improve
 	return comment.String()
 }
 
