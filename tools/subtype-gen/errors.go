@@ -38,7 +38,7 @@ var _ error = &SubTypeGenError{}
 
 func (e *SubTypeGenError) Error() string {
 	var sb strings.Builder
-	sb.WriteString("Parsing failed:\n")
+	sb.WriteString("Subtype generation failed:\n")
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
 		PrettyPrintError(e.Err, nil, map[common.Location][]byte{nil: e.Code})
 	if printErr != nil {

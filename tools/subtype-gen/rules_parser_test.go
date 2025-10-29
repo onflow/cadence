@@ -228,7 +228,7 @@ func TestParsingError(t *testing.T) {
 	_, err := ParseRulesFromBytes([]byte(yamlContent))
 	require.Error(t, err)
 
-	expectedErrorMsg := "Parsing failed:\n" +
+	expectedErrorMsg := "Subtype generation failed:\n" +
 		"error: cannot find `target` property for `equals` predicate\n" +
 		" --> :7:25\n" +
 		"  |\n" +
