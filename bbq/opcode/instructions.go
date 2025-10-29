@@ -2874,60 +2874,118 @@ func (i InstructionSetAttachmentBase) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionInitLocalFromConst
+// InstructionInvokeTransferAndConvert
 //
-// Pops a constant, a type, and a local index off the stack, and then initializes the local at the given index to the constant with the given type.
-type InstructionInitLocalFromConst struct {
-	Constant uint16
+// Pops a function and a type off the stack, invokes the function, and then transfers and converts the result to the given type.
+type InstructionInvokeTransferAndConvert struct {
+	TypeArgs []uint16
+	ArgCount uint16
 	Type     uint16
-	Local    uint16
 }
 
-var _ Instruction = InstructionInitLocalFromConst{}
+var _ Instruction = InstructionInvokeTransferAndConvert{}
 
-func (InstructionInitLocalFromConst) Opcode() Opcode {
-	return InitLocalFromConst
+func (InstructionInvokeTransferAndConvert) Opcode() Opcode {
+	return InvokeTransferAndConvert
 }
 
-func (i InstructionInitLocalFromConst) String() string {
+func (i InstructionInvokeTransferAndConvert) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionInitLocalFromConst) OperandsString(sb *strings.Builder, colorize bool) {
+func (i InstructionInvokeTransferAndConvert) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "constant", i.Constant, colorize)
+	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "local", i.Local, colorize)
 }
 
-func (i InstructionInitLocalFromConst) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionInvokeTransferAndConvert) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "constant", constants[i.Constant], colorize)
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
 	sb.WriteByte(' ')
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
+}
+
+func (i InstructionInvokeTransferAndConvert) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16Array(code, i.TypeArgs)
+	emitUint16(code, i.ArgCount)
+	emitUint16(code, i.Type)
+}
+
+func DecodeInvokeTransferAndConvert(ip *uint16, code []byte) (i InstructionInvokeTransferAndConvert) {
+	i.TypeArgs = decodeUint16Array(ip, code)
+	i.ArgCount = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionGetFieldLocal
+//
+// Pops a value off the stack, the target, and then pushes the value of the field at the given index onto the stack.
+type InstructionGetFieldLocal struct {
+	FieldName    uint16
+	AccessedType uint16
+	Local        uint16
+}
+
+var _ Instruction = InstructionGetFieldLocal{}
+
+func (InstructionGetFieldLocal) Opcode() Opcode {
+	return GetFieldLocal
+}
+
+func (i InstructionGetFieldLocal) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionGetFieldLocal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "fieldName", i.FieldName, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "accessedType", i.AccessedType, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
 }
 
-func (i InstructionInitLocalFromConst) Encode(code *[]byte) {
+func (i InstructionGetFieldLocal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
+}
+
+func (i InstructionGetFieldLocal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Constant)
-	emitUint16(code, i.Type)
+	emitUint16(code, i.FieldName)
+	emitUint16(code, i.AccessedType)
 	emitUint16(code, i.Local)
 }
 
-func DecodeInitLocalFromConst(ip *uint16, code []byte) (i InstructionInitLocalFromConst) {
-	i.Constant = decodeUint16(ip, code)
-	i.Type = decodeUint16(ip, code)
+func DecodeGetFieldLocal(ip *uint16, code []byte) (i InstructionGetFieldLocal) {
+	i.FieldName = decodeUint16(ip, code)
+	i.AccessedType = decodeUint16(ip, code)
 	i.Local = decodeUint16(ip, code)
 	return i
 }
@@ -3088,8 +3146,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeSetTypeIndex(ip, code)
 	case SetAttachmentBase:
 		return InstructionSetAttachmentBase{}
-	case InitLocalFromConst:
-		return DecodeInitLocalFromConst(ip, code)
+	case InvokeTransferAndConvert:
+		return DecodeInvokeTransferAndConvert(ip, code)
+	case GetFieldLocal:
+		return DecodeGetFieldLocal(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())

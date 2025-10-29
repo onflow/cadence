@@ -1010,14 +1010,44 @@
 
 # Combined "peephole" instructions
 
-- name: "initLocalFromConst"
+- name: "invokeTransferAndConvert"
   description:
-    Pops a constant, a type, and a local index off the stack,
-    and then initializes the local at the given index to the constant with the given type.
+    Pops a function and a type off the stack,
+    invokes the function, and then transfers and converts the result to the given type.
   operands:
-    - name: "constant"
-      type: "constantIndex"
+    - name: "typeArgs"
+      type: "typeIndices"
+    - name: "argCount"
+      type: "size"
     - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "arguments"
+        # TODO: count
+      - name: "function"
+        type: "function"
+      - name: "type"
+        type: "typeIndex"
+    push:
+      - name: "result"
+        type: "value"
+
+- name: "getFieldLocal"
+  description:
+    Pops a value off the stack, the target,
+    and then pushes the value of the field at the given index onto the stack.
+  operands:
+    - name: "fieldName"
+      type: "constantIndex"
+    - name: "accessedType"
       type: "typeIndex"
     - name: "local"
       type: "localIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"

@@ -1539,43 +1539,85 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	}
 }
 
-func opInitLocalFromConst(vm *VM, ins opcode.InstructionInitLocalFromConst) {
-	// equivalent to opGetConstant, opTransferAndConvert, opSetLocal
-	// TODO: given we know its a constant can we optimize anything here
+func opInvokeTransferAndConvert(vm *VM, ins opcode.InstructionInvokeTransferAndConvert) {
+	// invoke
+	// Load type arguments
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	constantIndex := ins.Constant
-	typeIndex := ins.Type
-	localIndex := ins.Local
+	// Load arguments
+	arguments := vm.popN(int(ins.ArgCount))
 
-	frame := vm.callFrame
-	context := vm.context
+	// Load the invoked value
+	functionValue := vm.pop()
 
-	executable := frame.function.Executable
-	c := executable.Constants[constantIndex]
-	if c == nil {
-		// Constants referred-to by `InstructionGetConstant`
-		// are always value-typed constants.
-		c = vm.initializeValueTypedConstant(constantIndex)
+	// Add base to front of arguments if the function is bound and base is defined.
+	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
+		base := boundFunction.Base
+		if base != nil {
+			arguments = append([]Value{base}, arguments...)
+		}
 	}
 
+	invokeFunction(
+		vm,
+		functionValue,
+		arguments,
+		typeArguments,
+	)
+
+	// transfer and convert
+
+	typeIndex := ins.Type
 	targetType := vm.loadType(typeIndex)
 
-	valueType := c.StaticType(context)
+	context := vm.context
+
+	value := vm.peek()
+	valueType := value.StaticType(context)
+
 	transferredValue := interpreter.TransferAndConvert(
 		context,
-		c,
+		value,
 		context.SemaTypeFromStaticType(valueType),
 		context.SemaTypeFromStaticType(targetType),
 	)
 
-	absoluteIndex := frame.localsOffset + localIndex
+	vm.replaceTop(transferredValue)
+}
 
-	existingValue := vm.locals[absoluteIndex]
-	if existingValue != nil {
-		interpreter.CheckResourceLoss(vm.context, existingValue)
+func opGetFieldLocal(vm *VM, ins opcode.InstructionGetFieldLocal) {
+	// get local
+	localIndex := ins.Local
+	absoluteIndex := vm.callFrame.localsOffset + localIndex
+	local := vm.locals[absoluteIndex]
+
+	// Some local variables can be implicit references. e.g: receiver of a bound function.
+	// TODO: maybe perform this check only if `localIndex == 0`?
+	if implicitReference, ok := local.(ImplicitReferenceValue); ok {
+		local = implicitReference.ReferencedValue(vm.context)
 	}
 
-	vm.locals[absoluteIndex] = transferredValue
+	// get field
+	memberAccessibleValue := local.(interpreter.MemberAccessibleValue)
+
+	checkMemberAccessTargetType(
+		vm,
+		ins.AccessedType,
+		memberAccessibleValue,
+	)
+
+	// VM assumes the field name is always a string.
+	fieldNameIndex := ins.FieldName
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
+
+	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName)
+	if fieldValue == nil {
+		panic(&interpreter.UseBeforeInitializationError{
+			Name: fieldName,
+		})
+	}
+
+	vm.push(fieldValue)
 }
 
 func (vm *VM) run() {
@@ -1759,8 +1801,10 @@ func (vm *VM) run() {
 			opRemoveTypeIndex(vm, ins)
 		case opcode.InstructionSetAttachmentBase:
 			opSetAttachmentBase(vm)
-		case opcode.InstructionInitLocalFromConst:
-			opInitLocalFromConst(vm, ins)
+		case opcode.InstructionInvokeTransferAndConvert:
+			opInvokeTransferAndConvert(vm, ins)
+		case opcode.InstructionGetFieldLocal:
+			opGetFieldLocal(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}

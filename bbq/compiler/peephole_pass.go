@@ -36,8 +36,6 @@ func NewPeepholeOptimizer[E, T any](compiler *Compiler[E, T]) *PeepholeOptimizer
 		return &PeepholeOptimizer[E, T]{
 			PatternsByOpcode: patternsByOpcode,
 			compiler:         c,
-			bytecodeShifts:   make([]BytecodeShiftPair, 0),
-			jumps:            make([]int, 0),
 		}
 	}
 	return nil
@@ -118,7 +116,8 @@ func (o *PeepholeOptimizer[E, T]) OptimizeInstructions(instructions []opcode.Ins
 	// Sort jumps by their target addresses
 	sort.Slice(o.jumps, func(a, b int) bool {
 		var jumpATarget, jumpBTarget uint16
-		switch ins := instructions[o.jumps[a]].(type) {
+		// TODO: cleanup
+		switch ins := optimized[o.jumps[a]].(type) {
 		case opcode.InstructionJump:
 			jumpATarget = ins.Target
 		case opcode.InstructionJumpIfFalse:
@@ -127,6 +126,16 @@ func (o *PeepholeOptimizer[E, T]) OptimizeInstructions(instructions []opcode.Ins
 			jumpATarget = ins.Target
 		case opcode.InstructionJumpIfNil:
 			jumpATarget = ins.Target
+		}
+		switch ins := optimized[o.jumps[b]].(type) {
+		case opcode.InstructionJump:
+			jumpBTarget = ins.Target
+		case opcode.InstructionJumpIfFalse:
+			jumpBTarget = ins.Target
+		case opcode.InstructionJumpIfTrue:
+			jumpBTarget = ins.Target
+		case opcode.InstructionJumpIfNil:
+			jumpBTarget = ins.Target
 		}
 		// ascending order
 		return jumpATarget < jumpBTarget
@@ -139,6 +148,8 @@ func (o *PeepholeOptimizer[E, T]) OptimizeInstructions(instructions []opcode.Ins
 
 func (o *PeepholeOptimizer[E, T]) Optimize(code []E) []E {
 	if instructions, ok := any(code).([]opcode.Instruction); ok {
+		o.bytecodeShifts = make([]BytecodeShiftPair, 0)
+		o.jumps = make([]int, 0)
 		return any(o.OptimizeInstructions(instructions)).([]E)
 	}
 	return code

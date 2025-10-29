@@ -6,23 +6,38 @@ import (
 )
 
 type PeepholePattern struct {
-	Name        string
+	Name string
+	// never match a jump instruction
 	Opcodes     []opcode.Opcode
 	Replacement func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction
 }
 
-var VariableInitializationPattern = PeepholePattern{
-	Name:    "VariableInitialization",
-	Opcodes: []opcode.Opcode{opcode.GetConstant, opcode.TransferAndConvert, opcode.SetLocal},
+var InvokeTransferAndConvertPattern = PeepholePattern{
+	Name:    "InvokeTransferAndConvert",
+	Opcodes: []opcode.Opcode{opcode.Invoke, opcode.TransferAndConvert},
 	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
-		getConstant := instructions[0].(opcode.InstructionGetConstant)
+		invoke := instructions[0].(opcode.InstructionInvoke)
 		transferAndConvert := instructions[1].(opcode.InstructionTransferAndConvert)
-		setLocal := instructions[2].(opcode.InstructionSetLocal)
 
-		return []opcode.Instruction{opcode.InstructionInitLocalFromConst{
-			Constant: getConstant.Constant,
+		return []opcode.Instruction{opcode.InstructionInvokeTransferAndConvert{
+			TypeArgs: invoke.TypeArgs,
+			ArgCount: invoke.ArgCount,
 			Type:     transferAndConvert.Type,
-			Local:    setLocal.Local,
+		}}
+	},
+}
+
+var GetFieldLocalPattern = PeepholePattern{
+	Name:    "GetFieldLocal",
+	Opcodes: []opcode.Opcode{opcode.GetLocal, opcode.GetField},
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
+		getLocal := instructions[0].(opcode.InstructionGetLocal)
+		getField := instructions[1].(opcode.InstructionGetField)
+
+		return []opcode.Instruction{opcode.InstructionGetFieldLocal{
+			FieldName:    getField.FieldName,
+			AccessedType: getField.AccessedType,
+			Local:        getLocal.Local,
 		}}
 	},
 }
@@ -37,5 +52,6 @@ func (p *PeepholePattern) Match(instructions []opcode.Instruction) bool {
 }
 
 var AllPatterns = []PeepholePattern{
-	VariableInitializationPattern,
+	InvokeTransferAndConvertPattern,
+	GetFieldLocalPattern,
 }
