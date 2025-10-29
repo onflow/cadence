@@ -417,7 +417,7 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			if !ok {
 				return nil,
 					NewParsingError(
-						fmt.Sprintf("cannot find `source` property for `mustType` predicate"),
+						"cannot find `source` property for `mustType` predicate",
 						value,
 					)
 			}
@@ -432,7 +432,7 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			if !ok {
 				return nil,
 					NewParsingError(
-						fmt.Sprintf("cannot find `target` property for `mustType` predicate"),
+						"cannot find `target` property for `mustType` predicate",
 						value,
 					)
 			}
@@ -467,7 +467,7 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			if !ok {
 				return nil,
 					NewParsingError(
-						fmt.Sprintf("cannot find `set` property for `setContains` predicate"),
+						"cannot find `set` property for `setContains` predicate",
 						value,
 					)
 			}
@@ -482,7 +482,7 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 			if !ok {
 				return nil,
 					NewParsingError(
-						fmt.Sprintf("cannot find `element` property for `setContains` predicate"),
+						"cannot find `element` property for `setContains` predicate",
 						value,
 					)
 			}
@@ -700,7 +700,7 @@ func nodeAsList(node ast.Node) ([]ast.Node, error) {
 			if listComment != nil && itemComment != nil {
 				return nil,
 					NewParsingError(
-						fmt.Sprintf("found comments for both the list and the first item"),
+						"found comments for both the list and the first item",
 						item,
 					)
 			}
@@ -821,7 +821,7 @@ func singleKeyValueFromMap(mappingNode *ast.MappingNode) (
 	if len(keyValuePairs) != 1 {
 		return "", nil, "",
 			NewParsingError(
-				fmt.Sprintf("expected exactly one key value pair"),
+				"expected exactly one key value pair",
 				mappingNode,
 			)
 	}
