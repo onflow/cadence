@@ -46,13 +46,23 @@ type RulesFile struct {
 type KeyValues = map[string]ast.Node
 
 // ParseRules reads and parses the YAML rules file
-func ParseRules() (RulesFile, error) {
+func ParseRules() (rulesFile RulesFile, err error) {
+	return ParseRulesFromBytes([]byte(subtypeCheckingRules))
+}
+
+func ParseRulesFromBytes(yamlContent []byte) (rulesFile RulesFile, err error) {
+	defer func() {
+		if err != nil {
+			err = &SubTypeGenError{
+				Code: yamlContent,
+				Err:  err,
+			}
+		}
+	}()
+
 	// Use the parser API, since the unmarshalar API
 	// doesn't correctly retain comments: https://github.com/goccy/go-yaml/issues/709
-	file, err := parser.ParseBytes(
-		[]byte(subtypeCheckingRules),
-		parser.ParseComments,
-	)
+	file, err := parser.ParseBytes(yamlContent, parser.ParseComments)
 	if err != nil {
 		return RulesFile{}, fmt.Errorf("failed to parse YAML: %v", err)
 	}
@@ -61,11 +71,8 @@ func ParseRules() (RulesFile, error) {
 	if len(docs) != 1 {
 		return RulesFile{}, fmt.Errorf("failed to parse YAML: expected one document, found %d", len(docs))
 	}
+	doc := docs[0]
 
-	return parseRulesFromDocument(docs[0])
-}
-
-func parseRulesFromDocument(doc *ast.DocumentNode) (RulesFile, error) {
 	rules, ok := doc.Body.(*ast.MappingNode)
 	if !ok {
 		return RulesFile{},

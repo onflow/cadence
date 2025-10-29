@@ -21,6 +21,7 @@ package subtype_gen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/goccy/go-yaml/ast"
@@ -52,7 +53,7 @@ func TestParsingComments(t *testing.T) {
                   # comment 8
                   sub: sub
                   super: AnyType
-        `
+    `
 
 	t.Run("in AST", func(t *testing.T) {
 
@@ -161,16 +162,7 @@ func TestParsingComments(t *testing.T) {
 
 		t.Parallel()
 
-		file, err := parser.ParseBytes(
-			[]byte(yamlContent),
-			parser.ParseComments,
-		)
-		require.NoError(t, err)
-
-		docs := file.Docs
-		require.Len(t, docs, 1)
-
-		rules, err := parseRulesFromDocument(docs[0])
+		rules, err := ParseRulesFromBytes([]byte(yamlContent))
 		require.NoError(t, err)
 
 		require.Equal(
@@ -215,5 +207,33 @@ func TestParsingComments(t *testing.T) {
 			rules,
 		)
 	})
+}
 
+func TestParsingError(t *testing.T) {
+	t.Parallel()
+
+	yamlContent := `
+      rules:
+        - super: AnyType
+          predicate:
+            and:
+              - equals:
+                  source: sub
+                  randomField: super
+              - subtype:
+                  sub: sub
+                  super: AnyType
+    `
+
+	_, err := ParseRulesFromBytes([]byte(yamlContent))
+	require.Error(t, err)
+
+	expectedErrorMsg := "Parsing failed:\n" +
+		"error: cannot find `target` property for `equals` predicate\n" +
+		" --> :7:25\n" +
+		"  |\n" +
+		"7 |                   source: sub\n" +
+		"  |                          ^"
+
+	assert.ErrorContains(t, err, expectedErrorMsg)
 }
