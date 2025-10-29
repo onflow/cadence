@@ -1329,6 +1329,155 @@ func TestCheckResourceArrayMapInvalid(t *testing.T) {
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 }
 
+func TestCheckArrayReduce(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x = [1, 2, 3]
+			let sum =
+				fun (acc: Int, x: Int): Int {
+					return acc + x
+				}
+
+			let y: Int = x.reduce(initial: 0, sum)
+		}
+
+		fun testFixedSize() {
+			let x : [Int; 5] = [1, 2, 3, 21, 30]
+			let product =
+				fun (acc: Int, x: Int): Int {
+					return acc * x
+				}
+
+			let y: Int = x.reduce(initial: 1, product)
+		}
+
+		struct S {
+			var index: Int
+
+			init(index: Int) {
+				self.index = index
+			}
+		}
+
+		fun testStructArrayReduce() {
+			let structs = [S(index: 1), S(index: 2), S(index: 3)]
+			let ref = &structs as &[S]
+
+			let reducer =
+				fun (acc: Int, x: S): Int {
+					x.index = x.index + 1
+					return acc + x.index
+				}
+
+			let y: Int = ref.reduce(initial: 0, reducer)
+		}
+	`)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayReduceInvalidArgs(t *testing.T) {
+
+	t.Parallel()
+
+	testInvalidArgs := func(code string, expectedErrors []sema.SemanticError) {
+		_, err := ParseAndCheck(t, code)
+
+		errs := RequireCheckerErrors(t, err, len(expectedErrors))
+
+		for i, e := range expectedErrors {
+			assert.IsType(t, e, errs[i])
+		}
+	}
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [1, 2, 3]
+			let y = x.reduce(initial: 0, 100)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.TypeMismatchError{},
+		},
+	)
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [1, 2, 3]
+			let sumInt16 =
+				fun (acc: Int16, x: Int16): Int16 {
+					return acc + x
+				}
+
+			let y: Int = x.reduce(initial: 0, sumInt16)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.TypeMismatchError{},
+		},
+	)
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [1, 2, 3]
+			let sum =
+				fun (acc: Int, x: Int): Int {
+					return acc + x
+				}
+			let y = x.reduce(initial: "0", sum)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.TypeMismatchError{},
+		},
+	)
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [[1], [2]]
+			let reducer =
+				fun (acc: [Int], inner: auth(Mutate) &[Int]): [Int] {
+					inner.append(1)
+					return acc
+				}
+			let y = x.reduce(initial: [], reducer)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.TypeAnnotationRequiredError{},
+		},
+	)
+}
+
+func TestCheckResourceArrayReduceInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource X {}
+
+		fun test(): Int {
+			let xs <- [<-create X()]
+			let reducer =
+				fun (acc: Int, x: @X): Int {
+					destroy x
+					return acc + 1
+				}
+
+			let count: Int = xs.reduce(initial: 0, reducer)
+			destroy xs
+			return count
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+}
+
 func TestCheckArrayContains(t *testing.T) {
 
 	t.Parallel()
