@@ -394,12 +394,25 @@ rules:
             source: sub.Purity
             target:
               oneOf: [super.Purity, FunctionPurityView]
-        - typeParamsEqual:
-            source: sub
-            target: super
-        - paramsContravariant:
-            source: sub
-            target: super
+        - forAll:
+            source: sub.TypeParameters
+            target: super.TypeParameters
+            predicate:
+              deepEquals:
+                source: source.TypeBound
+                target: target.TypeBound
+        - forAll:
+            source: sub.Parameters
+            target: super.Parameters
+            predicate:
+              subtype:
+                # Note the super-type is the subtype's parameter
+                # because the parameters are contravariant.
+                super: source.TypeAnnotation.Type
+                sub: target.TypeAnnotation.Type
+        - deepEquals:
+            source: sub.Arity
+            target: super.Arity
         - returnCovariant:
             source: sub
             target: super
@@ -425,9 +438,13 @@ rules:
           - subtype:
               super: super.BaseType
               sub: sub.BaseType
-          - typeArgumentsEqual:
-              source: sub
-              target: super
+          - forAll:
+              source: sub.TypeArguments
+              target: super.TypeArguments
+              predicate:
+                subtype:
+                  sub: source
+                  super: target
         - isParameterizedSubtype:
             sub: sub
             super: super

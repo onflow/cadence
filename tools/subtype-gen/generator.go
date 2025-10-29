@@ -520,6 +520,34 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 			combineAsAnd,
 		)
 
+	case *dst.RangeStmt:
+		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
+		result = append(result, lastNode)
+		for _, stmt := range stmts {
+			result = append(result, stmt)
+		}
+
+	case *dst.ReturnStmt:
+		// Merging with a return statement:
+		//  - If the return value is `false`, then no point of merging,
+		//    since the result will always be false. This should never occur.
+		//  - If the return value is `true`, then we can simply ignore the return,
+		//    and append the nested statements.
+		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
+		if len(lastNode.Results) != 1 {
+			panic(fmt.Errorf("error generating predicate AST: expected only one return value"))
+		}
+
+		returnValue, ok := lastNode.Results[0].(*dst.Ident)
+		if !ok || returnValue.Name != "true" {
+			panic(fmt.Errorf("error generating predicate AST: expected `return true` statement"))
+		}
+
+		// Drop the return, and append the nested statements.
+		for _, stmt := range stmts {
+			result = append(result, stmt)
+		}
+
 	default:
 		panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
 	}
@@ -752,6 +780,9 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case EqualsPredicate:
 		return gen.equalsPredicate(p)
 
+	case DeepEqualsPredicate:
+		return gen.deepEqualsPredicate(p)
+
 	case SubtypePredicate:
 		return gen.isSubTypePredicate(p)
 
@@ -767,20 +798,14 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case IsIntersectionSubsetPredicate:
 		return gen.isIntersectionSubset(p)
 
-	case TypeParamsEqualPredicate:
-		return gen.typeParamEqualCheck(p)
-
-	case ParamsContravariantPredicate:
-		return gen.paramsContravariantCheck(p)
-
 	case ReturnCovariantPredicate:
 		return gen.returnsCovariantCheck(p)
 
-	case TypeArgumentsEqualPredicate:
-		return gen.typeAegumentsEqualCheck(p)
-
 	case IsParameterizedSubtypePredicate:
 		return gen.isParameterizedSubtype(p)
+
+	case ForAllPredicate:
+		return gen.forAllPredicate(p)
 
 	default:
 		panic(fmt.Errorf("unsupported predicate: %T", p))
@@ -1062,6 +1087,22 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 	}
 }
 
+// deepEqualsPredicate generates AST for deep-equals predicate
+func (gen *SubTypeCheckGenerator) deepEqualsPredicate(equals DeepEqualsPredicate) []dst.Node {
+	switch target := equals.Target.(type) {
+	case TypeExpression, MemberExpression, IdentifierExpression:
+		return []dst.Node{
+			gen.callExpression(
+				dst.NewIdent("deepEquals"),
+				gen.expressionIgnoreNegation(equals.Source),
+				gen.expressionIgnoreNegation(target),
+			),
+		}
+	default:
+		panic(fmt.Errorf("unknown target type %t in `equals` rule", target))
+	}
+}
+
 func (gen *SubTypeCheckGenerator) expressionIgnoreNegation(expr Expression) dst.Expr {
 	return gen.expression(expr, true)
 }
@@ -1106,7 +1147,8 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression, ignoreNegation boo
 
 		case "EffectiveInterfaceConformanceSet",
 			"EffectiveIntersectionSet",
-			"BaseType":
+			"BaseType",
+			"TypeArguments":
 			return gen.callExpression(selectorExpr)
 		}
 
@@ -1403,34 +1445,6 @@ func (gen *SubTypeCheckGenerator) isIntersectionSubset(p IsIntersectionSubsetPre
 	}
 }
 
-func (gen *SubTypeCheckGenerator) typeParamEqualCheck(p TypeParamsEqualPredicate) []dst.Node {
-	args := []dst.Expr{
-		gen.expressionIgnoreNegation(p.Source),
-		gen.expressionIgnoreNegation(p.Target),
-	}
-
-	return []dst.Node{
-		gen.callExpression(
-			dst.NewIdent("AreTypeParamsEqual"),
-			args...,
-		),
-	}
-}
-
-func (gen *SubTypeCheckGenerator) paramsContravariantCheck(p ParamsContravariantPredicate) []dst.Node {
-	args := []dst.Expr{
-		gen.expressionIgnoreNegation(p.Source),
-		gen.expressionIgnoreNegation(p.Target),
-	}
-
-	return []dst.Node{
-		gen.callExpression(
-			dst.NewIdent("AreParamsContravariant"),
-			args...,
-		),
-	}
-}
-
 func (gen *SubTypeCheckGenerator) returnsCovariantCheck(p ReturnCovariantPredicate) []dst.Node {
 	args := []dst.Expr{
 		gen.expressionIgnoreNegation(p.Source),
@@ -1440,20 +1454,6 @@ func (gen *SubTypeCheckGenerator) returnsCovariantCheck(p ReturnCovariantPredica
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("AreReturnsCovariant"),
-			args...,
-		),
-	}
-}
-
-func (gen *SubTypeCheckGenerator) typeAegumentsEqualCheck(p TypeArgumentsEqualPredicate) []dst.Node {
-	args := []dst.Expr{
-		gen.expressionIgnoreNegation(p.Source),
-		gen.expressionIgnoreNegation(p.Target),
-	}
-
-	return []dst.Node{
-		gen.callExpression(
-			dst.NewIdent("AreTypeArgumentsEqual"),
 			args...,
 		),
 	}
@@ -1479,4 +1479,164 @@ func (gen *SubTypeCheckGenerator) newIdentifier(name string) *dst.Ident {
 	}
 
 	return dst.NewIdent(name)
+}
+
+func (gen *SubTypeCheckGenerator) forAllPredicate(p ForAllPredicate) []dst.Node {
+	sourceListVarName := gen.newTypedVariableNameFor(p.Source)
+	targetListVarName := gen.newTypedVariableNameFor(p.Target)
+
+	sourceListVar := &dst.AssignStmt{
+		Lhs: []dst.Expr{
+			gen.newIdentifier(sourceListVarName),
+		},
+		Tok: token.DEFINE,
+		Rhs: []dst.Expr{
+			gen.expressionIgnoreNegation(p.Source),
+		},
+	}
+
+	targetListVar := &dst.AssignStmt{
+		Lhs: []dst.Expr{
+			gen.newIdentifier(targetListVarName),
+		},
+		Tok: token.DEFINE,
+		Rhs: []dst.Expr{
+			gen.expressionIgnoreNegation(p.Target),
+		},
+	}
+
+	// Generate:
+	//   if len(sourceList) != len(targetList) {
+	//       return false
+	//   }
+	lengthCheck := &dst.IfStmt{
+		Cond: &dst.BinaryExpr{
+			X: &dst.CallExpr{
+				Fun: dst.NewIdent("len"),
+				Args: []dst.Expr{
+					gen.newIdentifier(sourceListVarName),
+				},
+			},
+			Op: token.NEQ,
+			Y: &dst.CallExpr{
+				Fun: dst.NewIdent("len"),
+				Args: []dst.Expr{
+					gen.newIdentifier(targetListVarName),
+				},
+			},
+		},
+		Body: &dst.BlockStmt{
+			List: []dst.Stmt{
+				&dst.ReturnStmt{
+					Results: []dst.Expr{
+						gen.booleanExpression(false),
+					},
+				},
+			},
+		},
+	}
+
+	// Generate:
+	//   target := targetList[i]
+	targetElement := &dst.AssignStmt{
+		Lhs: []dst.Expr{
+			gen.newIdentifier(targetVarName),
+		},
+		Tok: token.DEFINE,
+		Rhs: []dst.Expr{
+			&dst.IndexExpr{
+				X:     gen.newIdentifier(targetListVarName),
+				Index: dst.NewIdent("i"),
+			},
+		},
+	}
+
+	// The inner predicate is for each element for the source.
+	// Therefore, stop combining the inner predicates with the nested-predicates of the parent.
+	prevPredicateChain := gen.nestedPredicates
+	gen.nestedPredicates = nil
+	defer func() {
+		gen.nestedPredicates = prevPredicateChain
+	}()
+
+	// We want to return if the inner predicate fails.
+	// Therefore, negate the inner predicate when generating.
+	innerPredicates := gen.generateNegatedPredicate(p.Predicate)
+
+	if len(innerPredicates) > 1 {
+		panic(fmt.Errorf(
+			"only support one node for the inner predicate. found %d",
+			len(innerPredicates),
+		))
+	}
+
+	loopStmts := []dst.Stmt{
+		targetElement,
+	}
+
+	innerPredicate := innerPredicates[0]
+
+	switch innerPredicate := innerPredicate.(type) {
+	case dst.Expr:
+		ifMismatch := &dst.IfStmt{
+			Cond: innerPredicate,
+			Body: &dst.BlockStmt{
+				List: []dst.Stmt{
+					&dst.ReturnStmt{
+						Results: []dst.Expr{
+							gen.booleanExpression(false),
+						},
+					},
+				},
+			},
+		}
+
+		loopStmts = append(loopStmts, ifMismatch)
+	default:
+		panic(fmt.Errorf(
+			"only support expressions for the inner predicate. found %T",
+			innerPredicate,
+		))
+	}
+
+	forLoop := &dst.RangeStmt{
+		Key:   dst.NewIdent("i"),
+		Value: gen.newIdentifier(sourceVarName),
+		Tok:   token.DEFINE,
+		X:     gen.newIdentifier(sourceListVarName),
+		Body: &dst.BlockStmt{
+			List: loopStmts,
+		},
+		Decs: dst.RangeStmtDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.EmptyLine,
+				After:  dst.EmptyLine,
+			},
+		},
+	}
+
+	ifAllMatches := &dst.ReturnStmt{
+		Results: []dst.Expr{
+			gen.booleanExpression(true),
+		},
+	}
+
+	return []dst.Node{
+		sourceListVar,
+		targetListVar,
+		lengthCheck,
+		forLoop,
+		ifAllMatches,
+	}
+
+}
+
+func (gen *SubTypeCheckGenerator) generateNegatedPredicate(predicate Predicate) []dst.Node {
+	prevNegate := gen.negate
+	gen.negate = true
+	defer func() {
+		gen.negate = prevNegate
+	}()
+
+	return gen.generatePredicate(predicate)
 }
