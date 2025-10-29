@@ -32,7 +32,7 @@ func TestParsingRules(t *testing.T) {
 
 	rules, err := ParseRules()
 	require.NoError(t, err)
-	assert.Len(t, rules, 26)
+	assert.Len(t, rules.Rules, 26)
 }
 
 func TestGeneratingCode(t *testing.T) {

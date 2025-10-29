@@ -114,11 +114,11 @@ func (gen *SubTypeCheckGenerator) findInScope(expr Expression) (string, bool) {
 }
 
 // GenerateCheckSubTypeWithoutEqualityFunction generates the complete checkSubTypeWithoutEquality function.
-func (gen *SubTypeCheckGenerator) GenerateCheckSubTypeWithoutEqualityFunction(rules []Rule) []dst.Decl {
+func (gen *SubTypeCheckGenerator) GenerateCheckSubTypeWithoutEqualityFunction(rules RulesFile) []dst.Decl {
 	gen.pushScope()
 	defer gen.popScope()
 
-	checkSubTypeFunction := gen.createCheckSubTypeFunction(rules)
+	checkSubTypeFunction := gen.createCheckSubTypeFunction(rules.Rules)
 	return []dst.Decl{
 		checkSubTypeFunction,
 	}
@@ -300,7 +300,7 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 // createCaseStatementForRule creates a case statement for a rule.
 func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpleTypes bool) dst.Stmt {
 	// Parse types
-	superType := parseType(rule.Super)
+	superType := rule.SuperType
 
 	// Skip the given types.
 	// Some types are only exist during type-checking, but not at runtime. e.g: Storable type
@@ -317,13 +317,7 @@ func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpl
 	caseExpr := gen.parseCaseCondition(superType)
 
 	// Generate statements for the predicate.
-
-	predicate, err := parsePredicate(rule.Predicate)
-	if err != nil {
-		panic(fmt.Errorf("error parsing predicate: %w", err))
-	}
-
-	bodyStmts := gen.generatePredicateStatements(predicate)
+	bodyStmts := gen.generatePredicateStatements(rule.Predicate)
 
 	return &dst.CaseClause{
 		List: []dst.Expr{caseExpr},
@@ -376,9 +370,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 	case dst.Expr:
 		stmts = append(
 			stmts,
-			&dst.ReturnStmt{
-				Results: []dst.Expr{lastNode},
-			},
+			returnStatementWith(lastNode),
 		)
 	case dst.Stmt:
 		// Switch statements are generated without the default return,
@@ -403,6 +395,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 
 // generatePredicate recursively generates one or more expression/statement for a given predicate.
 func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result []dst.Node) {
+
 	// Pop the scope, for TypeAssertionPredicates.
 	switch predicate.(type) {
 	case TypeAssertionPredicate:
@@ -410,6 +403,16 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	}
 
 	prevNodes := gen.generatePredicateInternal(predicate)
+
+	defer func() {
+		description := predicate.Description()
+		if len(result) > 0 && description != "" {
+			firstNodeDecs := result[0].Decorations()
+			lineComments := descriptionAsLineComments(description)
+			firstNodeDecs.Before = dst.EmptyLine
+			firstNodeDecs.Start.Append(lineComments...)
+		}
+	}()
 
 	// If there are no chained/nested predicates (originating from AND),
 	// then add a return and complete the statements.
@@ -496,14 +499,14 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		panic(fmt.Errorf("generated node is nil"))
 
 	case dst.Expr:
-		result = gen.combineNestedNodesWithExpression(
+		result = gen.mergeNestedNodesWithExpression(
 			result,
 			lastNode,
 			nestedNodes,
 		)
 
 	case *dst.TypeSwitchStmt:
-		result = gen.combineNestedNodeWithSwitchStatement(
+		result = gen.mergeNestedNodeWithSwitchStatement(
 			result,
 			lastNode,
 			lastNode.Body,
@@ -512,7 +515,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		)
 
 	case *dst.SwitchStmt:
-		result = gen.combineNestedNodeWithSwitchStatement(
+		result = gen.mergeNestedNodeWithSwitchStatement(
 			result,
 			lastNode,
 			lastNode.Body,
@@ -521,7 +524,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		)
 
 	case *dst.RangeStmt:
-		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
+		stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
 		result = append(result, lastNode)
 		for _, stmt := range stmts {
 			result = append(result, stmt)
@@ -533,7 +536,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		//    since the result will always be false. This should never occur.
 		//  - If the return value is `true`, then we can simply ignore the return,
 		//    and append the nested statements.
-		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
+		stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
 		if len(lastNode.Results) != 1 {
 			panic(fmt.Errorf("error generating predicate AST: expected only one return value"))
 		}
@@ -555,7 +558,12 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	return
 }
 
-func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
+func descriptionAsLineComments(description string) []string {
+	description = strings.ReplaceAll(description, "#", "//")
+	return strings.Split(description, "\n")
+}
+
+func (gen *SubTypeCheckGenerator) mergeNestedNodesWithExpression(
 	result []dst.Node,
 	expr dst.Expr,
 	nestedNodes []dst.Node,
@@ -594,33 +602,47 @@ func (gen *SubTypeCheckGenerator) combineNestedNodesWithExpression(
 		// There are both expressions and statements generated.
 		// Convert the conditional-expression into a statement,
 		// by putting them as the condition of an if-statement.
+		ifStmt := mergeUsingIfStatement(expr, stmts)
+
 		result = append(
 			result,
-			&dst.IfStmt{
-				Cond: expr,
-				Body: &dst.BlockStmt{
-					List: stmts,
-				},
-				Decs: dst.IfStmtDecorations{
-					NodeDecs: dst.NodeDecs{
-						Before: dst.NewLine,
-						After:  dst.EmptyLine,
-					},
-				},
-			},
+			ifStmt,
 		)
 	}
 	return result
 }
 
-func (gen *SubTypeCheckGenerator) combineNestedNodeWithSwitchStatement(
+func mergeUsingIfStatement(expr dst.Expr, stmts []dst.Stmt) *dst.IfStmt {
+	ifStmt := &dst.IfStmt{
+		Cond: expr,
+		Body: &dst.BlockStmt{
+			List: stmts,
+		},
+		Decs: dst.IfStmtDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.EmptyLine,
+			},
+		},
+	}
+
+	conditionDecs := expr.Decorations()
+	if conditionDecs != nil {
+		ifStmt.Decorations().Start = conditionDecs.Start
+		conditionDecs.Start = nil
+	}
+
+	return ifStmt
+}
+
+func (gen *SubTypeCheckGenerator) mergeNestedNodeWithSwitchStatement(
 	combinedNodes []dst.Node,
 	switchStmt dst.Stmt,
 	switchStmtBody *dst.BlockStmt,
 	nestedNodes []dst.Node,
 	combineAsAnd bool,
 ) []dst.Node {
-	stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
+	stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
 
 	caseClauses := switchStmtBody.List
 	if len(caseClauses) == 0 {
@@ -653,7 +675,7 @@ func (gen *SubTypeCheckGenerator) combineNestedNodeWithSwitchStatement(
 	return combinedNodes
 }
 
-func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, combineAsAnd bool) []dst.Stmt {
+func (gen *SubTypeCheckGenerator) mergeNodesAsStatements(nodes []dst.Node, combineAsAnd bool) []dst.Stmt {
 	var conditionalExpr dst.Expr
 	var stmts []dst.Stmt
 
@@ -693,44 +715,28 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 	// Only expressions were generated.
 	if stmts == nil {
 		return []dst.Stmt{
-			&dst.ReturnStmt{
-				Results: []dst.Expr{conditionalExpr},
-			},
+			returnStatementWith(conditionalExpr),
 		}
 	}
 
 	// Both expressions and statements were generated.
 	if conditionalExpr != nil {
-		nodeDecs := dst.IfStmtDecorations{
-			NodeDecs: dst.NodeDecs{
-				Before: dst.NewLine,
-				After:  dst.EmptyLine,
-			},
-		}
-
 		if combineAsAnd {
 			return []dst.Stmt{
-				&dst.IfStmt{
-					Cond: conditionalExpr,
-					Body: &dst.BlockStmt{
-						List: stmts,
-					},
-					Decs: nodeDecs,
-				},
+				mergeUsingIfStatement(conditionalExpr, stmts),
 			}
 		} else {
 			combined := []dst.Stmt{
-				&dst.IfStmt{
-					Cond: conditionalExpr,
-					Body: &dst.BlockStmt{
-						List: []dst.Stmt{
-							&dst.ReturnStmt{
-								Results: []dst.Expr{gen.booleanExpression(true)},
+				mergeUsingIfStatement(
+					conditionalExpr,
+					[]dst.Stmt{
+						&dst.ReturnStmt{
+							Results: []dst.Expr{
+								gen.booleanExpression(true),
 							},
 						},
 					},
-					Decs: nodeDecs,
-				},
+				),
 			}
 
 			// TODO: Does the order matter?
@@ -741,6 +747,24 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 
 	// Only statements were generated
 	return stmts
+}
+
+func returnStatementWith(returnValue dst.Expr) *dst.ReturnStmt {
+	returnStmt := &dst.ReturnStmt{
+		Results: []dst.Expr{
+			returnValue,
+		},
+	}
+
+	returnValueDecs := returnValue.Decorations()
+	comments := returnValueDecs.Start
+
+	if len(comments) > 0 {
+		returnStmt.Decorations().Start.Append(comments...)
+		returnValueDecs.Start.Clear()
+		returnStmt.Decs.Before = dst.EmptyLine
+	}
+	return returnStmt
 }
 
 // generatePredicate recursively generates one or more expression/statement for a given predicate.
