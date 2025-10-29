@@ -114,11 +114,11 @@ func (gen *SubTypeCheckGenerator) findInScope(expr Expression) (string, bool) {
 }
 
 // GenerateCheckSubTypeWithoutEqualityFunction generates the complete checkSubTypeWithoutEquality function.
-func (gen *SubTypeCheckGenerator) GenerateCheckSubTypeWithoutEqualityFunction(rules []Rule) []dst.Decl {
+func (gen *SubTypeCheckGenerator) GenerateCheckSubTypeWithoutEqualityFunction(rules RulesFile) []dst.Decl {
 	gen.pushScope()
 	defer gen.popScope()
 
-	checkSubTypeFunction := gen.createCheckSubTypeFunction(rules)
+	checkSubTypeFunction := gen.createCheckSubTypeFunction(rules.Rules)
 	return []dst.Decl{
 		checkSubTypeFunction,
 	}

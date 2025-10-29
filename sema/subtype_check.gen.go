@@ -279,6 +279,9 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				case AnyType,
 					AnyStructType,
 					AnyResourceType:
+
+					// Below two combination is repeated several times below.
+					// Maybe combine them to produce a single predicate.
 					return (typedSuperType.LegacyType == nil ||
 						IsSubType(typedSubType.LegacyType, typedSuperType.LegacyType)) &&
 						IsIntersectionSubset(typedSuperType, typedSubType)

@@ -32,19 +32,21 @@ var subtypeCheckingRules string
 
 // Rule represents a single subtype rule
 type Rule struct {
-	SuperType Type      `yaml:"super"`
-	Predicate Predicate `yaml:"predicate"`
+	description `yaml:"description"`
+	SuperType   Type      `yaml:"super"`
+	Predicate   Predicate `yaml:"predicate"`
 }
 
 // RulesFile represents the entire YAML configuration
 type RulesFile struct {
-	Rules []Rule `yaml:"rules"`
+	description `yaml:"description"`
+	Rules       []Rule `yaml:"rules"`
 }
 
 type KeyValues = map[string]ast.Node
 
 // ParseRules reads and parses the YAML rules file
-func ParseRules() ([]Rule, error) {
+func ParseRules() (RulesFile, error) {
 	// Use the parser API, since the unmarshalar API
 	// doesn't correctly retain comments: https://github.com/goccy/go-yaml/issues/709
 	file, err := parser.ParseBytes(
@@ -52,59 +54,61 @@ func ParseRules() ([]Rule, error) {
 		parser.ParseComments,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %v", err)
+		return RulesFile{}, fmt.Errorf("failed to parse YAML: %v", err)
 	}
 
 	docs := file.Docs
 	if len(docs) != 1 {
-		return nil, fmt.Errorf("failed to parse YAML: expected one document, found %d", len(docs))
+		return RulesFile{}, fmt.Errorf("failed to parse YAML: expected one document, found %d", len(docs))
 	}
 
-	doc := docs[0]
+	return parseRulesFromDocument(docs[0])
+}
+
+func parseRulesFromDocument(doc *ast.DocumentNode) (RulesFile, error) {
 	rules, ok := doc.Body.(*ast.MappingNode)
 	if !ok {
-		return nil, fmt.Errorf("failed to parse YAML: expected a mapping, found %T", doc.Body)
+		return RulesFile{}, fmt.Errorf("failed to parse YAML: expected a mapping, found %T", doc.Body)
 	}
 
 	// Should contain `rules: ...`
-	// TODO: Support comments
-	key, value, _, err := singleKeyValueFromMap(rules)
+	key, value, fileComment, err := singleKeyValueFromMap(rules)
 	if err != nil {
-		return nil, err
+		return RulesFile{}, err
 	}
 	if key != "rules" {
-		return nil, fmt.Errorf("failed to parse YAML: expected key 'rules', found '%s'", key)
+		return RulesFile{}, fmt.Errorf("failed to parse YAML: expected key 'rules', found '%s'", key)
 	}
 
 	// Value must be a list of rules
-	rulesList, ok := value.(*ast.SequenceNode)
-	if !ok {
-		return nil, fmt.Errorf("failed to parse YAML: expected a list of rules, found %T", value)
-	}
+	rulesList, err := nodeAsList(value)
 
 	var parsedRules []Rule
 
-	for _, rule := range rulesList.Values {
-		ruleProperties, ok := rule.(*ast.MappingNode)
+	for _, rule := range rulesList {
+		ruleFields, ok := rule.(*ast.MappingNode)
 		if !ok {
-			return nil, fmt.Errorf("failed to parse YAML: expected a mapping, found %T", rule)
+			return RulesFile{}, fmt.Errorf("failed to parse YAML: expected a mapping, found %T", rule)
 		}
 
 		var typ Type
 		var predicate Predicate
 
-		for _, property := range ruleProperties.Values {
-			// TODO: Support comments
-			propertyName, propertyValue, _, err := stringKeyAndValueFromPair(property)
+		ruleDescription := description(nodeComments(rule))
+
+		for _, property := range ruleFields.Values {
+			propertyName, propertyValue, fieldComments, err := stringKeyAndValueFromPair(property)
 			if err != nil {
-				return nil, err
+				return RulesFile{}, err
 			}
+
+			ruleDescription = ruleDescription.Append(fieldComments)
 
 			switch propertyName {
 			case "super":
 				stringNode, ok := propertyValue.(*ast.StringNode)
 				if !ok {
-					return nil, fmt.Errorf("failed to parse YAML: expected a string key, found %T", propertyValue)
+					return RulesFile{}, fmt.Errorf("failed to parse YAML: expected a string key, found %T", propertyValue)
 				}
 
 				typ = parseType(stringNode.Value)
@@ -112,24 +116,28 @@ func ParseRules() ([]Rule, error) {
 			case "predicate":
 				predicate, err = parsePredicate(propertyValue)
 				if err != nil {
-					return nil, err
+					return RulesFile{}, err
 				}
 
 			default:
-				return nil, fmt.Errorf("failed to parse YAML: property '%s' is unsupported", property)
+				return RulesFile{}, fmt.Errorf("failed to parse YAML: property '%s' is unsupported", property)
 			}
 		}
 
 		parsedRules = append(
 			parsedRules,
 			Rule{
-				SuperType: typ,
-				Predicate: predicate,
+				description: ruleDescription,
+				SuperType:   typ,
+				Predicate:   predicate,
 			},
 		)
 	}
 
-	return parsedRules, nil
+	return RulesFile{
+		description: description(fileComment),
+		Rules:       parsedRules,
+	}, nil
 }
 
 // parseType parses a type with just a name.
@@ -532,8 +540,8 @@ func parsePredicate(predicate ast.Node) (Predicate, error) {
 	}
 }
 
-func nodeComments(predicate ast.Node) string {
-	comment := predicate.GetComment()
+func nodeComments(node ast.Node) string {
+	comment := node.GetComment()
 	if comment == nil {
 		return ""
 	}
@@ -592,16 +600,34 @@ func nodeAsList(node ast.Node) ([]ast.Node, error) {
 		return nil, fmt.Errorf("expected a list, got %s", node.Type())
 	}
 
-	// Comments of the list should belong to the
-	// first element of the list.
 	list := sequenceNode.Values
-	if len(list) > 0 {
-		err := list[0].SetComment(node.GetComment())
+
+	for i, item := range list {
+		itemComment := sequenceNode.ValueHeadComments[i]
+
+		// Comments of the list should belong to the
+		// first element of the list.
+		if i == 0 {
+			listComment := node.GetComment()
+
+			// Both the list comment and the first item comment cannot exist together.
+			if listComment != nil && itemComment != nil {
+				return nil, fmt.Errorf("found comments for both the list and the first item")
+			}
+
+			err := item.SetComment(listComment)
+			if err != nil {
+				return nil, err
+			}
+
+			_ = node.SetComment(nil)
+			continue
+		}
+
+		err := item.SetComment(itemComment)
 		if err != nil {
 			return nil, err
 		}
-
-		_ = node.SetComment(nil)
 	}
 
 	return list, nil

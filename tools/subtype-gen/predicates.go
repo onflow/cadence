@@ -31,7 +31,15 @@ func (p description) Description() string {
 }
 
 func (p description) Append(comments string) description {
-	return description(string(p) + comments)
+	if p == "" {
+		return description(comments)
+	}
+
+	if comments == "" {
+		return p
+	}
+
+	return description(string(p) + "\n" + comments)
 }
 
 // AlwaysPredicate represents an always-true condition.
