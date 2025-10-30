@@ -10187,6 +10187,60 @@ func TestCompileImportAlias(t *testing.T) {
 func TestPeepholeOptimizer(t *testing.T) {
 	t.Parallel()
 
+	t.Run("constant transfer and convert", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test(): Int {
+				let x = 1
+				return x
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		},
+			functions[0].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.EnablePeepholeOptimizations = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		}, functions2[0].Code)
+	})
+
 	t.Run("invoke transfer and convert", func(t *testing.T) {
 		t.Parallel()
 
@@ -10314,7 +10368,6 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0x1},
-			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x0},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0x0},
@@ -10324,18 +10377,17 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionGetLocal{Local: 0x0},
 			opcode.InstructionGetConstant{Constant: 0x1},
 			opcode.InstructionGreater{},
-			opcode.InstructionJumpIfFalse{Target: 18},
+			opcode.InstructionJumpIfFalse{Target: 17},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0x0},
 			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x1},
-			opcode.InstructionJump{Target: 22},
-			// 18
+			opcode.InstructionJump{Target: 20},
+			// 17
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0x2},
-			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x1},
-			// 22
+			// 20
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: 0x1},
 			opcode.InstructionTransferAndConvert{Type: 0x1},

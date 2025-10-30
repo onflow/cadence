@@ -1,8 +1,11 @@
 package compiler
 
 import (
+	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 type PeepholePattern struct {
@@ -42,6 +45,62 @@ var GetFieldLocalPattern = PeepholePattern{
 	},
 }
 
+// Optimizations ported from compiler `mustEmitTransferAndConvert`
+// TODO: check correctness in case of branching
+var ConstantTransferAndConvertPattern = PeepholePattern{
+	Name:    "ConstantTransferAndConvert",
+	Opcodes: []opcode.Opcode{opcode.GetConstant, opcode.TransferAndConvert},
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
+		getConstant := instructions[0].(opcode.InstructionGetConstant)
+		transferAndConvert := instructions[1].(opcode.InstructionTransferAndConvert)
+
+		// safety check
+		constantKind := compiler.constants[getConstant.Constant].kind
+		targetType := compiler.types[transferAndConvert.Type]
+		if constantKind == constant.FromSemaType(targetType) {
+			return []opcode.Instruction{getConstant}
+		}
+
+		return instructions
+	},
+}
+
+var PathTransferAndConvertPattern = PeepholePattern{
+	Name:    "PathTransferAndConvert",
+	Opcodes: []opcode.Opcode{opcode.NewPath, opcode.TransferAndConvert},
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
+		getPath := instructions[0].(opcode.InstructionNewPath)
+		transferAndConvert := instructions[1].(opcode.InstructionTransferAndConvert)
+
+		semaType := compiler.types[transferAndConvert.Type]
+
+		// check if optimization is applicable
+		if getPath.Domain != common.PathDomainStorage {
+			switch getPath.Domain {
+			case common.PathDomainPublic:
+				if semaType == sema.PublicPathType {
+					return []opcode.Instruction{getPath}
+				}
+			case common.PathDomainPrivate:
+				if semaType == sema.PrivatePathType {
+					return []opcode.Instruction{getPath}
+				}
+			}
+		}
+
+		return instructions
+	},
+}
+
+var NilTransferAndConvertPattern = PeepholePattern{
+	Name:    "NilTransferAndConvert",
+	Opcodes: []opcode.Opcode{opcode.Nil, opcode.TransferAndConvert},
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
+		nil := instructions[0].(opcode.InstructionNil)
+		return []opcode.Instruction{nil}
+	},
+}
+
 func (p *PeepholePattern) Match(instructions []opcode.Instruction) bool {
 	for i, opcode := range p.Opcodes {
 		if instructions[i].Opcode() != opcode {
@@ -54,4 +113,7 @@ func (p *PeepholePattern) Match(instructions []opcode.Instruction) bool {
 var AllPatterns = []PeepholePattern{
 	InvokeTransferAndConvertPattern,
 	GetFieldLocalPattern,
+	ConstantTransferAndConvertPattern,
+	PathTransferAndConvertPattern,
+	NilTransferAndConvertPattern,
 }
