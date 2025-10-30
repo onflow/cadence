@@ -83,9 +83,8 @@ func TestCodeGeneration(t *testing.T) {
 	t.Parallel()
 
 	test := func(inputPath string) {
-		// The test name is the directory name
+		// The test name is the file name without the extension
 		_, testName := filepath.Split(inputPath)
-
 		fileExt := filepath.Ext(testName)
 		testName = strings.TrimSuffix(testName, fileExt)
 
