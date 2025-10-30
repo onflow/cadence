@@ -196,11 +196,15 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 
 	// Create switch statement for simple types.
 	switchStmtForSimpleTypes := gen.createSwitchStatementForRules(rules, true)
-	stmts = append(stmts, switchStmtForSimpleTypes)
+	if switchStmtForSimpleTypes != nil {
+		stmts = append(stmts, switchStmtForSimpleTypes)
+	}
 
 	// Create switch statement for complex types.
 	switchStmtForComplexTypes := gen.createSwitchStatementForRules(rules, false)
-	stmts = append(stmts, switchStmtForComplexTypes)
+	if switchStmtForComplexTypes != nil {
+		stmts = append(stmts, switchStmtForComplexTypes)
+	}
 
 	// Add final return false
 	stmts = append(stmts, &dst.ReturnStmt{
@@ -259,6 +263,10 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 	nodeDecs := dst.NodeDecs{
 		Before: dst.NewLine,
 		After:  dst.EmptyLine,
+	}
+
+	if cases == nil {
+		return nil
 	}
 
 	// For simple types, use a value-switch.

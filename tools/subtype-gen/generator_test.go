@@ -19,6 +19,10 @@
 package subtype_gen
 
 import (
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dave/dst"
@@ -35,7 +39,7 @@ func TestParsingRules(t *testing.T) {
 	assert.Len(t, rules.Rules, 26)
 }
 
-func TestGeneratingCode(t *testing.T) {
+func TestGeneratedCodeStructure(t *testing.T) {
 	t.Parallel()
 
 	rules, err := ParseRules()
@@ -65,4 +69,85 @@ func TestGeneratingCode(t *testing.T) {
 	require.IsType(t, &dst.TypeSwitchStmt{}, statements[2])
 	// The final return
 	require.IsType(t, &dst.ReturnStmt{}, statements[3])
+}
+
+// Go treats directories named "testdata" specially
+const testDataDirectory = "testdata"
+
+// TestCodeGeneration finds all `.yaml` files in the `testdata` directory.
+// Each file turns into a test case.
+// Each input file is expected to have a "golden output" file,
+// with the same path, except the `.yaml` extension is replaced by `.golden.go`.
+func TestCodeGeneration(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(inputPath string) {
+		// The test name is the directory name
+		_, testName := filepath.Split(inputPath)
+
+		fileExt := filepath.Ext(testName)
+		testName = strings.TrimSuffix(testName, fileExt)
+
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
+
+			// Read input yaml file.
+			yaml, err := os.ReadFile(inputPath)
+			require.NoError(t, err)
+
+			// Parse the yaml.
+			rules, err := ParseRulesFromBytes(yaml)
+			require.NoError(t, err)
+
+			// Generate code.
+			config := Config{
+				SimpleTypeSuffix:  "Type",
+				ComplexTypeSuffix: "Type",
+
+				ArrayElementTypeMethodArgs: []any{
+					false,
+				},
+
+				NonPointerTypes: map[string]struct{}{
+					TypePlaceholderParameterized: {},
+					TypePlaceholderConforming:    {},
+				},
+
+				NameMapping: map[string]string{
+					FieldNameReferencedType: "Type",
+				},
+			}
+			gen := NewSubTypeCheckGenerator(config)
+			decls := gen.GenerateCheckSubTypeWithoutEqualityFunction(rules)
+
+			// Write output.
+			outFile, err := os.CreateTemp(t.TempDir(), "gen.*.go")
+			require.NoError(t, err)
+			defer outFile.Close()
+			WriteGoFile(outFile, decls, "github.com/onflow/cadence/sema")
+
+			// Read the expected output file.
+			goldenPath := strings.ReplaceAll(inputPath, fileExt, ".golden.go")
+			expected, err := os.ReadFile(goldenPath)
+			require.NoError(t, err)
+
+			_, err = outFile.Seek(0, io.SeekStart)
+			require.NoError(t, err)
+
+			actual, err := io.ReadAll(outFile)
+			require.NoError(t, err)
+
+			// Compare
+			require.Equal(t, string(expected), string(actual))
+		})
+	}
+
+	pathPattern := filepath.Join(testDataDirectory, "*.yaml")
+	paths, err := filepath.Glob(pathPattern)
+	require.NoError(t, err)
+
+	for _, path := range paths {
+		test(path)
+	}
 }
