@@ -17,7 +17,7 @@
       "type": "object",
       "properties": {
         "super": {
-          "type": "string"
+          "$ref": "#/$defs/typePlaceholder"
         },
         "predicate": {
           "$ref": "#/$defs/predicate"
@@ -194,7 +194,7 @@
               "$ref": "#/$defs/expression"
             },
             "type": {
-              "type": "string"
+              "$ref": "#/$defs/typePlaceholder"
             }
           },
           "required": [
@@ -455,6 +455,11 @@
           "additionalProperties": false
         }
       ]
+    },
+    "typePlaceholder": {
+      "type": "string",
+      "pattern": "Type$",
+      "description": "Type placeholder must end with 'Type' suffix"
     }
   }
 }
