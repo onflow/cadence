@@ -1,0 +1,22 @@
+rules:
+  - super: ComplexType
+    predicate:
+      or:
+        - and:
+            - mustType:
+                source: sub
+                type: IntersectionType
+            - not:
+                equals:
+                  source: sub.LegacyType
+                  target:
+                    oneOf: [nil, AnyResourceType, AnyStructType, AnyType]
+            - mustType:
+                source: sub.LegacyType
+                type: CompositeType
+        - and:
+            - mustType:
+                source: sub
+                type: CompositeType
+            - never
+
