@@ -50,7 +50,6 @@ type testEmulatorBackendType struct {
 	moveTimeFunctionType               *sema.FunctionType
 	createSnapshotFunctionType         *sema.FunctionType
 	loadSnapshotFunctionType           *sema.FunctionType
-	loadForkFunctionType               *sema.FunctionType
 	getAccountFunctionType             *sema.FunctionType
 }
 
@@ -120,11 +119,6 @@ func newTestEmulatorBackendType(
 	loadSnapshotFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeLoadSnapshotFunctionName,
-	)
-
-	loadForkFunctionType := interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		testEmulatorBackendTypeLoadForkFunctionName,
 	)
 
 	getAccountFunctionType := interfaceFunctionType(
@@ -222,12 +216,6 @@ func newTestEmulatorBackendType(
 		),
 		sema.NewUnmeteredPublicFunctionMember(
 			compositeType,
-			testEmulatorBackendTypeLoadForkFunctionName,
-			loadForkFunctionType,
-			testEmulatorBackendTypeLoadForkFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			compositeType,
 			testEmulatorBackendTypeGetAccountFunctionName,
 			getAccountFunctionType,
 			testEmulatorBackendTypeGetAccountFunctionDocString,
@@ -252,7 +240,6 @@ func newTestEmulatorBackendType(
 		moveTimeFunctionType:               moveTimeFunctionType,
 		createSnapshotFunctionType:         createSnapshotFunctionType,
 		loadSnapshotFunctionType:           loadSnapshotFunctionType,
-		loadForkFunctionType:               loadForkFunctionType,
 		getAccountFunctionType:             getAccountFunctionType,
 	}
 }
@@ -833,53 +820,7 @@ func (t *testEmulatorBackendType) newLoadSnapshotFunction(
 	)
 }
 
-// 'Emulator.loadFork' function
-
-const testEmulatorBackendTypeLoadForkFunctionName = "loadFork"
-
-const testEmulatorBackendTypeLoadForkFunctionDocString = `
-Loads a forked environment from the given network identifier, optionally at a specific block height.
-Only a single fork is active at a time. If height is nil, the latest sealed block should be used.
-`
-
-func (t *testEmulatorBackendType) newLoadForkFunction(
-	inter *interpreter.Interpreter,
-	emulatorBackend interpreter.MemberAccessibleValue,
-	blockchain Blockchain,
-) interpreter.BoundFunctionValue {
-	return interpreter.NewUnmeteredBoundHostFunctionValue(
-		inter,
-		emulatorBackend,
-		t.loadForkFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			// network: String (RPC host or alias)
-			network, ok := invocation.Arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			// height: UInt64?
-			var heightPtr *uint64
-			switch v := invocation.Arguments[1].(type) {
-			case interpreter.NilValue:
-				// leave nil
-			case *interpreter.SomeValue:
-				inner := v.InnerValue()
-				heightVal, ok := inner.(interpreter.UInt64Value)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				h := uint64(heightVal)
-				heightPtr = &h
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			err := blockchain.LoadFork(network.Str, heightPtr)
-			return newErrorValue(invocation.InvocationContext, err)
-		},
-	)
-}
+// (no loadFork on EmulatorBackend; Test.loadFork is a Test-level host function)
 
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
@@ -948,10 +889,7 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 			Name:  testEmulatorBackendTypeLoadSnapshotFunctionName,
 			Value: t.newLoadSnapshotFunction(inter, emulatorBackend, blockchain),
 		},
-		{
-			Name:  testEmulatorBackendTypeLoadForkFunctionName,
-			Value: t.newLoadForkFunction(inter, emulatorBackend, blockchain),
-		},
+		// no loadFork here; managed at Test level
 		{
 			Name:  testEmulatorBackendTypeGetAccountFunctionName,
 			Value: t.newGetAccountFunction(inter, emulatorBackend, blockchain),

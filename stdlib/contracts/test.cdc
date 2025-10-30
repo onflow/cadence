@@ -6,7 +6,7 @@ contract Test {
     /// backend emulates a real network.
     ///
     access(self)
-    let backend: {BlockchainBackend}
+    var backend: {BlockchainBackend}
 
     init(backend: {BlockchainBackend}) {
         self.backend = backend
@@ -179,17 +179,7 @@ contract Test {
         }
     }
 
-    /// Loads a forked environment from the given network identifier, optionally at a specific height.
-    /// Only a single forked environment is active at a time.
-    /// If `height` is nil, the latest sealed block should be used by the backend.
-    ///
-    access(all)
-    fun loadFork(network: String, height: UInt64?) {
-        let err = self.backend.loadFork(network: network, height: height)
-        if err != nil {
-            panic(err!.message)
-        }
-    }
+    // loadFork is provided natively by the host and injected at runtime.
 
     access(all)
     struct Matcher {
@@ -429,12 +419,7 @@ contract Test {
         access(all)
         fun loadSnapshot(name: String): Error?
 
-        /// Loads a forked environment from the given network,
-        /// optionally at a specific block height. Only a single fork is active at a time.
-        /// If `height` is nil, the latest sealed block should be used by the backend.
-        ///
-        access(all)
-        fun loadFork(network: String, height: UInt64?): Error?
+        // loadFork is provided natively by the host and injected at runtime.
     }
 
     /// Returns a new matcher that negates the test of the given matcher.
