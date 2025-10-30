@@ -71,6 +71,18 @@
         },
         {
           "$ref": "#/$defs/isAttachment"
+        },
+        {
+          "$ref": "#/$defs/deepEquals"
+        },
+        {
+          "$ref": "#/$defs/returnCovariant"
+        },
+        {
+          "$ref": "#/$defs/forAll"
+        },
+        {
+          "$ref": "#/$defs/isIntersectionSubset"
         }
       ]
     },
@@ -129,10 +141,10 @@
           "type": "object",
           "properties": {
             "source": {
-              "type": "string"
+              "$ref": "#/$defs/expression"
             },
             "target": {
-              "$ref": "#/$defs/name"
+              "$ref": "#/$defs/expression"
             }
           },
           "required": [
@@ -154,10 +166,10 @@
           "type": "object",
           "properties": {
             "super": {
-              "$ref": "#/$defs/name"
+              "$ref": "#/$defs/expression"
             },
             "sub": {
-              "$ref": "#/$defs/name"
+              "$ref": "#/$defs/expression"
             }
           },
           "required": [
@@ -179,7 +191,7 @@
           "type": "object",
           "properties": {
             "source": {
-              "type": "string"
+              "$ref": "#/$defs/expression"
             },
             "type": {
               "type": "string"
@@ -204,10 +216,10 @@
           "type": "object",
           "properties": {
             "super": {
-              "type": "string"
+              "$ref": "#/$defs/expression"
             },
             "sub": {
-              "type": "string"
+              "$ref": "#/$defs/expression"
             }
           },
           "required": [
@@ -229,10 +241,10 @@
           "type": "object",
           "properties": {
             "super": {
-              "type": "string"
+              "$ref": "#/$defs/expression"
             },
             "sub": {
-              "type": "string"
+              "$ref": "#/$defs/expression"
             }
           },
           "required": [
@@ -253,16 +265,16 @@
         "setContains": {
           "type": "object",
           "properties": {
-            "source": {
-              "type": "string"
+            "set": {
+              "$ref": "#/$defs/expression"
             },
-            "target": {
-              "type": "string"
+            "element": {
+              "$ref": "#/$defs/expression"
             }
           },
           "required": [
-            "source",
-            "target"
+            "set",
+            "element"
           ],
           "additionalProperties": false
         }
@@ -320,7 +332,111 @@
       ],
       "additionalProperties": false
     },
-    "name": {
+    "deepEquals": {
+      "type": "object",
+      "properties": {
+        "deepEquals": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "$ref": "#/$defs/expression"
+            },
+            "target": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "source",
+            "target"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "deepEquals"
+      ],
+      "additionalProperties": false
+    },
+    "returnCovariant": {
+      "type": "object",
+      "properties": {
+        "returnCovariant": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "$ref": "#/$defs/expression"
+            },
+            "target": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "source",
+            "target"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "returnCovariant"
+      ],
+      "additionalProperties": false
+    },
+    "forAll": {
+      "type": "object",
+      "properties": {
+        "forAll": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "$ref": "#/$defs/expression"
+            },
+            "target": {
+              "$ref": "#/$defs/expression"
+            },
+            "predicate": {
+              "$ref": "#/$defs/predicate"
+            }
+          },
+          "required": [
+            "source",
+            "target",
+            "predicate"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "forAll"
+      ],
+      "additionalProperties": false
+    },
+    "isIntersectionSubset": {
+      "type": "object",
+      "properties": {
+        "isIntersectionSubset": {
+          "type": "object",
+          "properties": {
+            "super": {
+              "$ref": "#/$defs/expression"
+            },
+            "sub": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "super",
+            "sub"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "isIntersectionSubset"
+      ],
+      "additionalProperties": false
+    },
+    "expression": {
       "oneOf": [
         {
           "type": "string"
