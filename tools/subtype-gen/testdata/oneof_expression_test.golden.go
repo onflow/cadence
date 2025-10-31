@@ -25,28 +25,15 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 	}
 
 	switch superType {
-	case ComplexType:
-		switch typedSubType := subType.(type) {
-		case *IntersectionType:
-			switch typedSubType.LegacyType {
-			case nil,
-				AnyResourceType,
-				AnyStructType,
-				AnyType:
-				return false
-			}
-
-			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
-			case *CompositeType:
-				return true
-			}
-
-			return false
-		case *CompositeType:
-			return false
+	case NumberType:
+		switch subType {
+		case NumberType,
+			SignedNumberType:
+			return true
 		}
 
-		return false
+		return IsSubType(subType, IntegerType) ||
+			IsSubType(subType, FixedPointType)
 
 	}
 

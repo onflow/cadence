@@ -40,7 +40,6 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		}
 
 		return true
-		return false
 
 	}
 

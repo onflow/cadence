@@ -54,8 +54,10 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 						IsIntersectionSubset(typedSuperType, typedSubType)
 				}
 
+				return false
 			}
 
+			return false
 		}
 
 		switch typedSubType := subType.(type) {
@@ -73,6 +75,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				return typedSubTypeLegacyType == typedSuperType.LegacyType
 			}
 
+			return false
 		}
 
 		return false
