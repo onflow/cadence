@@ -196,11 +196,15 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 
 	// Create switch statement for simple types.
 	switchStmtForSimpleTypes := gen.createSwitchStatementForRules(rules, true)
-	stmts = append(stmts, switchStmtForSimpleTypes)
+	if switchStmtForSimpleTypes != nil {
+		stmts = append(stmts, switchStmtForSimpleTypes)
+	}
 
 	// Create switch statement for complex types.
 	switchStmtForComplexTypes := gen.createSwitchStatementForRules(rules, false)
-	stmts = append(stmts, switchStmtForComplexTypes)
+	if switchStmtForComplexTypes != nil {
+		stmts = append(stmts, switchStmtForComplexTypes)
+	}
 
 	// Add final return false
 	stmts = append(stmts, &dst.ReturnStmt{
@@ -259,6 +263,10 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 	nodeDecs := dst.NodeDecs{
 		Before: dst.NewLine,
 		After:  dst.EmptyLine,
+	}
+
+	if cases == nil {
+		return nil
 	}
 
 	// For simple types, use a value-switch.
@@ -368,24 +376,25 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 	// Make sure the last statement always returns.
 	switch lastNode := lastNode.(type) {
 	case dst.Expr:
-		stmts = append(
-			stmts,
-			returnStatementWith(lastNode),
-		)
+		// If the last node is an expression, convert it to a return.
+		// However, if there is already a return, then merge this expression to the existing return.
+		if len(remainingNodes) > 1 {
+			oneBeforeLast := remainingNodes[lastIndex-1]
+			if existingReturnStmt, hasReturn := oneBeforeLast.(*dst.ReturnStmt); hasReturn {
+				validateReturn(existingReturnStmt)
+				existingReturnStmt.Results = []dst.Expr{lastNode}
+				transferCommentsToTheReturn(lastNode, existingReturnStmt)
+
+			}
+			break
+		}
+
+		// Otherwise, create a new return statement with this expressions
+		returnStmt := returnStatementWith(lastNode)
+		stmts = append(stmts, returnStmt)
+
 	case dst.Stmt:
-		// Switch statements are generated without the default return,
-		// so that they can be combined with other statements.
-		// If the last statement is a switch-case, then
-		// append a return statement.
 		stmts = append(stmts, lastNode)
-		stmts = append(
-			stmts,
-			&dst.ReturnStmt{
-				Results: []dst.Expr{
-					gen.booleanExpression(false),
-				},
-			},
-		)
 	default:
 		panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
 	}
@@ -415,53 +424,11 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	}()
 
 	// If there are no chained/nested predicates (originating from AND),
-	// then add a return and complete the statements.
-	// Also, if there is a negation, then do not nest, but rather early exit by adding a return.
+	// then add return the statements as-is.
+	// Also, if there is a negation, then do not nest, but rather early.
 	if gen.negate ||
 		gen.nestedPredicates == nil ||
 		!gen.nestedPredicates.hasMore() {
-
-		// Add a return for switch statements, since they were generated without a return.
-
-		if len(prevNodes) > 0 {
-			lastIndex := len(prevNodes) - 1
-			lastNode := prevNodes[lastIndex]
-
-			var body *dst.BlockStmt
-
-			// TODO: Also for if-statements?
-			switch lastNode := lastNode.(type) {
-			case *dst.TypeSwitchStmt:
-				body = lastNode.Body
-
-			case *dst.SwitchStmt:
-				body = lastNode.Body
-			}
-
-			if body != nil {
-				caseClauses := body.List
-				if len(caseClauses) == 0 {
-					panic("switch-statement must have at-least one cases clause")
-				}
-
-				lastCase := caseClauses[len(caseClauses)-1]
-				caseClause := lastCase.(*dst.CaseClause)
-
-				// Only add the return if the body is empty.
-				// Non-empty body means a return is already present.
-				if len(caseClause.Body) == 0 {
-					caseClause.Body = append(
-						caseClause.Body,
-						&dst.ReturnStmt{
-							Results: []dst.Expr{
-								gen.booleanExpression(true),
-							},
-						},
-					)
-				}
-			}
-		}
-
 		return prevNodes
 	}
 
@@ -486,28 +453,37 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	// If not (both previous nodes and nested nodes exist),
 	// then merge the two set of nodes.
 	// Merging happens via the last statement of the previous nodes.
+	return gen.mergeNestedNodesWithLastNode(prevNodes, nestedNodes, combineAsAnd)
+}
 
-	lastIndex := len(prevNodes) - 1
-	lastNode := prevNodes[lastIndex]
+// mergeNestedNodesWithLastNode merges the nested nodes as if they should be nested
+// inside the existing nodes.
+func (gen *SubTypeCheckGenerator) mergeNestedNodesWithLastNode(
+	existingNodes []dst.Node,
+	nestedNodes []dst.Node,
+	combineAsAnd bool,
+) []dst.Node {
+	lastIndex := len(existingNodes) - 1
+	lastNode := existingNodes[lastIndex]
 
 	// Add all nodes upto the last-1.
 	// Use the last node to merge the nested nodes.
-	result = append(result, prevNodes[:lastIndex]...)
+	mergedNodes := existingNodes[:lastIndex]
 
 	switch lastNode := lastNode.(type) {
 	case nil:
 		panic(fmt.Errorf("generated node is nil"))
 
 	case dst.Expr:
-		result = gen.mergeNestedNodesWithExpression(
-			result,
+		mergedNodes = gen.mergeNestedNodesWithExpression(
+			mergedNodes,
 			lastNode,
 			nestedNodes,
 		)
 
 	case *dst.TypeSwitchStmt:
-		result = gen.mergeNestedNodeWithSwitchStatement(
-			result,
+		mergedNodes = gen.mergeNestedNodeWithSwitchStatement(
+			mergedNodes,
 			lastNode,
 			lastNode.Body,
 			nestedNodes,
@@ -515,8 +491,8 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		)
 
 	case *dst.SwitchStmt:
-		result = gen.mergeNestedNodeWithSwitchStatement(
-			result,
+		mergedNodes = gen.mergeNestedNodeWithSwitchStatement(
+			mergedNodes,
 			lastNode,
 			lastNode.Body,
 			nestedNodes,
@@ -525,37 +501,51 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 
 	case *dst.RangeStmt:
 		stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
-		result = append(result, lastNode)
+		mergedNodes = append(mergedNodes, lastNode)
 		for _, stmt := range stmts {
-			result = append(result, stmt)
+			mergedNodes = append(mergedNodes, stmt)
 		}
 
 	case *dst.ReturnStmt:
-		// Merging with a return statement:
-		//  - If the return value is `false`, then no point of merging,
-		//    since the result will always be false. This should never occur.
-		//  - If the return value is `true`, then we can simply ignore the return,
-		//    and append the nested statements.
-		stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
-		if len(lastNode.Results) != 1 {
-			panic(fmt.Errorf("error generating predicate AST: expected only one return value"))
-		}
+		// Merging with a return statement: Return statements are added during generation
+		// to make the generated rule self-sufficient.
+		// When merging, it is safe to remove these return statements.
 
-		returnValue, ok := lastNode.Results[0].(*dst.Ident)
-		if !ok || returnValue.Name != "true" {
-			panic(fmt.Errorf("error generating predicate AST: expected `return true` statement"))
-		}
+		// However, makesure we are not dropping vital information:
+		// by checking the return is a one that was only added for "completeness"
+		// i.e: the dropping return should only be either `return true/false`.
+		// NOTE: validate the one that we are dropping.
+		validateReturn(lastNode)
 
-		// Drop the return, and append the nested statements.
-		for _, stmt := range stmts {
-			result = append(result, stmt)
+		// Drop the return (i.e: ignore the lastNode),
+		// and merge with the one before the node.
+		mergedNodes = gen.mergeNestedNodesWithLastNode(
+			mergedNodes,
+			nestedNodes,
+			combineAsAnd,
+		)
+
+		// However, if there was no return added during merging, then keep the return, for completeness.
+		lastMergedNode := mergedNodes[len(mergedNodes)-1]
+		if _, isReturn := lastMergedNode.(*dst.ReturnStmt); !isReturn {
+			mergedNodes = append(mergedNodes, lastNode)
 		}
 
 	default:
 		panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
 	}
+	return mergedNodes
+}
 
-	return
+func validateReturn(returnStmt *dst.ReturnStmt) {
+	if len(returnStmt.Results) != 1 {
+		panic(fmt.Errorf("error generating predicate AST: expected only one return value"))
+	}
+
+	returnValue, ok := returnStmt.Results[0].(*dst.Ident)
+	if !ok || (returnValue.Name != "true" && returnValue.Name != "false") {
+		panic(fmt.Errorf("error generating predicate AST: expected `return true/false` statement"))
+	}
 }
 
 func descriptionAsLineComments(description string) []string {
@@ -652,26 +642,53 @@ func (gen *SubTypeCheckGenerator) mergeNestedNodeWithSwitchStatement(
 	lastCase := caseClauses[len(caseClauses)-1]
 	caseClause := lastCase.(*dst.CaseClause)
 
-	if len(caseClause.Body) == 0 {
+	// If the case statement is non-empty, and the only statement is a `return false`,
+	// that means it's a rule with negation,
+	// and a return must have been added as an early-exit strategy.
+	// If so, add the nested conditions after the switch statement.
+	switch len(caseClause.Body) {
+	case 0:
 		// If the case statement is empty, then include the nested nodes
 		// inside the case-body.
 		caseClause.Body = append(caseClause.Body, stmts...)
 		combinedNodes = append(combinedNodes, switchStmt)
-	} else {
-		// If the case statement is non-empty, that means it's probably a rule with negation,
-		// and a return must have been added as an early-exit strategy.
-		// Verify this.
-		lastStmtInsideCase := caseClause.Body[len(caseClause.Body)-1]
-		if _, isReturnStmt := lastStmtInsideCase.(*dst.ReturnStmt); !isReturnStmt {
+		return combinedNodes
+	case 1:
+		// Only one statement
+		lastStmtInsideCase := caseClause.Body[0]
+		returnStmt, isReturnStmt := lastStmtInsideCase.(*dst.ReturnStmt)
+		if !isReturnStmt {
 			panic("last statement of a case-clause must be a return statement")
 		}
 
-		// Then the nested-conditions must be included after the switch statement.
-		combinedNodes = append(combinedNodes, switchStmt)
-		for _, stmt := range stmts {
-			combinedNodes = append(combinedNodes, stmt)
+		if len(returnStmt.Results) != 1 {
+			panic(fmt.Errorf("error generating predicate AST: expected only one return value"))
 		}
+
+		returnValue, ok := returnStmt.Results[0].(*dst.Ident)
+		if !ok || returnValue.Name != "true" {
+			break
+		}
+
+		// If the statement is a `return true`, then this is a return added for completeness.
+		// Ignore the return the merge the nested statements in-place of the return.
+		caseClause.Body = stmts
+		combinedNodes = append(combinedNodes, switchStmt)
+		return combinedNodes
 	}
+
+	clauseLastStmtIndex := len(caseClause.Body) - 1
+	lastStmtInsideCase := caseClause.Body[clauseLastStmtIndex]
+	if _, isReturnStmt := lastStmtInsideCase.(*dst.ReturnStmt); !isReturnStmt {
+		panic("last statement of a case-clause must be a return statement")
+	}
+
+	// Then the nested-conditions must be included after the switch statement.
+	combinedNodes = append(combinedNodes, switchStmt)
+	for _, stmt := range stmts {
+		combinedNodes = append(combinedNodes, stmt)
+	}
+
 	return combinedNodes
 }
 
@@ -756,6 +773,12 @@ func returnStatementWith(returnValue dst.Expr) *dst.ReturnStmt {
 		},
 	}
 
+	transferCommentsToTheReturn(returnValue, returnStmt)
+
+	return returnStmt
+}
+
+func transferCommentsToTheReturn(returnValue dst.Expr, returnStmt *dst.ReturnStmt) {
 	returnValueDecs := returnValue.Decorations()
 	comments := returnValueDecs.Start
 
@@ -764,7 +787,6 @@ func returnStatementWith(returnValue dst.Expr) *dst.ReturnStmt {
 		returnValueDecs.Start.Clear()
 		returnStmt.Decs.Before = dst.EmptyLine
 	}
-	return returnStmt
 }
 
 // generatePredicate recursively generates one or more expression/statement for a given predicate.
@@ -881,16 +903,7 @@ func (gen *SubTypeCheckGenerator) notPredicate(p NotPredicate) []dst.Node {
 	// negate the current negation.
 	gen.negate = !gen.negate
 
-	innerPredicateNodes := gen.generatePredicate(p.Predicate)
-	if len(innerPredicateNodes) != 1 {
-		panic("can only handle one node in `not` predicate")
-	}
-
-	innerPredicateExpr := innerPredicateNodes[0]
-
-	return []dst.Node{
-		innerPredicateExpr,
-	}
+	return gen.generatePredicate(p.Predicate)
 }
 
 func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
@@ -971,6 +984,7 @@ func (gen *SubTypeCheckGenerator) generateOrPredicate(predicates []Predicate) (r
 
 	var exprs []dst.Expr
 	var prevTypeSwitch *dst.TypeSwitchStmt
+	var returnStmt *dst.ReturnStmt
 
 	for _, predicate := range predicates {
 		generatedPredicatedNodes := gen.generatePredicate(predicate)
@@ -985,6 +999,20 @@ func (gen *SubTypeCheckGenerator) generateOrPredicate(predicates []Predicate) (r
 					prevTypeSwitch = node
 					result = append(result, node)
 				}
+			case *dst.ReturnStmt:
+				// There can be multiple return statements generated
+				// because each generated predicate is "self-complete".
+				// In that case, only keep the last return statement.
+
+				// But, makesure we are not dropping vital information:
+				// by checking the return is a one that was only added for "completeness"
+				// i.e: the dropping return should only be either `return true/false`.
+				// NOTE: validate the one that we are dropping.
+				if returnStmt != nil {
+					validateReturn(returnStmt)
+				}
+
+				returnStmt = node
 			case dst.Stmt:
 				// Add statements as-is, since they are all conditional-statements.
 				result = append(result, node)
@@ -994,6 +1022,11 @@ func (gen *SubTypeCheckGenerator) generateOrPredicate(predicates []Predicate) (r
 				panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", node))
 			}
 		}
+	}
+
+	// Append the return statement as the last statement.
+	if returnStmt != nil {
+		result = append(result, returnStmt)
 	}
 
 	var binaryExpr dst.Expr
@@ -1089,6 +1122,16 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 						After:  dst.NewLine,
 					},
 				},
+				Body: []dst.Stmt{
+					// Always add a return for the completeness.
+					// This return will be removed/kept as desired, when other statements
+					// are merged with this list of statements.
+					&dst.ReturnStmt{
+						Results: []dst.Expr{
+							gen.booleanExpression(true),
+						},
+					},
+				},
 			},
 		}
 
@@ -1103,6 +1146,15 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 						Before: dst.NewLine,
 						After:  dst.EmptyLine,
 					},
+				},
+			},
+
+			// Always add a return for the completeness.
+			// This return will be removed/kept as desired, when other statements
+			// are merged with this list of statements.
+			&dst.ReturnStmt{
+				Results: []dst.Expr{
+					gen.booleanExpression(false),
 				},
 			},
 		}
@@ -1324,6 +1376,16 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 				After:  dst.NewLine,
 			},
 		},
+		Body: []dst.Stmt{
+			// Always add a return for the completeness.
+			// This return will be removed/kept as desired, when other statements
+			// are merged with this list of statements.
+			&dst.ReturnStmt{
+				Results: []dst.Expr{
+					gen.booleanExpression(true),
+				},
+			},
+		},
 	}
 
 	caseClauses := []dst.Stmt{
@@ -1360,6 +1422,15 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 
 	return []dst.Node{
 		statement,
+
+		// Always add a return for the completeness.
+		// This return will be removed/kept as desired, when other statements
+		// are merged with this list of statements.
+		&dst.ReturnStmt{
+			Results: []dst.Expr{
+				gen.booleanExpression(false),
+			},
+		},
 	}
 }
 

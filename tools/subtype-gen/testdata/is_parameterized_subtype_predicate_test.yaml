@@ -1,0 +1,7 @@
+rules:
+  - super: CompositeType
+    predicate:
+      isParameterizedSubtype:
+        sub: sub
+        super: super
+

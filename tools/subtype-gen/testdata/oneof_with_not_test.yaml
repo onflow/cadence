@@ -1,0 +1,9 @@
+rules:
+  - super: SomeType
+    predicate:
+      not:
+        equals:
+          source: sub
+          target:
+            oneOf: [TypeA, TypeB, TypeC]
+

@@ -1,0 +1,59 @@
+rules:
+  - super: IntersectionType
+    predicate:
+      or:
+        - and:
+            - equals:
+                source: super.LegacyType
+                target:
+                  oneOf: [nil, AnyType, AnyStructType, AnyResourceType]
+            - and:
+                - not:
+                    equals:
+                      source: sub
+                      target:
+                        oneOf: [AnyType, AnyStructType, AnyResourceType]
+                - or:
+                    - and:
+                        - mustType:
+                            source: sub
+                            type: IntersectionType
+                        - or:
+                            - and:
+                                - equals:
+                                    source: sub.LegacyType
+                                    target: nil
+                                - isIntersectionSubset:
+                                    super: super
+                                    sub: sub
+                            - and:
+                                - equals:
+                                    source: sub.LegacyType
+                                    target:
+                                      oneOf: [AnyType, AnyStructType, AnyResourceType]
+                                - or:
+                                    - equals:
+                                        source: super.LegacyType
+                                        target: nil
+                                    - subtype:
+                                        super: super.LegacyType
+                                        sub: sub.LegacyType
+                                - isIntersectionSubset:
+                                    super: super
+                                    sub: sub
+        - and:
+            - mustType:
+                source: sub
+                type: IntersectionType
+            - not:
+                equals:
+                  source: sub.LegacyType
+                  target:
+                    oneOf: [ nil, AnyType, AnyStructType, AnyResourceType ]
+            - mustType:
+                source: sub.LegacyType
+                type: CompositeType
+            - equals:
+                source: sub.LegacyType
+                target: super.LegacyType
+

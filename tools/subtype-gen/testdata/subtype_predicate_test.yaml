@@ -1,0 +1,7 @@
+rules:
+  - super: NumberType
+    predicate:
+      subtype:
+        sub: sub
+        super: IntegerType
+

@@ -1,0 +1,6 @@
+rules:
+  - super: AnyStructType
+    predicate:
+      not:
+        isResource: sub
+
