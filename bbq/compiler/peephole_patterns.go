@@ -33,6 +33,7 @@ type PeepholePattern struct {
 	Replacement func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction
 }
 
+// Optimizations combining common instruction pairs
 var InvokeTransferAndConvertPattern = PeepholePattern{
 	Name:    "InvokeTransferAndConvert",
 	Opcodes: []opcode.Opcode{opcode.Invoke, opcode.TransferAndConvert},

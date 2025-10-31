@@ -10210,6 +10210,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0x0},
+			// this transfer can be optimized out
 			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x0},
 			opcode.InstructionStatement{},
@@ -10233,6 +10234,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0x0},
+			// transfer gone
 			opcode.InstructionSetLocal{Local: 0x0},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: 0x0},
@@ -10266,6 +10268,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0x0},
+			// common pattern
 			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionReturnValue{},
@@ -10286,6 +10289,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0x0},
+			// combined instr
 			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
 			opcode.InstructionReturnValue{},
 		}, functions2[1].Code)
@@ -10368,9 +10372,11 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0x1},
+			// transfers removed
 			opcode.InstructionSetLocal{Local: 0x0},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0x0},
+			// combined instrs
 			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x1},
 			opcode.InstructionStatement{},
@@ -10383,7 +10389,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x1},
 			opcode.InstructionJump{Target: 20},
-			// 17
+			// 17, jumps to correct statement after patching
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0x2},
 			opcode.InstructionSetLocal{Local: 0x1},
@@ -10430,6 +10436,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x0},
 			opcode.InstructionStatement{},
+			// common pattern
 			opcode.InstructionGetLocal{Local: 0x0},
 			opcode.InstructionGetField{FieldName: 0x0, AccessedType: 0x1},
 			opcode.InstructionTransferAndConvert{Type: 0x2},
@@ -10454,6 +10461,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x0},
 			opcode.InstructionStatement{},
+			// combined instr
 			opcode.InstructionGetFieldLocal{FieldName: 0x0, AccessedType: 0x1, Local: 0x0},
 			opcode.InstructionTransferAndConvert{Type: 0x2},
 			opcode.InstructionReturnValue{},
