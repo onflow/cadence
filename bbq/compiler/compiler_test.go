@@ -10183,3 +10183,288 @@ func TestCompileImportAlias(t *testing.T) {
 
 	})
 }
+
+func TestPeepholeOptimizer(t *testing.T) {
+	t.Parallel()
+
+	t.Run("constant transfer and convert", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test(): Int {
+				let x = 1
+				return x
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			// this transfer can be optimized out
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		},
+			functions[0].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.EnablePeepholeOptimizations = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			// transfer gone
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		}, functions2[0].Code)
+	})
+
+	t.Run("invoke transfer and convert", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test2(): Int {
+				return 32
+			}
+			fun test(): Int {
+				return test2()
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 2)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			// common pattern
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		},
+			functions[1].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.EnablePeepholeOptimizations = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 2)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			// combined instr
+			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
+			opcode.InstructionReturnValue{},
+		}, functions2[1].Code)
+	})
+
+	t.Run("patch jumps", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test2(): Int {
+				return 32
+			}
+			fun test(): Int {
+				var x = 0
+				var y = test2()
+				if x > 0 {
+					y = test2()
+				} else {
+					y = 64
+				}
+				return y
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 2)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			opcode.InstructionGreater{},
+			opcode.InstructionJumpIfFalse{Target: 20},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionJump{Target: 24},
+			// 20
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x2},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			// 24
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		},
+			functions[1].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.EnablePeepholeOptimizations = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 2)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			// transfers removed
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			// combined instrs
+			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			opcode.InstructionGreater{},
+			opcode.InstructionJumpIfFalse{Target: 17},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionJump{Target: 20},
+			// 17, jumps to correct statement after patching
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x2},
+			opcode.InstructionSetLocal{Local: 0x1},
+			// 20
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		}, functions2[1].Code)
+	})
+
+	t.Run("getFieldLocal", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct Test {
+				var x: Int
+
+				init() {
+					self.x = 32
+				}
+			}
+
+			fun test(): Int {
+				let test = Test()
+				return test.x
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 5)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x1},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			// common pattern
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionGetField{FieldName: 0x0, AccessedType: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x2},
+			opcode.InstructionReturnValue{},
+		},
+			functions[0].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.EnablePeepholeOptimizations = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 5)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x1},
+			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			// combined instr
+			opcode.InstructionGetFieldLocal{FieldName: 0x0, AccessedType: 0x1, Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x2},
+			opcode.InstructionReturnValue{},
+		}, functions2[0].Code)
+	})
+}

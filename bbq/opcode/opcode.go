@@ -135,8 +135,8 @@ const (
 	SetTypeIndex
 	RemoveTypeIndex
 	SetAttachmentBase
-	_
-	_
+	InvokeTransferAndConvert
+	GetFieldLocal
 
 	// Invocations
 

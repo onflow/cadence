@@ -2874,6 +2874,122 @@ func (i InstructionSetAttachmentBase) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionInvokeTransferAndConvert
+//
+// Pops a function and a type off the stack, invokes the function, and then transfers and converts the result to the given type.
+type InstructionInvokeTransferAndConvert struct {
+	TypeArgs []uint16
+	ArgCount uint16
+	Type     uint16
+}
+
+var _ Instruction = InstructionInvokeTransferAndConvert{}
+
+func (InstructionInvokeTransferAndConvert) Opcode() Opcode {
+	return InvokeTransferAndConvert
+}
+
+func (i InstructionInvokeTransferAndConvert) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionInvokeTransferAndConvert) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionInvokeTransferAndConvert) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+	sb.WriteByte(' ')
+	printfArgument(sb, "argCount", i.ArgCount, colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+}
+
+func (i InstructionInvokeTransferAndConvert) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16Array(code, i.TypeArgs)
+	emitUint16(code, i.ArgCount)
+	emitUint16(code, i.Type)
+}
+
+func DecodeInvokeTransferAndConvert(ip *uint16, code []byte) (i InstructionInvokeTransferAndConvert) {
+	i.TypeArgs = decodeUint16Array(ip, code)
+	i.ArgCount = decodeUint16(ip, code)
+	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionGetFieldLocal
+//
+// Pops a value off the stack, the target, and then pushes the value of the field at the given index onto the stack.
+type InstructionGetFieldLocal struct {
+	FieldName    uint16
+	AccessedType uint16
+	Local        uint16
+}
+
+var _ Instruction = InstructionGetFieldLocal{}
+
+func (InstructionGetFieldLocal) Opcode() Opcode {
+	return GetFieldLocal
+}
+
+func (i InstructionGetFieldLocal) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionGetFieldLocal) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "fieldName", i.FieldName, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "accessedType", i.AccessedType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
+}
+
+func (i InstructionGetFieldLocal) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
+}
+
+func (i InstructionGetFieldLocal) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.FieldName)
+	emitUint16(code, i.AccessedType)
+	emitUint16(code, i.Local)
+}
+
+func DecodeGetFieldLocal(ip *uint16, code []byte) (i InstructionGetFieldLocal) {
+	i.FieldName = decodeUint16(ip, code)
+	i.AccessedType = decodeUint16(ip, code)
+	i.Local = decodeUint16(ip, code)
+	return i
+}
+
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	switch Opcode(decodeByte(ip, code)) {
 	case Unknown:
@@ -3030,6 +3146,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeSetTypeIndex(ip, code)
 	case SetAttachmentBase:
 		return InstructionSetAttachmentBase{}
+	case InvokeTransferAndConvert:
+		return DecodeInvokeTransferAndConvert(ip, code)
+	case GetFieldLocal:
+		return DecodeGetFieldLocal(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())

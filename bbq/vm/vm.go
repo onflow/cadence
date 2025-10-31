@@ -197,7 +197,7 @@ func fill(slice []Value, n int) []Value {
 	return slice
 }
 
-func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value, arguments []Value) {
+func (vm *VM) pushCallFrame(functionValue *CompiledFunctionValue, receiver Value, arguments []Value) {
 	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
 		panic(&interpreter.CallStackLimitExceededError{
 			Limit: vm.context.StackDepthLimit,
@@ -863,7 +863,7 @@ func invokeFunction(
 	var receiver Value
 
 	switch functionValue := functionValue.(type) {
-	case CompiledFunctionValue:
+	case *CompiledFunctionValue:
 		if isBoundFunction {
 			// For compiled functions, pass the receiver as an implicit-reference.
 			// Because the `self` value can be accessed by user-code.
@@ -1543,6 +1543,87 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	}
 }
 
+func opInvokeTransferAndConvert(vm *VM, ins opcode.InstructionInvokeTransferAndConvert) {
+	// invoke
+	// Load type arguments
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
+
+	// Load arguments
+	arguments := vm.popN(int(ins.ArgCount))
+
+	// Load the invoked value
+	functionValue := vm.pop()
+
+	// Add base to front of arguments if the function is bound and base is defined.
+	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
+		base := boundFunction.Base
+		if base != nil {
+			arguments = append([]Value{base}, arguments...)
+		}
+	}
+
+	invokeFunction(
+		vm,
+		functionValue,
+		arguments,
+		typeArguments,
+	)
+
+	// transfer and convert
+
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
+	context := vm.context
+
+	value := vm.peek()
+	valueType := value.StaticType(context)
+
+	transferredValue := interpreter.TransferAndConvert(
+		context,
+		value,
+		context.SemaTypeFromStaticType(valueType),
+		context.SemaTypeFromStaticType(targetType),
+	)
+
+	vm.replaceTop(transferredValue)
+}
+
+func opGetFieldLocal(vm *VM, ins opcode.InstructionGetFieldLocal) {
+	// get local
+	localIndex := ins.Local
+	absoluteIndex := vm.callFrame.localsOffset + localIndex
+	local := vm.locals[absoluteIndex]
+
+	// Some local variables can be implicit references. e.g: receiver of a bound function.
+	// TODO: maybe perform this check only if `localIndex == 0`?
+	if implicitReference, ok := local.(ImplicitReferenceValue); ok {
+		local = implicitReference.ReferencedValue(vm.context)
+	}
+
+	// get field
+	memberAccessibleValue := local.(interpreter.MemberAccessibleValue)
+
+	checkMemberAccessTargetType(
+		vm,
+		ins.AccessedType,
+		memberAccessibleValue,
+	)
+
+	// VM assumes the field name is always a string.
+	fieldNameIndex := ins.FieldName
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
+
+	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName)
+	if fieldValue == nil {
+		panic(&interpreter.UseBeforeInitializationError{
+			Name: fieldName,
+		})
+	}
+
+	vm.push(fieldValue)
+}
+
 func (vm *VM) run() {
 
 	entryPointCallStackSize := len(vm.callstack)
@@ -1724,6 +1805,10 @@ func (vm *VM) run() {
 			opRemoveTypeIndex(vm, ins)
 		case opcode.InstructionSetAttachmentBase:
 			opSetAttachmentBase(vm)
+		case opcode.InstructionInvokeTransferAndConvert:
+			opInvokeTransferAndConvert(vm, ins)
+		case opcode.InstructionGetFieldLocal:
+			opGetFieldLocal(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
@@ -1771,7 +1856,7 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 
 	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
-	vm.push(CompiledFunctionValue{
+	vm.push(&CompiledFunctionValue{
 		Function:   function,
 		Executable: executable,
 		Upvalues:   upvalues,
@@ -1908,7 +1993,7 @@ func (vm *VM) LocationRange() interpreter.LocationRange {
 	return locationRangeOfInstruction(currentFunction, lastInstructionIndex)
 }
 
-func locationRangeOfInstruction(function CompiledFunctionValue, instructionIndex uint16) interpreter.LocationRange {
+func locationRangeOfInstruction(function *CompiledFunctionValue, instructionIndex uint16) interpreter.LocationRange {
 	lineNumbers := function.Function.LineNumbers
 	position := lineNumbers.GetSourcePosition(instructionIndex)
 

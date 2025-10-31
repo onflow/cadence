@@ -36,4 +36,6 @@ type Config struct {
 	// BuiltinGlobalsProvider provides the built-in globals for a given location.
 	// NOTE: all global imports must be for location nil!
 	BuiltinGlobalsProvider BuiltinGlobalsProvider
+
+	EnablePeepholeOptimizations bool
 }
