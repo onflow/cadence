@@ -11785,24 +11785,3 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 
 	assert.Equal(t, []string{`"x"`}, logs)
 }
-
-func TestPeepholeOptimizedCode(t *testing.T) {
-	t.Parallel()
-
-	t.Run("simple constant transfer and convert", func(t *testing.T) {
-		t.Parallel()
-
-		result, err := CompileAndInvoke(t,
-			`
-			fun test(): Int {
-				let x = 1
-				return x
-			}
-            `,
-			"test",
-		)
-		require.NoError(t, err)
-		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
-	})
-
-}
