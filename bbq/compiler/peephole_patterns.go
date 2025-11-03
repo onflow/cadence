@@ -33,7 +33,11 @@ type PeepholePattern struct {
 	Replacement func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction
 }
 
-// Optimizations combining common instruction pairs
+// Optimizations combining common instruction pairs:
+// These optimizations save one stack push/pop and one function call (inlined invocation) per usage of the pattern
+// since the improvements are marginal these should target high-frequency patterns in common use cases
+
+// Invoke -> TransferAndConvert, combined because commonly found in token transfer
 var InvokeTransferAndConvertPattern = PeepholePattern{
 	Name:    "InvokeTransferAndConvert",
 	Opcodes: []opcode.Opcode{opcode.Invoke, opcode.TransferAndConvert},
@@ -49,6 +53,7 @@ var InvokeTransferAndConvertPattern = PeepholePattern{
 	},
 }
 
+// GetLocal -> GetField, combined because commonly found in token transfer
 var GetFieldLocalPattern = PeepholePattern{
 	Name:    "GetFieldLocal",
 	Opcodes: []opcode.Opcode{opcode.GetLocal, opcode.GetField},
@@ -64,8 +69,10 @@ var GetFieldLocalPattern = PeepholePattern{
 	},
 }
 
-// Optimizations ported from compiler `mustEmitTransferAndConvert`
-// TODO: check correctness in case of branching
+// Optimizations ported from compiler `mustEmitTransferAndConvert`:
+// These optimizations remove unnecessary transfers in certain cases
+
+// GetConstant -> TransferAndConvert, unnecessary transfer if constant is of the same type
 var ConstantTransferAndConvertPattern = PeepholePattern{
 	Name:    "ConstantTransferAndConvert",
 	Opcodes: []opcode.Opcode{opcode.GetConstant, opcode.TransferAndConvert},
@@ -84,6 +91,7 @@ var ConstantTransferAndConvertPattern = PeepholePattern{
 	},
 }
 
+// NewPath -> TransferAndConvert, unnecessary transfer if path is of the same type
 var PathTransferAndConvertPattern = PeepholePattern{
 	Name:    "PathTransferAndConvert",
 	Opcodes: []opcode.Opcode{opcode.NewPath, opcode.TransferAndConvert},
@@ -111,6 +119,7 @@ var PathTransferAndConvertPattern = PeepholePattern{
 	},
 }
 
+// Nil -> TransferAndConvert, unnecessary transfer if value is nil
 var NilTransferAndConvertPattern = PeepholePattern{
 	Name:    "NilTransferAndConvert",
 	Opcodes: []opcode.Opcode{opcode.Nil, opcode.TransferAndConvert},
