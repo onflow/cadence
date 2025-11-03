@@ -389,10 +389,6 @@ func compiledFTTransfer(tb testing.TB) {
 
 	tokenTransferTxVM := vm.NewVM(txLocation, tokenTransferTxProgram, vmConfig)
 
-	// stringBuilder := strings.Builder{}
-	// opcode.PrintInstructions(&stringBuilder, compiledPrograms[flowTokenLocation].Program.Functions[17].Code, false, nil, nil, nil, false)
-	// fmt.Println(stringBuilder.String())
-
 	transferAmount := uint64(1) * sema.Fix64Factor
 
 	tokenTransferTxArgs := []vm.Value{
