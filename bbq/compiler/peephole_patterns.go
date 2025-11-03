@@ -37,22 +37,6 @@ type PeepholePattern struct {
 // These optimizations save one stack push/pop and one function call (inlined invocation) per usage of the pattern
 // since the improvements are marginal these should target high-frequency patterns in common use cases
 
-// Invoke -> TransferAndConvert, combined because commonly found in token transfer
-var InvokeTransferAndConvertPattern = PeepholePattern{
-	Name:    "InvokeTransferAndConvert",
-	Opcodes: []opcode.Opcode{opcode.Invoke, opcode.TransferAndConvert},
-	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
-		invoke := instructions[0].(opcode.InstructionInvoke)
-		transferAndConvert := instructions[1].(opcode.InstructionTransferAndConvert)
-
-		return []opcode.Instruction{opcode.InstructionInvokeTransferAndConvert{
-			TypeArgs: invoke.TypeArgs,
-			ArgCount: invoke.ArgCount,
-			Type:     transferAndConvert.Type,
-		}}
-	},
-}
-
 // GetLocal -> GetField, combined because commonly found in token transfer
 var GetFieldLocalPattern = PeepholePattern{
 	Name:    "GetFieldLocal",
@@ -139,7 +123,6 @@ func (p *PeepholePattern) Match(instructions []opcode.Instruction) bool {
 }
 
 var AllPatterns = []PeepholePattern{
-	InvokeTransferAndConvertPattern,
 	GetFieldLocalPattern,
 	ConstantTransferAndConvertPattern,
 	PathTransferAndConvertPattern,

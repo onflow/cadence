@@ -258,8 +258,7 @@ func TestPrintInstruction(t *testing.T) {
 		"Loop":                            {byte(Loop)},
 		"Statement":                       {byte(Statement)},
 		"TemplateString exprSize:258":     {byte(TemplateString), 1, 2, 3, 4},
-		"GetFieldLocal fieldName:258 accessedType:258 local:772":            {byte(GetFieldLocal), 1, 2, 1, 2, 3, 4},
-		"InvokeTransferAndConvert typeArgs:[772, 1286] argCount:1 type:258": {byte(InvokeTransferAndConvert), 0, 2, 3, 4, 5, 6, 0, 1, 1, 2},
+		"GetFieldLocal fieldName:258 accessedType:258 local:772": {byte(GetFieldLocal), 1, 2, 1, 2, 3, 4},
 	}
 
 	// Check if there is any opcode that is not tested

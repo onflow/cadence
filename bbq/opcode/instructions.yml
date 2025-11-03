@@ -1009,30 +1009,6 @@
         type: "value"
 
 # Combined "peephole" instructions
-
-- name: "invokeTransferAndConvert"
-  description:
-    Pops a function and a type off the stack,
-    invokes the function, and then transfers and converts the result to the given type.
-  operands:
-    - name: "typeArgs"
-      type: "typeIndices"
-    - name: "argCount"
-      type: "size"
-    - name: "type"
-      type: "typeIndex"
-  valueEffects:
-    pop:
-      - name: "arguments"
-        # TODO: count
-      - name: "function"
-        type: "function"
-      - name: "type"
-        type: "typeIndex"
-    push:
-      - name: "result"
-        type: "value"
-
 - name: "getFieldLocal"
   description:
     Pops a value off the stack, the target,

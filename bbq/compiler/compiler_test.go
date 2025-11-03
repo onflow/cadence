@@ -10243,58 +10243,6 @@ func TestPeepholeOptimizer(t *testing.T) {
 		}, functions2[0].Code)
 	})
 
-	t.Run("invoke transfer and convert", func(t *testing.T) {
-		t.Parallel()
-
-		checker, err := ParseAndCheck(t, `
-			fun test2(): Int {
-				return 32
-			}
-			fun test(): Int {
-				return test2()
-			}
-		`)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		program := comp.Compile()
-
-		functions := program.Functions
-		require.Len(t, functions, 2)
-
-		assert.Equal(t, []opcode.Instruction{
-			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: 0x0},
-			// common pattern
-			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
-			opcode.InstructionTransferAndConvert{Type: 0x1},
-			opcode.InstructionReturnValue{},
-		},
-			functions[1].Code,
-		)
-
-		comp2 := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		comp2.Config.EnablePeepholeOptimizations = true
-		program2 := comp2.Compile()
-
-		functions2 := program2.Functions
-		require.Len(t, functions2, 2)
-
-		assert.Equal(t, []opcode.Instruction{
-			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: 0x0},
-			// combined instr
-			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
-			opcode.InstructionReturnValue{},
-		}, functions2[1].Code)
-	})
-
 	t.Run("patch jumps", func(t *testing.T) {
 		t.Parallel()
 
@@ -10377,7 +10325,8 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0x0},
 			// combined instrs
-			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x1},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: 0x0},
@@ -10386,7 +10335,8 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionJumpIfFalse{Target: 17},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0x0},
-			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x1},
 			opcode.InstructionJump{Target: 20},
 			// 17, jumps to correct statement after patching
@@ -10458,7 +10408,8 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0x1},
-			opcode.InstructionInvokeTransferAndConvert{TypeArgs: []uint16(nil), ArgCount: 0x0, Type: 0x1},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x0},
 			opcode.InstructionStatement{},
 			// combined instr
@@ -10467,4 +10418,69 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionReturnValue{},
 		}, functions2[0].Code)
 	})
+}
+
+func BenchmarkCompileWithoutOptimizations(b *testing.B) {
+	checker, err := ParseAndCheck(b, `
+	struct Foo {
+		var id : Int
+
+		init(_ id: Int) {
+			self.id = id
+		}
+	}
+
+	fun test(count: Int) {
+		var i = 0
+		while i < count {
+			Foo(i)
+			i = i + 1
+		}
+	}
+	`)
+	require.NoError(b, err)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.EnablePeepholeOptimizations = false
+		comp.Compile()
+	}
+}
+
+func BenchmarkCompileWithOptimizations(b *testing.B) {
+	checker, err := ParseAndCheck(b, `
+	struct Foo {
+		var id : Int
+
+		init(_ id: Int) {
+			self.id = id
+		}
+	}
+
+	fun test(count: Int) {
+		var i = 0
+		while i < count {
+			Foo(i)
+			i = i + 1
+		}
+	}
+	`)
+	require.NoError(b, err)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Compile()
+	}
 }

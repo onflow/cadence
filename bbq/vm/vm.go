@@ -1539,52 +1539,6 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	}
 }
 
-func opInvokeTransferAndConvert(vm *VM, ins opcode.InstructionInvokeTransferAndConvert) {
-	// invoke
-	// Load type arguments
-	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-
-	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
-
-	// Load the invoked value
-	functionValue := vm.pop()
-
-	// Add base to front of arguments if the function is bound and base is defined.
-	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
-		base := boundFunction.Base
-		if base != nil {
-			arguments = append([]Value{base}, arguments...)
-		}
-	}
-
-	invokeFunction(
-		vm,
-		functionValue,
-		arguments,
-		typeArguments,
-	)
-
-	// transfer and convert
-
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
-
-	context := vm.context
-
-	value := vm.peek()
-	valueType := value.StaticType(context)
-
-	transferredValue := interpreter.TransferAndConvert(
-		context,
-		value,
-		context.SemaTypeFromStaticType(valueType),
-		context.SemaTypeFromStaticType(targetType),
-	)
-
-	vm.replaceTop(transferredValue)
-}
-
 func opGetFieldLocal(vm *VM, ins opcode.InstructionGetFieldLocal) {
 	// get local
 	localIndex := ins.Local
@@ -1801,8 +1755,6 @@ func (vm *VM) run() {
 			opRemoveTypeIndex(vm, ins)
 		case opcode.InstructionSetAttachmentBase:
 			opSetAttachmentBase(vm)
-		case opcode.InstructionInvokeTransferAndConvert:
-			opInvokeTransferAndConvert(vm, ins)
 		case opcode.InstructionGetFieldLocal:
 			opGetFieldLocal(vm, ins)
 		default:
