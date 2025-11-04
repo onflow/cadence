@@ -213,6 +213,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				return typedSubTypeLegacyType == typedSuperType
 			}
 
+			return false
 		case *CompositeType:
 			return false
 		}
@@ -299,12 +300,14 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 						IsIntersectionSubset(typedSuperType, typedSubTypeLegacyType)
 				}
 
+				return false
 			case ConformingType:
 				return (typedSuperType.LegacyType == nil ||
 					IsSubType(typedSubType, typedSuperType.LegacyType)) &&
 					IsIntersectionSubset(typedSuperType, typedSubType)
 			}
 
+			return false
 		}
 
 		// An intersection type `T{Us}`
@@ -331,6 +334,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				return typedSubTypeLegacyType == typedSuperType.LegacyType
 			}
 
+			return false
 		case *CompositeType:
 			return IsSubType(typedSubType, typedSuperType.LegacyType)
 		}
@@ -397,6 +401,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 						typedSubType.IsConstructor == typedSuperType.IsConstructor)
 			}
 
+			return false
 		}
 
 		return false
@@ -427,6 +432,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 			}
 
+			return false
 		}
 
 		return IsParameterizedSubType(subType, typedSuperType)

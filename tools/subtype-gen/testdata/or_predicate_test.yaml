@@ -1,0 +1,11 @@
+rules:
+  - super: NumberType
+    predicate:
+      or:
+        - equals:
+            source: sub
+            target: NumberType
+        - subtype:
+            sub: sub
+            super: IntegerType
+
