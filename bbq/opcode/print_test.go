@@ -320,47 +320,47 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 	}
 
 	const expected = `┌─ Block 0 (0-3) ─────────────────────────────────────────────────────┐
-│    0 | GetLocal                 |  local:0
-│    1 | GetConstant              |  constant:0
-│    2 | Less                     | 
-│    3 | JumpIfFalse              |  target:14
+│    0 | GetLocal           |  local:0
+│    1 | GetConstant        |  constant:0
+│    2 | Less               | 
+│    3 | JumpIfFalse        |  target:14
 └─────────────────────────────────────────────────────────────────────┘
     ─?→ Block 4 (jump if false)
 
     ──→ Block 1 (fall through)
 
 ┌─ Block 1 (4-5) ─────────────────────────────────────────────────────┐
-│    4 | GetLocal                 |  local:0
-│    5 | ReturnValue              | 
+│    4 | GetLocal           |  local:0
+│    5 | ReturnValue        | 
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─ Block 2 (6-11) ────────────────────────────────────────────────────┐
-│    6 | GetLocal                 |  local:0
-│    7 | GetConstant              |  constant:1
-│    8 | Subtract                 | 
-│    9 | TransferAndConvert       |  type:0
-│   10 | GetGlobal                |  global:0
-│   11 | Invoke                   |  typeArgs:[] argCount:0
+│    6 | GetLocal           |  local:0
+│    7 | GetConstant        |  constant:1
+│    8 | Subtract           | 
+│    9 | TransferAndConvert |  type:0
+│   10 | GetGlobal          |  global:0
+│   11 | Invoke             |  typeArgs:[] argCount:0
 └─────────────────────────────────────────────────────────────────────┘
     ──→ Unknown target (function_call)
 
 ┌─ Block 3 (12-13) ───────────────────────────────────────────────────┐
-│   12 | GetLocal                 |  local:0
-│   13 | GetConstant              |  constant:0
+│   12 | GetLocal           |  local:0
+│   13 | GetConstant        |  constant:0
 └─────────────────────────────────────────────────────────────────────┘
     ──→ Block 4 (fall through)
 
 ┌─ Block 4 (14-17) ───────────────────────────────────────────────────┐
-│   14 | Subtract                 | 
-│   15 | TransferAndConvert       |  type:0
-│   16 | GetGlobal                |  global:0
-│   17 | Invoke                   |  typeArgs:[] argCount:0
+│   14 | Subtract           | 
+│   15 | TransferAndConvert |  type:0
+│   16 | GetGlobal          |  global:0
+│   17 | Invoke             |  typeArgs:[] argCount:0
 └─────────────────────────────────────────────────────────────────────┘
     ──→ Unknown target (function_call)
 
 ┌─ Block 5 (18-19) ───────────────────────────────────────────────────┐
-│   18 | Add                      | 
-│   19 | ReturnValue              | 
+│   18 | Add                | 
+│   19 | ReturnValue        | 
 └─────────────────────────────────────────────────────────────────────┘
 
 `

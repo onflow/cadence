@@ -116,7 +116,6 @@ func NewBytecodeCompiler(
 	location common.Location,
 	config *Config,
 ) *Compiler[byte, []byte] {
-	config.EnablePeepholeOptimizations = true
 	return newCompiler(
 		program,
 		location,
@@ -133,9 +132,7 @@ func NewInstructionCompiler(
 	return NewInstructionCompilerWithConfig(
 		program,
 		location,
-		&Config{
-			EnablePeepholeOptimizations: true,
-		},
+		&Config{},
 	)
 }
 
@@ -144,7 +141,6 @@ func NewInstructionCompilerWithConfig(
 	location common.Location,
 	config *Config,
 ) *Compiler[opcode.Instruction, bbq.StaticType] {
-	config.EnablePeepholeOptimizations = true
 	return newCompiler(
 		program,
 		location,
@@ -725,7 +721,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		}
 	}
 
-	if c.Config.EnablePeepholeOptimizations {
+	if c.Config.PeepholeOptimizationsEnabled {
 		optimizer := NewPeepholeOptimizer(c)
 
 		for i, function := range functions {

@@ -10225,7 +10225,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
 		)
-		comp2.Config.EnablePeepholeOptimizations = true
+		comp2.Config.PeepholeOptimizationsEnabled = true
 		program2 := comp2.Compile()
 
 		functions2 := program2.Functions
@@ -10311,7 +10311,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
 		)
-		comp2.Config.EnablePeepholeOptimizations = true
+		comp2.Config.PeepholeOptimizationsEnabled = true
 		program2 := comp2.Compile()
 
 		functions2 := program2.Functions
@@ -10332,13 +10332,13 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionGetLocal{Local: 0x0},
 			opcode.InstructionGetConstant{Constant: 0x1},
 			opcode.InstructionGreater{},
-			opcode.InstructionJumpIfFalse{Target: 17},
+			opcode.InstructionJumpIfFalse{Target: 19},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0x0},
 			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x1},
-			opcode.InstructionJump{Target: 20},
+			opcode.InstructionJump{Target: 22},
 			// 17, jumps to correct statement after patching
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0x2},
@@ -10399,7 +10399,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
 		)
-		comp2.Config.EnablePeepholeOptimizations = true
+		comp2.Config.PeepholeOptimizationsEnabled = true
 		program2 := comp2.Compile()
 
 		functions2 := program2.Functions
@@ -10448,7 +10448,6 @@ func BenchmarkCompileWithoutOptimizations(b *testing.B) {
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
 		)
-		comp.Config.EnablePeepholeOptimizations = false
 		comp.Compile()
 	}
 }
@@ -10481,6 +10480,7 @@ func BenchmarkCompileWithOptimizations(b *testing.B) {
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
 		)
+		comp.Config.PeepholeOptimizationsEnabled = true
 		comp.Compile()
 	}
 }

@@ -83,27 +83,31 @@ func (g *InstructionCodeGen) Emit(instruction opcode.Instruction) {
 	*g.target = append(*g.target, instruction)
 }
 
-func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
-	switch ins := (*g.target)[offset].(type) {
+func PatchJump(target *[]opcode.Instruction, offset int, newTarget uint16) {
+	switch ins := (*target)[offset].(type) {
 	case opcode.InstructionJump:
 		ins.Target = newTarget
-		(*g.target)[offset] = ins
+		(*target)[offset] = ins
 
 	case opcode.InstructionJumpIfFalse:
 		ins.Target = newTarget
-		(*g.target)[offset] = ins
+		(*target)[offset] = ins
 
 	case opcode.InstructionJumpIfTrue:
 		ins.Target = newTarget
-		(*g.target)[offset] = ins
+		(*target)[offset] = ins
 
 	case opcode.InstructionJumpIfNil:
 		ins.Target = newTarget
-		(*g.target)[offset] = ins
+		(*target)[offset] = ins
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
+	PatchJump(g.target, offset, newTarget)
 }
 
 func (g *InstructionCodeGen) LastInstruction() opcode.Instruction {

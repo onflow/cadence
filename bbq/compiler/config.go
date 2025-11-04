@@ -37,5 +37,5 @@ type Config struct {
 	// NOTE: all global imports must be for location nil!
 	BuiltinGlobalsProvider BuiltinGlobalsProvider
 
-	EnablePeepholeOptimizations bool
+	PeepholeOptimizationsEnabled bool
 }

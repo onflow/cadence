@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -86,17 +87,21 @@ var PathTransferAndConvertPattern = PeepholePattern{
 		semaType := compiler.types[transferAndConvert.Type]
 
 		// check if optimization is applicable
-		if getPath.Domain != common.PathDomainStorage {
-			switch getPath.Domain {
-			case common.PathDomainPublic:
-				if semaType == sema.PublicPathType {
-					return []opcode.Instruction{getPath}
-				}
-			case common.PathDomainPrivate:
-				if semaType == sema.PrivatePathType {
-					return []opcode.Instruction{getPath}
-				}
+		switch getPath.Domain {
+		case common.PathDomainPublic:
+			if semaType == sema.PublicPathType {
+				return []opcode.Instruction{getPath}
 			}
+		case common.PathDomainPrivate:
+			if semaType == sema.PrivatePathType {
+				return []opcode.Instruction{getPath}
+			}
+		case common.PathDomainStorage:
+			if semaType == sema.StoragePathType {
+				return []opcode.Instruction{getPath}
+			}
+		default:
+			panic(errors.NewUnreachableError())
 		}
 
 		return instructions

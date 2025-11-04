@@ -694,8 +694,7 @@ func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 	vm.push(c)
 }
 
-func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
-	localIndex := ins.Local
+func getLocal(vm *VM, localIndex uint16) Value {
 	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	local := vm.locals[absoluteIndex]
 
@@ -705,6 +704,11 @@ func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
 		local = implicitReference.ReferencedValue(vm.context)
 	}
 
+	return local
+}
+
+func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
+	local := getLocal(vm, ins.Local)
 	vm.push(local)
 }
 
@@ -1037,17 +1041,15 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	memberAccessibleValue.SetMember(vm.context, fieldName, fieldValue)
 }
 
-func opGetField(vm *VM, ins opcode.InstructionGetField) {
-	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
+func getField(vm *VM, memberAccessibleValue interpreter.MemberAccessibleValue, fieldNameIndex uint16, accessedTypeIndex uint16) Value {
 
 	checkMemberAccessTargetType(
 		vm,
-		ins.AccessedType,
+		accessedTypeIndex,
 		memberAccessibleValue,
 	)
 
 	// VM assumes the field name is always a string.
-	fieldNameIndex := ins.FieldName
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName)
@@ -1056,6 +1058,14 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 			Name: fieldName,
 		})
 	}
+
+	return fieldValue
+}
+
+func opGetField(vm *VM, ins opcode.InstructionGetField) {
+	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
+
+	fieldValue := getField(vm, memberAccessibleValue, ins.FieldName, ins.AccessedType)
 
 	vm.push(fieldValue)
 }
@@ -1540,36 +1550,9 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 }
 
 func opGetFieldLocal(vm *VM, ins opcode.InstructionGetFieldLocal) {
-	// get local
-	localIndex := ins.Local
-	absoluteIndex := vm.callFrame.localsOffset + localIndex
-	local := vm.locals[absoluteIndex]
-
-	// Some local variables can be implicit references. e.g: receiver of a bound function.
-	// TODO: maybe perform this check only if `localIndex == 0`?
-	if implicitReference, ok := local.(ImplicitReferenceValue); ok {
-		local = implicitReference.ReferencedValue(vm.context)
-	}
-
-	// get field
+	local := getLocal(vm, ins.Local)
 	memberAccessibleValue := local.(interpreter.MemberAccessibleValue)
-
-	checkMemberAccessTargetType(
-		vm,
-		ins.AccessedType,
-		memberAccessibleValue,
-	)
-
-	// VM assumes the field name is always a string.
-	fieldNameIndex := ins.FieldName
-	fieldName := getRawStringConstant(vm, fieldNameIndex)
-
-	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName)
-	if fieldValue == nil {
-		panic(&interpreter.UseBeforeInitializationError{
-			Name: fieldName,
-		})
-	}
+	fieldValue := getField(vm, memberAccessibleValue, ins.FieldName, ins.AccessedType)
 
 	vm.push(fieldValue)
 }
