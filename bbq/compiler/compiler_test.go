@@ -10485,7 +10485,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 	})
 }
 
-func BenchmarkCompileWithoutOptimizations(b *testing.B) {
+func BenchmarkCompileTime(b *testing.B) {
 	checker, err := ParseAndCheck(b, `
 	struct Foo {
 		var id : Int
@@ -10505,47 +10505,15 @@ func BenchmarkCompileWithoutOptimizations(b *testing.B) {
 	`)
 	require.NoError(b, err)
 
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		comp.Compile()
-	}
-}
-
-func BenchmarkCompileWithOptimizations(b *testing.B) {
-	checker, err := ParseAndCheck(b, `
-	struct Foo {
-		var id : Int
-
-		init(_ id: Int) {
-			self.id = id
-		}
-	}
-
-	fun test(count: Int) {
-		var i = 0
-		while i < count {
-			Foo(i)
-			i = i + 1
-		}
-	}
-	`)
-	require.NoError(b, err)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
+		b.StopTimer()
 		comp := compiler.NewInstructionCompiler(
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
 		)
 		comp.Config.PeepholeOptimizationsEnabled = true
+		b.ReportAllocs()
+		b.StartTimer()
 		comp.Compile()
 	}
 }
