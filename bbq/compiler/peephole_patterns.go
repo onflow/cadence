@@ -119,9 +119,15 @@ var NilTransferAndConvertPattern = PeepholePattern{
 	},
 }
 
-func (p *PeepholePattern) Match(instructions []opcode.Instruction) bool {
+func (p *PeepholePattern) Match(instructions []opcode.Instruction, bytecodeOffset int, jumpTargets map[int]struct{}) bool {
 	for i, opcode := range p.Opcodes {
 		if instructions[i].Opcode() != opcode {
+			return false
+		}
+
+		// check if the instruction is a jump target
+		// do not optimize across basic blocks
+		if _, ok := jumpTargets[bytecodeOffset+i]; ok {
 			return false
 		}
 	}

@@ -43,6 +43,9 @@ type PeepholeInstructionStaticTypeOptimizer struct {
 
 	// jumps is a list of offsets in the optimized bytecode that need to be patched
 	jumps []int
+
+	// jumpTargets is a set of offsets in the original bytecode that are jump targets
+	jumpTargets map[int]struct{}
 }
 
 // look up table to improve pattern matching performance
@@ -101,6 +104,13 @@ func (o *PeepholeInstructionStaticTypeOptimizer) patchJumps(optimized []opcode.I
 }
 
 func (o *PeepholeInstructionStaticTypeOptimizer) OptimizeInstructions(instructions []opcode.Instruction) []opcode.Instruction {
+	// collect all jump targets
+	for _, instruction := range instructions {
+		if opcode.IsJump(instruction) {
+			o.jumpTargets[int(opcode.JumpTarget(instruction))] = struct{}{}
+		}
+	}
+
 	optimized := make([]opcode.Instruction, 0, len(instructions))
 
 	for i := 0; i < len(instructions); i++ {
@@ -113,7 +123,7 @@ func (o *PeepholeInstructionStaticTypeOptimizer) OptimizeInstructions(instructio
 			candidateOpcodes := candidate.Opcodes
 			window := instructions[i : i+len(candidateOpcodes)]
 
-			if candidate.Match(window) {
+			if candidate.Match(window, i, o.jumpTargets) {
 				replacement := candidate.Replacement(window, o.compiler)
 				optimized = append(optimized, replacement...)
 
@@ -155,5 +165,6 @@ func (o *PeepholeInstructionStaticTypeOptimizer) OptimizeInstructions(instructio
 func (o *PeepholeInstructionStaticTypeOptimizer) Optimize(code []opcode.Instruction) []opcode.Instruction {
 	o.bytecodeShifts = make([]BytecodeShiftPair, 0)
 	o.jumps = make([]int, 0)
+	o.jumpTargets = make(map[int]struct{})
 	return o.OptimizeInstructions(code)
 }

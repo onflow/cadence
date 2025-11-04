@@ -10418,6 +10418,71 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionReturnValue{},
 		}, functions2[0].Code)
 	})
+
+	t.Run("peephole avoid jump targets", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test(): Int? {
+				var x: Int? = true ? 123 : nil
+				return x
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionTrue{},
+			opcode.InstructionJumpIfFalse{Target: 0x5},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionJump{Target: 0x6},
+			opcode.InstructionNil{},
+			// this transfer after nil cannot be optimized out because it is a jump target
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		},
+			functions[0].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.PeepholeOptimizationsEnabled = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionTrue{},
+			opcode.InstructionJumpIfFalse{Target: 0x5},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionJump{Target: 0x6},
+			opcode.InstructionNil{},
+			// expect this transfer to still be here
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		}, functions2[0].Code)
+	})
 }
 
 func BenchmarkCompileWithoutOptimizations(b *testing.B) {
