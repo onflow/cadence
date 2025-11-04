@@ -179,7 +179,17 @@ contract Test {
         }
     }
 
-    // loadFork is provided natively by the host and injected at runtime.
+    /// Loads a forked environment from the given network, optionally at a specific height.
+    /// Only a single forked environment is active at a time.
+    /// If `height` is nil, the latest sealed block should be used by the backend.
+    ///
+    access(all)
+    fun loadFork(network: String, height: UInt64?) {
+        let err = self.backend.loadFork(network: network, height: height)
+        if err != nil {
+            panic(err!.message)
+        }
+    }
 
     access(all)
     struct Matcher {
@@ -419,7 +429,12 @@ contract Test {
         access(all)
         fun loadSnapshot(name: String): Error?
 
-        // loadFork is provided natively by the host and injected at runtime.
+        /// Loads a forked environment from the given network,
+        /// optionally at a specific block height. Only a single fork is active at a time.
+        /// If `height` is nil, the latest sealed block should be used by the backend.
+        ///
+        access(all)
+        fun loadFork(network: String, height: UInt64?): Error?
     }
 
     /// Returns a new matcher that negates the test of the given matcher.

@@ -2900,7 +2900,6 @@ func TestBlockchainAccount(t *testing.T) {
 type mockedTestFramework struct {
 	emulatorBackend func() Blockchain
 	readFile        func(s string) (string, error)
-	loadFork        func(string, *uint64) error
 }
 
 var _ TestFramework = &mockedTestFramework{}
@@ -2921,13 +2920,6 @@ func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
 	return m.readFile(fileName)
 }
 
-func (m mockedTestFramework) LoadFork(host string, height *uint64) error {
-	if m.loadFork == nil {
-		panic("'LoadFork' is not implemented")
-	}
-	return m.loadFork(host, height)
-}
-
 // mockedBlockchain is the implementation of `Blockchain` for testing purposes.
 type mockedBlockchain struct {
 	runScript          func(context TestFrameworkScriptExecutionContext, code string, arguments []interpreter.Value)
@@ -2944,6 +2936,7 @@ type mockedBlockchain struct {
 	moveTime           func(int64)
 	createSnapshot     func(string) error
 	loadSnapshot       func(string) error
+	loadFork           func(string, *uint64) error
 }
 
 var _ Blockchain = &mockedBlockchain{}
@@ -3076,4 +3069,11 @@ func (m mockedBlockchain) LoadSnapshot(name string) error {
 	}
 
 	return m.loadSnapshot(name)
+}
+
+func (m mockedBlockchain) LoadFork(network string, height *uint64) error {
+	if m.loadFork == nil {
+		panic("'LoadFork' is not implemented")
+	}
+	return m.loadFork(network, height)
 }

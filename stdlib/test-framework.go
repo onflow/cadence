@@ -33,9 +33,6 @@ type TestFramework interface {
 	EmulatorBackend() Blockchain
 
 	ReadFile(string) (string, error)
-
-	// LoadFork swaps the active blockchain environment to a fork from the given host at optional height.
-	LoadFork(host string, height *uint64) error
 }
 
 type Blockchain interface {
@@ -83,6 +80,8 @@ type Blockchain interface {
 	CreateSnapshot(string) error
 
 	LoadSnapshot(string) error
+
+	LoadFork(network string, height *uint64) error
 }
 
 type ScriptResult struct {

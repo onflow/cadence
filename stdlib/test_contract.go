@@ -399,86 +399,6 @@ func newTestTypeReadFileFunction(
 	)
 }
 
-// 'Test.loadFork' function
-
-const testTypeLoadForkFunctionDocString = `
-Loads a forked environment from the given host (RPC endpoint),
-optionally at a specific block height. Only a single fork is active at a time.
-If 'height' is omitted or nil, the latest sealed block should be used by the backend.
-`
-
-const testTypeLoadForkFunctionName = "loadFork"
-
-var testTypeLoadForkFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
-		{
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     "host",
-			TypeAnnotation: sema.StringTypeAnnotation,
-		},
-		{
-			Identifier: "height",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.OptionalType{Type: sema.UInt64Type},
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-	Arity:                &sema.Arity{Min: 1, Max: 2},
-}
-
-func newTestTypeLoadForkFunction(
-	testFramework TestFramework,
-	t *TestContractType,
-	inter *interpreter.Interpreter,
-	testContractValue *interpreter.CompositeValue,
-) interpreter.BoundFunctionValue {
-	return interpreter.NewUnmeteredBoundHostFunctionValue(
-		inter,
-		testContractValue,
-		testTypeLoadForkFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			// host: String
-			host, ok := invocation.Arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			// height: UInt64? (optional parameter)
-			var heightPtr *uint64
-			if len(invocation.Arguments) > 1 {
-				switch v := invocation.Arguments[1].(type) {
-				case interpreter.NilValue:
-					// nil height -> latest
-				case *interpreter.SomeValue:
-					inner := v.InnerValue()
-					heightVal, ok := inner.(interpreter.UInt64Value)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-					h := uint64(heightVal)
-					heightPtr = &h
-				default:
-					panic(errors.NewUnreachableError())
-				}
-			}
-
-			if err := testFramework.LoadFork(host.Str, heightPtr); err != nil {
-				panic(err)
-			}
-
-			// Recreate and assign a fresh backend bound to the (potentially) new environment
-			newBackend := t.emulatorBackendType.newEmulatorBackend(
-				inter,
-				testFramework.EmulatorBackend(),
-			)
-			testContractValue.SetMember(inter, "backend", newBackend)
-
-			return interpreter.Void
-		},
-	)
-}
-
 // 'Test.NewMatcher' function.
 // Constructs a matcher that test only 'AnyStruct'.
 // Accepts test function that accepts subtype of 'AnyStruct'.
@@ -1374,10 +1294,6 @@ func (t *TestContractType) NewTestContract(
 	compositeValue.Functions.Set(
 		testTypeReadFileFunctionName,
 		newTestTypeReadFileFunction(testFramework, inter, compositeValue),
-	)
-	compositeValue.Functions.Set(
-		testTypeLoadForkFunctionName,
-		newTestTypeLoadForkFunction(testFramework, t, inter, compositeValue),
 	)
 
 	// Inject natively implemented matchers
