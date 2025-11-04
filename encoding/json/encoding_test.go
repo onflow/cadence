@@ -204,6 +204,7 @@ func TestDecodeInvalidAddress(t *testing.T) {
 	t.Run("valid UTF-8 prefix", func(t *testing.T) {
 		t.Parallel()
 
+		// language=json
 		msg := `{"type":"Address","value":"000000000102030405"}`
 
 		_, err := Decode(nil, []byte(msg))
@@ -213,6 +214,7 @@ func TestDecodeInvalidAddress(t *testing.T) {
 	t.Run("invalid UTF-8 prefix", func(t *testing.T) {
 		t.Parallel()
 
+		// language=json
 		msg := `{"type":"Address","value":"\u1234"}`
 
 		_, err := Decode(nil, []byte(msg))
@@ -3074,6 +3076,7 @@ func TestDecodeCapability(t *testing.T) {
 		t.Parallel()
 
 		_, err := Decode(nil, []byte(
+			// language=json
 			`
             {
               "type": "Capability",
@@ -3093,8 +3096,8 @@ func TestDecodeCapability(t *testing.T) {
             }
           `,
 		))
-		require.Error(t, err)
-
+		assert.ErrorContains(t, err, "invalid capability: path is not supported")
+		assert.ErrorContains(t, err, "at .value")
 	})
 }
 
@@ -3138,7 +3141,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: "12.300000000",
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "invalid scale")
 					},
 				},
 				{
@@ -3204,7 +3207,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: "12.000000003",
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "invalid scale")
 					},
 				},
 				{
@@ -3224,7 +3227,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: fmt.Sprintf("%d.1", params.maxInt+1),
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "out of range")
 					},
 				},
 				{
@@ -3236,7 +3239,17 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: fmt.Sprintf("%d.1", params.minInt-1),
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						switch ty {
+						case cadence.UFix64Type:
+							assert.ErrorContains(t, err, "invalid negative integer part")
+
+						case cadence.Fix64Type:
+							assert.ErrorContains(t, err, "out of range")
+
+						default:
+							t.Fatal("unknown type")
+
+						}
 					},
 				},
 				{
@@ -3248,7 +3261,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: fmt.Sprintf("%d.%d", params.maxInt, params.maxFrac+1),
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "out of range")
 					},
 				},
 				{
@@ -3263,7 +3276,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				tests = append(tests, test{
 					input: fmt.Sprintf("%d.%d", params.minInt, -(params.minFrac - 1)),
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "out of range")
 					},
 				})
 			}
@@ -3293,7 +3306,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		// language=json
 		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": "1.-1"}`))
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "invalid sign in fractional part")
 	})
 
 	t.Run("plus sign in fractional", func(t *testing.T) {
@@ -3302,7 +3315,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		// language=json
 		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": "1.+1"}`))
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "invalid sign in fractional part")
 	})
 
 	t.Run("missing integer", func(t *testing.T) {
@@ -3311,7 +3324,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		// language=json
 		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": ".1"}`))
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "invalid integer part")
 	})
 
 	t.Run("missing fractional", func(t *testing.T) {
@@ -3320,7 +3333,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		// language=json
 		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": "1."}`))
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "invalid fractional part")
 	})
 }
 
@@ -3365,20 +3378,22 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 
 		// Decode with error if reference is not supported
 		_, err := Decode(nil, []byte(`
-                  {
-                    "type": "Type",
-                    "value": {
-                      "staticType": {
-                        "kind": "Reference",
-                        "type": {
-                          "kind": "Int"
-                        },
-                        "authorized": tru
-                      }
-                    }
-                  }
-                `))
-		require.Error(t, err)
+          {
+            "type": "Type",
+            "value": {
+              "staticType": {
+                "kind": "Reference",
+                "type": {
+                  "kind": "Int"
+                },
+                "authorized": true
+              }
+            }
+          }
+        `))
+
+		assert.ErrorContains(t, err, "missing property: authorization")
+		assert.ErrorContains(t, err, "at .value.staticType")
 	})
 
 	t.Run("with static restricted type", func(t *testing.T) {
@@ -3680,7 +3695,7 @@ func TestEncodePath(t *testing.T) {
 			// language=json
 			`{"type":"Path","value":{"domain":"Storage","identifier":"foo"}}`,
 		))
-		require.ErrorContains(t, err, "unknown domain in path")
+		assert.ErrorContains(t, err, "unknown domain in path")
 	})
 }
 
@@ -3719,7 +3734,6 @@ func TestDecodeInvalidType(t *testing.T) {
           }
         `
 		_, err := Decode(nil, []byte(encodedValue))
-		require.Error(t, err)
 		assert.ErrorContains(t,
 			err,
 			"invalid type ID for built-in: `` (at .value.id)",
@@ -3740,7 +3754,6 @@ func TestDecodeInvalidType(t *testing.T) {
           }
         `
 		_, err := Decode(nil, []byte(encodedValue))
-		require.Error(t, err)
 		assert.ErrorContains(t,
 			err,
 			"invalid type ID `I`: invalid identifier location type ID: missing location (at .value.id)",
@@ -3761,11 +3774,8 @@ func TestDecodeInvalidType(t *testing.T) {
           }
         `
 		_, err := Decode(nil, []byte(encodedValue))
-		require.Error(t, err)
-		assert.ErrorContains(t,
-			err,
-			"invalid type ID for built-in: `N.PublicKey` (at .value.id)",
-		)
+		assert.ErrorContains(t, err, "invalid type ID for built-in: `N.PublicKey`")
+		assert.ErrorContains(t, err, "at .value.id")
 	})
 }
 
@@ -3860,7 +3870,7 @@ func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
 		t.Parallel()
 
 		_, err := Decode(nil, []byte(encoded))
-		require.Error(t, err)
+		assert.ErrorContains(t, err, "expected JSON object, got &Int")
 	})
 
 }
@@ -4133,10 +4143,10 @@ func TestDecodeErrorContext(t *testing.T) {
 	t.Run("missing type at root", func(t *testing.T) {
 		t.Parallel()
 
+		// language=json
 		msg := `{"value": "test"}`
 		_, err := Decode(nil, []byte(msg))
-		require.Error(t, err)
-		require.ErrorContains(t, err, "missing property: type")
+		assert.ErrorContains(t, err, "missing property: type")
 	})
 
 	t.Run("missing type in array element", func(t *testing.T) {
@@ -4152,9 +4162,8 @@ func TestDecodeErrorContext(t *testing.T) {
             ]
         }`
 		_, err := Decode(nil, []byte(msg))
-		require.Error(t, err)
-		require.ErrorContains(t, err, "missing property: type")
-		require.ErrorContains(t, err, "at .value[0]")
+		assert.ErrorContains(t, err, "missing property: type")
+		assert.ErrorContains(t, err, "at .value[0]")
 	})
 
 	t.Run("missing type in nested array element", func(t *testing.T) {
@@ -4177,9 +4186,8 @@ func TestDecodeErrorContext(t *testing.T) {
             }
         `
 		_, err := Decode(nil, []byte(msg))
-		require.Error(t, err)
-		require.ErrorContains(t, err, "missing property: type")
-		require.ErrorContains(t, err, "at .value[0].value[0]")
+		assert.ErrorContains(t, err, "missing property: type")
+		assert.ErrorContains(t, err, "at .value[0].value[0]")
 	})
 
 	t.Run("missing type in struct field", func(t *testing.T) {
@@ -4203,9 +4211,8 @@ func TestDecodeErrorContext(t *testing.T) {
           }
         `
 		_, err := Decode(nil, []byte(msg))
-		require.Error(t, err)
-		require.ErrorContains(t, err, "missing property: type")
-		require.ErrorContains(t, err, "at .value.fields[0].value")
+		assert.ErrorContains(t, err, "missing property: type")
+		assert.ErrorContains(t, err, "at .value.fields[0].value")
 	})
 
 	t.Run("missing kind in type", func(t *testing.T) {
@@ -4222,9 +4229,8 @@ func TestDecodeErrorContext(t *testing.T) {
             }
         `
 		_, err := Decode(nil, []byte(msg))
-		require.Error(t, err)
-		require.ErrorContains(t, err, "missing property: kind")
-		require.ErrorContains(t, err, "at .value.staticType")
+		assert.ErrorContains(t, err, "missing property: kind")
+		assert.ErrorContains(t, err, "at .value.staticType")
 	})
 
 	t.Run("missing value in array element field", func(t *testing.T) {
@@ -4250,9 +4256,8 @@ func TestDecodeErrorContext(t *testing.T) {
             }
         `
 		_, err := Decode(nil, []byte(msg))
-		require.Error(t, err)
-		require.ErrorContains(t, err, "missing property: value")
-		require.ErrorContains(t, err, "at .value[0].value.fields[0]")
+		assert.ErrorContains(t, err, "missing property: value")
+		assert.ErrorContains(t, err, "at .value[0].value.fields[0]")
 	})
 
 	t.Run("missing value in dictionary key-value pair", func(t *testing.T) {
@@ -4276,9 +4281,8 @@ func TestDecodeErrorContext(t *testing.T) {
           }
         `
 		_, err := Decode(nil, []byte(msg))
-		require.Error(t, err)
-		require.ErrorContains(t, err, "expected JSON object with keys `type` and `value`")
-		require.ErrorContains(t, err, "at .value[0].value")
+		assert.ErrorContains(t, err, "expected JSON object with keys `type` and `value`")
+		assert.ErrorContains(t, err, "at .value[0].value")
 	})
 
 }
