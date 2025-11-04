@@ -448,7 +448,7 @@ func (v Fix64Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeFix64 (1 byte)
 // - int64 value encoded in big-endian (8 bytes)
-func (v Fix64Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Fix64Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeFix64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
 	return scratch[:9]

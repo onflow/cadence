@@ -112,6 +112,17 @@ func (v *StringValue) prepareGraphemes() {
 	}
 }
 
+func (v *StringValue) nextGrapheme(gauge common.ComputationGauge) bool {
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindGraphemesIteration,
+			Intensity: 1,
+		},
+	)
+	return v.graphemes.Next()
+}
+
 func (*StringValue) IsValue() {}
 
 func (v *StringValue) Accept(context ValueVisitContext, visitor Visitor) {
@@ -138,25 +149,35 @@ func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StringValue) MeteredString(
-	context ValueStringContext,
-	_ SeenReferences,
-) string {
+func (v *StringValue) MeteredString(context ValueStringContext, _ SeenReferences) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(context, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
-func (v *StringValue) Equal(_ ValueComparisonContext, other Value) bool {
+func (v *StringValue) meterComparison(gauge common.ComputationGauge, o *StringValue) {
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindStringComparison,
+			Intensity: uint64(minStringLength(v.Str, o.Str)),
+		},
+	)
+}
+
+func (v *StringValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
 	}
+
+	v.meterComparison(context, otherString)
+
 	return v.Str == otherString.Str
 }
 
 func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
-	otherString, ok := other.(*StringValue)
+	o, ok := other.(*StringValue)
 	if !ok {
 		panic(&InvalidOperandsError{
 			Operation: ast.OperationLess,
@@ -165,11 +186,13 @@ func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue
 		})
 	}
 
-	return v.Str < otherString.Str
+	v.meterComparison(context, o)
+
+	return v.Str < o.Str
 }
 
 func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
-	otherString, ok := other.(*StringValue)
+	o, ok := other.(*StringValue)
 	if !ok {
 		panic(&InvalidOperandsError{
 			Operation: ast.OperationLessEqual,
@@ -178,11 +201,13 @@ func (v *StringValue) LessEqual(context ValueComparisonContext, other Comparable
 		})
 	}
 
-	return v.Str <= otherString.Str
+	v.meterComparison(context, o)
+
+	return v.Str <= o.Str
 }
 
 func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
-	otherString, ok := other.(*StringValue)
+	o, ok := other.(*StringValue)
 	if !ok {
 		panic(&InvalidOperandsError{
 			Operation: ast.OperationGreater,
@@ -191,11 +216,13 @@ func (v *StringValue) Greater(context ValueComparisonContext, other ComparableVa
 		})
 	}
 
-	return v.Str > otherString.Str
+	v.meterComparison(context, o)
+
+	return v.Str > o.Str
 }
 
 func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
-	otherString, ok := other.(*StringValue)
+	o, ok := other.(*StringValue)
 	if !ok {
 		panic(&InvalidOperandsError{
 			Operation: ast.OperationGreaterEqual,
@@ -204,13 +231,15 @@ func (v *StringValue) GreaterEqual(context ValueComparisonContext, other Compara
 		})
 	}
 
-	return v.Str >= otherString.Str
+	v.meterComparison(context, o)
+
+	return v.Str >= o.Str
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeString (1 byte)
 // - string value (n bytes)
-func (v *StringValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v *StringValue) HashInput(_ common.Gauge, scratch []byte) []byte {
 	length := 1 + len(v.Str)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -258,15 +287,19 @@ func (v *StringValue) Concat(context StringValueFunctionContext, other *StringVa
 
 var EmptyString = NewUnmeteredStringValue("")
 
-func (v *StringValue) Slice(from IntValue, to IntValue) Value {
+func (v *StringValue) Slice(gauge common.Gauge, from IntValue, to IntValue) Value {
 	fromIndex := from.ToInt()
 	toIndex := to.ToInt()
-	return v.slice(fromIndex, toIndex)
+	return v.slice(
+		gauge,
+		fromIndex,
+		toIndex,
+	)
 }
 
-func (v *StringValue) slice(fromIndex int, toIndex int) *StringValue {
+func (v *StringValue) slice(gauge common.Gauge, fromIndex int, toIndex int) *StringValue {
 
-	length := v.Length()
+	length := v.Length(gauge)
 
 	if fromIndex < 0 || fromIndex > length || toIndex < 0 || toIndex > length {
 		panic(&StringSliceIndicesError{
@@ -296,6 +329,14 @@ func (v *StringValue) slice(fromIndex int, toIndex int) *StringValue {
 
 	v.prepareGraphemes()
 
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindGraphemesIteration,
+			Intensity: uint64(toIndex),
+		},
+	)
+
 	j := 0
 
 	for ; j <= fromIndex; j++ {
@@ -313,8 +354,8 @@ func (v *StringValue) slice(fromIndex int, toIndex int) *StringValue {
 	return NewUnmeteredStringValue(v.Str[start:end])
 }
 
-func (v *StringValue) checkBounds(index int) {
-	length := v.Length()
+func (v *StringValue) checkBounds(gauge common.Gauge, index int) {
+	length := v.Length(gauge)
 
 	if index < 0 || index >= length {
 		panic(&StringIndexOutOfBoundsError{
@@ -324,11 +365,19 @@ func (v *StringValue) checkBounds(index int) {
 	}
 }
 
-func (v *StringValue) GetKey(context ValueComparisonContext, key Value) Value {
+func (v *StringValue) GetKey(context ContainerReadContext, key Value) Value {
 	index := key.(NumberValue).ToInt()
-	v.checkBounds(index)
+	v.checkBounds(context, index)
 
 	v.prepareGraphemes()
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindGraphemesIteration,
+			Intensity: uint64(index + 1),
+		},
+	)
 
 	for j := 0; j <= index; j++ {
 		v.graphemes.Next()
@@ -359,7 +408,7 @@ func (*StringValue) RemoveKey(_ ContainerMutationContext, _ Value) Value {
 func (v *StringValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case sema.StringTypeLengthFieldName:
-		length := v.Length()
+		length := v.Length(context)
 		return NewIntValueFromInt64(context, int64(length))
 
 	case sema.StringTypeUtf8FieldName:
@@ -470,7 +519,7 @@ func (*StringValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 }
 
 // Length returns the number of characters (grapheme clusters)
-func (v *StringValue) Length() int {
+func (v *StringValue) Length(gauge common.Gauge) int {
 	// If the string is empty, the length is 0, and there are no graphemes.
 	//
 	// Do NOT store the length, as the value is the empty string singleton EmptyString,
@@ -482,7 +531,7 @@ func (v *StringValue) Length() int {
 	if v.length < 0 {
 		var length int
 		v.prepareGraphemes()
-		for v.graphemes.Next() {
+		for v.nextGrapheme(gauge) {
 			length++
 		}
 		v.length = length
@@ -496,7 +545,7 @@ func (v *StringValue) ToLower(context StringValueFunctionContext) *StringValue {
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
-			Kind:      common.ComputationKindLoop,
+			Kind:      common.ComputationKindStringToLower,
 			Intensity: uint64(len(v.Str)),
 		},
 	)
@@ -567,13 +616,15 @@ func (v *StringValue) Split(context ArrayCreationContext, separator *StringValue
 			partIndex++
 
 			part := remaining.slice(
+				context,
 				0,
 				separatorCharacterIndex,
 			)
 
 			remaining = remaining.slice(
-				separatorCharacterIndex+separator.Length(),
-				remaining.Length(),
+				context,
+				separatorCharacterIndex+separator.Length(context),
+				remaining.Length(context),
 			)
 
 			return part
@@ -590,7 +641,7 @@ func (v *StringValue) Explode(context ArrayCreationContext) *ArrayValue {
 		context,
 		VarSizedArrayOfStringType,
 		common.ZeroAddress,
-		uint64(v.Length()),
+		uint64(v.Length(context)),
 		func() Value {
 			value := iterator.Next(context)
 			if value == nil {
@@ -649,12 +700,12 @@ func (v *StringValue) ReplaceAll(
 			for i := 0; i < count; i++ {
 
 				var originalCharacterIndex, originalByteOffset int
-				if original.Length() == 0 {
+				if original.Length(context) == 0 {
 					if i > 0 {
 						originalCharacterIndex = 1
 
 						remaining.prepareGraphemes()
-						remaining.graphemes.Next()
+						remaining.nextGrapheme(context)
 						_, originalByteOffset = remaining.graphemes.Positions()
 					}
 				} else {
@@ -668,8 +719,9 @@ func (v *StringValue) ReplaceAll(
 				b.WriteString(replacement.Str)
 
 				remaining = remaining.slice(
-					originalCharacterIndex+original.Length(),
-					remaining.Length(),
+					context,
+					originalCharacterIndex+original.Length(context),
+					remaining.Length(context),
 				)
 			}
 			b.WriteString(remaining.Str)
@@ -730,6 +782,25 @@ var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteAr
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 func (v *StringValue) DecodeHex(context ArrayCreationContext) *ArrayValue {
+
+	intensity := uint64(len(v.Str))
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindStringDecodeHex,
+			Intensity: intensity,
+		},
+	)
+
+	common.UseMemory(
+		context,
+		common.MemoryUsage{
+			Kind:   common.MemoryKindBytes,
+			Amount: intensity,
+		},
+	)
+
 	bs, err := hex.DecodeString(v.Str)
 	if err != nil {
 		if err, ok := err.(hex.InvalidByteError); ok {
@@ -779,10 +850,8 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ ValueStaticTypeContext) ValueIterator {
-	return &StringValueIterator{
-		graphemes: uniseg.NewGraphemes(v.Str),
-	}
+func (v *StringValue) Iterator(context ValueStaticTypeContext) ValueIterator {
+	return NewStringValueIterator(context, v)
 }
 
 func (v *StringValue) ForEach(
@@ -815,7 +884,7 @@ func (v *StringValue) ForEach(
 	}
 }
 
-func (v *StringValue) IsGraphemeBoundaryStart(startOffset int) bool {
+func (v *StringValue) IsGraphemeBoundaryStart(gauge common.Gauge, startOffset int) bool {
 
 	// Empty strings have no grapheme clusters, and therefore no boundaries.
 	//
@@ -829,12 +898,12 @@ func (v *StringValue) IsGraphemeBoundaryStart(startOffset int) bool {
 	v.prepareGraphemes()
 
 	var characterIndex int
-	return v.seekGraphemeBoundaryStartPrepared(startOffset, &characterIndex)
+	return v.seekGraphemeBoundaryStartPrepared(gauge, startOffset, &characterIndex)
 }
 
-func (v *StringValue) seekGraphemeBoundaryStartPrepared(startOffset int, characterIndex *int) bool {
+func (v *StringValue) seekGraphemeBoundaryStartPrepared(gauge common.Gauge, startOffset int, characterIndex *int) bool {
 
-	for ; v.graphemes.Next(); *characterIndex++ {
+	for ; v.nextGrapheme(gauge); *characterIndex++ {
 
 		boundaryStart, boundaryEnd := v.graphemes.Positions()
 		if boundaryStart == boundaryEnd {
@@ -855,7 +924,7 @@ func (v *StringValue) seekGraphemeBoundaryStartPrepared(startOffset int, charact
 	return false
 }
 
-func (v *StringValue) IsGraphemeBoundaryEnd(end int) bool {
+func (v *StringValue) IsGraphemeBoundaryEnd(gauge common.Gauge, end int) bool {
 
 	// Empty strings have no grapheme clusters, and therefore no boundaries.
 	//
@@ -867,12 +936,12 @@ func (v *StringValue) IsGraphemeBoundaryEnd(end int) bool {
 	}
 
 	v.prepareGraphemes()
-	v.graphemes.Next()
+	v.nextGrapheme(gauge)
 
-	return v.isGraphemeBoundaryEndPrepared(end)
+	return v.isGraphemeBoundaryEndPrepared(gauge, end)
 }
 
-func (v *StringValue) isGraphemeBoundaryEndPrepared(end int) bool {
+func (v *StringValue) isGraphemeBoundaryEndPrepared(gauge common.Gauge, end int) bool {
 
 	for {
 		boundaryStart, boundaryEnd := v.graphemes.Positions()
@@ -890,7 +959,7 @@ func (v *StringValue) isGraphemeBoundaryEndPrepared(end int) bool {
 			return false
 		}
 
-		if !v.graphemes.Next() {
+		if !v.nextGrapheme(gauge) {
 			return false
 		}
 	}
@@ -901,7 +970,7 @@ func (v *StringValue) IndexOf(context StringValueFunctionContext, other *StringV
 	return NewIntValueFromInt64(context, int64(index))
 }
 
-func (v *StringValue) indexOf(gauge common.ComputationGauge, other *StringValue) (characterIndex int, byteOffset int) {
+func (v *StringValue) indexOf(gauge common.Gauge, other *StringValue) (characterIndex int, byteOffset int) {
 
 	if len(other.Str) == 0 {
 		return 0, 0
@@ -964,8 +1033,8 @@ func (v *StringValue) indexOf(gauge common.ComputationGauge, other *StringValue)
 		graphemesBackup := *v.graphemes
 		characterIndexBackup := characterIndex
 
-		if v.seekGraphemeBoundaryStartPrepared(absoluteFoundByteOffset, &characterIndex) &&
-			v.isGraphemeBoundaryEndPrepared(absoluteFoundByteOffset+len(other.Str)) {
+		if v.seekGraphemeBoundaryStartPrepared(gauge, absoluteFoundByteOffset, &characterIndex) &&
+			v.isGraphemeBoundaryEndPrepared(gauge, absoluteFoundByteOffset+len(other.Str)) {
 
 			return characterIndex, absoluteFoundByteOffset
 		}
@@ -988,19 +1057,10 @@ func (v *StringValue) Count(context StringValueFunctionContext, other *StringVal
 	return NewIntValueFromInt64(context, int64(index))
 }
 
-func (v *StringValue) count(gauge common.ComputationGauge, other *StringValue) int {
-	if other.Length() == 0 {
-		return 1 + v.Length()
+func (v *StringValue) count(gauge common.Gauge, other *StringValue) int {
+	if other.Length(gauge) == 0 {
+		return 1 + v.Length(gauge)
 	}
-
-	// Meter computation as if the string was iterated.
-	common.UseComputation(
-		gauge,
-		common.ComputationUsage{
-			Kind:      common.ComputationKindLoop,
-			Intensity: uint64(len(v.Str)),
-		},
-	)
 
 	remaining := v
 	count := 0
@@ -1014,8 +1074,9 @@ func (v *StringValue) count(gauge common.ComputationGauge, other *StringValue) i
 		count++
 
 		remaining = remaining.slice(
-			index+other.Length(),
-			remaining.Length(),
+			gauge,
+			index+other.Length(gauge),
+			remaining.Length(gauge),
 		)
 	}
 }
@@ -1027,8 +1088,23 @@ type StringValueIterator struct {
 
 var _ ValueIterator = &StringValueIterator{}
 
-func (i *StringValueIterator) Next(_ ValueIteratorContext) Value {
-	if !i.HasNext() {
+func NewStringValueIterator(gauge common.MemoryGauge, v *StringValue) *StringValueIterator {
+
+	common.UseMemory(
+		gauge,
+		common.MemoryUsage{
+			Kind:   common.MemoryKindStringIterator,
+			Amount: 1,
+		},
+	)
+
+	return &StringValueIterator{
+		graphemes: uniseg.NewGraphemes(v.Str),
+	}
+}
+
+func (i *StringValueIterator) Next(context ValueIteratorContext) Value {
+	if !i.HasNext(context) {
 		return nil
 	}
 
@@ -1036,13 +1112,24 @@ func (i *StringValueIterator) Next(_ ValueIteratorContext) Value {
 	return NewUnmeteredCharacterValue(i.graphemes.Str())
 }
 
-func (i *StringValueIterator) HasNext() bool {
+func (i *StringValueIterator) HasNext(context ValueIteratorContext) bool {
 	if i.hasNext == nil {
-		hasNext := i.graphemes.Next()
+		hasNext := i.nextGrapheme(context)
 		i.hasNext = &hasNext
 	}
 
 	return *i.hasNext
+}
+
+func (i *StringValueIterator) nextGrapheme(gauge common.ComputationGauge) bool {
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindGraphemesIteration,
+			Intensity: 1,
+		},
+	)
+	return i.graphemes.Next()
 }
 
 func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
@@ -1319,7 +1406,11 @@ var NativeStringSliceFunction = NativeFunction(
 		from := AssertValueOfType[IntValue](args[0])
 		to := AssertValueOfType[IntValue](args[1])
 		stringValue := AssertValueOfType[*StringValue](receiver)
-		return stringValue.Slice(from, to)
+		return stringValue.Slice(
+			context,
+			from,
+			to,
+		)
 	},
 )
 

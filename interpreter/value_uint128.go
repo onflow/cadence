@@ -448,7 +448,7 @@ func (v UInt128Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeUInt128 (1 byte)
 // - big int encoded in big endian (n bytes)
-func (v UInt128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v UInt128Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)

@@ -438,7 +438,7 @@ func (v UFix128Value) Equal(_ ValueComparisonContext, other Value) bool {
 // - HashInputTypeUFix128 (1 byte)
 // - high 64 bits encoded in big-endian (8 bytes)
 // - low 64 bits encoded in big-endian (8 bytes)
-func (v UFix128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v UFix128Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUFix128)
 
 	UFix128 := fix.UFix128(v)

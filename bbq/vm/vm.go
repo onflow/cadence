@@ -1382,7 +1382,7 @@ func opIterator(vm *VM) {
 func opIteratorHasNext(vm *VM) {
 	value := vm.pop()
 	iterator := value.(*IteratorWrapperValue)
-	result := interpreter.BoolValue(iterator.HasNext())
+	result := interpreter.BoolValue(iterator.HasNext(vm.context))
 	vm.push(result)
 }
 
@@ -1421,7 +1421,11 @@ func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 		valuesStr = append(valuesStr, s.Str)
 	}
 
-	vm.push(interpreter.BuildStringTemplate(valuesStr, expressions))
+	vm.push(interpreter.BuildStringTemplate(
+		vm.context,
+		valuesStr,
+		expressions,
+	))
 }
 
 func opGetTypeIndex(vm *VM, ins opcode.InstructionGetTypeIndex) {

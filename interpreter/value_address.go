@@ -137,7 +137,7 @@ func (v AddressValue) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeAddress (1 byte)
 // - address (8 bytes)
-func (v AddressValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v AddressValue) HashInput(_ common.Gauge, scratch []byte) []byte {
 	length := 1 + len(v)
 	var buffer []byte
 	if length <= len(scratch) {

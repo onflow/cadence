@@ -100,6 +100,7 @@ func NewPersistentSlabStorage(
 func NewStorage(
 	ledger atree.Ledger,
 	memoryGauge common.MemoryGauge,
+	computationGauge common.ComputationGauge,
 	config StorageConfig,
 ) *Storage {
 	persistentSlabStorage := NewPersistentSlabStorage(ledger, memoryGauge)
@@ -108,6 +109,7 @@ func NewStorage(
 		ledger,
 		persistentSlabStorage,
 		memoryGauge,
+		computationGauge,
 	)
 
 	return &Storage{
