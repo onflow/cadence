@@ -6,11 +6,10 @@ rules:
             - mustType:
                 source: sub
                 type: IntersectionType
-            - not:
-                equals:
-                  source: sub.LegacyType
-                  target:
-                    oneOf: [nil, AnyResourceType, AnyStructType, AnyType]
+            - equals:
+                source: sub.LegacyType
+                target:
+                  oneOf: [nil, AnyResourceType, AnyStructType, AnyType]
             - mustType:
                 source: sub.LegacyType
                 type: CompositeType
