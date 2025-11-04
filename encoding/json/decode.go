@@ -38,14 +38,14 @@ import (
 )
 
 type pathElement interface {
-	Append(w io.Writer)
+	writeTo(w io.Writer)
 }
 
 type indexPathElement int
 
 var _ pathElement = indexPathElement(0)
 
-func (e indexPathElement) Append(w io.Writer) {
+func (e indexPathElement) writeTo(w io.Writer) {
 	_, _ = fmt.Fprintf(w, "[%d]", int(e))
 }
 
@@ -53,7 +53,7 @@ type propertyPathElement string
 
 var _ pathElement = propertyPathElement("")
 
-func (e propertyPathElement) Append(w io.Writer) {
+func (e propertyPathElement) writeTo(w io.Writer) {
 	_, _ = fmt.Fprintf(w, ".%s", e)
 }
 
@@ -208,7 +208,7 @@ func (d *Decoder) getPathString() string {
 
 	var builder strings.Builder
 	for _, element := range d.pathContext {
-		element.Append(&builder)
+		element.writeTo(&builder)
 	}
 	return builder.String()
 }
