@@ -65,7 +65,8 @@ var ConstantTransferAndConvertPattern = PeepholePattern{
 		getConstant := instructions[0].(opcode.InstructionGetConstant)
 		transferAndConvert := instructions[1].(opcode.InstructionTransferAndConvert)
 
-		// safety check
+		// If the constant already has the same type as the target type of the conversion,
+		// just keep the constant.
 		constantKind := compiler.constants[getConstant.Constant].kind
 		targetType := compiler.types[transferAndConvert.Type]
 		if constantKind == constant.FromSemaType(targetType) {
