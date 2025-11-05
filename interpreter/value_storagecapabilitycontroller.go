@@ -331,17 +331,18 @@ func (v *StorageCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 	return v.CapabilityID
 }
 
-func (v *StorageCapabilityControllerValue) ReferenceValue(context ValueCapabilityControllerReferenceValueContext, capabilityAddress common.Address, resultBorrowType *sema.ReferenceType) ReferenceValue {
-	authorization := ConvertSemaAccessToStaticAuthorization(
-		context,
-		resultBorrowType.Authorization,
-	)
+func (v *StorageCapabilityControllerValue) ReferenceValue(
+	context ValueCapabilityControllerReferenceValueContext,
+	capabilityAddress common.Address,
+	resultBorrowType *sema.ReferenceType,
+) ReferenceValue {
+	resultBorrowStaticType := ConvertSemaToStaticType(context, resultBorrowType).(*ReferenceStaticType)
 	return NewStorageReferenceValue(
 		context,
-		authorization,
+		resultBorrowStaticType.Authorization,
 		capabilityAddress,
 		v.TargetPath,
-		resultBorrowType.Type,
+		resultBorrowStaticType.ReferencedType,
 	)
 }
 

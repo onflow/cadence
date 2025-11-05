@@ -367,14 +367,14 @@ func ReceiverReference(context ReferenceCreationContext, receiver Value) (Refere
 
 	selfRef, selfIsRef := receiver.(ReferenceValue)
 	if !selfIsRef {
-		semaType := MustSemaTypeOfValue(receiver, context)
+		receiverType := receiver.StaticType(context)
 		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
 		// it is not directly exposed to the users
 		selfRef = NewEphemeralReferenceValue(
 			context,
 			UnauthorizedAccess,
 			receiver,
-			semaType,
+			receiverType,
 		)
 	}
 	return selfRef, selfIsRef

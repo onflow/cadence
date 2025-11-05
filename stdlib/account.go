@@ -289,7 +289,7 @@ func NewAccountReferenceValue(
 		context,
 		authorization,
 		account,
-		sema.AccountType,
+		interpreter.PrimitiveStaticTypeAccount,
 	)
 }
 
@@ -1535,7 +1535,7 @@ func nativeAccountContractsBorrowFunction(
 		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
-		borrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -1583,18 +1583,18 @@ func AccountContractsBorrow(
 	invocationContext interpreter.InvocationContext,
 	address common.Address,
 	nameValue *interpreter.StringValue,
-	borrowType sema.Type,
+	borrowType interpreter.StaticType,
 	handler AccountContractsHandler,
 ) interpreter.Value {
 	name := nameValue.Str
 	location := common.NewAddressLocation(invocationContext, address, name)
 
-	referenceType, ok := borrowType.(*sema.ReferenceType)
+	referenceType, ok := borrowType.(*interpreter.ReferenceStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	if referenceType.Authorization != sema.UnauthorizedAccess {
+	if referenceType.Authorization != interpreter.UnauthorizedAccess {
 		panic(errors.NewDefaultUserError("cannot borrow a reference with an authorization"))
 	}
 
@@ -1622,7 +1622,7 @@ func AccountContractsBorrow(
 	// Check the type
 
 	staticType := contractValue.StaticType(invocationContext)
-	if !interpreter.IsSubTypeOfSemaType(invocationContext, staticType, referenceType.Type) {
+	if !interpreter.IsSubType(invocationContext, staticType, referenceType.ReferencedType) {
 		return interpreter.Nil
 	}
 
@@ -1632,7 +1632,7 @@ func AccountContractsBorrow(
 		invocationContext,
 		interpreter.UnauthorizedAccess,
 		contractValue,
-		referenceType.Type,
+		referenceType.ReferencedType,
 	)
 
 	return interpreter.NewSomeValueNonCopying(
@@ -3668,7 +3668,7 @@ func getStorageCapabilityControllerReference(
 		context,
 		interpreter.UnauthorizedAccess,
 		storageCapabilityController,
-		sema.StorageCapabilityControllerType,
+		interpreter.PrimitiveStaticTypeStorageCapabilityController,
 	)
 }
 
@@ -4794,7 +4794,7 @@ func getAccountCapabilityControllerReference(
 		context,
 		interpreter.UnauthorizedAccess,
 		accountCapabilityController,
-		sema.AccountCapabilityControllerType,
+		interpreter.PrimitiveStaticTypeAccountCapabilityController,
 	)
 }
 

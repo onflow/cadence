@@ -316,26 +316,29 @@ func (interpreter *Interpreter) checkMemberAccess(
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
+	expectedStaticType := ConvertSemaToStaticType(interpreter, expectedType)
+
 	CheckMemberAccessTargetType(
 		interpreter,
 		target,
-		expectedType,
+		expectedStaticType,
 	)
 }
 
 func CheckMemberAccessTargetType(
 	context ValueStaticTypeContext,
 	target Value,
-	expectedType sema.Type,
+	expectedType StaticType,
 ) {
 	switch expectedType := expectedType.(type) {
-	case *sema.TransactionType:
+	//case *sema.TransactionType:
+	case nil:
 		// TODO: maybe also check transactions.
 		//   they are composites with a type ID which has an empty qualified ID, i.e. no type is available
 
 		return
 
-	case *sema.CompositeType:
+	case *CompositeStaticType:
 		// TODO: also check built-in values.
 		//   blocked by standard library values (RLP, BLS, etc.),
 		//   which are implemented as contracts, but currently do not have their type registered
@@ -359,23 +362,19 @@ func CheckMemberAccessTargetType(
 
 	targetStaticType := target.StaticType(context)
 
-	if _, ok := expectedType.(*sema.OptionalType); ok {
+	if _, ok := expectedType.(*OptionalStaticType); ok {
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
-
 			panic(&MemberAccessTypeError{
-				ExpectedType: expectedType,
-				ActualType:   targetSemaType,
+				ExpectedType: MustConvertStaticToSemaType(expectedType, context),
+				ActualType:   MustConvertStaticToSemaType(targetStaticType, context),
 			})
 		}
 	}
 
-	if !IsSubTypeOfSemaType(context, targetStaticType, expectedType) {
-		targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
-
+	if !IsSubType(context, targetStaticType, expectedType) {
 		panic(&MemberAccessTypeError{
-			ExpectedType: expectedType,
-			ActualType:   targetSemaType,
+			ExpectedType: MustConvertStaticToSemaType(expectedType, context),
+			ActualType:   MustConvertStaticToSemaType(targetStaticType, context),
 		})
 	}
 }
@@ -1334,6 +1333,21 @@ func CreateReferenceValue(
 	value Value,
 	isImplicit bool,
 ) Value {
+	borrowStaticType := ConvertSemaToStaticType(context, borrowType)
+	return CreateReferenceValueFromStaticType(
+		context,
+		borrowStaticType,
+		value,
+		isImplicit,
+	)
+}
+
+func CreateReferenceValueFromStaticType(
+	context ReferenceCreationContext,
+	borrowType StaticType,
+	value Value,
+	isImplicit bool,
+) Value {
 
 	// There are four potential cases:
 	// (1) Target type is optional, actual value is also optional
@@ -1346,7 +1360,7 @@ func CreateReferenceValue(
 	// (4) Target type is non-optional, actual value is non-optional
 
 	switch typ := borrowType.(type) {
-	case *sema.OptionalType:
+	case *OptionalStaticType:
 
 		innerType := typ.Type
 
@@ -1360,7 +1374,7 @@ func CreateReferenceValue(
 
 			innerValue := value.InnerValue()
 
-			referenceValue := CreateReferenceValue(context, innerType, innerValue, false)
+			referenceValue := CreateReferenceValueFromStaticType(context, innerType, innerValue, false)
 
 			// Wrap the reference with an optional (since an optional is expected).
 			return NewSomeValueNonCopying(context, referenceValue)
@@ -1374,20 +1388,20 @@ func CreateReferenceValue(
 			// Case (2):
 			// If the referenced value is non-optional,
 			// but the target type is optional.
-			referenceValue := CreateReferenceValue(context, innerType, value, false)
+			referenceValue := CreateReferenceValueFromStaticType(context, innerType, value, false)
 
 			// Wrap the reference with an optional (since an optional is expected).
 			return NewSomeValueNonCopying(context, referenceValue)
 		}
 
-	case *sema.ReferenceType:
+	case *ReferenceStaticType:
 
 		switch value := value.(type) {
 		case *SomeValue:
 			// Case (3.a): target type is non-optional, actual value is optional.
 			innerValue := value.InnerValue()
 
-			return CreateReferenceValue(context, typ, innerValue, false)
+			return CreateReferenceValueFromStaticType(context, typ, innerValue, false)
 
 		case NilValue:
 			// Case (3.b) value is nil.
@@ -1405,10 +1419,10 @@ func CreateReferenceValue(
 				// Additionally, it is only safe to "compress" reference types like this when the desired
 				// result reference type is unauthorized
 				staticType := value.StaticType(context)
-				if typ.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(context, staticType, typ) {
+				if typ.Authorization != UnauthorizedAccess || !IsSubType(context, staticType, typ) {
 					panic(&InvalidMemberReferenceError{
 						ExpectedType: typ,
-						ActualType:   MustConvertStaticToSemaType(staticType, context),
+						ActualType:   staticType,
 					})
 				}
 
@@ -1429,16 +1443,13 @@ func CreateReferenceValue(
 func newEphemeralReference(
 	context ReferenceCreationContext,
 	value Value,
-	typ *sema.ReferenceType,
+	typ *ReferenceStaticType,
 ) *EphemeralReferenceValue {
-
-	auth := ConvertSemaAccessToStaticAuthorization(context, typ.Authorization)
-
 	return NewEphemeralReferenceValue(
 		context,
-		auth,
+		typ.Authorization,
 		value,
-		typ.Type,
+		typ.ReferencedType,
 	)
 }
 
@@ -1500,11 +1511,13 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
 
+	baseStaticType := base.StaticType(interpreter)
+
 	baseValue := NewEphemeralReferenceValue(
 		interpreter,
 		auth,
 		base,
-		MustSemaTypeOfValue(base, interpreter).(*sema.CompositeType),
+		baseStaticType,
 	)
 
 	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(

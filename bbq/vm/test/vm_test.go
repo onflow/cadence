@@ -11726,7 +11726,11 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 				context,
 				contractAddress,
 				interpreter.NewUnmeteredStringValue(contractName),
-				sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.AnyStructType),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypeAnyStruct,
+				),
 				accountHandler,
 			)
 

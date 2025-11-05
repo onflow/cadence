@@ -1069,13 +1069,10 @@ func checkMemberAccessTargetType(
 
 	context := vm.context
 
-	// TODO: Avoid sema type conversion.
-	accessedSemaType := context.SemaTypeFromStaticType(accessedType)
-
 	interpreter.CheckMemberAccessTargetType(
 		context,
 		accessedValue,
-		accessedSemaType,
+		accessedType,
 	)
 }
 
@@ -1111,11 +1108,11 @@ func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
 	value := vm.peek()
 	valueType := value.StaticType(context)
 
-	transferredValue := interpreter.TransferAndConvert(
+	transferredValue := interpreter.TransferAndConvertToStaticType(
 		context,
 		value,
-		context.SemaTypeFromStaticType(valueType),
-		context.SemaTypeFromStaticType(targetType),
+		valueType,
+		targetType,
 	)
 
 	vm.replaceTop(transferredValue)
@@ -1147,11 +1144,11 @@ func opConvert(vm *VM, ins opcode.InstructionConvert) {
 	value := vm.peek()
 	valueType := value.StaticType(context)
 
-	transferredValue := interpreter.ConvertAndBoxWithValidation(
+	transferredValue := interpreter.ConvertAndBoxToStaticTypeWithValidation(
 		context,
 		value,
-		context.SemaTypeFromStaticType(valueType),
-		context.SemaTypeFromStaticType(targetType),
+		valueType,
+		targetType,
 	)
 
 	vm.replaceTop(transferredValue)
@@ -1252,7 +1249,7 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	// so we don't substitute them.
 
 	// If the target is `AnyStruct` or `AnyResource` we want to preserve optionals
-	unboxedExpectedType := UnwrapOptionalType(targetType)
+	unboxedExpectedType := interpreter.UnwrapOptionalType(targetType)
 	if !(unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyStruct ||
 		unboxedExpectedType == interpreter.PrimitiveStaticTypeAnyResource) {
 		// otherwise dynamic cast now always unboxes optionals
@@ -1356,11 +1353,9 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 
 	context := vm.context
 
-	semaBorrowedType := context.SemaTypeFromStaticType(borrowedType)
-
-	ref := interpreter.CreateReferenceValue(
+	ref := interpreter.CreateReferenceValueFromStaticType(
 		context,
-		semaBorrowedType,
+		borrowedType,
 		value,
 		ins.IsImplicit,
 	)

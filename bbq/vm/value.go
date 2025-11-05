@@ -31,13 +31,10 @@ func ConvertAndBox(
 	value Value,
 	valueType, targetType bbq.StaticType,
 ) Value {
-	valueSemaType := context.SemaTypeFromStaticType(valueType)
-	targetSemaType := context.SemaTypeFromStaticType(targetType)
-
-	return interpreter.ConvertAndBox(
+	return interpreter.ConvertAndBoxToStaticType(
 		context,
 		value,
-		valueSemaType,
-		targetSemaType,
+		valueType,
+		targetType,
 	)
 }

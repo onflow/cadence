@@ -31,7 +31,7 @@ import (
 type EphemeralReferenceValue struct {
 	Value Value
 	// BorrowedType is the T in &T
-	BorrowedType  sema.Type
+	BorrowedType  StaticType
 	Authorization Authorization
 }
 
@@ -48,7 +48,7 @@ func NewUnmeteredEphemeralReferenceValue(
 	referenceTracker ReferenceTracker,
 	authorization Authorization,
 	value Value,
-	borrowedType sema.Type,
+	borrowedType StaticType,
 ) *EphemeralReferenceValue {
 	if reference, isReference := value.(ReferenceValue); isReference {
 		panic(&NestedReferenceError{
@@ -71,7 +71,7 @@ func NewEphemeralReferenceValue(
 	context ReferenceCreationContext,
 	authorization Authorization,
 	value Value,
-	borrowedType sema.Type,
+	borrowedType StaticType,
 ) *EphemeralReferenceValue {
 	common.UseMemory(context, common.EphemeralReferenceValueMemoryUsage)
 	return NewUnmeteredEphemeralReferenceValue(context, authorization, value, borrowedType)
@@ -231,7 +231,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 
 	staticType := v.Value.StaticType(context)
 
-	if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
+	if !IsSubType(context, staticType, v.BorrowedType) {
 		return false
 	}
 
@@ -315,7 +315,7 @@ func (v *EphemeralReferenceValue) ForEach(
 	)
 }
 
-func (v *EphemeralReferenceValue) BorrowType() sema.Type {
+func (v *EphemeralReferenceValue) BorrowType() StaticType {
 	return v.BorrowedType
 }
 

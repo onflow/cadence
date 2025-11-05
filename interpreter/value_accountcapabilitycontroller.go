@@ -309,15 +309,13 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 		sema.AccountType,
 	)
 
-	authorization := ConvertSemaAccessToStaticAuthorization(
-		context,
-		resultBorrowType.Authorization,
-	)
+	resultBorrowStaticType := ConvertSemaToStaticType(context, resultBorrowType).(*ReferenceStaticType)
+
 	return NewEphemeralReferenceValue(
 		context,
-		authorization,
+		resultBorrowStaticType.Authorization,
 		account,
-		resultBorrowType.Type,
+		resultBorrowStaticType.ReferencedType,
 	)
 }
 

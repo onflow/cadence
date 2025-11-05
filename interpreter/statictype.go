@@ -299,6 +299,7 @@ type InclusiveRangeStaticType struct {
 }
 
 var _ StaticType = InclusiveRangeStaticType{}
+var _ ParameterizedType = InclusiveRangeStaticType{}
 
 func NewInclusiveRangeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -344,6 +345,10 @@ func (t InclusiveRangeStaticType) ID() TypeID {
 
 func (t InclusiveRangeStaticType) IsDeprecated() bool {
 	return t.ElementType.IsDeprecated()
+}
+
+func (t InclusiveRangeStaticType) BaseType() StaticType {
+	return t.ElementType
 }
 
 // ConstantSizedStaticType
@@ -926,6 +931,7 @@ type CapabilityStaticType struct {
 }
 
 var _ StaticType = &CapabilityStaticType{}
+var _ ParameterizedType = &CapabilityStaticType{}
 
 func NewCapabilityStaticType(
 	memoryGauge common.MemoryGauge,
@@ -989,6 +995,14 @@ func (t *CapabilityStaticType) IsDeprecated() bool {
 		return false
 	}
 	return t.BorrowType.IsDeprecated()
+}
+
+func (t *CapabilityStaticType) BaseType() StaticType {
+	if t.BorrowType == nil {
+		return nil
+	}
+
+	return PrimitiveStaticTypeCapability
 }
 
 // Conversion
@@ -1497,4 +1511,8 @@ func (p TypeParameter) String() string {
 		builder.WriteString(p.TypeBound.String())
 	}
 	return builder.String()
+}
+
+type ParameterizedType interface {
+	BaseType() StaticType
 }

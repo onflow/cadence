@@ -661,7 +661,7 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext) OptionalVal
 		context,
 		UnauthorizedAccess,
 		ownerAccount,
-		sema.AccountType,
+		PrimitiveStaticTypeAccount,
 	)
 
 	return NewSomeValueNonCopying(context, reference)
@@ -1691,7 +1691,8 @@ func (v *CompositeValue) getBaseValue(
 		baseType = ty
 	}
 
-	return NewEphemeralReferenceValue(context, functionAuthorization, v.base, baseType)
+	baseStaticType := ConvertSemaToStaticType(context, baseType)
+	return NewEphemeralReferenceValue(context, functionAuthorization, v.base, baseStaticType)
 }
 
 func (v *CompositeValue) SetBaseValue(base *CompositeValue) {
@@ -1761,14 +1762,15 @@ func (v *CompositeValue) ForEachAttachment(
 	returnType := functionValueType.ReturnTypeAnnotation.Type
 
 	fn := func(attachment *CompositeValue) {
-		attachmentType := MustSemaTypeOfValue(attachment, context).(*sema.CompositeType)
+		attachmentStaticType := attachment.StaticType(context)
+		attachmentType := MustConvertStaticToSemaType(attachmentStaticType, context).(*sema.CompositeType)
 
 		attachmentReference := NewEphemeralReferenceValue(
 			context,
 			// attachments are unauthorized during iteration
 			UnauthorizedAccess,
 			attachment,
-			attachmentType,
+			attachmentStaticType,
 		)
 
 		referenceType := sema.NewReferenceType(
@@ -1800,12 +1802,14 @@ func AttachmentBaseAndSelfValues(
 	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(context, fnAccess)
 
 	base = v.getBaseValue(context, attachmentReferenceAuth)
+	valueStaticType := v.StaticType(context)
+
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(
 		context,
 		attachmentReferenceAuth,
 		v,
-		MustSemaTypeOfValue(v, context),
+		valueStaticType,
 	)
 
 	return
@@ -1818,7 +1822,7 @@ func (v *CompositeValue) forEachAttachment(
 	// The attachment iteration creates an implicit reference to the composite, and holds onto that referenced-value.
 	// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 	// We create a reference here for the purposes of tracking it during iteration.
-	vType := MustSemaTypeOfValue(v, context)
+	vType := v.StaticType(context)
 	compositeReference := NewEphemeralReferenceValue(context, UnauthorizedAccess, v, vType)
 	forEachAttachment(context, compositeReference, f)
 }
@@ -1884,12 +1888,14 @@ func (v *CompositeValue) getTypeKey(
 	// dynamically set the attachment's base to this composite
 	attachment.SetBaseValue(v)
 
+	attachmentStaticType := ConvertSemaToStaticType(context, attachmentType)
+
 	// The attachment reference has the same entitlements as the base access
 	attachmentRef := NewEphemeralReferenceValue(
 		context,
 		ConvertSemaAccessToStaticAuthorization(context, baseAccess),
 		attachment,
-		attachmentType,
+		attachmentStaticType,
 	)
 
 	return NewSomeValueNonCopying(context, attachmentRef)

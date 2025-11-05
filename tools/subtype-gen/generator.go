@@ -1555,10 +1555,13 @@ func (gen *SubTypeCheckGenerator) returnsCovariantCheck(p ReturnCovariantPredica
 }
 
 func (gen *SubTypeCheckGenerator) isParameterizedSubtype(p IsParameterizedSubtypePredicate) []dst.Node {
-	args := []dst.Expr{
+	args := gen.extraArguments()
+
+	args = append(
+		args,
 		gen.expressionIgnoreNegation(p.Sub),
 		gen.expressionIgnoreNegation(p.Super),
-	}
+	)
 
 	return []dst.Node{
 		gen.callExpression(
