@@ -38,13 +38,11 @@ func JumpTarget(instruction Instruction) uint16 {
 
 func IsJump(instruction Instruction) bool {
 	switch instruction.(type) {
-	case InstructionJump:
-		return true
-	case InstructionJumpIfFalse:
-		return true
-	case InstructionJumpIfTrue:
-		return true
-	case InstructionJumpIfNil:
+	case InstructionJump,
+		InstructionJumpIfFalse
+		InstructionJumpIfTrue,
+		InstructionJumpIfNil:
+		
 		return true
 	default:
 		return false

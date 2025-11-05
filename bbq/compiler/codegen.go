@@ -83,7 +83,7 @@ func (g *InstructionCodeGen) Emit(instruction opcode.Instruction) {
 	*g.target = append(*g.target, instruction)
 }
 
-func PatchJump(target *[]opcode.Instruction, offset int, newTarget uint16) {
+func PatchJump(target []opcode.Instruction, offset int, newTarget uint16) {
 	switch ins := (*target)[offset].(type) {
 	case opcode.InstructionJump:
 		ins.Target = newTarget

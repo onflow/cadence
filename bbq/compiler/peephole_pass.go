@@ -30,7 +30,7 @@ type BytecodeShiftPair struct {
 	Shift  int
 }
 
-type PeepholeOptimizer[E, T any] interface {
+type PeepholeOptimizer[E any] interface {
 	Optimize(code []E) []E
 }
 
@@ -48,35 +48,37 @@ type PeepholeInstructionStaticTypeOptimizer struct {
 	jumpTargets map[int]struct{}
 }
 
+var _ PeepholeOptimizer[opcode.Instruction] = &PeepholeInstructionStaticTypeOptimizer{}
+
 // look up table to improve pattern matching performance
 var PatternsByOpcode map[opcode.Opcode][]PeepholePattern
 
 func init() {
 	PatternsByOpcode = make(map[opcode.Opcode][]PeepholePattern)
 	for _, pattern := range AllPatterns {
-		if PatternsByOpcode[pattern.Opcodes[0]] == nil {
-			PatternsByOpcode[pattern.Opcodes[0]] = make([]PeepholePattern, 0)
-		}
-		PatternsByOpcode[pattern.Opcodes[0]] = append(PatternsByOpcode[pattern.Opcodes[0]], pattern)
+		firstOpcode := pattern.Opcodes[0]
+		PatternsByOpcode[firstOpcode] = append(PatternsByOpcode[firstOpcode], pattern)
 	}
 }
 
-func NewPeepholeOptimizer[E, T any](compiler *Compiler[E, T]) PeepholeOptimizer[E, T] {
+func NewPeepholeOptimizer[E, T any](compiler *Compiler[E, T]) PeepholeOptimizer[E] {
 	// restrict the compiler to opcode.Instruction and static type
 	// so patterns can ignore generics
 	if c, ok := any(compiler).(*Compiler[opcode.Instruction, interpreter.StaticType]); ok {
 		optimizer := &PeepholeInstructionStaticTypeOptimizer{
 			compiler: c,
 		}
-		return any(optimizer).(PeepholeOptimizer[E, T])
+		return any(optimizer).(PeepholeOptimizer[E])
 	}
-	return &PeepholeNoopOptimizer[E, T]{}
+	return PeepholeNoopOptimizer[E]{}
 }
 
-type PeepholeNoopOptimizer[E, T any] struct {
+type PeepholeNoopOptimizer[E any] struct {
 }
 
-func (o *PeepholeNoopOptimizer[E, T]) Optimize(code []E) []E {
+var _ PeepholeOptimizer[struct{}] = PeepholeNoopOptimizer[struct{}]{}
+
+func (PeepholeNoopOptimizer[E]) Optimize(code []E) []E {
 	return code
 }
 
@@ -163,8 +165,8 @@ func (o *PeepholeInstructionStaticTypeOptimizer) OptimizeInstructions(instructio
 	return optimized
 }
 func (o *PeepholeInstructionStaticTypeOptimizer) Optimize(code []opcode.Instruction) []opcode.Instruction {
-	o.bytecodeShifts = make([]BytecodeShiftPair, 0)
-	o.jumps = make([]int, 0)
-	o.jumpTargets = make(map[int]struct{})
+	o.bytecodeShifts = o.bytecodeShifts[:0]
+	o.jumps = o.jumps[:0]
+	clear(o.jumpTargets)
 	return o.OptimizeInstructions(code)
 }
