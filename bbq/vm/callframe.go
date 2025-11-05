@@ -23,7 +23,7 @@ import "time"
 type callFrame struct {
 	localsOffset uint16
 	localsCount  uint16
-	function     *CompiledFunctionValue
+	function     CompiledFunctionValue
 	openUpvalues map[int]*Upvalue
 
 	// For tracing.
