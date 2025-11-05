@@ -67,6 +67,10 @@ func NewPeepholeOptimizer[E, T any](compiler *Compiler[E, T]) PeepholeOptimizer[
 	if c, ok := any(compiler).(*Compiler[opcode.Instruction, interpreter.StaticType]); ok {
 		optimizer := &PeepholeInstructionStaticTypeOptimizer{
 			compiler: c,
+			// TODO: allocate these lazily
+			jumpTargets:    make(map[int]struct{}),
+			bytecodeShifts: make([]BytecodeShiftPair, 0),
+			jumps:          make([]int, 0),
 		}
 		return any(optimizer).(PeepholeOptimizer[E])
 	}
@@ -101,7 +105,7 @@ func (o *PeepholeInstructionStaticTypeOptimizer) patchJumps(optimized []opcode.I
 
 		// patch jump
 		newJumpTarget := jumpTarget + cumShift
-		PatchJump(&optimized, jump, uint16(newJumpTarget))
+		opcode.PatchJumpInstruction(optimized, jump, uint16(newJumpTarget))
 	}
 }
 

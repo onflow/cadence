@@ -18,7 +18,9 @@
 
 package opcode
 
-import "github.com/onflow/cadence/errors"
+import (
+	"github.com/onflow/cadence/errors"
+)
 
 // JumpTarget returns the target of a jump instruction
 func JumpTarget(instruction Instruction) uint16 {
@@ -39,10 +41,9 @@ func JumpTarget(instruction Instruction) uint16 {
 func IsJump(instruction Instruction) bool {
 	switch instruction.(type) {
 	case InstructionJump,
-		InstructionJumpIfFalse
+		InstructionJumpIfFalse,
 		InstructionJumpIfTrue,
 		InstructionJumpIfNil:
-		
 		return true
 	default:
 		return false
