@@ -19,9 +19,11 @@
 package compiler
 
 import (
+	"math"
 	"sort"
 
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -105,6 +107,10 @@ func (o *PeepholeInstructionStaticTypeOptimizer) patchJumps(optimized []opcode.I
 
 		// patch jump
 		newJumpTarget := jumpTarget + cumShift
+		if newJumpTarget > math.MaxUint16 {
+			//TODO: abort optimization pass instead of panicking
+			panic(errors.NewUnexpectedError("peephole shifted jump target past max uint16"))
+		}
 		opcode.PatchJumpInstruction(optimized, jump, uint16(newJumpTarget))
 	}
 }
