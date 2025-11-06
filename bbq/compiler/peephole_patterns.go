@@ -114,8 +114,8 @@ var NilTransferAndConvertPattern = PeepholePattern{
 	Name:    "NilTransferAndConvert",
 	Opcodes: []opcode.Opcode{opcode.Nil, opcode.TransferAndConvert},
 	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
-		nil := instructions[0].(opcode.InstructionNil)
-		return []opcode.Instruction{nil}
+		nilInstruction := instructions[0].(opcode.InstructionNil)
+		return []opcode.Instruction{nilInstruction}
 	},
 }
 
