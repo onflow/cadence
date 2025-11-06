@@ -323,8 +323,8 @@ func interpreterFTTransfer(tb testing.TB) {
 			context interpreter.BorrowCapabilityControllerContext,
 			address interpreter.AddressValue,
 			capabilityID interpreter.UInt64Value,
-			wantedBorrowType *sema.ReferenceType,
-			capabilityBorrowType *sema.ReferenceType,
+			wantedBorrowType *interpreter.ReferenceStaticType,
+			capabilityBorrowType *interpreter.ReferenceStaticType,
 		) interpreter.ReferenceValue {
 			return stdlib.BorrowCapabilityController(
 				context,

@@ -1396,7 +1396,7 @@ func (v *ArrayValue) GetOwner() common.Address {
 func (v *ArrayValue) SemaType(typeConverter TypeConverter) sema.ArrayType {
 	if v.semaType == nil {
 		// this function will panic already if this conversion fails
-		v.semaType, _ = MustConvertStaticToSemaType(v.Type, typeConverter).(sema.ArrayType)
+		v.semaType, _ = typeConverter.SemaTypeFromStaticType(v.Type).(sema.ArrayType)
 	}
 	return v.semaType
 }

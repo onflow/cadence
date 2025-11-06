@@ -183,7 +183,7 @@ func (v *PathCapabilityValue) GetMethod(context MemberAccessibleContext, name st
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+			borrowType, _ = context.SemaTypeFromStaticType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return v.newBorrowFunction(context, borrowType)
 
@@ -191,7 +191,7 @@ func (v *PathCapabilityValue) GetMethod(context MemberAccessibleContext, name st
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
 			// this function will panic already if this conversion fails
-			borrowType, _ = MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+			borrowType, _ = context.SemaTypeFromStaticType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return v.newCheckFunction(context, borrowType)
 	}

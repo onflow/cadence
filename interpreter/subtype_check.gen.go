@@ -220,19 +220,19 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		return IsParameterizedSubType(typeConverter, subType, typedSuperType)
 
 	case *InterfaceStaticType:
-		interfaceSuperType := MustConvertStaticToSemaType(typedSuperType, typeConverter).(*sema.InterfaceType)
+		interfaceSuperType := typeConverter.SemaTypeFromStaticType(typedSuperType).(*sema.InterfaceType)
 
 		switch typedSubType := subType.(type) {
 		case *CompositeStaticType:
-			compositeSubType := MustConvertStaticToSemaType(typedSubType, typeConverter).(*sema.CompositeType)
+			compositeSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.CompositeType)
 
 			return compositeSubType.Kind == interfaceSuperType.CompositeKind &&
 				compositeSubType.EffectiveInterfaceConformanceSet().Contains(interfaceSuperType)
 		case *IntersectionStaticType:
-			intersectionSubType := MustConvertStaticToSemaType(typedSubType, typeConverter).(*sema.IntersectionType)
+			intersectionSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.IntersectionType)
 			return intersectionSubType.EffectiveIntersectionSet().Contains(interfaceSuperType)
 		case *InterfaceStaticType:
-			interfaceSubType := MustConvertStaticToSemaType(typedSubType, typeConverter).(*sema.InterfaceType)
+			interfaceSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.InterfaceType)
 			return interfaceSubType.EffectiveInterfaceConformanceSet().Contains(interfaceSuperType)
 		}
 

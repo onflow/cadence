@@ -1529,7 +1529,7 @@ func (v *DictionaryValue) ValueID() atree.ValueID {
 func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {
 	if v.semaType == nil {
 		// this function will panic already if this conversion fails
-		v.semaType, _ = MustConvertStaticToSemaType(v.Type, typeConverter).(*sema.DictionaryType)
+		v.semaType, _ = typeConverter.SemaTypeFromStaticType(v.Type).(*sema.DictionaryType)
 	}
 	return v.semaType
 }

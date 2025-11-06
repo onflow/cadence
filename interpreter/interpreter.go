@@ -1512,7 +1512,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				if declaration.Kind() == common.CompositeKindAttachment {
 
 					attachmentStaticType := value.StaticType(invocationContext)
-					attachmentType := MustConvertStaticToSemaType(attachmentStaticType, invocationContext).(*sema.CompositeType)
+					attachmentType := invocationContext.SemaTypeFromStaticType(attachmentStaticType).(*sema.CompositeType)
 					// Self's type in the constructor is fully entitled, since
 					// the constructor can only be called when in possession of the base resource
 
@@ -3703,7 +3703,7 @@ func ConstructDictionaryTypeValue(
 	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 	if keyType == nil ||
 		!sema.IsSubType(
-			MustConvertStaticToSemaType(keyType, context),
+			context.SemaTypeFromStaticType(keyType),
 			sema.HashableStructType,
 		) {
 		return Nil
@@ -3747,7 +3747,7 @@ func ConstructFunctionTypeValue(
 	parameterTypeValues *ArrayValue,
 	returnTypeValue TypeValue,
 ) Value {
-	returnType := MustConvertStaticToSemaType(returnTypeValue.Type, invocationContext)
+	returnType := invocationContext.SemaTypeFromStaticType(returnTypeValue.Type)
 
 	var parameterTypes []sema.Parameter
 	parameterCount := parameterTypeValues.Count()
@@ -3756,7 +3756,7 @@ func ConstructFunctionTypeValue(
 		parameterTypeValues.Iterate(
 			invocationContext,
 			func(param Value) bool {
-				semaType := MustConvertStaticToSemaType(param.(TypeValue).Type, invocationContext)
+				semaType := invocationContext.SemaTypeFromStaticType(param.(TypeValue).Type)
 				parameterTypes = append(
 					parameterTypes,
 					sema.Parameter{
@@ -3945,7 +3945,7 @@ func ConstructInclusiveRangeTypeValue(
 	ty := typeValue.Type
 
 	// InclusiveRanges must hold integers
-	elemSemaTy := MustConvertStaticToSemaType(ty, context)
+	elemSemaTy := context.SemaTypeFromStaticType(ty)
 	if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
 		return Nil
 	}
@@ -4956,7 +4956,7 @@ func AccountStorageRead(
 	valueStaticType := value.StaticType(invocationContext)
 
 	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
-		valueSemaType := MustConvertStaticToSemaType(valueStaticType, invocationContext)
+		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
 
 		panic(&ForceCastTypeMismatchError{
 			ExpectedType: typeParameter,
@@ -5605,7 +5605,7 @@ func checkContainerMutation(
 
 	if !IsSubType(context, actualElementType, elementType) {
 		panic(&ContainerMutationError{
-			ExpectedType: MustConvertStaticToSemaType(elementType, context),
+			ExpectedType: context.SemaTypeFromStaticType(elementType),
 			ActualType:   MustSemaTypeOfValue(element, context),
 		})
 	}
@@ -6057,7 +6057,7 @@ func capabilityBorrowFunction(
 	capabilityBorrowType *ReferenceStaticType,
 ) FunctionValue {
 
-	capabilityBorrowSemaType := MustConvertStaticToSemaType(capabilityBorrowType, context)
+	capabilityBorrowSemaType := context.SemaTypeFromStaticType(capabilityBorrowType)
 
 	return NewBoundHostFunctionValue(
 		context,
@@ -6167,7 +6167,7 @@ func capabilityCheckFunction(
 	capabilityBorrowType *ReferenceStaticType,
 ) FunctionValue {
 
-	capabilityBorrowSemaType := MustConvertStaticToSemaType(capabilityBorrowType, context)
+	capabilityBorrowSemaType := context.SemaTypeFromStaticType(capabilityBorrowType)
 
 	return NewBoundHostFunctionValue(
 		context,

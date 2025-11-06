@@ -361,7 +361,7 @@ func ParseCheckAndPrepareWithOptions(
 									argumentTypes = make([]sema.Type, len(arguments))
 									for i, argument := range arguments {
 										staticType := argument.StaticType(context)
-										argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+										argumentTypes[i] = context.SemaTypeFromStaticType(staticType)
 									}
 								}
 

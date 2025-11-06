@@ -38,7 +38,7 @@ func isAttachmentType(typeConverter TypeConverter, typ StaticType) bool {
 		}
 
 		// TODO: Get rid of the conversion
-		compositeType := MustConvertStaticToSemaType(typ, typeConverter).(*sema.CompositeType)
+		compositeType := typeConverter.SemaTypeFromStaticType(typ).(*sema.CompositeType)
 		return compositeType.Kind == common.CompositeKindAttachment
 	}
 }
@@ -56,7 +56,7 @@ func IsHashableStructType(typeConverter TypeConverter, typ StaticType) bool {
 		_, ok := typ.(*CompositeStaticType)
 		if !ok {
 			// TODO: Get rid of the conversion
-			compositeType := MustConvertStaticToSemaType(typ, typeConverter).(*sema.CompositeType)
+			compositeType := typeConverter.SemaTypeFromStaticType(typ).(*sema.CompositeType)
 			return compositeType.Kind == common.CompositeKindEnum
 		}
 
@@ -78,7 +78,7 @@ func IsResourceType(typeConverter TypeConverter, typ StaticType) bool {
 	case *DictionaryStaticType:
 		return IsResourceType(typeConverter, typ.ValueType)
 	default:
-		semaType := MustConvertStaticToSemaType(typ, typeConverter)
+		semaType := typeConverter.SemaTypeFromStaticType(typ)
 		return semaType.IsResourceType()
 	}
 }
@@ -90,8 +90,8 @@ func PermitsAccess(typeConverter TypeConverter, superTypeAuth, subTypeAuth Autho
 }
 
 func IsIntersectionSubset(typeConverter TypeConverter, superType *IntersectionStaticType, subType StaticType) bool {
-	semaSuperType := MustConvertStaticToSemaType(superType, typeConverter).(*sema.IntersectionType)
-	semaSubType := MustConvertStaticToSemaType(subType, typeConverter)
+	semaSuperType := typeConverter.SemaTypeFromStaticType(superType).(*sema.IntersectionType)
+	semaSubType := typeConverter.SemaTypeFromStaticType(subType)
 	return sema.IsIntersectionSubset(semaSuperType, semaSubType)
 }
 

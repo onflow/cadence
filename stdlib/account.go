@@ -1222,7 +1222,7 @@ func AccountInboxUnpublish(
 	if !interpreter.IsSubTypeOfSemaType(context, publishedType, capabilityType) {
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType: capabilityType,
-			ActualType:   interpreter.MustConvertStaticToSemaType(publishedType, context),
+			ActualType:   context.SemaTypeFromStaticType(publishedType),
 		})
 	}
 
@@ -1340,7 +1340,7 @@ func AccountInboxClaim(
 	if !interpreter.IsSubTypeOfSemaType(context, publishedType, ty) {
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType: ty,
-			ActualType:   interpreter.MustConvertStaticToSemaType(publishedType, context),
+			ActualType:   context.SemaTypeFromStaticType(publishedType),
 		})
 	}
 
@@ -1725,7 +1725,7 @@ func nativeAccountContractsChangeFunction(
 		for i := 0; i < len(args); i++ {
 			// TODO: optimize, avoid gathering the types
 			staticType := args[i].StaticType(context)
-			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+			argumentTypes[i] = context.SemaTypeFromStaticType(staticType)
 		}
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
@@ -2116,7 +2116,7 @@ func nativeAccountContractsTryUpdateFunction(
 		for i := 0; i < len(args); i++ {
 			// TODO: optimize, avoid gathering the types
 			staticType := args[i].StaticType(context)
-			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+			argumentTypes[i] = context.SemaTypeFromStaticType(staticType)
 		}
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
