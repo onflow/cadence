@@ -145,6 +145,8 @@ func NewVMAccountConstructor(creator AccountCreator) StandardLibraryValue {
 	)
 }
 
+var AccountReferenceStaticType = interpreter.ConvertSemaToStaticType(nil, sema.AccountReferenceType)
+
 func NewAccount(
 	context interpreter.MemberAccessibleContext,
 	payer interpreter.MemberAccessibleValue,
@@ -154,7 +156,7 @@ func NewAccount(
 	interpreter.ExpectType(
 		context,
 		payer,
-		sema.AccountReferenceType,
+		AccountReferenceStaticType,
 	)
 
 	payerValue := payer.GetMember(context, sema.AccountTypeAddressFieldName)

@@ -451,8 +451,8 @@ func (e *ForceCastTypeMismatchError) SetLocationRange(locationRange LocationRang
 
 // TypeMismatchError
 type TypeMismatchError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -462,7 +462,7 @@ var _ HasLocationRange = &TypeMismatchError{}
 func (*TypeMismatchError) IsUserError() {}
 
 func (e *TypeMismatchError) Error() string {
-	expected, actual := sema.ErrorMessageExpectedActualTypes(
+	expected, actual := ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
 	)

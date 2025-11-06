@@ -4402,8 +4402,6 @@ func IsSubType(typeConverter TypeConverter, subType StaticType, superType Static
 		return true
 	}
 
-	//semaType := typeConverter.SemaTypeFromStaticType(superType)
-
 	return checkSubTypeWithoutEquality_gen(typeConverter, subType, superType)
 }
 
@@ -5592,16 +5590,14 @@ func setMember(
 func ExpectType(
 	context ValueStaticTypeContext,
 	value Value,
-	expectedType sema.Type,
+	expectedType StaticType,
 ) {
 	valueStaticType := value.StaticType(context)
 
-	if !IsSubTypeOfSemaType(context, valueStaticType, expectedType) {
-		valueSemaType := context.SemaTypeFromStaticType(valueStaticType)
-
+	if !IsSubType(context, valueStaticType, expectedType) {
 		panic(&TypeMismatchError{
 			ExpectedType: expectedType,
-			ActualType:   valueSemaType,
+			ActualType:   valueStaticType,
 		})
 	}
 }

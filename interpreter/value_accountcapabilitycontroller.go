@@ -306,7 +306,7 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	ExpectType(
 		context,
 		account,
-		sema.AccountType,
+		PrimitiveStaticTypeAccount,
 	)
 
 	resultBorrowStaticType := ConvertSemaToStaticType(context, resultBorrowType).(*ReferenceStaticType)

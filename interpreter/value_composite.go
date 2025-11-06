@@ -654,7 +654,7 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext) OptionalVal
 	ExpectType(
 		context,
 		ownerAccount,
-		sema.AccountType,
+		PrimitiveStaticTypeAccount,
 	)
 
 	reference := NewEphemeralReferenceValue(

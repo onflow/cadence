@@ -279,7 +279,7 @@ func PublicKeyVerifySignature(
 	interpreter.ExpectType(
 		context,
 		publicKeyValue,
-		sema.PublicKeyType,
+		PublicKeyStaticType,
 	)
 
 	signature, err := interpreter.ByteArrayValueToByteSlice(context, signatureValue)
@@ -370,6 +370,8 @@ func NewVMPublicKeyVerifyPoPFunction(verifier BLSPoPVerifier) VMFunction {
 	}
 }
 
+var PublicKeyStaticType = interpreter.ConvertSemaToStaticType(nil, sema.PublicKeyType)
+
 func PublicKeyVerifyPoP(
 	context interpreter.InvocationContext,
 	publicKeyValue *interpreter.CompositeValue,
@@ -380,7 +382,7 @@ func PublicKeyVerifyPoP(
 	interpreter.ExpectType(
 		context,
 		publicKeyValue,
-		sema.PublicKeyType,
+		PublicKeyStaticType,
 	)
 
 	publicKey, err := NewPublicKeyFromValue(context, publicKeyValue)

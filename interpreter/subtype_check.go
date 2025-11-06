@@ -70,7 +70,6 @@ func IsResourceType(typeConverter TypeConverter, typ StaticType) bool {
 	case PrimitiveStaticType:
 		// Primitive static type to sema type conversion is just a switch case.
 		// So not much overhead there.
-		// TODO: Maybe have these precomputed.
 		return typ.SemaType().IsResourceType()
 	case *OptionalStaticType:
 		return IsResourceType(typeConverter, typ.Type)
