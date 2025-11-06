@@ -754,8 +754,8 @@ func (e *UseBeforeInitializationError) SetLocationRange(locationRange LocationRa
 
 // MemberAccessTypeError
 type MemberAccessTypeError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -765,11 +765,12 @@ var _ HasLocationRange = &MemberAccessTypeError{}
 func (*MemberAccessTypeError) IsInternalError() {}
 
 func (e *MemberAccessTypeError) Error() string {
+	expected, actual := ErrorMessageExpectedActualTypes(e.ExpectedType, e.ActualType)
 	return fmt.Sprintf(
 		"%s invalid member access: expected `%s`, got `%s`",
 		errors.InternalErrorMessagePrefix,
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 

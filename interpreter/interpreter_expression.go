@@ -365,16 +365,16 @@ func CheckMemberAccessTargetType(
 	if _, ok := expectedType.(*OptionalStaticType); ok {
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
 			panic(&MemberAccessTypeError{
-				ExpectedType: MustConvertStaticToSemaType(expectedType, context),
-				ActualType:   MustConvertStaticToSemaType(targetStaticType, context),
+				ExpectedType: expectedType,
+				ActualType:   targetStaticType,
 			})
 		}
 	}
 
 	if !IsSubType(context, targetStaticType, expectedType) {
 		panic(&MemberAccessTypeError{
-			ExpectedType: MustConvertStaticToSemaType(expectedType, context),
-			ActualType:   MustConvertStaticToSemaType(targetStaticType, context),
+			ExpectedType: expectedType,
+			ActualType:   targetStaticType,
 		})
 	}
 }

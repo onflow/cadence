@@ -1077,6 +1077,9 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 	case *sema.TransactionType:
 		return ConvertSemaTransactionToStaticTransactionType(memoryGauge, t)
+
+	case *sema.GenericType:
+		return ConvertSemaToStaticType(memoryGauge, t.TypeParameter.TypeBound)
 	}
 
 	return nil
