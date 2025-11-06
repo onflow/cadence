@@ -11613,13 +11613,13 @@ func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
 			_ interpreter.AccountCapabilityGetValidationContext,
 			_ interpreter.AddressValue,
 			path interpreter.PathValue,
-			wantedBorrowType *sema.ReferenceType,
-			_ *sema.ReferenceType,
+			wantedBorrowType *interpreter.ReferenceStaticType,
+			_ *interpreter.ReferenceStaticType,
 		) (bool, error) {
 
 			validatedPaths = append(validatedPaths, path)
 
-			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
 			return !wantedHasEntitlements, nil
 		},
 	}
@@ -11703,13 +11703,13 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 			_ interpreter.AccountCapabilityGetValidationContext,
 			_ interpreter.AddressValue,
 			path interpreter.PathValue,
-			wantedBorrowType *sema.ReferenceType,
-			_ *sema.ReferenceType,
+			wantedBorrowType *interpreter.ReferenceStaticType,
+			_ *interpreter.ReferenceStaticType,
 		) (bool, error) {
 
 			validatedPaths = append(validatedPaths, path)
 
-			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
 			return !wantedHasEntitlements, nil
 		},
 	}

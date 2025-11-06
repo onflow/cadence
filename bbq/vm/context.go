@@ -331,14 +331,18 @@ func (c *Context) GetMethod(
 ) interpreter.FunctionValue {
 	staticType := value.StaticType(c)
 
-	semaType := c.SemaTypeFromStaticType(staticType)
-
 	var location common.Location
-	if locatedType, ok := semaType.(sema.LocatedType); ok {
-		location = locatedType.GetLocation()
+
+	switch staticType := staticType.(type) {
+	case *interpreter.CompositeStaticType:
+		location = staticType.Location
+	case *interpreter.InterfaceStaticType:
+		location = staticType.Location
+
+		// TODO: Anything else?
 	}
 
-	qualifiedFuncName := commons.TypeQualifiedName(semaType, name)
+	qualifiedFuncName := commons.StaticTypeQualifiedName(staticType, name)
 
 	method := c.GetFunction(location, qualifiedFuncName)
 	if method == nil {
@@ -422,22 +426,26 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 	return eventValues
 }
 
-func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
-	typeID := staticType.ID()
-	semaType, ok := c.semaTypeCache[typeID]
-	if ok {
-		return semaType
+func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) (semaType sema.Type) {
+	_, isPrimitiveType := staticType.(interpreter.PrimitiveStaticType)
+
+	if !isPrimitiveType {
+		typeID := staticType.ID()
+		cachedSemaType, ok := c.semaTypeCache[typeID]
+		if ok {
+			return cachedSemaType
+		}
+
+		defer func() {
+			if c.semaTypeCache == nil {
+				c.semaTypeCache = make(map[sema.TypeID]sema.Type)
+			}
+			c.semaTypeCache[typeID] = semaType
+		}()
 	}
 
 	// TODO: avoid the sema-type conversion
-	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
-
-	if c.semaTypeCache == nil {
-		c.semaTypeCache = make(map[sema.TypeID]sema.Type)
-	}
-	c.semaTypeCache[typeID] = semaType
-
-	return semaType
+	return interpreter.MustConvertStaticToSemaType(staticType, c)
 }
 
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {

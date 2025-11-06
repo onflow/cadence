@@ -46,8 +46,8 @@ func newCapabilityBorrowHandler(handler stdlib.CapabilityControllerHandler) inte
 		context interpreter.BorrowCapabilityControllerContext,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
-		wantedBorrowType *sema.ReferenceType,
-		capabilityBorrowType *sema.ReferenceType,
+		wantedBorrowType *interpreter.ReferenceStaticType,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) interpreter.ReferenceValue {
 		return stdlib.BorrowCapabilityController(
 			context,
@@ -65,8 +65,8 @@ func newCapabilityCheckHandler(handler stdlib.CapabilityControllerHandler) inter
 		context interpreter.CheckCapabilityControllerContext,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
-		wantedBorrowType *sema.ReferenceType,
-		capabilityBorrowType *sema.ReferenceType,
+		wantedBorrowType *interpreter.ReferenceStaticType,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) interpreter.BoolValue {
 		return stdlib.CheckCapabilityController(
 			context,
@@ -84,8 +84,8 @@ func newValidateAccountCapabilitiesGetHandler(i *Interface) interpreter.Validate
 		context interpreter.AccountCapabilityGetValidationContext,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
-		wantedBorrowType *sema.ReferenceType,
-		capabilityBorrowType *sema.ReferenceType,
+		wantedBorrowType *interpreter.ReferenceStaticType,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) (bool, error) {
 
 		return (*i).ValidateAccountCapabilitiesGet(

@@ -46,6 +46,15 @@ func TypeQualifiedName(typ sema.Type, functionName string) string {
 	return typeQualifier + "." + functionName
 }
 
+func StaticTypeQualifiedName(typ interpreter.StaticType, functionName string) string {
+	if typ == nil {
+		return functionName
+	}
+
+	typeQualifier := StaticTypeQualifier(typ)
+	return typeQualifier + "." + functionName
+}
+
 func QualifiedName(typeName, functionName string) string {
 	if typeName == "" {
 		return functionName
@@ -62,6 +71,8 @@ func QualifiedName(typeName, functionName string) string {
 // TODO: Add other types
 // TODO: Maybe make this a method on the type
 func TypeQualifier(typ sema.Type) string {
+	// IMPORTANT: Ensure this is in sync with `StaticTypeQualifier` method below.
+
 	switch typ := typ.(type) {
 	case *sema.ConstantSizedType:
 		return TypeQualifierArrayConstantSized
@@ -92,6 +103,51 @@ func TypeQualifier(typ sema.Type) string {
 		return TypeQualifierInclusiveRange
 	default:
 		return typ.QualifiedString()
+	}
+}
+
+func StaticTypeQualifier(typ interpreter.StaticType) string {
+	// IMPORTANT: Ensure this is in sync with `TypeQualifier` method above.
+	// TODO: try to unify
+
+	switch typ := typ.(type) {
+	case *interpreter.ConstantSizedStaticType:
+		return TypeQualifierArrayConstantSized
+	case *interpreter.VariableSizedStaticType:
+		return TypeQualifierArrayVariableSized
+	case *interpreter.DictionaryStaticType:
+		return TypeQualifierDictionary
+	case *interpreter.FunctionStaticType:
+		// This is only applicable for types that also has a constructor with the same name.
+		// e.g: `String` type has the `String()` constructor as well as the type on which
+		// functions can be called (`String.join()`).
+		// Thus, if a constructor function is used as a type-qualifier,
+		// then used the actual type associated with it (i.e: the return type).
+		if typ.TypeFunctionType != nil {
+			return TypeQualifier(typ.TypeFunctionType)
+		}
+		return TypeQualifierFunction
+	case *interpreter.OptionalStaticType:
+		return TypeQualifierOptional
+	case *interpreter.ReferenceStaticType:
+		return StaticTypeQualifier(typ.ReferencedType)
+	case *interpreter.IntersectionStaticType:
+		// TODO: Revisit. Probably this is not needed here?
+		return StaticTypeQualifier(typ.Types[0])
+	case *interpreter.CapabilityStaticType:
+		return interpreter.PrimitiveStaticTypeCapability.String()
+	case *interpreter.InclusiveRangeStaticType:
+		return TypeQualifierInclusiveRange
+
+	// In addition to the `TypeQualifier` method above,
+	// following are needed.
+	case *interpreter.CompositeStaticType:
+		return typ.QualifiedIdentifier
+	case *interpreter.InterfaceStaticType:
+		return typ.QualifiedIdentifier
+
+	default:
+		return typ.String()
 	}
 }
 

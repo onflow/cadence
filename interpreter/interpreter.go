@@ -119,8 +119,8 @@ type CapabilityBorrowHandlerFunc func(
 	context BorrowCapabilityControllerContext,
 	address AddressValue,
 	capabilityID UInt64Value,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *ReferenceStaticType,
+	capabilityBorrowType *ReferenceStaticType,
 ) ReferenceValue
 
 // CapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
@@ -128,8 +128,8 @@ type CapabilityCheckHandlerFunc func(
 	context CheckCapabilityControllerContext,
 	address AddressValue,
 	capabilityID UInt64Value,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *ReferenceStaticType,
+	capabilityBorrowType *ReferenceStaticType,
 ) BoolValue
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
@@ -165,8 +165,8 @@ type ValidateAccountCapabilitiesGetHandlerFunc func(
 	context AccountCapabilityGetValidationContext,
 	address AddressValue,
 	path PathValue,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *ReferenceStaticType,
+	capabilityBorrowType *ReferenceStaticType,
 ) (bool, error)
 
 // ValidateAccountCapabilitiesPublishHandlerFunc is a function that is used to handle when a capability of an account is got.
@@ -4687,13 +4687,7 @@ func checkValue(
 		// Capability values always have a `CapabilityStaticType` static type.
 		borrowType := staticType.(*CapabilityStaticType).BorrowType
 
-		var borrowSemaType sema.Type
-		borrowSemaType, valueError = ConvertStaticToSemaType(context, borrowType)
-		if valueError != nil {
-			return valueError
-		}
-
-		referenceType, ok := borrowSemaType.(*sema.ReferenceType)
+		referenceType, ok := borrowType.(*ReferenceStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -6002,7 +5996,7 @@ func (interpreter *Interpreter) Storage() Storage {
 func NativeCapabilityBorrowFunction(
 	addressValuePointer *AddressValue,
 	capabilityIDPointer *UInt64Value,
-	capabilityBorrowTypePointer *sema.ReferenceType,
+	capabilityBorrowTypePointer *ReferenceStaticType,
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -6010,7 +6004,7 @@ func NativeCapabilityBorrowFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		var capabilityBorrowType *sema.ReferenceType
+		var capabilityBorrowType *ReferenceStaticType
 		var capabilityID UInt64Value
 		var addressValue AddressValue
 
@@ -6035,7 +6029,7 @@ func NativeCapabilityBorrowFunction(
 				return Nil
 			}
 
-			capabilityBorrowType = context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
+			capabilityBorrowType = idCapabilityValue.BorrowType.(*ReferenceStaticType)
 			addressValue = idCapabilityValue.Address()
 		} else {
 			capabilityBorrowType = capabilityBorrowTypePointer
@@ -6043,7 +6037,7 @@ func NativeCapabilityBorrowFunction(
 			addressValue = *addressValuePointer
 		}
 
-		typeArgument := typeArguments.NextSema()
+		typeArgument := typeArguments.NextStatic()
 
 		return CapabilityBorrow(
 			context,
@@ -6060,32 +6054,34 @@ func capabilityBorrowFunction(
 	capabilityValue CapabilityValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	capabilityBorrowType *ReferenceStaticType,
 ) FunctionValue {
+
+	capabilityBorrowSemaType := MustConvertStaticToSemaType(capabilityBorrowType, context)
 
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
-		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
+		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowSemaType),
 		NativeCapabilityBorrowFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
 
 func CapabilityBorrow(
 	invocationContext InvocationContext,
-	typeArgument sema.Type,
+	typeArgument StaticType,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	capabilityBorrowType *ReferenceStaticType,
 ) Value {
 	if capabilityID == InvalidCapabilityID {
 		return Nil
 	}
 
-	var wantedBorrowType *sema.ReferenceType
+	var wantedBorrowType *ReferenceStaticType
 	if typeArgument != nil {
 		var ok bool
-		wantedBorrowType, ok = typeArgument.(*sema.ReferenceType)
+		wantedBorrowType, ok = typeArgument.(*ReferenceStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -6109,7 +6105,7 @@ func CapabilityBorrow(
 func NativeCapabilityCheckFunction(
 	addressValuePointer *AddressValue,
 	capabilityIDPointer *UInt64Value,
-	capabilityBorrowTypePointer *sema.ReferenceType,
+	capabilityBorrowTypePointer *ReferenceStaticType,
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -6117,7 +6113,7 @@ func NativeCapabilityCheckFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		var capabilityBorrowType *sema.ReferenceType
+		var capabilityBorrowType *ReferenceStaticType
 		var capabilityID UInt64Value
 		var addressValue AddressValue
 
@@ -6143,7 +6139,7 @@ func NativeCapabilityCheckFunction(
 				return FalseValue
 			}
 
-			capabilityBorrowType = context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
+			capabilityBorrowType = idCapabilityValue.BorrowType.(*ReferenceStaticType)
 			addressValue = idCapabilityValue.Address()
 		} else {
 			capabilityBorrowType = capabilityBorrowTypePointer
@@ -6151,7 +6147,7 @@ func NativeCapabilityCheckFunction(
 			addressValue = *addressValuePointer
 		}
 
-		typeArgument := typeArguments.NextSema()
+		typeArgument := typeArguments.NextStatic()
 
 		return CapabilityCheck(
 			context,
@@ -6168,33 +6164,35 @@ func capabilityCheckFunction(
 	capabilityValue CapabilityValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	capabilityBorrowType *ReferenceStaticType,
 ) FunctionValue {
+
+	capabilityBorrowSemaType := MustConvertStaticToSemaType(capabilityBorrowType, context)
 
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
-		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
+		sema.CapabilityTypeCheckFunctionType(capabilityBorrowSemaType),
 		NativeCapabilityCheckFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
 
 func CapabilityCheck(
 	invocationContext InvocationContext,
-	typeArgument sema.Type,
+	typeArgument StaticType,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	capabilityBorrowType *ReferenceStaticType,
 ) Value {
 
 	if capabilityID == InvalidCapabilityID {
 		return FalseValue
 	}
 
-	var wantedBorrowType *sema.ReferenceType
+	var wantedBorrowType *ReferenceStaticType
 	if typeArgument != nil {
 		var ok bool
-		wantedBorrowType, ok = typeArgument.(*sema.ReferenceType)
+		wantedBorrowType, ok = typeArgument.(*ReferenceStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}

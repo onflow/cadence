@@ -296,7 +296,7 @@ func (v *AccountCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 func (v *AccountCapabilityControllerValue) ReferenceValue(
 	context ValueCapabilityControllerReferenceValueContext,
 	capabilityAddress common.Address,
-	resultBorrowType *sema.ReferenceType,
+	resultBorrowType *ReferenceStaticType,
 ) ReferenceValue {
 
 	accountHandler := context.GetAccountHandlerFunc()
@@ -309,13 +309,11 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 		PrimitiveStaticTypeAccount,
 	)
 
-	resultBorrowStaticType := ConvertSemaToStaticType(context, resultBorrowType).(*ReferenceStaticType)
-
 	return NewEphemeralReferenceValue(
 		context,
-		resultBorrowStaticType.Authorization,
+		resultBorrowType.Authorization,
 		account,
-		resultBorrowStaticType.ReferencedType,
+		resultBorrowType.ReferencedType,
 	)
 }
 

@@ -1385,7 +1385,7 @@ func (e *InclusiveRangeConstructionError) SetLocationRange(locationRange Locatio
 // InvalidCapabilityIssueTypeError
 type InvalidCapabilityIssueTypeError struct {
 	ExpectedTypeDescription string
-	ActualType              sema.Type
+	ActualType              StaticType
 	LocationRange
 }
 
@@ -1398,7 +1398,7 @@ func (e *InvalidCapabilityIssueTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid type: expected %s, got `%s`",
 		e.ExpectedTypeDescription,
-		e.ActualType.QualifiedString(),
+		e.ActualType.String(),
 	)
 }
 
