@@ -4971,15 +4971,16 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 					)
 				}
 
-				riType := getType("RI").(*sema.InterfaceType)
+				riType := getType("RI")
+				riStaticType := interpreter.ConvertSemaToStaticType(nil, riType).(*interpreter.InterfaceStaticType)
 
 				return &interpreter.StorageReferenceValue{
 					Authorization:        auth,
 					TargetStorageAddress: storageAddress,
 					TargetPath:           storagePath,
-					BorrowedType: &sema.IntersectionType{
-						Types: []*sema.InterfaceType{
-							riType,
+					BorrowedType: &interpreter.IntersectionStaticType{
+						Types: []*interpreter.InterfaceStaticType{
+							riStaticType,
 						},
 					},
 				}
@@ -7401,7 +7402,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		inter,
 		interpreter.UnauthorizedAccess,
 		arrayValue,
-		interpreter.MustConvertStaticToSemaType(arrayStaticType, inter),
+		arrayStaticType,
 	)
 
 	_, err = inter.Invoke("test", ref)
@@ -11822,7 +11823,7 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 		t,
 		&interpreter.EphemeralReferenceValue{
 			Value:         interpreter.NewUnmeteredIntValueFromInt64(2),
-			BorrowedType:  sema.IntType,
+			BorrowedType:  interpreter.PrimitiveStaticTypeInt,
 			Authorization: interpreter.UnauthorizedAccess,
 		},
 		variable,

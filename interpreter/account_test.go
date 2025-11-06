@@ -550,7 +550,7 @@ func testAccountWithErrorHandlerWithCompiler(
 			NoOpReferenceCreationContext{},
 			interpreter.FullyEntitledAccountAccess,
 			account,
-			sema.AccountType,
+			interpreter.PrimitiveStaticTypeAccount,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -563,7 +563,7 @@ func testAccountWithErrorHandlerWithCompiler(
 			NoOpReferenceCreationContext{},
 			interpreter.UnauthorizedAccess,
 			account,
-			sema.AccountType,
+			interpreter.PrimitiveStaticTypeAccount,
 		),
 		Kind: common.DeclarationKindConstant,
 	}

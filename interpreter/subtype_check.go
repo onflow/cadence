@@ -54,7 +54,7 @@ func IsHashableStructType(typeConverter TypeConverter, typ StaticType) bool {
 		return true
 	default:
 		_, ok := typ.(*CompositeStaticType)
-		if !ok {
+		if ok {
 			// TODO: Get rid of the conversion
 			compositeType := typeConverter.SemaTypeFromStaticType(typ).(*sema.CompositeType)
 			return compositeType.Kind == common.CompositeKindEnum
@@ -96,7 +96,7 @@ func IsIntersectionSubset(typeConverter TypeConverter, superType *IntersectionSt
 }
 
 func AreReturnsCovariant(source, target FunctionStaticType) bool {
-	return AreReturnsCovariant(source, target)
+	return sema.AreReturnsCovariant(source.FunctionType, target.FunctionType)
 }
 
 func IsParameterizedSubType(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {

@@ -117,7 +117,7 @@ func StaticTypeQualifier(typ interpreter.StaticType) string {
 		return TypeQualifierArrayVariableSized
 	case *interpreter.DictionaryStaticType:
 		return TypeQualifierDictionary
-	case *interpreter.FunctionStaticType:
+	case interpreter.FunctionStaticType:
 		// This is only applicable for types that also has a constructor with the same name.
 		// e.g: `String` type has the `String()` constructor as well as the type on which
 		// functions can be called (`String.join()`).

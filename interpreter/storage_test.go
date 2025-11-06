@@ -553,6 +553,8 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		Members:    &sema.StringMemberOrderedMap{},
 	}
 
+	testResourcStaticType := ConvertSemaToStaticType(nil, testResourceType)
+
 	const fieldName = "test"
 
 	for _, testCompositeType := range []*sema.CompositeType{
@@ -826,7 +828,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 			inter,
 			UnauthorizedAccess,
 			childValue1,
-			testResourceType,
+			testResourcStaticType,
 		)
 
 		containerValue1.Append(inter, childValue1)
