@@ -18,25 +18,28 @@
 
 package interpreter
 
-import "github.com/onflow/cadence/sema"
+import (
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
+)
 
 //go:generate go run ./type_check_gen subtype_check.gen.go
 
 var FunctionPurityView = sema.FunctionPurityView
 
-func isAttachmentType(t StaticType) bool {
-	switch t {
+func isAttachmentType(typeConverter TypeConverter, typ StaticType) bool {
+	switch typ {
 	case PrimitiveStaticTypeAnyResourceAttachment, PrimitiveStaticTypeAnyStructAttachment:
 		return true
 	default:
-		_, ok := t.(*CompositeStaticType)
+		_, ok := typ.(*CompositeStaticType)
 		if !ok {
 			return false
 		}
 
-		// TODO:
-		//return compositeType.Kind == common.CompositeKindAttachment
-		return true
+		// TODO: Get rid of the conversion
+		compositeType := MustConvertStaticToSemaType(typ, typeConverter).(*sema.CompositeType)
+		return compositeType.Kind == common.CompositeKindAttachment
 	}
 }
 
@@ -52,9 +55,9 @@ func IsHashableStructType(typeConverter TypeConverter, typ StaticType) bool {
 	default:
 		_, ok := typ.(*CompositeStaticType)
 		if !ok {
-			// TODO:
-			//return  compositeType.Kind == common.CompositeKindEnum
-			return false
+			// TODO: Get rid of the conversion
+			compositeType := MustConvertStaticToSemaType(typ, typeConverter).(*sema.CompositeType)
+			return compositeType.Kind == common.CompositeKindEnum
 		}
 
 		return IsSubType(typeConverter, typ, PrimitiveStaticTypeNumber) ||
@@ -62,27 +65,35 @@ func IsHashableStructType(typeConverter TypeConverter, typ StaticType) bool {
 	}
 }
 
-func IsResourceType(typ StaticType) bool {
+func IsResourceType(typeConverter TypeConverter, typ StaticType) bool {
 	switch typ := typ.(type) {
 	case PrimitiveStaticType:
 		// Primitive static type to sema type conversion is just a switch case.
 		// So not much overhead there.
 		// TODO: Maybe have these precomputed.
 		return typ.SemaType().IsResourceType()
+	case *OptionalStaticType:
+		return IsResourceType(typeConverter, typ.Type)
+	case ArrayStaticType:
+		return IsResourceType(typeConverter, typ.ElementType())
+	case *DictionaryStaticType:
+		return IsResourceType(typeConverter, typ.ValueType)
 	default:
-		// TODO:
-		return false
+		semaType := MustConvertStaticToSemaType(typ, typeConverter)
+		return semaType.IsResourceType()
 	}
 }
 
-func PermitsAccess(superTypeAccess, subTypeAccess Authorization) bool {
-	// TODO:
-	return true
+func PermitsAccess(typeConverter TypeConverter, superTypeAuth, subTypeAuth Authorization) bool {
+	superTypeAccess := MustConvertStaticAuthorizationToSemaAccess(typeConverter, superTypeAuth)
+	subTypeAccess := MustConvertStaticAuthorizationToSemaAccess(typeConverter, subTypeAuth)
+	return sema.PermitsAccess(superTypeAccess, subTypeAccess)
 }
 
-func IsIntersectionSubset(superType *IntersectionStaticType, subType StaticType) bool {
-	// TODO
-	return true
+func IsIntersectionSubset(typeConverter TypeConverter, superType *IntersectionStaticType, subType StaticType) bool {
+	semaSuperType := MustConvertStaticToSemaType(superType, typeConverter).(*sema.IntersectionType)
+	semaSubType := MustConvertStaticToSemaType(subType, typeConverter)
+	return sema.IsIntersectionSubset(semaSuperType, semaSubType)
 }
 
 func AreReturnsCovariant(source, target FunctionStaticType) bool {

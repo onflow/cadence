@@ -1221,7 +1221,7 @@ func ConvertStaticAuthorizationToSemaAccess(
 		return sema.NewEntitlementMapAccess(entitlement), nil
 
 	case EntitlementSetAuthorization:
-		var entitlements []*sema.EntitlementType
+		entitlements := make([]*sema.EntitlementType, 0, auth.Entitlements.Len())
 		err := auth.Entitlements.ForeachWithError(func(id common.TypeID, value struct{}) error {
 			entitlement, err := handler.GetEntitlementType(id)
 			if err != nil {

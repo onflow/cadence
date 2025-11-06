@@ -1062,19 +1062,33 @@ func mergeTypeSwitches(existingTypeSwitch, newTypeSwitch *dst.TypeSwitchStmt) {
 }
 
 func (gen *SubTypeCheckGenerator) isAttachmentPredicate(predicate IsAttachmentPredicate) []dst.Node {
+	args := gen.extraArguments()
+
+	args = append(
+		args,
+		gen.expressionIgnoreNegation(predicate.Expression),
+	)
+
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("isAttachmentType"),
-			gen.expressionIgnoreNegation(predicate.Expression),
+			args...,
 		),
 	}
 }
 
 func (gen *SubTypeCheckGenerator) isResourcePredicate(predicate IsResourcePredicate) []dst.Node {
+	args := gen.extraArguments()
+
+	args = append(
+		args,
+		gen.expressionIgnoreNegation(predicate.Expression),
+	)
+
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("IsResourceType"),
-			gen.expressionIgnoreNegation(predicate.Expression),
+			args...,
 		),
 	}
 }
@@ -1335,10 +1349,13 @@ func (gen *SubTypeCheckGenerator) parseCaseCondition(superType Type) dst.Expr {
 }
 
 func (gen *SubTypeCheckGenerator) permitsPredicate(permits PermitsPredicate) []dst.Node {
-	args := []dst.Expr{
+	args := gen.extraArguments()
+
+	args = append(
+		args,
 		gen.expressionIgnoreNegation(permits.Super),
 		gen.expressionIgnoreNegation(permits.Sub),
-	}
+	)
 
 	return []dst.Node{
 		gen.callExpression(
@@ -1527,10 +1544,13 @@ func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node
 }
 
 func (gen *SubTypeCheckGenerator) isIntersectionSubset(p IsIntersectionSubsetPredicate) []dst.Node {
-	args := []dst.Expr{
+	args := gen.extraArguments()
+
+	args = append(
+		args,
 		gen.expressionIgnoreNegation(p.Super),
 		gen.expressionIgnoreNegation(p.Sub),
-	}
+	)
 
 	return []dst.Node{
 		gen.callExpression(
