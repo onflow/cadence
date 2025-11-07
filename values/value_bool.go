@@ -75,7 +75,7 @@ func (v BoolValue) GreaterEqual(_ common.Gauge, other BoolValue) bool {
 	return bool(v || !other)
 }
 
-func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

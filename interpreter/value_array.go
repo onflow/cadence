@@ -1179,14 +1179,14 @@ func (v *ArrayValue) Equal(context ValueComparisonContext, other Value) bool {
 func (v *ArrayValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	// NOTE: Need to change ArrayValue.UnwrapAtreeValue()
 	// if ArrayValue is stored with wrapping.
 	return v.array.Storable(storage, address, maxInlineSize)
 }
 
-func (v *ArrayValue) UnwrapAtreeValue() (atree.Value, uint64) {
+func (v *ArrayValue) UnwrapAtreeValue() (atree.Value, uint32) {
 	// Wrapper size is 0 because ArrayValue is stored as
 	// atree.Array without any physical wrapping (see ArrayValue.Storable()).
 	return v.array, 0

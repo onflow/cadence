@@ -550,7 +550,7 @@ func (v UInt8Value) ConformsToStaticType(
 	return true
 }
 
-func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

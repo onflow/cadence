@@ -1197,7 +1197,7 @@ func (v *CompositeValue) IsStorable() bool {
 func (v *CompositeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	if !v.IsStorable() {
 		return NonStorable{Value: v}, nil
@@ -1209,7 +1209,7 @@ func (v *CompositeValue) Storable(
 	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
-func (v *CompositeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+func (v *CompositeValue) UnwrapAtreeValue() (atree.Value, uint32) {
 	// Wrapper size is 0 because CompositeValue is stored as
 	// atree.OrderedMap without any physical wrapping (see CompositeValue.Storable()).
 	return v.dictionary, 0

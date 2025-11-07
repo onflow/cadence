@@ -51,7 +51,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.Equal(t, bv, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize), wrapperSize)
 	})
 
 	t.Run("SomeValue(SomeValue(bool))", func(t *testing.T) {
@@ -63,7 +63,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.Equal(t, bv, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...)))", func(t *testing.T) {
@@ -115,7 +115,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.Array{}, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		atreeArray := unwrappedValue.(*atree.Array)
 		require.Equal(t, atree.Address(address), atreeArray.Address())
@@ -180,7 +180,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)
@@ -284,7 +284,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)

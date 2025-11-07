@@ -1290,14 +1290,14 @@ func (v *DictionaryValue) Equal(context ValueComparisonContext, other Value) boo
 func (v *DictionaryValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	// NOTE: Need to change DictionaryValue.UnwrapAtreeValue()
 	// if DictionaryValue is stored with wrapping.
 	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
-func (v *DictionaryValue) UnwrapAtreeValue() (atree.Value, uint64) {
+func (v *DictionaryValue) UnwrapAtreeValue() (atree.Value, uint32) {
 	// Wrapper size is 0 because DictionaryValue is stored as
 	// atree.OrderedMap without any physical wrapping (see DictionaryValue.Storable()).
 	return v.dictionary, 0

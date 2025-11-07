@@ -259,7 +259,7 @@ func (*EphemeralReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return NonStorable{Value: v}, nil
 }
 
