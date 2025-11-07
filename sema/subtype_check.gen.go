@@ -439,5 +439,5 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 	}
 
-	return false
+	return IsParameterizedSubType(subType, superType)
 }
