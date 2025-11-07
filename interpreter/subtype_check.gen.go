@@ -306,15 +306,10 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 				}
 
 				return false
-
-			// TODO:
-			//case ConformingStaticType:
-			//	return (typedSuperType.LegacyType == nil ||
-			//		IsSubType(typeConverter, typedSubType, typedSuperType.LegacyType)) &&
-			//		IsIntersectionSubset(typedSuperType, typedSubType)
-			// TODO: Remove below
-			default:
-				return true
+			case ConformingStaticType:
+				return (typedSuperType.LegacyType == nil ||
+					IsSubType(typeConverter, typedSubType, typedSuperType.LegacyType)) &&
+					IsIntersectionSubset(typeConverter, typedSuperType, typedSubType)
 			}
 
 			return false

@@ -38,6 +38,9 @@ type PrimitiveStaticType uint
 
 var _ StaticType = PrimitiveStaticType(0)
 
+// Some simple types are conforming types.
+var _ ConformingStaticType = PrimitiveStaticType(0)
+
 const primitiveStaticTypePrefix = "PrimitiveStaticType"
 
 var primitiveStaticTypeConstantLength = len(primitiveStaticTypePrefix) + 2 // + 2 for parentheses
@@ -259,6 +262,8 @@ const (
 )
 
 func (PrimitiveStaticType) isStaticType() {}
+
+func (PrimitiveStaticType) isConformingStaticType() {}
 
 func (t PrimitiveStaticType) elementSize() uint {
 	switch t {
