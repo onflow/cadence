@@ -35,7 +35,7 @@ var _ atree.Storable = Uint64AtreeValue(0)
 func (v Uint64AtreeValue) Storable(
 	_ atree.SlabStorage,
 	_ atree.Address,
-	_ uint64,
+	_ uint32,
 ) (
 	atree.Storable,
 	error,

@@ -730,7 +730,7 @@ func (v *StringValue) ReplaceAll(
 	)
 }
 
-func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint32) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 

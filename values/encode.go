@@ -239,13 +239,13 @@ func MaybeLargeImmutableStorable(
 	storable atree.Storable,
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (
 	atree.Storable,
 	error,
 ) {
 
-	if uint64(storable.ByteSize()) < maxInlineSize {
+	if storable.ByteSize() < maxInlineSize {
 		return storable, nil
 	}
 
