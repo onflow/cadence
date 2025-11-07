@@ -30,6 +30,7 @@ import (
 
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -182,10 +183,33 @@ func decodeUpvalueArray(ip *uint16, code []byte) (upvalues []Upvalue) {
 
 // Jump
 
-func PatchJump(code *[]byte, opcodeOffset int, newTarget uint16) {
+func PatchJumpBytecode(code *[]byte, opcodeOffset int, newTarget uint16) {
 	first, second := encodeUint16(newTarget)
 	(*code)[opcodeOffset+1] = first
 	(*code)[opcodeOffset+2] = second
+}
+
+func PatchJumpInstruction(target []Instruction, offset int, newTarget uint16) {
+	switch ins := target[offset].(type) {
+	case InstructionJump:
+		ins.Target = newTarget
+		target[offset] = ins
+
+	case InstructionJumpIfFalse:
+		ins.Target = newTarget
+		target[offset] = ins
+
+	case InstructionJumpIfTrue:
+		ins.Target = newTarget
+		target[offset] = ins
+
+	case InstructionJumpIfNil:
+		ins.Target = newTarget
+		target[offset] = ins
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func DecodeInstructions(code []byte) []Instruction {

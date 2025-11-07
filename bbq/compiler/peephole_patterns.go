@@ -1,0 +1,142 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package compiler
+
+import (
+	"github.com/onflow/cadence/bbq/constant"
+	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+)
+
+type PeepholePattern struct {
+	Name string
+	// never match a jump instruction
+	Opcodes     []opcode.Opcode
+	Replacement func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction
+}
+
+// Optimizations combining common instruction pairs:
+// These optimizations save one stack push/pop and one function call (inlined invocation) per usage of the pattern
+// since the improvements are marginal these should target high-frequency patterns in common use cases
+
+// GetLocal -> GetField, combined because commonly found in token transfer
+var GetFieldLocalPattern = PeepholePattern{
+	Name:    "GetFieldLocal",
+	Opcodes: []opcode.Opcode{opcode.GetLocal, opcode.GetField},
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
+		getLocal := instructions[0].(opcode.InstructionGetLocal)
+		getField := instructions[1].(opcode.InstructionGetField)
+
+		return []opcode.Instruction{opcode.InstructionGetFieldLocal{
+			FieldName:    getField.FieldName,
+			AccessedType: getField.AccessedType,
+			Local:        getLocal.Local,
+		}}
+	},
+}
+
+// Optimizations ported from compiler `mustEmitTransferAndConvert`:
+// These optimizations remove unnecessary transfers in certain cases
+
+// GetConstant -> TransferAndConvert, unnecessary transfer if constant is of the same type
+var ConstantTransferAndConvertPattern = PeepholePattern{
+	Name:    "ConstantTransferAndConvert",
+	Opcodes: []opcode.Opcode{opcode.GetConstant, opcode.TransferAndConvert},
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
+		getConstant := instructions[0].(opcode.InstructionGetConstant)
+		transferAndConvert := instructions[1].(opcode.InstructionTransferAndConvert)
+
+		// If the constant already has the same type as the target type of the conversion,
+		// just keep the constant.
+		constantKind := compiler.constants[getConstant.Constant].kind
+		targetType := compiler.types[transferAndConvert.Type]
+		if constantKind == constant.FromSemaType(targetType) {
+			return []opcode.Instruction{getConstant}
+		}
+
+		return instructions
+	},
+}
+
+// NewPath -> TransferAndConvert, unnecessary transfer if path is of the same type
+var PathTransferAndConvertPattern = PeepholePattern{
+	Name:    "PathTransferAndConvert",
+	Opcodes: []opcode.Opcode{opcode.NewPath, opcode.TransferAndConvert},
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
+		getPath := instructions[0].(opcode.InstructionNewPath)
+		transferAndConvert := instructions[1].(opcode.InstructionTransferAndConvert)
+
+		semaType := compiler.types[transferAndConvert.Type]
+
+		// check if optimization is applicable
+		switch getPath.Domain {
+		case common.PathDomainPublic:
+			if semaType == sema.PublicPathType {
+				return []opcode.Instruction{getPath}
+			}
+		case common.PathDomainPrivate:
+			if semaType == sema.PrivatePathType {
+				return []opcode.Instruction{getPath}
+			}
+		case common.PathDomainStorage:
+			if semaType == sema.StoragePathType {
+				return []opcode.Instruction{getPath}
+			}
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		return instructions
+	},
+}
+
+// Nil -> TransferAndConvert, unnecessary transfer if value is nil
+var NilTransferAndConvertPattern = PeepholePattern{
+	Name:    "NilTransferAndConvert",
+	Opcodes: []opcode.Opcode{opcode.Nil, opcode.TransferAndConvert},
+	Replacement: func(instructions []opcode.Instruction, compiler *Compiler[opcode.Instruction, interpreter.StaticType]) []opcode.Instruction {
+		nilInstruction := instructions[0].(opcode.InstructionNil)
+		return []opcode.Instruction{nilInstruction}
+	},
+}
+
+func (p *PeepholePattern) Match(instructions []opcode.Instruction, bytecodeOffset int, jumpTargets map[int]struct{}) bool {
+	for i, opcode := range p.Opcodes {
+		if instructions[i].Opcode() != opcode {
+			return false
+		}
+
+		// check if the instruction is a jump target
+		// do not optimize across basic blocks
+		if _, ok := jumpTargets[bytecodeOffset+i]; ok {
+			return false
+		}
+	}
+	return true
+}
+
+var AllPatterns = []PeepholePattern{
+	GetFieldLocalPattern,
+	ConstantTransferAndConvertPattern,
+	PathTransferAndConvertPattern,
+	NilTransferAndConvertPattern,
+}
