@@ -189,7 +189,7 @@ func (v *EphemeralReferenceValue) GetTypeKey(context MemberAccessibleContext, ke
 		return selfComposite.getTypeKey(
 			context,
 			key,
-			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
+			context.SemaAccessFromStaticAuthorization(v.Authorization),
 		)
 	}
 

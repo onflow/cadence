@@ -6395,6 +6395,10 @@ func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) se
 	return MustConvertStaticToSemaType(staticType, interpreter)
 }
 
+func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) sema.Access {
+	return MustConvertStaticAuthorizationToSemaAccess(interpreter, auth)
+}
+
 func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
 	storageReference *StorageReferenceValue,
 	referencedValue Value,
