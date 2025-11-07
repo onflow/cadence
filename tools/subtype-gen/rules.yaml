@@ -514,3 +514,8 @@ rules:
         - isParameterizedSubtype:
             sub: sub
             super: super
+
+  - predicate:
+      isParameterizedSubtype:
+        sub: sub
+        super: super

@@ -194,24 +194,34 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 	}
 	stmts = append(stmts, neverTypeCheck)
 
+	simpleTypeRules, complexTypeRules, defaultRule := gen.separateRules(rules)
+
 	// Create switch statement for simple types.
-	switchStmtForSimpleTypes := gen.createSwitchStatementForRules(rules, true)
+	switchStmtForSimpleTypes := gen.createSwitchStatementForRules(simpleTypeRules)
 	if switchStmtForSimpleTypes != nil {
 		stmts = append(stmts, switchStmtForSimpleTypes)
 	}
 
-	// Create switch statement for complex types.
-	switchStmtForComplexTypes := gen.createSwitchStatementForRules(rules, false)
+	// Create a type-switch for complex types.
+	switchStmtForComplexTypes := gen.createTypeSwitchStatementForRules(complexTypeRules)
 	if switchStmtForComplexTypes != nil {
 		stmts = append(stmts, switchStmtForComplexTypes)
 	}
 
-	// Add final return false
-	stmts = append(stmts, &dst.ReturnStmt{
-		Results: []dst.Expr{
-			gen.booleanExpression(false),
-		},
-	})
+	if defaultRule != nil {
+		// If there is a default rule, then generate it.
+		// `generatePredicateStatements` always ensures the last statement is a return.
+		// So we don't have to explicitly add a return here.
+		defaultStmts := gen.generatePredicateStatements(defaultRule.Predicate)
+		stmts = append(stmts, defaultStmts...)
+	} else {
+		// If there are no default rules, then add a final `return false`
+		stmts = append(stmts, &dst.ReturnStmt{
+			Results: []dst.Expr{
+				gen.booleanExpression(false),
+			},
+		})
+	}
 
 	return &dst.FuncDecl{
 		Name: dst.NewIdent(subtypeCheckFuncName),
@@ -234,35 +244,15 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 }
 
 // createSwitchStatementForRules creates the switch statement for superType
-func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, forSimpleTypes bool) dst.Stmt {
-	var cases []dst.Stmt
-
+func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule) dst.Stmt {
 	prevSuperType := gen.expressionIgnoreNegation(super)
 
-	var typedVariableName string
-	if !forSimpleTypes {
-		// For complex types, a type-switch is created for `super`.
-		// So register a new variable to hold the type-value for `super`.
-		// During the nested generations, `super` will refer to this variable.
-		typedVariableName = gen.newTypedVariableNameFor(super)
-		gen.pushScope()
-		gen.addToScope(
-			super,
-			typedVariableName,
-		)
-		defer gen.popScope()
-	}
-
+	var cases []dst.Stmt
 	for _, rule := range rules {
-		caseStmt := gen.createCaseStatementForRule(rule, forSimpleTypes)
+		caseStmt := gen.createCaseStatementForRule(rule)
 		if caseStmt != nil {
 			cases = append(cases, caseStmt)
 		}
-	}
-
-	nodeDecs := dst.NodeDecs{
-		Before: dst.NewLine,
-		After:  dst.EmptyLine,
 	}
 
 	if cases == nil {
@@ -270,16 +260,45 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 	}
 
 	// For simple types, use a value-switch.
-	if forSimpleTypes {
-		return &dst.SwitchStmt{
-			Tag: prevSuperType,
-			Body: &dst.BlockStmt{
-				List: cases,
+	return &dst.SwitchStmt{
+		Tag: prevSuperType,
+		Body: &dst.BlockStmt{
+			List: cases,
+		},
+		Decs: dst.SwitchStmtDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.EmptyLine,
 			},
-			Decs: dst.SwitchStmtDecorations{
-				NodeDecs: nodeDecs,
-			},
+		},
+	}
+}
+
+// createSwitchStatementForRules creates the switch statement for superType
+func (gen *SubTypeCheckGenerator) createTypeSwitchStatementForRules(rules []Rule) dst.Stmt {
+	prevSuperType := gen.expressionIgnoreNegation(super)
+
+	// For complex types, a type-switch is created for `super`.
+	// So register a new variable to hold the type-value for `super`.
+	// During the nested generations, `super` will refer to this variable.
+	typedVariableName := gen.newTypedVariableNameFor(super)
+	gen.pushScope()
+	gen.addToScope(
+		super,
+		typedVariableName,
+	)
+	defer gen.popScope()
+
+	var cases []dst.Stmt
+	for _, rule := range rules {
+		caseStmt := gen.createCaseStatementForRule(rule)
+		if caseStmt != nil {
+			cases = append(cases, caseStmt)
 		}
+	}
+
+	if cases == nil {
+		return nil
 	}
 
 	// For complex types, use a type-switch.
@@ -300,24 +319,22 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 			List: cases,
 		},
 		Decs: dst.TypeSwitchStmtDecorations{
-			NodeDecs: nodeDecs,
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.EmptyLine,
+			},
 		},
 	}
 }
 
 // createCaseStatementForRule creates a case statement for a rule.
-func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpleTypes bool) dst.Stmt {
+func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule) dst.Stmt {
 	// Parse types
 	superType := rule.SuperType
 
 	// Skip the given types.
 	// Some types are only exist during type-checking, but not at runtime. e.g: Storable type
 	if _, ok := gen.config.SkipTypes[superType.Name()]; ok {
-		return nil
-	}
-
-	_, isSimpleType := superType.(SimpleType)
-	if isSimpleType != forSimpleTypes {
 		return nil
 	}
 
@@ -1757,4 +1774,33 @@ func (gen *SubTypeCheckGenerator) generateNegatedPredicate(predicate Predicate) 
 	}()
 
 	return gen.generatePredicate(predicate)
+}
+
+func (gen *SubTypeCheckGenerator) separateRules(rules []Rule) (
+	simpleTypeRules []Rule,
+	complexTypeRules []Rule,
+	defaultRule *Rule,
+) {
+	for _, rule := range rules {
+		superType := rule.SuperType
+
+		if superType == nil {
+			if defaultRule != nil {
+				panic("can only have one default rule")
+			}
+
+			defaultRule = &rule
+			continue
+		}
+
+		_, isSimpleType := superType.(SimpleType)
+		if isSimpleType {
+			simpleTypeRules = append(simpleTypeRules, rule)
+			continue
+		}
+
+		complexTypeRules = append(complexTypeRules, rule)
+	}
+
+	return
 }
