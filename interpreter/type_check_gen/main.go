@@ -27,12 +27,13 @@ import (
 )
 
 const (
-	interpreterPath        = "github.com/onflow/cadence/interpreter"
+	interpreterPkgPath     = "github.com/onflow/cadence/interpreter"
+	semaPkgPath            = "github.com/onflow/cadence/sema"
 	typeConverterParamName = "typeConverter"
 	typeConverterTypeName  = "TypeConverter"
 )
 
-var packagePathFlag = flag.String("pkg", interpreterPath, "target Go package name")
+var packagePathFlag = flag.String("pkg", interpreterPkgPath, "target Go package name")
 
 func main() {
 
@@ -58,7 +59,7 @@ func main() {
 			{
 				Name:    typeConverterParamName,
 				Type:    typeConverterTypeName,
-				PkgPath: interpreterPath,
+				PkgPath: interpreterPkgPath,
 			},
 		},
 		SkipTypes: map[string]struct{}{
@@ -74,6 +75,8 @@ func main() {
 	// Generate code using the comprehensive generator
 	gen := subtypegen.NewSubTypeCheckGenerator(config)
 	decls := gen.GenerateCheckSubTypeWithoutEqualityFunction(rules)
+
+	decls = Update(decls)
 
 	// Write output
 	outFile, err := os.Create(outPath)

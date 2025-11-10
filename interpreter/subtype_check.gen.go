@@ -72,8 +72,8 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedPoint)
 
 	case PrimitiveStaticTypeSignedNumber:
-		return subType == // TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
-			PrimitiveStaticTypeSignedNumber ||
+		return subType ==// TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
+		PrimitiveStaticTypeSignedNumber ||
 			(IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) ||
 				IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedFixedPoint))
 
@@ -220,20 +220,20 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		return IsParameterizedSubType(typeConverter, subType, typedSuperType)
 
 	case *InterfaceStaticType:
-		interfaceSuperType := typeConverter.SemaTypeFromStaticType(typedSuperType).(*sema.InterfaceType)
-
 		switch typedSubType := subType.(type) {
 		case *CompositeStaticType:
-			compositeSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.CompositeType)
-
-			return compositeSubType.Kind == interfaceSuperType.CompositeKind &&
-				compositeSubType.EffectiveInterfaceConformanceSet().Contains(interfaceSuperType)
+			typedSemaSuperType := typeConverter.SemaTypeFromStaticType(typedSuperType).(*sema.InterfaceType)
+			typedSemaSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.CompositeType)
+			return typedSemaSubType.Kind == typedSemaSuperType.CompositeKind &&
+				typedSemaSubType.EffectiveInterfaceConformanceSet().Contains(typedSemaSuperType)
 		case *IntersectionStaticType:
-			intersectionSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.IntersectionType)
-			return intersectionSubType.EffectiveIntersectionSet().Contains(interfaceSuperType)
+			typedSemaSuperType := typeConverter.SemaTypeFromStaticType(typedSuperType).(*sema.InterfaceType)
+			typedSemaSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.IntersectionType)
+			return typedSemaSubType.EffectiveIntersectionSet().Contains(typedSemaSuperType)
 		case *InterfaceStaticType:
-			interfaceSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.InterfaceType)
-			return interfaceSubType.EffectiveInterfaceConformanceSet().Contains(interfaceSuperType)
+			typedSemaSuperType := typeConverter.SemaTypeFromStaticType(typedSuperType).(*sema.InterfaceType)
+			typedSemaSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.InterfaceType)
+			return typedSemaSubType.EffectiveInterfaceConformanceSet().Contains(typedSemaSuperType)
 		}
 
 		return IsParameterizedSubType(typeConverter, subType, typedSuperType)
