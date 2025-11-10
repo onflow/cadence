@@ -1537,7 +1537,3 @@ type ConformingStaticType interface {
 	StaticType
 	isConformingStaticType()
 }
-
-type GenericStaticType struct {
-	TypeBound StaticType
-}
