@@ -1776,6 +1776,10 @@ func (s staticTypeConversionHandler) SemaTypeFromStaticType(staticType StaticTyp
 	return MustConvertStaticToSemaType(staticType, s)
 }
 
+func (s staticTypeConversionHandler) SemaAccessFromStaticAuthorization(auth Authorization) sema.Access {
+	return MustConvertStaticAuthorizationToSemaAccess(s, auth)
+}
+
 func TestIntersectionStaticType_ID(t *testing.T) {
 	t.Parallel()
 

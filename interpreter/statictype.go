@@ -355,7 +355,10 @@ func (t InclusiveRangeStaticType) IsDeprecated() bool {
 }
 
 func (t InclusiveRangeStaticType) BaseType() StaticType {
-	return t.ElementType
+	if t.ElementType == nil {
+		return nil
+	}
+	return &InclusiveRangeStaticType{}
 }
 
 // ConstantSizedStaticType
@@ -1105,7 +1108,8 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		return ConvertSemaTransactionToStaticTransactionType(memoryGauge, t)
 
 	case *sema.GenericType:
-		//return ConvertSemaToStaticType(memoryGauge, t.TypeParameter.TypeBound)
+		// Function types could have generic-typed returns/parameters. e.g: builtin functions.
+		// Since they are not resolved, the type is unknown here.
 		return PrimitiveStaticTypeUnknown
 	}
 
