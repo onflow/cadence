@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
@@ -556,6 +557,9 @@ var NilStaticType = &OptionalStaticType{
 type IntersectionStaticType struct {
 	Types      []*InterfaceStaticType
 	LegacyType StaticType
+
+	typeID     TypeID
+	typeIDOnce sync.Once
 }
 
 var _ StaticType = &IntersectionStaticType{}
@@ -628,20 +632,25 @@ outer:
 }
 
 func (t *IntersectionStaticType) ID() TypeID {
-	typeCount := len(t.Types)
-	if typeCount == 1 {
-		return sema.FormatIntersectionTypeIDWithSingleInterface(t.Types[0].ID())
-	}
-
-	var interfaceTypeIDs []TypeID
-	if typeCount > 0 {
-		interfaceTypeIDs = make([]TypeID, 0, typeCount)
-		for _, ty := range t.Types {
-			interfaceTypeIDs = append(interfaceTypeIDs, ty.ID())
+	t.typeIDOnce.Do(func() {
+		typeCount := len(t.Types)
+		if typeCount == 1 {
+			t.typeID = sema.FormatIntersectionTypeIDWithSingleInterface(t.Types[0].ID())
+			return
 		}
-	}
-	// FormatIntersectionTypeID sorts
-	return sema.FormatIntersectionTypeID(interfaceTypeIDs)
+
+		var interfaceTypeIDs []TypeID
+		if typeCount > 0 {
+			interfaceTypeIDs = make([]TypeID, 0, typeCount)
+			for _, ty := range t.Types {
+				interfaceTypeIDs = append(interfaceTypeIDs, ty.ID())
+			}
+		}
+		// FormatIntersectionTypeID sorts
+		t.typeID = sema.FormatIntersectionTypeID(interfaceTypeIDs)
+	})
+
+	return t.typeID
 }
 
 func (t *IntersectionStaticType) IsDeprecated() bool {
@@ -856,6 +865,9 @@ type ReferenceStaticType struct {
 	ReferencedType        StaticType
 	HasLegacyIsAuthorized bool
 	LegacyIsAuthorized    bool
+
+	typeID     TypeID
+	typeIDOnce sync.Once
 }
 
 var _ StaticType = &ReferenceStaticType{}
@@ -905,14 +917,17 @@ func (t *ReferenceStaticType) Equal(other StaticType) bool {
 }
 
 func (t *ReferenceStaticType) ID() TypeID {
-	var authorization TypeID
-	if t.Authorization != UnauthorizedAccess {
-		authorization = t.Authorization.ID()
-	}
-	return sema.FormatReferenceTypeID(
-		authorization,
-		t.ReferencedType.ID(),
-	)
+	t.typeIDOnce.Do(func() {
+		var authorization TypeID
+		if t.Authorization != UnauthorizedAccess {
+			authorization = t.Authorization.ID()
+		}
+		t.typeID = sema.FormatReferenceTypeID(
+			authorization,
+			t.ReferencedType.ID(),
+		)
+	})
+	return t.typeID
 }
 
 func (t *ReferenceStaticType) IsDeprecated() bool {
@@ -923,6 +938,8 @@ func (t *ReferenceStaticType) IsDeprecated() bool {
 
 type CapabilityStaticType struct {
 	BorrowType StaticType
+	typeID     TypeID
+	typeIDOnce sync.Once
 }
 
 var _ StaticType = &CapabilityStaticType{}
@@ -976,12 +993,15 @@ func (t *CapabilityStaticType) Equal(other StaticType) bool {
 }
 
 func (t *CapabilityStaticType) ID() TypeID {
-	var borrowTypeID TypeID
-	borrowType := t.BorrowType
-	if borrowType != nil {
-		borrowTypeID = borrowType.ID()
-	}
-	return sema.FormatCapabilityTypeID(borrowTypeID)
+	t.typeIDOnce.Do(func() {
+		var borrowTypeID TypeID
+		borrowType := t.BorrowType
+		if borrowType != nil {
+			borrowTypeID = borrowType.ID()
+		}
+		t.typeID = sema.FormatCapabilityTypeID(borrowTypeID)
+	})
+	return t.typeID
 }
 
 func (t *CapabilityStaticType) IsDeprecated() bool {
