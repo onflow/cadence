@@ -244,9 +244,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 			t.Run("invalid", func(t *testing.T) {
 
-				// TODO:
-				t.SkipNow()
-
 				t.Parallel()
 
 				inter := parseCheckAndPrepare(t, `
@@ -335,8 +332,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 			})
 
 			t.Run("invalid", func(t *testing.T) {
-				// TODO:
-				t.SkipNow()
 
 				t.Parallel()
 
