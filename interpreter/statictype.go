@@ -63,6 +63,7 @@ type CompositeStaticType struct {
 }
 
 var _ StaticType = &CompositeStaticType{}
+var _ ConformingStaticType = &CompositeStaticType{}
 
 func NewCompositeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -104,6 +105,8 @@ func NewCompositeStaticTypeComputeTypeID(
 
 func (*CompositeStaticType) isStaticType() {}
 
+func (*CompositeStaticType) isConformingStaticType() {}
+
 func (*CompositeStaticType) elementSize() uint {
 	return UnknownElementSize
 }
@@ -143,6 +146,7 @@ type InterfaceStaticType struct {
 }
 
 var _ StaticType = &InterfaceStaticType{}
+var _ ConformingStaticType = &InterfaceStaticType{}
 
 func NewInterfaceStaticType(
 	memoryGauge common.MemoryGauge,
@@ -183,6 +187,8 @@ func NewInterfaceStaticTypeComputeTypeID(
 }
 
 func (*InterfaceStaticType) isStaticType() {}
+
+func (*InterfaceStaticType) isConformingStaticType() {}
 
 func (*InterfaceStaticType) elementSize() uint {
 	return UnknownElementSize
@@ -299,6 +305,7 @@ type InclusiveRangeStaticType struct {
 }
 
 var _ StaticType = InclusiveRangeStaticType{}
+var _ ParameterizedType = InclusiveRangeStaticType{}
 
 func NewInclusiveRangeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -344,6 +351,13 @@ func (t InclusiveRangeStaticType) ID() TypeID {
 
 func (t InclusiveRangeStaticType) IsDeprecated() bool {
 	return t.ElementType.IsDeprecated()
+}
+
+func (t InclusiveRangeStaticType) BaseType() StaticType {
+	if t.ElementType == nil {
+		return nil
+	}
+	return &InclusiveRangeStaticType{}
 }
 
 // ConstantSizedStaticType
@@ -926,6 +940,7 @@ type CapabilityStaticType struct {
 }
 
 var _ StaticType = &CapabilityStaticType{}
+var _ ParameterizedType = &CapabilityStaticType{}
 
 func NewCapabilityStaticType(
 	memoryGauge common.MemoryGauge,
@@ -989,6 +1004,14 @@ func (t *CapabilityStaticType) IsDeprecated() bool {
 		return false
 	}
 	return t.BorrowType.IsDeprecated()
+}
+
+func (t *CapabilityStaticType) BaseType() StaticType {
+	if t.BorrowType == nil {
+		return nil
+	}
+
+	return PrimitiveStaticTypeCapability
 }
 
 // Conversion
@@ -1063,6 +1086,11 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 	case *sema.TransactionType:
 		return ConvertSemaTransactionToStaticTransactionType(memoryGauge, t)
+
+	case *sema.GenericType:
+		// Function types could have generic-typed returns/parameters. e.g: builtin functions.
+		// Since they are not resolved, the type is unknown here.
+		return PrimitiveStaticTypeUnknown
 	}
 
 	return nil
@@ -1497,4 +1525,19 @@ func (p TypeParameter) String() string {
 		builder.WriteString(p.TypeBound.String())
 	}
 	return builder.String()
+}
+
+type ParameterizedType interface {
+	BaseType() StaticType
+}
+
+// ConformingStaticType is any static type that conforms to some interface.
+// This is the static-type counterpart of `sema.ConformingType`.
+type ConformingStaticType interface {
+	StaticType
+	isConformingStaticType()
+}
+
+type GenericStaticType struct {
+	TypeBound StaticType
 }

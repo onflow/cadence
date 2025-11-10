@@ -55,7 +55,8 @@ type Context struct {
 	// This cache-alike is maintained per execution.
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
-	semaTypeCache map[sema.TypeID]sema.Type
+	semaTypeCache   map[sema.TypeID]sema.Type
+	semaAccessCache map[interpreter.Authorization]sema.Access
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
 	linkedGlobalsCache map[common.Location]LinkedGlobals
@@ -530,4 +531,20 @@ func (c *Context) GetEntitlementMapType(
 
 func (c *Context) LocationRange() interpreter.LocationRange {
 	return c.getLocationRange()
+}
+
+func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorization) sema.Access {
+	semaAccess, ok := c.semaAccessCache[auth]
+	if ok {
+		return semaAccess
+	}
+
+	semaAccess = interpreter.MustConvertStaticAuthorizationToSemaAccess(c, auth)
+
+	if c.semaAccessCache == nil {
+		c.semaAccessCache = make(map[interpreter.Authorization]sema.Access)
+	}
+	c.semaAccessCache[auth] = semaAccess
+
+	return semaAccess
 }

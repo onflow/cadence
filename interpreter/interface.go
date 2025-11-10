@@ -30,6 +30,7 @@ type TypeConverter interface {
 	common.MemoryGauge
 	StaticTypeConversionHandler
 	SemaTypeFromStaticType(staticType StaticType) sema.Type
+	SemaAccessFromStaticAuthorization(auth Authorization) sema.Access
 }
 
 var _ TypeConverter = &Interpreter{}
@@ -626,5 +627,9 @@ func (ctx NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
 }
 
 func (ctx NoOpStringContext) SemaTypeFromStaticType(_ StaticType) sema.Type {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) SemaAccessFromStaticAuthorization(auth Authorization) sema.Access {
 	panic(errors.NewUnreachableError())
 }

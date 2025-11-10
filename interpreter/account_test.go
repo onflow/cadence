@@ -475,6 +475,10 @@ func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(_ interpreter.Stati
 	return nil
 }
 
+func (n NoOpReferenceCreationContext) SemaAccessFromStaticAuthorization(auth interpreter.Authorization) sema.Access {
+	panic(errors.NewUnreachableError())
+}
+
 type NoOpFunctionCreationContext struct {
 	//Just to make the compiler happy
 	interpreter.ResourceDestructionContext
