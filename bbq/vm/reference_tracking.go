@@ -19,12 +19,35 @@
 package vm
 
 import (
+	"sync"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/interpreter"
 )
 
-type ReferencedResourceKindedValues map[atree.ValueID]map[*interpreter.EphemeralReferenceValue]struct{}
+type ReferencedResourceKindedValues map[atree.ValueID]ReferenceSet
+
+type ReferenceSet = map[*interpreter.EphemeralReferenceValue]struct{}
+
+var referenceSetPool = sync.Pool{
+	New: func() any {
+		return ReferenceSet{}
+	},
+}
+
+func newReferenceSet() ReferenceSet {
+	set := referenceSetPool.Get().(ReferenceSet)
+	return set
+}
+
+func releaseReferenceSet(set ReferenceSet) {
+	if set == nil {
+		return
+	}
+	clear(set)
+	referenceSetPool.Put(set)
+}
 
 func (c *Context) MaybeTrackReferencedResourceKindedValue(referenceValue *interpreter.EphemeralReferenceValue) {
 	referenceTrackedValue, ok := referenceValue.Value.(interpreter.ReferenceTrackedResourceKindedValue)
@@ -36,7 +59,7 @@ func (c *Context) MaybeTrackReferencedResourceKindedValue(referenceValue *interp
 
 	values := c.referencedResourceKindedValues[id]
 	if values == nil {
-		values = map[*interpreter.EphemeralReferenceValue]struct{}{}
+		values = newReferenceSet()
 		if c.referencedResourceKindedValues == nil {
 			c.referencedResourceKindedValues = make(ReferencedResourceKindedValues)
 		}
@@ -46,9 +69,11 @@ func (c *Context) MaybeTrackReferencedResourceKindedValue(referenceValue *interp
 }
 
 func (c *Context) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+	set := c.referencedResourceKindedValues[valueID]
+	releaseReferenceSet(set)
 	delete(c.referencedResourceKindedValues, valueID)
 }
 
-func (c *Context) ReferencedResourceKindedValues(valueID atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
+func (c *Context) ReferencedResourceKindedValues(valueID atree.ValueID) ReferenceSet {
 	return c.referencedResourceKindedValues[valueID]
 }
