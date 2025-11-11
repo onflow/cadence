@@ -56,6 +56,16 @@ func assertGlobalsEqual(t *testing.T, expected map[string]bbq.GlobalInfo, actual
 	}
 }
 
+func assertTypesEqual(t *testing.T, expectedTypes, actualTypes []interpreter.StaticType) {
+	for _, expectedType := range expectedTypes {
+		_ = expectedType.ID()
+	}
+	for _, actualType := range actualTypes {
+		_ = actualType.ID()
+	}
+	assert.Equal(t, expectedTypes, actualTypes)
+}
+
 func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
@@ -138,7 +148,8 @@ func TestCompileRecursionFib(t *testing.T) {
 		program.Constants,
 	)
 
-	assert.Equal(t,
+	assertTypesEqual(
+		t,
 		[]bbq.StaticType{
 			interpreter.FunctionStaticType{
 				Type: sema.NewSimpleFunctionType(
@@ -304,7 +315,8 @@ func TestCompileImperativeFib(t *testing.T) {
 		program.Constants,
 	)
 
-	assert.Equal(t,
+	assertTypesEqual(
+		t,
 		[]bbq.StaticType{
 			interpreter.FunctionStaticType{
 				Type: sema.NewSimpleFunctionType(
@@ -6669,7 +6681,8 @@ func TestCompileArgument(t *testing.T) {
 		functions[1].Code,
 	)
 
-	assert.Equal(t,
+	assertTypesEqual(
+		t,
 		[]bbq.StaticType{
 			interpreter.FunctionStaticType{
 				Type: sema.NewSimpleFunctionType(

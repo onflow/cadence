@@ -9990,19 +9990,23 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
         `)
 
 		value := inter.GetGlobal("x")
-		assert.Equal(
-			t,
-			interpreter.ConvertSemaToStaticType(
-				nil,
-				&sema.FunctionType{
-					Purity:               sema.FunctionPurityView,
-					ReturnTypeAnnotation: sema.MetaTypeAnnotation,
-					TypeParameters: []*sema.TypeParameter{
-						{Name: "T"},
-					},
+
+		expectedStaticType := interpreter.ConvertSemaToStaticType(
+			nil,
+			&sema.FunctionType{
+				Purity:               sema.FunctionPurityView,
+				ReturnTypeAnnotation: sema.MetaTypeAnnotation,
+				TypeParameters: []*sema.TypeParameter{
+					{Name: "T"},
 				},
-			),
-			value.StaticType(inter),
+			},
+		)
+
+		actualStaticType := value.StaticType(inter)
+
+		assert.True(
+			t,
+			actualStaticType.Equal(expectedStaticType),
 		)
 
 		value = inter.GetGlobal("y")
