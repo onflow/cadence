@@ -9296,14 +9296,13 @@ func TestInterpretMemoryMeteringStaticTypeConversion(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindDictionarySemaType))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariableSizedSemaType))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindConstantSizedSemaType))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindIntersectionSemaType))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindReferenceSemaType))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCapabilitySemaType))
-		// TODO: investigate why this is different for the compiler/VM
-		assert.Equal(t, ifCompile[uint64](3, 2), meter.getMemory(common.MemoryKindOptionalSemaType))
+		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindDictionarySemaType))
+		assert.Equal(t, ifCompile[uint64](2, 4), meter.getMemory(common.MemoryKindVariableSizedSemaType))
+		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindConstantSizedSemaType))
+		assert.Equal(t, ifCompile[uint64](2, 3), meter.getMemory(common.MemoryKindIntersectionSemaType))
+		assert.Equal(t, ifCompile[uint64](2, 4), meter.getMemory(common.MemoryKindReferenceSemaType))
+		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindCapabilitySemaType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalSemaType))
 	})
 }
 

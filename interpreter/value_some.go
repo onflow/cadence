@@ -197,9 +197,8 @@ func OptionalValueMapFunction(
 }
 
 func (v *SomeValue) InnerValueType(context ValueStaticTypeContext) sema.Type {
-	return MustConvertStaticToSemaType(
+	return context.SemaTypeFromStaticType(
 		v.value.StaticType(context),
-		context,
 	)
 }
 

@@ -3080,7 +3080,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		expectedGets := locationAccessCounts{}
 		if *compile {
-			expectedGets[txLocation] = 3
+			expectedGets[txLocation] = 2
 		}
 
 		require.Equal(t, expectedGets, programGets1)
@@ -3131,7 +3131,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 			contractLocation: 1,
 		}
 		if *compile {
-			expectedGets[txLocation] = 3
+			expectedGets[txLocation] = 2
 		}
 
 		assert.Equal(t,
@@ -3170,7 +3170,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		expectedGets1 := locationAccessCounts{}
 		if *compile {
-			expectedGets1[txLocation1] = 3
+			expectedGets1[txLocation1] = 2
 		}
 
 		assert.Equal(t,
@@ -3195,7 +3195,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 		expectedGets2 := locationAccessCounts{}
 		if *compile {
-			expectedGets2[txLocation2] = 3
+			expectedGets2[txLocation2] = 2
 		}
 		assert.Equal(t,
 			expectedGets2,
