@@ -745,6 +745,27 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			assert.True(t, result, "fun(Int): Int should be a subtype of fun(Int): Number")
 		})
 
+		t.Run("not subtype when parameter contravariance fails", func(t *testing.T) {
+			// fun(Int): Int is NOT <: fun(Number): Int
+			// Because Number is NOT <: Int (contravariance requirement fails)
+			func1 := &FunctionType{
+				Purity: FunctionPurityImpure,
+				Parameters: []Parameter{
+					{TypeAnnotation: NewTypeAnnotation(IntType)},
+				},
+				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
+			}
+			func2 := &FunctionType{
+				Purity: FunctionPurityImpure,
+				Parameters: []Parameter{
+					{TypeAnnotation: NewTypeAnnotation(NumberType)},
+				},
+				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
+			}
+			result := checkBothSubTypeFunctions(t, func1, func2)
+			assert.False(t, result, "fun(Int): Int should NOT be subtype of fun(Number): Int (contravariance fails)")
+		})
+
 		t.Run("not subtype when parameter arity differs", func(t *testing.T) {
 			func1 := &FunctionType{
 				Purity: FunctionPurityImpure,
@@ -1002,12 +1023,10 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		t.Run("intersection with nil legacy type as subtype", func(t *testing.T) {
 			// {I1, I2} <: {I1} when I1 is subset of {I1, I2}
 			subType := &IntersectionType{
-				LegacyType: nil,
-				Types:      []*InterfaceType{interfaceType1, interfaceType2},
+				Types: []*InterfaceType{interfaceType1, interfaceType2},
 			}
 			superType := &IntersectionType{
-				LegacyType: nil,
-				Types:      []*InterfaceType{interfaceType1},
+				Types: []*InterfaceType{interfaceType1},
 			}
 			result := checkBothSubTypeFunctions(t, subType, superType)
 			assert.True(t, result, "{I1, I2} should be a subtype of {I1}")
@@ -1016,12 +1035,10 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		t.Run("intersection with nil legacy type not subtype when not subset", func(t *testing.T) {
 			// {I1} is NOT <: {I2}
 			subType := &IntersectionType{
-				LegacyType: nil,
-				Types:      []*InterfaceType{interfaceType1},
+				Types: []*InterfaceType{interfaceType1},
 			}
 			superType := &IntersectionType{
-				LegacyType: nil,
-				Types:      []*InterfaceType{interfaceType2},
+				Types: []*InterfaceType{interfaceType2},
 			}
 			result := checkBothSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "{I1} should NOT be a subtype of {I2}")
@@ -1226,6 +1243,34 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			assert.False(t, result, "S1{I1} should NOT be a subtype of S2{I1} when different composites")
 		})
 
+		t.Run("intersection with interface legacy not subtype of composite intersection", func(t *testing.T) {
+			interfaceType3 := &InterfaceType{
+				Location:      location,
+				Identifier:    "I3",
+				CompositeKind: common.CompositeKindStructure,
+				Members:       &StringMemberOrderedMap{},
+			}
+
+			compositeType := &CompositeType{
+				Location:   location,
+				Identifier: "S",
+				Kind:       common.CompositeKindStructure,
+				Members:    &StringMemberOrderedMap{},
+			}
+
+			// I3{I1} is NOT <: S{I2} (interface legacy type vs composite legacy type)
+			subType := &IntersectionType{
+				LegacyType: interfaceType3,
+				Types:      []*InterfaceType{interfaceType1},
+			}
+			superType := &IntersectionType{
+				LegacyType: compositeType,
+				Types:      []*InterfaceType{interfaceType2},
+			}
+			result := checkBothSubTypeFunctions(t, subType, superType)
+			assert.False(t, result, "I3{I1} should NOT be a subtype of S{I2}")
+		})
+
 		t.Run("composite type subtype of composite intersection", func(t *testing.T) {
 			compositeType := &CompositeType{
 				Location:   location,
@@ -1253,8 +1298,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			// {I1} is NOT <: S{I1} statically
 			subType := &IntersectionType{
-				LegacyType: nil,
-				Types:      []*InterfaceType{interfaceType1},
+				Types: []*InterfaceType{interfaceType1},
 			}
 			superType := &IntersectionType{
 				LegacyType: compositeType,
@@ -1285,7 +1329,6 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			assert.False(t, result, "AnyStruct{I1} should NOT be statically a subtype of S{I1}")
 		})
 
-		// Tests for lines 7872-7880: AnyResourceType/AnyStructType/AnyType not subtype of composite intersection
 		t.Run("AnyResourceType not subtype of composite intersection", func(t *testing.T) {
 			compositeType := &CompositeType{
 				Location:   location,
@@ -1337,7 +1380,24 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			assert.False(t, result, "Any should NOT be statically a subtype of S{I1}")
 		})
 
-		// Tests for lines 7812-7816: composite legacy type in subtype vs Any* legacy type in supertype
+		t.Run("optional type not subtype of composite intersection", func(t *testing.T) {
+			compositeType := &CompositeType{
+				Location:   location,
+				Identifier: "S",
+				Kind:       common.CompositeKindStructure,
+				Members:    &StringMemberOrderedMap{},
+			}
+
+			// Int? is NOT <: S{I1}
+			optionalType := &OptionalType{Type: IntType}
+			superType := &IntersectionType{
+				LegacyType: compositeType,
+				Types:      []*InterfaceType{interfaceType1},
+			}
+			result := checkBothSubTypeFunctions(t, optionalType, superType)
+			assert.False(t, result, "Int? should NOT be subtype of S{I1}")
+		})
+
 		t.Run("struct composite intersection not subtype of AnyResource intersection", func(t *testing.T) {
 			structCompositeType := &CompositeType{
 				Location:   location,
@@ -1472,8 +1532,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		t.Run("intersection type subtype of interface type", func(t *testing.T) {
 			// {I1, I2} <: I1 when I1 is in the intersection set
 			subType := &IntersectionType{
-				LegacyType: nil,
-				Types:      []*InterfaceType{interfaceType1, interfaceType2},
+				Types: []*InterfaceType{interfaceType1, interfaceType2},
 			}
 			result := checkBothSubTypeFunctions(t, subType, interfaceType1)
 			assert.True(t, result, "{I1, I2} should be a subtype of I1")
@@ -1489,11 +1548,23 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			// {I1, I2} is NOT <: I3 when I3 is not in the intersection set
 			subType := &IntersectionType{
-				LegacyType: nil,
-				Types:      []*InterfaceType{interfaceType1, interfaceType2},
+				Types: []*InterfaceType{interfaceType1, interfaceType2},
 			}
 			result := checkBothSubTypeFunctions(t, subType, interfaceType3)
 			assert.False(t, result, "{I1, I2} should NOT be a subtype of I3")
+		})
+
+		t.Run("parameterized type not subtype of intersection", func(t *testing.T) {
+			// Capability<Int> is NOT <: {I1}
+			capType := &CapabilityType{
+				BorrowType: IntType,
+			}
+			superType := &IntersectionType{
+				LegacyType: AnyStructType,
+				Types:      []*InterfaceType{},
+			}
+			result := checkBothSubTypeFunctions(t, capType, superType)
+			assert.False(t, result, "Capability<Int> should NOT be subtype of {I1}")
 		})
 	})
 
@@ -1537,8 +1608,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			// {I} is NOT <: S statically
 			subType := &IntersectionType{
-				LegacyType: nil,
-				Types:      []*InterfaceType{interfaceType},
+				Types: []*InterfaceType{interfaceType},
 			}
 			result := checkBothSubTypeFunctions(t, subType, composite1)
 			assert.False(t, result, "{I} should NOT be statically a subtype of S")
@@ -1736,7 +1806,17 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			assert.False(t, result, "Int should NOT be a subtype of Capability<Int>")
 		})
 
-		// More comprehensive ParameterizedType tests
+		t.Run("parameterized type with nil BaseType", func(t *testing.T) {
+			// Capability with nil BorrowType has nil BaseType
+			nilCapability := &CapabilityType{
+				BorrowType: nil,
+			}
+
+			// Int is NOT <: Capability<nil>
+			result := checkBothSubTypeFunctions(t, IntType, nilCapability)
+			assert.False(t, result, "Int should NOT be a subtype of Capability with nil BorrowType")
+		})
+
 		t.Run("parameterized type with base types not matching", func(t *testing.T) {
 			// This tests the case where base types don't match
 			capability := &CapabilityType{
@@ -2040,6 +2120,13 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			}
 			result := checkBothSubTypeFunctions(t, ref1, ref2)
 			assert.True(t, result, "&{String: Int} should be subtype of &{String: Number}")
+		})
+
+		t.Run("simple type as supertype fallback", func(t *testing.T) {
+			// TransactionType doesn't match any special case in the switch statement
+			// so this falls back to the default-case.
+			result := checkBothSubTypeFunctions(t, IntType, &TransactionType{})
+			assert.False(t, result, "Int? should NOT be a subtype of String")
 		})
 	})
 }
