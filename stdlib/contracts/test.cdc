@@ -6,20 +6,11 @@ contract Test {
     /// backend emulates a real network.
     ///
     access(self)
-    var backend: {BlockchainBackend}
+    let backend: {BlockchainBackend}
 
     init(backend: {BlockchainBackend}) {
         self.backend = backend
-        self.MAINNET_HOST = "access.mainnet.nodes.onflow.org:9000"
-        self.TESTNET_HOST = "access.devnet.nodes.onflow.org:9000"
     }
-
-    /// RPC host constants for convenience. Providers may support additional aliases.
-    access(all)
-    let MAINNET_HOST: String
-
-    access(all)
-    let TESTNET_HOST: String
 
     /// Executes a script and returns the script return value and the status.
     /// `returnValue` field of the result will be `nil` if the script failed.
