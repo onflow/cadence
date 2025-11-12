@@ -2583,7 +2583,10 @@ func TestDecodeWord128Invalid(t *testing.T) {
 			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		})
 		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: failed to decode Word128: cbor: cannot decode CBOR tag type to big.Int", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"failed to decode Word128: cbor: cannot decode CBOR tag type to big.Int",
+		)
 	}
 }
 
@@ -2683,7 +2686,10 @@ func TestDecodeWord256Invalid(t *testing.T) {
 			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		})
 		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: failed to decode Word256: cbor: cannot decode CBOR tag type to big.Int", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"failed to decode Word256: cbor: cannot decode CBOR tag type to big.Int",
+		)
 	}
 }
 
@@ -10922,7 +10928,10 @@ func TestEncodeType(t *testing.T) {
 
 		_, err := ccf.Decode(nil, encodedData)
 		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: unexpected empty intersection type", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"unexpected empty intersection type",
+		)
 
 	})
 
@@ -10953,7 +10962,10 @@ func TestEncodeType(t *testing.T) {
 
 		_, err := ccf.Decode(nil, encodedData)
 		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: unexpected empty intersection type", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"unexpected empty intersection type",
+		)
 	})
 
 	t.Run("with static intersection type", func(t *testing.T) {
@@ -12817,7 +12829,10 @@ func TestDecodeInvalidType(t *testing.T) {
 		for _, dm := range decModes {
 			_, err := dm.Decode(nil, encodedData)
 			require.Error(t, err)
-			assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: ``", err.Error())
+			assert.ErrorContains(t,
+				err,
+				"invalid type ID for built-in: ``",
+			)
 		}
 	})
 
@@ -12875,7 +12890,10 @@ func TestDecodeInvalidType(t *testing.T) {
 		for _, dm := range decModes {
 			_, err := dm.Decode(nil, encodedData)
 			require.Error(t, err)
-			assert.Equal(t, "ccf: failed to decode: invalid type ID `I`: invalid identifier location type ID: missing location", err.Error())
+			assert.ErrorContains(t,
+				err,
+				"invalid type ID `I`: invalid identifier location type ID: missing location",
+			)
 		}
 	})
 
@@ -12933,7 +12951,10 @@ func TestDecodeInvalidType(t *testing.T) {
 		for _, dm := range decModes {
 			_, err := dm.Decode(nil, encodedData)
 			require.Error(t, err)
-			assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: `N.PublicKey`", err.Error())
+			assert.ErrorContains(t,
+				err,
+				"invalid type ID for built-in: `N.PublicKey`",
+			)
 		}
 	})
 }

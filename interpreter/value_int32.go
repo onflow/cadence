@@ -602,7 +602,7 @@ func (v Int32Value) ConformsToStaticType(
 	return true
 }
 
-func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

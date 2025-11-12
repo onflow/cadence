@@ -118,6 +118,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 			return activation
 		},
+		PeepholeOptimizationsEnabled: true,
 	}
 
 	// Parse and check contracts

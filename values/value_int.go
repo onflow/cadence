@@ -335,7 +335,7 @@ func (v IntValue) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint32) (atree.Storable, error) {
 	return MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 

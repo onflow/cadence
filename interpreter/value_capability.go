@@ -212,7 +212,7 @@ func (v *IDCapabilityValue) Address() AddressValue {
 func (v *IDCapabilityValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(
 		v,

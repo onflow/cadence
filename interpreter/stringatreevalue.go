@@ -34,7 +34,7 @@ var _ atree.ComparableStorable = StringAtreeValue("")
 func (v StringAtreeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (
 	atree.Storable,
 	error,

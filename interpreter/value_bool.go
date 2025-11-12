@@ -158,7 +158,7 @@ func (v BoolValue) ConformsToStaticType(
 	return true
 }
 
-func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return values.BoolValue(v), nil
 }
 

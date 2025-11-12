@@ -8094,8 +8094,9 @@ func TestArrayFunctions(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		require.Equal(
+		AssertValuesEqual(
 			t,
+			nil,
 			interpreter.TypeValue{
 				Type: interpreter.FunctionStaticType{
 					Type: sema.ArrayAppendFunctionType(sema.UInt8Type),
@@ -8120,8 +8121,9 @@ func TestArrayFunctions(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		require.Equal(
+		AssertValuesEqual(
 			t,
+			nil,
 			interpreter.TypeValue{
 				Type: interpreter.FunctionStaticType{
 					Type: sema.ArrayReverseFunctionType(
@@ -8151,8 +8153,9 @@ func TestArrayFunctions(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		require.Equal(
+		AssertValuesEqual(
 			t,
+			nil,
 			interpreter.TypeValue{
 				Type: interpreter.FunctionStaticType{
 					Type: sema.ArrayReverseFunctionType(

@@ -244,7 +244,7 @@ func newPathFromStringValue(gauge common.MemoryGauge, domain common.PathDomain, 
 func (v PathValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(
 		v,

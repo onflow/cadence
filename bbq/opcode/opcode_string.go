@@ -74,6 +74,7 @@ func _() {
 	_ = x[SetTypeIndex-87]
 	_ = x[RemoveTypeIndex-88]
 	_ = x[SetAttachmentBase-89]
+	_ = x[GetFieldLocal-91]
 	_ = x[Invoke-92]
 	_ = x[Drop-102]
 	_ = x[Dup-103]
@@ -96,7 +97,7 @@ const (
 	_Opcode_name_4 = "WrapUnwrapDestroyTransferAndConvertSimpleCastFailableCastForceCastDerefTransferConvert"
 	_Opcode_name_5 = "TrueFalseVoidNilNewSimpleCompositeNewCompositeNewCompositeAtNewPathNewArrayNewDictionaryNewRefNewClosure"
 	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueCloseUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndexGetMethodGetTypeIndexSetTypeIndexRemoveTypeIndexSetAttachmentBase"
-	_Opcode_name_7 = "Invoke"
+	_Opcode_name_7 = "GetFieldLocalInvoke"
 	_Opcode_name_8 = "DropDup"
 	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementTemplateStringOpcodeMax"
 )
@@ -109,6 +110,7 @@ var (
 	_Opcode_index_4 = [...]uint8{0, 4, 10, 17, 35, 45, 57, 66, 71, 79, 86}
 	_Opcode_index_5 = [...]uint8{0, 4, 9, 13, 16, 34, 46, 60, 67, 75, 88, 94, 104}
 	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 59, 68, 77, 85, 96, 104, 112, 120, 131, 140, 152, 164, 179, 196}
+	_Opcode_index_7 = [...]uint8{0, 13, 19}
 	_Opcode_index_8 = [...]uint8{0, 4, 7}
 	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 46, 55, 59, 68, 82, 91}
 )
@@ -135,8 +137,9 @@ func (i Opcode) String() string {
 	case 71 <= i && i <= 89:
 		i -= 71
 		return _Opcode_name_6[_Opcode_index_6[i]:_Opcode_index_6[i+1]]
-	case i == 92:
-		return _Opcode_name_7
+	case 91 <= i && i <= 92:
+		i -= 91
+		return _Opcode_name_7[_Opcode_index_7[i]:_Opcode_index_7[i+1]]
 	case 102 <= i && i <= 103:
 		i -= 102
 		return _Opcode_name_8[_Opcode_index_8[i]:_Opcode_index_8[i+1]]

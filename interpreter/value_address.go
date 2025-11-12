@@ -222,7 +222,7 @@ func (AddressValue) IsStorable() bool {
 	return true
 }
 
-func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

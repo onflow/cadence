@@ -420,7 +420,7 @@ func (Word8Value) IsStorable() bool {
 	return true
 }
 
-func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

@@ -918,7 +918,7 @@ func TestCheckFunctionWithPostTestConditionAndResourceResult(t *testing.T) {
 	require.IsType(t, &sema.PurityError{}, errs[0])
 }
 
-// TestCheckConditionCreateBefore tests if the AST expression extractor properly handles
+// TestCheckInvalidConditionCreateBefore tests if the AST expression extractor properly handles
 // that the rewritten expression of a create expression may not be an invocation expression.
 // For example, this is the case for the expression `create before(...)`,
 // where the sema.BeforeExtractor returns an IdentifierExpression.
