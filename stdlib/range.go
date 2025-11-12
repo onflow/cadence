@@ -167,10 +167,7 @@ func NewInclusiveRange(
 	}
 
 	rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocationContext, startStaticType)
-	rangeSemaType := interpreter.MustConvertStaticToSemaType(
-		rangeStaticType,
-		invocationContext,
-	).(*sema.InclusiveRangeType)
+	rangeSemaType := invocationContext.SemaTypeFromStaticType(rangeStaticType).(*sema.InclusiveRangeType)
 
 	if step != nil {
 

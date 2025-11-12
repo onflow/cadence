@@ -44,7 +44,7 @@ func MustConvertStaticToSemaType(staticType StaticType, typeConverter TypeConver
 
 func MustSemaTypeOfValue(value Value, context ValueStaticTypeContext) sema.Type {
 	staticType := value.StaticType(context)
-	return MustConvertStaticToSemaType(staticType, context)
+	return context.SemaTypeFromStaticType(staticType)
 }
 
 type StorageReader interface {
