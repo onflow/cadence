@@ -26,9 +26,9 @@ import (
 	"github.com/onflow/cadence/common"
 )
 
-// checkBothSubTypeFunctions calls both checkSubTypeWithoutEquality and checkSubTypeWithoutEquality_gen
+// checkSubTypeFunctions calls both checkSubTypeWithoutEquality and checkSubTypeWithoutEquality_gen
 // and asserts they produce the same result
-func checkBothSubTypeFunctions(t *testing.T, subType Type, superType Type) bool {
+func checkSubTypeFunctions(t *testing.T, subType Type, superType Type) bool {
 	result := checkSubTypeWithoutEquality(subType, superType)
 	generatedResult := checkSubTypeWithoutEquality_gen(subType, superType)
 
@@ -38,8 +38,8 @@ func checkBothSubTypeFunctions(t *testing.T, subType Type, superType Type) bool 
 		generatedResult,
 		"generated function produced different results for"+
 			" subType=%s, superType=%s: manual=%s, generated=%s",
-		subType.ID(),
-		superType.ID(),
+		subType,
+		superType,
 		result,
 		generatedResult,
 	)
@@ -68,7 +68,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, NeverType, tt.superType)
+				result := checkSubTypeFunctions(t, NeverType, tt.superType)
 				assert.True(t, result, "NeverType should be a subtype of %v", tt.superType)
 			})
 		}
@@ -90,7 +90,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, tt.subType, AnyType)
+				result := checkSubTypeFunctions(t, tt.subType, AnyType)
 				assert.True(t, result, "%v should be a subtype of AnyType", tt.subType)
 			})
 		}
@@ -111,19 +111,19 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					result := checkBothSubTypeFunctions(t, tt.subType, AnyStructType)
+					result := checkSubTypeFunctions(t, tt.subType, AnyStructType)
 					assert.True(t, result, "%v should be a subtype of AnyStructType", tt.subType)
 				})
 			}
 		})
 
 		t.Run("resource types are NOT subtypes of AnyStruct", func(t *testing.T) {
-			result := checkBothSubTypeFunctions(t, AnyResourceType, AnyStructType)
+			result := checkSubTypeFunctions(t, AnyResourceType, AnyStructType)
 			assert.False(t, result, "AnyResource should NOT be a subtype of AnyStruct")
 		})
 
 		t.Run("AnyType is NOT a subtype of AnyStruct", func(t *testing.T) {
-			result := checkBothSubTypeFunctions(t, AnyType, AnyStructType)
+			result := checkSubTypeFunctions(t, AnyType, AnyStructType)
 			assert.False(t, result, "AnyType should NOT be a subtype of AnyStruct")
 		})
 	})
@@ -132,7 +132,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		t.Parallel()
 
 		t.Run("resource types are subtypes of AnyResource", func(t *testing.T) {
-			result := checkBothSubTypeFunctions(t, AnyResourceType, AnyResourceType)
+			result := checkSubTypeFunctions(t, AnyResourceType, AnyResourceType)
 			assert.True(t, result, "AnyResource should be a subtype of AnyResource")
 		})
 
@@ -145,7 +145,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			}
 
 			for _, subType := range tests {
-				result := checkBothSubTypeFunctions(t, subType, AnyResourceType)
+				result := checkSubTypeFunctions(t, subType, AnyResourceType)
 				assert.False(t, result, "%v should NOT be a subtype of AnyResource", subType)
 			}
 		})
@@ -158,34 +158,34 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			// Note: Testing with real attachment types would require more setup
 			// These tests verify the basic structure
 			t.Run("non-resource is not subtype", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, IntType, AnyResourceAttachmentType)
+				result := checkSubTypeFunctions(t, IntType, AnyResourceAttachmentType)
 				assert.False(t, result)
 			})
 
 			t.Run("struct is not subtype", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, StringType, AnyResourceAttachmentType)
+				result := checkSubTypeFunctions(t, StringType, AnyResourceAttachmentType)
 				assert.False(t, result)
 			})
 
 			t.Run("AnyStruct is not subtype", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, AnyStructType, AnyResourceAttachmentType)
+				result := checkSubTypeFunctions(t, AnyStructType, AnyResourceAttachmentType)
 				assert.False(t, result)
 			})
 		})
 
 		t.Run("AnyStructAttachment", func(t *testing.T) {
 			t.Run("resource is not subtype", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, AnyResourceType, AnyStructAttachmentType)
+				result := checkSubTypeFunctions(t, AnyResourceType, AnyStructAttachmentType)
 				assert.False(t, result)
 			})
 
 			t.Run("non-attachment struct is not subtype", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, IntType, AnyStructAttachmentType)
+				result := checkSubTypeFunctions(t, IntType, AnyStructAttachmentType)
 				assert.False(t, result)
 			})
 
 			t.Run("AnyResource is not subtype", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, AnyResourceType, AnyStructAttachmentType)
+				result := checkSubTypeFunctions(t, AnyResourceType, AnyStructAttachmentType)
 				assert.False(t, result)
 			})
 		})
@@ -203,7 +203,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			}
 
 			for _, subType := range tests {
-				result := checkBothSubTypeFunctions(t, subType, HashableStructType)
+				result := checkSubTypeFunctions(t, subType, HashableStructType)
 				assert.True(t, result, "%v should be a subtype of HashableStruct", subType)
 			}
 		})
@@ -214,39 +214,39 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 		t.Run("PathType", func(t *testing.T) {
 			t.Run("StoragePath <: Path", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, StoragePathType, PathType)
+				result := checkSubTypeFunctions(t, StoragePathType, PathType)
 				assert.True(t, result)
 			})
 
 			t.Run("PrivatePath <: Path", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, PrivatePathType, PathType)
+				result := checkSubTypeFunctions(t, PrivatePathType, PathType)
 				assert.True(t, result)
 			})
 
 			t.Run("PublicPath <: Path", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, PublicPathType, PathType)
+				result := checkSubTypeFunctions(t, PublicPathType, PathType)
 				assert.True(t, result)
 			})
 
 			t.Run("Int is NOT <: Path", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, IntType, PathType)
+				result := checkSubTypeFunctions(t, IntType, PathType)
 				assert.False(t, result)
 			})
 		})
 
 		t.Run("CapabilityPathType", func(t *testing.T) {
 			t.Run("PrivatePath <: CapabilityPath", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, PrivatePathType, CapabilityPathType)
+				result := checkSubTypeFunctions(t, PrivatePathType, CapabilityPathType)
 				assert.True(t, result)
 			})
 
 			t.Run("PublicPath <: CapabilityPath", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, PublicPathType, CapabilityPathType)
+				result := checkSubTypeFunctions(t, PublicPathType, CapabilityPathType)
 				assert.True(t, result)
 			})
 
 			t.Run("StoragePath is NOT <: CapabilityPath", func(t *testing.T) {
-				result := checkBothSubTypeFunctions(t, StoragePathType, CapabilityPathType)
+				result := checkSubTypeFunctions(t, StoragePathType, CapabilityPathType)
 				assert.False(t, result)
 			})
 		})
@@ -264,7 +264,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			}
 
 			for _, subType := range tests {
-				result := checkBothSubTypeFunctions(t, subType, StorableType)
+				result := checkSubTypeFunctions(t, subType, StorableType)
 				assert.True(t, result, "%v should be a subtype of Storable", subType)
 			}
 		})
@@ -291,7 +291,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					result := checkBothSubTypeFunctions(t, tt.subType, NumberType)
+					result := checkSubTypeFunctions(t, tt.subType, NumberType)
 					assert.Equal(t, tt.expected, result)
 				})
 			}
@@ -313,7 +313,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					result := checkBothSubTypeFunctions(t, tt.subType, SignedNumberType)
+					result := checkSubTypeFunctions(t, tt.subType, SignedNumberType)
 					assert.Equal(t, tt.expected, result)
 				})
 			}
@@ -336,7 +336,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					result := checkBothSubTypeFunctions(t, tt.subType, IntegerType)
+					result := checkSubTypeFunctions(t, tt.subType, IntegerType)
 					assert.Equal(t, tt.expected, result)
 				})
 			}
@@ -362,7 +362,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					result := checkBothSubTypeFunctions(t, tt.subType, SignedIntegerType)
+					result := checkSubTypeFunctions(t, tt.subType, SignedIntegerType)
 					assert.Equal(t, tt.expected, result)
 				})
 			}
@@ -392,7 +392,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					result := checkBothSubTypeFunctions(t, tt.subType, FixedSizeUnsignedIntegerType)
+					result := checkSubTypeFunctions(t, tt.subType, FixedSizeUnsignedIntegerType)
 					assert.Equal(t, tt.expected, result)
 				})
 			}
@@ -415,7 +415,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					result := checkBothSubTypeFunctions(t, tt.subType, FixedPointType)
+					result := checkSubTypeFunctions(t, tt.subType, FixedPointType)
 					assert.Equal(t, tt.expected, result)
 				})
 			}
@@ -436,7 +436,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					result := checkBothSubTypeFunctions(t, tt.subType, SignedFixedPointType)
+					result := checkSubTypeFunctions(t, tt.subType, SignedFixedPointType)
 					assert.Equal(t, tt.expected, result)
 				})
 			}
@@ -448,21 +448,21 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 		t.Run("T <: T?", func(t *testing.T) {
 			optionalInt := &OptionalType{Type: IntType}
-			result := checkBothSubTypeFunctions(t, IntType, optionalInt)
+			result := checkSubTypeFunctions(t, IntType, optionalInt)
 			assert.True(t, result, "Int should be a subtype of Int?")
 		})
 
 		t.Run("T? <: U? when T <: U", func(t *testing.T) {
 			optionalNumber := &OptionalType{Type: NumberType}
 			optionalInt := &OptionalType{Type: IntType}
-			result := checkBothSubTypeFunctions(t, optionalInt, optionalNumber)
+			result := checkSubTypeFunctions(t, optionalInt, optionalNumber)
 			assert.True(t, result, "Int? should be a subtype of Number?")
 		})
 
 		t.Run("T? is NOT <: U? when T is NOT <: U", func(t *testing.T) {
 			optionalInt := &OptionalType{Type: IntType}
 			optionalString := &OptionalType{Type: StringType}
-			result := checkBothSubTypeFunctions(t, optionalInt, optionalString)
+			result := checkSubTypeFunctions(t, optionalInt, optionalString)
 			assert.False(t, result, "Int? should NOT be a subtype of String?")
 		})
 
@@ -471,7 +471,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			doubleOptionalInt := &OptionalType{
 				Type: &OptionalType{Type: IntType},
 			}
-			result := checkBothSubTypeFunctions(t, IntType, doubleOptionalInt)
+			result := checkSubTypeFunctions(t, IntType, doubleOptionalInt)
 			assert.True(t, result, "Int should be a subtype of Int??")
 		})
 	})
@@ -488,7 +488,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				KeyType:   NumberType,
 				ValueType: NumberType,
 			}
-			result := checkBothSubTypeFunctions(t, dict1, dict2)
+			result := checkSubTypeFunctions(t, dict1, dict2)
 			assert.True(t, result, "{Int: Int} should be a subtype of {Number: Number}")
 		})
 
@@ -501,7 +501,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				KeyType:   StringType,
 				ValueType: IntType,
 			}
-			result := checkBothSubTypeFunctions(t, dict1, dict2)
+			result := checkSubTypeFunctions(t, dict1, dict2)
 			assert.False(t, result, "{Int: Int} should NOT be a subtype of {String: Int}")
 		})
 
@@ -514,7 +514,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				KeyType:   IntType,
 				ValueType: StringType,
 			}
-			result := checkBothSubTypeFunctions(t, dict1, dict2)
+			result := checkSubTypeFunctions(t, dict1, dict2)
 			assert.False(t, result, "{Int: Int} should NOT be a subtype of {Int: String}")
 		})
 
@@ -523,7 +523,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				KeyType:   IntType,
 				ValueType: StringType,
 			}
-			result := checkBothSubTypeFunctions(t, IntType, dict)
+			result := checkSubTypeFunctions(t, IntType, dict)
 			assert.False(t, result, "Int should NOT be a subtype of {Int: String}")
 		})
 
@@ -536,7 +536,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				KeyType:   StringType,
 				ValueType: &OptionalType{Type: IntType},
 			}
-			result := checkBothSubTypeFunctions(t, dict1, dict2)
+			result := checkSubTypeFunctions(t, dict1, dict2)
 			assert.True(t, result, "{String: Int} should be a subtype of {String: Int?}")
 		})
 	})
@@ -547,20 +547,20 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		t.Run("covariant in element type", func(t *testing.T) {
 			arr1 := &VariableSizedType{Type: IntType}
 			arr2 := &VariableSizedType{Type: NumberType}
-			result := checkBothSubTypeFunctions(t, arr1, arr2)
+			result := checkSubTypeFunctions(t, arr1, arr2)
 			assert.True(t, result, "[Int] should be a subtype of [Number]")
 		})
 
 		t.Run("not subtype when element types don't match", func(t *testing.T) {
 			arr1 := &VariableSizedType{Type: IntType}
 			arr2 := &VariableSizedType{Type: StringType}
-			result := checkBothSubTypeFunctions(t, arr1, arr2)
+			result := checkSubTypeFunctions(t, arr1, arr2)
 			assert.False(t, result, "[Int] should NOT be a subtype of [String]")
 		})
 
 		t.Run("non-array is not subtype", func(t *testing.T) {
 			arr := &VariableSizedType{Type: IntType}
-			result := checkBothSubTypeFunctions(t, IntType, arr)
+			result := checkSubTypeFunctions(t, IntType, arr)
 			assert.False(t, result, "Int should NOT be a subtype of [Int]")
 		})
 
@@ -572,7 +572,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			arrNumber := &VariableSizedType{
 				Type: &VariableSizedType{Type: NumberType},
 			}
-			result := checkBothSubTypeFunctions(t, arrInt, arrNumber)
+			result := checkSubTypeFunctions(t, arrInt, arrNumber)
 			assert.True(t, result, "[[Int]] should be a subtype of [[Number]]")
 		})
 	})
@@ -583,27 +583,27 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		t.Run("covariant in element type with same size", func(t *testing.T) {
 			arr1 := &ConstantSizedType{Type: IntType, Size: 5}
 			arr2 := &ConstantSizedType{Type: NumberType, Size: 5}
-			result := checkBothSubTypeFunctions(t, arr1, arr2)
+			result := checkSubTypeFunctions(t, arr1, arr2)
 			assert.True(t, result, "[Int; 5] should be a subtype of [Number; 5]")
 		})
 
 		t.Run("not subtype when sizes differ", func(t *testing.T) {
 			arr1 := &ConstantSizedType{Type: IntType, Size: 5}
 			arr2 := &ConstantSizedType{Type: IntType, Size: 10}
-			result := checkBothSubTypeFunctions(t, arr1, arr2)
+			result := checkSubTypeFunctions(t, arr1, arr2)
 			assert.False(t, result, "[Int; 5] should NOT be a subtype of [Int; 10]")
 		})
 
 		t.Run("not subtype when element types don't match", func(t *testing.T) {
 			arr1 := &ConstantSizedType{Type: IntType, Size: 5}
 			arr2 := &ConstantSizedType{Type: StringType, Size: 5}
-			result := checkBothSubTypeFunctions(t, arr1, arr2)
+			result := checkSubTypeFunctions(t, arr1, arr2)
 			assert.False(t, result, "[Int; 5] should NOT be a subtype of [String; 5]")
 		})
 
 		t.Run("non-array is not subtype", func(t *testing.T) {
 			arr := &ConstantSizedType{Type: IntType, Size: 5}
-			result := checkBothSubTypeFunctions(t, IntType, arr)
+			result := checkSubTypeFunctions(t, IntType, arr)
 			assert.False(t, result, "Int should NOT be a subtype of [Int; 5]")
 		})
 	})
@@ -620,7 +620,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				Type:          NumberType,
 				Authorization: UnauthorizedAccess,
 			}
-			result := checkBothSubTypeFunctions(t, ref1, ref2)
+			result := checkSubTypeFunctions(t, ref1, ref2)
 			assert.True(t, result, "&Int should be a subtype of &Number")
 		})
 
@@ -636,7 +636,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				Type:          IntType,
 				Authorization: auth,
 			}
-			result := checkBothSubTypeFunctions(t, ref1, ref2)
+			result := checkSubTypeFunctions(t, ref1, ref2)
 			assert.False(t, result, "unauthorized reference should NOT be a subtype of authorized reference")
 		})
 
@@ -649,7 +649,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				Type:          StringType,
 				Authorization: UnauthorizedAccess,
 			}
-			result := checkBothSubTypeFunctions(t, ref1, ref2)
+			result := checkSubTypeFunctions(t, ref1, ref2)
 			assert.False(t, result, "&Int should NOT be a subtype of &String")
 		})
 
@@ -658,7 +658,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				Type:          IntType,
 				Authorization: UnauthorizedAccess,
 			}
-			result := checkBothSubTypeFunctions(t, IntType, ref)
+			result := checkSubTypeFunctions(t, IntType, ref)
 			assert.False(t, result, "Int should NOT be a subtype of &Int")
 		})
 
@@ -672,7 +672,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				Type:          AnyResourceType,
 				Authorization: UnauthorizedAccess,
 			}
-			result := checkBothSubTypeFunctions(t, ref1, ref2)
+			result := checkSubTypeFunctions(t, ref1, ref2)
 			assert.True(t, result, "&AnyResource should be a subtype of &AnyResource")
 		})
 
@@ -686,7 +686,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				Type:          &OptionalType{Type: IntType},
 				Authorization: UnauthorizedAccess,
 			}
-			result := checkBothSubTypeFunctions(t, refToInt, refToOptInt)
+			result := checkSubTypeFunctions(t, refToInt, refToOptInt)
 			assert.True(t, result, "&Int should be a subtype of &Int?")
 		})
 
@@ -700,7 +700,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				Type:          IntType,
 				Authorization: UnauthorizedAccess,
 			}
-			result := checkBothSubTypeFunctions(t, ref1, ref2)
+			result := checkSubTypeFunctions(t, ref1, ref2)
 			assert.False(t, result, "&String should NOT be a subtype of &Int")
 		})
 	})
@@ -723,7 +723,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				},
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 			}
-			result := checkBothSubTypeFunctions(t, viewFunc, impureFunc)
+			result := checkSubTypeFunctions(t, viewFunc, impureFunc)
 			assert.True(t, result, "view function should be a subtype of impure function")
 		})
 
@@ -742,7 +742,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				},
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 			}
-			result := checkBothSubTypeFunctions(t, impureFunc, viewFunc)
+			result := checkSubTypeFunctions(t, impureFunc, viewFunc)
 			assert.False(t, result, "impure function should NOT be a subtype of view function")
 		})
 
@@ -762,7 +762,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				},
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.True(t, result, "fun(Number): Int should be a subtype of fun(Int): Int")
 		})
 
@@ -782,7 +782,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				},
 				ReturnTypeAnnotation: NewTypeAnnotation(NumberType),
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.True(t, result, "fun(Int): Int should be a subtype of fun(Int): Number")
 		})
 
@@ -803,7 +803,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				},
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.False(t, result, "fun(Int): Int should NOT be subtype of fun(Number): Int (contravariance fails)")
 		})
 
@@ -823,7 +823,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				},
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.False(t, result, "functions with different arities should NOT be subtypes")
 		})
 
@@ -844,7 +844,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				IsConstructor:        false,
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.False(t, result, "constructor and non-constructor functions should NOT be subtypes")
 		})
 
@@ -854,7 +854,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				Parameters:           []Parameter{},
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 			}
-			result := checkBothSubTypeFunctions(t, IntType, fn)
+			result := checkSubTypeFunctions(t, IntType, fn)
 			assert.False(t, result, "Int should NOT be a subtype of function")
 		})
 
@@ -874,7 +874,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				},
 				ReturnTypeAnnotation: VoidTypeAnnotation,
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.True(t, result, "functions with Void return should be subtypes")
 		})
 
@@ -894,7 +894,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				},
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.False(t, result, "function with String return should NOT be subtype of Int return")
 		})
 
@@ -914,7 +914,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				Arity:                &Arity{Min: 1, Max: 1},
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.False(t, result, "functions with different arity should NOT be subtypes")
 		})
 
@@ -940,7 +940,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				TypeParameters:       []*TypeParameter{typeParam2},
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.False(t, result, "functions with different type parameter bounds should NOT be subtypes")
 		})
 
@@ -962,7 +962,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				TypeParameters:       []*TypeParameter{typeParam, typeParam},
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.False(t, result, "functions with different type parameter count should NOT be subtypes")
 		})
 
@@ -982,7 +982,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 					&VariableSizedType{Type: NumberType},
 				),
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.True(t, result, "fun(): [Int] should be subtype of fun(): [Number]")
 		})
 
@@ -1002,7 +1002,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				},
 				ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
+			result := checkSubTypeFunctions(t, func1, func2)
 			assert.True(t, result, "fun([Number]): Void should be subtype of fun([Int]): Void")
 		})
 	})
@@ -1028,7 +1028,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		}
 
 		t.Run("AnyResource intersection with nil subtype", func(t *testing.T) {
-			result := checkBothSubTypeFunctions(t,
+			result := checkSubTypeFunctions(t,
 				AnyResourceType,
 				&IntersectionType{
 					LegacyType: AnyResourceType,
@@ -1039,7 +1039,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		})
 
 		t.Run("AnyStruct intersection with nil subtype", func(t *testing.T) {
-			result := checkBothSubTypeFunctions(t,
+			result := checkSubTypeFunctions(t,
 				AnyStructType,
 				&IntersectionType{
 					LegacyType: AnyStructType,
@@ -1050,7 +1050,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		})
 
 		t.Run("Any intersection with nil subtype", func(t *testing.T) {
-			result := checkBothSubTypeFunctions(t,
+			result := checkSubTypeFunctions(t,
 				AnyType,
 				&IntersectionType{
 					LegacyType: AnyType,
@@ -1069,7 +1069,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			superType := &IntersectionType{
 				Types: []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.True(t, result, "{I1, I2} should be a subtype of {I1}")
 		})
 
@@ -1081,7 +1081,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			superType := &IntersectionType{
 				Types: []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "{I1} should NOT be a subtype of {I2}")
 		})
 
@@ -1103,7 +1103,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyResourceType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.True(t, result, "AnyResource{I1, I2} should be a subtype of AnyResource{I1}")
 		})
 
@@ -1116,7 +1116,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyStructType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "AnyResource{I} should NOT be a subtype of AnyStruct{I}")
 		})
 
@@ -1139,7 +1139,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyResourceType,
 				Types:      []*InterfaceType{},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.True(t, result, "R{I1} should be a subtype of AnyResource{}")
 		})
 
@@ -1168,7 +1168,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyResourceType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "R{I2} should NOT be a subtype of AnyResource{I1} when R doesn't conform")
 		})
 
@@ -1187,7 +1187,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyStructType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, compositeType, superType)
+			result := checkSubTypeFunctions(t, compositeType, superType)
 			assert.True(t, result, "composite should be a subtype of intersection when conforming")
 		})
 
@@ -1212,7 +1212,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyStructType,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, compositeType, superType)
+			result := checkSubTypeFunctions(t, compositeType, superType)
 			assert.False(t, result, "composite should NOT be a subtype of intersection when not conforming")
 		})
 
@@ -1230,7 +1230,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyStructType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, compositeType, superType)
+			result := checkSubTypeFunctions(t, compositeType, superType)
 			assert.False(t, result, "resource should NOT be a subtype of struct intersection")
 		})
 
@@ -1252,7 +1252,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType1,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.True(t, result, "S1{I1} should be a subtype of S1{I2} when same composite")
 		})
 
@@ -1280,7 +1280,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType2,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "S1{I1} should NOT be a subtype of S2{I1} when different composites")
 		})
 
@@ -1308,7 +1308,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "I3{I1} should NOT be a subtype of S{I2}")
 		})
 
@@ -1325,7 +1325,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, compositeType, superType)
+			result := checkSubTypeFunctions(t, compositeType, superType)
 			assert.True(t, result, "composite should be a subtype of its own intersection type")
 		})
 
@@ -1345,7 +1345,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "{I1} should NOT be statically a subtype of S{I1}")
 		})
 
@@ -1366,7 +1366,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "AnyStruct{I1} should NOT be statically a subtype of S{I1}")
 		})
 
@@ -1383,7 +1383,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, AnyResourceType, superType)
+			result := checkSubTypeFunctions(t, AnyResourceType, superType)
 			assert.False(t, result, "AnyResource should NOT be statically a subtype of R{I1}")
 		})
 
@@ -1400,7 +1400,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, AnyStructType, superType)
+			result := checkSubTypeFunctions(t, AnyStructType, superType)
 			assert.False(t, result, "AnyStruct should NOT be statically a subtype of S{I1}")
 		})
 
@@ -1417,7 +1417,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, AnyType, superType)
+			result := checkSubTypeFunctions(t, AnyType, superType)
 			assert.False(t, result, "Any should NOT be statically a subtype of S{I1}")
 		})
 
@@ -1435,7 +1435,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: compositeType,
 				Types:      []*InterfaceType{interfaceType1},
 			}
-			result := checkBothSubTypeFunctions(t, optionalType, superType)
+			result := checkSubTypeFunctions(t, optionalType, superType)
 			assert.False(t, result, "Int? should NOT be subtype of S{I1}")
 		})
 
@@ -1456,7 +1456,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyResourceType,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "S{I1} should NOT be subtype of AnyResource{I2} (struct vs resource)")
 		})
 
@@ -1478,7 +1478,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyResourceType,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.True(t, result, "R{I1} should be subtype of AnyResource{I2} when R conforms to I2")
 		})
 
@@ -1500,7 +1500,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyResourceType,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "R{I1} should NOT be subtype of AnyResource{I2} when R doesn't conform to I2")
 		})
 
@@ -1522,7 +1522,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyStructType,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.True(t, result, "S{I1} should be subtype of AnyStruct{I2} when S conforms to I2")
 		})
 
@@ -1543,7 +1543,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyStructType,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.False(t, result, "R{I1} should NOT be subtype of AnyStruct{I2} (resource vs struct)")
 		})
 
@@ -1565,7 +1565,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyType,
 				Types:      []*InterfaceType{interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, superType)
+			result := checkSubTypeFunctions(t, subType, superType)
 			assert.True(t, result, "S{I1} should be subtype of Any{I2} when S conforms to I2")
 		})
 
@@ -1575,7 +1575,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			subType := &IntersectionType{
 				Types: []*InterfaceType{interfaceType1, interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, interfaceType1)
+			result := checkSubTypeFunctions(t, subType, interfaceType1)
 			assert.True(t, result, "{I1, I2} should be a subtype of I1")
 		})
 
@@ -1591,7 +1591,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			subType := &IntersectionType{
 				Types: []*InterfaceType{interfaceType1, interfaceType2},
 			}
-			result := checkBothSubTypeFunctions(t, subType, interfaceType3)
+			result := checkSubTypeFunctions(t, subType, interfaceType3)
 			assert.False(t, result, "{I1, I2} should NOT be a subtype of I3")
 		})
 
@@ -1604,7 +1604,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyStructType,
 				Types:      []*InterfaceType{},
 			}
-			result := checkBothSubTypeFunctions(t, capType, superType)
+			result := checkSubTypeFunctions(t, capType, superType)
 			assert.False(t, result, "Capability<Int> should NOT be subtype of {I1}")
 		})
 	})
@@ -1629,12 +1629,12 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		}
 
 		t.Run("different composite types are not subtypes", func(t *testing.T) {
-			result := checkBothSubTypeFunctions(t, composite1, composite2)
+			result := checkSubTypeFunctions(t, composite1, composite2)
 			assert.False(t, result, "different composite types should NOT be subtypes")
 		})
 
 		t.Run("non-composite is not subtype of composite", func(t *testing.T) {
-			result := checkBothSubTypeFunctions(t, IntType, composite1)
+			result := checkSubTypeFunctions(t, IntType, composite1)
 			assert.False(t, result, "Int should NOT be a subtype of composite")
 		})
 
@@ -1651,7 +1651,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			subType := &IntersectionType{
 				Types: []*InterfaceType{interfaceType},
 			}
-			result := checkBothSubTypeFunctions(t, subType, composite1)
+			result := checkSubTypeFunctions(t, subType, composite1)
 			assert.False(t, result, "{I} should NOT be statically a subtype of S")
 		})
 
@@ -1668,7 +1668,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: AnyStructType,
 				Types:      []*InterfaceType{interfaceType},
 			}
-			result := checkBothSubTypeFunctions(t, subType, composite1)
+			result := checkSubTypeFunctions(t, subType, composite1)
 			assert.False(t, result, "AnyStruct{I} should NOT be statically a subtype of S")
 		})
 
@@ -1685,7 +1685,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: composite1,
 				Types:      []*InterfaceType{interfaceType},
 			}
-			result := checkBothSubTypeFunctions(t, subType, composite1)
+			result := checkSubTypeFunctions(t, subType, composite1)
 			assert.True(t, result, "S{I} should be a subtype of S (unrestrict)")
 		})
 
@@ -1702,7 +1702,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: composite2,
 				Types:      []*InterfaceType{interfaceType},
 			}
-			result := checkBothSubTypeFunctions(t, subType, composite1)
+			result := checkSubTypeFunctions(t, subType, composite1)
 			assert.False(t, result, "S1{I} should NOT be a subtype of S2")
 		})
 
@@ -1719,7 +1719,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				LegacyType: interfaceType,
 				Types:      []*InterfaceType{interfaceType},
 			}
-			result := checkBothSubTypeFunctions(t, subType, composite1)
+			result := checkSubTypeFunctions(t, subType, composite1)
 			assert.False(t, result, "intersection with interface legacy type should NOT be subtype of composite")
 		})
 	})
@@ -1747,7 +1747,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			// Set up conformance
 			compositeType.ExplicitInterfaceConformances = []*InterfaceType{interfaceType}
 
-			result := checkBothSubTypeFunctions(t, compositeType, interfaceType)
+			result := checkSubTypeFunctions(t, compositeType, interfaceType)
 			assert.True(t, result, "composite conforming to interface should be a subtype")
 		})
 
@@ -1761,7 +1761,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 
 			// No conformance set
 
-			result := checkBothSubTypeFunctions(t, compositeType, interfaceType)
+			result := checkSubTypeFunctions(t, compositeType, interfaceType)
 			assert.False(t, result, "composite NOT conforming to interface should NOT be a subtype")
 		})
 
@@ -1773,7 +1773,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				Members:    &StringMemberOrderedMap{},
 			}
 
-			result := checkBothSubTypeFunctions(t, compositeType, interfaceType)
+			result := checkSubTypeFunctions(t, compositeType, interfaceType)
 			assert.False(t, result, "composite with different kind should NOT be a subtype")
 		})
 
@@ -1795,14 +1795,14 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			// Set up conformance: I1 conforms to I2
 			interface1.ExplicitInterfaceConformances = []*InterfaceType{interface2}
 
-			result := checkBothSubTypeFunctions(t, interface1, interface2)
+			result := checkSubTypeFunctions(t, interface1, interface2)
 			assert.True(t, result, "interface conforming to another interface should be a subtype")
 		})
 
 		t.Run("non-conforming type not subtype of interface", func(t *testing.T) {
 			// Test fallback to IsParameterizedSubType for types that don't match the specific cases
 			// Int is NOT <: InterfaceType
-			result := checkBothSubTypeFunctions(t, IntType, interfaceType)
+			result := checkSubTypeFunctions(t, IntType, interfaceType)
 			assert.False(t, result, "Int should NOT be a subtype of interface")
 		})
 	})
@@ -1820,7 +1820,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				BorrowType: NumberType,
 			}
 
-			result := checkBothSubTypeFunctions(t, capability1, capability2)
+			result := checkSubTypeFunctions(t, capability1, capability2)
 			assert.True(t, result, "Capability<Int> should be a subtype of Capability<Number>")
 		})
 
@@ -1832,7 +1832,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				BorrowType: StringType,
 			}
 
-			result := checkBothSubTypeFunctions(t, capability1, capability2)
+			result := checkSubTypeFunctions(t, capability1, capability2)
 			assert.False(t, result, "Capability<Int> should NOT be a subtype of Capability<String>")
 		})
 
@@ -1841,7 +1841,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 				BorrowType: IntType,
 			}
 
-			result := checkBothSubTypeFunctions(t, IntType, capability)
+			result := checkSubTypeFunctions(t, IntType, capability)
 			// This may pass or fail depending on IsParameterizedSubType fallback
 			// The function checks if IntType's base type is a subtype of capability
 			assert.False(t, result, "Int should NOT be a subtype of Capability<Int>")
@@ -1854,7 +1854,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			}
 
 			// Int is NOT <: Capability<nil>
-			result := checkBothSubTypeFunctions(t, IntType, nilCapability)
+			result := checkSubTypeFunctions(t, IntType, nilCapability)
 			assert.False(t, result, "Int should NOT be a subtype of Capability with nil BorrowType")
 		})
 
@@ -1868,7 +1868,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			}
 
 			// The base types need to be subtypes first
-			result := checkBothSubTypeFunctions(t, capability, inclusiveRange)
+			result := checkSubTypeFunctions(t, capability, inclusiveRange)
 			assert.False(t, result, "base types must match for parameterized subtypes")
 		})
 	})
@@ -1876,7 +1876,7 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 	t.Run("unhandled type", func(t *testing.T) {
 		// TransactionType doesn't match any special case in the switch statement
 		// so this falls back to the default-case.
-		result := checkBothSubTypeFunctions(t, IntType, &TransactionType{})
+		result := checkSubTypeFunctions(t, IntType, &TransactionType{})
 		assert.False(t, result, "Int should NOT be a subtype of TransactionType")
 	})
 }
