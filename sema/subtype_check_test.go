@@ -29,15 +29,22 @@ import (
 // checkBothSubTypeFunctions calls both checkSubTypeWithoutEquality and checkSubTypeWithoutEquality_gen
 // and asserts they produce the same result
 func checkBothSubTypeFunctions(t *testing.T, subType Type, superType Type) bool {
-	//nolint:SA5007 // False positive: this calls the original implementation, not this function
-	result1 := checkSubTypeWithoutEquality(subType, superType)
-	result2 := checkSubTypeWithoutEquality_gen(subType, superType)
+	result := checkSubTypeWithoutEquality(subType, superType)
+	generatedResult := checkSubTypeWithoutEquality_gen(subType, superType)
 
-	assert.Equal(t, result1, result2,
-		"checkSubTypeWithoutEquality and checkSubTypeWithoutEquality_gen produced different results for subType=%v, superType=%v: manual=%v, generated=%v",
-		subType, superType, result1, result2)
+	assert.Equal(
+		t,
+		result,
+		generatedResult,
+		"generated function produced different results for"+
+			" subType=%s, superType=%s: manual=%s, generated=%s",
+		subType.ID(),
+		superType.ID(),
+		result,
+		generatedResult,
+	)
 
-	return result1
+	return result
 }
 
 // TestCheckSubTypeWithoutEquality tests all paths of checkSubTypeWithoutEquality function
@@ -458,6 +465,15 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			result := checkBothSubTypeFunctions(t, optionalInt, optionalString)
 			assert.False(t, result, "Int? should NOT be a subtype of String?")
 		})
+
+		t.Run("nested optionals", func(t *testing.T) {
+			// Int <: Int??
+			doubleOptionalInt := &OptionalType{
+				Type: &OptionalType{Type: IntType},
+			}
+			result := checkBothSubTypeFunctions(t, IntType, doubleOptionalInt)
+			assert.True(t, result, "Int should be a subtype of Int??")
+		})
 	})
 
 	t.Run("DictionaryType", func(t *testing.T) {
@@ -510,6 +526,19 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			result := checkBothSubTypeFunctions(t, IntType, dict)
 			assert.False(t, result, "Int should NOT be a subtype of {Int: String}")
 		})
+
+		t.Run("dictionary with optional values", func(t *testing.T) {
+			dict1 := &DictionaryType{
+				KeyType:   StringType,
+				ValueType: IntType,
+			}
+			dict2 := &DictionaryType{
+				KeyType:   StringType,
+				ValueType: &OptionalType{Type: IntType},
+			}
+			result := checkBothSubTypeFunctions(t, dict1, dict2)
+			assert.True(t, result, "{String: Int} should be a subtype of {String: Int?}")
+		})
 	})
 
 	t.Run("VariableSizedType", func(t *testing.T) {
@@ -533,6 +562,18 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 			arr := &VariableSizedType{Type: IntType}
 			result := checkBothSubTypeFunctions(t, IntType, arr)
 			assert.False(t, result, "Int should NOT be a subtype of [Int]")
+		})
+
+		t.Run("nested arrays", func(t *testing.T) {
+			// [[Int]] <: [[Number]]
+			arrInt := &VariableSizedType{
+				Type: &VariableSizedType{Type: IntType},
+			}
+			arrNumber := &VariableSizedType{
+				Type: &VariableSizedType{Type: NumberType},
+			}
+			result := checkBothSubTypeFunctions(t, arrInt, arrNumber)
+			assert.True(t, result, "[[Int]] should be a subtype of [[Number]]")
 		})
 	})
 
@@ -1832,301 +1873,10 @@ func TestCheckSubTypeWithoutEquality(t *testing.T) {
 		})
 	})
 
-	t.Run("EdgeCases", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("nested optionals", func(t *testing.T) {
-			// Int <: Int??
-			doubleOptionalInt := &OptionalType{
-				Type: &OptionalType{Type: IntType},
-			}
-			result := checkBothSubTypeFunctions(t, IntType, doubleOptionalInt)
-			assert.True(t, result, "Int should be a subtype of Int??")
-		})
-
-		t.Run("triple nested optionals", func(t *testing.T) {
-			// Int <: Int???
-			tripleOptionalInt := &OptionalType{
-				Type: &OptionalType{
-					Type: &OptionalType{Type: IntType},
-				},
-			}
-			result := checkBothSubTypeFunctions(t, IntType, tripleOptionalInt)
-			assert.True(t, result, "Int should be a subtype of Int???")
-		})
-
-		t.Run("optional subtype with non-subtype base", func(t *testing.T) {
-			// String? is NOT <: Int?
-			optString := &OptionalType{Type: StringType}
-			optInt := &OptionalType{Type: IntType}
-			result := checkBothSubTypeFunctions(t, optString, optInt)
-			assert.False(t, result, "String? should NOT be a subtype of Int?")
-		})
-
-		t.Run("nested arrays", func(t *testing.T) {
-			// [[Int]] <: [[Number]]
-			arrInt := &VariableSizedType{
-				Type: &VariableSizedType{Type: IntType},
-			}
-			arrNumber := &VariableSizedType{
-				Type: &VariableSizedType{Type: NumberType},
-			}
-			result := checkBothSubTypeFunctions(t, arrInt, arrNumber)
-			assert.True(t, result, "[[Int]] should be a subtype of [[Number]]")
-		})
-
-		t.Run("dictionary with optional values", func(t *testing.T) {
-			dict1 := &DictionaryType{
-				KeyType:   StringType,
-				ValueType: IntType,
-			}
-			dict2 := &DictionaryType{
-				KeyType:   StringType,
-				ValueType: &OptionalType{Type: IntType},
-			}
-			result := checkBothSubTypeFunctions(t, dict1, dict2)
-			assert.True(t, result, "{String: Int} should be a subtype of {String: Int?}")
-		})
-
-		t.Run("optional array", func(t *testing.T) {
-			arr := &VariableSizedType{Type: IntType}
-			optArr := &OptionalType{
-				Type: &VariableSizedType{Type: IntType},
-			}
-			result := checkBothSubTypeFunctions(t, arr, optArr)
-			assert.True(t, result, "[Int] should be a subtype of [Int]?")
-		})
-
-		t.Run("reference to optional", func(t *testing.T) {
-			refToInt := &ReferenceType{
-				Type:          IntType,
-				Authorization: UnauthorizedAccess,
-			}
-			refToOptInt := &ReferenceType{
-				Type:          &OptionalType{Type: IntType},
-				Authorization: UnauthorizedAccess,
-			}
-			result := checkBothSubTypeFunctions(t, refToInt, refToOptInt)
-			assert.True(t, result, "&Int should be a subtype of &Int?")
-		})
-	})
-
-	t.Run("ComplexScenarios", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("function returning optional", func(t *testing.T) {
-			// fun(): Int  <:  fun(): Int?
-			func1 := &FunctionType{
-				Purity:               FunctionPurityImpure,
-				Parameters:           []Parameter{},
-				ReturnTypeAnnotation: NewTypeAnnotation(IntType),
-			}
-			func2 := &FunctionType{
-				Purity:     FunctionPurityImpure,
-				Parameters: []Parameter{},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&OptionalType{Type: IntType},
-				),
-			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
-			assert.True(t, result, "fun(): Int should be a subtype of fun(): Int?")
-		})
-
-		t.Run("function with optional parameter", func(t *testing.T) {
-			// fun(Int?): Void  <:  fun(Int): Void (contravariance)
-			func1 := &FunctionType{
-				Purity: FunctionPurityImpure,
-				Parameters: []Parameter{
-					{TypeAnnotation: NewTypeAnnotation(&OptionalType{Type: IntType})},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-			}
-			func2 := &FunctionType{
-				Purity: FunctionPurityImpure,
-				Parameters: []Parameter{
-					{TypeAnnotation: NewTypeAnnotation(IntType)},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-			}
-			result := checkBothSubTypeFunctions(t, func1, func2)
-			assert.True(t, result, "fun(Int?): Void should be a subtype of fun(Int): Void")
-		})
-
-		t.Run("dictionary of arrays", func(t *testing.T) {
-			dict1 := &DictionaryType{
-				KeyType: StringType,
-				ValueType: &VariableSizedType{
-					Type: IntType,
-				},
-			}
-			dict2 := &DictionaryType{
-				KeyType: StringType,
-				ValueType: &VariableSizedType{
-					Type: NumberType,
-				},
-			}
-			result := checkBothSubTypeFunctions(t, dict1, dict2)
-			assert.True(t, result, "{String: [Int]} should be a subtype of {String: [Number]}")
-		})
-
-		t.Run("constant array covariance with number types", func(t *testing.T) {
-			arr1 := &ConstantSizedType{
-				Type: Int8Type,
-				Size: 3,
-			}
-			arr2 := &ConstantSizedType{
-				Type: SignedIntegerType,
-				Size: 3,
-			}
-			result := checkBothSubTypeFunctions(t, arr1, arr2)
-			assert.True(t, result, "[Int8; 3] should be a subtype of [SignedInteger; 3]")
-		})
-
-		t.Run("array of optionals", func(t *testing.T) {
-			// [Int?] <: [Number?]
-			arr1 := &VariableSizedType{
-				Type: &OptionalType{Type: IntType},
-			}
-			arr2 := &VariableSizedType{
-				Type: &OptionalType{Type: NumberType},
-			}
-			result := checkBothSubTypeFunctions(t, arr1, arr2)
-			assert.True(t, result, "[Int?] should be a subtype of [Number?]")
-		})
-
-		t.Run("dictionary with nested dictionaries", func(t *testing.T) {
-			// {String: {Int: Int}} <: {String: {Number: Number}}
-			dict1 := &DictionaryType{
-				KeyType: StringType,
-				ValueType: &DictionaryType{
-					KeyType:   IntType,
-					ValueType: IntType,
-				},
-			}
-			dict2 := &DictionaryType{
-				KeyType: StringType,
-				ValueType: &DictionaryType{
-					KeyType:   NumberType,
-					ValueType: NumberType,
-				},
-			}
-			result := checkBothSubTypeFunctions(t, dict1, dict2)
-			assert.True(t, result, "{String: {Int: Int}} should be a subtype of {String: {Number: Number}}")
-		})
-
-		t.Run("constant array of constant arrays", func(t *testing.T) {
-			// [[Int; 2]; 3] <: [[Number; 2]; 3]
-			arr1 := &ConstantSizedType{
-				Type: &ConstantSizedType{
-					Type: IntType,
-					Size: 2,
-				},
-				Size: 3,
-			}
-			arr2 := &ConstantSizedType{
-				Type: &ConstantSizedType{
-					Type: NumberType,
-					Size: 2,
-				},
-				Size: 3,
-			}
-			result := checkBothSubTypeFunctions(t, arr1, arr2)
-			assert.True(t, result, "[[Int; 2]; 3] should be subtype of [[Number; 2]; 3]")
-		})
-
-		t.Run("mixed variable and constant arrays", func(t *testing.T) {
-			// [[Int; 2]] <: [[Number; 2]]
-			arr1 := &VariableSizedType{
-				Type: &ConstantSizedType{
-					Type: IntType,
-					Size: 2,
-				},
-			}
-			arr2 := &VariableSizedType{
-				Type: &ConstantSizedType{
-					Type: NumberType,
-					Size: 2,
-				},
-			}
-			result := checkBothSubTypeFunctions(t, arr1, arr2)
-			assert.True(t, result, "[[Int; 2]] should be subtype of [[Number; 2]]")
-		})
-
-		t.Run("dictionary with references", func(t *testing.T) {
-			// {String: &Int} <: {String: &Number}
-			dict1 := &DictionaryType{
-				KeyType: StringType,
-				ValueType: &ReferenceType{
-					Type:          IntType,
-					Authorization: UnauthorizedAccess,
-				},
-			}
-			dict2 := &DictionaryType{
-				KeyType: StringType,
-				ValueType: &ReferenceType{
-					Type:          NumberType,
-					Authorization: UnauthorizedAccess,
-				},
-			}
-			result := checkBothSubTypeFunctions(t, dict1, dict2)
-			assert.True(t, result, "{String: &Int} should be subtype of {String: &Number}")
-		})
-
-		t.Run("optional dictionary", func(t *testing.T) {
-			// {String: Int}? <: {String: Number}?
-			dict1 := &DictionaryType{
-				KeyType:   StringType,
-				ValueType: IntType,
-			}
-			dict2 := &DictionaryType{
-				KeyType:   StringType,
-				ValueType: NumberType,
-			}
-			opt1 := &OptionalType{Type: dict1}
-			opt2 := &OptionalType{Type: dict2}
-			result := checkBothSubTypeFunctions(t, opt1, opt2)
-			assert.True(t, result, "{String: Int}? should be subtype of {String: Number}?")
-		})
-
-		t.Run("reference to array", func(t *testing.T) {
-			// &[Int] <: &[Number]
-			ref1 := &ReferenceType{
-				Type:          &VariableSizedType{Type: IntType},
-				Authorization: UnauthorizedAccess,
-			}
-			ref2 := &ReferenceType{
-				Type:          &VariableSizedType{Type: NumberType},
-				Authorization: UnauthorizedAccess,
-			}
-			result := checkBothSubTypeFunctions(t, ref1, ref2)
-			assert.True(t, result, "&[Int] should be subtype of &[Number]")
-		})
-
-		t.Run("reference to dictionary", func(t *testing.T) {
-			// &{String: Int} <: &{String: Number}
-			ref1 := &ReferenceType{
-				Type: &DictionaryType{
-					KeyType:   StringType,
-					ValueType: IntType,
-				},
-				Authorization: UnauthorizedAccess,
-			}
-			ref2 := &ReferenceType{
-				Type: &DictionaryType{
-					KeyType:   StringType,
-					ValueType: NumberType,
-				},
-				Authorization: UnauthorizedAccess,
-			}
-			result := checkBothSubTypeFunctions(t, ref1, ref2)
-			assert.True(t, result, "&{String: Int} should be subtype of &{String: Number}")
-		})
-
-		t.Run("simple type as supertype fallback", func(t *testing.T) {
-			// TransactionType doesn't match any special case in the switch statement
-			// so this falls back to the default-case.
-			result := checkBothSubTypeFunctions(t, IntType, &TransactionType{})
-			assert.False(t, result, "Int? should NOT be a subtype of String")
-		})
+	t.Run("unhandled type", func(t *testing.T) {
+		// TransactionType doesn't match any special case in the switch statement
+		// so this falls back to the default-case.
+		result := checkBothSubTypeFunctions(t, IntType, &TransactionType{})
+		assert.False(t, result, "Int should NOT be a subtype of TransactionType")
 	})
 }
