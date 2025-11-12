@@ -407,7 +407,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("no transfer, result is used", func(t *testing.T) {
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
@@ -448,7 +448,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("no transfer, result is not used", func(t *testing.T) {
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`

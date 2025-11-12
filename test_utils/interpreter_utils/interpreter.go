@@ -56,6 +56,6 @@ func NewTestInterpreterWithStorageAndAtreeValidationConfig(
 	return inter
 }
 
-func NewUnmeteredInMemoryStorage() interpreter.Storage {
-	return interpreter.NewInMemoryStorage(nil)
+func NewUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
+	return interpreter.NewInMemoryStorage(nil, nil)
 }

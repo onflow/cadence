@@ -3654,6 +3654,9 @@ type FunctionType struct {
 	// This is used for built-in functions like `Int`, `UInt8`, `String`, etc.
 	// which have members like `Int.fromString`, `UInt8.min`, `String.join`, etc.
 	TypeFunctionType Type
+
+	typeID     TypeID
+	typeIdOnce sync.Once
 }
 
 func NewSimpleFunctionType(
@@ -3767,37 +3770,40 @@ func (t *FunctionType) NamedQualifiedString(functionName string) string {
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
 func (t *FunctionType) ID() TypeID {
+	t.typeIdOnce.Do(func() {
+		purity := t.Purity.String()
 
-	purity := t.Purity.String()
-
-	typeParameterCount := len(t.TypeParameters)
-	var typeParameters []string
-	if typeParameterCount > 0 {
-		typeParameters = make([]string, typeParameterCount)
-		for i, typeParameter := range t.TypeParameters {
-			typeParameters[i] = typeParameter.IDPart()
+		typeParameterCount := len(t.TypeParameters)
+		var typeParameters []string
+		if typeParameterCount > 0 {
+			typeParameters = make([]string, typeParameterCount)
+			for i, typeParameter := range t.TypeParameters {
+				typeParameters[i] = typeParameter.IDPart()
+			}
 		}
-	}
 
-	parameterCount := len(t.Parameters)
-	var parameters []string
-	if parameterCount > 0 {
-		parameters = make([]string, parameterCount)
-		for i, parameter := range t.Parameters {
-			parameters[i] = string(parameter.TypeAnnotation.Type.ID())
+		parameterCount := len(t.Parameters)
+		var parameters []string
+		if parameterCount > 0 {
+			parameters = make([]string, parameterCount)
+			for i, parameter := range t.Parameters {
+				parameters[i] = string(parameter.TypeAnnotation.Type.ID())
+			}
 		}
-	}
 
-	returnTypeAnnotation := string(t.ReturnTypeAnnotation.Type.ID())
+		returnTypeAnnotation := string(t.ReturnTypeAnnotation.Type.ID())
 
-	return TypeID(
-		FormatFunctionTypeID(
-			purity,
-			typeParameters,
-			parameters,
-			returnTypeAnnotation,
-		),
-	)
+		t.typeID = TypeID(
+			FormatFunctionTypeID(
+				purity,
+				typeParameters,
+				parameters,
+				returnTypeAnnotation,
+			),
+		)
+	})
+
+	return t.typeID
 }
 
 // NOTE: parameter names and argument labels are intentionally *not* considered!
@@ -6990,6 +6996,9 @@ func (t *InclusiveRangeType) ContainFieldsOrElements() bool {
 type ReferenceType struct {
 	Type          Type
 	Authorization Access
+
+	typeID     TypeID
+	typeIdOnce sync.Once
 }
 
 var _ Type = &ReferenceType{}
@@ -7069,17 +7078,21 @@ func (t *ReferenceType) QualifiedString() string {
 }
 
 func (t *ReferenceType) ID() TypeID {
-	if t.Type == nil {
-		return "reference"
-	}
-	var authorization TypeID
-	if t.Authorization != UnauthorizedAccess {
-		authorization = t.Authorization.ID()
-	}
-	return FormatReferenceTypeID(
-		authorization,
-		t.Type.ID(),
-	)
+	t.typeIdOnce.Do(func() {
+		if t.Type == nil {
+			t.typeID = "reference"
+			return
+		}
+		var authorization TypeID
+		if t.Authorization != UnauthorizedAccess {
+			authorization = t.Authorization.ID()
+		}
+		t.typeID = FormatReferenceTypeID(
+			authorization,
+			t.Type.ID(),
+		)
+	})
+	return t.typeID
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -8188,6 +8201,9 @@ type IntersectionType struct {
 	supportedEntitlements        *EntitlementSet
 	// Deprecated
 	LegacyType Type
+
+	typeID     TypeID
+	typeIdOnce sync.Once
 }
 
 var _ Type = &IntersectionType{}
@@ -8293,16 +8309,20 @@ func (t *IntersectionType) QualifiedString() string {
 }
 
 func (t *IntersectionType) ID() TypeID {
-	var interfaceTypeIDs []TypeID
-	typeCount := len(t.Types)
-	if typeCount > 0 {
-		interfaceTypeIDs = make([]TypeID, 0, typeCount)
-		for _, typ := range t.Types {
-			interfaceTypeIDs = append(interfaceTypeIDs, typ.ID())
+	t.typeIdOnce.Do(func() {
+		var interfaceTypeIDs []TypeID
+		typeCount := len(t.Types)
+		if typeCount > 0 {
+			interfaceTypeIDs = make([]TypeID, 0, typeCount)
+			for _, typ := range t.Types {
+				interfaceTypeIDs = append(interfaceTypeIDs, typ.ID())
+			}
 		}
-	}
-	// FormatIntersectionTypeID sorts
-	return FormatIntersectionTypeID(interfaceTypeIDs)
+		// FormatIntersectionTypeID sorts
+		t.typeID = FormatIntersectionTypeID(interfaceTypeIDs)
+	})
+
+	return t.typeID
 }
 
 func (t *IntersectionType) Equal(other Type) bool {

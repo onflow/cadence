@@ -212,7 +212,7 @@ type PublicKeySignatureVerifier interface {
 }
 
 func NativePublicKeyVerifySignatureFunction(
-	publicKeyValue *interpreter.CompositeValue,
+	constantPublicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
 ) interpreter.NativeFunction {
 	return func(
@@ -226,7 +226,9 @@ func NativePublicKeyVerifySignatureFunction(
 		domainSeparationTagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[2])
 		hashAlgorithmValue := interpreter.AssertValueOfType[*interpreter.SimpleCompositeValue](args[3])
 
+		publicKeyValue := constantPublicKeyValue
 		if publicKeyValue == nil {
+			// VM does not provide a constant public key
 			publicKeyValue = interpreter.AssertValueOfType[*interpreter.CompositeValue](receiver)
 		}
 
@@ -322,7 +324,7 @@ type BLSPoPVerifier interface {
 }
 
 func NativePublicKeyVerifyPoPFunction(
-	publicKeyValue *interpreter.CompositeValue,
+	constantPublicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
 ) interpreter.NativeFunction {
 	return func(
@@ -333,8 +335,10 @@ func NativePublicKeyVerifyPoPFunction(
 	) interpreter.Value {
 		signatureValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 
+		publicKeyValue := constantPublicKeyValue
 		if publicKeyValue == nil {
-			publicKeyValue = receiver.(*interpreter.CompositeValue)
+			// VM does not provide a constant public key
+			publicKeyValue = interpreter.AssertValueOfType[*interpreter.CompositeValue](receiver)
 		}
 
 		return PublicKeyVerifyPoP(

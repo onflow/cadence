@@ -115,7 +115,7 @@ func (*PublishedValue) IsStorable() bool {
 	return true
 }
 
-func (v *PublishedValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v *PublishedValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint32) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 

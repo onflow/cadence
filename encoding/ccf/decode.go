@@ -591,7 +591,7 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 		default:
 			err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
 			if err != nil {
-				return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", t.ID(), t, err.Error())
+				return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %w", t.ID(), t, err)
 			}
 
 			// Decode ccf-type-and-value-message.
@@ -1538,7 +1538,7 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 	if nextType == cbor.TagType {
 		err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
 		if err != nil {
-			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", typ.ID(), typ, err.Error())
+			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %w", typ.ID(), typ, err)
 		}
 
 		// Decode ccf-type-and-value-message.

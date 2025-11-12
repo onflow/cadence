@@ -63,9 +63,13 @@ func parseCheckAndInterpretWithOptions(
 	err error,
 ) {
 
-	var memoryGauge common.MemoryGauge
+	var (
+		memoryGauge      common.MemoryGauge
+		computationGauge common.ComputationGauge
+	)
 	if options.InterpreterConfig != nil {
 		memoryGauge = options.InterpreterConfig.MemoryGauge
+		computationGauge = options.InterpreterConfig.ComputationGauge
 	}
 	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
 		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
@@ -112,7 +116,10 @@ func parseCheckAndInterpretWithOptions(
 		}
 	}
 	if config.Storage == nil {
-		config.Storage = interpreter.NewInMemoryStorage(memoryGauge)
+		config.Storage = interpreter.NewInMemoryStorage(
+			memoryGauge,
+			computationGauge,
+		)
 	}
 
 	inter, err = interpreter.NewInterpreter(
@@ -182,7 +189,7 @@ func newSingleAddressOrStringLocationHandler(tb testing.TB, address common.Addre
 
 func interpreterFTTransfer(tb testing.TB) {
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})

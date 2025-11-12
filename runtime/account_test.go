@@ -1632,36 +1632,69 @@ func TestRuntimePublicKey(t *testing.T) {
 
 		script := `
             access(all) fun main(): Bool {
-                let publicKey =  PublicKey(
+                let publicKey = PublicKey(
                     publicKey: "0102".decodeHex(),
                     signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
                 )
 
+                let publicKey2 = PublicKey(
+                    publicKey: "0304".decodeHex(),
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_secp256k1
+                )
+
                 return publicKey.verify(
-                    signature: [],
-                    signedData: [],
-                    domainSeparationTag: "something",
+                    signature: [3, 4],
+                    signedData: [5, 6],
+                    domainSeparationTag: "something1",
                     hashAlgorithm: HashAlgorithm.SHA2_256
+                ) && publicKey2.verify(
+                    signature: [7, 8],
+                    signedData: [9, 0],
+                    domainSeparationTag: "something2",
+                    hashAlgorithm: HashAlgorithm.SHA3_256
                 )
             }
         `
 
-		var invoked bool
+		var calls int
 
 		storage := NewTestLedger(nil, nil)
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: storage,
 			OnVerifySignature: func(
-				_ []byte,
-				_ string,
-				_ []byte,
-				_ []byte,
-				_ SignatureAlgorithm,
-				_ HashAlgorithm,
+				signature []byte,
+				tag string,
+				signedData []byte,
+				publicKey []byte,
+				signatureAlgorithm SignatureAlgorithm,
+				hashAlgorithm HashAlgorithm,
 			) (bool, error) {
-				invoked = true
-				return true, nil
+
+				calls++
+
+				switch calls {
+				case 1:
+					assert.Equal(t, []byte{3, 4}, signature)
+					assert.Equal(t, "something1", tag)
+					assert.Equal(t, []byte{5, 6}, signedData)
+					assert.Equal(t, []byte{1, 2}, publicKey)
+					assert.Equal(t, SignatureAlgorithmECDSA_P256, signatureAlgorithm)
+					assert.Equal(t, HashAlgorithmSHA2_256, hashAlgorithm)
+					return true, nil
+
+				case 2:
+					assert.Equal(t, []byte{7, 8}, signature)
+					assert.Equal(t, "something2", tag)
+					assert.Equal(t, []byte{9, 0}, signedData)
+					assert.Equal(t, []byte{3, 4}, publicKey)
+					assert.Equal(t, SignatureAlgorithmECDSA_secp256k1, signatureAlgorithm)
+					assert.Equal(t, HashAlgorithmSHA3_256, hashAlgorithm)
+					return true, nil
+
+				default:
+					return false, fmt.Errorf("unexpected call %d", calls)
+				}
 			},
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
@@ -1669,7 +1702,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
 
-		assert.True(t, invoked)
+		assert.Equal(t, 2, calls)
 		assert.Equal(t, cadence.Bool(true), value)
 	})
 
@@ -1820,6 +1853,86 @@ func TestRuntimePublicKey(t *testing.T) {
 		}).WithType(PublicKeyType)
 
 		assert.Equal(t, expected, value)
+	})
+
+	t.Run("VerifyPoP", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestRuntime()
+
+		script := []byte(`
+
+          access(all) fun main(): Bool {
+              let publicKey = PublicKey(
+                  publicKey: "0102".decodeHex(),
+                  signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+              )
+
+              let publicKey2 = PublicKey(
+                  publicKey: "0304".decodeHex(),
+                  signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+              )
+
+              return publicKey.verifyPoP([1, 2, 3, 4, 5])
+                  && publicKey2.verifyPoP([6, 7, 8, 9, 0])
+          }
+        `)
+
+		var calls int
+
+		storage := NewTestLedger(nil, nil)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnValidatePublicKey: func(
+				pk *stdlib.PublicKey,
+			) error {
+				return nil
+			},
+			OnBLSVerifyPOP: func(
+				pk *stdlib.PublicKey,
+				proof []byte,
+			) (bool, error) {
+				calls++
+
+				switch calls {
+				case 1:
+					assert.Equal(t, []byte{1, 2}, pk.PublicKey)
+					assert.Equal(t, SignatureAlgorithmBLS_BLS12_381, pk.SignAlgo)
+					assert.Equal(t, []byte{1, 2, 3, 4, 5}, proof)
+					return true, nil
+
+				case 2:
+					assert.Equal(t, []byte{3, 4}, pk.PublicKey)
+					assert.Equal(t, SignatureAlgorithmBLS_BLS12_381, pk.SignAlgo)
+					assert.Equal(t, []byte{6, 7, 8, 9, 0}, proof)
+					return true, nil
+
+				default:
+					return false, fmt.Errorf("unexpected call %d", calls)
+				}
+			},
+		}
+		addPublicKeyValidation(runtimeInterface, nil)
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			cadence.NewBool(true),
+			result,
+		)
+
+		assert.Equal(t, 2, calls)
 	})
 }
 

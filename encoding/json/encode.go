@@ -982,6 +982,14 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Initializers: prepareInitializers(typ.Initializers, results),
 			Type:         PrepareType(typ.RawType, results),
 		}
+	case *cadence.AttachmentType:
+		return jsonNominalType{
+			Kind:         "Attachment",
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
+			Fields:       prepareFields(getCompositeTypeFields(typ), results),
+			Initializers: prepareInitializers(typ.Initializers, results),
+			Type:         PrepareType(typ.BaseType, results),
+		}
 	case cadence.PrimitiveType:
 		return jsonSimpleType{
 			Kind: typ.ID(),

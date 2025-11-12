@@ -39,7 +39,7 @@ func NewIteratorWrapperValue(iterator interpreter.ValueIterator) *IteratorWrappe
 
 func (v IteratorWrapperValue) IsValue() {}
 
-func (v IteratorWrapperValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v IteratorWrapperValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
