@@ -1336,7 +1336,7 @@ func TestCompileEmit(t *testing.T) {
 			opcode.InstructionStatement{},
 			// x
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionConvert{Type: 1},
 			// emit
 			opcode.InstructionEmitEvent{
 				Type:     2,

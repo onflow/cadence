@@ -7340,6 +7340,44 @@ func TestInterpretEmitEvent(t *testing.T) {
 	)
 }
 
+func BenchmarkEmit(b *testing.B) {
+
+	inter, err := parseCheckAndPrepareWithOptions(
+		b,
+		`
+          event Foo(ints: [Int])
+
+          fun test() {
+              var i = 0
+              while i < 1000 {
+                  emit Foo(ints: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+                  i = i + 1
+              }
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					_ *sema.CompositeType,
+					_ []interpreter.Value,
+				) error {
+					return nil
+				},
+			},
+		},
+	)
+	require.NoError(b, err)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := inter.Invoke("test")
+		require.NoError(b, err)
+	}
+}
+
 func TestInterpretReferenceEventParameter(t *testing.T) {
 
 	t.Parallel()
