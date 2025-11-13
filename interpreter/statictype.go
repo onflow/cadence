@@ -1013,6 +1013,7 @@ func (t *CapabilityStaticType) IsDeprecated() bool {
 }
 
 func (t *CapabilityStaticType) BaseType() StaticType {
+	// Note: Must be same as `sema.CapabilityType.BaseType()`
 	if t.BorrowType == nil {
 		return nil
 	}
