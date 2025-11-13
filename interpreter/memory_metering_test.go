@@ -245,7 +245,7 @@ func TestInterpretMemoryMeteringArray(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](2, 9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("append with packing", func(t *testing.T) {
@@ -778,7 +778,7 @@ func TestInterpretMemoryMeteringComposite(t *testing.T) {
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
-		assert.Equal(t, uint64(12), meter.getMemory(common.MemoryKindCompositeStaticType))
+		assert.Equal(t, ifCompile[uint64](2, 12), meter.getMemory(common.MemoryKindCompositeStaticType))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeTypeInfo))
 
 		// TODO: assert equivalent for compiler/VM
@@ -9302,7 +9302,7 @@ func TestInterpretMemoryMeteringStaticTypeConversion(t *testing.T) {
 		assert.Equal(t, ifCompile[uint64](2, 3), meter.getMemory(common.MemoryKindIntersectionSemaType))
 		assert.Equal(t, ifCompile[uint64](2, 4), meter.getMemory(common.MemoryKindReferenceSemaType))
 		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindCapabilitySemaType))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalSemaType))
+		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindOptionalSemaType))
 	})
 }
 

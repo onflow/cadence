@@ -4078,12 +4078,16 @@ func AccountCapabilitiesPublish(
 	domain := pathValue.Domain.StorageDomain()
 	identifier := pathValue.Identifier
 
-	capabilityType, ok := capabilityValue.StaticType(invocationContext).(*interpreter.CapabilityStaticType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+	staticType := capabilityValue.StaticType(invocationContext)
 
-	borrowType := capabilityType.BorrowType
+	var borrowType interpreter.StaticType
+	if staticType != interpreter.PrimitiveStaticTypeCapability {
+		capabilityType, ok := staticType.(*interpreter.CapabilityStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		borrowType = capabilityType.BorrowType
+	}
 
 	// It is possible to have legacy capabilities without borrow type.
 	// So perform the validation only if the borrow type is present.
@@ -4129,7 +4133,7 @@ func AccountCapabilitiesPublish(
 		})
 	}
 
-	capabilityValue, ok = capabilityValue.Transfer(
+	capabilityValue, ok := capabilityValue.Transfer(
 		invocationContext,
 		atree.Address(accountAddress),
 		true,

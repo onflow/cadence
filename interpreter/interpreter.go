@@ -1984,9 +1984,9 @@ func ConvertAndBoxToStaticTypeWithValidation(
 	if targetType != nil &&
 		!IsSubType(context, resultStaticType, targetType) {
 
-		panic(&ValueTransferTypeError2{
-			ExpectedType: targetType,
-			ActualType:   resultStaticType,
+		panic(&ValueTransferTypeError{
+			ExpectedType: context.SemaTypeFromStaticType(targetType),
+			ActualType:   context.SemaTypeFromStaticType(resultStaticType),
 		})
 	}
 
@@ -4466,7 +4466,7 @@ func IsSubType(typeConverter TypeConverter, subType StaticType, superType Static
 		return true
 	}
 
-	return checkSubTypeWithoutEquality_gen(typeConverter, subType, superType)
+	return CheckSubTypeWithoutEquality_gen(typeConverter, subType, superType)
 }
 
 func IsSubTypeOfSemaType(typeConverter TypeConverter, staticSubType StaticType, superType sema.Type) bool {
@@ -4739,6 +4739,9 @@ func checkValue(
 		}
 	}()
 
+	// For all values, try to load the type and see if it's not broken.
+	_, valueError = ConvertStaticToSemaType(context, staticType)
+
 	// Here, the value at the path could be either:
 	//	1) The actual stored value (storage path)
 	//	2) A capability to the value at the storage (private/public paths)
@@ -4769,7 +4772,6 @@ func checkValue(
 	} else {
 		// For all other values, trying to load the type is sufficient.
 		// Here it is only interested in whether the type can be properly loaded.
-		_, valueError = ConvertStaticToSemaType(context, staticType)
 	}
 
 	return

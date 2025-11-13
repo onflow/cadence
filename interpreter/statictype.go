@@ -342,6 +342,10 @@ func (t InclusiveRangeStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
+	if t.ElementType == nil {
+		return otherRangeType.ElementType == nil
+	}
+
 	return t.ElementType.Equal(otherRangeType.ElementType)
 }
 
@@ -951,8 +955,12 @@ var _ ParameterizedStaticType = &CapabilityStaticType{}
 func NewCapabilityStaticType(
 	memoryGauge common.MemoryGauge,
 	borrowType StaticType,
-) *CapabilityStaticType {
+) StaticType {
 	common.UseMemory(memoryGauge, common.CapabilityStaticTypeMemoryUsage)
+
+	if borrowType == nil {
+		return PrimitiveStaticTypeCapability
+	}
 
 	return &CapabilityStaticType{
 		BorrowType: borrowType,

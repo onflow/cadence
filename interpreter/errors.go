@@ -808,36 +808,6 @@ func (e *ValueTransferTypeError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
 
-// ValueTransferTypeError2
-type ValueTransferTypeError2 struct {
-	ExpectedType StaticType
-	ActualType   StaticType
-	LocationRange
-}
-
-var _ errors.InternalError = &ValueTransferTypeError2{}
-var _ HasLocationRange = &ValueTransferTypeError2{}
-
-func (*ValueTransferTypeError2) IsInternalError() {}
-
-func (e *ValueTransferTypeError2) Error() string {
-	expected, actual := ErrorMessageExpectedActualTypes(
-		e.ExpectedType,
-		e.ActualType,
-	)
-
-	return fmt.Sprintf(
-		"%s invalid transfer of value: expected `%s`, got `%s`",
-		errors.InternalErrorMessagePrefix,
-		expected,
-		actual,
-	)
-}
-
-func (e *ValueTransferTypeError2) SetLocationRange(locationRange LocationRange) {
-	e.LocationRange = locationRange
-}
-
 // UnexpectedMappedEntitlementError
 type UnexpectedMappedEntitlementError struct {
 	Type StaticType
