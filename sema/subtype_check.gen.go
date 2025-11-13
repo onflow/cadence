@@ -210,7 +210,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 			case *CompositeType:
-				return typedSubTypeLegacyType == typedSuperType
+				return deepEquals(typedSubTypeLegacyType, typedSuperType)
 			}
 
 			return false
@@ -331,7 +331,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
 				// `Us` and `Ws` do *not* have to be subsets:
 				// The owner may freely restrict and unrestrict.
-				return typedSubTypeLegacyType == typedSuperType.LegacyType
+				return deepEquals(typedSubTypeLegacyType, typedSuperType.LegacyType)
 			}
 
 			return false

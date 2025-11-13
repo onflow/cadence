@@ -144,11 +144,14 @@ type Equatable[T any] interface {
 	Equal(other T) bool
 }
 
-func deepEquals[T Equatable[T]](source, target T) bool {
-	var empty T
-	if source == empty {
-		return target == empty
+func deepEquals[T any, A, B Equatable[T]](source A, target B) bool {
+	var emptyA A
+	var emptyB B
+	if source == emptyA {
+		return target == emptyB
 	}
 
-	return source.Equal(target)
+	// Convert target to T to pass to source.Equal
+	targetAsT := any(target).(T)
+	return source.Equal(targetAsT)
 }

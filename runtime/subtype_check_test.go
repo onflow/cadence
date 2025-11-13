@@ -155,17 +155,9 @@ func checkSubTypeFunctions(t *testing.T, subType sema.Type, superType sema.Type)
 
 	elaboration.SetEntitlementType(entitlementType.ID(), entitlementType)
 
-	//addToElaboration := func(typ sema.Type) {
-	//	if compositeType, ok := typ.(*sema.CompositeType); ok {
-	//		elaboration.SetCompositeType(compositeType.ID(), compositeType)
-	//	}
-	//}
-
 	subStaticType := interpreter.ConvertSemaToStaticType(nil, subType)
-	//addToElaboration(subType)
 
 	superStaticType := interpreter.ConvertSemaToStaticType(nil, superType)
-	//addToElaboration(superType)
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
@@ -174,9 +166,6 @@ func checkSubTypeFunctions(t *testing.T, subType sema.Type, superType sema.Type)
 			CompositeTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 				return elaboration.CompositeType(typeID)
 			},
-			//InterfaceTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
-			//	return typeMappings[typeID].(*sema.InterfaceType)
-			//},
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				return interpreter.VirtualImport{
 					Elaboration: elaboration,
