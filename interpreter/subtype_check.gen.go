@@ -52,6 +52,9 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		return IsSubType(typeConverter, subType, PrimitiveStaticTypeStoragePath) ||
 			IsSubType(typeConverter, subType, PrimitiveStaticTypeCapabilityPath)
 
+	case PrimitiveStaticTypeStorable:
+		return IsStorableType(typeConverter, subType)
+
 	case PrimitiveStaticTypeCapabilityPath:
 		switch subType {
 		case PrimitiveStaticTypePrivatePath,

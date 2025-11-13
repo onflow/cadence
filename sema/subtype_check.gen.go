@@ -51,7 +51,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			IsSubType(subType, CapabilityPathType)
 
 	case StorableType:
-		return subType.IsStorable(map[*Member]bool{})
+		return IsStorableType(subType)
 
 	case CapabilityPathType:
 		switch subType {

@@ -62,9 +62,6 @@ func main() {
 				PkgPath: interpreterPkgPath,
 			},
 		},
-		SkipTypes: map[string]struct{}{
-			subtypegen.TypePlaceholderStorable: {},
-		},
 		NonPointerTypes: map[string]struct{}{
 			subtypegen.TypePlaceholderFunction:      {},
 			subtypegen.TypePlaceholderConforming:    {},

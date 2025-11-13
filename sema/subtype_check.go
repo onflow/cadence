@@ -135,6 +135,10 @@ func IsParameterizedSubType(subType Type, superType Type) bool {
 	return false
 }
 
+func IsStorableType(typ Type) bool {
+	return typ.IsStorable(map[*Member]bool{})
+}
+
 type Equatable[T any] interface {
 	comparable
 	Equal(other T) bool

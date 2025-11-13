@@ -200,7 +200,7 @@ func checkSubTypeFunctions(t *testing.T, subType sema.Type, superType sema.Type)
 		subType,
 		superType,
 		result,
-		generatedSemaResult,
+		generatedStaticTypeResult,
 	)
 
 	return result

@@ -50,7 +50,8 @@ func IsHashableStructType(typeConverter TypeConverter, typ StaticType) bool {
 		PrimitiveStaticTypeCharacter,
 		PrimitiveStaticTypeString,
 		PrimitiveStaticTypeMetaType,
-		PrimitiveStaticTypeHashableStruct:
+		PrimitiveStaticTypeHashableStruct,
+		PrimitiveStaticTypeAddress:
 		return true
 	default:
 		_, ok := typ.(*CompositeStaticType)
@@ -110,6 +111,11 @@ func IsParameterizedSubType(typeConverter TypeConverter, subType StaticType, sup
 	}
 
 	return false
+}
+
+func IsStorableType(typeConverter TypeConverter, typ StaticType) bool {
+	semaType := typeConverter.SemaTypeFromStaticType(typ)
+	return semaType.IsStorable(map[*sema.Member]bool{})
 }
 
 type Equatable[T any] interface {
