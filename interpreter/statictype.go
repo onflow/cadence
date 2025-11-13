@@ -357,7 +357,7 @@ func (t InclusiveRangeStaticType) BaseType() StaticType {
 	if t.ElementType == nil {
 		return nil
 	}
-	return &InclusiveRangeStaticType{}
+	return InclusiveRangeStaticType{}
 }
 
 func (t InclusiveRangeStaticType) TypeArguments() []StaticType {
@@ -1350,12 +1350,15 @@ func ConvertStaticToSemaType(
 		), nil
 
 	case InclusiveRangeStaticType:
-		elementType, err := ConvertStaticToSemaType(
-			context,
-			t.ElementType,
-		)
-		if err != nil {
-			return nil, err
+		var elementType sema.Type
+		if t.ElementType != nil {
+			elementType, err = ConvertStaticToSemaType(
+				context,
+				t.ElementType,
+			)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return sema.NewInclusiveRangeType(

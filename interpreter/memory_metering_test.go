@@ -9730,6 +9730,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 			switch primitiveStaticType {
 			case interpreter.PrimitiveStaticTypeAny,
+				interpreter.PrimitiveStaticTypeStorable,
 				interpreter.PrimitiveStaticTypeUnknown,
 				interpreter.PrimitiveStaticType_Count:
 				continue

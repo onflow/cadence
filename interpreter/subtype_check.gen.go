@@ -21,7 +21,7 @@ package interpreter
 
 import "github.com/onflow/cadence/sema"
 
-func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {
+func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {
 	if subType == PrimitiveStaticTypeNever {
 		return true
 	}
@@ -52,6 +52,9 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		return IsSubType(typeConverter, subType, PrimitiveStaticTypeStoragePath) ||
 			IsSubType(typeConverter, subType, PrimitiveStaticTypeCapabilityPath)
 
+	case PrimitiveStaticTypeStorable:
+		return IsStorableType(typeConverter, subType)
+
 	case PrimitiveStaticTypeCapabilityPath:
 		switch subType {
 		case PrimitiveStaticTypePrivatePath,
@@ -72,8 +75,8 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedPoint)
 
 	case PrimitiveStaticTypeSignedNumber:
-		return subType == // TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
-			PrimitiveStaticTypeSignedNumber ||
+		return subType ==// TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
+		PrimitiveStaticTypeSignedNumber ||
 			(IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) ||
 				IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedFixedPoint))
 
@@ -209,7 +212,7 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 			case *CompositeStaticType:
-				return typedSubTypeLegacyType == typedSuperType
+				return deepEquals(typedSubTypeLegacyType, typedSuperType)
 			}
 
 			return false
@@ -336,7 +339,7 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 				// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
 				// `Us` and `Ws` do *not* have to be subsets:
 				// The owner may freely restrict and unrestrict.
-				return typedSubTypeLegacyType == typedSuperType.LegacyType
+				return deepEquals(typedSubTypeLegacyType, typedSuperType.LegacyType)
 			}
 
 			return false
