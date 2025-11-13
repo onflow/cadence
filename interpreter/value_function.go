@@ -135,7 +135,7 @@ func (f *InterpretedFunctionValue) ConformsToStaticType(
 	return true
 }
 
-func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 
@@ -292,7 +292,7 @@ func (f *HostFunctionValue) ConformsToStaticType(
 	return true
 }
 
-func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 
@@ -499,7 +499,7 @@ func (f BoundFunctionValue) ConformsToStaticType(
 	)
 }
 
-func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 

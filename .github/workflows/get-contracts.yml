@@ -18,7 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  get-contracts:
+    name: Get contracts
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

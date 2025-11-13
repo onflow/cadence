@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -69,7 +70,6 @@ func NewDeployedContractValue(
 func NewNativeDeployedContractPublicTypesFunctionValue(
 	addressPointer *common.Address,
 	name *StringValue,
-	publicTypes *ArrayValue,
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -79,7 +79,7 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 	) Value {
 		var address common.Address
 		if addressPointer == nil {
-			// the vm does not provide any arguments
+			// VM does not provide address
 			deployedContract := AssertValueOfType[*SimpleCompositeValue](receiver)
 
 			addressFieldValue := deployedContract.GetMember(
@@ -94,18 +94,18 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 			)
 			name = AssertValueOfType[*StringValue](nameFieldValue)
 		} else {
+			// Interpreter provides address and name
 			address = *addressPointer
+			if name == nil {
+				panic(errors.NewUnreachableError())
+			}
 		}
 
-		if publicTypes == nil {
-			publicTypes = DeployedContractPublicTypes(
-				context,
-				address,
-				name,
-			)
-		}
-
-		return publicTypes
+		return DeployedContractPublicTypes(
+			context,
+			address,
+			name,
+		)
 	}
 }
 
@@ -115,15 +115,12 @@ func newInterpreterDeployedContractPublicTypesFunctionValue(
 	addressValue AddressValue,
 	name *StringValue,
 ) FunctionValue {
-	// public types only need to be computed once per contract
-	var publicTypes *ArrayValue
-
 	address := addressValue.ToAddress()
 	return NewBoundHostFunctionValue(
 		context,
 		self,
 		sema.DeployedContractTypePublicTypesFunctionType,
-		NewNativeDeployedContractPublicTypesFunctionValue(&address, name, publicTypes),
+		NewNativeDeployedContractPublicTypesFunctionValue(&address, name),
 	)
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	"github.com/onflow/cadence/test_utils/interpreter_utils"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -373,7 +374,9 @@ func TestInterpretFunctionType(t *testing.T) {
       let d = Type<fun(String): Int>();
     `)
 
-	assert.Equal(t,
+	interpreter_utils.AssertValuesEqual(
+		t,
+		inter,
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				FunctionType: &sema.FunctionType{
@@ -389,7 +392,9 @@ func TestInterpretFunctionType(t *testing.T) {
 		inter.GetGlobal("a"),
 	)
 
-	assert.Equal(t,
+	interpreter_utils.AssertValuesEqual(
+		t,
+		inter,
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				FunctionType: &sema.FunctionType{
@@ -404,7 +409,9 @@ func TestInterpretFunctionType(t *testing.T) {
 		inter.GetGlobal("b"),
 	)
 
-	assert.Equal(t,
+	interpreter_utils.AssertValuesEqual(
+		t,
+		inter,
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				FunctionType: &sema.FunctionType{
@@ -415,7 +422,9 @@ func TestInterpretFunctionType(t *testing.T) {
 		inter.GetGlobal("c"),
 	)
 
-	assert.Equal(t,
+	interpreter_utils.AssertValuesEqual(
+		t,
+		inter,
 		inter.GetGlobal("a"),
 		inter.GetGlobal("d"),
 	)
