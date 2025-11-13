@@ -1312,6 +1312,43 @@ func TestMemberExpression_Doc(t *testing.T) {
 		)
 	})
 
+	t.Run("force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &ForceExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Concat{
+					prettier.Text("foo"),
+					prettier.Text("!"),
+				},
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("."),
+							prettier.Text("bar"),
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestMemberExpression_String(t *testing.T) {
@@ -1428,6 +1465,96 @@ func TestMemberExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			".bar",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &ForceExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			"foo!.bar",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression on invocation", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &ForceExpression{
+				Expression: &InvocationExpression{
+					InvokedExpression: &MemberExpression{
+						Expression: &MemberExpression{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "self",
+								},
+							},
+							Identifier: Identifier{
+								Identifier: "nftProviderCapability",
+							},
+						},
+						Identifier: Identifier{
+							Identifier: "borrow",
+						},
+					},
+					Arguments: []*Argument{},
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "borrowNFT",
+			},
+		}
+
+		assert.Equal(t,
+			"self.nftProviderCapability.borrow()!.borrowNFT",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression with lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &ForceExpression{
+				Expression: &BinaryExpression{
+					Operation: OperationPlus,
+					Left: &IdentifierExpression{
+						Identifier: Identifier{
+							Identifier: "a",
+						},
+					},
+					Right: &IdentifierExpression{
+						Identifier: Identifier{
+							Identifier: "b",
+						},
+					},
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "member",
+			},
+		}
+
+		assert.Equal(t,
+			"(a + b)!.member",
 			expr.String(),
 		)
 	})
@@ -1779,6 +1906,31 @@ func TestIndexExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"[]",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IndexExpression{
+			TargetExpression: &ForceExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "array",
+					},
+				},
+			},
+			IndexingExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "index",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"array![index]",
 			expr.String(),
 		)
 	})
@@ -4099,6 +4251,27 @@ func TestInvocationExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"foo<>()",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &ForceExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "func",
+					},
+				},
+			},
+			Arguments: []*Argument{},
+		}
+
+		assert.Equal(t,
+			"func!()",
 			expr.String(),
 		)
 	})

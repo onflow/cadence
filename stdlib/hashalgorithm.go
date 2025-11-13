@@ -76,19 +76,25 @@ func NewHashAlgorithmCase(
 }
 
 // Native hash functions
-func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
+
+func NativeHashAlgorithmHashFunction(
+	hasher Hasher,
+	constantHashAlgoValue interpreter.MemberAccessibleValue,
+) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		if hashAlgoValue == nil {
-			// vm does not provide the hash algo value
-			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
-		}
 
 		dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+
+		hashAlgoValue := constantHashAlgoValue
+		if hashAlgoValue == nil {
+			// VM does not provide a constant hash algo value
+			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+		}
 
 		return hash(
 			context,
@@ -100,19 +106,26 @@ func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.Me
 	}
 }
 
-func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
+func NativeHashAlgorithmHashWithTagFunction(
+	hasher Hasher,
+	constantHashAlgoValue interpreter.MemberAccessibleValue,
+) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		if hashAlgoValue == nil {
-			// vm does not provide the hash algo value
-			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
-		}
+
 		dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 		tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
+
+		hashAlgoValue := constantHashAlgoValue
+		if hashAlgoValue == nil {
+			// VM does not provide a constant hash algo value
+			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+		}
+
 		return hash(
 			context,
 			hasher,

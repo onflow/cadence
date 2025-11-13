@@ -240,7 +240,7 @@ func (*PathCapabilityValue) IsStorable() bool {
 func (v *PathCapabilityValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(
 		v,

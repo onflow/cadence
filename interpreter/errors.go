@@ -1525,6 +1525,35 @@ func (e *CallStackLimitExceededError) SetLocationRange(locationRange LocationRan
 	e.LocationRange = locationRange
 }
 
+// StoredValueTypeMismatchError
+type StoredValueTypeMismatchError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = &StoredValueTypeMismatchError{}
+var _ HasLocationRange = &StoredValueTypeMismatchError{}
+
+func (*StoredValueTypeMismatchError) IsUserError() {}
+
+func (e *StoredValueTypeMismatchError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"stored value type mismatch: expected type `%s`, got `%s`",
+		expected,
+		actual,
+	)
+}
+
+func (e *StoredValueTypeMismatchError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 func ErrorMessageExpectedActualTypes(
 	expectedType StaticType,
 	actualType StaticType,

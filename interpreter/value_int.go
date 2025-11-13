@@ -338,7 +338,7 @@ func (v IntValue) Less(context ValueComparisonContext, other ComparableValue) Bo
 		})
 	}
 
-	return BoolValue(v.IntValue.Less(o.IntValue))
+	return BoolValue(v.IntValue.Less(context, o.IntValue))
 }
 
 func (v IntValue) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -351,7 +351,7 @@ func (v IntValue) LessEqual(context ValueComparisonContext, other ComparableValu
 		})
 	}
 
-	return BoolValue(v.IntValue.LessEqual(o.IntValue))
+	return BoolValue(v.IntValue.LessEqual(context, o.IntValue))
 }
 
 func (v IntValue) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -364,7 +364,7 @@ func (v IntValue) Greater(context ValueComparisonContext, other ComparableValue)
 		})
 	}
 
-	return BoolValue(v.IntValue.Greater(o.IntValue))
+	return BoolValue(v.IntValue.Greater(context, o.IntValue))
 }
 
 func (v IntValue) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -377,22 +377,22 @@ func (v IntValue) GreaterEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	return BoolValue(v.IntValue.GreaterEqual(o.IntValue))
+	return BoolValue(v.IntValue.GreaterEqual(context, o.IntValue))
 }
 
-func (v IntValue) Equal(_ ValueComparisonContext, other Value) bool {
+func (v IntValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherInt, ok := other.(IntValue)
 	if !ok {
 		return false
 	}
 
-	return v.IntValue.Equal(otherInt.IntValue)
+	return v.IntValue.Equal(context, otherInt.IntValue)
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt (1 byte)
 // - big int encoded in big-endian (n bytes)
-func (v IntValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v IntValue) HashInput(_ common.Gauge, scratch []byte) []byte {
 	b := values.SignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)

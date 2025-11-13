@@ -115,7 +115,7 @@ func (PathLinkValue) IsStorable() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint32) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
@@ -239,7 +239,7 @@ func (AccountLinkValue) IsStorable() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint32) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 

@@ -1007,3 +1007,23 @@
         type: "value"
       - name: "base"
         type: "value"
+
+# Combined "peephole" instructions
+- name: "getFieldLocal"
+  description:
+    Pops a value off the stack, the target,
+    and then pushes the value of the field at the given index onto the stack.
+  operands:
+    - name: "fieldName"
+      type: "constantIndex"
+    - name: "accessedType"
+      type: "typeIndex"
+    - name: "local"
+      type: "localIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"

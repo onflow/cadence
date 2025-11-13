@@ -1,0 +1,64 @@
+name: Publish parser NPM package
+
+on:
+  push:
+    tags:
+      # Only run this action if a release was made
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      # Setup .npmrc file to publish to npm
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+      - name: "Update package.json"
+        run: |
+          tag_name=${GITHUB_REF#refs/tags/}
+          release_version=$(echo "$tag_name" | awk -F"/v" '{print $2}')
+
+          jq '.version = $version' --arg version "$release_version" ./npm-packages/cadence-parser/package.json > tmp_package.json && \
+              mv tmp_package.json ./npm-packages/cadence-parser/package.json
+          npm install --package-lock-only --prefix ./npm-packages/cadence-parser
+
+          cat ./npm-packages/cadence-parser/package.json
+
+          release_branch="npm-publish-parser-$release_version"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+          # Commit changes
+          git add \
+              ./npm-packages/cadence-parser/package.json \
+              ./npm-packages/cadence-parser/package-lock.json
+          git commit -m "Update version to $release_version"
+
+          # Create a branch for the changes
+          git branch "$release_branch"
+          git checkout "$release_branch"
+          git push origin "$release_branch"
+
+          # Create a pull request with the changes
+          gh pr create \
+              --title "Update and publish parser NPM package $release_version" \
+              --body "Updating the version in package.json to $release_version and publishing to NPM" \
+              --base master \
+              --head "$release_branch"
+
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: "Build NPM package"
+        run: |
+          cd npm-packages/cadence-parser
+          npm install
+          npm run build
+      - name: "Publish NPM package"
+        run: |
+          cd npm-packages/cadence-parser
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

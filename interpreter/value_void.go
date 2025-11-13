@@ -83,7 +83,7 @@ func (v VoidValue) Equal(_ ValueComparisonContext, other Value) bool {
 	return ok
 }
 
-func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

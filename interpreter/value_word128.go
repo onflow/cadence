@@ -368,7 +368,7 @@ func (v Word128Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord128 (1 byte)
 // - big int encoded in big endian (n bytes)
-func (v Word128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Word128Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
@@ -562,7 +562,7 @@ func (Word128Value) IsStorable() bool {
 	return true
 }
 
-func (v Word128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Word128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

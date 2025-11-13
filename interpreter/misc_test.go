@@ -55,10 +55,6 @@ var parseCheckAndInterpretWithOptions = test_utils.ParseCheckAndInterpretWithOpt
 
 type testEvent = test_utils.TestEvent
 
-func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
-	return interpreter.NewInMemoryStorage(nil)
-}
-
 func constructorArguments(compositeKind common.CompositeKind, arguments string) string {
 	switch compositeKind {
 	case common.CompositeKindContract:
@@ -3956,7 +3952,7 @@ func TestInterpretImport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -4072,7 +4068,7 @@ func TestInterpretImportError(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(mainChecker),
@@ -4993,7 +4989,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		var err error
 		inter, err = parseCheckAndPrepareWithOptions(t,
@@ -6819,7 +6815,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -7441,7 +7437,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		Members:    &sema.StringMemberOrderedMap{},
 	}
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
@@ -8647,7 +8643,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -9995,19 +9991,23 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
         `)
 
 		value := inter.GetGlobal("x")
-		assert.Equal(
-			t,
-			interpreter.ConvertSemaToStaticType(
-				nil,
-				&sema.FunctionType{
-					Purity:               sema.FunctionPurityView,
-					ReturnTypeAnnotation: sema.MetaTypeAnnotation,
-					TypeParameters: []*sema.TypeParameter{
-						{Name: "T"},
-					},
+
+		expectedStaticType := interpreter.ConvertSemaToStaticType(
+			nil,
+			&sema.FunctionType{
+				Purity:               sema.FunctionPurityView,
+				ReturnTypeAnnotation: sema.MetaTypeAnnotation,
+				TypeParameters: []*sema.TypeParameter{
+					{Name: "T"},
 				},
-			),
-			value.StaticType(inter),
+			},
+		)
+
+		actualStaticType := value.StaticType(inter)
+
+		assert.True(
+			t,
+			actualStaticType.Equal(expectedStaticType),
 		)
 
 		value = inter.GetGlobal("y")
@@ -12689,7 +12689,12 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 				code,
 				ParseCheckAndInterpretOptions{
 					InterpreterConfig: &interpreter.Config{
-						Storage: runtime.NewStorage(ledger, nil, runtime.StorageConfig{}),
+						Storage: runtime.NewStorage(
+							ledger,
+							nil,
+							nil,
+							runtime.StorageConfig{},
+						),
 					},
 				},
 			)

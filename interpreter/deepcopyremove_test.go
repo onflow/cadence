@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 func TestValueDeepCopyAndDeepRemove(t *testing.T) {
@@ -36,7 +37,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	address := common.Address{0x1}
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		nil,

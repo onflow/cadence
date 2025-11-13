@@ -4129,6 +4129,63 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
+
+	t.Run("field initialization with let", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("let foo: Int = 1")
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&FieldInitializationError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("field initialization with var", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("var foo: Int = 42")
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&FieldInitializationError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("field initialization with complex expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("let foo: Int = 1 + 2")
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&FieldInitializationError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseField(t *testing.T) {

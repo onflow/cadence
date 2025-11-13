@@ -913,6 +913,20 @@ func NewAtreeEncodedSlabMemoryUsage(slabsCount uint) MemoryUsage {
 	}
 }
 
+func minSliceLength[T []U, U any](a, b T) int {
+	if len(a) < len(b) {
+		return len(a)
+	}
+	return len(b)
+}
+
+func NewBigIntsWordSliceOperation(v *big.Int, o *big.Int) ComputationUsage {
+	return ComputationUsage{
+		Kind:      ComputationKindWordSliceOperation,
+		Intensity: uint64(minSliceLength(v.Bits(), o.Bits())),
+	}
+}
+
 func NewGoSliceMemoryUsages(length int) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindGoSliceLength,
