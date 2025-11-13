@@ -287,7 +287,7 @@ func (v Word8Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord8 (1 byte)
 // - uint8 value (1 byte)
-func (v Word8Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Word8Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord8)
 	scratch[1] = byte(v)
 	return scratch[:2]
@@ -420,7 +420,7 @@ func (Word8Value) IsStorable() bool {
 	return true
 }
 
-func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

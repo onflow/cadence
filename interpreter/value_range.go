@@ -44,7 +44,7 @@ func NewInclusiveRangeValue(
 
 	step := GetSmallIntegerValue(1, rangeStaticType.ElementType)
 	if startComparable.Greater(context, endComparable) {
-		elemSemaTy := MustConvertStaticToSemaType(rangeStaticType.ElementType, context)
+		elemSemaTy := context.SemaTypeFromStaticType(rangeStaticType.ElementType)
 		if elemSemaTy.Tag().BelongsTo(sema.UnsignedIntegerTypeTag) {
 			panic(&InclusiveRangeConstructionError{
 				Message: fmt.Sprintf(
@@ -226,9 +226,9 @@ func InclusiveRangeContains(
 	return BoolValue(result)
 }
 
-func getFieldAsIntegerValue(memoryGauge common.MemoryGauge, rangeValue *CompositeValue, name string) IntegerValue {
+func getFieldAsIntegerValue(gauge common.Gauge, rangeValue *CompositeValue, name string) IntegerValue {
 	return convertAndAssertIntegerValue(
-		rangeValue.GetField(memoryGauge, name),
+		rangeValue.GetField(gauge, name),
 	)
 }
 

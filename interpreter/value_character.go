@@ -112,47 +112,79 @@ func (v CharacterValue) MeteredString(
 	return v.String()
 }
 
-func (v CharacterValue) Equal(_ ValueComparisonContext, other Value) bool {
+func minStringLength(s1, s2 string) int {
+	if len(s1) > len(s2) {
+		return len(s1)
+	}
+	return len(s2)
+}
+
+func (v CharacterValue) meterComparison(gauge common.ComputationGauge, o CharacterValue) {
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindStringComparison,
+			Intensity: uint64(minStringLength(v.Str, o.Str)),
+		},
+	)
+}
+
+func (v CharacterValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str == otherChar.Str
 }
 
-func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue) BoolValue {
+func (v CharacterValue) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str < otherChar.Str
 }
 
-func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
+func (v CharacterValue) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str <= otherChar.Str
 }
 
-func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue) BoolValue {
+func (v CharacterValue) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str > otherChar.Str
 }
 
-func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
+func (v CharacterValue) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	v.meterComparison(context, otherChar)
+
 	return v.Str >= otherChar.Str
 }
 
-func (v CharacterValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v CharacterValue) HashInput(_ common.Gauge, scratch []byte) []byte {
 	s := []byte(v.Str)
 	length := 1 + len(s)
 	var buffer []byte
@@ -174,7 +206,7 @@ func (v CharacterValue) ConformsToStaticType(
 	return true
 }
 
-func (v CharacterValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v CharacterValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

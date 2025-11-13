@@ -315,7 +315,7 @@ func (v Word64Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord64 (1 byte)
 // - uint64 value encoded in big-endian (8 bytes)
-func (v Word64Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Word64Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
 	return scratch[:9]
@@ -450,7 +450,7 @@ func (Word64Value) IsStorable() bool {
 	return true
 }
 
-func (v Word64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Word64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

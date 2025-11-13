@@ -60,16 +60,16 @@ func (v BoolValue) Negate(_ *Interpreter) BoolValue {
 	return BoolValue(values.BoolValue(v).Negate())
 }
 
-func (v BoolValue) Equal(_ ValueComparisonContext, other Value) bool {
+func (v BoolValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
 	}
 	return values.BoolValue(v).
-		Equal(values.BoolValue(otherBool))
+		Equal(context, values.BoolValue(otherBool))
 }
 
-func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue) BoolValue {
+func (v BoolValue) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -77,11 +77,11 @@ func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue) BoolVal
 
 	return BoolValue(
 		values.BoolValue(v).
-			Less(values.BoolValue(o)),
+			Less(context, values.BoolValue(o)),
 	)
 }
 
-func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
+func (v BoolValue) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -89,11 +89,11 @@ func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue) Bo
 
 	return BoolValue(
 		values.BoolValue(v).
-			LessEqual(values.BoolValue(o)),
+			LessEqual(context, values.BoolValue(o)),
 	)
 }
 
-func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue) BoolValue {
+func (v BoolValue) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -101,11 +101,11 @@ func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue) Bool
 
 	return BoolValue(
 		values.BoolValue(v).
-			Greater(values.BoolValue(o)),
+			Greater(context, values.BoolValue(o)),
 	)
 }
 
-func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
+func (v BoolValue) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -113,14 +113,14 @@ func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue)
 
 	return BoolValue(
 		values.BoolValue(v).
-			GreaterEqual(values.BoolValue(o)),
+			GreaterEqual(context, values.BoolValue(o)),
 	)
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeBool (1 byte)
 // - 1/0 (1 byte)
-func (v BoolValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v BoolValue) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeBool)
 	if v {
 		scratch[1] = 1
@@ -158,7 +158,7 @@ func (v BoolValue) ConformsToStaticType(
 	return true
 }
 
-func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return values.BoolValue(v), nil
 }
 

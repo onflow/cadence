@@ -257,8 +257,8 @@ func MetaTypeIsSubType(
 	}
 
 	result := sema.IsSubType(
-		MustConvertStaticToSemaType(staticType, invocationContext),
-		MustConvertStaticToSemaType(otherStaticType, invocationContext),
+		invocationContext.SemaTypeFromStaticType(staticType),
+		invocationContext.SemaTypeFromStaticType(otherStaticType),
 	)
 	return BoolValue(result)
 }
@@ -283,7 +283,7 @@ func (v TypeValue) ConformsToStaticType(
 func (v TypeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(
 		v,
@@ -338,7 +338,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // HashInput returns a byte slice containing:
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
-func (v TypeValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v TypeValue) HashInput(_ common.Gauge, scratch []byte) []byte {
 	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)

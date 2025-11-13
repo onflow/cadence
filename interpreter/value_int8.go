@@ -440,7 +440,7 @@ func (v Int8Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt8 (1 byte)
 // - int8 value (1 byte)
-func (v Int8Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Int8Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt8)
 	scratch[1] = byte(v)
 	return scratch[:2]
@@ -598,7 +598,7 @@ func (v Int8Value) ConformsToStaticType(
 	return true
 }
 
-func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
