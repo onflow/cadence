@@ -305,7 +305,7 @@ type InclusiveRangeStaticType struct {
 }
 
 var _ StaticType = InclusiveRangeStaticType{}
-var _ ParameterizedType = InclusiveRangeStaticType{}
+var _ ParameterizedStaticType = InclusiveRangeStaticType{}
 
 func NewInclusiveRangeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -358,6 +358,12 @@ func (t InclusiveRangeStaticType) BaseType() StaticType {
 		return nil
 	}
 	return &InclusiveRangeStaticType{}
+}
+
+func (t InclusiveRangeStaticType) TypeArguments() []StaticType {
+	return []StaticType{
+		t.ElementType,
+	}
 }
 
 // ConstantSizedStaticType
@@ -940,7 +946,7 @@ type CapabilityStaticType struct {
 }
 
 var _ StaticType = &CapabilityStaticType{}
-var _ ParameterizedType = &CapabilityStaticType{}
+var _ ParameterizedStaticType = &CapabilityStaticType{}
 
 func NewCapabilityStaticType(
 	memoryGauge common.MemoryGauge,
@@ -1012,6 +1018,21 @@ func (t *CapabilityStaticType) BaseType() StaticType {
 	}
 
 	return PrimitiveStaticTypeCapability
+}
+
+func (t *CapabilityStaticType) TypeArguments() []StaticType {
+	// Note: Must be same as `sema.CapabilityType.TypeArguments()`
+	borrowType := t.BorrowType
+	if borrowType == nil {
+		borrowType = &ReferenceStaticType{
+			ReferencedType: PrimitiveStaticTypeAny,
+			Authorization:  UnauthorizedAccess,
+		}
+	}
+
+	return []StaticType{
+		borrowType,
+	}
 }
 
 // Conversion
@@ -1527,8 +1548,10 @@ func (p TypeParameter) String() string {
 	return builder.String()
 }
 
-type ParameterizedType interface {
+type ParameterizedStaticType interface {
+	StaticType
 	BaseType() StaticType
+	TypeArguments() []StaticType
 }
 
 // ConformingStaticType is any static type that conforms to some interface.

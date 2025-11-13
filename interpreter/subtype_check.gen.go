@@ -72,8 +72,8 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedPoint)
 
 	case PrimitiveStaticTypeSignedNumber:
-		return subType ==// TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
-		PrimitiveStaticTypeSignedNumber ||
+		return subType == // TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
+			PrimitiveStaticTypeSignedNumber ||
 			(IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) ||
 				IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedFixedPoint))
 
@@ -410,6 +410,37 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		}
 
 		return false
+
+	case ParameterizedStaticType:
+		if typedSuperType.BaseType() != nil {
+			switch typedSubType := subType.(type) {
+			case ParameterizedStaticType:
+				if typedSubType.BaseType() != nil {
+					if IsSubType(typeConverter, typedSubType.BaseType(), typedSuperType.BaseType()) {
+						typedSubTypeTypeArguments := typedSubType.TypeArguments()
+						typedSuperTypeTypeArguments := typedSuperType.TypeArguments()
+						if len(typedSubTypeTypeArguments) != len(typedSuperTypeTypeArguments) {
+							return false
+						}
+
+						for i, source := range typedSubTypeTypeArguments {
+							target := typedSuperTypeTypeArguments[i]
+							if !(IsSubType(typeConverter, source, target)) {
+								return false
+							}
+						}
+
+						return true
+					}
+
+				}
+
+			}
+
+			return false
+		}
+
+		return IsParameterizedSubType(typeConverter, subType, typedSuperType)
 
 	}
 

@@ -100,7 +100,7 @@ func AreReturnsCovariant(source, target FunctionStaticType) bool {
 }
 
 func IsParameterizedSubType(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {
-	typedSubType, ok := subType.(ParameterizedType)
+	typedSubType, ok := subType.(ParameterizedStaticType)
 	if !ok {
 		return false
 	}
