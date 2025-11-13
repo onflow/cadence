@@ -7491,7 +7491,7 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
-	return checkSubTypeWithoutEquality(subType, superType)
+	return CheckSubTypeWithoutEquality(subType, superType)
 }
 
 // IsSameTypeKind determines if the given subtype belongs to the
@@ -7519,16 +7519,16 @@ func IsProperSubType(subType Type, superType Type) bool {
 		return false
 	}
 
-	return checkSubTypeWithoutEquality(subType, superType)
+	return CheckSubTypeWithoutEquality(subType, superType)
 }
 
-// checkSubTypeWithoutEquality determines if the given subtype
+// CheckSubTypeWithoutEquality determines if the given subtype
 // is a subtype of the given supertype, BUT it does NOT check
 // the equality of the two types, so does NOT return a specific
 // value when the two types are equal or are not.
 //
 // Consider using IsSubType or IsProperSubType
-func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
+func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	if subType == NeverType {
 		return true

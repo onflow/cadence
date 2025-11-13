@@ -36,7 +36,7 @@ const (
 
 	FieldNameReferencedType = "ReferencedType"
 
-	subtypeCheckFuncName = "checkSubTypeWithoutEquality_gen"
+	subtypeCheckFuncName = "CheckSubTypeWithoutEquality_gen"
 	subTypeVarName       = "subType"
 	superTypeVarName     = "superType"
 	sourceVarName        = "source"

@@ -21,7 +21,7 @@ package interpreter
 
 import "github.com/onflow/cadence/sema"
 
-func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {
+func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {
 	if subType == PrimitiveStaticTypeNever {
 		return true
 	}
@@ -72,8 +72,8 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedPoint)
 
 	case PrimitiveStaticTypeSignedNumber:
-		return subType == // TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
-			PrimitiveStaticTypeSignedNumber ||
+		return subType ==// TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
+		PrimitiveStaticTypeSignedNumber ||
 			(IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) ||
 				IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedFixedPoint))
 
