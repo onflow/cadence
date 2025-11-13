@@ -7874,6 +7874,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 						IsSubsetOf(intersectionSubtype.EffectiveInterfaceConformanceSet())
 				}
 
+				return false
+
 			case ConformingType:
 				// A type `T`
 				// is a subtype of an intersection type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
@@ -7890,50 +7892,52 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 			}
 
-		default:
-			// Supertype (intersection) has a non-Any* legacy type
+			return false
+		}
 
-			switch typedSubType := subType.(type) {
-			case *IntersectionType:
+		// Supertype (intersection) has a non-Any* legacy type
 
-				// An intersection type `T{Us}`
-				// is a subtype of an intersection type `V{Ws}`:
+		switch subType {
+		case AnyResourceType, AnyStructType, AnyType:
+			// A type `T`
+			// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+			// not statically.
+			return false
+		}
 
-				intersectionSubType := typedSubType.LegacyType //nolint:staticcheck
-				switch intersectionSubType {
-				case nil, AnyResourceType, AnyStructType, AnyType:
-					// When `T == AnyResource || T == AnyStruct || T == Any`:
-					// not statically.
-					return false
-				}
+		switch typedSubType := subType.(type) {
+		case *IntersectionType:
 
-				if intersectionSubType, ok := intersectionSubType.(*CompositeType); ok {
-					// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
-					//
-					// `Us` and `Ws` do *not* have to be subsets:
-					// The owner may freely restrict and unrestrict.
+			// An intersection type `T{Us}`
+			// is a subtype of an intersection type `V{Ws}`:
 
-					return intersectionSubType == intersectionSuperType
-				}
-
-			case *CompositeType:
-				// A type `T`
-				// is a subtype of an intersection type `U{Vs}`: if `T <: U`.
-				//
-				// The owner may freely restrict.
-
-				return IsSubType(typedSubType, intersectionSuperType)
-			}
-
-			switch subType {
-			case AnyResourceType, AnyStructType, AnyType:
-				// A type `T`
-				// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+			intersectionSubType := typedSubType.LegacyType //nolint:staticcheck
+			switch intersectionSubType {
+			case nil, AnyResourceType, AnyStructType, AnyType:
+				// When `T == AnyResource || T == AnyStruct || T == Any`:
 				// not statically.
-
 				return false
 			}
+
+			if intersectionSubType, ok := intersectionSubType.(*CompositeType); ok {
+				// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
+				//
+				// `Us` and `Ws` do *not* have to be subsets:
+				// The owner may freely restrict and unrestrict.
+
+				return intersectionSubType == intersectionSuperType
+			}
+
+		case *CompositeType:
+			// A type `T`
+			// is a subtype of an intersection type `U{Vs}`: if `T <: U`.
+			//
+			// The owner may freely restrict.
+
+			return IsSubType(typedSubType, intersectionSuperType)
 		}
+
+		return false
 
 	case *CompositeType:
 
@@ -7966,10 +7970,14 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				return intersectionSubType == typedSuperType
 			}
 
+			return false
+
 		case *CompositeType:
 			// Non-equal composite types are never subtypes of each other
 			return false
 		}
+
+		return false
 
 	case *InterfaceType:
 
@@ -8004,6 +8012,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return typedSubType.EffectiveInterfaceConformanceSet().
 				Contains(typedSuperType)
 		}
+
+		return false
 
 	case ParameterizedType:
 		if superTypeBaseType := typedSuperType.BaseType(); superTypeBaseType != nil {
