@@ -112,6 +112,7 @@ func IntersectionTypeCheckUpdater(decl dst.Decl) dst.Decl {
 			// so that renaming the variables won't affect this newly added one.
 			switch node {
 			case intersectionTypeRuleNode:
+				// Clear the variable when exiting from the intersection-type case-clause
 				intersectionTypeRuleNode = nil
 
 			case nestedCaseClause:
@@ -182,6 +183,7 @@ func IntersectionTypeCheckUpdater(decl dst.Decl) dst.Decl {
 				stmts = append(stmts, caseClause.Body...)
 				caseClause.Body = stmts
 
+				// Clear the variable when exiting from the nested case-clause.
 				nestedCaseClause = nil
 			}
 
@@ -240,6 +242,20 @@ func FunctionParametersCheckUpdater(decl dst.Decl) dst.Decl {
 			// Return true to continue visiting children
 			return true
 		},
-		nil,
+
+		// Post-order traversal: called after visiting children
+		func(cursor *dstutil.Cursor) bool {
+			node := cursor.Node()
+			if node == nil {
+				return true
+			}
+
+			// Reset the flag when exiting from the function-type case-clause
+			if node == functionTypeRuleNode {
+				isFunctionParamsLoop = false
+			}
+
+			return true
+		},
 	).(dst.Decl)
 }
