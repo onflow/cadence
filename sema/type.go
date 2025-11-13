@@ -8016,47 +8016,51 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return false
 
 	case ParameterizedType:
+		typedSubType, ok := subType.(ParameterizedType)
+		if !ok {
+			return false
+		}
+
 		if superTypeBaseType := typedSuperType.BaseType(); superTypeBaseType != nil {
 
 			// T<Us> <: V<Ws>
 			// if T <: V  && |Us| == |Ws| && U_i <: W_i
 
-			if typedSubType, ok := subType.(ParameterizedType); ok {
-				if subTypeBaseType := typedSubType.BaseType(); subTypeBaseType != nil {
+			if subTypeBaseType := typedSubType.BaseType(); subTypeBaseType != nil {
 
-					if !IsSubType(subTypeBaseType, superTypeBaseType) {
-						return false
-					}
-
-					subTypeTypeArguments := typedSubType.TypeArguments()
-					superTypeTypeArguments := typedSuperType.TypeArguments()
-
-					if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
-						return false
-					}
-
-					for i, superTypeTypeArgument := range superTypeTypeArguments {
-						subTypeTypeArgument := subTypeTypeArguments[i]
-						if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
-							return false
-						}
-					}
-
-					return true
+				if !IsSubType(subTypeBaseType, superTypeBaseType) {
+					return false
 				}
+
+				subTypeTypeArguments := typedSubType.TypeArguments()
+				superTypeTypeArguments := typedSuperType.TypeArguments()
+
+				if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
+					return false
+				}
+
+				for i, superTypeTypeArgument := range superTypeTypeArguments {
+					subTypeTypeArgument := subTypeTypeArguments[i]
+					if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
+						return false
+					}
+				}
+
+				return true
+			}
+		} else {
+			// TODO: enforce type arguments, remove this rule
+
+			// T<Us> <: V
+			// if T <: V
+
+			if baseType := typedSubType.BaseType(); baseType != nil {
+				return IsSubType(baseType, superType)
 			}
 		}
-	}
 
-	// TODO: enforce type arguments, remove this rule
+		return false
 
-	// T<Us> <: V
-	// if T <: V
-
-	if typedSubType, ok := subType.(ParameterizedType); ok {
-		if baseType := typedSubType.BaseType(); baseType != nil {
-			return IsSubType(baseType, superType)
-		}
 	}
 
 	return false
