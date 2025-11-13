@@ -1057,10 +1057,19 @@ func (gen *SubTypeCheckGenerator) generateOrPredicate(predicates []Predicate) (r
 
 		// Don't negate again here (i.e: don't use `binaryExpression` method),
 		// since negation is already done before calling this method `generateOrPredicate`.
+
+		existingDecs := binaryExpr.Decorations().Start
+		binaryExpr.Decorations().Start = nil
+
 		binaryExpr = &dst.BinaryExpr{
 			X:  binaryExpr,
 			Op: token.LOR,
 			Y:  expr,
+			Decs: dst.BinaryExprDecorations{
+				NodeDecs: dst.NodeDecs{
+					Start: existingDecs,
+				},
+			},
 		}
 	}
 
