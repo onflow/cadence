@@ -17,130 +17,129 @@
  * limitations under the License.
  */
 
-package sema
+package interpreter
 
-func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
-	if subType == NeverType {
+import "github.com/onflow/cadence/sema"
+
+func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {
+	if subType == PrimitiveStaticTypeNever {
 		return true
 	}
 
 	switch superType {
-	case AnyType:
+	case PrimitiveStaticTypeAny:
 		return true
 
-	case AnyStructType:
-		return !(IsResourceType(subType)) &&
-			subType != AnyType
+	case PrimitiveStaticTypeAnyStruct:
+		return !(IsResourceType(typeConverter, subType)) &&
+			subType != PrimitiveStaticTypeAny
 
-	case AnyResourceType:
-		return IsResourceType(subType)
+	case PrimitiveStaticTypeAnyResource:
+		return IsResourceType(typeConverter, subType)
 
-	case AnyResourceAttachmentType:
-		return isAttachmentType(subType) &&
-			IsResourceType(subType)
+	case PrimitiveStaticTypeAnyResourceAttachment:
+		return isAttachmentType(typeConverter, subType) &&
+			IsResourceType(typeConverter, subType)
 
-	case AnyStructAttachmentType:
-		return isAttachmentType(subType) &&
-			!(IsResourceType(subType))
+	case PrimitiveStaticTypeAnyStructAttachment:
+		return isAttachmentType(typeConverter, subType) &&
+			!(IsResourceType(typeConverter, subType))
 
-	case HashableStructType:
-		return IsHashableStructType(subType)
+	case PrimitiveStaticTypeHashableStruct:
+		return IsHashableStructType(typeConverter, subType)
 
-	case PathType:
-		return IsSubType(subType, StoragePathType) ||
-			IsSubType(subType, CapabilityPathType)
+	case PrimitiveStaticTypePath:
+		return IsSubType(typeConverter, subType, PrimitiveStaticTypeStoragePath) ||
+			IsSubType(typeConverter, subType, PrimitiveStaticTypeCapabilityPath)
 
-	case StorableType:
-		return subType.IsStorable(map[*Member]bool{})
-
-	case CapabilityPathType:
+	case PrimitiveStaticTypeCapabilityPath:
 		switch subType {
-		case PrivatePathType,
-			PublicPathType:
+		case PrimitiveStaticTypePrivatePath,
+			PrimitiveStaticTypePublicPath:
 			return true
 		}
 
 		return false
 
-	case NumberType:
+	case PrimitiveStaticTypeNumber:
 		switch subType {
-		case NumberType,
-			SignedNumberType:
+		case PrimitiveStaticTypeNumber,
+			PrimitiveStaticTypeSignedNumber:
 			return true
 		}
 
-		return IsSubType(subType, IntegerType) ||
-			IsSubType(subType, FixedPointType)
+		return IsSubType(typeConverter, subType, PrimitiveStaticTypeInteger) ||
+			IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedPoint)
 
-	case SignedNumberType:
+	case PrimitiveStaticTypeSignedNumber:
 
 		// TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
-		return subType == SignedNumberType ||
-			(IsSubType(subType, SignedIntegerType) ||
-				IsSubType(subType, SignedFixedPointType))
+		return subType == PrimitiveStaticTypeSignedNumber ||
+			(IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) ||
+				IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedFixedPoint))
 
-	case IntegerType:
+	case PrimitiveStaticTypeInteger:
 		switch subType {
-		case IntegerType,
-			SignedIntegerType,
-			FixedSizeUnsignedIntegerType,
-			UIntType:
+		case PrimitiveStaticTypeInteger,
+			PrimitiveStaticTypeSignedInteger,
+			PrimitiveStaticTypeFixedSizeUnsignedInteger,
+			PrimitiveStaticTypeUInt:
 			return true
 		}
 
-		return IsSubType(subType, SignedIntegerType) ||
-			IsSubType(subType, FixedSizeUnsignedIntegerType)
+		return IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) ||
+			IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedSizeUnsignedInteger)
 
-	case SignedIntegerType:
+	case PrimitiveStaticTypeSignedInteger:
 		switch subType {
-		case SignedIntegerType,
-			IntType,
-			Int8Type,
-			Int16Type,
-			Int32Type,
-			Int64Type,
-			Int128Type,
-			Int256Type:
-			return true
-		}
-
-		return false
-
-	case FixedSizeUnsignedIntegerType:
-		switch subType {
-		case UInt8Type,
-			UInt16Type,
-			UInt32Type,
-			UInt64Type,
-			UInt128Type,
-			UInt256Type,
-			Word8Type,
-			Word16Type,
-			Word32Type,
-			Word64Type,
-			Word128Type,
-			Word256Type:
+		case PrimitiveStaticTypeSignedInteger,
+			PrimitiveStaticTypeInt,
+			PrimitiveStaticTypeInt8,
+			PrimitiveStaticTypeInt16,
+			PrimitiveStaticTypeInt32,
+			PrimitiveStaticTypeInt64,
+			PrimitiveStaticTypeInt128,
+			PrimitiveStaticTypeInt256:
 			return true
 		}
 
 		return false
 
-	case FixedPointType:
+	case PrimitiveStaticTypeFixedSizeUnsignedInteger:
 		switch subType {
-		case FixedPointType,
-			SignedFixedPointType,
-			UFix64Type,
-			UFix128Type:
+		case PrimitiveStaticTypeUInt8,
+			PrimitiveStaticTypeUInt16,
+			PrimitiveStaticTypeUInt32,
+			PrimitiveStaticTypeUInt64,
+			PrimitiveStaticTypeUInt128,
+			PrimitiveStaticTypeUInt256,
+			PrimitiveStaticTypeWord8,
+			PrimitiveStaticTypeWord16,
+			PrimitiveStaticTypeWord32,
+			PrimitiveStaticTypeWord64,
+			PrimitiveStaticTypeWord128,
+			PrimitiveStaticTypeWord256:
 			return true
 		}
 
-		return IsSubType(subType, SignedFixedPointType)
+		return false
 
-	case SignedFixedPointType:
+	case PrimitiveStaticTypeFixedPoint:
 		switch subType {
-		case SignedFixedPointType,
-			Fix64Type,
-			Fix128Type:
+		case PrimitiveStaticTypeFixedPoint,
+			PrimitiveStaticTypeSignedFixedPoint,
+			PrimitiveStaticTypeUFix64,
+			PrimitiveStaticTypeUFix128:
+			return true
+		}
+
+		return IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedFixedPoint)
+
+	case PrimitiveStaticTypeSignedFixedPoint:
+		switch subType {
+		case PrimitiveStaticTypeSignedFixedPoint,
+			PrimitiveStaticTypeFix64,
+			PrimitiveStaticTypeFix128:
 			return true
 		}
 
@@ -149,97 +148,103 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 	}
 
 	switch typedSuperType := superType.(type) {
-	case *OptionalType:
+	case *OptionalStaticType:
 
 		// Optionals are covariant: T? <: U? if T <: U
 		switch typedSubType := subType.(type) {
-		case *OptionalType:
-			return IsSubType(typedSubType.Type, typedSuperType.Type)
+		case *OptionalStaticType:
+			return IsSubType(typeConverter, typedSubType.Type, typedSuperType.Type)
 		}
 
 		// T <: U? if T <: U
-		return IsSubType(subType, typedSuperType.Type)
+		return IsSubType(typeConverter, subType, typedSuperType.Type)
 
-	case *DictionaryType:
+	case *DictionaryStaticType:
 		switch typedSubType := subType.(type) {
-		case *DictionaryType:
-			return IsSubType(typedSubType.ValueType, typedSuperType.ValueType) &&
-				IsSubType(typedSubType.KeyType, typedSuperType.KeyType)
+		case *DictionaryStaticType:
+			return IsSubType(typeConverter, typedSubType.ValueType, typedSuperType.ValueType) &&
+				IsSubType(typeConverter, typedSubType.KeyType, typedSuperType.KeyType)
 		}
 
 		return false
 
-	case *VariableSizedType:
+	case *VariableSizedStaticType:
 		switch typedSubType := subType.(type) {
-		case *VariableSizedType:
-			return IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
+		case *VariableSizedStaticType:
+			return IsSubType(typeConverter, typedSubType.ElementType(), typedSuperType.ElementType())
 		}
 
 		return false
 
-	case *ConstantSizedType:
+	case *ConstantSizedStaticType:
 		switch typedSubType := subType.(type) {
-		case *ConstantSizedType:
+		case *ConstantSizedStaticType:
 			return typedSuperType.Size == typedSubType.Size &&
-				IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
+				IsSubType(typeConverter, typedSubType.ElementType(), typedSuperType.ElementType())
 		}
 
 		return false
 
-	case *ReferenceType:
+	case *ReferenceStaticType:
 		switch typedSubType := subType.(type) {
-		case *ReferenceType:
+		case *ReferenceStaticType:
 
 			// The authorization of the subtype reference must be usable in all situations where the supertype reference is usable.
-			return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
+			return PermitsAccess(typeConverter, typedSuperType.Authorization, typedSubType.Authorization) &&
 				// References are covariant in their referenced type
-				IsSubType(typedSubType.Type, typedSuperType.Type)
+				IsSubType(typeConverter, typedSubType.ReferencedType, typedSuperType.ReferencedType)
 		}
 
 		return false
 
-	case *CompositeType:
+	case *CompositeStaticType:
 		switch typedSubType := subType.(type) {
-		case *IntersectionType:
+		case *IntersectionStaticType:
 			switch typedSubType.LegacyType {
 			case nil,
-				AnyResourceType,
-				AnyStructType,
-				AnyType:
+				PrimitiveStaticTypeAnyResource,
+				PrimitiveStaticTypeAnyStruct,
+				PrimitiveStaticTypeAny:
 				return false
 			}
 
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
-			case *CompositeType:
+			case *CompositeStaticType:
 				return typedSubTypeLegacyType == typedSuperType
 			}
 
 			return false
-		case *CompositeType:
+		case *CompositeStaticType:
 			return false
 		}
 
 		return false
 
-	case *InterfaceType:
+	case *InterfaceStaticType:
 		switch typedSubType := subType.(type) {
-		case *CompositeType:
-			return typedSubType.Kind == typedSuperType.CompositeKind &&
-				typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
-		case *IntersectionType:
-			return typedSubType.EffectiveIntersectionSet().Contains(typedSuperType)
-		case *InterfaceType:
-			return typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
+		case *CompositeStaticType:
+			typedSemaSuperType := typeConverter.SemaTypeFromStaticType(typedSuperType).(*sema.InterfaceType)
+			typedSemaSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.CompositeType)
+			return typedSemaSubType.Kind == typedSemaSuperType.CompositeKind &&
+				typedSemaSubType.EffectiveInterfaceConformanceSet().Contains(typedSemaSuperType)
+		case *IntersectionStaticType:
+			typedSemaSuperType := typeConverter.SemaTypeFromStaticType(typedSuperType).(*sema.InterfaceType)
+			typedSemaSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.IntersectionType)
+			return typedSemaSubType.EffectiveIntersectionSet().Contains(typedSemaSuperType)
+		case *InterfaceStaticType:
+			typedSemaSuperType := typeConverter.SemaTypeFromStaticType(typedSuperType).(*sema.InterfaceType)
+			typedSemaSubType := typeConverter.SemaTypeFromStaticType(typedSubType).(*sema.InterfaceType)
+			return typedSemaSubType.EffectiveInterfaceConformanceSet().Contains(typedSemaSuperType)
 		}
 
 		return false
 
-	case *IntersectionType:
+	case *IntersectionStaticType:
 		switch typedSuperType.LegacyType {
 		case nil,
-			AnyType,
-			AnyStructType,
-			AnyResourceType:
+			PrimitiveStaticTypeAny,
+			PrimitiveStaticTypeAnyStruct,
+			PrimitiveStaticTypeAnyResource:
 
 			// `Any` is a subtype of an intersection type
 			//  - `Any{Us}: not statically.`
@@ -256,20 +261,20 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			//  - `AnyStruct{Us}`: never.
 			//  - `Any{Us}`: not statically;
 			switch subType {
-			case AnyType,
-				AnyStructType,
-				AnyResourceType:
+			case PrimitiveStaticTypeAny,
+				PrimitiveStaticTypeAnyStruct,
+				PrimitiveStaticTypeAnyResource:
 				return false
 			}
 
 			// An intersection type `T{Us}`
 			// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
 			switch typedSubType := subType.(type) {
-			case *IntersectionType:
+			case *IntersectionStaticType:
 				// An intersection type `{Us}` is a subtype of an intersection type `{Vs}` / `{Vs}` / `{Vs}`:
 				// when `Vs` is a subset of `Us`.
 				if typedSubType.LegacyType == nil &&
-					IsIntersectionSubset(typedSuperType, typedSubType) {
+					IsIntersectionSubset(typeConverter, typedSuperType, typedSubType) {
 					return true
 				}
 
@@ -278,15 +283,15 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				// is a subtype of the intersection supertype,
 				// and `Vs` is a subset of `Us`.
 				switch typedSubType.LegacyType {
-				case AnyType,
-					AnyStructType,
-					AnyResourceType:
+				case PrimitiveStaticTypeAny,
+					PrimitiveStaticTypeAnyStruct,
+					PrimitiveStaticTypeAnyResource:
 
 					// Below two combination is repeated several times below.
 					// Maybe combine them to produce a single predicate.
 					return (typedSuperType.LegacyType == nil ||
-						IsSubType(typedSubType.LegacyType, typedSuperType.LegacyType)) &&
-						IsIntersectionSubset(typedSuperType, typedSubType)
+						IsSubType(typeConverter, typedSubType.LegacyType, typedSuperType.LegacyType)) &&
+						IsIntersectionSubset(typeConverter, typedSuperType, typedSubType)
 				}
 
 				// When `T != AnyResource && T != AnyStruct && T != Any`:
@@ -295,17 +300,17 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				// and `T` conforms to `Vs`.
 				// `Us` and `Vs` do *not* have to be subsets.
 				switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
-				case *CompositeType:
+				case *CompositeStaticType:
 					return (typedSuperType.LegacyType == nil ||
-						IsSubType(typedSubTypeLegacyType, typedSuperType.LegacyType)) &&
-						IsIntersectionSubset(typedSuperType, typedSubTypeLegacyType)
+						IsSubType(typeConverter, typedSubTypeLegacyType, typedSuperType.LegacyType)) &&
+						IsIntersectionSubset(typeConverter, typedSuperType, typedSubTypeLegacyType)
 				}
 
 				return false
-			case ConformingType:
+			case ConformingStaticType:
 				return (typedSuperType.LegacyType == nil ||
-					IsSubType(typedSubType, typedSuperType.LegacyType)) &&
-					IsIntersectionSubset(typedSuperType, typedSubType)
+					IsSubType(typeConverter, typedSubType, typedSuperType.LegacyType)) &&
+					IsIntersectionSubset(typeConverter, typedSuperType, typedSubType)
 			}
 
 			return false
@@ -315,29 +320,29 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
 		// not statically.
 		switch subType {
-		case AnyType,
-			AnyStructType,
-			AnyResourceType:
+		case PrimitiveStaticTypeAny,
+			PrimitiveStaticTypeAnyStruct,
+			PrimitiveStaticTypeAnyResource:
 			return false
 		}
 
 		// An intersection type `T{Us}`
 		// is a subtype of an intersection type `V{Ws}`:
 		switch typedSubType := subType.(type) {
-		case *IntersectionType:
+		case *IntersectionStaticType:
 
 			// When `T == AnyResource || T == AnyStruct || T == Any`:
 			// not statically.
 			switch typedSubType.LegacyType {
 			case nil,
-				AnyType,
-				AnyStructType,
-				AnyResourceType:
+				PrimitiveStaticTypeAny,
+				PrimitiveStaticTypeAnyStruct,
+				PrimitiveStaticTypeAnyResource:
 				return false
 			}
 
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
-			case *CompositeType:
+			case *CompositeStaticType:
 
 				// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
 				// `Us` and `Ws` do *not* have to be subsets:
@@ -346,15 +351,15 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			}
 
 			return false
-		case *CompositeType:
-			return IsSubType(typedSubType, typedSuperType.LegacyType)
+		case *CompositeStaticType:
+			return IsSubType(typeConverter, typedSubType, typedSuperType.LegacyType)
 		}
 
 		return false
 
-	case *FunctionType:
+	case FunctionStaticType:
 		switch typedSubType := subType.(type) {
-		case *FunctionType:
+		case FunctionStaticType:
 
 			// View functions are subtypes of impure functions
 			switch typedSubType.Purity {
@@ -391,7 +396,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 					// Note the super-type is the subtype's parameter
 					// because the parameters are contravariant.
-					!(IsSubType(target.TypeAnnotation.Type, source.TypeAnnotation.Type)) {
+					!(sema.IsSubType(target.TypeAnnotation.Type, source.TypeAnnotation.Type)) {
 						return false
 					}
 				}
@@ -407,12 +412,12 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 		return false
 
-	case ParameterizedType:
+	case ParameterizedStaticType:
 		switch typedSubType := subType.(type) {
-		case ParameterizedType:
+		case ParameterizedStaticType:
 			if typedSubType.BaseType() != nil {
 				if typedSuperType.BaseType() != nil {
-					if IsSubType(typedSubType.BaseType(), typedSuperType.BaseType()) {
+					if IsSubType(typeConverter, typedSubType.BaseType(), typedSuperType.BaseType()) {
 						typedSubTypeTypeArguments := typedSubType.TypeArguments()
 						typedSuperTypeTypeArguments := typedSuperType.TypeArguments()
 						if len(typedSubTypeTypeArguments) != len(typedSuperTypeTypeArguments) {
@@ -421,7 +426,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 						for i, source := range typedSubTypeTypeArguments {
 							target := typedSuperTypeTypeArguments[i]
-							if !(IsSubType(source, target)) {
+							if !(IsSubType(typeConverter, source, target)) {
 								return false
 							}
 						}
@@ -432,7 +437,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 					return false
 				}
 
-				return IsSubType(typedSubType.BaseType(), typedSuperType)
+				return IsSubType(typeConverter, typedSubType.BaseType(), typedSuperType)
 			}
 
 		}

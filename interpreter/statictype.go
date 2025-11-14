@@ -63,6 +63,7 @@ type CompositeStaticType struct {
 }
 
 var _ StaticType = &CompositeStaticType{}
+var _ ConformingStaticType = &CompositeStaticType{}
 
 func NewCompositeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -104,6 +105,8 @@ func NewCompositeStaticTypeComputeTypeID(
 
 func (*CompositeStaticType) isStaticType() {}
 
+func (*CompositeStaticType) isConformingStaticType() {}
+
 func (*CompositeStaticType) elementSize() uint {
 	return UnknownElementSize
 }
@@ -143,6 +146,7 @@ type InterfaceStaticType struct {
 }
 
 var _ StaticType = &InterfaceStaticType{}
+var _ ConformingStaticType = &InterfaceStaticType{}
 
 func NewInterfaceStaticType(
 	memoryGauge common.MemoryGauge,
@@ -183,6 +187,8 @@ func NewInterfaceStaticTypeComputeTypeID(
 }
 
 func (*InterfaceStaticType) isStaticType() {}
+
+func (*InterfaceStaticType) isConformingStaticType() {}
 
 func (*InterfaceStaticType) elementSize() uint {
 	return UnknownElementSize
@@ -299,6 +305,7 @@ type InclusiveRangeStaticType struct {
 }
 
 var _ StaticType = InclusiveRangeStaticType{}
+var _ ParameterizedStaticType = InclusiveRangeStaticType{}
 
 func NewInclusiveRangeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -344,6 +351,19 @@ func (t InclusiveRangeStaticType) ID() TypeID {
 
 func (t InclusiveRangeStaticType) IsDeprecated() bool {
 	return t.ElementType.IsDeprecated()
+}
+
+func (t InclusiveRangeStaticType) BaseType() StaticType {
+	if t.ElementType == nil {
+		return nil
+	}
+	return &InclusiveRangeStaticType{}
+}
+
+func (t InclusiveRangeStaticType) TypeArguments() []StaticType {
+	return []StaticType{
+		t.ElementType,
+	}
 }
 
 // ConstantSizedStaticType
@@ -926,6 +946,7 @@ type CapabilityStaticType struct {
 }
 
 var _ StaticType = &CapabilityStaticType{}
+var _ ParameterizedStaticType = &CapabilityStaticType{}
 
 func NewCapabilityStaticType(
 	memoryGauge common.MemoryGauge,
@@ -989,6 +1010,30 @@ func (t *CapabilityStaticType) IsDeprecated() bool {
 		return false
 	}
 	return t.BorrowType.IsDeprecated()
+}
+
+func (t *CapabilityStaticType) BaseType() StaticType {
+	// Note: Must be same as `sema.CapabilityType.BaseType()`
+	if t.BorrowType == nil {
+		return nil
+	}
+
+	return PrimitiveStaticTypeCapability
+}
+
+func (t *CapabilityStaticType) TypeArguments() []StaticType {
+	// Note: Must be same as `sema.CapabilityType.TypeArguments()`
+	borrowType := t.BorrowType
+	if borrowType == nil {
+		borrowType = &ReferenceStaticType{
+			ReferencedType: PrimitiveStaticTypeAny,
+			Authorization:  UnauthorizedAccess,
+		}
+	}
+
+	return []StaticType{
+		borrowType,
+	}
 }
 
 // Conversion
@@ -1063,6 +1108,11 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 	case *sema.TransactionType:
 		return ConvertSemaTransactionToStaticTransactionType(memoryGauge, t)
+
+	case *sema.GenericType:
+		// Function types could have generic-typed returns/parameters. e.g: builtin functions.
+		// Since they are not resolved, the type is unknown here.
+		return PrimitiveStaticTypeUnknown
 	}
 
 	return nil
@@ -1184,6 +1234,12 @@ func ConvertSemaTransactionToStaticTransactionType(
 	)
 }
 
+// ConvertStaticAuthorizationToSemaAccess converts authorization of static-types
+// to the sema-type representation of the same.
+//
+// **IMPORTANT**: Do not use this function directly. Instead, use the
+// `SemaAccessFromStaticAuthorization` method of the `TypeConverter` interface,
+// since it will cache and re-use the conversion results.
 func ConvertStaticAuthorizationToSemaAccess(
 	auth Authorization,
 	handler StaticAuthorizationConversionHandler,
@@ -1370,7 +1426,7 @@ func ConvertStaticToSemaType(
 			return nil, err
 		}
 
-		access, err := ConvertStaticAuthorizationToSemaAccess(t.Authorization, context)
+		access, err := context.SemaAccessFromStaticAuthorization(t.Authorization)
 
 		if err != nil {
 			return nil, err
@@ -1497,4 +1553,17 @@ func (p TypeParameter) String() string {
 		builder.WriteString(p.TypeBound.String())
 	}
 	return builder.String()
+}
+
+type ParameterizedStaticType interface {
+	StaticType
+	BaseType() StaticType
+	TypeArguments() []StaticType
+}
+
+// ConformingStaticType is any static type that conforms to some interface.
+// This is the static-type counterpart of `sema.ConformingType`.
+type ConformingStaticType interface {
+	StaticType
+	isConformingStaticType()
 }
