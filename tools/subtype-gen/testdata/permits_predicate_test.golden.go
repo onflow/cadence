@@ -19,7 +19,7 @@
 
 package sema
 
-func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
+func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 	if subType == NeverType {
 		return true
 	}

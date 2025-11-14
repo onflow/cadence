@@ -85,8 +85,16 @@ func IsResourceType(typeConverter TypeConverter, typ StaticType) bool {
 }
 
 func PermitsAccess(typeConverter TypeConverter, superTypeAuth, subTypeAuth Authorization) bool {
-	superTypeAccess := typeConverter.SemaAccessFromStaticAuthorization(superTypeAuth)
-	subTypeAccess := typeConverter.SemaAccessFromStaticAuthorization(subTypeAuth)
+	superTypeAccess, err := typeConverter.SemaAccessFromStaticAuthorization(superTypeAuth)
+	if err != nil {
+		panic(err)
+	}
+
+	subTypeAccess, err := typeConverter.SemaAccessFromStaticAuthorization(subTypeAuth)
+	if err != nil {
+		panic(err)
+	}
+
 	return sema.PermitsAccess(superTypeAccess, subTypeAccess)
 }
 

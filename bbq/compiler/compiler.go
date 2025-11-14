@@ -1619,7 +1619,19 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 			invocationExpression := statement.InvocationExpression
 			arguments := invocationExpression.Arguments
 			invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(invocationExpression)
-			c.compileArguments(arguments, invocationTypes)
+
+			// Instead of compiling arguments as usual (via compileArguments),
+			// only convert the arguments and don't transfer them.
+
+			for index, argument := range arguments {
+				c.compileExpression(argument.Expression)
+
+				parameterType := invocationTypes.ParameterTypes[index]
+				parameterTypeIndex := c.getOrAddType(parameterType)
+				c.emit(opcode.InstructionConvert{
+					Type: parameterTypeIndex,
+				})
+			}
 
 			argCount := len(arguments)
 			if argCount >= math.MaxUint16 {

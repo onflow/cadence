@@ -1021,6 +1021,7 @@ func (t *CapabilityStaticType) IsDeprecated() bool {
 }
 
 func (t *CapabilityStaticType) BaseType() StaticType {
+	// Note: Must be same as `sema.CapabilityType.BaseType()`
 	if t.BorrowType == nil {
 		return nil
 	}
@@ -1241,6 +1242,12 @@ func ConvertSemaTransactionToStaticTransactionType(
 	)
 }
 
+// ConvertStaticAuthorizationToSemaAccess converts authorization of static-types
+// to the sema-type representation of the same.
+//
+// **IMPORTANT**: Do not use this function directly. Instead, use the
+// `SemaAccessFromStaticAuthorization` method of the `TypeConverter` interface,
+// since it will cache and re-use the conversion results.
 func ConvertStaticAuthorizationToSemaAccess(
 	auth Authorization,
 	handler StaticAuthorizationConversionHandler,
@@ -1430,7 +1437,7 @@ func ConvertStaticToSemaType(
 			return nil, err
 		}
 
-		access, err := ConvertStaticAuthorizationToSemaAccess(t.Authorization, context)
+		access, err := context.SemaAccessFromStaticAuthorization(t.Authorization)
 
 		if err != nil {
 			return nil, err

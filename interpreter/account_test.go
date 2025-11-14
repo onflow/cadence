@@ -417,65 +417,65 @@ type NoOpReferenceCreationContext struct{}
 
 var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
 
-func (n NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
+func (NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
-func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
-	// NO-OP
-	return nil
-}
-
-func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
-	// NO-OP
-}
-
-func (n NoOpReferenceCreationContext) MeterMemory(_ common.MemoryUsage) error {
+func (NoOpReferenceCreationContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) MeterComputation(_ common.ComputationUsage) error {
+func (NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
+	// NO-OP
+}
+
+func (NoOpReferenceCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) ReadStored(_ common.Address, _ common.StorageDomain, _ interpreter.StorageMapKey) interpreter.Value {
+func (NoOpReferenceCreationContext) MeterComputation(_ common.ComputationUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementType(_ interpreter.TypeID) (*sema.EntitlementType, error) {
+func (NoOpReferenceCreationContext) ReadStored(_ common.Address, _ common.StorageDomain, _ interpreter.StorageMapKey) interpreter.Value {
+	// NO-OP
+	return nil
+}
+
+func (NoOpReferenceCreationContext) GetEntitlementType(_ interpreter.TypeID) (*sema.EntitlementType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementMapType(_ interpreter.TypeID) (*sema.EntitlementMapType, error) {
+func (NoOpReferenceCreationContext) GetEntitlementMapType(_ interpreter.TypeID) (*sema.EntitlementMapType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetInterfaceType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.InterfaceType, error) {
+func (NoOpReferenceCreationContext) GetInterfaceType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.InterfaceType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetCompositeType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.CompositeType, error) {
+func (NoOpReferenceCreationContext) GetCompositeType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.CompositeType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(_ common.Location) bool {
+func (NoOpReferenceCreationContext) IsTypeInfoRecovered(_ common.Location) bool {
 	// NO-OP
 	return false
 }
 
-func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(_ interpreter.StaticType) sema.Type {
+func (NoOpReferenceCreationContext) SemaTypeFromStaticType(_ interpreter.StaticType) sema.Type {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) SemaAccessFromStaticAuthorization(auth interpreter.Authorization) sema.Access {
+func (NoOpReferenceCreationContext) SemaAccessFromStaticAuthorization(interpreter.Authorization) (sema.Access, error) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -486,28 +486,28 @@ type NoOpFunctionCreationContext struct {
 
 var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
 
-func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
+func (NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) ReferencedResourceKindedValues(
+func (NoOpFunctionCreationContext) ReferencedResourceKindedValues(
 	_ atree.ValueID,
 ) map[*interpreter.EphemeralReferenceValue]struct{} {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(
+func (NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(
 	_ interpreter.Value,
 ) {
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
+func (NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) MeterMemory(_ common.MemoryUsage) error {
+func (NoOpFunctionCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }

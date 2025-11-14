@@ -52,9 +52,7 @@ func TestTypeConversion(t *testing.T) {
 	}
 
 	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() ||
-			ty.IsDeprecated() || //nolint:staticcheck
-			ty == interpreter.PrimitiveStaticTypeStorable {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 

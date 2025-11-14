@@ -5263,17 +5263,6 @@ func (interpreter *Interpreter) GetEntitlementMapType(typeID common.TypeID) (*se
 	return ty, nil
 }
 
-func MustConvertStaticAuthorizationToSemaAccess(
-	handler StaticAuthorizationConversionHandler,
-	auth Authorization,
-) sema.Access {
-	access, err := ConvertStaticAuthorizationToSemaAccess(auth, handler)
-	if err != nil {
-		panic(err)
-	}
-	return access
-}
-
 func (interpreter *Interpreter) getElaboration(location common.Location) *sema.Elaboration {
 
 	// Ensure the program for this location is loaded,
@@ -6461,8 +6450,8 @@ func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) se
 	return MustConvertStaticToSemaType(staticType, interpreter)
 }
 
-func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) sema.Access {
-	return MustConvertStaticAuthorizationToSemaAccess(interpreter, auth)
+func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
+	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
 }
 
 func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(

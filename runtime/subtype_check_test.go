@@ -21,12 +21,12 @@ package runtime
 import (
 	"testing"
 
-	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 var location = common.NewStringLocation(nil, "test")
@@ -119,7 +119,7 @@ var resourceTypeWithConformance2 = &sema.CompositeType{
 	ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceType1, interfaceType2},
 }
 
-// checkSubTypeFunctions calls both checkSubTypeWithoutEquality and checkSubTypeWithoutEquality_gen
+// checkSubTypeFunctions calls both checkSubTypeWithoutEquality and CheckSubTypeWithoutEquality_gen
 // and asserts they produce the same result
 func checkSubTypeFunctions(t *testing.T, subType sema.Type, superType sema.Type) bool {
 	result := sema.CheckSubTypeWithoutEquality(subType, superType)

@@ -186,10 +186,15 @@ func (v *EphemeralReferenceValue) GetTypeKey(context MemberAccessibleContext, ke
 	self := v.Value
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+		semaAccess, err := context.SemaAccessFromStaticAuthorization(v.Authorization)
+		if err != nil {
+			panic(err)
+		}
+
 		return selfComposite.getTypeKey(
 			context,
 			key,
-			context.SemaAccessFromStaticAuthorization(v.Authorization),
+			semaAccess,
 		)
 	}
 

@@ -283,7 +283,10 @@ func (v *StorageReferenceValue) GetTypeKey(
 	self := v.mustReferencedValue(context)
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
-		access := context.SemaAccessFromStaticAuthorization(v.Authorization)
+		access, err := context.SemaAccessFromStaticAuthorization(v.Authorization)
+		if err != nil {
+			panic(err)
+		}
 		return selfComposite.getTypeKey(
 			context,
 			key,
