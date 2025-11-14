@@ -79,6 +79,8 @@ func NewVMBLSAggregatePublicKeysFunction(
 	}
 }
 
+var PublicKeyArrayStaticType = interpreter.ConvertSemaToStaticType(nil, sema.PublicKeyArrayType)
+
 func BLSAggregatePublicKeys(
 	context interpreter.InvocationContext,
 	publicKeysValue *interpreter.ArrayValue,
@@ -88,7 +90,7 @@ func BLSAggregatePublicKeys(
 	interpreter.ExpectType(
 		context,
 		publicKeysValue,
-		sema.PublicKeyArrayType,
+		PublicKeyArrayStaticType,
 	)
 
 	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
@@ -180,6 +182,8 @@ func NewVMBLSAggregateSignaturesFunction(
 	}
 }
 
+var ByteArrayArrayStaticType = interpreter.ConvertSemaToStaticType(nil, sema.ByteArrayArrayType)
+
 func BLSAggregateSignatures(
 	context interpreter.InvocationContext,
 	signaturesValue *interpreter.ArrayValue,
@@ -189,7 +193,7 @@ func BLSAggregateSignatures(
 	interpreter.ExpectType(
 		context,
 		signaturesValue,
-		sema.ByteArrayArrayType,
+		ByteArrayArrayStaticType,
 	)
 
 	bytesArray := make([][]byte, 0, signaturesValue.Count())

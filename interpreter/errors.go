@@ -451,8 +451,8 @@ func (e *ForceCastTypeMismatchError) SetLocationRange(locationRange LocationRang
 
 // TypeMismatchError
 type TypeMismatchError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -462,7 +462,7 @@ var _ HasLocationRange = &TypeMismatchError{}
 func (*TypeMismatchError) IsUserError() {}
 
 func (e *TypeMismatchError) Error() string {
-	expected, actual := sema.ErrorMessageExpectedActualTypes(
+	expected, actual := ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
 	)
@@ -480,8 +480,8 @@ func (e *TypeMismatchError) SetLocationRange(locationRange LocationRange) {
 
 // InvalidMemberReferenceError
 type InvalidMemberReferenceError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -491,7 +491,7 @@ var _ HasLocationRange = &InvalidMemberReferenceError{}
 func (*InvalidMemberReferenceError) IsUserError() {}
 
 func (e *InvalidMemberReferenceError) Error() string {
-	expected, actual := sema.ErrorMessageExpectedActualTypes(
+	expected, actual := ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
 	)
@@ -754,8 +754,8 @@ func (e *UseBeforeInitializationError) SetLocationRange(locationRange LocationRa
 
 // MemberAccessTypeError
 type MemberAccessTypeError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -765,11 +765,12 @@ var _ HasLocationRange = &MemberAccessTypeError{}
 func (*MemberAccessTypeError) IsInternalError() {}
 
 func (e *MemberAccessTypeError) Error() string {
+	expected, actual := ErrorMessageExpectedActualTypes(e.ExpectedType, e.ActualType)
 	return fmt.Sprintf(
 		"%s invalid member access: expected `%s`, got `%s`",
 		errors.InternalErrorMessagePrefix,
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
@@ -809,7 +810,7 @@ func (e *ValueTransferTypeError) SetLocationRange(locationRange LocationRange) {
 
 // UnexpectedMappedEntitlementError
 type UnexpectedMappedEntitlementError struct {
-	Type sema.Type
+	Type StaticType
 	LocationRange
 }
 
@@ -822,7 +823,7 @@ func (e *UnexpectedMappedEntitlementError) Error() string {
 	return fmt.Sprintf(
 		"%s invalid transfer of value: found an unexpected runtime mapped entitlement `%s`",
 		errors.InternalErrorMessagePrefix,
-		e.Type.QualifiedString(),
+		e.Type.ID(),
 	)
 }
 
@@ -1307,7 +1308,7 @@ func (e *NestedReferenceError) SetLocationRange(locationRange LocationRange) {
 
 // NonOptionalReferenceToNilError
 type NonOptionalReferenceToNilError struct {
-	ReferenceType sema.Type
+	ReferenceType StaticType
 	LocationRange
 }
 
@@ -1354,7 +1355,7 @@ func (e *InclusiveRangeConstructionError) SetLocationRange(locationRange Locatio
 // InvalidCapabilityIssueTypeError
 type InvalidCapabilityIssueTypeError struct {
 	ExpectedTypeDescription string
-	ActualType              sema.Type
+	ActualType              StaticType
 	LocationRange
 }
 
@@ -1367,7 +1368,7 @@ func (e *InvalidCapabilityIssueTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid type: expected %s, got `%s`",
 		e.ExpectedTypeDescription,
-		e.ActualType.QualifiedString(),
+		e.ActualType.String(),
 	)
 }
 
@@ -1521,4 +1522,22 @@ func (e *StoredValueTypeMismatchError) Error() string {
 
 func (e *StoredValueTypeMismatchError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
+}
+
+func ErrorMessageExpectedActualTypes(
+	expectedType StaticType,
+	actualType StaticType,
+) (
+	expected string,
+	actual string,
+) {
+	expected = expectedType.String()
+	actual = actualType.String()
+
+	if expected == actual {
+		expected = string(expectedType.ID())
+		actual = string(actualType.ID())
+	}
+
+	return
 }

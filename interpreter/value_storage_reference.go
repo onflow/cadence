@@ -29,7 +29,7 @@ import (
 
 // StorageReferenceValue
 type StorageReferenceValue struct {
-	BorrowedType         sema.Type
+	BorrowedType         StaticType
 	TargetPath           PathValue
 	TargetStorageAddress common.Address
 	Authorization        Authorization
@@ -48,7 +48,7 @@ func NewUnmeteredStorageReferenceValue(
 	authorization Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
-	borrowedType sema.Type,
+	borrowedType StaticType,
 ) *StorageReferenceValue {
 	return &StorageReferenceValue{
 		Authorization:        authorization,
@@ -63,7 +63,7 @@ func NewStorageReferenceValue(
 	authorization Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
-	borrowedType sema.Type,
+	borrowedType StaticType,
 ) *StorageReferenceValue {
 	common.UseMemory(memoryGauge, common.StorageReferenceValueMemoryUsage)
 	return NewUnmeteredStorageReferenceValue(
@@ -140,11 +140,11 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 	if v.BorrowedType != nil {
 		staticType := referenced.StaticType(context)
 
-		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
+		if !IsSubType(context, staticType, v.BorrowedType) {
 			semaType := context.SemaTypeFromStaticType(staticType)
 
 			return nil, &StoredValueTypeMismatchError{
-				ExpectedType: v.BorrowedType,
+				ExpectedType: context.SemaTypeFromStaticType(v.BorrowedType),
 				ActualType:   semaType,
 			}
 		}
@@ -346,7 +346,7 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 
 	staticType := self.StaticType(context)
 
-	if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
+	if !IsSubType(context, staticType, v.BorrowedType) {
 		return false
 	}
 
@@ -462,7 +462,7 @@ func forEachReference(
 	)
 }
 
-func (v *StorageReferenceValue) BorrowType() sema.Type {
+func (v *StorageReferenceValue) BorrowType() StaticType {
 	return v.BorrowedType
 }
 

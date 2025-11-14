@@ -342,6 +342,10 @@ func (t InclusiveRangeStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
+	if t.ElementType == nil {
+		return otherRangeType.ElementType == nil
+	}
+
 	return t.ElementType.Equal(otherRangeType.ElementType)
 }
 
@@ -951,8 +955,12 @@ var _ ParameterizedStaticType = &CapabilityStaticType{}
 func NewCapabilityStaticType(
 	memoryGauge common.MemoryGauge,
 	borrowType StaticType,
-) *CapabilityStaticType {
+) StaticType {
 	common.UseMemory(memoryGauge, common.CapabilityStaticTypeMemoryUsage)
+
+	if borrowType == nil {
+		return PrimitiveStaticTypeCapability
+	}
 
 	return &CapabilityStaticType{
 		BorrowType: borrowType,
@@ -1260,7 +1268,7 @@ func ConvertStaticAuthorizationToSemaAccess(
 		return sema.NewEntitlementMapAccess(entitlement), nil
 
 	case EntitlementSetAuthorization:
-		var entitlements []*sema.EntitlementType
+		entitlements := make([]*sema.EntitlementType, 0, auth.Entitlements.Len())
 		err := auth.Entitlements.ForeachWithError(func(id common.TypeID, value struct{}) error {
 			entitlement, err := handler.GetEntitlementType(id)
 			if err != nil {
