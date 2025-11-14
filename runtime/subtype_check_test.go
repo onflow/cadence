@@ -21,12 +21,12 @@ package runtime
 import (
 	"testing"
 
-	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 )
 
 var location = common.NewStringLocation(nil, "test")

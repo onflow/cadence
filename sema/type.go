@@ -7882,8 +7882,8 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 				// `Us` and `Ws` do *not* have to be subsets:
 				// The owner may freely restrict and unrestrict.
 
-					return intersectionSubType.Equal(intersectionSuperType)
-				}
+				return intersectionSubType.Equal(intersectionSuperType)
+			}
 
 		case *CompositeType:
 			// A type `T`
