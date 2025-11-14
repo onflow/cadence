@@ -378,11 +378,15 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 	remainingNodes := nodes[:lastIndex]
 
 	var stmts []dst.Stmt
+	var lastExpr dst.Expr
 
 	for _, node := range remainingNodes {
 		switch node := node.(type) {
 		case dst.Expr:
-			panic("predicate should produce at most one expression")
+			if lastExpr != nil {
+				panic("predicate should produce at most one expression")
+			}
+			lastExpr = node
 		case dst.Stmt:
 			stmts = append(stmts, node)
 		default:
@@ -455,13 +459,6 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	nextPredicate := gen.nestedPredicates.next()
 	nestedNodes := gen.generatePredicate(nextPredicate)
 
-	// `combineAsAnd` indicates whether to combine the nested statement
-	// using an AND operator (or otherwise as OR operator)
-	_, combineAsAnd := nextPredicate.(*AndPredicate)
-	if gen.negate {
-		combineAsAnd = !combineAsAnd
-	}
-
 	// If previous nodes are nil, simply return the nested nodes.
 	if len(prevNodes) == 0 {
 		return nestedNodes
@@ -470,7 +467,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	// If not (both previous nodes and nested nodes exist),
 	// then merge the two set of nodes.
 	// Merging happens via the last statement of the previous nodes.
-	return gen.mergeNestedNodesWithLastNode(prevNodes, nestedNodes, combineAsAnd)
+	return gen.mergeNestedNodesWithLastNode(prevNodes, nestedNodes)
 }
 
 // mergeNestedNodesWithLastNode merges the nested nodes as if they should be nested
@@ -478,7 +475,6 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 func (gen *SubTypeCheckGenerator) mergeNestedNodesWithLastNode(
 	existingNodes []dst.Node,
 	nestedNodes []dst.Node,
-	combineAsAnd bool,
 ) []dst.Node {
 	lastIndex := len(existingNodes) - 1
 	lastNode := existingNodes[lastIndex]
@@ -504,7 +500,6 @@ func (gen *SubTypeCheckGenerator) mergeNestedNodesWithLastNode(
 			lastNode,
 			lastNode.Body,
 			nestedNodes,
-			combineAsAnd,
 		)
 
 	case *dst.SwitchStmt:
@@ -513,11 +508,10 @@ func (gen *SubTypeCheckGenerator) mergeNestedNodesWithLastNode(
 			lastNode,
 			lastNode.Body,
 			nestedNodes,
-			combineAsAnd,
 		)
 
 	case *dst.RangeStmt:
-		stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
+		stmts := gen.mergeNodesAsStatements(nestedNodes)
 		mergedNodes = append(mergedNodes, lastNode)
 		for _, stmt := range stmts {
 			mergedNodes = append(mergedNodes, stmt)
@@ -539,7 +533,6 @@ func (gen *SubTypeCheckGenerator) mergeNestedNodesWithLastNode(
 		mergedNodes = gen.mergeNestedNodesWithLastNode(
 			mergedNodes,
 			nestedNodes,
-			combineAsAnd,
 		)
 
 		// However, if there was no return added during merging, then keep the return, for completeness.
@@ -551,6 +544,7 @@ func (gen *SubTypeCheckGenerator) mergeNestedNodesWithLastNode(
 	default:
 		panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
 	}
+
 	return mergedNodes
 }
 
@@ -578,48 +572,54 @@ func (gen *SubTypeCheckGenerator) mergeNestedNodesWithExpression(
 	// Previous nodes ended with an expression.
 	// Then either merge the nested ones using a:
 	//  - Binary expression: for nested expressions.
-	//  - If statement: for nested statement.
+	//  - If statement: for nested statements.
 
-	var stmts []dst.Stmt
-
-	for _, nestedNode := range nestedNodes {
-		switch nestedNode := nestedNode.(type) {
-		case nil:
-			// Skip empty node.
-			// Ideally shouldn't reach here.
-
-		case dst.Expr:
-			expr = gen.binaryExpression(
-				expr,
-				nestedNode,
-				token.LAND,
+	// The nested nodes can have only one expression.
+	//
+	// Note: it is not possible to generate more than one expression.
+	// TODO: Maybe validate that.
+	if len(nestedNodes) == 1 {
+		onlyExpr, ok := nestedNodes[0].(dst.Expr)
+		if ok {
+			result = append(
+				result,
+				gen.binaryExpression(
+					expr,
+					onlyExpr,
+					token.LAND,
+				),
 			)
-		case dst.Stmt:
-			stmts = append(stmts, nestedNode)
 
-		default:
-			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", expr))
+			return result
 		}
 	}
 
-	if stmts == nil {
-		// Only expressions were generated.
-		result = append(result, expr)
-	} else {
-		// There are both expressions and statements generated.
-		// Convert the conditional-expression into a statement,
-		// by putting them as the condition of an if-statement.
-		ifStmt := mergeUsingIfStatement(expr, stmts)
+	// There are both expressions and statements generated.
+	// Convert the conditional-expression into a statement,
+	// by putting them as the condition of an if-statement.
+	stmts := gen.mergeNodesAsStatements(nestedNodes)
 
-		result = append(
-			result,
-			ifStmt,
-		)
-	}
+	result = append(
+		result,
+		gen.mergeUsingIfStatement(expr, stmts),
+	)
+
 	return result
 }
 
-func mergeUsingIfStatement(expr dst.Expr, stmts []dst.Stmt) *dst.IfStmt {
+func (gen *SubTypeCheckGenerator) mergeUsingIfStatement(expr dst.Expr, stmts []dst.Stmt) *dst.IfStmt {
+	lastStmt := stmts[len(stmts)-1]
+	if _, isReturn := lastStmt.(*dst.ReturnStmt); !isReturn {
+		stmts = append(
+			stmts,
+			&dst.ReturnStmt{
+				Results: []dst.Expr{
+					gen.booleanExpression(false),
+				},
+			},
+		)
+	}
+
 	ifStmt := &dst.IfStmt{
 		Cond: expr,
 		Body: &dst.BlockStmt{
@@ -647,9 +647,8 @@ func (gen *SubTypeCheckGenerator) mergeNestedNodeWithSwitchStatement(
 	switchStmt dst.Stmt,
 	switchStmtBody *dst.BlockStmt,
 	nestedNodes []dst.Node,
-	combineAsAnd bool,
 ) []dst.Node {
-	stmts := gen.mergeNodesAsStatements(nestedNodes, combineAsAnd)
+	stmts := gen.mergeNodesAsStatements(nestedNodes)
 
 	caseClauses := switchStmtBody.List
 	if len(caseClauses) == 0 {
@@ -709,60 +708,24 @@ func (gen *SubTypeCheckGenerator) mergeNestedNodeWithSwitchStatement(
 	return combinedNodes
 }
 
-func (gen *SubTypeCheckGenerator) mergeNodesAsStatements(nodes []dst.Node, combineAsAnd bool) []dst.Stmt {
-	var conditionalExpr dst.Expr
-	var stmts []dst.Stmt
-
-	var operator token.Token
-	if combineAsAnd {
-		operator = token.LAND
-	} else {
-		operator = token.LOR
-	}
+func (gen *SubTypeCheckGenerator) mergeNodesAsStatements(nodes []dst.Node) (result []dst.Stmt) {
+	var lastExpr dst.Expr
 
 	for _, nestedNode := range nodes {
 		switch nestedNode := nestedNode.(type) {
-		case nil:
-			// Skip empty node.
-			// Ideally shouldn't reach here.
-
 		case dst.Expr:
-			if conditionalExpr == nil {
-				conditionalExpr = nestedNode
-				continue
+			if lastExpr != nil {
+				panic("predicate should produce at most one expression")
 			}
-
-			conditionalExpr = gen.binaryExpression(
-				conditionalExpr,
-				nestedNode,
-				operator,
-			)
+			lastExpr = nestedNode
 
 		case dst.Stmt:
-			stmts = append(stmts, nestedNode)
-
-		default:
-			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", nestedNode))
-		}
-	}
-
-	// Only expressions were generated.
-	if stmts == nil {
-		return []dst.Stmt{
-			returnStatementWith(conditionalExpr),
-		}
-	}
-
-	// Both expressions and statements were generated.
-	if conditionalExpr != nil {
-		if combineAsAnd {
-			return []dst.Stmt{
-				mergeUsingIfStatement(conditionalExpr, stmts),
-			}
-		} else {
-			combined := []dst.Stmt{
-				mergeUsingIfStatement(
-					conditionalExpr,
+			// If there has been an expression preceding this statement,
+			// then convert that previous expression into a statement
+			// by putting that expression as a condition of an if-statement.
+			if lastExpr != nil {
+				ifStmt := gen.mergeUsingIfStatement(
+					lastExpr,
 					[]dst.Stmt{
 						&dst.ReturnStmt{
 							Results: []dst.Expr{
@@ -770,17 +733,29 @@ func (gen *SubTypeCheckGenerator) mergeNodesAsStatements(nodes []dst.Node, combi
 							},
 						},
 					},
-				),
+				)
+
+				// Then append the current statement
+				result = append(result, ifStmt)
+
+				// Clear
+				lastExpr = nil
 			}
 
-			// TODO: Does the order matter?
-			combined = append(combined, stmts...)
-			return combined
+			result = append(result, nestedNode)
+
+		default:
+			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", nestedNode))
 		}
 	}
 
-	// Only statements were generated
-	return stmts
+	// If there was still an expression left (i.e: last node is an expression),
+	// then convert it to a statement by putting it in a return statement.
+	if lastExpr != nil {
+		result = append(result, returnStatementWith(lastExpr))
+	}
+
+	return result
 }
 
 func returnStatementWith(returnValue dst.Expr) *dst.ReturnStmt {
@@ -995,22 +970,24 @@ func (gen *SubTypeCheckGenerator) generateOrPredicate(predicates []Predicate) (r
 		gen.nestedPredicates = prevPredicateChain
 	}()
 
-	var exprs []dst.Expr
-	var prevTypeSwitch *dst.TypeSwitchStmt
-	var returnStmt *dst.ReturnStmt
+	var (
+		lastNode       dst.Node
+		prevTypeSwitch *dst.TypeSwitchStmt
+		returnStmt     *dst.ReturnStmt
+	)
 
 	for _, predicate := range predicates {
 		generatedPredicatedNodes := gen.generatePredicate(predicate)
 
-		for _, node := range generatedPredicatedNodes {
-			switch node := node.(type) {
+		for _, currentNode := range generatedPredicatedNodes {
+			switch typedCurrentNode := currentNode.(type) {
 			case *dst.TypeSwitchStmt:
 				if prevTypeSwitch != nil &&
-					reflect.DeepEqual(prevTypeSwitch.Assign, node.Assign) {
-					mergeTypeSwitches(prevTypeSwitch, node)
+					reflect.DeepEqual(prevTypeSwitch.Assign, typedCurrentNode.Assign) {
+					mergeTypeSwitches(prevTypeSwitch, typedCurrentNode)
 				} else {
-					prevTypeSwitch = node
-					result = append(result, node)
+					prevTypeSwitch = typedCurrentNode
+					result = append(result, typedCurrentNode)
 				}
 			case *dst.ReturnStmt:
 				// There can be multiple return statements generated
@@ -1025,52 +1002,72 @@ func (gen *SubTypeCheckGenerator) generateOrPredicate(predicates []Predicate) (r
 					validateReturn(returnStmt)
 				}
 
-				returnStmt = node
+				returnStmt = typedCurrentNode
 			case dst.Stmt:
-				// Add statements as-is, since they are all conditional-statements.
-				result = append(result, node)
+				switch typedLastNode := lastNode.(type) {
+				case dst.Expr:
+					ifStmt := gen.mergeUsingIfStatement(
+						typedLastNode,
+						[]dst.Stmt{
+							&dst.ReturnStmt{
+								Results: []dst.Expr{
+									gen.booleanExpression(true),
+								},
+							},
+						},
+					)
+
+					result[len(result)-1] = ifStmt
+				}
+
+				result = append(result, typedCurrentNode)
+
 			case dst.Expr:
-				exprs = append(exprs, node)
+				switch typedLastNode := lastNode.(type) {
+				case dst.Expr:
+
+					typedCurrentNode.Decorations().Before = dst.NewLine
+
+					// Don't negate again here (i.e: don't use `binaryExpression` method),
+					// since negation is already done before calling this method `generateOrPredicate`.
+
+					existingDecs := typedLastNode.Decorations().Start
+					typedLastNode.Decorations().Start = nil
+
+					currentNode = &dst.BinaryExpr{
+						X:  typedLastNode,
+						Op: token.LOR,
+						Y:  typedCurrentNode,
+						Decs: dst.BinaryExprDecorations{
+							NodeDecs: dst.NodeDecs{
+								Start: existingDecs,
+							},
+						},
+					}
+
+					// We merged it with the last expr. So replace the existing one with the
+					// merged expression, rather than appending.
+					result[len(result)-1] = currentNode
+
+				default:
+					result = append(result, typedCurrentNode)
+				}
+
 			default:
-				panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", node))
+				panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", typedCurrentNode))
 			}
+
+			lastNode = currentNode
 		}
 	}
 
 	// Append the return statement as the last statement.
 	if returnStmt != nil {
-		result = append(result, returnStmt)
-	}
-
-	var binaryExpr dst.Expr
-	for _, expr := range exprs {
-		if binaryExpr == nil {
-			binaryExpr = expr
-			continue
+		if lastExpr, ok := lastNode.(dst.Expr); ok {
+			result = append(result, returnStatementWith(lastExpr))
+		} else {
+			result = append(result, returnStmt)
 		}
-
-		expr.Decorations().Before = dst.NewLine
-
-		// Don't negate again here (i.e: don't use `binaryExpression` method),
-		// since negation is already done before calling this method `generateOrPredicate`.
-
-		existingDecs := binaryExpr.Decorations().Start
-		binaryExpr.Decorations().Start = nil
-
-		binaryExpr = &dst.BinaryExpr{
-			X:  binaryExpr,
-			Op: token.LOR,
-			Y:  expr,
-			Decs: dst.BinaryExprDecorations{
-				NodeDecs: dst.NodeDecs{
-					Start: existingDecs,
-				},
-			},
-		}
-	}
-
-	if binaryExpr != nil {
-		result = append(result, binaryExpr)
 	}
 
 	return result

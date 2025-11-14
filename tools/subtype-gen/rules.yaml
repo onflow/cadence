@@ -250,9 +250,6 @@ rules:
                 source: sub
                 type: CompositeType
             - never
-        - isParameterizedSubtype:
-            sub: sub
-            super: super
 
   - super: InterfaceType
     predicate:
@@ -281,9 +278,6 @@ rules:
           - setContains:
               set: sub.EffectiveInterfaceConformanceSet
               element: super
-        - isParameterizedSubtype:
-            sub: sub
-            super: super
 
   - super: IntersectionType
     predicate:
@@ -389,6 +383,15 @@ rules:
                     super: super
                     sub: sub
 
+        # A type `T`
+        # is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+        # not statically.
+        - not:
+            equals:
+              source: sub
+              target:
+                oneOf: [AnyType, AnyStructType, AnyResourceType]
+
         - and:
           # An intersection type `T{Us}`
           # is a subtype of an intersection type `V{Ws}`:
@@ -424,19 +427,6 @@ rules:
           - subtype:
               super: super.LegacyType
               sub: sub
-
-        # A type `T`
-        # is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
-        # not statically.
-        - not:
-            equals:
-              source: sub
-              target:
-                oneOf: [AnyType, AnyStructType, AnyResourceType]
-
-        - isParameterizedSubtype:
-            sub: sub
-            super: super
 
   - super: FunctionType
     predicate:
@@ -488,34 +478,30 @@ rules:
 
   - super: ParameterizedType
     predicate:
-      or:
-        - and:
-          - not:
-              equals:
-                source: super.BaseType
-                target: nil
-          - mustType:
-              source: sub
-              type: ParameterizedType
-          - not:
-              equals:
-                source: sub.BaseType
-                target: nil
+      and:
+        - mustType:
+            source: sub
+            type: ParameterizedType
+        - not:
+            equals:
+              source: sub.BaseType
+              target: nil
+        - or:
+          - and:
+            - not:
+                equals:
+                  source: super.BaseType
+                  target: nil
+            - subtype:
+                super: super.BaseType
+                sub: sub.BaseType
+            - forAll:
+                source: sub.TypeArguments
+                target: super.TypeArguments
+                predicate:
+                  subtype:
+                    sub: source
+                    super: target
           - subtype:
-              super: super.BaseType
               sub: sub.BaseType
-          - forAll:
-              source: sub.TypeArguments
-              target: super.TypeArguments
-              predicate:
-                subtype:
-                  sub: source
-                  super: target
-        - isParameterizedSubtype:
-            sub: sub
-            super: super
-
-  - predicate:
-      isParameterizedSubtype:
-        sub: sub
-        super: super
+              super: super
