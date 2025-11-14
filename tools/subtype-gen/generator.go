@@ -1057,10 +1057,19 @@ func (gen *SubTypeCheckGenerator) generateOrPredicate(predicates []Predicate) (r
 
 		// Don't negate again here (i.e: don't use `binaryExpression` method),
 		// since negation is already done before calling this method `generateOrPredicate`.
+
+		existingDecs := binaryExpr.Decorations().Start
+		binaryExpr.Decorations().Start = nil
+
 		binaryExpr = &dst.BinaryExpr{
 			X:  binaryExpr,
 			Op: token.LOR,
 			Y:  expr,
+			Decs: dst.BinaryExprDecorations{
+				NodeDecs: dst.NodeDecs{
+					Start: existingDecs,
+				},
+			},
 		}
 	}
 
@@ -1079,19 +1088,33 @@ func mergeTypeSwitches(existingTypeSwitch, newTypeSwitch *dst.TypeSwitchStmt) {
 }
 
 func (gen *SubTypeCheckGenerator) isAttachmentPredicate(predicate IsAttachmentPredicate) []dst.Node {
+	args := gen.extraArguments()
+
+	args = append(
+		args,
+		gen.expressionIgnoreNegation(predicate.Expression),
+	)
+
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("isAttachmentType"),
-			gen.expressionIgnoreNegation(predicate.Expression),
+			args...,
 		),
 	}
 }
 
 func (gen *SubTypeCheckGenerator) isResourcePredicate(predicate IsResourcePredicate) []dst.Node {
+	args := gen.extraArguments()
+
+	args = append(
+		args,
+		gen.expressionIgnoreNegation(predicate.Expression),
+	)
+
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("IsResourceType"),
-			gen.expressionIgnoreNegation(predicate.Expression),
+			args...,
 		),
 	}
 }
@@ -1352,10 +1375,13 @@ func (gen *SubTypeCheckGenerator) parseCaseCondition(superType Type) dst.Expr {
 }
 
 func (gen *SubTypeCheckGenerator) permitsPredicate(permits PermitsPredicate) []dst.Node {
-	args := []dst.Expr{
+	args := gen.extraArguments()
+
+	args = append(
+		args,
 		gen.expressionIgnoreNegation(permits.Super),
 		gen.expressionIgnoreNegation(permits.Sub),
-	}
+	)
 
 	return []dst.Node{
 		gen.callExpression(
@@ -1544,10 +1570,13 @@ func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node
 }
 
 func (gen *SubTypeCheckGenerator) isIntersectionSubset(p IsIntersectionSubsetPredicate) []dst.Node {
-	args := []dst.Expr{
+	args := gen.extraArguments()
+
+	args = append(
+		args,
 		gen.expressionIgnoreNegation(p.Super),
 		gen.expressionIgnoreNegation(p.Sub),
-	}
+	)
 
 	return []dst.Node{
 		gen.callExpression(
@@ -1572,10 +1601,13 @@ func (gen *SubTypeCheckGenerator) returnsCovariantCheck(p ReturnCovariantPredica
 }
 
 func (gen *SubTypeCheckGenerator) isParameterizedSubtype(p IsParameterizedSubtypePredicate) []dst.Node {
-	args := []dst.Expr{
+	args := gen.extraArguments()
+
+	args = append(
+		args,
 		gen.expressionIgnoreNegation(p.Sub),
 		gen.expressionIgnoreNegation(p.Super),
-	}
+	)
 
 	return []dst.Node{
 		gen.callExpression(
