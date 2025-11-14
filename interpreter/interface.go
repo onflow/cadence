@@ -638,7 +638,3 @@ func (NoOpStringContext) SemaTypeFromStaticType(_ StaticType) sema.Type {
 func (NoOpStringContext) SemaAccessFromStaticAuthorization(Authorization) (sema.Access, error) {
 	panic(errors.NewUnreachableError())
 }
-
-func (ctx NoOpStringContext) SemaAccessFromStaticAuthorization(auth Authorization) sema.Access {
-	panic(errors.NewUnreachableError())
-}
