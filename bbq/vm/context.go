@@ -533,18 +533,21 @@ func (c *Context) LocationRange() interpreter.LocationRange {
 	return c.getLocationRange()
 }
 
-func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorization) sema.Access {
+func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorization) (sema.Access, error) {
 	semaAccess, ok := c.semaAccessCache[auth]
 	if ok {
-		return semaAccess
+		return semaAccess, nil
 	}
 
-	semaAccess = interpreter.MustConvertStaticAuthorizationToSemaAccess(c, auth)
+	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c)
+	if err != nil {
+		return nil, err
+	}
 
 	if c.semaAccessCache == nil {
 		c.semaAccessCache = make(map[interpreter.Authorization]sema.Access)
 	}
 	c.semaAccessCache[auth] = semaAccess
 
-	return semaAccess
+	return semaAccess, nil
 }
