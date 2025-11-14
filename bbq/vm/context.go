@@ -468,7 +468,6 @@ func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorizati
 	return semaAccess, nil
 }
 
-
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
 	c.ensureProgramInitialized(contractLocation)
 	return c.ContractValueHandler(c, contractLocation)

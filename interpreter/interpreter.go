@@ -4768,10 +4768,6 @@ func checkValue(
 			referenceType,
 			referenceType,
 		)
-
-	} else {
-		// For all other values, trying to load the type is sufficient.
-		// Here it is only interested in whether the type can be properly loaded.
 	}
 
 	return
