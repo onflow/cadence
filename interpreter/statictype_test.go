@@ -1621,6 +1621,11 @@ func TestStaticTypeConversion(t *testing.T) {
 				ElementType: PrimitiveStaticTypeInt,
 			},
 		},
+		{
+			name:       "Storable",
+			semaType:   sema.StorableType,
+			staticType: PrimitiveStaticTypeStorable,
+		},
 		// Deprecated primitive static types, only exist for migration purposes
 		{
 			name:           "AuthAccount",

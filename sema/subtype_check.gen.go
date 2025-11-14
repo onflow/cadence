@@ -19,7 +19,7 @@
 
 package sema
 
-func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
+func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 	if subType == NeverType {
 		return true
 	}
@@ -51,7 +51,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			IsSubType(subType, CapabilityPathType)
 
 	case StorableType:
-		return subType.IsStorable(map[*Member]bool{})
+		return IsStorableType(subType)
 
 	case CapabilityPathType:
 		switch subType {
@@ -211,7 +211,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 			case *CompositeType:
-				return typedSubTypeLegacyType == typedSuperType
+				return deepEquals(typedSubTypeLegacyType, typedSuperType)
 			}
 
 			return false
@@ -332,7 +332,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
 				// `Us` and `Ws` do *not* have to be subsets:
 				// The owner may freely restrict and unrestrict.
-				return typedSubTypeLegacyType == typedSuperType.LegacyType
+				return deepEquals(typedSubTypeLegacyType, typedSuperType.LegacyType)
 			}
 
 			return false

@@ -242,7 +242,7 @@ rules:
           - mustType:
               source: sub.LegacyType
               type: CompositeType
-          - equals:
+          - deepEquals:
               source: sub.LegacyType
               target: super
         - and:
@@ -410,7 +410,7 @@ rules:
           # When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
           # `Us` and `Ws` do *not* have to be subsets:
           # The owner may freely restrict and unrestrict.
-          - equals:
+          - deepEquals:
               source: sub.LegacyType
               target: super.LegacyType
 

@@ -892,22 +892,18 @@ func (gen *SubTypeCheckGenerator) isHashableStructPredicate(predicate IsHashable
 }
 
 func (gen *SubTypeCheckGenerator) isStorablePredicate(predicate IsStorablePredicate) []dst.Node {
-	function := &dst.SelectorExpr{
-		X:   gen.expressionIgnoreNegation(predicate.Expression),
-		Sel: dst.NewIdent("IsStorable"),
-	}
+	args := gen.extraArguments()
 
-	argument := &dst.CompositeLit{
-		Type: &dst.MapType{
-			Key: &dst.StarExpr{
-				X: dst.NewIdent("Member"),
-			},
-			Value: dst.NewIdent("bool"),
-		},
-	}
+	args = append(
+		args,
+		gen.expressionIgnoreNegation(predicate.Expression),
+	)
 
 	return []dst.Node{
-		gen.callExpression(function, argument),
+		gen.callExpression(
+			dst.NewIdent("IsStorableType"),
+			args...,
+		),
 	}
 }
 
