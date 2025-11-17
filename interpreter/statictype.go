@@ -958,10 +958,6 @@ func NewCapabilityStaticType(
 ) StaticType {
 	common.UseMemory(memoryGauge, common.CapabilityStaticTypeMemoryUsage)
 
-	if borrowType == nil {
-		return PrimitiveStaticTypeCapability
-	}
-
 	return &CapabilityStaticType{
 		BorrowType: borrowType,
 	}
@@ -1026,7 +1022,7 @@ func (t *CapabilityStaticType) BaseType() StaticType {
 		return nil
 	}
 
-	return PrimitiveStaticTypeCapability
+	return &CapabilityStaticType{}
 }
 
 func (t *CapabilityStaticType) TypeArguments() []StaticType {

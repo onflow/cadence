@@ -20,6 +20,7 @@ package commons
 
 import (
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -134,7 +135,7 @@ func StaticTypeQualifier(typ interpreter.StaticType) string {
 		// TODO: Revisit. Probably this is not needed here?
 		return StaticTypeQualifier(typ.Types[0])
 	case *interpreter.CapabilityStaticType:
-		return interpreter.PrimitiveStaticTypeCapability.String()
+		return TypeQualifierCapability
 	case *interpreter.InclusiveRangeStaticType:
 		return TypeQualifierInclusiveRange
 
