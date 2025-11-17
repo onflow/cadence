@@ -219,7 +219,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return false
 		}
 
-		return IsParameterizedSubType(subType, typedSuperType)
+		return false
 
 	case *InterfaceType:
 		switch typedSubType := subType.(type) {
@@ -232,7 +232,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
 		}
 
-		return IsParameterizedSubType(subType, typedSuperType)
+		return false
 
 	case *IntersectionType:
 		switch typedSuperType.LegacyType {
@@ -311,6 +311,16 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return false
 		}
 
+		// A type `T`
+		// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+		// not statically.
+		switch subType {
+		case AnyType,
+			AnyStructType,
+			AnyResourceType:
+			return false
+		}
+
 		// An intersection type `T{Us}`
 		// is a subtype of an intersection type `V{Ws}`:
 		switch typedSubType := subType.(type) {
@@ -340,17 +350,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return IsSubType(typedSubType, typedSuperType.LegacyType)
 		}
 
-		// A type `T`
-		// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
-		// not statically.
-		switch subType {
-		case AnyType,
-			AnyStructType,
-			AnyResourceType:
-			return false
-		}
-
-		return IsParameterizedSubType(subType, typedSuperType)
+		return false
 
 	case *FunctionType:
 		switch typedSubType := subType.(type) {
@@ -408,10 +408,10 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		return false
 
 	case ParameterizedType:
-		if typedSuperType.BaseType() != nil {
-			switch typedSubType := subType.(type) {
-			case ParameterizedType:
-				if typedSubType.BaseType() != nil {
+		switch typedSubType := subType.(type) {
+		case ParameterizedType:
+			if typedSubType.BaseType() != nil {
+				if typedSuperType.BaseType() != nil {
 					if IsSubType(typedSubType.BaseType(), typedSuperType.BaseType()) {
 						typedSubTypeTypeArguments := typedSubType.TypeArguments()
 						typedSuperTypeTypeArguments := typedSuperType.TypeArguments()
@@ -429,16 +429,17 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 						return true
 					}
 
+					return false
 				}
 
+				return IsSubType(typedSubType.BaseType(), typedSuperType)
 			}
 
-			return false
 		}
 
-		return IsParameterizedSubType(subType, typedSuperType)
+		return false
 
 	}
 
-	return IsParameterizedSubType(subType, superType)
+	return false
 }
