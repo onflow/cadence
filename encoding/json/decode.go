@@ -1496,7 +1496,7 @@ var simpleTypes = func() map[string]cadence.Type {
 }()
 
 func canEncodeAsSimpleType(primitiveType cadence.PrimitiveType) bool {
-	return primitiveType != cadence.PrimitiveType(interpreter.PrimitiveStaticTypeCapability)
+	return primitiveType != cadence.PrimitiveType(interpreter.PrimitiveStaticTypeCapability) //nolint:staticcheck
 }
 
 func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence.Type {

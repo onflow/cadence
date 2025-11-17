@@ -9730,6 +9730,8 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 			switch primitiveStaticType {
 			case interpreter.PrimitiveStaticTypeAny,
+				// Capability is converted to CapabilityStaticType
+				interpreter.PrimitiveStaticTypeCapability, //nolint:staticcheck
 				interpreter.PrimitiveStaticTypeUnknown,
 				interpreter.PrimitiveStaticType_Count:
 				continue

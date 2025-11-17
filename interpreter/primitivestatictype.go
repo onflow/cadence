@@ -164,6 +164,7 @@ const (
 	// Storage
 
 	PrimitiveStaticTypePath
+	// Deprecated: PrimitiveStaticTypeCapability only exists for encoding/decoding purposes.
 	PrimitiveStaticTypeCapability
 	PrimitiveStaticTypeStoragePath
 	PrimitiveStaticTypeCapabilityPath
@@ -960,16 +961,9 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeAccountMapping
 	}
 
-	switch t := t.(type) {
+	switch t.(type) {
 	case *sema.AddressType:
 		typ = PrimitiveStaticTypeAddress
-
-	// Storage
-	case *sema.CapabilityType:
-		// Only convert unparameterized Capability type
-		if t.BorrowType == nil {
-			typ = PrimitiveStaticTypeCapability
-		}
 	}
 
 	if typ == PrimitiveStaticTypeUnknown {
