@@ -1046,12 +1046,10 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		return ConvertSemaReferenceTypeToStaticReferenceType(memoryGauge, t)
 
 	case *sema.CapabilityType:
-		if t.BorrowType == nil {
-			// Unparameterized Capability type should have been
-			// converted to primitive static type earlier
-			panic(errors.NewUnreachableError())
+		var borrowType StaticType
+		if t.BorrowType != nil {
+			borrowType = ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		}
-		borrowType := ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		return NewCapabilityStaticType(memoryGauge, borrowType)
 
 	case *sema.InclusiveRangeType:
