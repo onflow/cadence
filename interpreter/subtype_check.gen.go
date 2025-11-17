@@ -221,7 +221,7 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			return false
 		}
 
-		return IsParameterizedSubType(typeConverter, subType, typedSuperType)
+		return false
 
 	case *InterfaceStaticType:
 		switch typedSubType := subType.(type) {
@@ -240,7 +240,7 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			return typedSemaSubType.EffectiveInterfaceConformanceSet().Contains(typedSemaSuperType)
 		}
 
-		return IsParameterizedSubType(typeConverter, subType, typedSuperType)
+		return false
 
 	case *IntersectionStaticType:
 		switch typedSuperType.LegacyType {
@@ -319,6 +319,16 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			return false
 		}
 
+		// A type `T`
+		// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+		// not statically.
+		switch subType {
+		case PrimitiveStaticTypeAny,
+			PrimitiveStaticTypeAnyStruct,
+			PrimitiveStaticTypeAnyResource:
+			return false
+		}
+
 		// An intersection type `T{Us}`
 		// is a subtype of an intersection type `V{Ws}`:
 		switch typedSubType := subType.(type) {
@@ -348,17 +358,7 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			return IsSubType(typeConverter, typedSubType, typedSuperType.LegacyType)
 		}
 
-		// A type `T`
-		// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
-		// not statically.
-		switch subType {
-		case PrimitiveStaticTypeAny,
-			PrimitiveStaticTypeAnyStruct,
-			PrimitiveStaticTypeAnyResource:
-			return false
-		}
-
-		return IsParameterizedSubType(typeConverter, subType, typedSuperType)
+		return false
 
 	case FunctionStaticType:
 		switch typedSubType := subType.(type) {
@@ -416,10 +416,10 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		return false
 
 	case ParameterizedStaticType:
-		if typedSuperType.BaseType() != nil {
-			switch typedSubType := subType.(type) {
-			case ParameterizedStaticType:
-				if typedSubType.BaseType() != nil {
+		switch typedSubType := subType.(type) {
+		case ParameterizedStaticType:
+			if typedSubType.BaseType() != nil {
+				if typedSuperType.BaseType() != nil {
 					if IsSubType(typeConverter, typedSubType.BaseType(), typedSuperType.BaseType()) {
 						typedSubTypeTypeArguments := typedSubType.TypeArguments()
 						typedSuperTypeTypeArguments := typedSuperType.TypeArguments()
@@ -437,16 +437,17 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 						return true
 					}
 
+					return false
 				}
 
+				return IsSubType(typeConverter, typedSubType.BaseType(), typedSuperType)
 			}
 
-			return false
 		}
 
-		return IsParameterizedSubType(typeConverter, subType, typedSuperType)
+		return false
 
 	}
 
-	return IsParameterizedSubType(typeConverter, subType, superType)
+	return false
 }
