@@ -1219,11 +1219,6 @@ func TestStaticTypeConversion(t *testing.T) {
 			staticType: PrimitiveStaticTypePath,
 		},
 		{
-			name:       "Capability",
-			semaType:   &sema.CapabilityType{},
-			staticType: PrimitiveStaticTypeCapability,
-		},
-		{
 			name:       "StoragePath",
 			semaType:   sema.StoragePathType,
 			staticType: PrimitiveStaticTypeStoragePath,
@@ -1482,9 +1477,15 @@ func TestStaticTypeConversion(t *testing.T) {
 		},
 
 		{
+			name:           "Capability",
+			staticType:     PrimitiveStaticTypeCapability,
+			semaType:       &sema.CapabilityType{},
+			noSemaToStatic: true,
+		},
+		{
 			name:       "Unparameterized Capability",
 			semaType:   &sema.CapabilityType{},
-			staticType: PrimitiveStaticTypeCapability,
+			staticType: &CapabilityStaticType{},
 		},
 		{
 			name: "Parameterized  Capability",
