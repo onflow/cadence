@@ -38,6 +38,9 @@ type PrimitiveStaticType uint
 
 var _ StaticType = PrimitiveStaticType(0)
 
+// Some simple types are conforming types.
+var _ ConformingStaticType = PrimitiveStaticType(0)
+
 const primitiveStaticTypePrefix = "PrimitiveStaticType"
 
 var primitiveStaticTypeConstantLength = len(primitiveStaticTypePrefix) + 2 // + 2 for parentheses
@@ -83,7 +86,7 @@ const (
 	PrimitiveStaticTypeAnyResourceAttachment
 	PrimitiveStaticTypeAnyStructAttachment
 	PrimitiveStaticTypeHashableStruct
-	_
+	PrimitiveStaticTypeStorable
 	_
 	_
 
@@ -261,6 +264,8 @@ const (
 
 func (PrimitiveStaticType) isStaticType() {}
 
+func (PrimitiveStaticType) isConformingStaticType() {}
+
 func (t PrimitiveStaticType) elementSize() uint {
 	switch t {
 	case
@@ -269,7 +274,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeAny,
 		PrimitiveStaticTypeAnyStructAttachment,
 		PrimitiveStaticTypeAnyResourceAttachment,
-		PrimitiveStaticTypeHashableStruct:
+		PrimitiveStaticTypeHashableStruct,
+		PrimitiveStaticTypeStorable:
 		return UnknownElementSize
 
 	case PrimitiveStaticTypeVoid:
@@ -506,6 +512,9 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 
 	case PrimitiveStaticTypeBlock:
 		return sema.BlockType
+
+	case PrimitiveStaticTypeStorable:
+		return sema.StorableType
 
 	// Number
 
@@ -877,6 +886,8 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeStorageCapabilityController
 	case sema.AccountCapabilityControllerType:
 		typ = PrimitiveStaticTypeAccountCapabilityController
+	case sema.StorableType:
+		typ = PrimitiveStaticTypeStorable
 
 	case sema.AccountType:
 		typ = PrimitiveStaticTypeAccount

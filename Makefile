@@ -52,7 +52,7 @@ build-commands: ./cmd/parse/parse ./cmd/parse/parse.wasm ./cmd/check/check ./cmd
 build-tools: build-analysis build-get-contracts build-compatibility-check
 
 .PHONY: test-tools
-test-tools: test-analysis test-compatibility-check
+test-tools: test-analysis test-compatibility-check test-subtype-gen
 
 ## Analysis tool
 
@@ -79,6 +79,12 @@ build-compatibility-check:
 .PHONY: test-compatibility-check
 test-compatibility-check:
 	(cd ./tools/compatibility-check && go test .)
+
+## Subtyping generator tool
+
+.PHONY: test-subtype-gen
+test-subtype-gen:
+	(cd ./tools/subtype-gen && go test .)
 
 # Testing
 

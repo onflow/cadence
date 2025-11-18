@@ -8099,7 +8099,7 @@ func TestArrayFunctions(t *testing.T) {
 			nil,
 			interpreter.TypeValue{
 				Type: interpreter.FunctionStaticType{
-					Type: sema.ArrayAppendFunctionType(sema.UInt8Type),
+					FunctionType: sema.ArrayAppendFunctionType(sema.UInt8Type),
 				},
 			},
 			result,
@@ -8126,7 +8126,7 @@ func TestArrayFunctions(t *testing.T) {
 			nil,
 			interpreter.TypeValue{
 				Type: interpreter.FunctionStaticType{
-					Type: sema.ArrayReverseFunctionType(
+					FunctionType: sema.ArrayReverseFunctionType(
 						sema.NewVariableSizedType(
 							nil,
 							sema.UInt8Type,
@@ -8158,7 +8158,7 @@ func TestArrayFunctions(t *testing.T) {
 			nil,
 			interpreter.TypeValue{
 				Type: interpreter.FunctionStaticType{
-					Type: sema.ArrayReverseFunctionType(
+					FunctionType: sema.ArrayReverseFunctionType(
 						sema.NewConstantSizedType(
 							nil,
 							sema.UInt8Type,

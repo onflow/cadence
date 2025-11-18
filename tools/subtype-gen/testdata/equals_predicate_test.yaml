@@ -1,0 +1,7 @@
+rules:
+  - super: CapabilityPathType
+    predicate:
+      equals:
+        source: sub
+        target: PrivatePathType
+

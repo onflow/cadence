@@ -1605,7 +1605,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:     "Function",
 			semaType: testFunctionType,
 			staticType: FunctionStaticType{
-				Type: testFunctionType,
+				FunctionType: testFunctionType,
 			},
 		},
 		{
@@ -1621,6 +1621,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			staticType: InclusiveRangeStaticType{
 				ElementType: PrimitiveStaticTypeInt,
 			},
+		},
+		{
+			name:       "Storable",
+			semaType:   sema.StorableType,
+			staticType: PrimitiveStaticTypeStorable,
 		},
 		// Deprecated primitive static types, only exist for migration purposes
 		{

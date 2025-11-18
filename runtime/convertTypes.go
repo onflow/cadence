@@ -172,6 +172,8 @@ func ExportMeteredType(
 			return cadence.AccountType
 		case sema.DeployedContractType:
 			return cadence.DeployedContractType
+		case sema.StorableType:
+			return cadence.StorableType
 
 		case sema.MutateType:
 			return cadence.MutateType

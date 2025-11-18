@@ -7491,7 +7491,7 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
-	return checkSubTypeWithoutEquality(subType, superType)
+	return CheckSubTypeWithoutEquality(subType, superType)
 }
 
 // IsSameTypeKind determines if the given subtype belongs to the
@@ -7519,16 +7519,16 @@ func IsProperSubType(subType Type, superType Type) bool {
 		return false
 	}
 
-	return checkSubTypeWithoutEquality(subType, superType)
+	return CheckSubTypeWithoutEquality(subType, superType)
 }
 
-// checkSubTypeWithoutEquality determines if the given subtype
+// CheckSubTypeWithoutEquality determines if the given subtype
 // is a subtype of the given supertype, BUT it does NOT check
 // the equality of the two types, so does NOT return a specific
 // value when the two types are equal or are not.
 //
 // Consider using IsSubType or IsProperSubType
-func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
+func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	if subType == NeverType {
 		return true
@@ -7719,60 +7719,17 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// whereas, return types be *covariant/subtypes*. Since type parameters can be used in
 		// both parameters and return types, inorder to satisfies both above conditions,
 		// bound type of type parameters can only be strictly equal, but not subtypes/supertypes of one another.
-		if len(typedSubType.TypeParameters) != len(typedSuperType.TypeParameters) {
-			return false
-		}
 
-		for i, subTypeParameter := range typedSubType.TypeParameters {
-			superTypeParameter := typedSuperType.TypeParameters[i]
-			if !subTypeParameter.TypeBoundEqual(superTypeParameter.TypeBound) {
-				return false
-			}
-		}
+		return AreTypeParamsEqual(typedSubType, typedSuperType) &&
 
-		// Parameter arity must be equivalent.
-		if len(typedSubType.Parameters) != len(typedSuperType.Parameters) {
-			return false
-		}
+			// Functions are contravariant in their parameter types.
+			AreParamsContravariant(typedSubType, typedSuperType) &&
 
-		if !typedSubType.ArityEqual(typedSuperType.Arity) {
-			return false
-		}
+			// Functions are covariant in their return type.
+			AreReturnsCovariant(typedSubType, typedSuperType) &&
 
-		// Functions are contravariant in their parameter types
-		for i, subParameter := range typedSubType.Parameters {
-			superParameter := typedSuperType.Parameters[i]
-			if !IsSubType(
-				superParameter.TypeAnnotation.Type,
-				subParameter.TypeAnnotation.Type,
-			) {
-				return false
-			}
-		}
-
-		// Functions are covariant in their return type
-		if typedSubType.ReturnTypeAnnotation.Type != nil {
-			if typedSuperType.ReturnTypeAnnotation.Type == nil {
-				return false
-			}
-
-			if !IsSubType(
-				typedSubType.ReturnTypeAnnotation.Type,
-				typedSuperType.ReturnTypeAnnotation.Type,
-			) {
-				return false
-			}
-		} else if typedSuperType.ReturnTypeAnnotation.Type != nil {
-			return false
-		}
-
-		// Constructors?
-
-		if typedSubType.IsConstructor != typedSuperType.IsConstructor {
-			return false
-		}
-
-		return true
+			// Constructors?
+			typedSubType.IsConstructor == typedSuperType.IsConstructor
 
 	case *IntersectionType:
 
@@ -7925,7 +7882,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				// `Us` and `Ws` do *not* have to be subsets:
 				// The owner may freely restrict and unrestrict.
 
-				return intersectionSubType == intersectionSuperType
+				return intersectionSubType.Equal(intersectionSuperType)
 			}
 
 		case *CompositeType:
@@ -7967,7 +7924,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				//
 				// The owner may freely unrestrict.
 
-				return intersectionSubType == typedSuperType
+				return intersectionSubType.Equal(typedSuperType)
 			}
 
 			return false
@@ -8032,21 +7989,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					return false
 				}
 
-				subTypeTypeArguments := typedSubType.TypeArguments()
-				superTypeTypeArguments := typedSuperType.TypeArguments()
-
-				if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
-					return false
-				}
-
-				for i, superTypeTypeArgument := range superTypeTypeArguments {
-					subTypeTypeArgument := subTypeTypeArguments[i]
-					if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
-						return false
-					}
-				}
-
-				return true
+				return AreTypeArgumentsEqual(typedSubType, typedSuperType)
 			}
 		} else {
 			// TODO: enforce type arguments, remove this rule

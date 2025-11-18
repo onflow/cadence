@@ -152,7 +152,7 @@ func TestCompileRecursionFib(t *testing.T) {
 		t,
 		[]bbq.StaticType{
 			interpreter.FunctionStaticType{
-				Type: sema.NewSimpleFunctionType(
+				FunctionType: sema.NewSimpleFunctionType(
 					sema.FunctionPurityImpure,
 					[]sema.Parameter{
 						{
@@ -319,7 +319,7 @@ func TestCompileImperativeFib(t *testing.T) {
 		t,
 		[]bbq.StaticType{
 			interpreter.FunctionStaticType{
-				Type: sema.NewSimpleFunctionType(
+				FunctionType: sema.NewSimpleFunctionType(
 					sema.FunctionPurityImpure,
 					[]sema.Parameter{
 						{
@@ -6685,7 +6685,7 @@ func TestCompileArgument(t *testing.T) {
 		t,
 		[]bbq.StaticType{
 			interpreter.FunctionStaticType{
-				Type: sema.NewSimpleFunctionType(
+				FunctionType: sema.NewSimpleFunctionType(
 					sema.FunctionPurityImpure,
 					[]sema.Parameter{
 						{
@@ -6700,7 +6700,7 @@ func TestCompileArgument(t *testing.T) {
 				),
 			},
 			interpreter.FunctionStaticType{
-				Type: sema.NewSimpleFunctionType(
+				FunctionType: sema.NewSimpleFunctionType(
 					sema.FunctionPurityImpure,
 					[]sema.Parameter{},
 					sema.VoidTypeAnnotation,
