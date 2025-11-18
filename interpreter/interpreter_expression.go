@@ -1256,6 +1256,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
 	expectedType := castingExpressionTypes.TargetType
+	expectedStaticType := ConvertSemaToStaticType(interpreter, expectedType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1275,9 +1276,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// otherwise dynamic cast now always unboxes optionals
 			value = Unbox(value)
 		}
-		valueSemaType := MustSemaTypeOfValue(value, interpreter)
-		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
-		isSubType := IsSubTypeOfSemaType(interpreter, valueStaticType, expectedType)
+
+		valueStaticType := value.StaticType(interpreter)
+		isSubType := IsSubType(interpreter, valueStaticType, expectedStaticType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
@@ -1288,8 +1289,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		case ast.OperationForceCast:
 			if !isSubType {
 				panic(&ForceCastTypeMismatchError{
-					ExpectedType: expectedType,
-					ActualType:   valueSemaType,
+					ExpectedType: expectedStaticType,
+					ActualType:   valueStaticType,
 				})
 			}
 
@@ -1298,7 +1299,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		value = ConvertAndBox(interpreter, value, valueSemaType, expectedType)
+		value = ConvertAndBoxToStaticType(interpreter, value, valueStaticType, expectedStaticType)
 
 		if expression.Operation == ast.OperationFailableCast {
 			// Failable casting is a resource invalidation
@@ -1310,9 +1311,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		return value
 
 	case ast.OperationCast:
-		staticValueType := castingExpressionTypes.StaticValueType
+		staticValueType := ConvertSemaToStaticType(interpreter, castingExpressionTypes.StaticValueType)
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-		return ConvertAndBox(interpreter, value, staticValueType, expectedType)
+		return ConvertAndBoxToStaticType(interpreter, value, staticValueType, expectedStaticType)
 
 	default:
 		panic(errors.NewUnreachableError())

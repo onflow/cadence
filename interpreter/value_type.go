@@ -256,9 +256,10 @@ func MetaTypeIsSubType(
 		return FalseValue
 	}
 
-	result := sema.IsSubType(
-		invocationContext.SemaTypeFromStaticType(staticType),
-		invocationContext.SemaTypeFromStaticType(otherStaticType),
+	result := IsSubType(
+		invocationContext,
+		staticType,
+		otherStaticType,
 	)
 	return BoolValue(result)
 }

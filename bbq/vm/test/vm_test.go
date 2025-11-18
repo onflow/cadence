@@ -5266,8 +5266,8 @@ func TestCasting(t *testing.T) {
 		assert.Equal(
 			t,
 			&interpreter.ForceCastTypeMismatchError{
-				ExpectedType: sema.IntType,
-				ActualType:   sema.BoolType,
+				ExpectedType: interpreter.PrimitiveStaticTypeInt,
+				ActualType:   interpreter.PrimitiveStaticTypeBool,
 				LocationRange: interpreter.LocationRange{
 					Location: TestLocation,
 					HasPosition: bbq.Position{

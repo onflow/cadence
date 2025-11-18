@@ -1151,7 +1151,7 @@ func nativeAccountInboxUnpublishFunction(
 		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
-		borrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		providerValue := interpreter.GetAddressValue(receiver, providerPointer)
 
@@ -1196,7 +1196,7 @@ func NewVMAccountInboxUnpublishFunction(
 func AccountInboxUnpublish(
 	context interpreter.InvocationContext,
 	providerValue interpreter.AddressValue,
-	borrowType sema.Type,
+	borrowType interpreter.StaticType,
 	nameValue *interpreter.StringValue,
 	handler EventEmitter,
 ) interpreter.Value {
@@ -1217,12 +1217,12 @@ func AccountInboxUnpublish(
 		panic(errors.NewUnreachableError())
 	}
 
-	capabilityType := sema.NewCapabilityType(context, borrowType)
+	capabilityType := interpreter.NewCapabilityStaticType(context, borrowType)
 	publishedType := publishedValue.Value.StaticType(context)
-	if !interpreter.IsSubTypeOfSemaType(context, publishedType, capabilityType) {
+	if !interpreter.IsSubType(context, publishedType, capabilityType) {
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType: capabilityType,
-			ActualType:   context.SemaTypeFromStaticType(publishedType),
+			ActualType:   publishedType,
 		})
 	}
 
@@ -1262,7 +1262,7 @@ func nativeAccountInboxClaimFunction(
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 		providerValue := interpreter.AssertValueOfType[interpreter.AddressValue](args[1])
-		borrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		recipientValue := interpreter.GetAddressValue(receiver, recipientPointer)
 
@@ -1310,7 +1310,7 @@ func AccountInboxClaim(
 	providerValue interpreter.AddressValue,
 	recipientValue interpreter.AddressValue,
 	nameValue *interpreter.StringValue,
-	borrowType sema.Type,
+	borrowType interpreter.StaticType,
 	handler EventEmitter,
 ) interpreter.Value {
 	providerAddress := providerValue.ToAddress()
@@ -1335,12 +1335,12 @@ func AccountInboxClaim(
 		return interpreter.Nil
 	}
 
-	ty := sema.NewCapabilityType(context, borrowType)
+	ty := interpreter.NewCapabilityStaticType(context, borrowType)
 	publishedType := publishedValue.Value.StaticType(context)
-	if !interpreter.IsSubTypeOfSemaType(context, publishedType, ty) {
+	if !interpreter.IsSubType(context, publishedType, ty) {
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType: ty,
-			ActualType:   context.SemaTypeFromStaticType(publishedType),
+			ActualType:   publishedType,
 		})
 	}
 

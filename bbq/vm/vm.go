@@ -1233,12 +1233,9 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 
 	var result Value
 	if !isSubType {
-		targetSemaType := context.SemaTypeFromStaticType(targetType)
-		valueSemaType := context.SemaTypeFromStaticType(valueType)
-
 		panic(&interpreter.ForceCastTypeMismatchError{
-			ExpectedType: targetSemaType,
-			ActualType:   valueSemaType,
+			ExpectedType: targetType,
+			ActualType:   valueType,
 		})
 	}
 

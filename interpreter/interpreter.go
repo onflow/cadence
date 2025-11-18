@@ -1894,21 +1894,14 @@ func TransferAndConvert(
 	value Value,
 	valueType, targetType sema.Type,
 ) Value {
+	valueStaticType := ConvertSemaToStaticType(context, valueType)
+	targetStaticType := ConvertSemaToStaticType(context, targetType)
 
-	transferredValue := value.Transfer(
+	return TransferAndConvertToStaticType(
 		context,
-		atree.Address{},
-		false,
-		nil,
-		nil,
-		true, // value is standalone.
-	)
-
-	return ConvertAndBoxWithValidation(
-		context,
-		transferredValue,
-		valueType,
-		targetType,
+		value,
+		valueStaticType,
+		targetStaticType,
 	)
 }
 
@@ -1941,28 +1934,15 @@ func ConvertAndBoxWithValidation(
 	valueType sema.Type,
 	targetType sema.Type,
 ) Value {
-	result := ConvertAndBox(
+	valueStaticType := ConvertSemaToStaticType(context, valueType)
+	targetStaticType := ConvertSemaToStaticType(context, targetType)
+
+	return ConvertAndBoxToStaticTypeWithValidation(
 		context,
 		transferredValue,
-		valueType,
-		targetType,
+		valueStaticType,
+		targetStaticType,
 	)
-
-	// Defensively check the value's type matches the target type
-	resultStaticType := result.StaticType(context)
-
-	if targetType != nil &&
-		!IsSubTypeOfSemaType(context, resultStaticType, targetType) {
-
-		resultSemaType := context.SemaTypeFromStaticType(resultStaticType)
-
-		panic(&ValueTransferTypeError{
-			ExpectedType: targetType,
-			ActualType:   resultSemaType,
-		})
-	}
-
-	return result
 }
 
 func ConvertAndBoxToStaticTypeWithValidation(
@@ -1985,8 +1965,8 @@ func ConvertAndBoxToStaticTypeWithValidation(
 		!IsSubType(context, resultStaticType, targetType) {
 
 		panic(&ValueTransferTypeError{
-			ExpectedType: context.SemaTypeFromStaticType(targetType),
-			ActualType:   context.SemaTypeFromStaticType(resultStaticType),
+			ExpectedType: targetType,
+			ActualType:   resultStaticType,
 		})
 	}
 
@@ -3766,9 +3746,10 @@ func ConstructDictionaryTypeValue(
 
 	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 	if keyType == nil ||
-		!sema.IsSubType(
-			context.SemaTypeFromStaticType(keyType),
-			sema.HashableStructType,
+		!IsSubType(
+			context,
+			keyType,
+			PrimitiveStaticTypeHashableStruct,
 		) {
 		return Nil
 	}
@@ -4009,8 +3990,7 @@ func ConstructInclusiveRangeTypeValue(
 	ty := typeValue.Type
 
 	// InclusiveRanges must hold integers
-	elemSemaTy := context.SemaTypeFromStaticType(ty)
-	if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
+	if !IsSameTypeKind(context, ty, PrimitiveStaticTypeInteger) {
 		return Nil
 	}
 
@@ -4741,6 +4721,9 @@ func checkValue(
 
 	// For all values, try to load the type and see if it's not broken.
 	_, valueError = ConvertStaticToSemaType(context, staticType)
+	if valueError != nil {
+		return valueError
+	}
 
 	// Here, the value at the path could be either:
 	//	1) The actual stored value (storage path)
@@ -4961,12 +4944,12 @@ func NativeAccountStorageReadFunction(
 		args []Value,
 	) Value {
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
-		semaBorrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		return AccountStorageRead(
 			context,
 			args,
-			semaBorrowType,
+			borrowType,
 			address,
 			clear,
 		)
@@ -4992,7 +4975,7 @@ func authAccountReadFunction(
 func AccountStorageRead(
 	invocationContext InvocationContext,
 	arguments []Value,
-	typeParameter sema.Type,
+	typeParameter StaticType,
 	address common.Address,
 	clear bool,
 ) Value {
@@ -5017,12 +5000,10 @@ func AccountStorageRead(
 
 	valueStaticType := value.StaticType(invocationContext)
 
-	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
-		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
-
+	if !IsSubType(invocationContext, valueStaticType, typeParameter) {
 		panic(&StoredValueTypeMismatchError{
 			ExpectedType: typeParameter,
-			ActualType:   valueSemaType,
+			ActualType:   valueStaticType,
 		})
 	}
 
@@ -5656,8 +5637,8 @@ func checkContainerMutation(
 
 	if !IsSubType(context, actualElementType, elementType) {
 		panic(&ContainerMutationError{
-			ExpectedType: context.SemaTypeFromStaticType(elementType),
-			ActualType:   MustSemaTypeOfValue(element, context),
+			ExpectedType: elementType,
+			ActualType:   actualElementType,
 		})
 	}
 }

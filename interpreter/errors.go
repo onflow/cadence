@@ -251,8 +251,8 @@ func (e RedeclarationError) Error() string {
 
 type DereferenceError struct {
 	Cause        string
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -270,7 +270,7 @@ func (e *DereferenceError) SecondaryError() string {
 	if e.Cause != "" {
 		return e.Cause
 	}
-	expected, actual := sema.ErrorMessageExpectedActualTypes(
+	expected, actual := ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
 	)
@@ -422,8 +422,8 @@ func (e *ForceNilError) SetLocationRange(locationRange LocationRange) {
 
 // ForceCastTypeMismatchError
 type ForceCastTypeMismatchError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -433,7 +433,7 @@ var _ HasLocationRange = &ForceCastTypeMismatchError{}
 func (*ForceCastTypeMismatchError) IsUserError() {}
 
 func (e *ForceCastTypeMismatchError) Error() string {
-	expected, actual := sema.ErrorMessageExpectedActualTypes(
+	expected, actual := ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
 	)
@@ -780,8 +780,8 @@ func (e *MemberAccessTypeError) SetLocationRange(locationRange LocationRange) {
 
 // ValueTransferTypeError
 type ValueTransferTypeError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -791,7 +791,7 @@ var _ HasLocationRange = &ValueTransferTypeError{}
 func (*ValueTransferTypeError) IsInternalError() {}
 
 func (e *ValueTransferTypeError) Error() string {
-	expected, actual := sema.ErrorMessageExpectedActualTypes(
+	expected, actual := ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
 	)
@@ -857,8 +857,8 @@ func (e *ResourceConstructionError) SetLocationRange(locationRange LocationRange
 
 // ContainerMutationError
 type ContainerMutationError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -868,10 +868,15 @@ var _ HasLocationRange = &ContainerMutationError{}
 func (*ContainerMutationError) IsUserError() {}
 
 func (e *ContainerMutationError) Error() string {
+	expected, actual := ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
 	return fmt.Sprintf(
 		"invalid container update: expected a subtype of `%s`, found `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
+		expected,
+		actual,
 	)
 }
 
@@ -1497,8 +1502,8 @@ func (e *CallStackLimitExceededError) SetLocationRange(locationRange LocationRan
 
 // StoredValueTypeMismatchError
 type StoredValueTypeMismatchError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
+	ExpectedType StaticType
+	ActualType   StaticType
 	LocationRange
 }
 
@@ -1508,7 +1513,7 @@ var _ HasLocationRange = &StoredValueTypeMismatchError{}
 func (*StoredValueTypeMismatchError) IsUserError() {}
 
 func (e *StoredValueTypeMismatchError) Error() string {
-	expected, actual := sema.ErrorMessageExpectedActualTypes(
+	expected, actual := ErrorMessageExpectedActualTypes(
 		e.ExpectedType,
 		e.ActualType,
 	)
