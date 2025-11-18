@@ -68,11 +68,7 @@ func TestRuntimeExportValue(t *testing.T) {
 			if tt.valueFactory != nil {
 				value = tt.valueFactory(inter)
 			}
-			actual, err := ExportValue(
-				value,
-				inter,
-				interpreter.EmptyLocationRange,
-			)
+			actual, err := ExportValue(value, inter)
 
 			if tt.invalid {
 				RequireError(t, err)
@@ -145,7 +141,7 @@ func TestRuntimeExportValue(t *testing.T) {
 	}
 
 	testFunctionType := cadence.NewFunctionType(
-		sema.FunctionPurityImpure,
+		cadence.FunctionPurityImpure,
 		nil,
 		nil,
 		cadence.VoidType,
@@ -196,7 +192,6 @@ func TestRuntimeExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -213,7 +208,6 @@ func TestRuntimeExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -234,7 +228,6 @@ func TestRuntimeExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
@@ -255,7 +248,6 @@ func TestRuntimeExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -273,7 +265,6 @@ func TestRuntimeExportValue(t *testing.T) {
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -415,9 +406,27 @@ func TestRuntimeExportValue(t *testing.T) {
 			expected: cadence.Fix64(-123000000),
 		},
 		{
+			label: "Fix128",
+			value: interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(-123, 22),
+			expected: func() cadence.Fix128 {
+				v, err := cadence.NewUnmeteredFix128FromString("-1.23")
+				require.NoError(t, err)
+				return v
+			}(),
+		},
+		{
 			label:    "UFix64",
 			value:    interpreter.NewUnmeteredUFix64Value(123000000),
 			expected: cadence.UFix64(123000000),
+		},
+		{
+			label: "UFix128",
+			value: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(123, 22),
+			expected: func() cadence.UFix128 {
+				v, err := cadence.NewUnmeteredUFix128FromString("1.23")
+				require.NoError(t, err)
+				return v
+			}(),
 		},
 		{
 			label: "Path",
@@ -465,14 +474,13 @@ func TestRuntimeExportValue(t *testing.T) {
 					interpreter.NewUnmeteredIntValueFromInt64(1),
 					stdlib.NewPublicKeyValue(
 						inter,
-						interpreter.EmptyLocationRange,
 						&stdlib.PublicKey{
 							PublicKey: []byte{1, 2, 3},
 							SignAlgo:  2,
 						},
 					),
 					hashAlgorithm,
-					interpreter.NewUnmeteredUFix64ValueWithInteger(10, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(10),
 					false,
 				)
 			},
@@ -539,7 +547,6 @@ func TestRuntimeExportValue(t *testing.T) {
 					interpreter.NewUnmeteredStringValue("C"),
 					interpreter.NewArrayValue(
 						inter,
-						interpreter.EmptyLocationRange,
 						interpreter.ByteArrayStaticType,
 						common.ZeroAddress,
 					),
@@ -559,11 +566,10 @@ func TestRuntimeExportValue(t *testing.T) {
 					interpreter.NewUnmeteredUInt64Value(2),
 					interpreter.NewArrayValue(
 						inter,
-						interpreter.EmptyLocationRange,
 						blockIDStaticType,
 						common.ZeroAddress,
 					),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(1, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(1),
 				)
 			},
 			invalid: true,
@@ -628,7 +634,6 @@ func TestRuntimeImportValue(t *testing.T) {
 
 			actual, err := ImportValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				nil,
 				nil,
 				tt.value,
@@ -690,7 +695,6 @@ func TestRuntimeImportValue(t *testing.T) {
 			value: cadence.NewArray([]cadence.Value{}),
 			expected: interpreter.NewArrayValue(
 				NewTestInterpreter(t),
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -708,7 +712,6 @@ func TestRuntimeImportValue(t *testing.T) {
 			}),
 			expected: interpreter.NewArrayValue(
 				NewTestInterpreter(t),
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -724,7 +727,6 @@ func TestRuntimeImportValue(t *testing.T) {
 			label: "Dictionary",
 			expected: interpreter.NewDictionaryValue(
 				NewTestInterpreter(t),
-				interpreter.EmptyLocationRange,
 				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -740,7 +742,6 @@ func TestRuntimeImportValue(t *testing.T) {
 			label: "Dictionary (non-empty)",
 			expected: interpreter.NewDictionaryValue(
 				NewTestInterpreter(t),
-				interpreter.EmptyLocationRange,
 				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -881,9 +882,27 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewUnmeteredFix64Value(-123000000),
 		},
 		{
+			label: "Fix128",
+			value: func() cadence.Fix128 {
+				v, err := cadence.NewUnmeteredFix128FromString("-1.23")
+				require.NoError(t, err)
+				return v
+			}(),
+			expected: interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(-123, 22),
+		},
+		{
 			label:    "UFix64",
 			value:    cadence.UFix64(123000000),
 			expected: interpreter.NewUnmeteredUFix64Value(123000000),
+		},
+		{
+			label: "UFix128",
+			value: func() cadence.UFix128 {
+				v, err := cadence.NewUnmeteredUFix128FromString("1.23")
+				require.NoError(t, err)
+				return v
+			}(),
+			expected: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(123, 22),
 		},
 		{
 			label: "Path",
@@ -1276,7 +1295,6 @@ func TestRuntimeExportFixedPointValuesFromScript(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-
 		var literal string
 		if sema.IsSubType(fixedPointType, sema.SignedFixedPointType) {
 			literal = "-1.23"
@@ -1368,7 +1386,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -1381,7 +1398,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 			inter,
 			interpreter.NewInclusiveRangeValueWithStep(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewIntValueFromInt64(inter, 10),
 				interpreter.NewIntValueFromInt64(inter, -10),
 				interpreter.NewIntValueFromInt64(inter, -2),
@@ -1403,7 +1419,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -1416,7 +1431,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 			inter,
 			interpreter.NewInclusiveRangeValueWithStep(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewIntValueFromInt64(inter, 10),
 				interpreter.NewIntValueFromInt64(inter, -10),
 				interpreter.NewIntValueFromInt64(inter, -2),
@@ -1438,7 +1452,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		_, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -1469,7 +1482,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		_, err = ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -1757,7 +1769,7 @@ func TestRuntimeExportEventValue(t *testing.T) {
 			nil,
 		)
 
-		actual := exportEventFromScript(t, script)
+		actual := exportEventFromScript(t, script, *compile)
 		expected := cadence.NewEvent([]cadence.Value{
 			cadence.NewInt(42),
 		}).WithType(fooEventType)
@@ -1793,7 +1805,7 @@ func TestRuntimeExportEventValue(t *testing.T) {
 			nil,
 		)
 
-		actual := exportEventFromScript(t, script)
+		actual := exportEventFromScript(t, script, *compile)
 		expected := cadence.NewEvent([]cadence.Value{
 			cadence.NewInt(42),
 		}).WithType(fooEventType)
@@ -1802,8 +1814,8 @@ func TestRuntimeExportEventValue(t *testing.T) {
 	})
 }
 
-func exportEventFromScript(t *testing.T, script string) cadence.Event {
-	rt := NewTestInterpreterRuntime()
+func exportEventFromScript(t *testing.T, script string, useVM bool) cadence.Event {
+	rt := NewTestRuntime()
 
 	var events []cadence.Event
 
@@ -1821,6 +1833,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 		Context{
 			Interface: inter,
 			Location:  common.ScriptLocation{},
+			UseVM:     useVM,
 		},
 	)
 
@@ -1833,7 +1846,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 }
 
 func exportValueFromScript(t *testing.T, script string) cadence.Value {
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	value, err := rt.ExecuteScript(
 		Script{
@@ -1842,6 +1855,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 		Context{
 			Interface: &TestRuntimeInterface{},
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 
@@ -1961,7 +1975,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 
 		// Arrange
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		transaction := `
             transaction {
@@ -2001,6 +2015,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2018,6 +2033,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2027,14 +2043,14 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("storage, recursive, same reference", func(t *testing.T) {
+	t.Run("storage, recursive, same reference, script", func(t *testing.T) {
 
 		t.Parallel()
 
 		script := `
             access(all) fun main(): &AnyStruct {
                 var acct = getAuthAccount<auth(Storage) &Account>(0x01)
-	            var v:[AnyStruct] = []
+	            var v: [AnyStruct] = []
 	            acct.storage.save(v, to: /storage/x)
 
                 var ref = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
@@ -2043,7 +2059,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -2056,13 +2072,57 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
+			},
+		)
+		// Non-storable values cannot be stored in storage,
+		// but script execution does not commit / serialize writes to storage.
+		require.NoError(t, err)
+	})
+
+	t.Run("storage, recursive, same reference, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            transaction {
+                prepare(acct: auth(Storage) &Account) {
+
+	                var v: [AnyStruct] = []
+	                acct.storage.save(v, to: /storage/x)
+
+                    var ref = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
+	                ref.append(ref)
+                }
+            }
+        `
+
+		rt := NewTestRuntime()
+
+		address := common.MustBytesToAddress([]byte{0x01})
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []common.Address{address}, nil
+			},
+		}
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cannot store non-storable value")
 	})
 
-	t.Run("storage, recursive, two references", func(t *testing.T) {
+	t.Run("storage, recursive, two references, script", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2080,7 +2140,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -2093,6 +2153,51 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
+			},
+		)
+		// Non-storable values cannot be stored in storage,
+		// but script execution does not commit / serialize writes to storage.
+		require.NoError(t, err)
+	})
+
+	t.Run("storage, recursive, two references, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+           transaction {
+                prepare(acct: auth(Storage) &Account) {
+	                let v: [AnyStruct] = []
+	                acct.storage.save(v, to: /storage/x)
+
+                    let ref1 = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
+                    let ref2 = acct.storage.borrow<&[AnyStruct]>(from: /storage/x)!
+
+	                ref1.append(ref2)
+                }
+           }
+        `
+
+		rt := NewTestRuntime()
+
+		address := common.MustBytesToAddress([]byte{0x01})
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []common.Address{address}, nil
+			},
+		}
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.Error(t, err)
@@ -2173,7 +2278,6 @@ func TestRuntimeExportTypeValue(t *testing.T) {
 		actual, err := ExportValue(
 			value,
 			NewTestInterpreter(t),
-			interpreter.EmptyLocationRange,
 		)
 		require.NoError(t, err)
 
@@ -2221,7 +2325,7 @@ func TestRuntimeExportTypeValue(t *testing.T) {
 			},
 		}
 
-		actual, err := ExportValue(ty, inter, interpreter.EmptyLocationRange)
+		actual, err := ExportValue(ty, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -2258,7 +2362,6 @@ func TestRuntimeExportCapabilityValue(t *testing.T) {
 		actual, err := ExportValue(
 			capability,
 			NewTestInterpreter(t),
-			interpreter.EmptyLocationRange,
 		)
 		require.NoError(t, err)
 
@@ -2302,11 +2405,7 @@ func TestRuntimeExportCapabilityValue(t *testing.T) {
 			interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 		)
 
-		actual, err := ExportValue(
-			capability,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(capability, inter)
 		require.NoError(t, err)
 
 		expected := cadence.NewCapability(
@@ -2382,7 +2481,7 @@ var exportJsonDeterministicExpected string
 func TestRuntimeExportJsonDeterministic(t *testing.T) {
 	t.Parallel()
 
-	// exported order of field in a dictionary depends on the execution ,
+	// exported order of field in a dictionary depends on the execution,
 	// however the deterministic code should generate deterministic type
 
 	script := `
@@ -2420,7 +2519,7 @@ func TestRuntimeExportJsonDeterministic(t *testing.T) {
         }
     `
 
-	event := exportEventFromScript(t, script)
+	event := exportEventFromScript(t, script, *compile)
 
 	bytes, err := json.Encode(event)
 
@@ -2527,7 +2626,7 @@ func TestRuntimeEnumValue(t *testing.T) {
 }
 
 func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
@@ -2551,6 +2650,7 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 
@@ -3514,18 +3614,13 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		value := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
 		)
 
-		actual, err := ExportValue(
-			value,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(value, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3547,7 +3642,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3560,7 +3654,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -3578,7 +3671,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		value := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -3587,11 +3679,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 
-		actual, err := ExportValue(
-			value,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(value, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3618,7 +3706,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3633,7 +3720,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -3664,7 +3750,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3677,7 +3762,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: &interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
@@ -3686,7 +3770,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				common.ZeroAddress,
 				interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
@@ -3696,7 +3779,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				),
 				interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
@@ -3720,7 +3802,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		value := interpreter.NewDictionaryValue(
 			NewTestInterpreter(t),
-			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3730,7 +3811,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		actual, err := ExportValue(
 			value,
 			NewTestInterpreter(t),
-			interpreter.EmptyLocationRange,
 		)
 		require.NoError(t, err)
 
@@ -3754,7 +3834,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3770,7 +3849,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			inter,
 			interpreter.NewDictionaryValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeUInt8,
@@ -3788,7 +3866,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		value := interpreter.NewDictionaryValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3797,11 +3874,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 
-		actual, err := ExportValue(
-			value,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(value, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3841,7 +3914,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3857,7 +3929,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			inter,
 			interpreter.NewDictionaryValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3906,7 +3977,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3919,7 +3989,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			inter,
 			interpreter.NewDictionaryValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.DictionaryStaticType{
 					KeyType: interpreter.PrimitiveStaticTypeString,
 					ValueType: &interpreter.DictionaryStaticType{
@@ -3931,7 +4000,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeInt8,
 						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
@@ -3943,7 +4011,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewUnmeteredStringValue("b"),
 				interpreter.NewDictionaryValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
@@ -3974,7 +4041,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			dictionaryWithHeterogenousKeys,
@@ -3987,7 +4053,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			inter,
 			interpreter.NewDictionaryValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeHashableStruct,
 					ValueType: interpreter.PrimitiveStaticTypeString,
@@ -4059,7 +4124,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(stringValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var validated bool
 
@@ -4081,6 +4146,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4109,7 +4175,7 @@ func TestRuntimeTypeValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var ok bool
 
@@ -4131,6 +4197,7 @@ func TestRuntimeTypeValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4157,7 +4224,7 @@ func TestRuntimeTypeValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
@@ -4173,6 +4240,7 @@ func TestRuntimeTypeValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4204,7 +4272,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
@@ -4220,6 +4288,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4245,7 +4314,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
@@ -4261,6 +4330,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4293,7 +4363,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
@@ -4309,6 +4379,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4331,7 +4402,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		encodedArg, err := json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		return rt.ExecuteScript(
 			Script{
@@ -4341,6 +4412,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -4681,7 +4753,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -4702,6 +4774,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -4747,7 +4820,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -4768,6 +4841,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4811,7 +4885,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var publicKeyValidated bool
 
@@ -4838,6 +4912,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4882,7 +4957,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var publicKeyValidated bool
 
@@ -4909,6 +4984,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4948,7 +5024,6 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	internalArrayValue := interpreter.NewArrayValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		staticArrayType,
 		common.ZeroAddress,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
@@ -4981,7 +5056,6 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	internalDictionaryValue := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		staticDictionaryType,
 		interpreter.NewUnmeteredStringValue("a"), internalArrayValue,
 	)
@@ -5044,7 +5118,6 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	internalCompositeValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
@@ -5060,11 +5133,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 		// NOTE: cannot be parallel, due to type's ID being cached (potential data race)
 
-		actual, err := ExportValue(
-			internalCompositeValue,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(internalCompositeValue, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -5091,7 +5160,6 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			externalCompositeValue,
@@ -5229,7 +5297,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -5250,6 +5318,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5292,7 +5361,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -5313,6 +5382,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5327,7 +5397,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
 func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) resource S {}
@@ -5359,6 +5429,7 @@ func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.Error(t, err)
@@ -5378,7 +5449,7 @@ func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
             access(all) fun main(v: DeploymentResult) {}
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		runtimeInterface := &TestRuntimeInterface{}
 
 		_, err := rt.ExecuteScript(
@@ -5388,6 +5459,7 @@ func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5407,7 +5479,7 @@ func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		runtimeInterface := &TestRuntimeInterface{}
 
 		_, err := rt.ExecuteScript(
@@ -5417,6 +5489,7 @@ func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5441,7 +5514,7 @@ func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		typeValue := cadence.NewTypeValue(cadence.NewStructType(
 			nil,
@@ -5472,6 +5545,7 @@ func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5488,7 +5562,7 @@ func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		runtimeInterface := &TestRuntimeInterface{}
 
 		result, err := rt.ExecuteScript(
@@ -5498,6 +5572,7 @@ func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5569,7 +5644,7 @@ func TestRuntimeExportInterfaceType(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		_, err := rt.ExecuteScript(
 			Script{
@@ -5578,6 +5653,7 @@ func TestRuntimeExportInterfaceType(t *testing.T) {
 			Context{
 				Interface: &TestRuntimeInterface{},
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5607,7 +5683,7 @@ func TestRuntimeExportInterfaceType(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		_, err := rt.ExecuteScript(
 			Script{
@@ -5616,6 +5692,7 @@ func TestRuntimeExportInterfaceType(t *testing.T) {
 			Context{
 				Interface: &TestRuntimeInterface{},
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5692,7 +5769,6 @@ func TestRuntimeImportResolvedLocation(t *testing.T) {
 
 	actual, err := ImportValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		nil,
 		resolveLocation,
 		externalCompositeValue,
@@ -5702,7 +5778,6 @@ func TestRuntimeImportResolvedLocation(t *testing.T) {
 
 	internalCompositeValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		addressLocation,
 		"Foo",
 		common.CompositeKindStructure,
@@ -5722,11 +5797,7 @@ func TestExportNil(t *testing.T) {
 	t.Parallel()
 
 	inter := NewTestInterpreter(t)
-	actual, err := ExportValue(
-		nil,
-		inter,
-		interpreter.EmptyLocationRange,
-	)
+	actual, err := ExportValue(nil, inter)
 	require.NoError(t, err)
 	assert.Nil(t, actual)
 }

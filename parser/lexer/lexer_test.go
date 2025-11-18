@@ -2748,17 +2748,6 @@ func TestLexIntegerLiterals(t *testing.T) {
 			[]token{
 				{
 					Token: Token{
-						Type:         TokenError,
-						SpaceOrError: errors.New("missing digits"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "b",
-				},
-				{
-					Token: Token{
 						Type: TokenBinaryIntegerLiteral,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2919,17 +2908,6 @@ func TestLexIntegerLiterals(t *testing.T) {
 		testLex(t,
 			`0o`,
 			[]token{
-				{
-					Token: Token{
-						Type:         TokenError,
-						SpaceOrError: errors.New("missing digits"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "o",
-				},
 				{
 					Token: Token{
 						Type: TokenOctalIntegerLiteral,
@@ -3146,17 +3124,6 @@ func TestLexIntegerLiterals(t *testing.T) {
 		testLex(t,
 			`0x`,
 			[]token{
-				{
-					Token: Token{
-						Type:         TokenError,
-						SpaceOrError: errors.New("missing digits"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "x",
-				},
 				{
 					Token: Token{
 						Type: TokenHexadecimalIntegerLiteral,
@@ -3413,17 +3380,6 @@ func TestLexIntegerLiterals(t *testing.T) {
 		testLex(t,
 			"0z123",
 			[]token{
-				{
-					Token: Token{
-						Type:         TokenError,
-						SpaceOrError: errors.New("invalid number literal prefix: 'z'"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "z",
-				},
 				{
 					Token: Token{
 						Type: TokenUnknownBaseIntegerLiteral,
@@ -4016,4 +3972,21 @@ func TestLimit(t *testing.T) {
 
 	_, err := Lex([]byte(code), nil)
 	require.ErrorAs(t, err, &TokenLimitReachedError{})
+}
+
+func TestLexInvalidRune(t *testing.T) {
+
+	t.Parallel()
+
+	code := `"\(FFFF\`
+
+	tokens, err := Lex([]byte(code), nil)
+	require.NoError(t, err)
+
+	for {
+		token := tokens.Next()
+		if token.Type == TokenEOF {
+			break
+		}
+	}
 }

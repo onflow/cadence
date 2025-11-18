@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretEquality(t *testing.T) {
@@ -67,14 +68,16 @@ func TestInterpretEquality(t *testing.T) {
               let res2 = maybeCapNil == nil
 		    `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
 					},
 				},
 			},

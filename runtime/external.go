@@ -41,56 +41,6 @@ type ExternalInterface struct {
 var _ Interface = ExternalInterface{}
 var _ Metrics = ExternalInterface{}
 
-func (e ExternalInterface) MeterMemory(usage common.MemoryUsage) (err error) {
-	errors.WrapPanic(func() {
-		err = e.Interface.MeterMemory(usage)
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
-func (e ExternalInterface) MeterComputation(usage common.ComputationUsage) (err error) {
-	errors.WrapPanic(func() {
-		err = e.Interface.MeterComputation(usage)
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
-func (e ExternalInterface) ComputationUsed() (usage uint64, err error) {
-	errors.WrapPanic(func() {
-		usage, err = e.Interface.ComputationUsed()
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
-func (e ExternalInterface) MemoryUsed() (usage uint64, err error) {
-	errors.WrapPanic(func() {
-		usage, err = e.Interface.MemoryUsed()
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
-func (e ExternalInterface) InteractionUsed() (usage uint64, err error) {
-	errors.WrapPanic(func() {
-		usage, err = e.Interface.InteractionUsed()
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
 func (e ExternalInterface) ResolveLocation(
 	identifiers []Identifier,
 	location Location,
@@ -130,21 +80,6 @@ func (e ExternalInterface) GetOrLoadProgram(
 	if err != nil {
 		err = interpreter.WrappedExternalError(err)
 	}
-	return
-}
-
-func (e ExternalInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
-	errors.WrapPanic(func() {
-		e.Interface.SetInterpreterSharedState(state)
-	})
-	// No error to wrap
-}
-
-func (e ExternalInterface) GetInterpreterSharedState() (state *interpreter.SharedState) {
-	errors.WrapPanic(func() {
-		state = e.Interface.GetInterpreterSharedState()
-	})
-	// No error to wrap
 	return
 }
 
@@ -470,14 +405,12 @@ func (e ExternalInterface) GetAccountContractNames(address Address) (names []str
 
 func (e ExternalInterface) RecordTrace(
 	operation string,
-	location Location,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
 ) {
 	errors.WrapPanic(func() {
 		e.Interface.RecordTrace(
 			operation,
-			location,
 			duration,
 			attrs,
 		)
@@ -549,7 +482,6 @@ func (e ExternalInterface) RecoverProgram(program *ast.Program, location common.
 
 func (e ExternalInterface) ValidateAccountCapabilitiesGet(
 	context interpreter.AccountCapabilityGetValidationContext,
-	locationRange interpreter.LocationRange,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
 	wantedBorrowType *sema.ReferenceType,
@@ -561,7 +493,6 @@ func (e ExternalInterface) ValidateAccountCapabilitiesGet(
 	errors.WrapPanic(func() {
 		valid, err = e.Interface.ValidateAccountCapabilitiesGet(
 			context,
-			locationRange,
 			address,
 			path,
 			wantedBorrowType,
@@ -576,7 +507,6 @@ func (e ExternalInterface) ValidateAccountCapabilitiesGet(
 
 func (e ExternalInterface) ValidateAccountCapabilitiesPublish(
 	context interpreter.AccountCapabilityPublishValidationContext,
-	locationRange interpreter.LocationRange,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
 	capabilityBorrowType *interpreter.ReferenceStaticType,
@@ -587,7 +517,6 @@ func (e ExternalInterface) ValidateAccountCapabilitiesPublish(
 	errors.WrapPanic(func() {
 		ok, err = e.Interface.ValidateAccountCapabilitiesPublish(
 			context,
-			locationRange,
 			address,
 			path,
 			capabilityBorrowType,

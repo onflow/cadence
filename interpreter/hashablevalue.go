@@ -27,13 +27,13 @@ import (
 // HashableValue is an immutable value that can be hashed
 type HashableValue interface {
 	Value
-	HashInput(memoryGauge common.MemoryGauge, locationRange LocationRange, scratch []byte) []byte
+	HashInput(gauge common.Gauge, scratch []byte) []byte
 }
 
-func newHashInputProvider(memoryGauge common.MemoryGauge, locationRange LocationRange) atree.HashInputProvider {
+func newHashInputProvider(gauge common.Gauge) atree.HashInputProvider {
 	return func(value atree.Value, scratch []byte) ([]byte, error) {
-		hashInput := MustConvertStoredValue(memoryGauge, value).(HashableValue).
-			HashInput(memoryGauge, locationRange, scratch)
+		hashInput := MustConvertStoredValue(gauge, value).(HashableValue).
+			HashInput(gauge, scratch)
 		return hashInput, nil
 	}
 }
@@ -102,7 +102,7 @@ const (
 	_ // future: Fix16
 	_ // future: Fix32
 	HashInputTypeFix64
-	_ // future: Fix128
+	HashInputTypeFix128
 	_ // future: Fix256
 	_
 
@@ -112,7 +112,7 @@ const (
 	_ // future: UFix16
 	_ // future: UFix32
 	HashInputTypeUFix64
-	_ // future: UFix128
+	HashInputTypeUFix128
 	_ // future: UFix256
 	_
 

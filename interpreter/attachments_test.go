@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +40,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -61,7 +62,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -85,7 +86,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -107,7 +108,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -130,7 +131,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -153,7 +154,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment B for S {}
         attachment A for S {
@@ -177,7 +178,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -198,7 +199,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {
             let i: Int
             init(i: Int) {
@@ -234,7 +235,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -260,7 +261,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -284,7 +285,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -308,7 +309,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           let x: Int
@@ -338,7 +339,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -363,7 +364,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -388,7 +389,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment B for R {}
        attachment A for R {
@@ -414,7 +415,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -437,7 +438,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource R {
             let i: Int
             init(i: Int) {
@@ -480,7 +481,7 @@ func TestInterpretAttachExecutionOrdering(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {
                 let x: Int
@@ -511,6 +512,7 @@ func TestInterpretAttachExecutionOrdering(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: enable after merging master in
 		inter := parseCheckAndInterpret(t, `
             struct S {
                 fun bar(): Int? {
@@ -541,7 +543,7 @@ func TestInterpretAttachExecutionOrdering(t *testing.T) {
 func TestInterpretAttachmentNestedBaseUse(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource R {
             let x: Int
             init (x: Int) {
@@ -579,7 +581,7 @@ func TestInterpretAttachmentNestedBaseUse(t *testing.T) {
 func TestInterpretNestedAttach(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource X {
             let i: Int
             init() {
@@ -618,7 +620,7 @@ func TestInterpretNestedAttach(t *testing.T) {
 func TestInterpretNestedAttachFunction(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource X {
             let i: Int
             init() {
@@ -665,7 +667,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -694,7 +696,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -727,7 +729,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -770,7 +772,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -806,7 +808,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 	            resource interface I {
 	                fun foo(): Int
 	            }
@@ -839,7 +841,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource interface I {
                 fun foo(): Int
             }
@@ -872,7 +874,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource interface I {
                 fun foo(): Int
             }
@@ -912,7 +914,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R { }
        attachment A for R {
           let y: Int
@@ -940,7 +942,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -973,7 +975,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 	            resource R { }
 	            attachment A for R {
 	                let self: &A
@@ -1001,7 +1003,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R { }
             attachment A for R {
                 fun returnSelf(): &A {
@@ -1029,7 +1031,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R { }
             attachment A for R {
                 fun selfFn(): Int {
@@ -1063,7 +1065,7 @@ func TestInterpretAttachmentNameConflict(t *testing.T) {
 	t.Run("base field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 let A: Int
                 init (a: Int) {
@@ -1100,7 +1102,7 @@ func TestInterpretAttachmentIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource interface I {
             fun foo(): Int
         }
@@ -1133,7 +1135,7 @@ func TestInterpretAttachmentIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource interface I {
             fun foo(): Int
         }
@@ -1167,7 +1169,7 @@ func TestInterpretAttachmentIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource interface I {
             fun foo(): Int
         }
@@ -1202,7 +1204,7 @@ func TestInterpretAttachmentIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource interface I {
             fun foo(): Int
         }
@@ -1246,7 +1248,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1261,10 +1263,9 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1290,7 +1291,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1315,10 +1316,9 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1344,7 +1344,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1362,10 +1362,9 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1388,7 +1387,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1416,10 +1415,9 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1442,7 +1440,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1474,10 +1472,9 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1504,7 +1501,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     var foo: String
@@ -1543,10 +1540,9 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						eventFields []interpreter.Value,
 					) error {
@@ -1587,7 +1583,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 access(all) var id: UInt8
@@ -1611,7 +1607,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r3 <- r2
                 let a2 = r3[A]!
                 a2.setID(5)
-                authAccount.storage.save(<-r3, to: /storage/foo)
+                account.storage.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
                 return a.id
@@ -1634,7 +1630,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 fun foo(): Int { return 3 }
@@ -1664,7 +1660,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
             resource R2 {
                 let r: @R
@@ -1692,7 +1688,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r3 <- r2
                 let a2 = r3.r[A]!
                 a2.setID(5)
-                authAccount.storage.save(<-r3, to: /storage/foo)
+                account.storage.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
                 return a.id
@@ -1715,7 +1711,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             access(all) resource R {
                 access(all) var id: UInt8
 
@@ -1744,7 +1740,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
                 var r2 <- r
                 r2.setID(5)
-                authAccount.storage.save(<-r2, to: /storage/foo)
+                account.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
             }`,
 			sema.Config{},
@@ -1761,7 +1757,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
 
             resource R2 {
@@ -1800,7 +1796,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             access(all) resource R {}
 
             var ref: &A? = nil
@@ -1828,7 +1824,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r2 <- r
                 let a = r2[A]!
                 a.setID(5)
-                authAccount.storage.save(<-r2, to: /storage/foo)
+                account.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
             }`,
 			sema.Config{},
@@ -1848,7 +1844,7 @@ func TestInterpretAttachmentsRuntimeType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
             attachment A for R {}
             fun test(): Type {
@@ -1865,6 +1861,27 @@ func TestInterpretAttachmentsRuntimeType(t *testing.T) {
 		require.IsType(t, interpreter.TypeValue{}, a)
 		require.Equal(t, "S.test.A", a.(interpreter.TypeValue).Type.String())
 	})
+
+	t.Run("isInstance()", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            resource R {}
+            attachment A for R {}
+            fun test(): Bool {
+                let r <- create R()
+                let r2 <- attach A() to <-r
+                let a: Bool = r2[A]!.isInstance(Type<&A>())
+                destroy r2
+                return a
+            }
+        `)
+
+		a, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.BoolValue(false), a)
+	})
 }
 
 func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
@@ -1874,6 +1891,9 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
+		// this defensive check requires changing opGetTypeIndex to take on the work that
+		// previous instructions in VisitAttachExpression do which is not ideal
+		// same goes for all below attach defensive checks
 		inter, _ := parseCheckAndInterpretWithOptions(t, `
         struct S {}
         attachment A for S {}
@@ -1895,7 +1915,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
         struct S {}
         attachment A for S {}
         fun test() {
@@ -1936,7 +1956,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
         struct S {}
         attachment A for S {}
         fun test() {
@@ -1980,7 +2000,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
         struct S {}
         attachment A for S {}
         enum E: UInt8 {
@@ -2004,7 +2024,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 func TestInterpretAttachmentSelfAccessMembers(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
             access(all) resource R{
                 access(all) fun baz() {}
             }
@@ -2048,7 +2068,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
             attachment A for R {}
             attachment B for R {}
@@ -2074,7 +2094,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2099,7 +2119,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {
                 fun foo(_ x: Int): Int { return 7 + x }
@@ -2136,7 +2156,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement F
             entitlement Y
             struct S {
@@ -2179,7 +2199,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement F
 
             access(all) struct S {
@@ -2222,7 +2242,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Sub {
                 let name: String
                 init(_ name: String) {
@@ -2271,7 +2291,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             attachment A for R {
@@ -2318,7 +2338,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2341,7 +2361,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2364,7 +2384,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2385,7 +2405,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2406,7 +2426,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2432,7 +2452,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2456,7 +2476,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2484,7 +2504,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2512,7 +2532,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource R {
                 let foo: Int
                 init() {
@@ -2550,15 +2570,17 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range []stdlib.StandardLibraryValue{
-		stdlib.NewPublicKeyConstructor(
+		stdlib.NewInterpreterPublicKeyConstructor(
 			assumeValidPublicKeyValidator{},
 		),
-		stdlib.SignatureAlgorithmConstructor,
+		stdlib.InterpreterSignatureAlgorithmConstructor,
 	} {
 		baseValueActivation.DeclareValue(valueDeclaration)
 		interpreter.Declare(baseActivation, valueDeclaration)
 	}
 
+	// This test is adapted and available in vm_test.go
+	// TestAttachments/build-in type
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           attachment A for AnyStruct {
@@ -2577,12 +2599,14 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
@@ -2602,7 +2626,7 @@ func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource R{
                 init() {}
             }

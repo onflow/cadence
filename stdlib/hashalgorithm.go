@@ -19,10 +19,17 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+)
+
+var hashAlgorithmLookupType = cryptoAlgorithmEnumLookupType(
+	sema.HashAlgorithmType,
+	sema.HashAlgorithms,
 )
 
 var hashAlgorithmStaticType interpreter.StaticType = interpreter.ConvertSemaCompositeTypeToStaticCompositeType(
@@ -62,87 +69,131 @@ func NewHashAlgorithmCase(
 	)
 	value.Fields = map[string]interpreter.Value{
 		sema.EnumRawValueFieldName:                    rawValue,
-		sema.HashAlgorithmTypeHashFunctionName:        newHashAlgorithmHashFunction(value, hasher),
-		sema.HashAlgorithmTypeHashWithTagFunctionName: newHashAlgorithmHashWithTagFunction(value, hasher),
+		sema.HashAlgorithmTypeHashFunctionName:        newInterpreterHashAlgorithmHashFunction(value, hasher),
+		sema.HashAlgorithmTypeHashWithTagFunctionName: newInterpreterHashAlgorithmHashWithTagFunction(value, hasher),
 	}
 	return value, nil
 }
 
-func newHashAlgorithmHashFunction(
+// Native hash functions
+
+func NativeHashAlgorithmHashFunction(
+	hasher Hasher,
+	constantHashAlgoValue interpreter.MemberAccessibleValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+
+		dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+
+		hashAlgoValue := constantHashAlgoValue
+		if hashAlgoValue == nil {
+			// VM does not provide a constant hash algo value
+			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+		}
+
+		return hash(
+			context,
+			hasher,
+			dataValue,
+			nil,
+			hashAlgoValue,
+		)
+	}
+}
+
+func NativeHashAlgorithmHashWithTagFunction(
+	hasher Hasher,
+	constantHashAlgoValue interpreter.MemberAccessibleValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+
+		dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
+
+		hashAlgoValue := constantHashAlgoValue
+		if hashAlgoValue == nil {
+			// VM does not provide a constant hash algo value
+			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+		}
+
+		return hash(
+			context,
+			hasher,
+			dataValue,
+			tagValue,
+			hashAlgoValue,
+		)
+	}
+}
+
+func newInterpreterHashAlgorithmHashFunction(
 	hashAlgoValue interpreter.MemberAccessibleValue,
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
 	// TODO: should ideally create a bound-host function.
 	// But the interpreter is not available at this point.
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		sema.HashAlgorithmTypeHashFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			context := invocation.InvocationContext
-
-			locationRange := invocation.LocationRange
-
-			return hash(
-				context,
-				locationRange,
-				hasher,
-				dataValue,
-				nil,
-				hashAlgoValue,
-			)
-		},
+		NativeHashAlgorithmHashFunction(hasher, hashAlgoValue),
 	)
 }
 
-func newHashAlgorithmHashWithTagFunction(
+func NewVMHashAlgorithmHashFunction(
+	hasher Hasher,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.HashAlgorithmType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.HashAlgorithmTypeHashFunctionName,
+			sema.HashAlgorithmTypeHashFunctionType,
+			NativeHashAlgorithmHashFunction(hasher, nil),
+		),
+	}
+}
+
+func newInterpreterHashAlgorithmHashWithTagFunction(
 	hashAlgorithmValue interpreter.MemberAccessibleValue,
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
 	// TODO: should ideally create a bound-host function.
 	// But the interpreter is not available at this point.
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		sema.HashAlgorithmTypeHashWithTagFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			tagValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			inter := invocation.InvocationContext
-
-			locationRange := invocation.LocationRange
-
-			return hash(
-				inter,
-				locationRange,
-				hasher,
-				dataValue,
-				tagValue,
-				hashAlgorithmValue,
-			)
-		},
+		NativeHashAlgorithmHashWithTagFunction(hasher, hashAlgorithmValue),
 	)
+}
+
+func NewVMHashAlgorithmHashWithTagFunction(
+	hasher Hasher,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.HashAlgorithmType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.HashAlgorithmTypeHashWithTagFunctionName,
+			sema.HashAlgorithmTypeHashWithTagFunctionType,
+			NativeHashAlgorithmHashWithTagFunction(hasher, nil),
+		),
+	}
 }
 
 func hash(
 	context interpreter.MemberAccessibleContext,
-	locationRange interpreter.LocationRange,
 	hasher Hasher,
 	dataValue *interpreter.ArrayValue,
 	tagValue *interpreter.StringValue,
 	hashAlgorithmValue interpreter.MemberAccessibleValue,
 ) interpreter.Value {
-	data, err := interpreter.ByteArrayValueToByteSlice(context, dataValue, locationRange)
+	data, err := interpreter.ByteArrayValueToByteSlice(context, dataValue)
 	if err != nil {
 		panic(errors.NewUnexpectedError("failed to get data. %w", err))
 	}
@@ -152,7 +203,7 @@ func hash(
 		tag = tagValue.Str
 	}
 
-	hashAlgorithm := NewHashAlgorithmFromValue(context, locationRange, hashAlgorithmValue)
+	hashAlgorithm := NewHashAlgorithmFromValue(context, hashAlgorithmValue)
 
 	result, err := hasher.Hash(data, tag, hashAlgorithm)
 	if err != nil {
@@ -161,15 +212,11 @@ func hash(
 	return interpreter.ByteSliceToByteArrayValue(context, result)
 }
 
-func NewHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
+// these functions are left as is, since there are differences in the implementations between interpreter and vm
+func NewInterpreterHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 
-	enumLookupType := cryptoAlgorithmEnumLookupType(
-		sema.HashAlgorithmType,
-		sema.HashAlgorithms,
-	)
-
-	hashAlgorithmConstructorValue, _ := cryptoAlgorithmEnumValueAndCaseValues(
-		enumLookupType,
+	interpreterHashAlgorithmConstructorValue, _ := interpreterCryptoAlgorithmEnumValueAndCaseValues(
+		hashAlgorithmLookupType,
 		sema.HashAlgorithms,
 		func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {
 			// Assume rawValues are all valid, given we iterate over sema.HashAlgorithms
@@ -180,8 +227,65 @@ func NewHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 
 	return StandardLibraryValue{
 		Name:  sema.HashAlgorithmTypeName,
-		Type:  enumLookupType,
-		Value: hashAlgorithmConstructorValue,
+		Type:  hashAlgorithmLookupType,
+		Value: interpreterHashAlgorithmConstructorValue,
 		Kind:  common.DeclarationKindEnum,
 	}
+}
+
+func NewVMHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
+
+	caseCount := len(sema.HashAlgorithms)
+	cases := make(map[interpreter.UInt8Value]interpreter.MemberAccessibleValue, caseCount)
+
+	for _, hashAlgorithm := range sema.HashAlgorithms {
+		rawValue := interpreter.UInt8Value(hashAlgorithm.RawValue())
+		// Assume rawValues are all valid, given we iterate over sema.HashAlgorithms
+		caseValue, _ := NewHashAlgorithmCase(rawValue, hasher)
+		cases[rawValue] = caseValue
+	}
+
+	function := vm.NewNativeFunctionValue(
+		sema.HashAlgorithmTypeName,
+		hashAlgorithmLookupType,
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			rawValue := args[0].(interpreter.UInt8Value)
+
+			caseValue, ok := cases[rawValue]
+			if !ok {
+				return interpreter.Nil
+			}
+
+			return interpreter.NewSomeValueNonCopying(context, caseValue)
+		},
+	)
+
+	return StandardLibraryValue{
+		Name:  sema.HashAlgorithmTypeName,
+		Type:  hashAlgorithmLookupType,
+		Value: function,
+		Kind:  common.DeclarationKindEnum,
+	}
+}
+
+func NewVMHashAlgorithmCaseValues(hasher Hasher) []VMValue {
+	values := make([]VMValue, len(sema.HashAlgorithms))
+	for i, hashAlgorithm := range sema.HashAlgorithms {
+		rawValue := interpreter.UInt8Value(hashAlgorithm.RawValue())
+		// Assume rawValues are all valid, given we iterate over sema.HashAlgorithms
+		caseValue, _ := NewHashAlgorithmCase(rawValue, hasher)
+		values[i] = VMValue{
+			Name: commons.TypeQualifiedName(
+				sema.HashAlgorithmType,
+				hashAlgorithm.Name(),
+			),
+			Value: caseValue,
+		}
+	}
+	return values
 }

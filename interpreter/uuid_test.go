@@ -65,7 +65,7 @@ func TestInterpretResourceUUID(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					assert.Equal(t,
 						ImportedLocation,
@@ -83,7 +83,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	var uuid uint64
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -129,16 +129,12 @@ func TestInterpretResourceUUID(t *testing.T) {
 	require.Equal(t, length, array.Count())
 
 	for i := 0; i < length; i++ {
-		element := array.Get(inter, interpreter.EmptyLocationRange, i)
+		element := array.Get(inter, i)
 
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)
 
-		uuidValue := res.GetMember(
-			inter,
-			interpreter.EmptyLocationRange,
-			sema.ResourceUUIDFieldName,
-		)
+		uuidValue := res.GetMember(inter, sema.ResourceUUIDFieldName)
 
 		RequireValuesEqual(
 			t,

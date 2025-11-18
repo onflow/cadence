@@ -603,6 +603,33 @@ func TestArrayExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil element", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &ArrayExpression{
+			Values: []Expression{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestArrayExpression_String(t *testing.T) {
@@ -633,6 +660,21 @@ func TestArrayExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			`[nil, true, "test"]`,
+			expr.String(),
+		)
+	})
+
+	t.Run("nil element", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &ArrayExpression{
+			Values: []Expression{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"[]",
 			expr.String(),
 		)
 	})
@@ -769,6 +811,46 @@ func TestDictionaryExpression_Doc(t *testing.T) {
 		)
 	})
 
+	t.Run("nil key and value", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DictionaryExpression{
+			Entries: []DictionaryEntry{
+				{
+					Key:   nil,
+					Value: nil,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text(""),
+									prettier.Concat{
+										prettier.Text(":"),
+										prettier.Line{},
+									},
+									prettier.Text(""),
+								},
+							},
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestDictionaryExpression_String(t *testing.T) {
@@ -808,6 +890,24 @@ func TestDictionaryExpression_String(t *testing.T) {
 		)
 	})
 
+	t.Run("nil key and value", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DictionaryExpression{
+			Entries: []DictionaryEntry{
+				{
+					Key:   nil,
+					Value: nil,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{: }",
+			expr.String(),
+		)
+	})
 }
 
 func TestIdentifierExpression_MarshalJSON(t *testing.T) {
@@ -967,8 +1067,8 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
 				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
 			},
 		},
-		Optional:  true,
-		AccessPos: Position{Offset: 7, Line: 8, Column: 9},
+		Optional:     true,
+		AccessEndPos: Position{Offset: 7, Line: 8, Column: 9},
 		Identifier: Identifier{
 			Identifier: "foobar",
 			Pos:        Position{Offset: 10, Line: 11, Column: 12},
@@ -990,7 +1090,7 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
                 "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
             },
             "Optional": true,
-            "AccessPos": {"Offset": 7, "Line": 8, "Column": 9},
+            "AccessEndPos": {"Offset": 7, "Line": 8, "Column": 9},
             "Identifier": {
                 "Identifier": "foobar",
                 "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
@@ -1159,7 +1259,7 @@ func TestMemberExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Group{
 											Doc: prettier.Text("bar"),
 										},
@@ -1184,6 +1284,71 @@ func TestMemberExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("."),
+							prettier.Text("bar"),
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &ForceExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Concat{
+					prettier.Text("foo"),
+					prettier.Text("!"),
+				},
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("."),
+							prettier.Text("bar"),
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestMemberExpression_String(t *testing.T) {
@@ -1287,6 +1452,113 @@ func TestMemberExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			".bar",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &ForceExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			"foo!.bar",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression on invocation", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &ForceExpression{
+				Expression: &InvocationExpression{
+					InvokedExpression: &MemberExpression{
+						Expression: &MemberExpression{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "self",
+								},
+							},
+							Identifier: Identifier{
+								Identifier: "nftProviderCapability",
+							},
+						},
+						Identifier: Identifier{
+							Identifier: "borrow",
+						},
+					},
+					Arguments: []*Argument{},
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "borrowNFT",
+			},
+		}
+
+		assert.Equal(t,
+			"self.nftProviderCapability.borrow()!.borrowNFT",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression with lower precedence", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &ForceExpression{
+				Expression: &BinaryExpression{
+					Operation: OperationPlus,
+					Left: &IdentifierExpression{
+						Identifier: Identifier{
+							Identifier: "a",
+						},
+					},
+					Right: &IdentifierExpression{
+						Identifier: Identifier{
+							Identifier: "b",
+						},
+					},
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "member",
+			},
+		}
+
+		assert.Equal(t,
+			"(a + b)!.member",
+			expr.String(),
+		)
+	})
+
 }
 
 func TestIndexExpression_MarshalJSON(t *testing.T) {
@@ -1479,7 +1751,7 @@ func TestIndexExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Group{
 											Doc: prettier.Text("bar"),
 										},
@@ -1498,6 +1770,33 @@ func TestIndexExpression_Doc(t *testing.T) {
 							Doc: prettier.Concat{
 								prettier.SoftLine{},
 								prettier.Text("baz"),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text("]"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nil target expression and indexing expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IndexExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("["),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
 							},
 						},
 						prettier.SoftLine{},
@@ -1595,6 +1894,43 @@ func TestIndexExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"(foo - bar)[baz]",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil target expression and indexing expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IndexExpression{}
+
+		assert.Equal(t,
+			"[]",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IndexExpression{
+			TargetExpression: &ForceExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "array",
+					},
+				},
+			},
+			IndexingExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "index",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"array![index]",
 			expr.String(),
 		)
 	})
@@ -1734,7 +2070,7 @@ func TestUnaryExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Group{
 											Doc: prettier.Text("bar"),
 										},
@@ -1746,6 +2082,23 @@ func TestUnaryExpression_Doc(t *testing.T) {
 						prettier.Text(")"),
 					},
 				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &UnaryExpression{
+			Operation: OperationMinus,
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("-"),
+				prettier.Text(""),
 			},
 			expr.Doc(),
 		)
@@ -1820,6 +2173,20 @@ func TestUnaryExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"-(foo - bar)",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &UnaryExpression{
+			Operation: OperationMinus,
+		}
+
+		assert.Equal(t,
+			"-",
 			expr.String(),
 		)
 	})
@@ -1961,7 +2328,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 								},
 								prettier.Line{},
 								prettier.Text("+"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Group{
 									Doc: prettier.Text("1"),
 								},
@@ -1970,7 +2337,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("+"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Text("99"),
 					},
@@ -2023,7 +2390,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 												},
 												prettier.Line{},
 												prettier.Text("|"),
-												prettier.Text(" "),
+												prettier.Space,
 												prettier.Group{
 													Doc: prettier.Text("1"),
 												},
@@ -2038,7 +2405,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("+"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Text("99"),
 					},
@@ -2082,7 +2449,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("??"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Group{
 							Doc: prettier.Concat{
@@ -2091,7 +2458,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 								},
 								prettier.Line{},
 								prettier.Text("??"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Group{
 									Doc: prettier.Text("1"),
 								},
@@ -2147,7 +2514,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 												},
 												prettier.Line{},
 												prettier.Text("||"),
-												prettier.Text(" "),
+												prettier.Space,
 												prettier.Group{
 													Doc: prettier.Text("1"),
 												},
@@ -2162,7 +2529,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("??"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Text("99"),
 					},
@@ -2172,6 +2539,31 @@ func TestBinaryExpression_Doc(t *testing.T) {
 		)
 	})
 
+	t.Run("nil left and right", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &BinaryExpression{
+			Operation: OperationPlus,
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Text(""),
+					},
+					prettier.Line{},
+					prettier.Text("+"),
+					prettier.Space,
+					prettier.Group{
+						Doc: prettier.Text(""),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestBinaryExpression_String(t *testing.T) {
@@ -2330,6 +2722,19 @@ func TestBinaryExpression_String(t *testing.T) {
 		)
 	})
 
+	t.Run("nil left and right", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &BinaryExpression{
+			Operation: OperationPlus,
+		}
+
+		assert.Equal(t,
+			" + ",
+			expr.String(),
+		)
+	})
 }
 
 func TestDestroyExpression_MarshalJSON(t *testing.T) {
@@ -2460,7 +2865,7 @@ func TestDestroyExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Group{
 											Doc: prettier.Text("bar"),
 										},
@@ -2476,6 +2881,22 @@ func TestDestroyExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DestroyExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("destroy "),
+				prettier.Text(""),
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestDestroyExpression_String(t *testing.T) {
@@ -2543,6 +2964,18 @@ func TestDestroyExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"destroy (foo - bar)",
+			expr.String(),
+		)
+	})
+
+	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DestroyExpression{}
+
+		assert.Equal(t,
+			"destroy ",
 			expr.String(),
 		)
 	})
@@ -2677,6 +3110,21 @@ func TestForceExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ForceExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Text("!"),
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestForceExpression_String(t *testing.T) {
@@ -2738,6 +3186,18 @@ func TestForceExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"(-foo)!",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ForceExpression{}
+
+		assert.Equal(t,
+			"!",
 			expr.String(),
 		)
 	})
@@ -3132,6 +3592,40 @@ func TestConditionalExpression_Doc(t *testing.T) {
 		)
 	})
 
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ConditionalExpression{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text(""),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text("? "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text(""),
+							},
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text(": "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text(""),
+							},
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestConditionalExpression_String(t *testing.T) {
@@ -3270,6 +3764,18 @@ func TestConditionalExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"false ? 1 : false ? 2 : 3",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ConditionalExpression{}
+
+		assert.Equal(t,
+			" ?  : ",
 			expr.String(),
 		)
 	})
@@ -3440,7 +3946,7 @@ func TestInvocationExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("as"),
-										prettier.Line{},
+										prettier.Space,
 										prettier.Text("T"),
 									},
 								},
@@ -3521,6 +4027,91 @@ func TestInvocationExpression_Doc(t *testing.T) {
 						prettier.Text(")"),
 					},
 				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nil invoked expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Text("()"),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nil argument", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Arguments: []*Argument{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foo"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nil type argument", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foo"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+				prettier.Text("()"),
 			},
 			expr.Doc(),
 		)
@@ -3609,6 +4200,78 @@ func TestInvocationExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"foobar<@AB>(ok: false)",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil invoked expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{}
+
+		assert.Equal(t,
+			"()",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil argument", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Arguments: []*Argument{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"foo()",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil type argument", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"foo<>()",
+			expr.String(),
+		)
+	})
+
+	t.Run("force expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &ForceExpression{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "func",
+					},
+				},
+			},
+			Arguments: []*Argument{},
+		}
+
+		assert.Equal(t,
+			"func!()",
 			expr.String(),
 		)
 	})
@@ -3712,7 +4375,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("as?"),
-					prettier.Line{},
+					prettier.Space,
 					prettier.Text("Int"),
 				},
 			},
@@ -3761,14 +4424,14 @@ func TestCastingExpression_Doc(t *testing.T) {
 								},
 								prettier.Line{},
 								prettier.Text("as?"),
-								prettier.Line{},
+								prettier.Space,
 								prettier.Text("AnyStruct"),
 							},
 						},
 					},
 					prettier.Line{},
 					prettier.Text("as?"),
-					prettier.Line{},
+					prettier.Space,
 					prettier.Text("Int"),
 				},
 			},
@@ -3821,7 +4484,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 												},
 												prettier.Line{},
 												prettier.Text("-"),
-												prettier.Text(" "),
+												prettier.Space,
 												prettier.Group{
 													Doc: prettier.Text("bar"),
 												},
@@ -3835,13 +4498,40 @@ func TestCastingExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("as?"),
-					prettier.Line{},
+					prettier.Space,
 					prettier.Text("Int"),
 				},
 			},
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil expression and type", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &CastingExpression{
+			Expression:     nil,
+			Operation:      OperationFailableCast,
+			TypeAnnotation: nil,
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Text(""),
+					},
+					prettier.Line{},
+					prettier.Text("as?"),
+					prettier.Space,
+					prettier.Text(""),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestCastingExpression_String(t *testing.T) {
@@ -3943,6 +4633,23 @@ func TestCastingExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+
+	t.Run("nil expression and type", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &CastingExpression{
+			Expression:     nil,
+			Operation:      OperationFailableCast,
+			TypeAnnotation: nil,
+		}
+
+		assert.Equal(t,
+			" as? ",
+			expr.String(),
+		)
+	})
+
 }
 
 func TestCreateExpression_MarshalJSON(t *testing.T) {
@@ -4059,46 +4766,79 @@ func TestCreateExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &CreateExpression{
-		InvocationExpression: &InvocationExpression{
-			InvokedExpression: &IdentifierExpression{
-				Identifier: Identifier{
-					Identifier: "foo",
+	t.Run("nil invocation expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &CreateExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("create "),
+				prettier.Text(""),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("with expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &CreateExpression{
+			InvocationExpression: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("create "),
+		assert.Equal(t,
 			prettier.Concat{
-				prettier.Text("foo"),
-				prettier.Text("()"),
+				prettier.Text("create "),
+				prettier.Concat{
+					prettier.Text("foo"),
+					prettier.Text("()"),
+				},
 			},
-		},
-		expr.Doc(),
-	)
+			expr.Doc(),
+		)
+	})
 }
 
 func TestCreateExpression_String(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &CreateExpression{
-		InvocationExpression: &InvocationExpression{
-			InvokedExpression: &IdentifierExpression{
-				Identifier: Identifier{
-					Identifier: "foo",
+	t.Run("nil invocation expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &CreateExpression{}
+
+		assert.Equal(t,
+			"create ",
+			expr.String(),
+		)
+	})
+
+	t.Run("with expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &CreateExpression{
+			InvocationExpression: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	assert.Equal(t,
-		"create foo()",
-		expr.String(),
-	)
+		assert.Equal(t,
+			"create foo()",
+			expr.String(),
+		)
+	})
 }
 
 func TestReferenceExpression_MarshalJSON(t *testing.T) {
@@ -4242,7 +4982,7 @@ func TestReferenceExpression_Doc(t *testing.T) {
 												},
 												prettier.Line{},
 												prettier.Text("-"),
-												prettier.Text(" "),
+												prettier.Space,
 												prettier.Group{
 													Doc: prettier.Text("bar"),
 												},
@@ -4253,6 +4993,25 @@ func TestReferenceExpression_Doc(t *testing.T) {
 								prettier.Text(")"),
 							},
 						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ReferenceExpression{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("&"),
+					prettier.Group{
+						Doc: prettier.Text(""),
 					},
 				},
 			},
@@ -4325,6 +5084,18 @@ func TestReferenceExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"&(foo - bar)",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ReferenceExpression{}
+
+		assert.Equal(t,
+			"&",
 			expr.String(),
 		)
 	})
@@ -4475,13 +5246,14 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("fun "),
+			prettier.Text("fun"),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("()"),
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Text("{}"),
 		}
 
@@ -4548,7 +5320,8 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("fun "),
+			prettier.Text("fun"),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Group{
@@ -4588,7 +5361,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Concat{
 				prettier.Text("{"),
 				prettier.Indent{
@@ -4661,7 +5434,8 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("fun "),
+			prettier.Text("fun"),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("()"),
@@ -4669,7 +5443,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					prettier.Text("Void"),
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Concat{
 				prettier.Text("{"),
 				prettier.Indent{
@@ -4678,7 +5452,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("pre"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -4705,7 +5479,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("post"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -4762,13 +5536,14 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		expected := prettier.Concat{
 			prettier.Text("view"),
 			prettier.Space,
-			prettier.Text("fun "),
+			prettier.Text("fun"),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("()"),
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Text("{}"),
 		}
 

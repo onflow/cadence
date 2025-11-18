@@ -37,11 +37,6 @@ type EmptyRuntimeInterface struct{}
 
 var _ Interface = EmptyRuntimeInterface{}
 
-func (EmptyRuntimeInterface) MeterMemory(_ common.MemoryUsage) error {
-	// NO-OP
-	return nil
-}
-
 func (EmptyRuntimeInterface) ResolveLocation(_ []Identifier, _ Location) ([]ResolvedLocation, error) {
 	panic("unexpected call to ResolveLocation")
 }
@@ -54,33 +49,8 @@ func (EmptyRuntimeInterface) GetAccountContractCode(_ common.AddressLocation) (c
 	panic("unexpected call to GetAccountContractCode")
 }
 
-func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationUsage) error {
-	// NO-OP
-	return nil
-}
-
-func (EmptyRuntimeInterface) ComputationUsed() (uint64, error) {
-	panic("unexpected call to ComputationUsed")
-}
-
-func (EmptyRuntimeInterface) MemoryUsed() (uint64, error) {
-	panic("unexpected call to MemoryUsed")
-}
-
-func (EmptyRuntimeInterface) InteractionUsed() (uint64, error) {
-	panic("unexpected call to InteractionUsed")
-}
-
 func (EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
 	panic("unexpected call to GetCode")
-}
-
-func (EmptyRuntimeInterface) SetInterpreterSharedState(_ *interpreter.SharedState) {
-	panic("unexpected call to SetInterpreterSharedState")
-}
-
-func (EmptyRuntimeInterface) GetInterpreterSharedState() *interpreter.SharedState {
-	panic("unexpected call to GetInterpreterSharedState")
 }
 
 func (EmptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {
@@ -207,7 +177,7 @@ func (EmptyRuntimeInterface) GetAccountContractNames(_ Address) ([]string, error
 	panic("unexpected call to GetAccountContractNames")
 }
 
-func (EmptyRuntimeInterface) RecordTrace(_ string, _ Location, _ time.Duration, _ []attribute.KeyValue) {
+func (EmptyRuntimeInterface) RecordTrace(_ string, _ time.Duration, _ []attribute.KeyValue) {
 	panic("unexpected call to RecordTrace")
 }
 
@@ -242,7 +212,6 @@ func (EmptyRuntimeInterface) RecoverProgram(_ *ast.Program, _ common.Location) (
 
 func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
 	_ interpreter.AccountCapabilityGetValidationContext,
-	_ interpreter.LocationRange,
 	_ interpreter.AddressValue,
 	_ interpreter.PathValue,
 	_ *sema.ReferenceType,
@@ -253,7 +222,6 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
 
 func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
 	_ interpreter.AccountCapabilityPublishValidationContext,
-	_ interpreter.LocationRange,
 	_ interpreter.AddressValue,
 	_ interpreter.PathValue,
 	_ *interpreter.ReferenceStaticType,

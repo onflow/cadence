@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 func TestValueDeepCopyAndDeepRemove(t *testing.T) {
@@ -36,7 +37,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	address := common.Address{0x1}
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
@@ -59,14 +60,12 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	dictValueValue := interpreter.NewUnmeteredInt256ValueFromInt64(1)
 	dictValue := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		dictionaryStaticType,
 		dictValueKey, dictValueValue,
 	)
 
 	arrayValue := interpreter.NewArrayValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.VariableSizedStaticType{
 			Type: dictionaryStaticType,
 		},
@@ -78,12 +77,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	compositeValue := newTestCompositeValue(inter, address)
 
-	compositeValue.SetMember(
-		inter,
-		interpreter.EmptyLocationRange,
-		"value",
-		optionalValue,
-	)
+	compositeValue.SetMember(inter, "value", optionalValue)
 
 	compositeValue.DeepRemove(inter, true)
 

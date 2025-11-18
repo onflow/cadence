@@ -22,66 +22,67 @@ import (
 	"github.com/onflow/atree"
 )
 
-// placeholderValue
-type placeholderValue struct{}
+// PlaceholderValue
+type PlaceholderValue struct{}
 
-var placeholder Value = placeholderValue{}
+var placeholder Value = PlaceholderValue{}
 
-var _ Value = placeholderValue{}
+var _ Value = PlaceholderValue{}
 
-func (placeholderValue) IsValue() {}
+func (PlaceholderValue) IsValue() {}
 
-func (f placeholderValue) String() string {
-	return f.RecursiveString(SeenReferences{})
+func (v PlaceholderValue) String() string {
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (f placeholderValue) RecursiveString(_ SeenReferences) string {
+func (PlaceholderValue) RecursiveString(_ SeenReferences) string {
 	return ""
 }
 
-func (f placeholderValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (PlaceholderValue) MeteredString(
+	_ ValueStringContext,
+	_ SeenReferences,
+) string {
 	return ""
 }
 
-func (f placeholderValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (PlaceholderValue) Accept(_ ValueVisitContext, _ Visitor) {
 	// NO-OP
 }
 
-func (f placeholderValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (PlaceholderValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (f placeholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
+func (PlaceholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return PrimitiveStaticTypeNever
 }
 
-func (placeholderValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (PlaceholderValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
-func (f placeholderValue) ConformsToStaticType(
+func (PlaceholderValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (f placeholderValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return NonStorable{Value: f}, nil
+func (v PlaceholderValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
+	return NonStorable{Value: v}, nil
 }
 
-func (placeholderValue) NeedsStoreTo(_ atree.Address) bool {
+func (PlaceholderValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (placeholderValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
+func (PlaceholderValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
-func (f placeholderValue) Transfer(
+func (v PlaceholderValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -92,13 +93,13 @@ func (f placeholderValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
-	return f
+	return v
 }
 
-func (f placeholderValue) Clone(_ ValueCloneContext) Value {
-	return f
+func (v PlaceholderValue) Clone(_ ValueCloneContext) Value {
+	return v
 }
 
-func (placeholderValue) DeepRemove(_ ValueRemoveContext, _ bool) {
+func (PlaceholderValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }

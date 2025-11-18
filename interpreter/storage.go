@@ -85,7 +85,7 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 			), nil
 
 		case CompositeTypeInfo:
-			return newCompositeValueFromAtreeMap(
+			return NewCompositeValueFromAtreeMap(
 				gauge,
 				staticType,
 				value,
@@ -173,17 +173,27 @@ type InMemoryStorage struct {
 	*atree.BasicSlabStorage
 	DomainStorageMaps map[StorageDomainKey]*DomainStorageMap
 	memoryGauge       common.MemoryGauge
+	computationGauge  common.ComputationGauge
 }
 
 var _ Storage = InMemoryStorage{}
 
-func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
+func NewInMemoryStorage(
+	memoryGauge common.MemoryGauge,
+	computationGauge common.ComputationGauge,
+) InMemoryStorage {
+
 	decodeStorable := func(
 		decoder *cbor.StreamDecoder,
 		storableSlabStorageID atree.SlabID,
 		inlinedExtraData []atree.ExtraData,
 	) (atree.Storable, error) {
-		return DecodeStorable(decoder, storableSlabStorageID, inlinedExtraData, memoryGauge)
+		return DecodeStorable(
+			decoder,
+			storableSlabStorageID,
+			inlinedExtraData,
+			memoryGauge,
+		)
 	}
 
 	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
@@ -201,6 +211,7 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 		BasicSlabStorage:  slabStorage,
 		DomainStorageMaps: make(map[StorageDomainKey]*DomainStorageMap),
 		memoryGauge:       memoryGauge,
+		computationGauge:  computationGauge,
 	}
 }
 
@@ -215,7 +226,12 @@ func (i InMemoryStorage) GetDomainStorageMap(
 	key := NewStorageDomainKey(i.memoryGauge, address, domain)
 	domainStorageMap = i.DomainStorageMaps[key]
 	if domainStorageMap == nil && createIfNotExists {
-		domainStorageMap = NewDomainStorageMap(i.memoryGauge, i, atree.Address(address))
+		domainStorageMap = NewDomainStorageMap(
+			i.memoryGauge,
+			i.computationGauge,
+			i,
+			atree.Address(address),
+		)
 		i.DomainStorageMaps[key] = domainStorageMap
 	}
 	return domainStorageMap

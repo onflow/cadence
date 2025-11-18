@@ -58,11 +58,11 @@ var _ MemberAccessibleValue = PathValue{}
 
 func (PathValue) IsValue() {}
 
-func (v PathValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v PathValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitPathValue(context, v)
 }
 
-func (PathValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (PathValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -79,7 +79,7 @@ func (v PathValue) StaticType(context ValueStaticTypeContext) StaticType {
 	}
 }
 
-func (v PathValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (v PathValue) IsImportable(_ ValueImportableContext) bool {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return sema.StoragePathType.Importable
@@ -103,22 +103,33 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v PathValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v PathValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	// len(domain) + len(identifier) + '/' x2
 	strLen := len(v.Domain.Identifier()) + len(v.Identifier) + 2
 	common.UseMemory(context, common.NewRawStringMemoryUsage(strLen))
 	return v.String()
 }
 
-func (v PathValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v PathValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v PathValue) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	name string,
-) FunctionValue {
+var NativePathValueToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		path := AssertValueOfType[PathValue](receiver)
+		return PathValueToStringFunction(context, path)
+	},
+)
+
+func (v PathValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -126,14 +137,7 @@ func (v PathValue) GetMethod(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v PathValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				return PathValueToStringFunction(
-					invocationContext,
-					v,
-					locationRange,
-				)
-			},
+			NativePathValueToStringFunction,
 		)
 	}
 
@@ -143,13 +147,12 @@ func (v PathValue) GetMethod(
 func PathValueToStringFunction(
 	memoryGauge common.MemoryGauge,
 	v PathValue,
-	locationRange LocationRange,
 ) Value {
 	domainLength := len(v.Domain.Identifier())
 	identifierLength := len(v.Identifier)
 
 	memoryUsage := common.NewStringMemoryUsage(
-		safeAdd(domainLength, identifierLength, locationRange),
+		safeAdd(domainLength, identifierLength),
 	)
 
 	return NewStringValue(
@@ -159,39 +162,49 @@ func PathValueToStringFunction(
 	)
 }
 
-func (PathValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (PathValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Paths have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (PathValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (PathValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Paths have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v PathValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v PathValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v PathValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherPath, ok := other.(PathValue)
 	if !ok {
 		return false
 	}
 
-	return otherPath.Identifier == v.Identifier &&
-		otherPath.Domain == v.Domain
+	if otherPath.Domain != v.Domain {
+		return false
+	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindStringComparison,
+			Intensity: uint64(minStringLength(v.Identifier, otherPath.Identifier)),
+		},
+	)
+
+	return otherPath.Identifier == v.Identifier
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypePath (1 byte)
 // - domain (1 byte)
 // - identifier (n bytes)
-func (v PathValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v PathValue) HashInput(_ common.Gauge, scratch []byte) []byte {
 	length := 1 + 1 + len(v.Identifier)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -231,7 +244,7 @@ func newPathFromStringValue(gauge common.MemoryGauge, domain common.PathDomain, 
 func (v PathValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(
 		v,
@@ -251,7 +264,6 @@ func (PathValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v PathValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

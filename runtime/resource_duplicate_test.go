@@ -37,7 +37,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 
@@ -86,6 +86,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -99,6 +100,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -139,6 +141,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -172,7 +175,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
               // Given the value is a reference, this won't duplicate the contract value.
               let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! &Holder
 
-              // Move the vault of of the contract.
+              // Move the vault of the contract.
               // The 'dupeVault' must be nil, since it was moved out of the contract
               // in the above step.
               let dupeVault <- dupeContract.swapContent(nil)
@@ -193,6 +196,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -205,7 +209,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 
@@ -254,6 +258,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -267,6 +272,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -315,7 +321,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
               // Given the value is a reference, this won't duplicate the contract value.
               let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! &Holder
 
-              // Move the vault of of the contract.
+              // Move the vault of the contract.
               // The 'dupeVault' must be nil, since it was moved out of the contract
               // in the above step.
               let dupeVault <- dupeContract.swapContent(nil)
@@ -339,6 +345,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)

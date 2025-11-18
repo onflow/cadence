@@ -75,10 +75,10 @@ func NewAccountStorageCapabilitiesValue(
 	}
 
 	var str string
-	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(context, common.AccountStorageCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(context, seenReferences, locationRange)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.StorageCapabilities(%s)", addressStr)
 		}
 		return str
@@ -95,7 +95,7 @@ func NewAccountStorageCapabilitiesValue(
 		methodsGetter,
 		nil,
 		stringer,
-	).WithPrivateField(accountTypePrivateAddressFieldName, address)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return storageCapabilities
 }

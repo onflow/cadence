@@ -33,38 +33,74 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 	t.Parallel()
 
 	contractCode := `
-		access(all) contract Test {
-			access(all) struct A {}
-			access(all) resource B {}
-			access(all) event C()
+        access(all) contract Test {
+            access(all) struct A {}
+            access(all) resource B {}
+            access(all) event C()
 
-			init() {}
-		}
-	`
+            init() {}
+        }
+    `
 
-	script :=
-		`
-		transaction {
-			prepare(signer: &Account) {
-				let deployedContract = signer.contracts.get(name: "Test")
-				assert(deployedContract!.name == "Test")
+	contractCode2 := `
+        access(all) contract Test2 {
+            access(all) struct A2 {}
+            access(all) resource B2 {}
+            access(all) event C2()
 
-				let expected: {String: Void} =
-					{ "A.2a00000000000000.Test.A": ()
-					, "A.2a00000000000000.Test.B": ()
-					, "A.2a00000000000000.Test.C": ()
-					}
-				let types = deployedContract!.publicTypes()
-				assert(types.length == 3)
+            init() {}
+        }
+    `
 
-				for type in types {
-					assert(expected[type.identifier] != nil, message: type.identifier)
-				}
-			}
-		}
-		`
+	tx := `
+        transaction {
+            prepare(signer: &Account) {
+                let deployedContract = signer.contracts.get(name: "Test")
+                assert(deployedContract!.name == "Test")
 
-	rt := NewTestInterpreterRuntime()
+                let expected: {String: Void} = {
+                    "A.2a00000000000000.Test.A": (),
+                    "A.2a00000000000000.Test.B": (),
+                    "A.2a00000000000000.Test.C": ()
+                }
+                let types = deployedContract!.publicTypes()
+                assert(types.length == 3)
+
+                for type in types {
+                    assert(
+                        expected[type.identifier] != nil,
+                        message: "type \(type.identifier) missing"
+                    )
+                }
+            }
+        }
+    `
+
+	tx2 := `
+        transaction {
+            prepare(signer: &Account) {
+                let deployedContract = signer.contracts.get(name: "Test2")
+                assert(deployedContract!.name == "Test2")
+
+                let expected: {String: Void} = {
+                    "A.2a00000000000000.Test2.A2": (),
+                    "A.2a00000000000000.Test2.B2": (),
+                    "A.2a00000000000000.Test2.C2": ()
+                }
+                let types = deployedContract!.publicTypes()
+                assert(types.length == 3)
+
+                for type in types {
+                    assert(
+                        expected[type.identifier] != nil,
+                        message: "type \(type.identifier) missing"
+                    )
+                }
+            }
+        }
+    `
+
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	runtimeInterface := &TestRuntimeInterface{
@@ -96,26 +132,40 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
-	newContext := func() Context {
-		return Context{Interface: runtimeInterface, Location: nextTransactionLocation()}
+
+	// Deploy contracts
+	for name, code := range map[string]string{
+		"Test":  contractCode,
+		"Test2": contractCode2,
+	} {
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction(name, []byte(code)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
 	}
 
-	// deploy the contract
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: DeploymentTransaction("Test", []byte(contractCode)),
-		},
-		newContext(),
-	)
-	require.NoError(t, err)
+	// Run test transactions
+	for _, script := range []string{tx, tx2} {
 
-	// grab the public types from the deployed contract
-	err = rt.ExecuteTransaction(
-		Script{
-			Source: []byte(script),
-		},
-		newContext(),
-	)
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
+	}
 
-	require.NoError(t, err)
 }

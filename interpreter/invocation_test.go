@@ -25,27 +25,68 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
+func TestInterpretReturnType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-       fun test(_ x: Int): Int {
-           return x
-       }
-   `)
+	xValue := stdlib.StandardLibraryValue{
+		Name: "x",
+		Type: sema.IntType,
+		// NOTE: value with different type than declared type
+		Value: interpreter.TrueValue,
+	}
 
-	_, err := inter.Invoke("test", interpreter.TrueValue)
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(xValue)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, xValue)
+
+	inter, err := parseCheckAndPrepareWithOptions(
+		t,
+		`
+            fun test(): Int {
+                return x
+            }
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: NewUnmeteredInMemoryStorage(),
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+					AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	var transferTypeError *interpreter.ValueTransferTypeError
-	require.ErrorAs(t, err, &transferTypeError)
+	if *compile {
+		var unexpectedErr errors.UnexpectedError
+		require.ErrorAs(t, err, &unexpectedErr)
+	} else {
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	}
 }
 
 func TestInterpretSelfDeclaration(t *testing.T) {
@@ -54,16 +95,25 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 
 	test := func(t *testing.T, code string, expectSelf bool) {
 
-		checkFunction := stdlib.NewStandardLibraryStaticFunction(
+		checkFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"check",
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
 				// Check that the *caller's* self
 
-				callStack := invocation.InvocationContext.CallStack()
+				// This is an interpreter-only test.
+				// So the `InvocationContext` is an interpreter instance.
+				inter := context.(*interpreter.Interpreter)
+
+				callStack := inter.CallStack()
 				parentInvocation := callStack[len(callStack)-1]
 
 				if expectSelf {
@@ -81,20 +131,28 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, checkFunction)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				Storage: newUnmeteredInMemoryStorage(),
-				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-					return baseActivation
+		// NOTE: test only applies to the interpreter,
+		// the VM does not provide a way to check the caller's self
+		inter, err := parseCheckAndInterpretWithOptions(
+			t,
+			code,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					Storage: NewUnmeteredInMemoryStorage(),
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
-			},
-		})
+		)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
@@ -141,7 +199,7 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(n: Int?): Int? {
 		  return n.map(fun(n: Int): Int {
 			  return n + 1
@@ -160,7 +218,7 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		[]interpreter.Value{value},
 		[]sema.Type{sema.IntType},
 		nil,
-		interpreter.EmptyLocationRange,
+		interpreter.LocationRange{},
 	)
 
 	_, err := interpreter.InvokeFunction(
@@ -170,6 +228,11 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var memberAccessTypeError *interpreter.MemberAccessTypeError
-	require.ErrorAs(t, err, &memberAccessTypeError)
+	if *compile {
+		var internalErr errors.InternalError
+		require.ErrorAs(t, err, &internalErr)
+	} else {
+		var memberAccessTypeError *interpreter.MemberAccessTypeError
+		require.ErrorAs(t, err, &memberAccessTypeError)
+	}
 }

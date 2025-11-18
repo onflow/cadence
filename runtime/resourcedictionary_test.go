@@ -87,7 +87,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -141,6 +141,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -154,6 +155,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -178,6 +180,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -199,10 +202,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: readTx},
+			Source: readTx,
+		},
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -232,6 +237,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -265,6 +271,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -305,6 +312,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -330,6 +338,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -366,6 +375,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -385,7 +395,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -503,6 +513,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -516,6 +527,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -542,6 +554,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -568,6 +581,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -582,7 +596,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 	signer1 := common.MustBytesToAddress([]byte{0x1})
 	signer2 := common.MustBytesToAddress([]byte{0x2})
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(`
      access(all) contract Test {
@@ -696,6 +710,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -709,6 +724,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -740,6 +756,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -749,7 +766,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -836,6 +853,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -847,6 +865,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -858,6 +877,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -869,6 +889,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -878,7 +899,7 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -950,6 +971,7 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -962,6 +984,7 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -973,6 +996,7 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -991,7 +1015,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -1090,6 +1114,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1101,6 +1126,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1112,6 +1138,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1123,6 +1150,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1132,7 +1160,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -1247,6 +1275,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1259,6 +1288,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1271,6 +1301,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1283,6 +1314,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1295,6 +1327,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1307,6 +1340,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1314,7 +1348,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -1336,7 +1370,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let data: @{Int: Test.R} <- {}
              var i = 0
              while i < 1000 {
@@ -1381,6 +1415,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(b, err)
@@ -1394,6 +1429,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(b, err)
@@ -1403,7 +1439,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let ref = signer.storage.borrow<&{Int: Test.R}>(from: /storage/data)!
              assert(ref[50] != nil)
         }
@@ -1422,6 +1458,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(b, err)

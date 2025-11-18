@@ -56,7 +56,7 @@ var _ atree.Value = &SomeValue{}
 var _ atree.WrapperValue = &SomeValue{}
 
 // UnwrapAtreeValue returns non-SomeValue and wrapper size.
-func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint32) {
 	// NOTE:
 	// - non-SomeValue is the same as non-SomeValue in SomeValue.Storable()
 	// - non-SomeValue wrapper size is the same as encoded wrapper size in SomeStorable.ByteSize().
@@ -71,24 +71,24 @@ func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
 	switch nonSomeValue := nonSomeValue.(type) {
 	case atree.WrapperValue:
 		unwrappedValue, wrapperSize := nonSomeValue.UnwrapAtreeValue()
-		return unwrappedValue, wrapperSize + uint64(someStorableEncodedPrefixSize)
+		return unwrappedValue, wrapperSize + someStorableEncodedPrefixSize
 
 	default:
-		return nonSomeValue, uint64(someStorableEncodedPrefixSize)
+		return nonSomeValue, someStorableEncodedPrefixSize
 	}
 }
 
 func (*SomeValue) IsValue() {}
 
-func (v *SomeValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (v *SomeValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitSomeValue(context, v)
 	if !descend {
 		return
 	}
-	v.value.Accept(context, visitor, locationRange)
+	v.value.Accept(context, visitor)
 }
 
-func (v *SomeValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
+func (v *SomeValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	walkChild(v.value)
 }
 
@@ -107,8 +107,8 @@ func (v *SomeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	)
 }
 
-func (v *SomeValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
-	return v.value.IsImportable(context, locationRange)
+func (v *SomeValue) IsImportable(context ValueImportableContext) bool {
+	return v.value.IsImportable(context)
 }
 
 func (*SomeValue) isOptionalValue() {}
@@ -126,9 +126,9 @@ func (v *SomeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *SomeValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
+func (v *SomeValue) Destroy(context ResourceDestructionContext) {
 	innerValue := v.InnerValue()
-	maybeDestroy(context, locationRange, innerValue)
+	maybeDestroy(context, innerValue)
 
 	v.isDestroyed = true
 	v.value = nil
@@ -142,19 +142,18 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.value.RecursiveString(seenReferences)
 }
 
-func (v *SomeValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
-	return v.value.MeteredString(context, seenReferences, locationRange)
+func (v *SomeValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
+	return v.value.MeteredString(context, seenReferences)
 }
 
-func (v *SomeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v *SomeValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v *SomeValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v *SomeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := v.InnerValueType(context)
@@ -164,26 +163,7 @@ func (v *SomeValue) GetMethod(
 			sema.OptionalTypeMapFunctionType(
 				innerValueType,
 			),
-			func(v *SomeValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				transformFunctionType := transformFunction.FunctionType(invocationContext)
-
-				return OptionalValueMapFunction(
-					invocationContext,
-					v,
-					transformFunctionType,
-					transformFunction,
-					innerValueType,
-					locationRange,
-				)
-			},
+			NativeOptionalMapFunction,
 		)
 	}
 
@@ -196,7 +176,6 @@ func OptionalValueMapFunction(
 	transformFunctionType *sema.FunctionType,
 	transformFunction FunctionValue,
 	innerValueType sema.Type,
-	locationRange LocationRange,
 ) Value {
 	parameterTypes := transformFunctionType.ParameterTypes()
 	returnType := transformFunctionType.ReturnTypeAnnotation.Type
@@ -208,12 +187,10 @@ func OptionalValueMapFunction(
 				invocationContext,
 				transformFunction,
 				[]Value{v},
-				nil,
 				[]sema.Type{innerValueType},
 				parameterTypes,
 				returnType,
 				nil,
-				locationRange,
 			)
 		},
 	)
@@ -226,17 +203,16 @@ func (v *SomeValue) InnerValueType(context ValueStaticTypeContext) sema.Type {
 	)
 }
 
-func (v *SomeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (v *SomeValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *SomeValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (v *SomeValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
 func (v *SomeValue) ConformsToStaticType(
 	context ValueStaticTypeConformanceContext,
-	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 
@@ -246,14 +222,10 @@ func (v *SomeValue) ConformsToStaticType(
 
 	innerValue := v.InnerValue()
 
-	return innerValue.ConformsToStaticType(
-		context,
-		locationRange,
-		results,
-	)
+	return innerValue.ConformsToStaticType(context, results)
 }
 
-func (v *SomeValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *SomeValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherSome, ok := other.(*SomeValue)
 	if !ok {
 		return false
@@ -266,13 +238,13 @@ func (v *SomeValue) Equal(context ValueComparisonContext, locationRange Location
 		return false
 	}
 
-	return equatableValue.Equal(context, locationRange, otherSome.value)
+	return equatableValue.Equal(context, otherSome.value)
 }
 
 func (v *SomeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 
 	// SomeStorable returned from this function can be encoded in two ways:
@@ -301,7 +273,7 @@ func (v *SomeValue) Storable(
 
 		// Reduce maxInlineSize for non-SomeValue to make sure
 		// that SomeStorable wrapper is always encoded inline.
-		maxInlineSize -= uint64(someStorableEncodedPrefixSize)
+		maxInlineSize -= someStorableEncodedPrefixSize
 
 		nonSomeValueStorable, err := nonSomeValue.Storable(
 			storage,
@@ -366,7 +338,6 @@ func (v *SomeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 
 func (v *SomeValue) Transfer(
 	context ValueTransferContext,
-	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -382,7 +353,6 @@ func (v *SomeValue) Transfer(
 
 		innerValue = v.value.Transfer(
 			context,
-			locationRange,
 			address,
 			remove,
 			nil,
@@ -409,7 +379,7 @@ func (v *SomeValue) Transfer(
 		// we don't need to invalidate referenced resources if this resource was moved
 		// to storage, as the earlier transfer will have done this already
 		if !needsStoreTo {
-			InvalidateReferencedResources(context, v.value, locationRange)
+			InvalidateReferencedResources(context, v.value)
 		}
 		v.value = nil
 	}
@@ -532,3 +502,27 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 		s.Storable,
 	}
 }
+
+// Native some functions
+
+var NativeOptionalMapFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		optionalValue := AssertValueOfType[OptionalValue](receiver)
+		innerValueType := optionalValue.InnerValueType(context)
+
+		transformFunction := AssertValueOfType[FunctionValue](args[0])
+		transformFunctionType := transformFunction.FunctionType(context)
+		return OptionalValueMapFunction(
+			context,
+			optionalValue,
+			transformFunctionType,
+			transformFunction,
+			innerValueType,
+		)
+	},
+)

@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -114,73 +113,93 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
+var NativeInclusiveRangeConstructorFunction = interpreter.NativeFunction(
+	func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		start := interpreter.AssertValueOfType[interpreter.IntegerValue](args[0])
+		end := interpreter.AssertValueOfType[interpreter.IntegerValue](args[1])
+		var step interpreter.IntegerValue
+		if len(args) > 2 {
+			step = interpreter.AssertValueOfType[interpreter.IntegerValue](args[2])
+		}
+
+		return NewInclusiveRange(context, start, end, step)
+	},
+)
+
+var InterpreterInclusiveRangeConstructor = NewNativeStandardLibraryStaticFunction(
 	"InclusiveRange",
 	inclusiveRangeConstructorFunctionType,
 	inclusiveRangeConstructorFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		start, startOk := invocation.Arguments[0].(interpreter.IntegerValue)
-		end, endOk := invocation.Arguments[1].(interpreter.IntegerValue)
+	NativeInclusiveRangeConstructorFunction,
+	false,
+)
 
-		if !startOk || !endOk {
-			panic(errors.NewUnreachableError())
-		}
+var VMInclusiveRangeConstructor = NewNativeStandardLibraryStaticFunction(
+	"InclusiveRange",
+	inclusiveRangeConstructorFunctionType,
+	inclusiveRangeConstructorFunctionDocString,
+	NativeInclusiveRangeConstructorFunction,
+	true,
+)
 
-		invocationContext := invocation.InvocationContext
-		locationRange := invocation.LocationRange
+func NewInclusiveRange(
+	invocationContext interpreter.InvocationContext,
+	start interpreter.IntegerValue,
+	end interpreter.IntegerValue,
+	step interpreter.IntegerValue,
+) interpreter.Value {
 
-		startStaticType := start.StaticType(invocationContext)
-		endStaticType := end.StaticType(invocationContext)
-		if !startStaticType.Equal(endStaticType) {
+	startStaticType := start.StaticType(invocationContext)
+	endStaticType := end.StaticType(invocationContext)
+	if !startStaticType.Equal(endStaticType) {
+		panic(&interpreter.InclusiveRangeConstructionError{
+			Message: fmt.Sprintf(
+				"start and end are of different types. start: %s and end: %s",
+				startStaticType,
+				endStaticType,
+			),
+		})
+	}
+
+	rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocationContext, startStaticType)
+	rangeSemaType := interpreter.MustConvertStaticToSemaType(
+		rangeStaticType,
+		invocationContext,
+	).(*sema.InclusiveRangeType)
+
+	if step != nil {
+
+		stepStaticType := step.StaticType(invocationContext)
+		if stepStaticType != startStaticType {
 			panic(&interpreter.InclusiveRangeConstructionError{
-				LocationRange: locationRange,
 				Message: fmt.Sprintf(
-					"start and end are of different types. start: %s and end: %s",
+					"step must be of the same type as start and end. start/end: %s and step: %s",
 					startStaticType,
-					endStaticType,
+					stepStaticType,
 				),
 			})
 		}
 
-		rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocation.InvocationContext, startStaticType)
-		rangeSemaType := sema.NewInclusiveRangeType(invocation.InvocationContext, invocation.ArgumentTypes[0])
-
-		if len(invocation.Arguments) > 2 {
-			step, ok := invocation.Arguments[2].(interpreter.IntegerValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			stepStaticType := step.StaticType(invocationContext)
-			if stepStaticType != startStaticType {
-				panic(&interpreter.InclusiveRangeConstructionError{
-					LocationRange: locationRange,
-					Message: fmt.Sprintf(
-						"step must be of the same type as start and end. start/end: %s and step: %s",
-						startStaticType,
-						stepStaticType,
-					),
-				})
-			}
-
-			return interpreter.NewInclusiveRangeValueWithStep(
-				invocationContext,
-				locationRange,
-				start,
-				end,
-				step,
-				rangeStaticType,
-				rangeSemaType,
-			)
-		}
-
-		return interpreter.NewInclusiveRangeValue(
+		return interpreter.NewInclusiveRangeValueWithStep(
 			invocationContext,
-			locationRange,
 			start,
 			end,
+			step,
 			rangeStaticType,
 			rangeSemaType,
 		)
-	},
-)
+	}
+
+	return interpreter.NewInclusiveRangeValue(
+		invocationContext,
+		start,
+		end,
+		rangeStaticType,
+		rangeSemaType,
+	)
+}

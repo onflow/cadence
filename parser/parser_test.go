@@ -36,6 +36,15 @@ import (
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
+func (p *parser) mustToken(tokenType lexer.TokenType, string string) (lexer.Token, error) {
+	t := p.current
+	if !p.isToken(t, tokenType, string) {
+		return lexer.Token{}, p.newSyntaxError("expected token %s with string value %s", tokenType, string)
+	}
+	p.next()
+	return t, nil
+}
+
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
@@ -563,8 +572,10 @@ func TestParseBuffering(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 398, Line: 9, Column: 94},
+					Message:       "expected token identifier",
+					Pos:           ast.Position{Offset: 398, Line: 9, Column: 94},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			err.(Error).Errors,
@@ -637,7 +648,29 @@ func TestParseBuffering(t *testing.T) {
             }`
 
 		_, err := testParseProgram(src)
-		assert.NoError(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingEndOfParenthesizedTypeError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 283, Line: 9, Column: 36},
+							EndPos:   ast.Position{Offset: 283, Line: 9, Column: 36},
+						},
+						Type: lexer.TokenGreater,
+					},
+				},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 289, Line: 9, Column: 42},
+							EndPos:   ast.Position{Offset: 289, Line: 9, Column: 42},
+						},
+						Type: lexer.TokenParenClose,
+					},
+				},
+			},
+			err.(Error).Errors,
+		)
 	})
 
 }
@@ -757,8 +790,10 @@ func TestParseArgumentList(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "expected token `(`",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -886,13 +921,11 @@ func TestParseBufferedErrors(t *testing.T) {
 	_, errs := testParseExpression("a<b,>(")
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message: "missing type annotation after comma",
-				Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+			&MissingTypeAnnotationAfterCommaError{
+				Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 			},
-			&SyntaxError{
-				Message: "missing ')' at end of invocation argument list",
-				Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+			&MissingClosingParenInArgumentListError{
+				Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 			},
 		},
 		errs,
@@ -905,7 +938,7 @@ func TestParseInvalidSingleQuoteImport(t *testing.T) {
 
 	_, err := testParseProgram(`import 'X'`)
 
-	require.ErrorContains(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n")
+	require.ErrorContains(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''")
 }
 
 func TestParseExpressionDepthLimit(t *testing.T) {
@@ -1024,6 +1057,18 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 		Error{
 			Code: []byte(code),
 			Errors: []error{
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
 				&SyntaxError{
 					Message: fmt.Sprintf(
 						"program too ambiguous, global replay limit of %d tokens exceeded",

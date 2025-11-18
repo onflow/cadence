@@ -19,8 +19,6 @@
 package interpreter
 
 import (
-	"time"
-
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -31,6 +29,7 @@ import (
 type TypeConverter interface {
 	common.MemoryGauge
 	StaticTypeConversionHandler
+	SemaTypeFromStaticType(staticType StaticType) sema.Type
 }
 
 var _ TypeConverter = &Interpreter{}
@@ -70,7 +69,7 @@ type StorageWriter interface {
 var _ StorageWriter = &Interpreter{}
 
 type ValueStaticTypeContext interface {
-	common.MemoryGauge
+	common.Gauge
 	StorageReader
 	TypeConverter
 	IsTypeInfoRecovered(location common.Location) bool
@@ -120,13 +119,10 @@ type ValueTransferContext interface {
 		newOwner common.Address,
 	)
 
-	WithMutationPrevention(valueID atree.ValueID, f func())
-	ValidateMutation(valueID atree.ValueID, locationRange LocationRange)
+	WithContainerMutationPrevention(valueID atree.ValueID, f func())
+	ValidateContainerMutation(valueID atree.ValueID)
 
-	EnforceNotResourceDestruction(
-		valueID atree.ValueID,
-		locationRange LocationRange,
-	)
+	EnforceNotResourceDestruction(valueID atree.ValueID)
 }
 
 var _ ValueTransferContext = &Interpreter{}
@@ -147,6 +143,11 @@ var _ ValueCreationContext = &Interpreter{}
 type ValueRemoveContext = ValueTransferContext
 
 var _ ValueRemoveContext = &Interpreter{}
+
+type ContainerReadContext interface {
+	common.ComputationGauge
+	ValueComparisonContext
+}
 
 type ContainerMutationContext interface {
 	ValueTransferContext
@@ -217,7 +218,12 @@ type MemberAccessibleContext interface {
 	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
-	GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue
+	GetMethod(value MemberAccessibleValue, name string) FunctionValue
+	MaybeUpdateStorageReferenceMemberReceiver(
+		storageReference *StorageReferenceValue,
+		referencedValue Value,
+		member Value,
+	) Value
 }
 
 var _ MemberAccessibleContext = &Interpreter{}
@@ -230,7 +236,7 @@ type FunctionCreationContext interface {
 var _ FunctionCreationContext = &Interpreter{}
 
 type CompositeFunctionContext interface {
-	GetCompositeValueFunctions(v *CompositeValue, locationRange LocationRange) *FunctionOrderedMap
+	GetCompositeValueFunctions(v *CompositeValue) *FunctionOrderedMap
 }
 
 var _ CompositeFunctionContext = &Interpreter{}
@@ -270,11 +276,7 @@ type StorageIterationTracker interface {
 var _ StorageIterationTracker = &Interpreter{}
 
 type ResourceDestructionHandler interface {
-	WithResourceDestruction(
-		valueID atree.ValueID,
-		locationRange LocationRange,
-		f func(),
-	)
+	WithResourceDestruction(valueID atree.ValueID, f func())
 }
 
 var _ ResourceDestructionHandler = &Interpreter{}
@@ -381,14 +383,20 @@ type AccountCapabilityPublishValidationContext interface {
 
 var _ AccountCapabilityPublishValidationContext = &Interpreter{}
 
+type LocationRangeProvider interface {
+	LocationRange() LocationRange
+}
+
 type ResourceDestructionContext interface {
 	ValueWalkContext
 	ResourceDestructionHandler
 	CompositeFunctionContext
 	EventContext
 	InvocationContext
+	LocationRangeProvider
 
 	GetResourceDestructionContextForLocation(location common.Location) ResourceDestructionContext
+	DefaultDestroyEvents(resourceValue *CompositeValue) []*CompositeValue
 }
 
 var _ ResourceDestructionContext = &Interpreter{}
@@ -402,7 +410,6 @@ var _ ValueWalkContext = &Interpreter{}
 type EventContext interface {
 	EmitEvent(
 		context ValueExportContext,
-		locationRange LocationRange,
 		eventType *sema.CompositeType,
 		eventFields []Value,
 	)
@@ -441,9 +448,9 @@ type InvocationContext interface {
 	CapabilityHandlers
 	StoredValueCheckContext
 	VariableResolver
+	LocationRangeProvider
 
 	GetLocation() common.Location
-	CallStack() []Invocation
 
 	InvokeFunction(
 		fn FunctionValue,
@@ -501,7 +508,7 @@ var _ AccountContractCreationContext = &Interpreter{}
 
 type AccountContractBorrowContext interface {
 	FunctionCreationContext
-	GetContractValue(contractLocation common.AddressLocation) (*CompositeValue, error)
+	GetContractValue(contractLocation common.AddressLocation) *CompositeValue
 }
 
 var _ AccountContractBorrowContext = &Interpreter{}
@@ -525,7 +532,9 @@ var _ VariableResolver = &Interpreter{}
 //
 // TODO: Ideally, Value.RecursiveString shouldn't need the full ValueTransferContext.
 // But that would require refactoring the iterator methods for arrays and dictionaries.
-type NoOpStringContext struct{}
+type NoOpStringContext struct {
+	NoOpTracer
+}
 
 var _ ValueStringContext = NoOpStringContext{}
 
@@ -534,34 +543,22 @@ func (ctx NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 }
 
 func (ctx NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
-	panic(errors.NewUnreachableError())
+	return nil
 }
 
-func (ctx NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
+func (ctx NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f func()) {
 	f()
 }
 
-func (ctx NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) {
+func (ctx NoOpStringContext) ValidateContainerMutation(_ atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) EnforceNotResourceDestruction(_ atree.ValueID, _ LocationRange) {
+func (ctx NoOpStringContext) EnforceNotResourceDestruction(_ atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
 func (ctx NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ConvertStaticToSemaType(_ StaticType) (sema.Type, error) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) IsSubType(_ StaticType, _ StaticType) bool {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) IsSubTypeOfSemaType(_ StaticType, _ sema.Type) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -581,14 +578,6 @@ func (ctx NoOpStringContext) MaybeValidateAtreeStorage() {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) InvalidateReferencedResources(_ Value, _ LocationRange) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) CheckInvalidatedResourceOrResourceReference(_ Value, _ LocationRange) {
-	panic(errors.NewUnreachableError())
-}
-
 func (ctx NoOpStringContext) MaybeTrackReferencedResourceKindedValue(_ *EphemeralReferenceValue) {
 	panic(errors.NewUnreachableError())
 }
@@ -598,90 +587,6 @@ func (ctx NoOpStringContext) ClearReferencedResourceKindedValues(_ atree.ValueID
 }
 
 func (ctx NoOpStringContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*EphemeralReferenceValue]struct{} {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) TracingEnabled() bool {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueTransferTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueDestroyTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueDeepRemoveTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueGetMemberTrace(_ string, _ int, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueGetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueConstructTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDomainStorageMapDeepRemoveTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -722,5 +627,9 @@ func (ctx NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ Typ
 }
 
 func (ctx NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) SemaTypeFromStaticType(_ StaticType) sema.Type {
 	panic(errors.NewUnreachableError())
 }

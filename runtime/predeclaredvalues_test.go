@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/interpreter"
@@ -53,12 +54,14 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		t *testing.T,
 		contract string,
 		script string,
-		valueDeclarations map[common.Location]stdlib.StandardLibraryValue,
+		valueDeclarations map[common.Location][]stdlib.StandardLibraryValue,
+		typeDeclarations map[common.Location][]stdlib.StandardLibraryType,
 		checkTransaction func(err error) bool,
 		checkScript func(result cadence.Value, err error),
+		useVM bool,
 	) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		deploy := DeploymentTransaction(contractName, []byte(contract))
 
@@ -88,14 +91,21 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		}
 
 		prepareEnvironment := func(env Environment) {
-			for location, valueDeclaration := range valueDeclarations {
-				env.DeclareValue(valueDeclaration, location)
+			for location, valueDeclarations := range valueDeclarations {
+				for _, valueDeclaration := range valueDeclarations {
+					env.DeclareValue(valueDeclaration, location)
+				}
+			}
+			for location, typeDeclarations := range typeDeclarations {
+				for _, typeDeclaration := range typeDeclarations {
+					env.DeclareType(typeDeclaration, location)
+				}
 			}
 		}
 
 		// Run deploy transaction
 
-		transactionEnvironment := NewBaseInterpreterEnvironment(Config{})
+		transactionEnvironment := newTransactionEnvironment()
 		prepareEnvironment(transactionEnvironment)
 
 		err := runtime.ExecuteTransaction(
@@ -106,12 +116,20 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    common.TransactionLocation{},
 				Environment: transactionEnvironment,
+				UseVM:       *compile,
 			},
 		)
 
+		// Run script if transaction was successful
+
 		if checkTransaction(err) {
 
-			scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+			var scriptEnvironment Environment
+			if useVM {
+				scriptEnvironment = NewScriptVMEnvironment(Config{})
+			} else {
+				scriptEnvironment = NewScriptInterpreterEnvironment(Config{})
+			}
 			prepareEnvironment(scriptEnvironment)
 
 			checkScript(runtime.ExecuteScript(
@@ -122,19 +140,20 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					Interface:   runtimeInterface,
 					Location:    common.ScriptLocation{},
 					Environment: scriptEnvironment,
+					UseVM:       useVM,
 				},
 			))
 		}
 	}
 
-	t.Run("everywhere", func(t *testing.T) {
+	t.Run("constant, everywhere", func(t *testing.T) {
 		t.Parallel()
 
 		test(t,
 			`
 	          access(all) contract C {
 	              access(all) fun foo(): Int {
-	                  return foo
+	                  return bar
 	              }
 	          }
 	        `,
@@ -142,17 +161,20 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	          import C from 0x1
 
 	          access(all) fun main(): Int {
-	        	  return foo + C.foo()
+	        	  return C.foo() + bar
 	          }
 	        `,
-			map[common.Location]stdlib.StandardLibraryValue{
+			map[common.Location][]stdlib.StandardLibraryValue{
 				nil: {
-					Name:  "foo",
-					Type:  sema.IntType,
-					Kind:  common.DeclarationKindConstant,
-					Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+					{
+						Name:  "bar",
+						Type:  sema.IntType,
+						Kind:  common.DeclarationKindConstant,
+						Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+					},
 				},
 			},
+			nil,
 			func(err error) bool {
 				return assert.NoError(t, err)
 			},
@@ -165,17 +187,93 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					result,
 				)
 			},
+			*compile,
 		)
 	})
 
-	t.Run("only contract, no use in script", func(t *testing.T) {
+	t.Run("function, everywhere", func(t *testing.T) {
+		t.Parallel()
+
+		functionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityView,
+			nil,
+			sema.IntTypeAnnotation,
+		)
+
+		nativeFunction := func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			_ []interpreter.Value,
+		) interpreter.Value {
+			return interpreter.NewUnmeteredIntValueFromInt64(2)
+		}
+
+		var function interpreter.FunctionValue
+		if *compile {
+			function = vm.NewNativeFunctionValue(
+				"bar",
+				functionType,
+				nativeFunction,
+			)
+		} else {
+			function = interpreter.NewStaticHostFunctionValueFromNativeFunction(
+				nil,
+				functionType,
+				nativeFunction,
+			)
+		}
+
+		test(t,
+			`
+	          access(all) contract C {
+	              access(all) fun foo(): Int {
+	                  return bar()
+	              }
+	          }
+	        `,
+			`
+	          import C from 0x1
+
+	          access(all) fun main(): Int {
+	        	  return C.foo() + bar()
+	          }
+	        `,
+			map[common.Location][]stdlib.StandardLibraryValue{
+				nil: {
+					{
+						Name:  "bar",
+						Type:  functionType,
+						Kind:  common.DeclarationKindFunction,
+						Value: function,
+					},
+				},
+			},
+			nil,
+			func(err error) bool {
+				return assert.NoError(t, err)
+			},
+			func(result cadence.Value, err error) {
+
+				require.NoError(t, err)
+
+				require.Equal(t,
+					cadence.Int{Value: big.NewInt(4)},
+					result,
+				)
+			},
+			*compile,
+		)
+	})
+
+	t.Run("constant, only usable in contract, not used in script", func(t *testing.T) {
 		t.Parallel()
 
 		test(t,
 			`
 	          access(all) contract C {
 	              access(all) fun foo(): Int {
-	                  return foo
+	                  return bar
 	              }
 	          }
 	        `,
@@ -186,14 +284,17 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	        	  return C.foo()
 	          }
 	        `,
-			map[common.Location]stdlib.StandardLibraryValue{
+			map[common.Location][]stdlib.StandardLibraryValue{
 				contractLocation: {
-					Name:  "foo",
-					Type:  sema.IntType,
-					Kind:  common.DeclarationKindConstant,
-					Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+					{
+						Name:  "bar",
+						Type:  sema.IntType,
+						Kind:  common.DeclarationKindConstant,
+						Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+					},
 				},
 			},
+			nil,
 			func(err error) bool {
 				return assert.NoError(t, err)
 			},
@@ -206,17 +307,18 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					result,
 				)
 			},
+			*compile,
 		)
 	})
 
-	t.Run("only contract, use in script", func(t *testing.T) {
+	t.Run("constant, only usable in contract, used in script", func(t *testing.T) {
 		t.Parallel()
 
 		test(t,
 			`
 	          access(all) contract C {
 	              access(all) fun foo(): Int {
-	                  return foo
+	                  return bar
 	              }
 	          }
 	        `,
@@ -224,17 +326,20 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	          import C from 0x1
 
 	          access(all) fun main(): Int {
-	        	  return foo + C.foo()
+	        	  return bar + C.foo()
 	          }
 	        `,
-			map[common.Location]stdlib.StandardLibraryValue{
+			map[common.Location][]stdlib.StandardLibraryValue{
 				contractLocation: {
-					Name:  "foo",
-					Type:  sema.IntType,
-					Kind:  common.DeclarationKindConstant,
-					Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+					{
+						Name:  "bar",
+						Type:  sema.IntType,
+						Kind:  common.DeclarationKindConstant,
+						Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+					},
 				},
 			},
+			nil,
 			func(err error) bool {
 				return assert.NoError(t, err)
 			},
@@ -249,8 +354,431 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 				var notDeclaredErr *sema.NotDeclaredError
 				require.ErrorAs(t, errs[0], &notDeclaredErr)
-				require.Equal(t, "foo", notDeclaredErr.Name)
+				require.Equal(t, "bar", notDeclaredErr.Name)
 			},
+			*compile,
+		)
+	})
+
+	t.Run("function, only usable in contract, not used in script", func(t *testing.T) {
+		t.Parallel()
+
+		functionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityView,
+			nil,
+			sema.IntTypeAnnotation,
+		)
+
+		var function interpreter.FunctionValue
+		if *compile {
+			function = vm.NewNativeFunctionValue(
+				"bar",
+				functionType,
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.Value,
+					_ []interpreter.Value,
+				) interpreter.Value {
+					return interpreter.NewUnmeteredIntValueFromInt64(2)
+				},
+			)
+		} else {
+			function = interpreter.NewStaticHostFunctionValue(
+				nil,
+				functionType,
+				func(invocation interpreter.Invocation) interpreter.Value {
+					return interpreter.NewUnmeteredIntValueFromInt64(2)
+				},
+			)
+		}
+
+		test(t,
+			`
+	          access(all) contract C {
+	              access(all) fun foo(): Int {
+	                  return bar()
+	              }
+	          }
+	        `,
+			`
+	          import C from 0x1
+
+	          access(all) fun main(): Int {
+	        	  return C.foo()
+	          }
+	        `,
+			map[common.Location][]stdlib.StandardLibraryValue{
+				contractLocation: {
+					{
+						Name:  "bar",
+						Type:  functionType,
+						Kind:  common.DeclarationKindFunction,
+						Value: function,
+					},
+				},
+			},
+			nil,
+			func(err error) bool {
+				return assert.NoError(t, err)
+			},
+			func(result cadence.Value, err error) {
+
+				require.NoError(t, err)
+
+				require.Equal(t,
+					cadence.Int{Value: big.NewInt(2)},
+					result,
+				)
+			},
+			*compile,
+		)
+	})
+
+	t.Run("function, only usable in contract, used in script", func(t *testing.T) {
+		t.Parallel()
+
+		functionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityView,
+			nil,
+			sema.IntTypeAnnotation,
+		)
+
+		var function interpreter.FunctionValue
+		if *compile {
+			function = vm.NewNativeFunctionValue(
+				"bar",
+				functionType,
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.Value,
+					_ []interpreter.Value,
+				) interpreter.Value {
+					return interpreter.NewUnmeteredIntValueFromInt64(2)
+				},
+			)
+		} else {
+			function = interpreter.NewStaticHostFunctionValue(
+				nil,
+				functionType,
+				func(invocation interpreter.Invocation) interpreter.Value {
+					return interpreter.NewUnmeteredIntValueFromInt64(2)
+				},
+			)
+		}
+
+		test(t,
+			`
+	          access(all) contract C {
+	              access(all) fun foo(): Int {
+	                  return bar()
+	              }
+	          }
+	        `,
+			`
+	          import C from 0x1
+
+	          access(all) fun main(): Int {
+	        	  return C.foo() + bar()
+	          }
+	        `,
+			map[common.Location][]stdlib.StandardLibraryValue{
+				contractLocation: {
+					{
+						Name:  "bar",
+						Type:  functionType,
+						Kind:  common.DeclarationKindFunction,
+						Value: function,
+					},
+				},
+			},
+			nil,
+			func(err error) bool {
+				return assert.NoError(t, err)
+			},
+			func(result cadence.Value, err error) {
+				RequireError(t, err)
+
+				var checkerErr *sema.CheckerError
+				require.ErrorAs(t, err, &checkerErr)
+				assert.Equal(t, common.ScriptLocation{}, checkerErr.Location)
+
+				errs := RequireCheckerErrors(t, err, 1)
+
+				var notDeclaredErr *sema.NotDeclaredError
+				require.ErrorAs(t, errs[0], &notDeclaredErr)
+				require.Equal(t, "bar", notDeclaredErr.Name)
+			},
+			*compile,
+		)
+	})
+
+	t.Run("contract, only usable in contract, not used in script", func(t *testing.T) {
+		t.Parallel()
+
+		cType := &sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "n",
+					TypeAnnotation: sema.IntTypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+		}
+
+		bType := &sema.CompositeType{
+			Identifier: "B",
+			Kind:       common.CompositeKindContract,
+		}
+
+		bType.Members = sema.MembersAsMap([]*sema.Member{
+			sema.NewUnmeteredPublicFunctionMember(
+				bType,
+				"c",
+				cType,
+				"",
+			),
+			sema.NewUnmeteredPublicConstantFieldMember(
+				bType,
+				"d",
+				sema.IntType,
+				"",
+			),
+		})
+
+		bStaticType := interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, bType)
+
+		bValue := interpreter.NewSimpleCompositeValue(
+			nil,
+			bType.ID(),
+			bStaticType,
+			[]string{"d"},
+			map[string]interpreter.Value{
+				"d": interpreter.NewUnmeteredIntValueFromInt64(1),
+			},
+			nil,
+			nil,
+			nil,
+			nil,
+		)
+
+		var function interpreter.FunctionValue
+		if *compile {
+			function = vm.NewNativeFunctionValue(
+				"B.c",
+				cType,
+				func(
+					context interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					receiver interpreter.Value,
+					args []interpreter.Value,
+				) interpreter.Value {
+					assert.Same(t, bValue, receiver)
+
+					require.Len(t, args, 1)
+					require.IsType(t, interpreter.IntValue{}, args[0])
+					arg := args[0].(interpreter.IntValue)
+
+					return arg.Plus(context, arg)
+				},
+			)
+		} else {
+			function = interpreter.NewStaticHostFunctionValue(
+				nil,
+				cType,
+				func(invocation interpreter.Invocation) interpreter.Value {
+
+					args := invocation.Arguments
+					require.Len(t, args, 1)
+					require.IsType(t, interpreter.IntValue{}, args[0])
+					arg := args[0].(interpreter.IntValue)
+
+					return arg.Plus(invocation.InvocationContext, arg)
+				},
+			)
+			bValue.Fields["c"] = function
+		}
+
+		test(t,
+			`
+	          access(all) contract C {
+	              access(all) fun foo(): Int {
+                      return B.c(B.d)
+	              }
+	          }
+	        `,
+			`
+	          import C from 0x1
+
+	          access(all) fun main(): Int {
+	        	  return C.foo()
+	          }
+	        `,
+			map[common.Location][]stdlib.StandardLibraryValue{
+				contractLocation: {
+					{
+						Name:  bType.Identifier,
+						Type:  bType,
+						Value: bValue,
+						Kind:  common.DeclarationKindContract,
+					},
+					// Only required for VM, not necessary for interpreter.
+					{
+						Name:  "B.c",
+						Type:  cType,
+						Value: function,
+						Kind:  common.DeclarationKindFunction,
+					},
+				},
+			},
+			map[common.Location][]stdlib.StandardLibraryType{
+				contractLocation: {
+					{
+						Name: bType.Identifier,
+						Type: bType,
+						Kind: common.DeclarationKindContract,
+					},
+				},
+			},
+			func(err error) bool {
+				return assert.NoError(t, err)
+			},
+			func(result cadence.Value, err error) {
+
+				require.NoError(t, err)
+
+				require.Equal(t,
+					cadence.Int{Value: big.NewInt(2)},
+					result,
+				)
+			},
+			*compile,
+		)
+	})
+
+	t.Run("contract, only usable in contract, used in script", func(t *testing.T) {
+		t.Parallel()
+
+		cType := &sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "n",
+					TypeAnnotation: sema.IntTypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+		}
+
+		bType := &sema.CompositeType{
+			Identifier: "B",
+			Kind:       common.CompositeKindContract,
+		}
+
+		bType.Members = sema.MembersAsMap([]*sema.Member{
+			sema.NewUnmeteredPublicFunctionMember(
+				bType,
+				"c",
+				cType,
+				"",
+			),
+			sema.NewUnmeteredPublicConstantFieldMember(
+				bType,
+				"d",
+				sema.IntType,
+				"",
+			),
+		})
+
+		var function interpreter.FunctionValue
+		if *compile {
+			function = vm.NewNativeFunctionValue(
+				"B.c",
+				cType,
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.Value,
+					_ []interpreter.Value,
+				) interpreter.Value {
+					require.Fail(t, "function should have not been called")
+					return nil
+				},
+			)
+		} else {
+			function = interpreter.NewStaticHostFunctionValue(
+				nil,
+				cType,
+				func(invocation interpreter.Invocation) interpreter.Value {
+					require.Fail(t, "function should have not been called")
+					return nil
+				},
+			)
+		}
+
+		test(t,
+			`
+	          access(all) contract C {
+	              access(all) fun foo(): Int {
+                      return B.c(B.d)
+	              }
+	          }
+	        `,
+			`
+	          import C from 0x1
+
+	          access(all) fun main(): Int {
+	        	  return C.foo() + B.c(B.d)
+	          }
+	        `,
+			map[common.Location][]stdlib.StandardLibraryValue{
+				contractLocation: {
+					{
+						Name: bType.Identifier,
+						Type: bType,
+						// Omitted, not used
+						Kind: common.DeclarationKindContract,
+					},
+					// Only required for VM, not necessary for interpreter.
+					{
+						Name:  "B.c",
+						Type:  cType,
+						Value: function,
+						Kind:  common.DeclarationKindFunction,
+					},
+				},
+			},
+			map[common.Location][]stdlib.StandardLibraryType{
+				contractLocation: {
+					{
+						Name: bType.Identifier,
+						Type: bType,
+						Kind: common.DeclarationKindContract,
+					},
+				},
+			},
+			func(err error) bool {
+				return assert.NoError(t, err)
+			},
+			func(result cadence.Value, err error) {
+				RequireError(t, err)
+
+				var checkerErr *sema.CheckerError
+				require.ErrorAs(t, err, &checkerErr)
+				assert.Equal(t, common.ScriptLocation{}, checkerErr.Location)
+
+				errs := RequireCheckerErrors(t, err, 2)
+
+				var notDeclaredErr *sema.NotDeclaredError
+				require.ErrorAs(t, errs[0], &notDeclaredErr)
+				assert.Equal(t, "B", notDeclaredErr.Name)
+
+				require.ErrorAs(t, errs[1], &notDeclaredErr)
+				assert.Equal(t, "B", notDeclaredErr.Name)
+			},
+			*compile,
 		)
 	})
 
@@ -285,7 +813,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -297,7 +825,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 		scriptEnvironment.DeclareType(typeDeclaration, nil)
 
@@ -309,6 +837,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    common.ScriptLocation{},
 				Environment: scriptEnvironment,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -357,7 +886,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -369,7 +898,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 		scriptEnvironment.DeclareType(typeDeclaration, nil)
 
@@ -381,6 +910,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    common.ScriptLocation{},
 				Environment: scriptEnvironment,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -400,7 +930,10 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 	t.Run("composite type, top-level, non-existing", func(t *testing.T) {
 		t.Parallel()
 
+		location := common.ScriptLocation{}
+
 		xType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "X",
 			Kind:       common.CompositeKindStructure,
 			Members:    &sema.StringMemberOrderedMap{},
@@ -429,7 +962,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -441,7 +974,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 
 		_, err := runtime.ExecuteScript(
@@ -450,8 +983,9 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 			},
 			Context{
 				Interface:   runtimeInterface,
-				Location:    common.ScriptLocation{},
+				Location:    location,
 				Environment: scriptEnvironment,
+				UseVM:       *compile,
 			},
 		)
 		RequireError(t, err)
@@ -463,13 +997,17 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 	t.Run("composite type, nested, existing", func(t *testing.T) {
 		t.Parallel()
 
+		location := common.ScriptLocation{}
+
 		yType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "Y",
 			Kind:       common.CompositeKindStructure,
 			Members:    &sema.StringMemberOrderedMap{},
 		}
 
 		xType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "X",
 			Kind:       common.CompositeKindContract,
 			Members:    &sema.StringMemberOrderedMap{},
@@ -493,9 +1031,15 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 			),
 		}
 
-		typeDeclaration := stdlib.StandardLibraryType{
+		xTypeDeclaration := stdlib.StandardLibraryType{
 			Name: "X",
 			Type: xType,
+			Kind: common.DeclarationKindType,
+		}
+
+		yTypeDeclaration := stdlib.StandardLibraryType{
+			Name: "X.Y",
+			Type: yType,
 			Kind: common.DeclarationKindType,
 		}
 
@@ -506,7 +1050,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -518,9 +1062,10 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
-		scriptEnvironment.DeclareType(typeDeclaration, nil)
+		scriptEnvironment.DeclareType(xTypeDeclaration, nil)
+		scriptEnvironment.DeclareType(yTypeDeclaration, nil)
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -528,8 +1073,9 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 			},
 			Context{
 				Interface:   runtimeInterface,
-				Location:    common.ScriptLocation{},
+				Location:    location,
 				Environment: scriptEnvironment,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -537,7 +1083,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		require.Equal(t,
 			cadence.NewStruct([]cadence.Value{}).
 				WithType(cadence.NewStructType(
-					nil,
+					location,
 					yType.QualifiedIdentifier(),
 					[]cadence.Field{},
 					nil,
@@ -549,13 +1095,17 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 	t.Run("composite type, nested, non-existing", func(t *testing.T) {
 		t.Parallel()
 
+		location := common.ScriptLocation{}
+
 		yType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "Y",
 			Kind:       common.CompositeKindStructure,
 			Members:    &sema.StringMemberOrderedMap{},
 		}
 
 		xType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "X",
 			Kind:       common.CompositeKindContract,
 			Members:    &sema.StringMemberOrderedMap{},
@@ -586,7 +1136,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -598,7 +1148,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 
 		_, err := runtime.ExecuteScript(
@@ -607,8 +1157,9 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 			},
 			Context{
 				Interface:   runtimeInterface,
-				Location:    common.ScriptLocation{},
+				Location:    location,
 				Environment: scriptEnvironment,
+				UseVM:       *compile,
 			},
 		)
 		RequireError(t, err)
@@ -619,6 +1170,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 }
 
+// NOTE: This feature is only supported by the interpreter environment, not the VM environment.
 func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 
 	t.Parallel()
@@ -663,7 +1215,6 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				return interpreter.NewCompositeValue(
 					invocation.InvocationContext,
-					invocation.LocationRange,
 					xType.Location,
 					xType.QualifiedIdentifier(),
 					xType.Kind,
@@ -687,7 +1238,7 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
       }
 	`)
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
@@ -706,7 +1257,6 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 		xType.ID(),
 		func(
 			inter *interpreter.Interpreter,
-			locationRange interpreter.LocationRange,
 			compositeValue *interpreter.CompositeValue,
 		) *interpreter.FunctionOrderedMap {
 			require.NotNil(t, compositeValue)
@@ -734,6 +1284,8 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			Interface:   runtimeInterface,
 			Location:    common.ScriptLocation{},
 			Environment: scriptEnvironment,
+			// NOTE: not supported by VM environment
+			UseVM: false,
 		},
 	)
 	require.NoError(t, err)

@@ -61,11 +61,11 @@ func (*PathCapabilityValue) IsValue() {}
 
 func (*PathCapabilityValue) isCapabilityValue() {}
 
-func (v *PathCapabilityValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (v *PathCapabilityValue) Accept(_ ValueVisitContext, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
+func (v *PathCapabilityValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	walkChild(v.address)
 	walkChild(v.Path)
 }
@@ -77,7 +77,7 @@ func (v *PathCapabilityValue) StaticType(context ValueStaticTypeContext) StaticT
 	)
 }
 
-func (v *PathCapabilityValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (v *PathCapabilityValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 func (v *PathCapabilityValue) String() string {
@@ -102,22 +102,25 @@ func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) str
 	}
 }
 
-func (v *PathCapabilityValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *PathCapabilityValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 	common.UseMemory(context, common.PathCapabilityValueStringMemoryUsage)
 
 	borrowType := v.BorrowType
 	if borrowType == nil {
 		return fmt.Sprintf(
 			"Capability(address: %s, path: %s)",
-			v.address.MeteredString(context, seenReferences, locationRange),
-			v.Path.MeteredString(context, seenReferences, locationRange),
+			v.address.MeteredString(context, seenReferences),
+			v.Path.MeteredString(context, seenReferences),
 		)
 	} else {
 		return fmt.Sprintf(
 			"Capability<%s>(address: %s, path: %s)",
 			borrowType.String(),
-			v.address.MeteredString(context, seenReferences, locationRange),
-			v.Path.MeteredString(context, seenReferences, locationRange),
+			v.address.MeteredString(context, seenReferences),
+			v.Path.MeteredString(context, seenReferences),
 		)
 	}
 }
@@ -130,7 +133,12 @@ func (v *PathCapabilityValue) newBorrowFunction(
 		context,
 		v,
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
-		func(_ Value, _ Invocation) Value {
+		func(
+			_ NativeFunctionContext,
+			_ TypeArgumentsIterator,
+			_ Value,
+			_ []Value,
+		) Value {
 			// Borrowing is never allowed
 			return Nil
 		},
@@ -145,14 +153,19 @@ func (v *PathCapabilityValue) newCheckFunction(
 		context,
 		v,
 		sema.CapabilityTypeCheckFunctionType(borrowType),
-		func(_ Value, _ Invocation) Value {
+		func(
+			_ NativeFunctionContext,
+			_ TypeArgumentsIterator,
+			_ Value,
+			_ []Value,
+		) Value {
 			// Borrowing is never allowed
 			return FalseValue
 		},
 	)
 }
 
-func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case sema.CapabilityTypeAddressFieldName:
 		return v.address
@@ -161,14 +174,10 @@ func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, locatio
 		return InvalidCapabilityID
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v *PathCapabilityValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v *PathCapabilityValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		var borrowType *sema.ReferenceType
@@ -189,23 +198,22 @@ func (v *PathCapabilityValue) GetMethod(
 	return nil
 }
 
-func (*PathCapabilityValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (*PathCapabilityValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (*PathCapabilityValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (*PathCapabilityValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	panic(errors.NewUnreachableError())
 }
 
 func (v *PathCapabilityValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v *PathCapabilityValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *PathCapabilityValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherCapability, ok := other.(*PathCapabilityValue)
 	if !ok {
 		return false
@@ -221,8 +229,8 @@ func (v *PathCapabilityValue) Equal(context ValueComparisonContext, locationRang
 		return false
 	}
 
-	return otherCapability.address.Equal(context, locationRange, v.address) &&
-		otherCapability.Path.Equal(context, locationRange, v.Path)
+	return otherCapability.address.Equal(context, v.address) &&
+		otherCapability.Path.Equal(context, v.Path)
 }
 
 func (*PathCapabilityValue) IsStorable() bool {
@@ -232,7 +240,7 @@ func (*PathCapabilityValue) IsStorable() bool {
 func (v *PathCapabilityValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(
 		v,
@@ -252,7 +260,6 @@ func (*PathCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v *PathCapabilityValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

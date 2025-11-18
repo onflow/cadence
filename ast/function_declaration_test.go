@@ -341,7 +341,8 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 			prettier.Space,
 			prettier.Text("native"),
 			prettier.Space,
-			prettier.Text("fun "),
+			prettier.Text("fun"),
+			prettier.Space,
 			prettier.Text("xyz"),
 			prettier.Group{
 				Doc: prettier.Concat{
@@ -353,7 +354,7 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 									prettier.SoftLine{},
 									prettier.Concat{
 										prettier.Text("ok"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Text("foobar"),
 										prettier.Text(": "),
 										prettier.Text("AB"),
@@ -371,7 +372,7 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Text("{}"),
 		},
 		decl.Doc(),
@@ -825,7 +826,7 @@ func TestSpecialFunctionDeclaration_Doc(t *testing.T) {
 									prettier.SoftLine{},
 									prettier.Concat{
 										prettier.Text("ok"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Text("foobar"),
 										prettier.Text(": "),
 										prettier.Text("AB"),
@@ -843,7 +844,7 @@ func TestSpecialFunctionDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Text("{}"),
 		},
 		decl.Doc(),

@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
@@ -29,6 +30,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretTransferCheck(t *testing.T) {
@@ -67,22 +69,24 @@ func TestInterpretTransferCheck(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   let alsoFruit: Fruit = fruit
               }
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseTypeActivation
-					},
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseTypeActivation
+						},
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -102,7 +106,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 		      contract interface CI {
 		          resource interface RI {}
@@ -124,7 +128,7 @@ func TestInterpretTransferCheck(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
@@ -139,7 +143,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 		      contract interface CI {
 		          resource interface RI {}
@@ -161,7 +165,7 @@ func TestInterpretTransferCheck(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
@@ -170,5 +174,172 @@ func TestInterpretTransferCheck(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
+	})
+}
+
+func TestInterpretConversionOnTransfer(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array literal without type annotation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+              resource R {}
+
+              fun test(): @[R?] {
+                  // No type annotation: type is inferred based on each expression's type.
+                  // So the unary-move '<- create R()' has an expected type of 'R' (not 'R?').
+                  let array <- [ <- create R(), nil]
+                  return <- array
+              }
+            `,
+		)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, result)
+		array := result.(*interpreter.ArrayValue)
+
+		require.Equal(t, 2, array.Count())
+
+		// Elements must be boxed.
+
+		element := array.Get(nil, 0)
+
+		require.IsType(t, &interpreter.SomeValue{}, element)
+		someValue := element.(*interpreter.SomeValue)
+
+		innerValue := someValue.InnerValue()
+		require.IsType(t, &interpreter.CompositeValue{}, innerValue)
+		composite := innerValue.(*interpreter.CompositeValue)
+
+		assert.Equal(t, common.TypeID("S.test.R"), composite.TypeID())
+	})
+
+	t.Run("array literal with type annotation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+              resource R {}
+
+              fun test(): @[R?] {
+                  let array: @[R?] <- [ <- create R(), nil]
+                  return <- array
+              }
+            `,
+		)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, result)
+		array := result.(*interpreter.ArrayValue)
+
+		require.Equal(t, 2, array.Count())
+
+		// Elements must be boxed.
+
+		element := array.Get(nil, 0)
+
+		require.IsType(t, &interpreter.SomeValue{}, element)
+		someValue := element.(*interpreter.SomeValue)
+
+		innerValue := someValue.InnerValue()
+		require.IsType(t, &interpreter.CompositeValue{}, innerValue)
+		composite := innerValue.(*interpreter.CompositeValue)
+
+		assert.Equal(t, common.TypeID("S.test.R"), composite.TypeID())
+	})
+
+	t.Run("dictionary literal without type annotations", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+              resource R {}
+
+              fun test(): @{Int: R?} {
+                  // No type annotation: type is inferred based on each expression's type.
+                  // So the unary-move '<- create R()' has an expected type of 'R' (not 'R?').
+                  let dictionary <- { 1: <- create R(), 2: nil}
+                  return <- dictionary
+              }
+            `,
+		)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, result)
+		dictionary := result.(*interpreter.DictionaryValue)
+
+		require.Equal(t, 2, dictionary.Count())
+
+		// Elements must be boxed.
+
+		// Use 'Get' to get the value as-is.
+		// 'GetKey' method would explicitly box the value before returning.
+		element, ok := dictionary.Get(
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 1),
+		)
+
+		require.True(t, ok)
+
+		require.IsType(t, &interpreter.SomeValue{}, element)
+		someValue := element.(*interpreter.SomeValue)
+
+		innerValue := someValue.InnerValue()
+		require.IsType(t, &interpreter.CompositeValue{}, innerValue)
+		composite := innerValue.(*interpreter.CompositeValue)
+
+		assert.Equal(t, common.TypeID("S.test.R"), composite.TypeID())
+	})
+
+	t.Run("dictionary literal with type annotation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+              resource R {}
+
+              fun test(): @{Int: R?} {
+                  let dictionary: @{Int: R?} <- { 1: <- create R(), 2: nil}
+                  return <- dictionary
+              }
+            `,
+		)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, result)
+		dictionary := result.(*interpreter.DictionaryValue)
+
+		require.Equal(t, 2, dictionary.Count())
+
+		// Elements must be boxed.
+
+		// Use 'Get' to get the value as-is.
+		// 'GetKey' method would explicitly box the value before returning.
+		element, ok := dictionary.Get(
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 1),
+		)
+
+		require.True(t, ok)
+
+		require.IsType(t, &interpreter.SomeValue{}, element)
+		someValue := element.(*interpreter.SomeValue)
+
+		innerValue := someValue.InnerValue()
+		require.IsType(t, &interpreter.CompositeValue{}, innerValue)
+		composite := innerValue.(*interpreter.CompositeValue)
+
+		assert.Equal(t, common.TypeID("S.test.R"), composite.TypeID())
 	})
 }

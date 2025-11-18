@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type containsTestCase struct {
@@ -50,10 +51,10 @@ func TestInclusiveRange(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	unsignedContainsTestCases := []containsTestCase{
 		{
@@ -392,14 +393,16 @@ func TestInclusiveRange(t *testing.T) {
 				)
 			}
 
-			inter, err := parseCheckAndInterpretWithOptions(t, code,
+			inter, err := parseCheckAndPrepareWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
-							return baseValueActivation
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
 						},
 					},
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 							return baseActivation
 						},
@@ -422,7 +425,6 @@ func TestInclusiveRange(t *testing.T) {
 			if withStep {
 				expectedRangeValue = interpreter.NewInclusiveRangeValueWithStep(
 					inter,
-					interpreter.EmptyLocationRange,
 					interpreter.GetSmallIntegerValue(testCase.s, integerType),
 					interpreter.GetSmallIntegerValue(testCase.e, integerType),
 					interpreter.GetSmallIntegerValue(testCase.step, integerType),
@@ -432,7 +434,6 @@ func TestInclusiveRange(t *testing.T) {
 			} else {
 				expectedRangeValue = interpreter.NewInclusiveRangeValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					interpreter.GetSmallIntegerValue(testCase.s, integerType),
 					interpreter.GetSmallIntegerValue(testCase.e, integerType),
 					rangeType,
@@ -444,7 +445,7 @@ func TestInclusiveRange(t *testing.T) {
 				t,
 				inter,
 				expectedRangeValue,
-				inter.Globals.Get("r").GetValue(inter),
+				inter.GetGlobal("r"),
 			)
 
 			// Check that contains returns correct information.
@@ -460,7 +461,7 @@ func TestInclusiveRange(t *testing.T) {
 					t,
 					inter,
 					expectedValue,
-					inter.Globals.Get(fmt.Sprintf("c_%d", i)).GetValue(inter),
+					inter.GetGlobal(fmt.Sprintf("c_%d", i)),
 				)
 			}
 		})
@@ -498,23 +499,25 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	runInvalidCase := func(t *testing.T, label, code string, expectedError error, expectedMessage string) {
 		t.Run(label, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := parseCheckAndInterpretWithOptions(t, code,
+			_, err := parseCheckAndPrepareWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
-							return baseValueActivation
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
 						},
 					},
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 							return baseActivation
 						},

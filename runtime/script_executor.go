@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -50,6 +51,7 @@ type scriptExecutor struct {
 	runtime Runtime
 	scriptExecutorPreparation
 	script Script
+	vm     *vm.VM
 }
 
 func newScriptExecutor(
@@ -110,7 +112,8 @@ func (executor *scriptExecutor) preprocess() (err error) {
 
 	storage := NewStorage(
 		runtimeInterface,
-		runtimeInterface,
+		context.MemoryGauge,
+		context.ComputationGauge,
 		StorageConfig{},
 	)
 	executor.storage = storage
@@ -118,23 +121,18 @@ func (executor *scriptExecutor) preprocess() (err error) {
 	environment := context.Environment
 	if environment == nil {
 		if context.UseVM {
-			return errors.NewUnexpectedError("cannot execute script with the VM")
+			environment = NewScriptVMEnvironment(config)
+		} else {
+			environment = NewScriptInterpreterEnvironment(config)
 		}
-		environment = NewScriptInterpreterEnvironment(config)
-	}
-
-	switch environment.(type) {
-	case *interpreterEnvironment:
-		break
-	default:
-		return errors.NewUnexpectedError("scripts can only be executed with the interpreter")
 	}
 
 	environment.Configure(
 		runtimeInterface,
 		codesAndPrograms,
 		storage,
-		context.CoverageReport,
+		context.MemoryGauge,
+		context.ComputationGauge,
 	)
 	executor.environment = environment
 
@@ -176,7 +174,34 @@ func (executor *scriptExecutor) preprocess() (err error) {
 		return newError(err, location, codesAndPrograms)
 	}
 
-	executor.interpret = executor.scriptExecutionFunction()
+	switch environment := environment.(type) {
+	case *InterpreterEnvironment:
+		if context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the VM, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+
+		executor.interpret = executor.scriptExecutionFunction()
+
+	case *vmEnvironment:
+		if !context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the interpreter, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+		var program *Program
+		program, err = environment.loadProgram(location)
+		if err != nil {
+			return newError(err, location, codesAndPrograms)
+		}
+		executor.vm = environment.newVM(location, program.compiledProgram.program)
+
+	default:
+		return errors.NewUnexpectedError("scripts can only be executed with the interpreter")
+	}
 
 	return nil
 }
@@ -200,24 +225,30 @@ func (executor *scriptExecutor) execute() (val cadence.Value, err error) {
 		codesAndPrograms,
 	)
 
+	var result cadence.Value
+
 	switch environment := environment.(type) {
-	case *interpreterEnvironment:
-		value, err := executor.executeWithInterpreter(environment)
-		if err != nil {
-			return nil, newError(err, executor.context.Location, codesAndPrograms)
-		}
-		return value, nil
+	case *InterpreterEnvironment:
+		result, err = executor.executeWithInterpreter(environment)
+
+	case *vmEnvironment:
+		result, err = executor.executeWithVM(environment)
 
 	default:
 		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
 	}
+
+	if err != nil {
+		return nil, newError(err, executor.context.Location, codesAndPrograms)
+	}
+	return result, nil
 }
 
 func (executor *scriptExecutor) executeWithInterpreter(
-	environment *interpreterEnvironment,
+	environment *InterpreterEnvironment,
 ) (val cadence.Value, err error) {
 
-	value, inter, err := environment.interpret(
+	value, inter, err := environment.Interpret(
 		executor.context.Location,
 		executor.program,
 		executor.interpret,
@@ -226,28 +257,47 @@ func (executor *scriptExecutor) executeWithInterpreter(
 		return nil, err
 	}
 
-	// Export before committing storage
+	return ExportValue(value, inter)
+}
 
-	result, err := ExportValue(
-		value,
-		inter,
-		interpreter.EmptyLocationRange,
+func (executor *scriptExecutor) executeWithVM(
+	environment *vmEnvironment,
+) (val cadence.Value, err error) {
+
+	context := executor.vm.Context()
+	codesAndPrograms := executor.codesAndPrograms
+
+	// Recover internal panics and return them as an error.
+	// For example, the argument validation might attempt to
+	// load contract code for non-existing types
+
+	defer Recover(
+		func(internalErr Error) {
+			err = internalErr
+		},
+		executor.context.Location,
+		codesAndPrograms,
+	)
+
+	values, err := importValidatedArguments(
+		context,
+		executor.environment,
+		executor.script.Arguments,
+		executor.functionEntryPointType.Parameters,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	// Write back all stored values, which were actually just cached, back into storage.
-
-	// Even though this function is `ExecuteScript`, that doesn't imply the changes
-	// to storage will be actually persisted
-
-	err = environment.commitStorage(inter)
+	value, err := executor.vm.InvokeExternally(
+		sema.FunctionEntryPointName,
+		values...,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	return ExportValue(value, context)
 }
 
 func (executor *scriptExecutor) scriptExecutionFunction() interpretFunc {
@@ -264,7 +314,6 @@ func (executor *scriptExecutor) scriptExecutionFunction() interpretFunc {
 		values, err := importValidatedArguments(
 			inter,
 			executor.environment,
-			interpreter.EmptyLocationRange,
 			executor.script.Arguments,
 			executor.functionEntryPointType.Parameters,
 		)

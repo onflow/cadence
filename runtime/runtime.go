@@ -33,8 +33,7 @@ import (
 
 type Program struct {
 	interpreterProgram *interpreter.Program
-	// TODO: enable once feature branch is merged
-	//compiledProgram    *compiledProgram
+	compiledProgram    *compiledProgram
 }
 
 type Script struct {
@@ -329,7 +328,8 @@ func (r *runtime) ParseAndCheckProgram(
 		context.Interface,
 		codesAndPrograms,
 		nil,
-		context.CoverageReport,
+		context.MemoryGauge,
+		context.ComputationGauge,
 	)
 
 	program, err = environment.ParseAndCheckProgram(
@@ -358,7 +358,8 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 
 	storage := NewStorage(
 		runtimeInterface,
-		runtimeInterface,
+		context.MemoryGauge,
+		context.ComputationGauge,
 		StorageConfig{},
 	)
 
@@ -371,15 +372,16 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 		runtimeInterface,
 		codesAndPrograms,
 		storage,
-		context.CoverageReport,
+		context.MemoryGauge,
+		context.ComputationGauge,
 	)
 
-	interpreterEnv, ok := environment.(*interpreterEnvironment)
+	interpreterEnv, ok := environment.(*InterpreterEnvironment)
 	if !ok {
 		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
 	}
 
-	_, inter, err := interpreterEnv.interpret(
+	_, inter, err := interpreterEnv.Interpret(
 		location,
 		nil,
 		nil,
@@ -432,7 +434,7 @@ func (r *runtime) ReadStored(
 
 	var exportedValue cadence.Value
 	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
+		exportedValue, err = ExportValue(value, inter)
 		if err != nil {
 			return nil, newError(err, location, codesAndPrograms)
 		}

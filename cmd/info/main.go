@@ -239,7 +239,7 @@ func dumpBuiltinValues() {
 	}
 
 	allBaseSemaValueTypes := sema_utils.AllBaseSemaValueTypes()
-	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
+	standardLibraryValues := stdlib.InterpreterDefaultScriptStandardLibraryValues(nil)
 
 	valueTypes := make([]valueType, 0, len(allBaseSemaValueTypes)+len(standardLibraryValues))
 

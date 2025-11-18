@@ -31,7 +31,44 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
+
+// native helpers
+func newAssertHelloLogFunction(t *testing.T, invoked *bool) stdlib.StandardLibraryValue {
+	return stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"log",
+		stdlib.LogFunctionType,
+		"",
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			*invoked = true
+			assert.Equal(t, "\"hello\"", args[0].String())
+			return interpreter.Void
+		},
+	)
+}
+
+func newAssertUnexpectedLogFunction(t *testing.T) stdlib.StandardLibraryValue {
+	return stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"log",
+		stdlib.LogFunctionType,
+		"",
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			_ []interpreter.Value,
+		) interpreter.Value {
+			assert.Fail(t, "unexpected call of log")
+			return interpreter.Void
+		},
+	)
+}
 
 func TestInterpretArrayMutation(t *testing.T) {
 
@@ -59,7 +96,6 @@ func TestInterpretArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -133,7 +169,6 @@ func TestInterpretArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -208,7 +243,6 @@ func TestInterpretArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -270,7 +304,6 @@ func TestInterpretArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -308,16 +341,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			stdlib.LogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				invoked = true
-				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-				return interpreter.Void
-			},
-		)
+		valueDeclaration := newAssertHelloLogFunction(t, &invoked)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
@@ -325,7 +349,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun test() {
                 let array: [AnyStruct] = [nil] as [(fun(AnyStruct):Void)?]
 
@@ -335,12 +359,14 @@ func TestInterpretArrayMutation(t *testing.T) {
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -390,12 +416,12 @@ func TestInterpretArrayMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 
@@ -441,12 +467,12 @@ func TestInterpretArrayMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 
@@ -454,15 +480,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			stdlib.LogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				assert.Fail(t, "unexpected call of log")
-				return interpreter.Void
-			},
-		)
+		valueDeclaration := newAssertUnexpectedLogFunction(t)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
@@ -470,7 +488,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
                 fun test() {
                     let array: [AnyStruct] = [nil] as [(fun():Void)?]
 
@@ -478,12 +496,14 @@ func TestInterpretArrayMutation(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -543,7 +563,6 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
@@ -622,7 +641,6 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
@@ -706,16 +724,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			stdlib.LogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				invoked = true
-				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-				return interpreter.Void
-			},
-		)
+		valueDeclaration := newAssertHelloLogFunction(t, &invoked)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
@@ -723,7 +732,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun test() {
                 let dict: {String: AnyStruct} = {}
 
@@ -733,12 +742,14 @@ func TestInterpretDictionaryMutation(t *testing.T) {
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -788,12 +799,12 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 
@@ -839,12 +850,12 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 
@@ -852,15 +863,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			stdlib.LogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				assert.Fail(t, "unexpected call of log")
-				return interpreter.Void
-			},
-		)
+		valueDeclaration := newAssertUnexpectedLogFunction(t)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
@@ -868,7 +871,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
                fun test() {
                    let dict: {String: AnyStruct} = {} as {String: fun():Void}
 
@@ -876,12 +879,14 @@ func TestInterpretDictionaryMutation(t *testing.T) {
                }
            `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -939,7 +944,6 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 			nil,
 			interpreter.AddressValue{1},
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", owner)
@@ -978,7 +982,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("array, append", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [String] {
                 let array: [String] = ["foo", "bar"]
 
@@ -1005,7 +1009,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("array, remove", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let array: [String] = ["foo", "bar", "baz"]
 
@@ -1027,7 +1031,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("dictionary, add", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): {String: String} {
                 let dictionary: {String: String} = {"a": "foo", "b": "bar"}
 
@@ -1054,7 +1058,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("dictionary, remove", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): {String: String} {
                 let dictionary: {String: String} = {"a": "foo", "b": "bar", "c": "baz"}
 
@@ -1079,7 +1083,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("resource dictionary, remove", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {}
 
             fun test(): @{String: Foo} {
@@ -1134,7 +1138,6 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -1168,7 +1171,6 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -1204,7 +1206,6 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("name"),
 		)
 		assert.True(t, present)
@@ -1239,7 +1240,6 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("name"),
 		)
 		assert.True(t, present)

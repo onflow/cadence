@@ -141,6 +141,7 @@ const (
 	MemoryKindAddressLocation
 	MemoryKindBytes
 	MemoryKindVariable
+	MemoryKindContractVariable
 	MemoryKindCompositeTypeInfo
 	MemoryKindCompositeField
 	MemoryKindInvocation
@@ -168,6 +169,7 @@ const (
 	MemoryKindMembers
 	MemoryKindTypeAnnotation
 	MemoryKindDictionaryEntry
+	MemoryKindSwitchCase
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
@@ -256,6 +258,24 @@ const (
 	MemoryKindOrderedMap
 	MemoryKindOrderedMapEntryList
 	MemoryKindOrderedMapEntry
+
+	// iterators
+	MemoryKindArrayIterator
+	MemoryKindDictionaryKeyIterator
+	MemoryKindStringIterator
+
+	// Go allocations
+
+	MemoryKindGoSliceLength
+
+	// Compiler
+	MemoryKindCompiler
+	MemoryKindCompilerGlobal
+	MemoryKindCompilerConstant
+
+	// VM
+	MemoryKindImplicitReferenceVMValue
+	MemoryKindBoundFunctionVMValue
 
 	// Placeholder kind to allow consistent indexing
 	// this should always be the last kind

@@ -461,7 +461,7 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 				ParseOptions: parser.Config{
 					NativeModifierEnabled: true,
 				},
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: false,
 				},
 			},
@@ -484,7 +484,7 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 				ParseOptions: parser.Config{
 					NativeModifierEnabled: true,
 				},
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 			},
@@ -507,7 +507,7 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 				ParseOptions: parser.Config{
 					NativeModifierEnabled: true,
 				},
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 			},
@@ -532,7 +532,7 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 				ParseOptions: parser.Config{
 					NativeModifierEnabled: true,
 				},
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 			},
@@ -690,7 +690,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 			TypeBound: boundType1,
 		}
 
-		function1 := stdlib.NewStandardLibraryStaticFunction(
+		function1 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"foo",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -707,7 +707,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 			TypeBound: boundType2,
 		}
 
-		function2 := stdlib.NewStandardLibraryStaticFunction(
+		function2 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"bar",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -726,7 +726,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 		return ParseAndCheckWithOptions(tt,
 			code,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -879,7 +879,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 			Name: "T",
 		}
 
-		function1 := stdlib.NewStandardLibraryStaticFunction(
+		function1 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"foo",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -895,7 +895,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 			Name: "T",
 		}
 
-		function2 := stdlib.NewStandardLibraryStaticFunction(
+		function2 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"bar",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -917,7 +917,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
                 func = bar      // fun<T>(): Path
 		    }`,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},

@@ -345,8 +345,10 @@ func (checker *Checker) report(err error) {
 
 func (checker *Checker) CheckProgram(program *ast.Program) {
 
+	// Declare imports
+	allImported := map[Imported]struct{}{}
 	for _, declaration := range program.ImportDeclarations() {
-		checker.declareImportDeclaration(declaration)
+		checker.declareImportDeclaration(declaration, allImported)
 	}
 
 	// Declare interface and composite types
@@ -884,8 +886,14 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	case *ast.InstantiationType:
 		return checker.convertInstantiationType(t)
 
+	case nil:
+		checker.report(&MissingTypeError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
+		})
+		return InvalidType
+
 	default:
-		checker.report(&UnconvertableTypeError{
+		checker.report(&UnconvertibleTypeError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
 		})
 		return InvalidType
@@ -2072,6 +2080,7 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 					} else {
 						checker.report(
 							&InvalidNonEntitlementAccessError{
+								Type:  nominalType,
 								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
 							},
 						)
@@ -2254,6 +2263,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	case TypeAnnotationStateInvalidResourceAnnotation:
 		checker.report(
 			&InvalidResourceAnnotationError{
+				Type:  typeAnnotation.Type,
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)

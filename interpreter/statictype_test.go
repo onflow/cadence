@@ -163,9 +163,9 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 			(&ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeString,
 			}).Equal(
-				(&CapabilityStaticType{
+				&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
-				}),
+				},
 			),
 		)
 	})
@@ -1196,11 +1196,21 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType:   sema.Fix64Type,
 			staticType: PrimitiveStaticTypeFix64,
 		},
+		{
+			name:       "Fix128",
+			semaType:   sema.Fix128Type,
+			staticType: PrimitiveStaticTypeFix128,
+		},
 
 		{
 			name:       "UFix64",
 			semaType:   sema.UFix64Type,
 			staticType: PrimitiveStaticTypeUFix64,
+		},
+		{
+			name:       "UFix128",
+			semaType:   sema.UFix128Type,
+			staticType: PrimitiveStaticTypeUFix128,
 		},
 
 		{
@@ -1760,6 +1770,10 @@ func (s staticTypeConversionHandler) GetEntitlementMapType(typeID TypeID) (*sema
 func (s staticTypeConversionHandler) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
+}
+
+func (s staticTypeConversionHandler) SemaTypeFromStaticType(staticType StaticType) sema.Type {
+	return MustConvertStaticToSemaType(staticType, s)
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {

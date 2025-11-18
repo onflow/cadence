@@ -56,7 +56,7 @@ func ValuesAreEqual(context interpreter.ValueComparisonContext, expected, actual
 	}
 
 	if expected, ok := expected.(interpreter.EquatableValue); ok {
-		return expected.Equal(context, interpreter.EmptyLocationRange, actual)
+		return expected.Equal(context, actual)
 	}
 
 	return assert.ObjectsAreEqual(expected, actual)
@@ -98,11 +98,11 @@ func AssertValuesEqual(t testing.TB, context interpreter.ValueComparisonContext,
 	return true
 }
 
-func ArrayElements(gauge common.MemoryGauge, array *interpreter.ArrayValue) []interpreter.Value {
+func ArrayElements(gauge common.Gauge, array *interpreter.ArrayValue) []interpreter.Value {
 	count := array.Count()
 	result := make([]interpreter.Value, count)
 	for i := 0; i < count; i++ {
-		result[i] = array.Get(gauge, interpreter.EmptyLocationRange, i)
+		result[i] = array.Get(gauge, i)
 	}
 	return result
 }
@@ -113,7 +113,6 @@ func DictionaryKeyValues(context interpreter.ContainerMutationContext, dict *int
 	i := 0
 	dict.Iterate(
 		context,
-		interpreter.EmptyLocationRange,
 		func(key, value interpreter.Value) (resume bool) {
 			result[i*2] = key
 			result[i*2+1] = value
@@ -148,7 +147,6 @@ func DictionaryEntries[K, V any](
 	idx := 0
 	dict.Iterate(
 		context,
-		interpreter.EmptyLocationRange,
 		func(rawKey, rawValue interpreter.Value) (resume bool) {
 			key, ok := fromKey(rawKey)
 

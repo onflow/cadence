@@ -61,7 +61,7 @@ func NewAccountKeysValue(
 		return nil
 	}
 
-	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
+	computeField := func(name string, _ MemberAccessibleContext) Value {
 		switch name {
 		case sema.Account_KeysTypeCountFieldName:
 			return getKeysCount()
@@ -82,10 +82,10 @@ func NewAccountKeysValue(
 	}
 
 	var str string
-	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(context, common.AccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(context, seenReferences, locationRange)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.Keys(%s)", addressStr)
 		}
 		return str
@@ -102,7 +102,7 @@ func NewAccountKeysValue(
 		methodsGetter,
 		nil,
 		stringer,
-	)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return accountKeys
 }

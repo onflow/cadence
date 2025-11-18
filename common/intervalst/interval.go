@@ -21,6 +21,9 @@ package intervalst
 import "fmt"
 
 type Position interface {
+	// Compare compares this position to the given other position.
+	// NOTE: MUST also handle intervalst.MinPosition and return 1
+	// (every position is greater than the minimum position)
 	Compare(other Position) int
 }
 

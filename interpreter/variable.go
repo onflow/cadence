@@ -23,16 +23,26 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
+type VariableKind uint8
+
+const (
+	VariableKindSimple VariableKind = iota
+	VariableKindSelf
+	VariableKindContract
+)
+
 type Variable interface {
 	GetValue(ValueStaticTypeContext) Value
-	SetValue(context ValueStaticTypeContext, locationRange LocationRange, value Value)
+	SetValue(context ValueStaticTypeContext, value Value)
 	InitializeWithValue(value Value)
 	InitializeWithGetter(getter func() Value)
+	Kind() VariableKind
 }
 
 type SimpleVariable struct {
 	value  Value
 	getter func() Value
+	kind   VariableKind
 }
 
 var _ Variable = &SimpleVariable{}
@@ -54,13 +64,17 @@ func (v *SimpleVariable) GetValue(ValueStaticTypeContext) Value {
 	return v.value
 }
 
-func (v *SimpleVariable) SetValue(context ValueStaticTypeContext, locationRange LocationRange, value Value) {
+func (v *SimpleVariable) SetValue(context ValueStaticTypeContext, value Value) {
 	existingValue := v.value
 	if existingValue != nil {
-		CheckResourceLoss(context, existingValue, locationRange)
+		CheckResourceLoss(context, existingValue)
 	}
 	v.getter = nil
 	v.value = value
+}
+
+func (v *SimpleVariable) Kind() VariableKind {
+	return v.kind
 }
 
 var variableMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindVariable)
@@ -79,6 +93,14 @@ func NewVariableWithGetter(gauge common.MemoryGauge, getter func() Value) Variab
 	}
 }
 
+func NewContractVariableWithGetter(gauge common.MemoryGauge, getter func() Value) Variable {
+	common.UseMemory(gauge, variableMemoryUsage)
+	return &SimpleVariable{
+		getter: getter,
+		kind:   VariableKindContract,
+	}
+}
+
 type SelfVariable struct {
 	value   Value
 	selfRef ReferenceValue
@@ -86,14 +108,14 @@ type SelfVariable struct {
 
 var _ Variable = &SelfVariable{}
 
-func NewSelfVariableWithValue(interpreter *Interpreter, value Value, locationRange LocationRange) Variable {
+func NewSelfVariableWithValue(interpreter *Interpreter, value Value) Variable {
 	common.UseMemory(interpreter, variableMemoryUsage)
 
 	semaType := MustSemaTypeOfValue(value, interpreter)
 
 	// Create an explicit reference to represent the implicit reference behavior of 'self' value.
 	// Authorization doesn't matter, we just need a reference to add to tracking.
-	selfRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, semaType, locationRange)
+	selfRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, semaType)
 
 	return &SelfVariable{
 		value:   value,
@@ -113,11 +135,15 @@ func (v *SelfVariable) InitializeWithGetter(func() Value) {
 
 func (v *SelfVariable) GetValue(context ValueStaticTypeContext) Value {
 	// TODO: pass proper location range
-	CheckInvalidatedResourceOrResourceReference(v.selfRef, EmptyLocationRange, context)
+	CheckInvalidatedResourceOrResourceReference(v.selfRef, context)
 	return v.value
 }
 
-func (v *SelfVariable) SetValue(ValueStaticTypeContext, LocationRange, Value) {
+func (v *SelfVariable) SetValue(ValueStaticTypeContext, Value) {
 	// self variable cannot be updated.
 	panic(errors.NewUnreachableError())
+}
+
+func (*SelfVariable) Kind() VariableKind {
+	return VariableKindSelf
 }

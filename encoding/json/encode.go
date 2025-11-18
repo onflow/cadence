@@ -29,8 +29,11 @@ import (
 	"strings"
 	_ "unsafe"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -257,7 +260,9 @@ const (
 	word128TypeStr        = "Word128"
 	word256TypeStr        = "Word256"
 	fix64TypeStr          = "Fix64"
+	fix128TypeStr         = "Fix128"
 	ufix64TypeStr         = "UFix64"
+	ufix128TypeStr        = "UFix128"
 	arrayTypeStr          = "Array"
 	dictionaryTypeStr     = "Dictionary"
 	structTypeStr         = "Struct"
@@ -331,8 +336,12 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareWord256(v)
 	case cadence.Fix64:
 		return prepareFix64(v)
+	case cadence.Fix128:
+		return prepareFix128(v)
 	case cadence.UFix64:
 		return prepareUFix64(v)
+	case cadence.UFix128:
+		return prepareUFix128(v)
 	case cadence.Array:
 		return prepareArray(v)
 	case cadence.Dictionary:
@@ -558,10 +567,24 @@ func prepareFix64(v cadence.Fix64) jsonValue {
 	}
 }
 
+func prepareFix128(v cadence.Fix128) jsonValue {
+	return jsonValueObject{
+		Type:  fix128TypeStr,
+		Value: encodeFix128(fix.Fix128(v)),
+	}
+}
+
 func prepareUFix64(v cadence.UFix64) jsonValue {
 	return jsonValueObject{
 		Type:  ufix64TypeStr,
 		Value: encodeUFix64(uint64(v)),
+	}
+}
+
+func prepareUFix128(v cadence.UFix128) jsonValue {
+	return jsonValueObject{
+		Type:  ufix128TypeStr,
+		Value: encodeUFix128(fix.UFix128(v)),
 	}
 }
 
@@ -959,6 +982,14 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Initializers: prepareInitializers(typ.Initializers, results),
 			Type:         PrepareType(typ.RawType, results),
 		}
+	case *cadence.AttachmentType:
+		return jsonNominalType{
+			Kind:         "Attachment",
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
+			Fields:       prepareFields(getCompositeTypeFields(typ), results),
+			Initializers: prepareInitializers(typ.Initializers, results),
+			Type:         PrepareType(typ.BaseType, results),
+		}
 	case cadence.PrimitiveType:
 		return jsonSimpleType{
 			Kind: typ.ID(),
@@ -1047,6 +1078,10 @@ func encodeFix64(v int64) string {
 	return builder.String()
 }
 
+func encodeFix128(v fix.Fix128) string {
+	return format.Fix128(v)
+}
+
 func encodeUFix64(v uint64) string {
 	integer := v / sema.Fix64Factor
 	fraction := v % sema.Fix64Factor
@@ -1056,4 +1091,8 @@ func encodeUFix64(v uint64) string {
 		integer,
 		fraction,
 	)
+}
+
+func encodeUFix128(v fix.UFix128) string {
+	return format.UFix128(v)
 }

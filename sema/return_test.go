@@ -25,9 +25,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -210,7 +213,7 @@ func testExits(t *testing.T, test exitTest) {
 		t,
 		code,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -420,7 +423,7 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 	t.Parallel()
 
 	valueDeclarations := []sema.ValueDeclaration{
-		stdlib.PanicFunction,
+		stdlib.InterpreterPanicFunction,
 	}
 
 	t.Run("expression statement", func(t *testing.T) {
@@ -534,4 +537,59 @@ func TestCheckFunctionExpressionReturnStatementInfluence(t *testing.T) {
 	// If this test fails, there is likely something wrong in the definite halt analysis,
 	// or in the function activation stack
 	require.NoError(t, err)
+}
+
+func TestCheckUnreachableStatement(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      fun f() {}
+
+      fun test() {
+        return
+        f()//after
+      }
+    `
+
+	_, err := ParseAndCheck(t, code)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	var unreachableErr *sema.UnreachableStatementError
+	require.ErrorAs(t, errs[0], &unreachableErr)
+
+	fixes := unreachableErr.SuggestFixes(code)
+
+	common_utils.AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove unreachable statement",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 61, Line: 6, Column: 8},
+							EndPos:   ast.Position{Offset: 63, Line: 6, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      fun f() {}
+
+      fun test() {
+        return
+        //after
+      }
+    `
+	assert.Equal(
+		t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }

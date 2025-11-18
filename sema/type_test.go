@@ -649,9 +649,10 @@ func TestCommonSuperType(t *testing.T) {
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
+				computedSuperType := LeastCommonSuperType(test.types...)
 				assert.True(
 					t,
-					test.expectedSuperType.Equal(LeastCommonSuperType(test.types...)),
+					test.expectedSuperType.Equal(computedSuperType),
 				)
 			})
 		}
@@ -722,8 +723,42 @@ func TestCommonSuperType(t *testing.T) {
 				name: "heterogeneous fixed-point types",
 				types: []Type{
 					Fix64Type,
+					Fix128Type,
 					UFix64Type,
+					UFix128Type,
 					FixedPointType,
+				},
+				expectedSuperType: FixedPointType,
+			},
+			{
+				name: "homogenous fix128 types",
+				types: []Type{
+					Fix128Type,
+					Fix128Type,
+				},
+				expectedSuperType: Fix128Type,
+			},
+			{
+				name: "homogenous ufix128 types",
+				types: []Type{
+					UFix128Type,
+					UFix128Type,
+				},
+				expectedSuperType: UFix128Type,
+			},
+			{
+				name: "heterogeneous signed fixed-point types",
+				types: []Type{
+					Fix64Type,
+					Fix128Type,
+				},
+				expectedSuperType: SignedFixedPointType,
+			},
+			{
+				name: "heterogeneous unsigned fixed-point types",
+				types: []Type{
+					UFix64Type,
+					UFix128Type,
 				},
 				expectedSuperType: FixedPointType,
 			},
@@ -1979,7 +2014,7 @@ func TestIsPrimitive(t *testing.T) {
 
 		for _, ty := range []Type{
 			&GenericType{TypeParameter: &TypeParameter{Name: "T"}},
-			&TransactionType{},
+			&TransactionType{Location: common.NewTransactionLocation(nil, []byte{42})},
 		} {
 			tests = append(tests, testCase{
 				expectedIsPrimitive: false,

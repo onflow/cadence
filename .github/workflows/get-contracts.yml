@@ -11,14 +11,15 @@ on:
         required: true
 
 env:
-  GO_VERSION: '1.23'
+  GO_VERSION: '1.24'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.run_id }}-${{ inputs.chain }}
   cancel-in-progress: true
 
 jobs:
-  check:
+  get-contracts:
+    name: Get contracts
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

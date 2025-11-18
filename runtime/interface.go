@@ -32,8 +32,6 @@ import (
 )
 
 type Interface interface {
-	MeterInterface
-
 	// ResolveLocation resolves an import location.
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
@@ -58,11 +56,6 @@ type Interface interface {
 		location Location,
 		load func() (*Program, error),
 	) (*Program, error)
-	// SetInterpreterSharedState sets the shared state of all interpreters.
-	SetInterpreterSharedState(state *interpreter.SharedState)
-	// GetInterpreterSharedState gets the shared state of all interpreters.
-	// May return nil if none is available or use is not applicable.
-	GetInterpreterSharedState() *interpreter.SharedState
 	// GetValue gets a value for the given key in the storage, owned by the given account.
 	GetValue(owner, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
@@ -128,8 +121,8 @@ type Interface interface {
 	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
-	// RecordTrace records an opentelemetry trace.
-	RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
+	// RecordTrace records an OpenTelemetry trace.
+	RecordTrace(operation string, duration time.Duration, attrs []attribute.KeyValue)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
@@ -148,7 +141,6 @@ type Interface interface {
 	RecoverProgram(program *ast.Program, location common.Location) ([]byte, error)
 	ValidateAccountCapabilitiesGet(
 		context interpreter.AccountCapabilityGetValidationContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
 		wantedBorrowType *sema.ReferenceType,
@@ -156,27 +148,12 @@ type Interface interface {
 	) (bool, error)
 	ValidateAccountCapabilitiesPublish(
 		context interpreter.AccountCapabilityPublishValidationContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
 		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) (bool, error)
 
 	MinimumRequiredVersion() (string, error)
-}
-
-type MeterInterface interface {
-	// MeterMemory gets called when new memory is allocated or used by the interpreter
-	MeterMemory(usage common.MemoryUsage) error
-	// MeterComputation is a callback method for metering computation, it returns error
-	// when computation passes the limit (set by the environment)
-	MeterComputation(usage common.ComputationUsage) error
-	// ComputationUsed returns the total computation used in the current runtime.
-	ComputationUsed() (uint64, error)
-	// MemoryUsed returns the total memory (estimate) used in the current runtime.
-	MemoryUsed() (uint64, error)
-	// InteractionUsed returns the total storage interaction used in the current runtime.
-	InteractionUsed() (uint64, error)
 }
 
 type Metrics interface {

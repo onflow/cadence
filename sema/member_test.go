@@ -25,8 +25,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -88,70 +91,166 @@ func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
-			`
-              fun test() {
-                  let bar = Bar()
-                  // field Bar.foo is not optional but try to access it through optional chaining
-                  bar.foo?.getContent()
-              }
+		const code = `
+          fun test() {
+              let bar = Bar()
+              // field Bar.foo is not optional but try to access it through optional chaining
+              bar.foo?.getContent()
+          }
 
-              struct Bar {
-                  var foo: Foo
-                  init() {
-                      self.foo = Foo()
-                  }
+          struct Bar {
+              var foo: Foo
+              init() {
+                  self.foo = Foo()
               }
+          }
 
-              struct Foo {
-                  fun getContent(): String {
-                      return "hello"
-                  }
+          struct Foo {
+              fun getContent(): String {
+                  return "hello"
               }
-            `,
-		)
+          }
+        `
+
+		_, err := ParseAndCheck(t, code)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidOptionalChainingError{}, errs[0])
+		var invalidOptionalChainingErr *sema.InvalidOptionalChainingError
+		require.ErrorAs(t, errs[0], &invalidOptionalChainingErr)
 
+		fixes := invalidOptionalChainingErr.SuggestFixes(code)
+
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove optional chaining",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: ".",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 169, Line: 5, Column: 21},
+								EndPos:   ast.Position{Offset: 170, Line: 5, Column: 22},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+          fun test() {
+              let bar = Bar()
+              // field Bar.foo is not optional but try to access it through optional chaining
+              bar.foo.getContent()
+          }
+
+          struct Bar {
+              var foo: Foo
+              init() {
+                  self.foo = Foo()
+              }
+          }
+
+          struct Foo {
+              fun getContent(): String {
+                  return "hello"
+              }
+          }
+        `
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("non-function", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
-			`
-              fun test() {
-                  let bar = Bar()
-                  // Two issues:
-                  //    - Field Bar.foo is not optional, but access through optional chaining
-                  //    - Field Foo.id is not a function, yet invoke as a function
-                  bar.foo?.id()
-              }
+		const code = `
+          fun test() {
+              let bar = Bar()
+              // Two issues:
+              //    - Field Bar.foo is not optional, but access through optional chaining
+              //    - Field Foo.id is not a function, yet invoke as a function
+              bar.foo?.id()
+          }
 
-              struct Bar {
-                  var foo: Foo
-                  init() {
-                      self.foo = Foo()
-                  }
+          struct Bar {
+              var foo: Foo
+              init() {
+                  self.foo = Foo()
               }
+          }
 
-              struct Foo {
-                  var id: String
+          struct Foo {
+              var id: String
 
-                  init() {
-                      self.id = ""
-                  }
+              init() {
+                  self.id = ""
               }
-            `,
-		)
+          }
+        `
+
+		_, err := ParseAndCheck(t, code)
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.InvalidOptionalChainingError{}, errs[0])
+		var invalidOptionalChainingErr *sema.InvalidOptionalChainingError
+		require.ErrorAs(t, errs[0], &invalidOptionalChainingErr)
+
 		assert.IsType(t, &sema.NotCallableError{}, errs[1])
+
+		fixes := invalidOptionalChainingErr.SuggestFixes(code)
+
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove optional chaining",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: ".",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 273, Line: 7, Column: 21},
+								EndPos:   ast.Position{Offset: 274, Line: 7, Column: 22},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+          fun test() {
+              let bar = Bar()
+              // Two issues:
+              //    - Field Bar.foo is not optional, but access through optional chaining
+              //    - Field Foo.id is not a function, yet invoke as a function
+              bar.foo.id()
+          }
+
+          struct Bar {
+              var foo: Foo
+              init() {
+                  self.foo = Foo()
+              }
+          }
+
+          struct Foo {
+              var id: String
+
+              init() {
+                  self.id = ""
+              }
+          }
+        `
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 }
 
@@ -307,24 +406,31 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t, `
-            struct Test {
-                fun foo(): Int { return 3 }
-            }
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct Test {
+                    fun foo(): Int { return 3 }
+                }
 
-            let test: Test = Test()
-            let x = test.foop()
-        `, ParseAndCheckOptions{
-			Config: &sema.Config{
-				SuggestionsEnabled: true,
+                let test: Test = Test()
+                let x = test.foop()
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					SuggestionsEnabled: true,
+				},
 			},
-		})
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "did you mean `foo`?", memberErr.SecondaryError())
+		assert.Contains(
+			t,
+			memberErr.SecondaryError(),
+			"did you mean member `foo` instead?",
+		)
 	})
 
 	t.Run("without option", func(t *testing.T) {
@@ -344,81 +450,103 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "unknown member", memberErr.SecondaryError())
+
+		assert.NotContains(t,
+			memberErr.SecondaryError(),
+			"did you mean",
+		)
 	})
 
 	t.Run("selects closest", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t, `
-            struct Test {
-                fun fou(): Int { return 1 }
-                fun bar(): Int { return 2 }
-                fun foo(): Int { return 3 }
-            }
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct Test {
+                    fun fou(): Int { return 1 }
+                    fun bar(): Int { return 2 }
+                    fun foo(): Int { return 3 }
+                }
 
-            let test: Test = Test()
-            let x = test.foop()
-        `, ParseAndCheckOptions{
-			Config: &sema.Config{
-				SuggestionsEnabled: true,
+                let test: Test = Test()
+                let x = test.foop()
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					SuggestionsEnabled: true,
+				},
 			},
-		})
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "did you mean `foo`?", memberErr.SecondaryError())
+		assert.Contains(t,
+			memberErr.SecondaryError(),
+			"did you mean member `foo` instead?",
+		)
 	})
 
 	t.Run("no members = no suggestion", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t, `
-            struct Test {
-                
-            }
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct Test {}
 
-            let test: Test = Test()
-            let x = test.foop()
-        `, ParseAndCheckOptions{
-			Config: &sema.Config{
-				SuggestionsEnabled: true,
+                let test: Test = Test()
+                let x = test.foop()
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					SuggestionsEnabled: true,
+				},
 			},
-		})
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "unknown member", memberErr.SecondaryError())
+
+		assert.NotContains(t,
+			memberErr.SecondaryError(),
+			"did you mean",
+		)
 	})
 
 	t.Run("no similarity = no suggestion", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t, `
-            struct Test {
-                fun bar(): Int { return 1 }
-            }
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct Test {
+                    fun bar(): Int { return 1 }
+                }
 
-            let test: Test = Test()
-            let x = test.foop()
-        `, ParseAndCheckOptions{
-			Config: &sema.Config{
-				SuggestionsEnabled: true,
+                let test: Test = Test()
+                let x = test.foop()
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					SuggestionsEnabled: true,
+				},
 			},
-		})
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "unknown member", memberErr.SecondaryError())
+
+		assert.NotContains(t,
+			memberErr.SecondaryError(),
+			"did you mean",
+		)
 	})
 }
 

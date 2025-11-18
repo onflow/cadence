@@ -31,17 +31,18 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
-// checkingEnvironmentReconfigured is the portion of checkingEnvironment
+// checkingEnvironmentReconfigured is the portion of CheckingEnvironment
 // that gets reconfigured by checkingEnvironment.Configure
 type checkingEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	codesAndPrograms CodesAndPrograms
+	memoryGauge      common.MemoryGauge
 }
 
-type checkingEnvironment struct {
+type CheckingEnvironment struct {
 	checkingEnvironmentReconfigured
 
-	config *sema.Config
+	Config *sema.Config
 
 	checkedImports importResolutionResults
 
@@ -66,18 +67,18 @@ type checkingEnvironment struct {
 	baseValueActivationsByLocation map[common.Location]*sema.VariableActivation
 }
 
-func newCheckingEnvironment() *checkingEnvironment {
+func newCheckingEnvironment() *CheckingEnvironment {
 	defaultBaseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	defaultBaseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
-	env := &checkingEnvironment{
+	env := &CheckingEnvironment{
 		defaultBaseValueActivation: defaultBaseValueActivation,
 		defaultBaseTypeActivation:  defaultBaseTypeActivation,
 	}
-	env.config = env.newConfig()
+	env.Config = env.newConfig()
 	return env
 }
 
-func (e *checkingEnvironment) newConfig() *sema.Config {
+func (e *CheckingEnvironment) newConfig() *sema.Config {
 	return &sema.Config{
 		AccessCheckMode:                  sema.AccessCheckModeStrict,
 		BaseValueActivationHandler:       e.getBaseValueActivation,
@@ -89,16 +90,21 @@ func (e *checkingEnvironment) newConfig() *sema.Config {
 	}
 }
 
-func (e *checkingEnvironment) configure(runtimeInterface Interface, codesAndPrograms CodesAndPrograms) {
+func (e *CheckingEnvironment) configure(
+	runtimeInterface Interface,
+	codesAndPrograms CodesAndPrograms,
+	memoryGauge common.MemoryGauge,
+) {
 	e.runtimeInterface = runtimeInterface
 	e.codesAndPrograms = codesAndPrograms
+	e.memoryGauge = memoryGauge
 }
 
 // getBaseValueActivation returns the base activation for the given location.
 // If a value was declared for the location (using DeclareValue),
 // then the specific base value activation for this location is returned.
 // Otherwise, the default base activation that applies for all locations is returned.
-func (e *checkingEnvironment) getBaseValueActivation(
+func (e *CheckingEnvironment) getBaseValueActivation(
 	location common.Location,
 ) (
 	baseValueActivation *sema.VariableActivation,
@@ -121,7 +127,7 @@ func (e *checkingEnvironment) getBaseValueActivation(
 // If a type was declared for the location (using DeclareType),
 // then the specific base type activation for this location is returned.
 // Otherwise, the default base activation that applies for all locations is returned.
-func (e *checkingEnvironment) getBaseTypeActivation(
+func (e *CheckingEnvironment) getBaseTypeActivation(
 	location common.Location,
 ) (
 	baseTypeActivation *sema.VariableActivation,
@@ -139,7 +145,7 @@ func (e *checkingEnvironment) getBaseTypeActivation(
 	return
 }
 
-func (e *checkingEnvironment) semaBaseActivationFor(
+func (e *CheckingEnvironment) semaBaseActivationFor(
 	location common.Location,
 	baseActivationsByLocation *map[Location]*sema.VariableActivation,
 	defaultBaseActivation *sema.VariableActivation,
@@ -160,7 +166,7 @@ func (e *checkingEnvironment) semaBaseActivationFor(
 	return baseActivation
 }
 
-func (e *checkingEnvironment) declareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
+func (e *CheckingEnvironment) declareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
 	e.semaBaseActivationFor(
 		location,
 		&e.baseValueActivationsByLocation,
@@ -168,7 +174,7 @@ func (e *checkingEnvironment) declareValue(valueDeclaration stdlib.StandardLibra
 	).DeclareValue(valueDeclaration)
 }
 
-func (e *checkingEnvironment) declareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
+func (e *CheckingEnvironment) declareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
 	e.semaBaseActivationFor(
 		location,
 		&e.baseTypeActivationsByLocation,
@@ -176,7 +182,7 @@ func (e *checkingEnvironment) declareType(typeDeclaration stdlib.StandardLibrary
 	).DeclareType(typeDeclaration)
 }
 
-func (e *checkingEnvironment) resolveLocation(
+func (e *CheckingEnvironment) resolveLocation(
 	identifiers []Identifier,
 	location Location,
 ) (
@@ -190,7 +196,7 @@ func (e *checkingEnvironment) resolveLocation(
 	)
 }
 
-func (e *checkingEnvironment) resolveImport(
+func (e *CheckingEnvironment) resolveImport(
 	_ *sema.Checker,
 	importedLocation common.Location,
 	importRange ast.Range,
@@ -222,7 +228,7 @@ func (e *checkingEnvironment) resolveImport(
 	}, nil
 }
 
-func (e *checkingEnvironment) check(
+func (e *CheckingEnvironment) check(
 	location common.Location,
 	program *ast.Program,
 	checkedImports importResolutionResults,
@@ -235,8 +241,8 @@ func (e *checkingEnvironment) check(
 	checker, err := sema.NewChecker(
 		program,
 		location,
-		e,
-		e.config,
+		e.memoryGauge,
+		e.Config,
 	)
 	if err != nil {
 		return nil, err
@@ -252,11 +258,7 @@ func (e *checkingEnvironment) check(
 	return elaboration, nil
 }
 
-func (e *checkingEnvironment) MeterMemory(usage common.MemoryUsage) error {
-	return e.runtimeInterface.MeterMemory(usage)
-}
-
-func (e *checkingEnvironment) ParseAndCheckProgram(
+func (e *CheckingEnvironment) ParseAndCheckProgram(
 	code []byte,
 	location common.Location,
 	getAndSetProgram bool,
@@ -283,7 +285,7 @@ func (e *checkingEnvironment) ParseAndCheckProgram(
 }
 
 // parseAndCheckProgram parses and checks the given program.
-func (e *checkingEnvironment) parseAndCheckProgram(
+func (e *CheckingEnvironment) parseAndCheckProgram(
 	code []byte,
 	location common.Location,
 	checkedImports importResolutionResults,
@@ -309,7 +311,7 @@ func (e *checkingEnvironment) parseAndCheckProgram(
 
 	reportMetric(
 		func() {
-			program, err = parser.ParseProgram(e, code, parser.Config{})
+			program, err = parser.ParseProgram(e.memoryGauge, code, parser.Config{})
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -330,7 +332,7 @@ func (e *checkingEnvironment) parseAndCheckProgram(
 	return program, elaboration, nil
 }
 
-func (e *checkingEnvironment) GetProgram(
+func (e *CheckingEnvironment) GetProgram(
 	location Location,
 	storeProgram bool,
 	checkedImports importResolutionResults,
@@ -350,7 +352,7 @@ func (e *checkingEnvironment) GetProgram(
 
 // getProgram returns the existing program at the given location, if available.
 // If it is not available, it loads the code, and then parses and checks it.
-func (e *checkingEnvironment) getProgram(
+func (e *CheckingEnvironment) getProgram(
 	location Location,
 	getCode func() ([]byte, error),
 	getAndSetProgram bool,
@@ -423,7 +425,7 @@ func (e *checkingEnvironment) getProgram(
 // Recovery attempts to parse the contract with the old parser,
 // and if it succeeds, uses the program recovery handler
 // to produce an elaboration for the old program.
-func (e *checkingEnvironment) parseAndCheckProgramWithRecovery(
+func (e *CheckingEnvironment) parseAndCheckProgramWithRecovery(
 	code []byte,
 	location common.Location,
 	checkedImports importResolutionResults,
@@ -463,7 +465,7 @@ func (e *checkingEnvironment) parseAndCheckProgramWithRecovery(
 
 // recoverProgram parses and checks the given program with the old parser,
 // and recovers the elaboration from the old program.
-func (e *checkingEnvironment) recoverProgram(
+func (e *CheckingEnvironment) recoverProgram(
 	oldCode []byte,
 	location common.Location,
 	checkedImports importResolutionResults,
@@ -476,7 +478,7 @@ func (e *checkingEnvironment) recoverProgram(
 	var err error
 	reportMetric(
 		func() {
-			program, err = old_parser.ParseProgram(e, oldCode, old_parser.Config{})
+			program, err = old_parser.ParseProgram(e.memoryGauge, oldCode, old_parser.Config{})
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -499,7 +501,7 @@ func (e *checkingEnvironment) recoverProgram(
 
 	// Parse and check the recovered program
 
-	program, err = parser.ParseProgram(e, newCode, parser.Config{})
+	program, err = parser.ParseProgram(e.memoryGauge, newCode, parser.Config{})
 	if err != nil {
 		return nil, nil
 	}
@@ -514,6 +516,6 @@ func (e *checkingEnvironment) recoverProgram(
 	return program, elaboration
 }
 
-func (e *checkingEnvironment) temporarilyRecordCode(location common.AddressLocation, code []byte) {
+func (e *CheckingEnvironment) temporarilyRecordCode(location common.AddressLocation, code []byte) {
 	e.codesAndPrograms.setCode(location, code)
 }

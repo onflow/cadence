@@ -75,10 +75,10 @@ func NewAccountAccountCapabilitiesValue(
 	}
 
 	var str string
-	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(context, common.AccountAccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(context, seenReferences, locationRange)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.AccountCapabilities(%s)", addressStr)
 		}
 		return str
@@ -95,7 +95,7 @@ func NewAccountAccountCapabilitiesValue(
 		methodGetter,
 		nil,
 		stringer,
-	).WithPrivateField(accountTypePrivateAddressFieldName, address)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return accountCapabilities
 }

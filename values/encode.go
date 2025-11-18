@@ -117,7 +117,7 @@ const (
 	_ // future: Fix16
 	_ // future: Fix32
 	CBORTagFix64Value
-	_ // future: Fix128
+	CBORTagFix128Value
 	_ // future: Fix256
 	_
 
@@ -127,7 +127,7 @@ const (
 	_ // future: UFix16
 	_ // future: UFix32
 	CBORTagUFix64Value
-	_ // future: UFix128
+	CBORTagUFix128Value
 	_ // future: UFix256
 	_
 
@@ -239,13 +239,13 @@ func MaybeLargeImmutableStorable(
 	storable atree.Storable,
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (
 	atree.Storable,
 	error,
 ) {
 
-	if uint64(storable.ByteSize()) < maxInlineSize {
+	if storable.ByteSize() < maxInlineSize {
 		return storable, nil
 	}
 

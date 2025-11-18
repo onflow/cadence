@@ -27,10 +27,12 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	"github.com/onflow/cadence/values"
 )
 
@@ -49,7 +51,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.Equal(t, bv, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize), wrapperSize)
 	})
 
 	t.Run("SomeValue(SomeValue(bool))", func(t *testing.T) {
@@ -61,28 +63,35 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.Equal(t, bv, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...)))", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
-		inter, err := interpreter.NewInterpreter(
-			&interpreter.Program{
-				Program:     ast.NewProgram(nil, []ast.Declaration{}),
-				Elaboration: sema.NewElaboration(nil),
-			},
-			TestLocation,
-			&interpreter.Config{
-				Storage: storage,
-				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-					return interpreter.VirtualImport{
-						Elaboration: inter.Program.Elaboration,
-					}
+		var context interpreter.MemberAccessibleContext
+
+		if *compile {
+			context = vm.NewContext(vm.NewConfig(storage))
+		} else {
+			var err error
+			context, err = interpreter.NewInterpreter(
+				&interpreter.Program{
+					Program:     ast.NewProgram(nil, []ast.Declaration{}),
+					Elaboration: sema.NewElaboration(nil),
 				},
-			},
-		)
-		require.NoError(t, err)
+				TestLocation,
+				&interpreter.Config{
+					Storage: storage,
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						return interpreter.VirtualImport{
+							Elaboration: inter.Program.Elaboration,
+						}
+					},
+				},
+			)
+			require.NoError(t, err)
+		}
 
 		address := common.Address{'A'}
 
@@ -92,8 +101,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 		}
 
 		array := interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
+			context,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -107,7 +115,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.Array{}, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		atreeArray := unwrappedValue.(*atree.Array)
 		require.Equal(t, atree.Address(address), atreeArray.Address())
@@ -121,24 +129,31 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(DictionaryValue(...)))", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
-		inter, err := interpreter.NewInterpreter(
-			&interpreter.Program{
-				Program:     ast.NewProgram(nil, []ast.Declaration{}),
-				Elaboration: sema.NewElaboration(nil),
-			},
-			TestLocation,
-			&interpreter.Config{
-				Storage: storage,
-				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-					return interpreter.VirtualImport{
-						Elaboration: inter.Program.Elaboration,
-					}
+		var context interpreter.MemberAccessibleContext
+
+		if *compile {
+			context = vm.NewContext(vm.NewConfig(storage))
+		} else {
+			var err error
+			context, err = interpreter.NewInterpreter(
+				&interpreter.Program{
+					Program:     ast.NewProgram(nil, []ast.Declaration{}),
+					Elaboration: sema.NewElaboration(nil),
 				},
-			},
-		)
-		require.NoError(t, err)
+				TestLocation,
+				&interpreter.Config{
+					Storage: storage,
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						return interpreter.VirtualImport{
+							Elaboration: inter.Program.Elaboration,
+						}
+					},
+				},
+			)
+			require.NoError(t, err)
+		}
 
 		address := common.Address{'A'}
 
@@ -150,8 +165,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 		}
 
 		dict := interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.EmptyLocationRange,
+			context,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -166,7 +180,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)
@@ -178,17 +192,17 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 			atreeValue atree.Value,
 			otherStorable atree.Storable,
 		) (bool, error) {
-			value := interpreter.MustConvertStoredValue(inter, atreeValue)
-			otherValue := interpreter.StoredValue(inter, otherStorable, storage)
-			return value.(interpreter.EquatableValue).Equal(inter, interpreter.EmptyLocationRange, otherValue), nil
+			value := interpreter.MustConvertStoredValue(context, atreeValue)
+			otherValue := interpreter.StoredValue(context, otherStorable, storage)
+			return value.(interpreter.EquatableValue).Equal(context, otherValue), nil
 		}
 
 		hashInputProvider := func(
 			value atree.Value,
 			scratch []byte,
 		) ([]byte, error) {
-			hashInput := interpreter.MustConvertStoredValue(inter, value).(interpreter.HashableValue).
-				HashInput(inter, interpreter.EmptyLocationRange, scratch)
+			hashInput := interpreter.MustConvertStoredValue(context, value).(interpreter.HashableValue).
+				HashInput(context, scratch)
 			return hashInput, nil
 		}
 
@@ -207,24 +221,31 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(CompositeValue(...)))", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
-		inter, err := interpreter.NewInterpreter(
-			&interpreter.Program{
-				Program:     ast.NewProgram(nil, []ast.Declaration{}),
-				Elaboration: sema.NewElaboration(nil),
-			},
-			TestLocation,
-			&interpreter.Config{
-				Storage: storage,
-				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-					return interpreter.VirtualImport{
-						Elaboration: inter.Program.Elaboration,
-					}
+		var context interpreter.MemberAccessibleContext
+
+		if *compile {
+			context = vm.NewContext(vm.NewConfig(storage))
+		} else {
+			var err error
+			context, err = interpreter.NewInterpreter(
+				&interpreter.Program{
+					Program:     ast.NewProgram(nil, []ast.Declaration{}),
+					Elaboration: sema.NewElaboration(nil),
 				},
-			},
-		)
-		require.NoError(t, err)
+				TestLocation,
+				&interpreter.Config{
+					Storage: storage,
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						return interpreter.VirtualImport{
+							Elaboration: inter.Program.Elaboration,
+						}
+					},
+				},
+			)
+			require.NoError(t, err)
+		}
 
 		address := common.Address{'A'}
 
@@ -249,8 +270,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 		}
 
 		composite := interpreter.NewCompositeValue(
-			inter,
-			interpreter.EmptyLocationRange,
+			context,
 			location,
 			identifier,
 			kind,
@@ -264,7 +284,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)
@@ -290,7 +310,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	address := common.Address{'A'}
 
 	t.Run("SomeValue(bool)", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		v := interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.BoolValue(true))
@@ -305,7 +325,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(bool))", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		v := interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredSomeValueNonCopying(
@@ -321,7 +341,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...))), small ArrayValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
@@ -347,7 +367,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -383,7 +402,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...))), large ArrayValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
@@ -410,7 +429,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -446,7 +464,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(DictionaryValue(...))), small DictionaryValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
@@ -475,7 +493,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		dict := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -512,7 +529,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 		) (bool, error) {
 			value := interpreter.MustConvertStoredValue(inter, atreeValue)
 			otherValue := interpreter.StoredValue(inter, otherStorable, storage)
-			return value.(interpreter.EquatableValue).Equal(inter, interpreter.EmptyLocationRange, otherValue), nil
+			return value.(interpreter.EquatableValue).Equal(inter, otherValue), nil
 		}
 
 		hashInputProvider := func(
@@ -520,7 +537,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 			scratch []byte,
 		) ([]byte, error) {
 			hashInput := interpreter.MustConvertStoredValue(inter, value).(interpreter.HashableValue).
-				HashInput(inter, interpreter.EmptyLocationRange, scratch)
+				HashInput(inter, scratch)
 			return hashInput, nil
 		}
 
@@ -539,7 +556,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(DictionaryValue(...))), large DictionaryValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
@@ -572,7 +589,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		dict := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -609,7 +625,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 		) (bool, error) {
 			value := interpreter.MustConvertStoredValue(inter, atreeValue)
 			otherValue := interpreter.StoredValue(inter, otherStorable, storage)
-			return value.(interpreter.EquatableValue).Equal(inter, interpreter.EmptyLocationRange, otherValue), nil
+			return value.(interpreter.EquatableValue).Equal(inter, otherValue), nil
 		}
 
 		hashInputProvider := func(
@@ -617,7 +633,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 			scratch []byte,
 		) ([]byte, error) {
 			hashInput := interpreter.MustConvertStoredValue(inter, value).(interpreter.HashableValue).
-				HashInput(inter, interpreter.EmptyLocationRange, scratch)
+				HashInput(inter, scratch)
 			return hashInput, nil
 		}
 
@@ -636,7 +652,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(CompositeValue(...))), small CompositeValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
@@ -679,7 +695,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		composite := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			identifier,
 			kind,
@@ -720,7 +735,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(CompositeValue(...))), large CompositeValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
@@ -763,7 +778,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		composite := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			identifier,
 			kind,

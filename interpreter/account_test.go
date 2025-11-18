@@ -28,13 +28,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
+	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type storageKey struct {
@@ -114,7 +121,6 @@ type testAccountHandler struct {
 	accountKeysCount func(address common.Address) (uint32, error)
 	emitEvent        func(
 		context interpreter.ValueExportContext,
-		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
 	)
@@ -264,7 +270,6 @@ func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint32, e
 
 func (t *testAccountHandler) EmitEvent(
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
 ) {
@@ -273,7 +278,6 @@ func (t *testAccountHandler) EmitEvent(
 	}
 	t.emitEvent(
 		context,
-		locationRange,
 		eventType,
 		values,
 	)
@@ -413,61 +417,62 @@ type NoOpReferenceCreationContext struct{}
 
 var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
 
-func (n NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+func (n NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
-func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(valueID atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
-	// NO-OP
-	return nil
-}
-
-func (n NoOpReferenceCreationContext) CheckInvalidatedResourceOrResourceReference(value interpreter.Value, locationRange interpreter.LocationRange) {
-	// NO-OP
-}
-
-func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(ref *interpreter.EphemeralReferenceValue) {
-	// NO-OP
-}
-
-func (n NoOpReferenceCreationContext) MeterMemory(usage common.MemoryUsage) error {
+func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) MeterComputation(usage common.ComputationUsage) error {
+func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
+	// NO-OP
+}
+
+func (n NoOpReferenceCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
+func (n NoOpReferenceCreationContext) MeterComputation(_ common.ComputationUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
+func (n NoOpReferenceCreationContext) ReadStored(_ common.Address, _ common.StorageDomain, _ interpreter.StorageMapKey) interpreter.Value {
+	// NO-OP
+	return nil
+}
+
+func (n NoOpReferenceCreationContext) GetEntitlementType(_ interpreter.TypeID) (*sema.EntitlementType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
+func (n NoOpReferenceCreationContext) GetEntitlementMapType(_ interpreter.TypeID) (*sema.EntitlementMapType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.InterfaceType, error) {
+func (n NoOpReferenceCreationContext) GetInterfaceType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.InterfaceType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetCompositeType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.CompositeType, error) {
+func (n NoOpReferenceCreationContext) GetCompositeType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.CompositeType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(location common.Location) bool {
+func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(_ common.Location) bool {
 	// NO-OP
 	return false
+}
+
+func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(_ interpreter.StaticType) sema.Type {
+	// NO-OP
+	return nil
 }
 
 type NoOpFunctionCreationContext struct {
@@ -477,7 +482,7 @@ type NoOpFunctionCreationContext struct {
 
 var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
 
-func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
@@ -490,7 +495,6 @@ func (n NoOpFunctionCreationContext) ReferencedResourceKindedValues(
 
 func (n NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(
 	_ interpreter.Value,
-	_ interpreter.LocationRange,
 ) {
 	// NO-OP
 }
@@ -499,7 +503,7 @@ func (n NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) MeterMemory(usage common.MemoryUsage) error {
+func (n NoOpFunctionCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
@@ -547,7 +551,6 @@ func testAccountWithErrorHandlerWithCompiler(
 			interpreter.FullyEntitledAccountAccess,
 			account,
 			sema.AccountType,
-			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -561,7 +564,6 @@ func testAccountWithErrorHandlerWithCompiler(
 			interpreter.UnauthorizedAccess,
 			account,
 			sema.AccountType,
-			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -579,7 +581,7 @@ func testAccountWithErrorHandlerWithCompiler(
 		authAccountValueDeclaration,
 		pubAccountValueDeclaration,
 		accountValueDeclaration,
-		stdlib.InclusiveRangeConstructorFunction,
+		stdlib.InterpreterInclusiveRangeConstructor,
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -601,74 +603,79 @@ func testAccountWithErrorHandlerWithCompiler(
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
-		// TODO: Uncomment once the compiler branch is merged to master.
-		//vmConfig := &vm.Config{
-		//	BuiltinGlobalsProvider: func() map[string]*vm.Variable {
-		//		funcs := vm.NativeFunctions()
-		//		variable := &interpreter.SimpleVariable{}
-		//		variable.InitializeWithValue(accountValueDeclaration.Value)
-		//		funcs[accountValueDeclaration.Name] = variable
-		//		return funcs
-		//	},
-		//}
-		//
-		//programs := map[common.Location]*CompiledProgram{}
-		//parseAndCheckOptions := &ParseAndCheckOptions{
-		//	Config: &sema.Config{
-		//		LocationHandler: NewSingleIdentifierLocationResolver(t),
-		//		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-		//			return baseValueActivation
-		//		},
-		//	},
-		//}
-		//
-		//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-		//	t,
-		//	code,
-		//	compilerUtils.CompilerAndVMOptions{
-		//		ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-		//			ParseAndCheckOptions: parseAndCheckOptions,
-		//			CompilerConfig: &compiler.Config{
-		//				BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-		//					builtins := compiler.NativeFunctions()
-		//					for _, valueDeclaration := range valueDeclarations {
-		//						name := valueDeclaration.Name
-		//						builtins[name] = &compiler.Global{
-		//							Name: name,
-		//						}
-		//					}
-		//					return builtins
-		//				},
-		//			},
-		//		},
-		//		VMConfig: vmConfig,
-		//		Programs: programs,
-		//	},
-		//)
-		//
-		//var uuid uint64
-		//uuidHandler := func() (uint64, error) {
-		//	uuid++
-		//	return uuid, nil
-		//}
-		//
-		//vmConfig.UUIDHandler = uuidHandler
-		//
-		//elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
-		//
-		//invokable = test_utils.NewVMInvokable(vmInstance, elaboration)
-		//storage = vmConfig.Storage()
+			variable := &interpreter.SimpleVariable{}
+			variable.InitializeWithValue(accountValueDeclaration.Value)
+			activation.Set(accountValueDeclaration.Name, variable)
 
-		// Not supported for now
-		panic(errors.NewUnreachableError())
+			return activation
+		}
+
+		programs := map[common.Location]*CompiledProgram{}
+		parseAndCheckOptions := &ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				LocationHandler: NewSingleIdentifierLocationResolver(t),
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+		}
+
+		vmInstance, err := compilerUtils.CompileAndPrepareToInvoke(
+			t,
+			code,
+			compilerUtils.CompilerAndVMOptions{
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: parseAndCheckOptions,
+					CompilerConfig: &compiler.Config{
+						BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+							activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+							for _, valueDeclaration := range valueDeclarations {
+								name := valueDeclaration.Name
+								existing := activation.Find(name)
+								if existing != (compiler.GlobalImport{}) {
+									continue
+								}
+								activation.Set(
+									name,
+									compiler.NewGlobalImport(name),
+								)
+							}
+							return activation
+						},
+					},
+				},
+				VMConfig: vmConfig,
+				Programs: programs,
+			},
+		)
+		require.NoError(t, err)
+
+		var uuid uint64
+		uuidHandler := func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
+
+		vmConfig.UUIDHandler = uuidHandler
+
+		elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
+
+		invokable = test_utils.NewVMInvokable(vmInstance, elaboration)
+		storage = vmConfig.Storage()
 	} else {
 
+		// NOTE: test code for VM above
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			code,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &checkerConfig,
-				Config: &interpreter.Config{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &checkerConfig,
+				},
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -690,9 +697,9 @@ func testAccountWithErrorHandlerWithCompiler(
 		accountValues := make(map[storageKey]interpreter.Value)
 
 		for storageMapKey, accountStorage := range storage.(interpreter.InMemoryStorage).DomainStorageMaps {
-			iterator := accountStorage.Iterator(invokable)
+			iterator := accountStorage.Iterator()
 			for {
-				key, value := iterator.Next()
+				key, value := iterator.Next(invokable)
 				if key == nil {
 					break
 				}
@@ -950,8 +957,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadR2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1028,8 +1035,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadS2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1115,8 +1122,8 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 		_, err = inter.Invoke("copyS2")
 		RequireError(t, err)
 
-		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+		var typeMismatchError *interpreter.StoredValueTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
 
 		// NOTE: check loaded value was *not* removed from storage
 		require.Len(t, getAccountValues(), 1)
@@ -1276,8 +1283,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowR2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1456,8 +1463,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowS2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)

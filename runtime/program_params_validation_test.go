@@ -82,7 +82,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -102,6 +102,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -422,6 +423,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
+
 			typString := typ.QualifiedString()
 
 			t.Run(typString, func(t *testing.T) {
@@ -700,7 +702,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -739,6 +741,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  transactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -755,6 +758,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  transactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -1013,6 +1017,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
+
 			typString := typ.QualifiedString()
 
 			t.Run(typString, func(t *testing.T) {

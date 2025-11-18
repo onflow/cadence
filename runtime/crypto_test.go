@@ -41,7 +41,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 	t.Parallel()
 
 	executeScript := func(code string, inter Interface) (cadence.Value, error) {
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 		return runtime.ExecuteScript(
 			Script{
 				Source: []byte(code),
@@ -49,6 +49,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 			Context{
 				Interface: inter,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -59,10 +60,11 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		script := `
             access(all) fun main() {
                 log(HashAlgorithm.SHA3_256.hash("01020304".decodeHex()))
+                log(HashAlgorithm.SHA2_384.hash("05060708".decodeHex()))
             }
         `
 
-		var called bool
+		var calls int
 
 		var loggedMessages []string
 
@@ -75,10 +77,24 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 				tag string,
 				hashAlgorithm HashAlgorithm,
 			) ([]byte, error) {
-				called = true
-				assert.Equal(t, []byte{1, 2, 3, 4}, data)
-				assert.Equal(t, HashAlgorithmSHA3_256, hashAlgorithm)
-				return []byte{5, 6, 7, 8}, nil
+				calls++
+
+				assert.Empty(t, tag)
+
+				switch calls {
+				case 1:
+					assert.Equal(t, []byte{1, 2, 3, 4}, data)
+					assert.Equal(t, HashAlgorithmSHA3_256, hashAlgorithm)
+					return []byte{4, 3, 2, 1}, nil
+
+				case 2:
+					assert.Equal(t, []byte{5, 6, 7, 8}, data)
+					assert.Equal(t, HashAlgorithmSHA2_384, hashAlgorithm)
+					return []byte{8, 7, 6, 5}, nil
+
+				default:
+					return nil, fmt.Errorf("unexpected call %d", calls)
+				}
 			},
 			OnProgramLog: func(message string) {
 				loggedMessages = append(loggedMessages, message)
@@ -90,75 +106,74 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 		assert.Equal(t,
 			[]string{
-				"[5, 6, 7, 8]",
+				"[4, 3, 2, 1]",
+				"[8, 7, 6, 5]",
 			},
 			loggedMessages,
 		)
 
-		assert.True(t, called)
+		assert.Equal(t, 2, calls)
 	})
 
-	t.Run("hash - check tag", func(t *testing.T) {
+	t.Run("hashWithTag", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
             access(all) fun main() {
-                HashAlgorithm.SHA3_256.hash("01020304".decodeHex())
+                log(HashAlgorithm.SHA3_256.hashWithTag("01020304".decodeHex(), tag: "tag1"))
+                log(HashAlgorithm.SHA2_384.hashWithTag("05060708".decodeHex(), tag: "tag2"))
             }
         `
 
-		var called bool
-		hashTag := "non-empty-string"
+		var calls int
+
+		var loggedMessages []string
 
 		storage := NewTestLedger(nil, nil)
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: storage,
-			OnHash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
-				called = true
-				hashTag = tag
-				return nil, nil
+			OnHash: func(
+				data []byte,
+				tag string,
+				hashAlgorithm HashAlgorithm,
+			) ([]byte, error) {
+				calls++
+
+				switch calls {
+				case 1:
+					assert.Equal(t, []byte{1, 2, 3, 4}, data)
+					assert.Equal(t, HashAlgorithmSHA3_256, hashAlgorithm)
+					assert.Equal(t, "tag1", tag)
+					return []byte{4, 3, 2, 1}, nil
+
+				case 2:
+					assert.Equal(t, []byte{5, 6, 7, 8}, data)
+					assert.Equal(t, HashAlgorithmSHA2_384, hashAlgorithm)
+					assert.Equal(t, "tag2", tag)
+					return []byte{8, 7, 6, 5}, nil
+
+				default:
+					return nil, fmt.Errorf("unexpected call %d", calls)
+				}
+			},
+			OnProgramLog: func(message string) {
+				loggedMessages = append(loggedMessages, message)
 			},
 		}
 
 		_, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
 
-		assert.True(t, called)
-		assert.Empty(t, hashTag)
-	})
-
-	t.Run("hashWithTag - check tag", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            access(all) fun main() {
-                HashAlgorithm.SHA3_256.hashWithTag(
-                    "01020304".decodeHex(),
-                    tag: "some-tag"
-                )
-            }
-        `
-
-		var called bool
-		hashTag := ""
-
-		storage := NewTestLedger(nil, nil)
-
-		runtimeInterface := &TestRuntimeInterface{
-			Storage: storage,
-			OnHash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
-				called = true
-				hashTag = tag
-				return nil, nil
+		assert.Equal(t,
+			[]string{
+				"[4, 3, 2, 1]",
+				"[8, 7, 6, 5]",
 			},
-		}
+			loggedMessages,
+		)
 
-		_, err := executeScript(script, runtimeInterface)
-		require.NoError(t, err)
-
-		assert.True(t, called)
-		assert.Equal(t, "some-tag", hashTag)
+		assert.Equal(t, 2, calls)
 	})
 }
 
@@ -166,7 +181,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	runtimeInterface := &TestRuntimeInterface{}
 	nextScriptLocation := NewScriptLocationGenerator()
 
@@ -186,6 +201,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -211,7 +227,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	runtimeInterface := &TestRuntimeInterface{}
 	nextScriptLocation := NewScriptLocationGenerator()
 
@@ -231,6 +247,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -256,7 +273,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	runtimeInterface := &TestRuntimeInterface{
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
@@ -296,6 +313,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -333,7 +351,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 
 		storage := NewTestLedger(nil, nil)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: storage,
 			OnHash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
@@ -377,6 +395,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -401,45 +420,21 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 	}
 }
 
-func TestRuntimeBLSVerifyPoP(t *testing.T) {
+func TestRuntimeBLSGetTypeAndIsInstance(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
-      access(all) fun main(): Bool {
-          let publicKey = PublicKey(
-              publicKey: "0102".decodeHex(),
-              signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
-          )
+	  access(all) fun main(): Type {
+        assert(BLS.isInstance(Type<BLS>()))
+		return BLS.getType()
+	  }
+	`)
 
-          return publicKey.verifyPoP([1, 2, 3, 4, 5])
-      }
-    `)
-
-	var called bool
-
-	storage := NewTestLedger(nil, nil)
-
-	runtimeInterface := &TestRuntimeInterface{
-		Storage: storage,
-		OnValidatePublicKey: func(
-			pk *stdlib.PublicKey,
-		) error {
-			return nil
-		},
-		OnBLSVerifyPOP: func(
-			pk *stdlib.PublicKey,
-			proof []byte,
-		) (bool, error) {
-			assert.Equal(t, pk.PublicKey, []byte{1, 2})
-			called = true
-			return true, nil
-		},
-	}
-	addPublicKeyValidation(runtimeInterface, nil)
+	runtimeInterface := &TestRuntimeInterface{}
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -448,23 +443,29 @@ func TestRuntimeBLSVerifyPoP(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		cadence.NewBool(true),
+		cadence.TypeValue{
+			StaticType: cadence.NewContractType(
+				nil,
+				stdlib.BLSTypeName,
+				[]cadence.Field{},
+				nil,
+			),
+		},
 		result,
 	)
-
-	assert.True(t, called)
 }
 
 func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -488,7 +489,7 @@ func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 		OnBLSAggregateSignatures: func(
 			sigs [][]byte,
 		) ([]byte, error) {
-			assert.Equal(t, len(sigs), 5)
+			assert.Len(t, sigs, 5)
 			ret := make([]byte, 0, len(sigs[0]))
 			for i, sig := range sigs {
 				ret = append(ret, sig[i])
@@ -498,13 +499,16 @@ func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 		},
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	result, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -529,7 +533,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -560,7 +564,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 		OnBLSAggregatePublicKeys: func(
 			keys []*stdlib.PublicKey,
 		) (*stdlib.PublicKey, error) {
-			assert.Equal(t, len(keys), 2)
+			assert.Len(t, keys, 2)
 			ret := make([]byte, 0, len(keys))
 			for _, key := range keys {
 				ret = append(ret, key.PublicKey...)
@@ -574,13 +578,16 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 	}
 	addPublicKeyValidation(runtimeInterface, nil)
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	result, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -624,7 +631,7 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(rootHash: [UInt8], address: [UInt8], accountProof: [[UInt8]]){
@@ -739,6 +746,7 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

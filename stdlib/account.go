@@ -19,7 +19,6 @@
 package stdlib
 
 import (
-	goerrors "errors"
 	"fmt"
 
 	"golang.org/x/crypto/sha3"
@@ -27,12 +26,15 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
 )
+
+const accountFunctionName = "Account"
 
 const accountFunctionDocString = `
 Creates a new account, paid by the given existing account
@@ -67,9 +69,8 @@ var accountFunctionType = sema.NewSimpleFunctionType(
 type EventEmitter interface {
 	EmitEvent(
 		context interpreter.ValueExportContext,
-		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
-		values []interpreter.Value,
+		eventFields []interpreter.Value,
 	)
 }
 
@@ -108,89 +109,107 @@ type AccountCreator interface {
 	CreateAccount(payer common.Address) (address common.Address, err error)
 }
 
-func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
-		"Account",
+func NativeAccountConstructor(creator AccountCreator) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		payer := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](args[0])
+		return NewAccount(
+			context,
+			payer,
+			creator,
+		)
+	}
+}
+
+func NewInterpreterAccountConstructor(creator AccountCreator) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		accountFunctionName,
 		accountFunctionType,
 		accountFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
+		NativeAccountConstructor(creator),
+		false,
+	)
+}
 
-			payer, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+func NewVMAccountConstructor(creator AccountCreator) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		accountFunctionName,
+		accountFunctionType,
+		accountFunctionDocString,
+		NativeAccountConstructor(creator),
+		true,
+	)
+}
 
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
+func NewAccount(
+	context interpreter.MemberAccessibleContext,
+	payer interpreter.MemberAccessibleValue,
+	creator AccountCreator,
+) interpreter.Value {
 
-			interpreter.ExpectType(
-				inter,
-				payer,
-				sema.AccountReferenceType,
-				locationRange,
-			)
+	interpreter.ExpectType(
+		context,
+		payer,
+		sema.AccountReferenceType,
+	)
 
-			payerValue := payer.GetMember(
-				inter,
-				locationRange,
-				sema.AccountTypeAddressFieldName,
-			)
-			if payerValue == nil {
-				panic(errors.NewUnexpectedError("payer address is not set"))
-			}
+	payerValue := payer.GetMember(context, sema.AccountTypeAddressFieldName)
+	if payerValue == nil {
+		panic(errors.NewUnexpectedError("payer address is not set"))
+	}
 
-			payerAddressValue, ok := payerValue.(interpreter.AddressValue)
-			if !ok {
-				panic(errors.NewUnexpectedError("payer address is not address"))
-			}
+	payerAddressValue, ok := payerValue.(interpreter.AddressValue)
+	if !ok {
+		panic(errors.NewUnexpectedError("payer address is not address"))
+	}
 
-			payerAddress := payerAddressValue.ToAddress()
+	payerAddress := payerAddressValue.ToAddress()
 
-			err := creator.CommitStorageTemporarily(inter)
+	err := creator.CommitStorageTemporarily(context)
+	if err != nil {
+		panic(err)
+	}
+
+	addressValue := interpreter.NewAddressValueFromConstructor(
+		context,
+		func() (address common.Address) {
+			var err error
+			address, err = creator.CreateAccount(payerAddress)
 			if err != nil {
 				panic(err)
 			}
 
-			addressValue := interpreter.NewAddressValueFromConstructor(
-				inter,
-				func() (address common.Address) {
-					var err error
-					address, err = creator.CreateAccount(payerAddress)
-					if err != nil {
-						panic(err)
-					}
-
-					return
-				},
-			)
-
-			creator.EmitEvent(
-				inter,
-				locationRange,
-				AccountCreatedEventType,
-				[]interpreter.Value{addressValue},
-			)
-
-			return NewAccountReferenceValue(
-				inter,
-				creator,
-				addressValue,
-				interpreter.FullyEntitledAccountAccess,
-				locationRange,
-			)
+			return
 		},
+	)
+
+	creator.EmitEvent(
+		context,
+		AccountCreatedEventType,
+		[]interpreter.Value{addressValue},
+	)
+
+	return NewAccountReferenceValue(
+		context,
+		creator,
+		addressValue,
+		interpreter.FullyEntitledAccountAccess,
 	)
 }
 
-const getAuthAccountFunctionName = "getAuthAccount"
+const GetAuthAccountFunctionName = "getAuthAccount"
 const getAuthAccountFunctionDocString = `
 Returns the account for the given address. Only available in scripts
 `
 
-// getAuthAccountFunctionType represents the type
+// GetAuthAccountFunctionType represents the type
 //
 //	fun getAuthAccount<T: &Account>(_ address: Address): T
-var getAuthAccountFunctionType = func() *sema.FunctionType {
+var GetAuthAccountFunctionType = func() *sema.FunctionType {
 
 	typeParam := &sema.TypeParameter{
 		Name:      "T",
@@ -215,45 +234,47 @@ var getAuthAccountFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
-		getAuthAccountFunctionName,
-		getAuthAccountFunctionType,
+func NativeGetAuthAccountFunction(handler AccountHandler) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
+
+		ty := typeArguments.NextStatic()
+		referenceType, ok := ty.(*interpreter.ReferenceStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return NewAccountReferenceValue(
+			context,
+			handler,
+			accountAddress,
+			referenceType.Authorization,
+		)
+	}
+}
+
+func NewInterpreterGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		GetAuthAccountFunctionName,
+		GetAuthAccountFunctionType,
 		getAuthAccountFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		NativeGetAuthAccountFunction(handler),
+		false,
+	)
+}
 
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			ty := typeParameterPair.Value
-
-			referenceType, ok := ty.(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
-				inter,
-				referenceType.Authorization,
-			)
-
-			return NewAccountReferenceValue(
-				inter,
-				handler,
-				accountAddress,
-				authorization,
-				locationRange,
-			)
-		},
+func NewVMGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		GetAuthAccountFunctionName,
+		GetAuthAccountFunctionType,
+		getAuthAccountFunctionDocString,
+		NativeGetAuthAccountFunction(handler),
+		true,
 	)
 }
 
@@ -262,7 +283,6 @@ func NewAccountReferenceValue(
 	handler AccountHandler,
 	addressValue interpreter.AddressValue,
 	authorization interpreter.Authorization,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 	account := NewAccountValue(context, handler, addressValue)
 	return interpreter.NewEphemeralReferenceValue(
@@ -270,7 +290,6 @@ func NewAccountReferenceValue(
 		authorization,
 		account,
 		sema.AccountType,
-		locationRange,
 	)
 }
 
@@ -343,44 +362,39 @@ func newAccountContractsValue(
 	return interpreter.NewAccountContractsValue(
 		context,
 		addressValue,
-		newAccountContractsChangeFunction(
+		newInterpreterAccountContractsChangeFunction(
 			context,
-			sema.Account_ContractsTypeAddFunctionType,
 			handler,
 			addressValue,
 			false,
 		),
-		newAccountContractsChangeFunction(
+		newInterpreterAccountContractsChangeFunction(
 			context,
-			sema.Account_ContractsTypeUpdateFunctionType,
 			handler,
 			addressValue,
 			true,
 		),
-		newAccountContractsTryUpdateFunction(
-			context,
-			sema.Account_ContractsTypeUpdateFunctionType,
-			handler,
-			addressValue,
-		),
-		newAccountContractsGetFunction(
-			context,
-			sema.Account_ContractsTypeGetFunctionType,
-			handler,
-			addressValue,
-		),
-		newAccountContractsBorrowFunction(
-			context,
-			sema.Account_ContractsTypeBorrowFunctionType,
-			handler,
-			addressValue,
-		),
-		newAccountContractsRemoveFunction(
+		newInterpreterAccountContractsTryUpdateFunction(
 			context,
 			handler,
 			addressValue,
 		),
-		newAccountContractsGetNamesFunction(
+		newInterpreterAccountContractsGetFunction(
+			context,
+			handler,
+			addressValue,
+		),
+		newInterpreterAccountContractsBorrowFunction(
+			context,
+			handler,
+			addressValue,
+		),
+		newInterpreterAccountContractsRemoveFunction(
+			context,
+			handler,
+			addressValue,
+		),
+		newInterpreterAccountContractsGetNamesFunction(
 			handler,
 			addressValue,
 		),
@@ -419,25 +433,24 @@ func newAccountKeysValue(
 	return interpreter.NewAccountKeysValue(
 		context,
 		addressValue,
-		newAccountKeysAddFunction(
+		newInterpreterAccountKeysAddFunction(
 			context,
 			handler,
 			addressValue,
 		),
-		newAccountKeysGetFunction(
+		newInterpreterAccountKeysGetFunction(
 			context,
 			sema.Account_KeysTypeGetFunctionType,
 			handler,
 			addressValue,
 		),
-		newAccountKeysRevokeFunction(
+		newInterpreterAccountKeysRevokeFunction(
 			context,
 			handler,
 			addressValue,
 		),
-		newAccountKeysForEachFunction(
+		newInterpreterAccountKeysForEachFunction(
 			context,
-			sema.Account_KeysTypeForEachFunctionType,
 			handler,
 			addressValue,
 		),
@@ -580,71 +593,105 @@ type AccountKeyAdditionHandler interface {
 	AddAccountKey(address common.Address, key *PublicKey, algo sema.HashAlgorithm, weight int) (*AccountKey, error)
 }
 
-func newAccountKeysAddFunction(
+func nativeAccountKeysAddFunction(
+	handler AccountKeyAdditionHandler,
+	addressPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		publicKeyValue := interpreter.AssertValueOfType[*interpreter.CompositeValue](args[0])
+		hashAlgoValue := args[1]
+		weightValue := interpreter.AssertValueOfType[interpreter.UFix64Value](args[2])
+
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
+
+		return AccountKeysAdd(
+			context,
+			addressValue,
+			publicKeyValue,
+			hashAlgoValue,
+			weightValue,
+			handler,
+		)
+	}
+}
+
+func newInterpreterAccountKeysAddFunction(
 	context interpreter.AccountKeyCreationContext,
 	handler AccountKeyAdditionHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-
-		// Converted addresses can be cached and don't have to be recomputed on each function invocation
-		address := addressValue.ToAddress()
-
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeAddFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
-				if err != nil {
-					panic(err)
-				}
-
-				hashAlgoValue := invocation.Arguments[1]
-				hashAlgo := NewHashAlgorithmFromValue(context, locationRange, hashAlgoValue)
-
-				weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				weight := weightValue.ToInt(locationRange)
-
-				accountKey, err := handler.AddAccountKey(address, publicKey, hashAlgo, weight)
-				if err != nil {
-					panic(err)
-				}
-
-				handler.EmitEvent(
-					inter,
-					locationRange,
-					AccountKeyAddedFromPublicKeyEventType,
-					[]interpreter.Value{
-						addressValue,
-						publicKeyValue,
-						weightValue,
-						hashAlgoValue,
-						interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
-					},
-				)
-
-				return NewAccountKeyValue(
-					context,
-					locationRange,
-					accountKey,
-					handler,
-				)
-			},
+			nativeAccountKeysAddFunction(handler, &addressValue),
 		)
 	}
+}
+
+func NewVMAccountKeysAddFunction(
+	handler AccountKeyAdditionHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_KeysType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_KeysTypeAddFunctionName,
+			sema.Account_KeysTypeAddFunctionType,
+			nativeAccountKeysAddFunction(handler, nil),
+		),
+	}
+}
+
+func AccountKeysAdd(
+	context interpreter.AccountKeyCreationContext,
+	addressValue interpreter.AddressValue,
+	publicKeyValue interpreter.MemberAccessibleValue,
+	hashAlgoValue interpreter.Value,
+	weightValue interpreter.UFix64Value,
+	handler AccountKeyAdditionHandler,
+) interpreter.Value {
+	publicKey, err := NewPublicKeyFromValue(context, publicKeyValue)
+	if err != nil {
+		panic(err)
+	}
+
+	hashAlgo := NewHashAlgorithmFromValue(context, hashAlgoValue)
+
+	weight := weightValue.ToInt()
+
+	address := addressValue.ToAddress()
+
+	accountKey, err := handler.AddAccountKey(
+		address,
+		publicKey,
+		hashAlgo,
+		weight,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	accountKeyIndex := interpreter.NewIntValueFromInt64(context, int64(accountKey.KeyIndex))
+
+	handler.EmitEvent(context, AccountKeyAddedFromPublicKeyEventType, []interpreter.Value{
+		addressValue,
+		publicKeyValue,
+		weightValue,
+		hashAlgoValue,
+		accountKeyIndex,
+	})
+
+	return NewAccountKeyValue(
+		context,
+		accountKey,
+		handler,
+	)
 }
 
 type AccountKey struct {
@@ -665,7 +712,30 @@ type AccountKeyProvider interface {
 	AccountKeysCount(address common.Address) (uint32, error)
 }
 
-func newAccountKeysGetFunction(
+func nativeAccountKeysGetFunction(
+	provider AccountKeyProvider,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		indexValue := interpreter.AssertValueOfType[interpreter.IntValue](args[0])
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return AccountKeysGet(
+			context,
+			address,
+			indexValue,
+			provider,
+		)
+	}
+}
+
+func newInterpreterAccountKeysGetFunction(
 	context interpreter.FunctionCreationContext,
 	functionType *sema.FunctionType,
 	provider AccountKeyProvider,
@@ -680,49 +750,83 @@ func newAccountKeysGetFunction(
 			context,
 			accountKeys,
 			functionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				locationRange := invocation.LocationRange
-				index := indexValue.ToUint32(locationRange)
-
-				accountKey, err := provider.GetAccountKey(address, index)
-				if err != nil {
-					panic(err)
-				}
-
-				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
-				// This is done because, if the host function returns an error when a key is not found, then
-				// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
-				if accountKey == nil {
-					return interpreter.Nil
-				}
-
-				inter := invocation.InvocationContext
-
-				return interpreter.NewSomeValueNonCopying(
-					inter,
-					NewAccountKeyValue(
-						inter,
-						locationRange,
-						accountKey,
-						provider,
-					),
-				)
-			},
+			nativeAccountKeysGetFunction(provider, &address),
 		)
 	}
+}
+
+func NewVMAccountKeysGetFunction(
+	provider AccountKeyProvider,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_KeysType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_KeysTypeGetFunctionName,
+			sema.Account_KeysTypeGetFunctionType,
+			nativeAccountKeysGetFunction(provider, nil),
+		),
+	}
+}
+
+func AccountKeysGet(
+	context interpreter.AccountKeyCreationContext,
+	address common.Address,
+	indexValue interpreter.IntValue,
+	provider AccountKeyProvider,
+) interpreter.Value {
+	index := indexValue.ToUint32()
+
+	accountKey, err := provider.GetAccountKey(address, index)
+	if err != nil {
+		panic(err)
+	}
+
+	// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+	// This is done because, if the host function returns an error when a key is not found, then
+	// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+	if accountKey == nil {
+		return interpreter.Nil
+	}
+
+	return interpreter.NewSomeValueNonCopying(
+		context,
+		NewAccountKeyValue(
+			context,
+			accountKey,
+			provider,
+		),
+	)
 }
 
 // accountKeysForEachCallbackTypeParams are the parameter types of the callback function of
 // `Account.Keys.forEachKey(_ f: fun(AccountKey): Bool)`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
-func newAccountKeysForEachFunction(
+func nativeAccountKeysForEachFunction(
+	provider AccountKeyProvider,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		fnValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return AccountKeysForEach(
+			context,
+			address,
+			fnValue,
+			provider,
+		)
+	}
+}
+
+func newInterpreterAccountKeysForEachFunction(
 	context interpreter.FunctionCreationContext,
-	functionType *sema.FunctionType,
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
@@ -732,79 +836,88 @@ func newAccountKeysForEachFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
-			functionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
-
-				fnValueType := fnValue.FunctionType(invocationContext)
-				parameterTypes := fnValueType.ParameterTypes()
-				returnType := fnValueType.ReturnTypeAnnotation.Type
-
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				liftKeyToValue := func(key *AccountKey) interpreter.Value {
-					return NewAccountKeyValue(
-						invocationContext,
-						locationRange,
-						key,
-						provider,
-					)
-				}
-
-				count, err := provider.AccountKeysCount(address)
-				if err != nil {
-					panic(err)
-				}
-
-				for index := uint32(0); index < count; index++ {
-
-					accountKey, err := provider.GetAccountKey(address, index)
-					if err != nil {
-						panic(err)
-					}
-
-					// Here it is expected the host function to return a nil key, if a key is not found at the given index.
-					// This is done because, if the host function returns an error when a key is not found, then
-					// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
-					if accountKey == nil {
-						continue
-					}
-
-					liftedKey := liftKeyToValue(accountKey)
-
-					res, err := interpreter.InvokeFunctionValue(
-						invocationContext,
-						fnValue,
-						[]interpreter.Value{liftedKey},
-						accountKeysForEachCallbackTypeParams,
-						parameterTypes,
-						returnType,
-						locationRange,
-					)
-					if err != nil {
-						// interpreter panicked while invoking the inner function value
-						panic(err)
-					}
-
-					shouldContinue, ok := res.(interpreter.BoolValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					if !shouldContinue {
-						break
-					}
-				}
-
-				return interpreter.Void
-			},
+			sema.Account_KeysTypeForEachFunctionType,
+			nativeAccountKeysForEachFunction(provider, &address),
 		)
 	}
+}
+
+func NewVMAccountKeysForEachFunction(
+	provider AccountKeyProvider,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_KeysType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_KeysTypeForEachFunctionName,
+			sema.Account_KeysTypeForEachFunctionType,
+			nativeAccountKeysForEachFunction(provider, nil),
+		),
+	}
+}
+
+func AccountKeysForEach(
+	invocationContext interpreter.InvocationContext,
+	address common.Address,
+	fnValue interpreter.FunctionValue,
+	provider AccountKeyProvider,
+) interpreter.Value {
+	fnValueType := fnValue.FunctionType(invocationContext)
+	parameterTypes := fnValueType.ParameterTypes()
+	returnType := fnValueType.ReturnTypeAnnotation.Type
+
+	liftKeyToValue := func(key *AccountKey) interpreter.Value {
+		return NewAccountKeyValue(
+			invocationContext,
+			key,
+			provider,
+		)
+	}
+
+	count, err := provider.AccountKeysCount(address)
+	if err != nil {
+		panic(err)
+	}
+
+	for index := uint32(0); index < count; index++ {
+
+		accountKey, err := provider.GetAccountKey(address, index)
+		if err != nil {
+			panic(err)
+		}
+
+		// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+		// This is done because, if the host function returns an error when a key is not found, then
+		// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+		if accountKey == nil {
+			continue
+		}
+
+		liftedKey := liftKeyToValue(accountKey)
+
+		res, err := interpreter.InvokeFunctionValue(
+			invocationContext,
+			fnValue,
+			[]interpreter.Value{liftedKey},
+			accountKeysForEachCallbackTypeParams,
+			parameterTypes,
+			returnType,
+		)
+		if err != nil {
+			// interpreter panicked while invoking the inner function value
+			panic(err)
+		}
+
+		shouldContinue, ok := res.(interpreter.BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if !shouldContinue {
+			break
+		}
+	}
+
+	return interpreter.Void
 }
 
 func newAccountKeysCountGetter(
@@ -841,213 +954,328 @@ type AccountKeyRevocationHandler interface {
 	RevokeAccountKey(address common.Address, index uint32) (*AccountKey, error)
 }
 
-func newAccountKeysRevokeFunction(
+func nativeAccountKeysRevokeFunction(
+	handler AccountKeyRevocationHandler,
+	addressPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		indexValue := interpreter.AssertValueOfType[interpreter.IntValue](args[0])
+
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
+
+		return AccountKeysRevoke(
+			context,
+			addressValue,
+			indexValue,
+			handler,
+		)
+	}
+}
+
+func newInterpreterAccountKeysRevokeFunction(
 	context interpreter.FunctionCreationContext,
 	handler AccountKeyRevocationHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		// Converted addresses can be cached and don't have to be recomputed on each function invocation
-		address := addressValue.ToAddress()
-
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeRevokeFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				locationRange := invocation.LocationRange
-				index := indexValue.ToUint32(locationRange)
-
-				accountKey, err := handler.RevokeAccountKey(address, index)
-				if err != nil {
-					panic(err)
-				}
-
-				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
-				// This is done because, if the host function returns an error when a key is not found, then
-				// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
-				if accountKey == nil {
-					return interpreter.Nil
-				}
-
-				inter := invocation.InvocationContext
-
-				handler.EmitEvent(
-					inter,
-					locationRange,
-					AccountKeyRemovedFromPublicKeyIndexEventType,
-					[]interpreter.Value{
-						addressValue,
-						indexValue,
-					},
-				)
-
-				return interpreter.NewSomeValueNonCopying(
-					inter,
-					NewAccountKeyValue(
-						inter,
-						locationRange,
-						accountKey,
-						handler,
-					),
-				)
-			},
+			nativeAccountKeysRevokeFunction(handler, &addressValue),
 		)
 	}
 }
 
-func newAccountInboxPublishFunction(
+func NewVMAccountKeysRevokeFunction(
+	handler AccountKeyRevocationHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_KeysType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_KeysTypeRevokeFunctionName,
+			sema.Account_KeysTypeRevokeFunctionType,
+			nativeAccountKeysRevokeFunction(handler, nil),
+		),
+	}
+}
+
+func AccountKeysRevoke(
+	context interpreter.InvocationContext,
+	addressValue interpreter.AddressValue,
+	indexValue interpreter.IntValue,
+	handler AccountKeyRevocationHandler,
+) interpreter.Value {
+	index := indexValue.ToUint32()
+
+	address := addressValue.ToAddress()
+
+	accountKey, err := handler.RevokeAccountKey(address, index)
+	if err != nil {
+		panic(err)
+	}
+
+	// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+	// This is done because, if the host function returns an error when a key is not found, then
+	// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+	if accountKey == nil {
+		return interpreter.Nil
+	}
+
+	handler.EmitEvent(context, AccountKeyRemovedFromPublicKeyIndexEventType, []interpreter.Value{
+		addressValue,
+		indexValue,
+	})
+
+	return interpreter.NewSomeValueNonCopying(
+		context,
+		NewAccountKeyValue(
+			context,
+			accountKey,
+			handler,
+		),
+	)
+}
+
+func nativeAccountInboxPublishFunction(
+	handler EventEmitter,
+	providerPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		value := interpreter.AssertValueOfType[interpreter.CapabilityValue](args[0])
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
+		recipientValue := interpreter.AssertValueOfType[interpreter.AddressValue](args[2])
+
+		providerValue := interpreter.GetAddressValue(receiver, providerPointer)
+
+		return AccountInboxPublish(
+			context,
+			providerValue,
+			recipientValue,
+			nameValue,
+			value,
+			handler,
+		)
+	}
+}
+
+func newInterpreterAccountInboxPublishFunction(
 	context interpreter.FunctionCreationContext,
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		provider := providerValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypePublishFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				nameValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				recipientValue := invocation.Arguments[2].(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				handler.EmitEvent(
-					inter,
-					locationRange,
-					AccountInboxPublishedEventType,
-					[]interpreter.Value{
-						providerValue,
-						recipientValue,
-						nameValue,
-						interpreter.NewTypeValue(inter, value.StaticType(inter)),
-					},
-				)
-
-				publishedValue := interpreter.NewPublishedValue(inter, recipientValue, value).Transfer(
-					inter,
-					locationRange,
-					atree.Address(provider),
-					true,
-					nil,
-					nil,
-					true, // New PublishedValue is standalone.
-				)
-
-				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
-
-				inter.WriteStored(
-					provider,
-					common.StorageDomainInbox,
-					storageMapKey,
-					publishedValue,
-				)
-
-				return interpreter.Void
-			},
+			nativeAccountInboxPublishFunction(handler, &providerValue),
 		)
 	}
 }
 
-func newAccountInboxUnpublishFunction(
+func NewVMAccountInboxPublishFunction(
+	handler EventEmitter,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_InboxType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_InboxTypePublishFunctionName,
+			sema.Account_InboxTypePublishFunctionType,
+			nativeAccountInboxPublishFunction(handler, nil),
+		),
+	}
+}
+
+func AccountInboxPublish(
+	context interpreter.InvocationContext,
+	providerValue interpreter.AddressValue,
+	recipientValue interpreter.AddressValue,
+	nameValue *interpreter.StringValue,
+	value interpreter.CapabilityValue,
+	handler EventEmitter,
+) interpreter.Value {
+	handler.EmitEvent(context, AccountInboxPublishedEventType, []interpreter.Value{
+		providerValue,
+		recipientValue,
+		nameValue,
+		interpreter.NewTypeValue(context, value.StaticType(context)),
+	})
+
+	publishedValue := interpreter.NewPublishedValue(
+		context,
+		recipientValue,
+		value,
+	).Transfer(
+		context,
+		atree.Address(providerValue),
+		true,
+		nil,
+		nil,
+		true, // New PublishedValue is standalone.
+	)
+
+	storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+	context.WriteStored(
+		common.Address(providerValue),
+		common.StorageDomainInbox,
+		storageMapKey,
+		publishedValue,
+	)
+
+	return interpreter.Void
+}
+
+func nativeAccountInboxUnpublishFunction(
+	handler EventEmitter,
+	providerPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		typeArguments interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
+		borrowType := typeArguments.NextSema()
+
+		providerValue := interpreter.GetAddressValue(receiver, providerPointer)
+
+		return AccountInboxUnpublish(
+			context,
+			providerValue,
+			borrowType,
+			nameValue,
+			handler,
+		)
+	}
+}
+
+func newInterpreterAccountInboxUnpublishFunction(
 	context interpreter.FunctionCreationContext,
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		provider := providerValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
-
-				readValue := inter.ReadStored(provider, common.StorageDomainInbox, storageMapKey)
-				if readValue == nil {
-					return interpreter.Nil
-				}
-				publishedValue := readValue.(*interpreter.PublishedValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-
-				ty := sema.NewCapabilityType(inter, typeParameterPair.Value)
-				publishedType := publishedValue.Value.StaticType(invocation.InvocationContext)
-				if !interpreter.IsSubTypeOfSemaType(inter, publishedType, ty) {
-					panic(&interpreter.ForceCastTypeMismatchError{
-						ExpectedType:  ty,
-						ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, inter),
-						LocationRange: locationRange,
-					})
-				}
-
-				value := publishedValue.Value.Transfer(
-					inter,
-					locationRange,
-					atree.Address{},
-					true,
-					nil,
-					nil,
-					false, // publishedValue is an element in storage map because it is returned by ReadStored.
-				)
-
-				inter.WriteStored(
-					provider,
-					common.StorageDomainInbox,
-					storageMapKey,
-					nil,
-				)
-
-				handler.EmitEvent(
-					inter,
-					locationRange,
-					AccountInboxUnpublishedEventType,
-					[]interpreter.Value{
-						providerValue,
-						nameValue,
-					},
-				)
-
-				return interpreter.NewSomeValueNonCopying(inter, value)
-			},
+			nativeAccountInboxUnpublishFunction(handler, &providerValue),
 		)
 	}
 }
 
-func newAccountInboxClaimFunction(
+func NewVMAccountInboxUnpublishFunction(
+	handler EventEmitter,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_InboxType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_InboxTypeUnpublishFunctionName,
+			sema.Account_InboxTypeUnpublishFunctionType,
+			nativeAccountInboxUnpublishFunction(handler, nil),
+		),
+	}
+}
+
+func AccountInboxUnpublish(
+	context interpreter.InvocationContext,
+	providerValue interpreter.AddressValue,
+	borrowType sema.Type,
+	nameValue *interpreter.StringValue,
+	handler EventEmitter,
+) interpreter.Value {
+	storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+	provider := common.Address(providerValue)
+
+	readValue := context.ReadStored(
+		provider,
+		common.StorageDomainInbox,
+		storageMapKey,
+	)
+	if readValue == nil {
+		return interpreter.Nil
+	}
+	publishedValue, ok := readValue.(*interpreter.PublishedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	capabilityType := sema.NewCapabilityType(context, borrowType)
+	publishedType := publishedValue.Value.StaticType(context)
+	if !interpreter.IsSubTypeOfSemaType(context, publishedType, capabilityType) {
+		panic(&interpreter.ForceCastTypeMismatchError{
+			ExpectedType: capabilityType,
+			ActualType:   interpreter.MustConvertStaticToSemaType(publishedType, context),
+		})
+	}
+
+	value := publishedValue.Value.Transfer(
+		context,
+		atree.Address{},
+		true,
+		nil,
+		nil,
+		false, // publishedValue is an element in storage map because it is returned by ReadStored.
+	)
+
+	context.WriteStored(
+		provider,
+		common.StorageDomainInbox,
+		storageMapKey,
+		nil,
+	)
+
+	handler.EmitEvent(context, AccountInboxUnpublishedEventType, []interpreter.Value{
+		providerValue,
+		nameValue,
+	})
+
+	return interpreter.NewSomeValueNonCopying(context, value)
+}
+
+func nativeAccountInboxClaimFunction(
+	handler EventEmitter,
+	recipientPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		typeArguments interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
+		providerValue := interpreter.AssertValueOfType[interpreter.AddressValue](args[1])
+		borrowType := typeArguments.NextSema()
+
+		recipientValue := interpreter.GetAddressValue(receiver, recipientPointer)
+
+		return AccountInboxClaim(
+			context,
+			providerValue,
+			recipientValue,
+			nameValue,
+			borrowType,
+			handler,
+		)
+	}
+}
+
+func newInterpreterAccountInboxClaimFunction(
 	context interpreter.FunctionCreationContext,
 	handler EventEmitter,
 	recipientValue interpreter.AddressValue,
@@ -1057,85 +1285,86 @@ func newAccountInboxClaimFunction(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeClaimFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				providerValue, ok := invocation.Arguments[1].(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				providerAddress := providerValue.ToAddress()
-
-				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
-
-				readValue := inter.ReadStored(providerAddress, common.StorageDomainInbox, storageMapKey)
-				if readValue == nil {
-					return interpreter.Nil
-				}
-				publishedValue := readValue.(*interpreter.PublishedValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// compare the intended recipient with the caller
-				if !publishedValue.Recipient.Equal(inter, locationRange, recipientValue) {
-					return interpreter.Nil
-				}
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-
-				ty := sema.NewCapabilityType(inter, typeParameterPair.Value)
-				publishedType := publishedValue.Value.StaticType(invocation.InvocationContext)
-				if !interpreter.IsSubTypeOfSemaType(inter, publishedType, ty) {
-					panic(&interpreter.ForceCastTypeMismatchError{
-						ExpectedType:  ty,
-						ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, inter),
-						LocationRange: locationRange,
-					})
-				}
-
-				value := publishedValue.Value.Transfer(
-					inter,
-					locationRange,
-					atree.Address{},
-					true,
-					nil,
-					nil,
-					false, // publishedValue is an element in storage map because it is returned by ReadStored.
-				)
-
-				inter.WriteStored(
-					providerAddress,
-					common.StorageDomainInbox,
-					storageMapKey,
-					nil,
-				)
-
-				handler.EmitEvent(
-					inter,
-					locationRange,
-					AccountInboxClaimedEventType,
-					[]interpreter.Value{
-						providerValue,
-						recipientValue,
-						nameValue,
-					},
-				)
-
-				return interpreter.NewSomeValueNonCopying(inter, value)
-			},
+			nativeAccountInboxClaimFunction(handler, &recipientValue),
 		)
 	}
+}
+
+func NewVMAccountInboxClaimFunction(
+	handler EventEmitter,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_InboxType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_InboxTypeClaimFunctionName,
+			sema.Account_InboxTypeClaimFunctionType,
+			nativeAccountInboxClaimFunction(handler, nil),
+		),
+	}
+}
+
+func AccountInboxClaim(
+	context interpreter.InvocationContext,
+	providerValue interpreter.AddressValue,
+	recipientValue interpreter.AddressValue,
+	nameValue *interpreter.StringValue,
+	borrowType sema.Type,
+	handler EventEmitter,
+) interpreter.Value {
+	providerAddress := providerValue.ToAddress()
+
+	storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+	readValue := context.ReadStored(
+		providerAddress,
+		common.StorageDomainInbox,
+		storageMapKey,
+	)
+	if readValue == nil {
+		return interpreter.Nil
+	}
+	publishedValue, ok := readValue.(*interpreter.PublishedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// compare the intended recipient with the caller
+	if !publishedValue.Recipient.Equal(context, recipientValue) {
+		return interpreter.Nil
+	}
+
+	ty := sema.NewCapabilityType(context, borrowType)
+	publishedType := publishedValue.Value.StaticType(context)
+	if !interpreter.IsSubTypeOfSemaType(context, publishedType, ty) {
+		panic(&interpreter.ForceCastTypeMismatchError{
+			ExpectedType: ty,
+			ActualType:   interpreter.MustConvertStaticToSemaType(publishedType, context),
+		})
+	}
+
+	value := publishedValue.Value.Transfer(
+		context,
+		atree.Address{},
+		true,
+		nil,
+		nil,
+		false, // publishedValue is an element in storage map because it is returned by ReadStored.
+	)
+
+	context.WriteStored(
+		providerAddress,
+		common.StorageDomainInbox,
+		storageMapKey,
+		nil,
+	)
+
+	handler.EmitEvent(context, AccountInboxClaimedEventType, []interpreter.Value{
+		providerValue,
+		recipientValue,
+		nameValue,
+	})
+
+	return interpreter.NewSomeValueNonCopying(context, value)
 }
 
 func newAccountInboxValue(
@@ -1146,9 +1375,9 @@ func newAccountInboxValue(
 	return interpreter.NewAccountInboxValue(
 		context,
 		addressValue,
-		newAccountInboxPublishFunction(context, handler, addressValue),
-		newAccountInboxUnpublishFunction(context, handler, addressValue),
-		newAccountInboxClaimFunction(context, handler, addressValue),
+		newInterpreterAccountInboxPublishFunction(context, handler, addressValue),
+		newInterpreterAccountInboxUnpublishFunction(context, handler, addressValue),
+		newInterpreterAccountInboxClaimFunction(context, handler, addressValue),
 	)
 }
 
@@ -1157,12 +1386,11 @@ type AccountContractNamesProvider interface {
 	GetAccountContractNames(address common.Address) ([]string, error)
 }
 
-func newAccountContractsGetNamesFunction(
+func newInterpreterAccountContractsGetNamesFunction(
 	provider AccountContractNamesProvider,
 	addressValue interpreter.AddressValue,
 ) func(
 	context interpreter.MemberAccessibleContext,
-	locationRange interpreter.LocationRange,
 ) *interpreter.ArrayValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
@@ -1170,7 +1398,6 @@ func newAccountContractsGetNamesFunction(
 
 	return func(
 		context interpreter.MemberAccessibleContext,
-		locationRange interpreter.LocationRange,
 	) *interpreter.ArrayValue {
 		names, err := provider.GetAccountContractNames(address)
 		if err != nil {
@@ -1199,7 +1426,6 @@ func newAccountContractsGetNamesFunction(
 
 		return interpreter.NewArrayValue(
 			context,
-			locationRange,
 			arrayType,
 			common.ZeroAddress,
 			values...,
@@ -1212,58 +1438,119 @@ type AccountContractProvider interface {
 	GetAccountContractCode(location common.AddressLocation) ([]byte, error)
 }
 
-func newAccountContractsGetFunction(
+func nativeAccountContractsGetFunction(
+	provider AccountContractProvider,
+	addressPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
+
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
+
+		return AccountContractsGet(
+			context,
+			addressValue,
+			nameValue,
+			provider,
+		)
+	}
+}
+
+func newInterpreterAccountContractsGetFunction(
 	context interpreter.FunctionCreationContext,
-	functionType *sema.FunctionType,
 	provider AccountContractProvider,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		// Converted addresses can be cached and don't have to be recomputed on each function invocation
-		address := addressValue.ToAddress()
-
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
-			functionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				name := nameValue.Str
-				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
-
-				code, err := provider.GetAccountContractCode(location)
-				if err != nil {
-					panic(err)
-				}
-
-				if len(code) > 0 {
-					return interpreter.NewSomeValueNonCopying(
-						invocation.InvocationContext,
-						interpreter.NewDeployedContractValue(
-							invocation.InvocationContext,
-							addressValue,
-							nameValue,
-							interpreter.ByteSliceToByteArrayValue(
-								invocation.InvocationContext,
-								code,
-							),
-						),
-					)
-				} else {
-					return interpreter.Nil
-				}
-			},
+			sema.Account_ContractsTypeGetFunctionType,
+			nativeAccountContractsGetFunction(provider, &addressValue),
 		)
 	}
 }
 
-func newAccountContractsBorrowFunction(
+func NewVMAccountContractsGetFunction(provider AccountContractProvider) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_ContractsTypeGetFunctionName,
+			sema.Account_ContractsTypeGetFunctionType,
+			nativeAccountContractsGetFunction(provider, nil),
+		),
+	}
+}
+
+func AccountContractsGet(
+	context interpreter.InvocationContext,
+	addressValue interpreter.AddressValue,
+	nameValue *interpreter.StringValue,
+	provider AccountContractProvider,
+) interpreter.Value {
+	name := nameValue.Str
+	location := common.NewAddressLocation(
+		context,
+		common.Address(addressValue),
+		name,
+	)
+
+	code, err := provider.GetAccountContractCode(location)
+	if err != nil {
+		panic(err)
+	}
+
+	if len(code) > 0 {
+		return interpreter.NewSomeValueNonCopying(
+			context,
+			interpreter.NewDeployedContractValue(
+				context,
+				addressValue,
+				nameValue,
+				interpreter.ByteSliceToByteArrayValue(
+					context,
+					code,
+				),
+			),
+		)
+	} else {
+		return interpreter.Nil
+	}
+}
+
+func nativeAccountContractsBorrowFunction(
+	handler AccountContractsHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		typeArguments interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
+		borrowType := typeArguments.NextSema()
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return AccountContractsBorrow(
+			context,
+			address,
+			nameValue,
+			borrowType,
+			handler,
+		)
+	}
+}
+
+func newInterpreterAccountContractsBorrowFunction(
 	context interpreter.AccountContractBorrowContext,
-	functionType *sema.FunctionType,
 	handler AccountContractsHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
@@ -1275,84 +1562,83 @@ func newAccountContractsBorrowFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
-			functionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				name := nameValue.Str
-				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-				ty := typeParameterPair.Value
-
-				referenceType, ok := ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				if referenceType.Authorization != sema.UnauthorizedAccess {
-					panic(errors.NewDefaultUserError("cannot borrow a reference with an authorization"))
-				}
-
-				// Check if the contract exists
-
-				code, err := handler.GetAccountContractCode(location)
-				if err != nil {
-					panic(err)
-				}
-				if len(code) == 0 {
-					return interpreter.Nil
-				}
-
-				// Load the contract and get the contract composite value.
-				// The requested contract may be a contract interface,
-				// in which case there will be no contract composite value.
-
-				contractLocation := common.NewAddressLocation(invocationContext, address, name)
-
-				contractValue, err := invocationContext.GetContractValue(contractLocation)
-				if err != nil {
-					var notDeclaredErr interpreter.NotDeclaredError
-					if goerrors.As(err, &notDeclaredErr) {
-						return interpreter.Nil
-					}
-
-					panic(err)
-				}
-
-				// Check the type
-
-				staticType := contractValue.StaticType(invocationContext)
-				if !interpreter.IsSubTypeOfSemaType(invocationContext, staticType, referenceType.Type) {
-					return interpreter.Nil
-				}
-
-				// No need to track the referenced value, since the reference is taken to a contract value.
-				// A contract value would never be moved or destroyed, within the execution of a program.
-				reference := interpreter.NewEphemeralReferenceValue(
-					invocationContext,
-					interpreter.UnauthorizedAccess,
-					contractValue,
-					referenceType.Type,
-					locationRange,
-				)
-
-				return interpreter.NewSomeValueNonCopying(
-					invocationContext,
-					reference,
-				)
-			},
+			sema.Account_ContractsTypeBorrowFunctionType,
+			nativeAccountContractsBorrowFunction(handler, &address),
 		)
 	}
+}
+
+func NewVMAccountContractsBorrowFunction(handler AccountContractsHandler) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_ContractsTypeBorrowFunctionName,
+			sema.Account_ContractsTypeBorrowFunctionType,
+			nativeAccountContractsBorrowFunction(handler, nil),
+		),
+	}
+}
+
+func AccountContractsBorrow(
+	invocationContext interpreter.InvocationContext,
+	address common.Address,
+	nameValue *interpreter.StringValue,
+	borrowType sema.Type,
+	handler AccountContractsHandler,
+) interpreter.Value {
+	name := nameValue.Str
+	location := common.NewAddressLocation(invocationContext, address, name)
+
+	referenceType, ok := borrowType.(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if referenceType.Authorization != sema.UnauthorizedAccess {
+		panic(errors.NewDefaultUserError("cannot borrow a reference with an authorization"))
+	}
+
+	// Check if the contract exists
+
+	code, err := handler.GetAccountContractCode(location)
+	if err != nil {
+		panic(err)
+	}
+	if len(code) == 0 {
+		return interpreter.Nil
+	}
+
+	// Load the contract and get the contract composite value.
+	// The requested contract may be a contract interface,
+	// in which case there will be no contract composite value.
+
+	contractLocation := common.NewAddressLocation(invocationContext, address, name)
+
+	contractValue := invocationContext.GetContractValue(contractLocation)
+	if contractValue == nil {
+		return interpreter.Nil
+	}
+
+	// Check the type
+
+	staticType := contractValue.StaticType(invocationContext)
+	if !interpreter.IsSubTypeOfSemaType(invocationContext, staticType, referenceType.Type) {
+		return interpreter.Nil
+	}
+
+	// No need to track the referenced value, since the reference is taken to a contract value.
+	// A contract value would never be moved or destroyed, within the execution of a program.
+	reference := interpreter.NewEphemeralReferenceValue(
+		invocationContext,
+		interpreter.UnauthorizedAccess,
+		contractValue,
+		referenceType.Type,
+	)
+
+	return interpreter.NewSomeValueNonCopying(
+		invocationContext,
+		reference,
+	)
 }
 
 type ContractAdditionTracker interface {
@@ -1422,25 +1708,81 @@ type AccountContractAdditionHandler interface {
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 }
 
-// newAccountContractsChangeFunction called when e.g.
+func nativeAccountContractsChangeFunction(
+	handler AccountContractAdditionAndNamesHandler,
+	addressPointer *interpreter.AddressValue,
+	isUpdate bool,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		argumentTypes := make([]sema.Type, len(args))
+		for i := 0; i < len(args); i++ {
+			// TODO: optimize, avoid gathering the types
+			staticType := args[i].StaticType(context)
+			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+		}
+
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
+
+		return changeAccountContracts(
+			context,
+			args,
+			argumentTypes,
+			addressValue,
+			handler,
+			isUpdate,
+		)
+	}
+}
+
+// newInterpreterAccountContractsChangeFunction called when e.g.
 // - adding: `Account.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
 // - updating: `Account.contracts.update(name: "Foo", code: [...])` (isUpdate = true)
-func newAccountContractsChangeFunction(
+func newInterpreterAccountContractsChangeFunction(
 	context interpreter.FunctionCreationContext,
-	functionType *sema.FunctionType,
 	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 	isUpdate bool,
 ) interpreter.BoundFunctionGenerator {
+
+	functionType := sema.Account_ContractsTypeAddFunctionType
+	if isUpdate {
+		functionType = sema.Account_ContractsTypeUpdateFunctionType
+	}
+
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
 			functionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				return changeAccountContracts(invocation, handler, addressValue, isUpdate)
-			},
+			nativeAccountContractsChangeFunction(handler, &addressValue, isUpdate),
 		)
+	}
+}
+
+func newVMAccountContractsChangeFunction(
+	handler AccountContractAdditionAndNamesHandler,
+	isUpdate bool,
+) VMFunction {
+
+	functionName := sema.Account_ContractsTypeAddFunctionName
+	functionType := sema.Account_ContractsTypeAddFunctionType
+	if isUpdate {
+		functionName = sema.Account_ContractsTypeUpdateFunctionName
+		functionType = sema.Account_ContractsTypeUpdateFunctionType
+	}
+
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			functionName,
+			functionType,
+			nativeAccountContractsChangeFunction(handler, nil, isUpdate),
+		),
 	}
 }
 
@@ -1471,30 +1813,30 @@ func (e *OldProgramError) ImportLocation() common.Location {
 }
 
 func changeAccountContracts(
-	invocation interpreter.Invocation,
-	handler AccountContractAdditionAndNamesHandler,
+	context interpreter.InvocationContext,
+	arguments []interpreter.Value,
+	argumentTypes []sema.Type,
 	addressValue interpreter.AddressValue,
+	handler AccountContractAdditionAndNamesHandler,
 	isUpdate bool,
 ) interpreter.Value {
 
-	locationRange := invocation.LocationRange
-
 	const requiredArgumentCount = 2
 
-	nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+	nameValue, ok := arguments[0].(*interpreter.StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
+	newCodeValue, ok := arguments[1].(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	constructorArguments := invocation.Arguments[requiredArgumentCount:]
-	constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
+	constructorArguments := arguments[requiredArgumentCount:]
+	constructorArgumentTypes := argumentTypes[requiredArgumentCount:]
 
-	newCode, err := interpreter.ByteArrayValueToByteSlice(invocation.InvocationContext, newCodeValue, locationRange)
+	newCode, err := interpreter.ByteArrayValueToByteSlice(context, newCodeValue)
 	if err != nil {
 		panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 	}
@@ -1511,7 +1853,7 @@ func changeAccountContracts(
 	}
 
 	address := addressValue.ToAddress()
-	location := common.NewAddressLocation(invocation.InvocationContext, address, contractName)
+	location := common.NewAddressLocation(context, address, contractName)
 
 	existingCode, err := handler.GetAccountContractCode(location)
 	if err != nil {
@@ -1560,8 +1902,7 @@ func changeAccountContracts(
 		handler.TemporarilyRecordCode(location, code)
 
 		panic(&InvalidContractDeploymentError{
-			Err:           err,
-			LocationRange: locationRange,
+			Err: err,
 		})
 	}
 
@@ -1649,15 +1990,12 @@ func changeAccountContracts(
 
 	// Validate the contract update
 
-	inter := invocation.InvocationContext
-
 	if isUpdate {
 		oldCode, err := handler.GetAccountContractCode(location)
 		handleContractUpdateError(err, newCode)
 
-		memoryGauge := invocation.InvocationContext
 		oldProgram, err := parser.ParseProgram(
-			memoryGauge,
+			context,
 			oldCode,
 			parser.Config{
 				IgnoreLeadingIdentifierEnabled: true,
@@ -1715,30 +2053,86 @@ func changeAccountContracts(
 		eventType = AccountContractAddedEventType
 	}
 
-	codeHashValue := CodeToHashValue(inter, newCode)
+	codeHashValue := CodeToHashValue(context, newCode)
 
-	handler.EmitEvent(
-		inter,
-		locationRange,
-		eventType,
-		[]interpreter.Value{
-			addressValue,
-			codeHashValue,
-			nameValue,
-		},
-	)
+	handler.EmitEvent(context, eventType, []interpreter.Value{
+		addressValue,
+		codeHashValue,
+		nameValue,
+	})
 
 	return interpreter.NewDeployedContractValue(
-		inter,
+		context,
 		addressValue,
 		nameValue,
 		newCodeValue,
 	)
 }
 
-func newAccountContractsTryUpdateFunction(
+func nativeAccountContractsTryUpdateFunction(
+	handler AccountContractAdditionAndNamesHandler,
+	addressPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) (deploymentResult interpreter.Value) {
+		var deployedContract interpreter.Value
+
+		defer func() {
+			if r := recover(); r != nil {
+				rootError := r
+				for {
+					switch err := r.(type) {
+					case errors.UserError, errors.ExternalError:
+						// Error is ignored for now.
+						// Simply return with a `nil` deployed-contract
+					case xerrors.Wrapper:
+						r = err.Unwrap()
+						continue
+					default:
+						panic(rootError)
+					}
+
+					break
+				}
+			}
+
+			var optionalDeployedContract interpreter.OptionalValue
+			if deployedContract == nil {
+				optionalDeployedContract = interpreter.NilOptionalValue
+			} else {
+				optionalDeployedContract = interpreter.NewSomeValueNonCopying(context, deployedContract)
+			}
+
+			deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
+		}()
+
+		argumentTypes := make([]sema.Type, len(args))
+		for i := 0; i < len(args); i++ {
+			// TODO: optimize, avoid gathering the types
+			staticType := args[i].StaticType(context)
+			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+		}
+
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
+
+		deployedContract = changeAccountContracts(
+			context,
+			args,
+			argumentTypes,
+			addressValue,
+			handler,
+			true, // isUpdate = true for TryUpdate
+		)
+		return
+	}
+}
+
+func newInterpreterAccountContractsTryUpdateFunction(
 	context interpreter.FunctionCreationContext,
-	functionType *sema.FunctionType,
 	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
@@ -1746,43 +2140,23 @@ func newAccountContractsTryUpdateFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
-			functionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) (deploymentResult interpreter.Value) {
-				var deployedContract interpreter.Value
-
-				defer func() {
-					if r := recover(); r != nil {
-						rootError := r
-						for {
-							switch err := r.(type) {
-							case errors.UserError, errors.ExternalError:
-								// Error is ignored for now.
-								// Simply return with a `nil` deployed-contract
-							case xerrors.Wrapper:
-								r = err.Unwrap()
-								continue
-							default:
-								panic(rootError)
-							}
-
-							break
-						}
-					}
-
-					var optionalDeployedContract interpreter.OptionalValue
-					if deployedContract == nil {
-						optionalDeployedContract = interpreter.NilOptionalValue
-					} else {
-						optionalDeployedContract = interpreter.NewSomeValueNonCopying(invocation.InvocationContext, deployedContract)
-					}
-
-					deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
-				}()
-
-				deployedContract = changeAccountContracts(invocation, handler, addressValue, true)
-				return
-			},
+			sema.Account_ContractsTypeTryUpdateFunctionType,
+			nativeAccountContractsTryUpdateFunction(handler, &addressValue),
 		)
+	}
+}
+
+func newVMAccountContractsTryUpdateFunction(
+	handler AccountContractAdditionAndNamesHandler,
+) VMFunction {
+
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_ContractsTypeTryUpdateFunctionName,
+			sema.Account_ContractsTypeTryUpdateFunctionType,
+			nativeAccountContractsTryUpdateFunction(handler, nil),
+		),
 	}
 }
 
@@ -1794,6 +2168,7 @@ type InvalidContractDeploymentError struct {
 
 var _ errors.UserError = &InvalidContractDeploymentError{}
 var _ errors.ParentError = &InvalidContractDeploymentError{}
+var _ interpreter.HasLocationRange = &InvalidContractDeploymentError{}
 
 func (*InvalidContractDeploymentError) IsUserError() {}
 
@@ -1814,17 +2189,26 @@ func (e *InvalidContractDeploymentError) Unwrap() error {
 	return e.Err
 }
 
+func (e *InvalidContractDeploymentError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // InvalidContractDeploymentOriginError
 type InvalidContractDeploymentOriginError struct {
 	interpreter.LocationRange
 }
 
 var _ errors.UserError = &InvalidContractDeploymentOriginError{}
+var _ interpreter.HasLocationRange = &InvalidContractDeploymentOriginError{}
 
 func (*InvalidContractDeploymentOriginError) IsUserError() {}
 
 func (*InvalidContractDeploymentOriginError) Error() string {
 	return "cannot deploy invalid contract"
+}
+
+func (e *InvalidContractDeploymentOriginError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ignoreUpdatedProgramParserError determines if the parsing error
@@ -2035,99 +2419,130 @@ type AccountContractRemovalHandler interface {
 	RecordContractRemoval(location common.AddressLocation)
 }
 
-func newAccountContractsRemoveFunction(
+func nativeAccountContractsRemoveFunction(
+	handler AccountContractRemovalHandler,
+	addressPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
+
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
+
+		return removeContract(
+			context,
+			addressValue,
+			nameValue,
+			handler,
+		)
+	}
+}
+
+func newInterpreterAccountContractsRemoveFunction(
 	context interpreter.FunctionCreationContext,
 	handler AccountContractRemovalHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		// Converted addresses can be cached and don't have to be recomputed on each function invocation
-		address := addressValue.ToAddress()
-
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				inter := invocation.InvocationContext
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				name := nameValue.Str
-				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
-
-				// Get the current code
-
-				code, err := handler.GetAccountContractCode(location)
-				if err != nil {
-					panic(err)
-				}
-
-				// Only remove the contract code, remove the contract value, and emit an event,
-				// if there is currently code deployed for the given contract name
-
-				if len(code) > 0 {
-					locationRange := invocation.LocationRange
-
-					// NOTE: *DO NOT* call setProgram – the program removal
-					// should not be effective during the execution, only after
-
-					existingProgram, err := parser.ParseProgram(inter, code, parser.Config{})
-
-					// If the existing code is not parsable (i.e: `err != nil`),
-					// that shouldn't be a reason to fail the contract removal.
-					// Therefore, validate only if the code is a valid one.
-					if err == nil && containsEnumsInProgram(existingProgram) {
-						panic(&ContractRemovalError{
-							Name:          name,
-							LocationRange: locationRange,
-						})
-					}
-
-					err = handler.RemoveAccountContractCode(location)
-					if err != nil {
-						panic(err)
-					}
-
-					// NOTE: the contract recording function delays the write
-					// until the end of the execution of the program
-
-					handler.RecordContractRemoval(location)
-
-					codeHashValue := CodeToHashValue(inter, code)
-
-					handler.EmitEvent(
-						inter,
-						locationRange,
-						AccountContractRemovedEventType,
-						[]interpreter.Value{
-							addressValue,
-							codeHashValue,
-							nameValue,
-						},
-					)
-
-					return interpreter.NewSomeValueNonCopying(
-						inter,
-						interpreter.NewDeployedContractValue(
-							inter,
-							addressValue,
-							nameValue,
-							interpreter.ByteSliceToByteArrayValue(
-								inter,
-								code,
-							),
-						),
-					)
-				} else {
-					return interpreter.Nil
-				}
-			},
+			nativeAccountContractsRemoveFunction(handler, &addressValue),
 		)
 	}
+}
+
+func newVMAccountContractsRemoveFunction(
+	handler AccountContractRemovalHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_ContractsTypeRemoveFunctionName,
+			sema.Account_ContractsTypeRemoveFunctionType,
+			nativeAccountContractsRemoveFunction(handler, nil),
+		),
+	}
+}
+
+func removeContract(
+	context interpreter.InvocationContext,
+	addressValue interpreter.AddressValue,
+	nameValue *interpreter.StringValue,
+	handler AccountContractRemovalHandler,
+) interpreter.Value {
+	name := nameValue.Str
+
+	location := common.NewAddressLocation(
+		context,
+		addressValue.ToAddress(),
+		name,
+	)
+
+	// Get the current code
+
+	code, err := handler.GetAccountContractCode(location)
+	if err != nil {
+		panic(err)
+	}
+
+	// Only remove the contract code, remove the contract value, and emit an event,
+	// if there is currently code deployed for the given contract name
+
+	if len(code) == 0 {
+		return interpreter.Nil
+	}
+
+	// NOTE: *DO NOT* call setProgram – the program removal
+	// should not be effective during the execution, only after
+
+	existingProgram, err := parser.ParseProgram(context, code, parser.Config{})
+
+	// If the existing code is not parsable (i.e: `err != nil`),
+	// that shouldn't be a reason to fail the contract removal.
+	// Therefore, validate only if the code is a valid one.
+	if err == nil && containsEnumsInProgram(existingProgram) {
+		panic(&ContractRemovalError{
+			Name: name,
+		})
+	}
+
+	err = handler.RemoveAccountContractCode(location)
+	if err != nil {
+		panic(err)
+	}
+
+	// NOTE: the contract recording function delays the write
+	// until the end of the execution of the program
+
+	handler.RecordContractRemoval(location)
+
+	codeHashValue := CodeToHashValue(context, code)
+
+	handler.EmitEvent(context, AccountContractRemovedEventType, []interpreter.Value{
+		addressValue,
+		codeHashValue,
+		nameValue,
+	})
+
+	return interpreter.NewSomeValueNonCopying(
+		context,
+		interpreter.NewDeployedContractValue(
+			context,
+			addressValue,
+			nameValue,
+			interpreter.ByteSliceToByteArrayValue(
+				context,
+				code,
+			),
+		),
+	)
 }
 
 // ContractRemovalError
@@ -2137,6 +2552,7 @@ type ContractRemovalError struct {
 }
 
 var _ errors.UserError = &ContractRemovalError{}
+var _ interpreter.HasLocationRange = &ContractRemovalError{}
 
 func (*ContractRemovalError) IsUserError() {}
 
@@ -2144,11 +2560,17 @@ func (e *ContractRemovalError) Error() string {
 	return fmt.Sprintf("cannot remove contract `%s`", e.Name)
 }
 
+func (e *ContractRemovalError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
+}
+
 const getAccountFunctionDocString = `
 Returns the account for the given address
 `
 
-var getAccountFunctionType = sema.NewSimpleFunctionType(
+const GetAccountFunctionName = "getAccount"
+
+var GetAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]sema.Parameter{
 		{
@@ -2160,35 +2582,45 @@ var getAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.AccountReferenceTypeAnnotation,
 )
 
-func NewGetAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
-		"getAccount",
-		getAccountFunctionType,
+func NativeGetAccountFunction(handler AccountHandler) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
+		return NewAccountReferenceValue(
+			context,
+			handler,
+			accountAddress,
+			interpreter.UnauthorizedAccess,
+		)
+	}
+}
+
+func NewInterpreterGetAccountFunction(handler AccountHandler) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		GetAccountFunctionName,
+		GetAccountFunctionType,
 		getAccountFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
+		NativeGetAccountFunction(handler),
+		false,
+	)
+}
 
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return NewAccountReferenceValue(
-				inter,
-				handler,
-				accountAddress,
-				interpreter.UnauthorizedAccess,
-				locationRange,
-			)
-		},
+func NewVMGetAccountFunction(handler AccountHandler) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		GetAccountFunctionName,
+		GetAccountFunctionType,
+		getAccountFunctionDocString,
+		NativeGetAccountFunction(handler),
+		true,
 	)
 }
 
 func NewAccountKeyValue(
 	context interpreter.AccountKeyCreationContext,
-	locationRange interpreter.LocationRange,
 	accountKey *AccountKey,
 	hasher Hasher,
 ) interpreter.Value {
@@ -2204,7 +2636,6 @@ func NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(context, int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(
 			context,
-			locationRange,
 			accountKey.PublicKey,
 		),
 		hashAlgorithm,
@@ -2212,7 +2643,6 @@ func NewAccountKeyValue(
 			context, func() uint64 {
 				return uint64(accountKey.Weight)
 			},
-			locationRange,
 		),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)
@@ -2220,19 +2650,18 @@ func NewAccountKeyValue(
 
 func NewHashAlgorithmFromValue(
 	context interpreter.MemberAccessibleContext,
-	locationRange interpreter.LocationRange,
 	value interpreter.Value,
 ) sema.HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
 
-	rawValue := hashAlgoValue.GetMember(context, locationRange, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetMember(context, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
 
 	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
-	return sema.HashAlgorithm(hashAlgoRawValue.ToInt(locationRange))
+	return sema.HashAlgorithm(hashAlgoRawValue.ToInt())
 }
 
 func CodeToHashValue(context interpreter.ArrayCreationContext, code []byte) *interpreter.ArrayValue {
@@ -2249,11 +2678,11 @@ func newAccountStorageCapabilitiesValue(
 	return interpreter.NewAccountStorageCapabilitiesValue(
 		context,
 		addressValue,
-		newAccountStorageCapabilitiesGetControllerFunction(context, addressValue, handler),
-		newAccountStorageCapabilitiesGetControllersFunction(context, addressValue, handler),
-		newAccountStorageCapabilitiesForEachControllerFunction(context, addressValue, handler),
-		newAccountStorageCapabilitiesIssueFunction(context, issueHandler, addressValue),
-		newAccountStorageCapabilitiesIssueWithTypeFunction(context, issueHandler, addressValue),
+		newInterpreterAccountStorageCapabilitiesGetControllerFunction(context, addressValue, handler),
+		newInterpreterAccountStorageCapabilitiesGetControllersFunction(context, addressValue, handler),
+		newInterpreterAccountStorageCapabilitiesForEachControllerFunction(context, addressValue, handler),
+		newInterpreterAccountStorageCapabilitiesIssueFunction(context, issueHandler, addressValue),
+		newInterpreterAccountStorageCapabilitiesIssueWithTypeFunction(context, issueHandler, addressValue),
 	)
 }
 
@@ -2266,11 +2695,11 @@ func newAccountAccountCapabilitiesValue(
 	accountCapabilities := interpreter.NewAccountAccountCapabilitiesValue(
 		context,
 		addressValue,
-		newAccountAccountCapabilitiesGetControllerFunction(context, addressValue, handler),
-		newAccountAccountCapabilitiesGetControllersFunction(context, addressValue, handler),
-		newAccountAccountCapabilitiesForEachControllerFunction(context, addressValue, handler),
-		newAccountAccountCapabilitiesIssueFunction(context, addressValue, issueHandler),
-		newAccountAccountCapabilitiesIssueWithTypeFunction(context, addressValue, issueHandler),
+		newInterpreterAccountAccountCapabilitiesGetControllerFunction(context, addressValue, handler),
+		newInterpreterAccountAccountCapabilitiesGetControllersFunction(context, addressValue, handler),
+		newInterpreterAccountAccountCapabilitiesForEachControllerFunction(context, addressValue, handler),
+		newInterpreterAccountAccountCapabilitiesIssueFunction(context, addressValue, issueHandler),
+		newInterpreterAccountAccountCapabilitiesIssueWithTypeFunction(context, addressValue, issueHandler),
 	)
 
 	return accountCapabilities
@@ -2285,11 +2714,11 @@ func newAccountCapabilitiesValue(
 	return interpreter.NewAccountCapabilitiesValue(
 		context,
 		addressValue,
-		newAccountCapabilitiesGetFunction(context, addressValue, handler, false),
-		newAccountCapabilitiesGetFunction(context, addressValue, handler, true),
-		newAccountCapabilitiesExistsFunction(context, addressValue),
-		newAccountCapabilitiesPublishFunction(context, addressValue, handler),
-		newAccountCapabilitiesUnpublishFunction(context, addressValue, handler),
+		newInterpreterAccountCapabilitiesGetFunction(context, addressValue, handler, false),
+		newInterpreterAccountCapabilitiesGetFunction(context, addressValue, handler, true),
+		newInterpreterAccountCapabilitiesExistsFunction(context, addressValue),
+		newInterpreterAccountCapabilitiesPublishFunction(context, addressValue, handler),
+		newInterpreterAccountCapabilitiesUnpublishFunction(context, addressValue, handler),
 		func() interpreter.Value {
 			return newAccountStorageCapabilitiesValue(
 				context,
@@ -2309,7 +2738,30 @@ func newAccountCapabilitiesValue(
 	)
 }
 
-func newAccountStorageCapabilitiesGetControllerFunction(
+func nativeAccountStorageCapabilitiesGetControllerFunction(
+	handler CapabilityControllerHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		capabilityIDValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return AccountStorageCapabilitiesGetController(
+			context,
+			handler,
+			capabilityIDValue,
+			address,
+		)
+	}
+}
+
+func newInterpreterAccountStorageCapabilitiesGetControllerFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -2320,27 +2772,21 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get capability ID argument
-
-				capabilityIDValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountStorageCapabilitiesGetController(
-					invocationContext,
-					handler,
-					capabilityIDValue,
-					address,
-					locationRange,
-				)
-			},
+			nativeAccountStorageCapabilitiesGetControllerFunction(handler, &address),
 		)
+	}
+}
+
+func NewVMAccountStorageCapabilitiesGetControllerFunction(
+	handler CapabilityControllerHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_StorageCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
+			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
+			nativeAccountStorageCapabilitiesGetControllerFunction(handler, nil),
+		),
 	}
 }
 
@@ -2349,13 +2795,11 @@ func AccountStorageCapabilitiesGetController(
 	handler CapabilityControllerHandler,
 	capabilityIDValue interpreter.UInt64Value,
 	address common.Address,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 	capabilityID := uint64(capabilityIDValue)
 
 	referenceValue := getStorageCapabilityControllerReference(
 		invocationContext,
-		locationRange,
 		address,
 		capabilityID,
 		handler,
@@ -2374,7 +2818,30 @@ var storageCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 	},
 }
 
-func newAccountStorageCapabilitiesGetControllersFunction(
+func nativeAccountStorageCapabilitiesGetControllersFunction(
+	handler CapabilityControllerHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		targetPathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return AccountStorageCapabilitiesGetControllers(
+			context,
+			handler,
+			targetPathValue,
+			address,
+		)
+	}
+}
+
+func newInterpreterAccountStorageCapabilitiesGetControllersFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -2385,27 +2852,21 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get path argument
-
-				targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountStorageCapabilitiesGetControllers(
-					invocationContext,
-					handler,
-					targetPathValue,
-					address,
-					locationRange,
-				)
-			},
+			nativeAccountStorageCapabilitiesGetControllersFunction(handler, &address),
 		)
+	}
+}
+
+func NewVMAccountStorageCapabilitiesGetControllersFunction(
+	handler CapabilityControllerHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_StorageCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
+			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
+			nativeAccountStorageCapabilitiesGetControllersFunction(handler, nil),
+		),
 	}
 }
 
@@ -2414,7 +2875,6 @@ func AccountStorageCapabilitiesGetControllers(
 	handler CapabilityControllerHandler,
 	targetPathValue interpreter.PathValue,
 	address common.Address,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 
 	if targetPathValue.Domain != common.PathDomainStorage {
@@ -2446,7 +2906,6 @@ func AccountStorageCapabilitiesGetControllers(
 
 			referenceValue := getStorageCapabilityControllerReference(
 				invocationContext,
-				locationRange,
 				address,
 				capabilityID,
 				handler,
@@ -2469,7 +2928,32 @@ var accountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	},
 }
 
-func newAccountStorageCapabilitiesForEachControllerFunction(
+func nativeAccountStorageCapabilitiesForEachControllerFunction(
+	handler CapabilityControllerHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		targetPathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
+		functionValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[1])
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return AccountStorageCapabilitiesForeachController(
+			context,
+			handler,
+			functionValue,
+			address,
+			targetPathValue,
+		)
+	}
+}
+
+func newInterpreterAccountStorageCapabilitiesForEachControllerFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -2481,33 +2965,20 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get path argument
-				targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Get function argument
-				functionValue, ok := invocation.Arguments[1].(interpreter.FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountStorageCapabilitiesForeachController(
-					invocationContext,
-					handler,
-					functionValue,
-					address,
-					targetPathValue,
-					locationRange,
-				)
-			},
+			nativeAccountStorageCapabilitiesForEachControllerFunction(handler, &address),
 		)
+	}
+}
+func NewVMAccountStorageCapabilitiesForEachControllerFunction(
+	handler CapabilityControllerHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_StorageCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
+			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
+			nativeAccountStorageCapabilitiesForEachControllerFunction(handler, nil),
+		),
 	}
 }
 
@@ -2517,7 +2988,6 @@ func AccountStorageCapabilitiesForeachController(
 	functionValue interpreter.FunctionValue,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 	if targetPathValue.Domain != common.PathDomainStorage {
 		panic(errors.NewUnreachableError())
@@ -2557,7 +3027,6 @@ func AccountStorageCapabilitiesForeachController(
 
 		referenceValue := getStorageCapabilityControllerReference(
 			invocationContext,
-			locationRange,
 			address,
 			capabilityID,
 			handler,
@@ -2573,7 +3042,6 @@ func AccountStorageCapabilitiesForeachController(
 			accountStorageCapabilitiesForEachControllerCallbackTypeParams,
 			parameterTypes,
 			returnType,
-			locationRange,
 		)
 		if err != nil {
 			// interpreter panicked while invoking the inner function value
@@ -2598,16 +3066,38 @@ func AccountStorageCapabilitiesForeachController(
 		// In order to be safe, we perform this check here to effectively enforce
 		// that users return `false` from their callback in all cases where storage is mutated.
 		if invocationContext.MutationDuringCapabilityControllerIteration() {
-			panic(CapabilityControllersMutatedDuringIterationError{
-				LocationRange: locationRange,
-			})
+			panic(&CapabilityControllersMutatedDuringIterationError{})
 		}
 	}
 
 	return interpreter.Void
 }
 
-func newAccountStorageCapabilitiesIssueFunction(
+func nativeAccountStorageCapabilitiesIssueFunction(
+	handler CapabilityControllerIssueHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		typeArguments interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		borrowType := typeArguments.NextSema()
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return AccountStorageCapabilitiesIssue(
+			args,
+			context,
+			handler,
+			address,
+			borrowType,
+		)
+	}
+}
+
+func newInterpreterAccountStorageCapabilitiesIssueFunction(
 	context interpreter.FunctionCreationContext,
 	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
@@ -2618,33 +3108,27 @@ func newAccountStorageCapabilitiesIssueFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-				arguments := invocation.Arguments
-
-				// Get borrow-type type-argument
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				typeParameter := typeParameterPair.Value
-
-				return AccountStorageCapabilitiesIssue(
-					arguments,
-					invocationContext,
-					locationRange,
-					handler,
-					address,
-					typeParameter,
-				)
-			},
+			nativeAccountStorageCapabilitiesIssueFunction(handler, &address),
 		)
+	}
+}
+
+func NewVMAccountStorageCapabilitiesIssueFunction(
+	handler CapabilityControllerIssueHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_StorageCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeIssueFunctionName,
+			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
+			nativeAccountStorageCapabilitiesIssueFunction(handler, nil),
+		),
 	}
 }
 
 func AccountStorageCapabilitiesIssue(
 	arguments []interpreter.Value,
 	invocationContext interpreter.InvocationContext,
-	locationRange interpreter.LocationRange,
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	typeParameter sema.Type,
@@ -2661,7 +3145,6 @@ func AccountStorageCapabilitiesIssue(
 
 	return checkAndIssueStorageCapabilityControllerWithType(
 		invocationContext,
-		locationRange,
 		handler,
 		address,
 		targetPathValue,
@@ -2669,7 +3152,32 @@ func AccountStorageCapabilitiesIssue(
 	)
 }
 
-func newAccountStorageCapabilitiesIssueWithTypeFunction(
+func nativeAccountStorageCapabilitiesIssueWithTypeFunction(
+	handler CapabilityControllerIssueHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		targetPathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
+		borrowType := interpreter.AssertValueOfType[interpreter.TypeValue](args[1])
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return AccountStorageCapabilitiesIssueWithType(
+			context,
+			handler,
+			borrowType,
+			address,
+			targetPathValue,
+		)
+	}
+}
+
+func newInterpreterAccountStorageCapabilitiesIssueWithTypeFunction(
 	context interpreter.FunctionCreationContext,
 	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
@@ -2680,35 +3188,21 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get path argument
-
-				targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Get type argument
-
-				typeValue, ok := invocation.Arguments[1].(interpreter.TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountStorageCapabilitiesIssueWithType(
-					invocationContext,
-					handler,
-					typeValue,
-					address,
-					targetPathValue,
-					locationRange,
-				)
-			},
+			nativeAccountStorageCapabilitiesIssueWithTypeFunction(handler, &address),
 		)
+	}
+}
+
+func NewVMAccountStorageCapabilitiesIssueWithTypeFunction(
+	handler CapabilityControllerIssueHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_StorageCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
+			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
+			nativeAccountStorageCapabilitiesIssueWithTypeFunction(handler, nil),
+		),
 	}
 }
 
@@ -2718,7 +3212,6 @@ func AccountStorageCapabilitiesIssueWithType(
 	typeValue interpreter.TypeValue,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 	if targetPathValue.Domain != common.PathDomainStorage {
 		panic(errors.NewUnreachableError())
@@ -2733,7 +3226,6 @@ func AccountStorageCapabilitiesIssueWithType(
 
 	return checkAndIssueStorageCapabilityControllerWithType(
 		invocationContext,
-		locationRange,
 		handler,
 		address,
 		targetPathValue,
@@ -2743,7 +3235,6 @@ func AccountStorageCapabilitiesIssueWithType(
 
 func checkAndIssueStorageCapabilityControllerWithType(
 	context interpreter.CapabilityControllerContext,
-	locationRange interpreter.LocationRange,
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
@@ -2755,7 +3246,6 @@ func checkAndIssueStorageCapabilityControllerWithType(
 		panic(&interpreter.InvalidCapabilityIssueTypeError{
 			ExpectedTypeDescription: "reference type",
 			ActualType:              ty,
-			LocationRange:           locationRange,
 		})
 	}
 
@@ -2765,7 +3255,6 @@ func checkAndIssueStorageCapabilityControllerWithType(
 
 	capabilityIDValue := IssueStorageCapabilityController(
 		context,
-		locationRange,
 		handler,
 		address,
 		borrowStaticType,
@@ -2773,7 +3262,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	)
 
 	if capabilityIDValue == interpreter.InvalidCapabilityID {
-		panic(interpreter.InvalidCapabilityIDError{})
+		panic(&interpreter.InvalidCapabilityIDError{})
 	}
 
 	// Return controller's capability
@@ -2788,7 +3277,6 @@ func checkAndIssueStorageCapabilityControllerWithType(
 
 func IssueStorageCapabilityController(
 	context interpreter.CapabilityControllerContext,
-	locationRange interpreter.LocationRange,
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	borrowStaticType *interpreter.ReferenceStaticType,
@@ -2821,62 +3309,45 @@ func IssueStorageCapabilityController(
 	)
 
 	storeCapabilityController(context, address, capabilityIDValue, controller)
-	recordStorageCapabilityController(context, locationRange, address, targetPathValue, capabilityIDValue)
+	recordStorageCapabilityController(context, address, targetPathValue, capabilityIDValue)
 
 	addressValue := interpreter.AddressValue(address)
 	typeValue := interpreter.NewTypeValue(context, borrowStaticType)
 
-	handler.EmitEvent(
-		context,
-		locationRange,
-		StorageCapabilityControllerIssuedEventType,
-		[]interpreter.Value{
-			capabilityIDValue,
-			addressValue,
-			typeValue,
-			targetPathValue,
-		},
-	)
+	handler.EmitEvent(context, StorageCapabilityControllerIssuedEventType, []interpreter.Value{
+		capabilityIDValue,
+		addressValue,
+		typeValue,
+		targetPathValue,
+	})
 
 	return capabilityIDValue
 }
 
-func newAccountAccountCapabilitiesIssueFunction(
-	context interpreter.FunctionCreationContext,
-	addressValue interpreter.AddressValue,
+func nativeAccountAccountCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
-) interpreter.BoundFunctionGenerator {
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		address := addressValue.ToAddress()
-		return interpreter.NewBoundHostFunctionValue(
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		typeArguments interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		borrowType := typeArguments.NextSema()
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return checkAndIssueAccountCapabilityControllerWithType(
 			context,
-			accountCapabilities,
-			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get borrow type type argument
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				ty := typeParameterPair.Value
-
-				// Issue capability controller and return capability
-
-				return checkAndIssueAccountCapabilityControllerWithType(
-					invocationContext,
-					locationRange,
-					handler,
-					address,
-					ty,
-				)
-			},
+			handler,
+			address,
+			borrowType,
 		)
 	}
 }
 
-func newAccountAccountCapabilitiesIssueWithTypeFunction(
+func newInterpreterAccountAccountCapabilitiesIssueFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerIssueHandler,
@@ -2887,40 +3358,82 @@ func newAccountAccountCapabilitiesIssueWithTypeFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get type argument
-
-				typeValue, ok := invocation.Arguments[0].(interpreter.TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				ty, err := interpreter.ConvertStaticToSemaType(invocationContext, typeValue.Type)
-				if err != nil {
-					panic(errors.NewUnexpectedErrorFromCause(err))
-				}
-
-				// Issue capability controller and return capability
-
-				return checkAndIssueAccountCapabilityControllerWithType(
-					invocationContext,
-					locationRange,
-					handler,
-					address,
-					ty,
-				)
-			},
+			nativeAccountAccountCapabilitiesIssueFunction(handler, &address),
 		)
+	}
+}
+
+func NewVMAccountAccountCapabilitiesIssueFunction(
+	handler CapabilityControllerIssueHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_AccountCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_AccountCapabilitiesTypeIssueFunctionName,
+			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
+			nativeAccountAccountCapabilitiesIssueFunction(handler, nil),
+		),
+	}
+}
+
+func nativeAccountAccountCapabilitiesIssueWithTypeFunction(
+	handler CapabilityControllerIssueHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		typeValue := interpreter.AssertValueOfType[interpreter.TypeValue](args[0])
+		ty, err := interpreter.ConvertStaticToSemaType(context, typeValue.Type)
+		if err != nil {
+			panic(errors.NewUnexpectedErrorFromCause(err))
+		}
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return checkAndIssueAccountCapabilityControllerWithType(
+			context,
+			handler,
+			address,
+			ty,
+		)
+	}
+}
+
+func newInterpreterAccountAccountCapabilitiesIssueWithTypeFunction(
+	context interpreter.FunctionCreationContext,
+	addressValue interpreter.AddressValue,
+	handler CapabilityControllerIssueHandler,
+) interpreter.BoundFunctionGenerator {
+	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+		address := addressValue.ToAddress()
+		return interpreter.NewBoundHostFunctionValue(
+			context,
+			accountCapabilities,
+			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
+			nativeAccountAccountCapabilitiesIssueWithTypeFunction(handler, &address),
+		)
+	}
+}
+
+func NewVMAccountAccountCapabilitiesIssueWithTypeFunction(
+	handler CapabilityControllerIssueHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_AccountCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName,
+			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionType,
+			nativeAccountAccountCapabilitiesIssueWithTypeFunction(handler, nil),
+		),
 	}
 }
 
 func checkAndIssueAccountCapabilityControllerWithType(
 	context interpreter.CapabilityControllerContext,
-	locationRange interpreter.LocationRange,
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	ty sema.Type,
@@ -2933,7 +3446,6 @@ func checkAndIssueAccountCapabilityControllerWithType(
 		panic(&interpreter.InvalidCapabilityIssueTypeError{
 			ExpectedTypeDescription: fmt.Sprintf("`%s`", typeBound.QualifiedString()),
 			ActualType:              ty,
-			LocationRange:           locationRange,
 		})
 	}
 
@@ -2949,14 +3461,13 @@ func checkAndIssueAccountCapabilityControllerWithType(
 	capabilityIDValue :=
 		IssueAccountCapabilityController(
 			context,
-			locationRange,
 			handler,
 			address,
 			borrowStaticType,
 		)
 
 	if capabilityIDValue == interpreter.InvalidCapabilityID {
-		panic(interpreter.InvalidCapabilityIDError{})
+		panic(&interpreter.InvalidCapabilityIDError{})
 	}
 
 	// Return controller's capability
@@ -2971,7 +3482,6 @@ func checkAndIssueAccountCapabilityControllerWithType(
 
 func IssueAccountCapabilityController(
 	context interpreter.CapabilityControllerContext,
-	locationRange interpreter.LocationRange,
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	borrowStaticType *interpreter.ReferenceStaticType,
@@ -2997,7 +3507,6 @@ func IssueAccountCapabilityController(
 	storeCapabilityController(context, address, capabilityIDValue, controller)
 	recordAccountCapabilityController(
 		context,
-		locationRange,
 		address,
 		capabilityIDValue,
 	)
@@ -3005,16 +3514,11 @@ func IssueAccountCapabilityController(
 	addressValue := interpreter.AddressValue(address)
 	typeValue := interpreter.NewTypeValue(context, borrowStaticType)
 
-	handler.EmitEvent(
-		context,
-		locationRange,
-		AccountCapabilityControllerIssuedEventType,
-		[]interpreter.Value{
-			capabilityIDValue,
-			addressValue,
-			typeValue,
-		},
-	)
+	handler.EmitEvent(context, AccountCapabilityControllerIssuedEventType, []interpreter.Value{
+		capabilityIDValue,
+		addressValue,
+		typeValue,
+	})
 
 	return capabilityIDValue
 }
@@ -3140,7 +3644,6 @@ func getCapabilityController(
 
 func getStorageCapabilityControllerReference(
 	context interpreter.CapabilityControllerReferenceContext,
-	locationRange interpreter.LocationRange,
 	address common.Address,
 	capabilityID uint64,
 	handler CapabilityControllerHandler,
@@ -3166,7 +3669,6 @@ func getStorageCapabilityControllerReference(
 		interpreter.UnauthorizedAccess,
 		storageCapabilityController,
 		sema.StorageCapabilityControllerType,
-		locationRange,
 	)
 }
 
@@ -3174,10 +3676,9 @@ func newStorageCapabilityControllerSetTargetFunction(
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
 	handler CapabilityControllerHandler,
-) func(interpreter.CapabilityControllerContext, interpreter.LocationRange, interpreter.PathValue) {
+) func(interpreter.CapabilityControllerContext, interpreter.PathValue) {
 	return func(
 		context interpreter.CapabilityControllerContext,
-		locationRange interpreter.LocationRange,
 		newTargetPathValue interpreter.PathValue,
 	) {
 		oldTargetPathValue := controller.TargetPath
@@ -3185,14 +3686,12 @@ func newStorageCapabilityControllerSetTargetFunction(
 
 		unrecordStorageCapabilityController(
 			context,
-			locationRange,
 			address,
 			oldTargetPathValue,
 			capabilityID,
 		)
 		recordStorageCapabilityController(
 			context,
-			locationRange,
 			address,
 			newTargetPathValue,
 			capabilityID,
@@ -3200,16 +3699,11 @@ func newStorageCapabilityControllerSetTargetFunction(
 
 		addressValue := interpreter.AddressValue(address)
 
-		handler.EmitEvent(
-			context,
-			locationRange,
-			StorageCapabilityControllerTargetChangedEventType,
-			[]interpreter.Value{
-				capabilityID,
-				addressValue,
-				newTargetPathValue,
-			},
-		)
+		handler.EmitEvent(context, StorageCapabilityControllerTargetChangedEventType, []interpreter.Value{
+			capabilityID,
+			addressValue,
+			newTargetPathValue,
+		})
 	}
 }
 
@@ -3217,17 +3711,13 @@ func newStorageCapabilityControllerDeleteFunction(
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
 	handler CapabilityControllerHandler,
-) func(interpreter.CapabilityControllerContext, interpreter.LocationRange) {
-	return func(
-		context interpreter.CapabilityControllerContext,
-		locationRange interpreter.LocationRange,
-	) {
+) func(interpreter.CapabilityControllerContext) {
+	return func(context interpreter.CapabilityControllerContext) {
 		targetPathValue := controller.TargetPath
 		capabilityID := controller.CapabilityID
 
 		unrecordStorageCapabilityController(
 			context,
-			locationRange,
 			address,
 			targetPathValue,
 			capabilityID,
@@ -3242,7 +3732,6 @@ func newStorageCapabilityControllerDeleteFunction(
 
 		handler.EmitEvent(
 			context,
-			locationRange,
 			StorageCapabilityControllerDeletedEventType,
 			[]interpreter.Value{
 				capabilityID,
@@ -3259,7 +3748,6 @@ var capabilityIDSetStaticType = &interpreter.DictionaryStaticType{
 
 func recordStorageCapabilityController(
 	context interpreter.CapabilityControllerContext,
-	locationRange interpreter.LocationRange,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
 	capabilityIDValue interpreter.UInt64Value,
@@ -3296,7 +3784,6 @@ func recordStorageCapabilityController(
 	if readValue == nil {
 		capabilityIDSet := interpreter.NewDictionaryValueWithAddress(
 			context,
-			locationRange,
 			capabilityIDSetStaticType,
 			address,
 			setKey,
@@ -3305,7 +3792,7 @@ func recordStorageCapabilityController(
 		storageMap.SetValue(context, storageMapKey, capabilityIDSet)
 	} else {
 		capabilityIDSet := readValue.(*interpreter.DictionaryValue)
-		existing := capabilityIDSet.Insert(context, locationRange, setKey, setValue)
+		existing := capabilityIDSet.Insert(context, setKey, setValue)
 		if existing != interpreter.Nil {
 			panic(errors.NewUnreachableError())
 		}
@@ -3350,7 +3837,6 @@ func getPathCapabilityIDSet(
 
 func unrecordStorageCapabilityController(
 	context interpreter.CapabilityControllerContext,
-	locationRange interpreter.LocationRange,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
 	capabilityIDValue interpreter.UInt64Value,
@@ -3370,7 +3856,7 @@ func unrecordStorageCapabilityController(
 		panic(errors.NewUnreachableError())
 	}
 
-	existing := capabilityIDSet.Remove(context, locationRange, capabilityIDValue)
+	existing := capabilityIDSet.Remove(context, capabilityIDValue)
 	if existing == interpreter.Nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -3413,7 +3899,7 @@ func getStorageCapabilityControllerIDsIterator(
 		}, 0
 	}
 
-	iterator := capabilityIDSet.Iterator()
+	iterator := capabilityIDSet.Iterator(context)
 
 	count = uint64(capabilityIDSet.Count())
 	nextCapabilityID = func() (uint64, bool) {
@@ -3434,7 +3920,6 @@ func getStorageCapabilityControllerIDsIterator(
 
 func recordAccountCapabilityController(
 	context interpreter.CapabilityControllerContext,
-	_ interpreter.LocationRange,
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
 ) {
@@ -3507,11 +3992,11 @@ func getAccountCapabilityControllerIDsIterator(
 		}, 0
 	}
 
-	iterator := storageMap.Iterator(context)
+	iterator := storageMap.Iterator()
 
 	count = storageMap.Count()
 	nextCapabilityID = func() (uint64, bool) {
-		keyValue := iterator.NextKey()
+		keyValue := iterator.NextKey(context)
 		if keyValue == nil {
 			return 0, false
 		}
@@ -3526,7 +4011,32 @@ func getAccountCapabilityControllerIDsIterator(
 	return
 }
 
-func newAccountCapabilitiesPublishFunction(
+func nativeAccountCapabilitiesPublishFunction(
+	handler CapabilityControllerHandler,
+	accountAddressPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		capabilityValue := interpreter.AssertValueOfType[interpreter.CapabilityValue](args[0])
+		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[1])
+
+		accountAddressValue := interpreter.GetAddressValue(receiver, accountAddressPointer)
+
+		return AccountCapabilitiesPublish(
+			context,
+			handler,
+			capabilityValue,
+			pathValue,
+			accountAddressValue,
+		)
+	}
+}
+
+func newInterpreterAccountCapabilitiesPublishFunction(
 	context interpreter.FunctionCreationContext,
 	accountAddressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -3537,33 +4047,21 @@ func newAccountCapabilitiesPublishFunction(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-				arguments := invocation.Arguments
-
-				// Get capability argument
-				capabilityValue, ok := arguments[0].(interpreter.CapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Get path argument
-				pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountCapabilitiesPublish(
-					invocationContext,
-					handler,
-					capabilityValue,
-					pathValue,
-					accountAddressValue,
-					locationRange,
-				)
-			},
+			nativeAccountCapabilitiesPublishFunction(handler, &accountAddressValue),
 		)
+	}
+}
+
+func NewVMAccountCapabilitiesPublishFunction(
+	handler CapabilityControllerHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_CapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_CapabilitiesTypePublishFunctionName,
+			sema.Account_CapabilitiesTypePublishFunctionType,
+			nativeAccountCapabilitiesPublishFunction(handler, nil),
+		),
 	}
 }
 
@@ -3573,7 +4071,6 @@ func AccountCapabilitiesPublish(
 	capabilityValue interpreter.CapabilityValue,
 	pathValue interpreter.PathValue,
 	accountAddressValue interpreter.AddressValue,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 
 	if pathValue.Domain != common.PathDomainPublic {
@@ -3585,7 +4082,6 @@ func AccountCapabilitiesPublish(
 	capabilityAddressValue := capabilityValue.Address()
 	if capabilityAddressValue != accountAddressValue {
 		panic(&interpreter.CapabilityAddressPublishingError{
-			LocationRange:     locationRange,
 			CapabilityAddress: capabilityAddressValue,
 			AccountAddress:    accountAddressValue,
 		})
@@ -3613,7 +4109,6 @@ func AccountCapabilitiesPublish(
 		if publishHandler != nil {
 			valid, err := publishHandler(
 				invocationContext,
-				locationRange,
 				capabilityAddressValue,
 				pathValue,
 				capabilityBorrowType,
@@ -3623,9 +4118,8 @@ func AccountCapabilitiesPublish(
 			}
 			if !valid {
 				panic(&interpreter.EntitledCapabilityPublishingError{
-					LocationRange: locationRange,
-					BorrowType:    capabilityBorrowType,
-					Path:          pathValue,
+					BorrowType: capabilityBorrowType,
+					Path:       pathValue,
 				})
 			}
 		}
@@ -3642,15 +4136,13 @@ func AccountCapabilitiesPublish(
 		storageMapKey,
 	) {
 		panic(&interpreter.OverwriteError{
-			Address:       accountAddressValue,
-			Path:          pathValue,
-			LocationRange: locationRange,
+			Address: accountAddressValue,
+			Path:    pathValue,
 		})
 	}
 
 	capabilityValue, ok = capabilityValue.Transfer(
 		invocationContext,
-		locationRange,
 		atree.Address(accountAddress),
 		true,
 		nil,
@@ -3672,7 +4164,6 @@ func AccountCapabilitiesPublish(
 
 	handler.EmitEvent(
 		invocationContext,
-		locationRange,
 		CapabilityPublishedEventType,
 		[]interpreter.Value{
 			accountAddressValue,
@@ -3684,7 +4175,30 @@ func AccountCapabilitiesPublish(
 	return interpreter.Void
 }
 
-func newAccountCapabilitiesUnpublishFunction(
+func nativeAccountCapabilitiesUnpublishFunction(
+	handler CapabilityControllerHandler,
+	addressPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
+
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
+
+		return AccountCapabilitiesUnpublish(
+			context,
+			handler,
+			pathValue,
+			addressValue,
+		)
+	}
+}
+
+func newInterpreterAccountCapabilitiesUnpublishFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -3695,26 +4209,21 @@ func newAccountCapabilitiesUnpublishFunction(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get path argument
-				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountCapabilitiesUnpublish(
-					invocationContext,
-					handler,
-					pathValue,
-					addressValue,
-					locationRange,
-				)
-			},
+			nativeAccountCapabilitiesUnpublishFunction(handler, &addressValue),
 		)
+	}
+}
+
+func NewVMAccountCapabilitiesUnpublishFunction(
+	handler CapabilityControllerHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_CapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_CapabilitiesTypeUnpublishFunctionName,
+			sema.Account_CapabilitiesTypeUnpublishFunctionType,
+			nativeAccountCapabilitiesUnpublishFunction(handler, nil),
+		),
 	}
 }
 
@@ -3723,7 +4232,6 @@ func AccountCapabilitiesUnpublish(
 	handler CapabilityControllerHandler,
 	pathValue interpreter.PathValue,
 	addressValue interpreter.AddressValue,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 
 	if pathValue.Domain != common.PathDomainPublic {
@@ -3766,7 +4274,6 @@ func AccountCapabilitiesUnpublish(
 
 	capabilityValue, ok := capabilityValue.Transfer(
 		invocationContext,
-		locationRange,
 		atree.Address{},
 		true,
 		nil,
@@ -3786,7 +4293,6 @@ func AccountCapabilitiesUnpublish(
 
 	handler.EmitEvent(
 		invocationContext,
-		locationRange,
 		CapabilityUnpublishedEventType,
 		[]interpreter.Value{
 			addressValue,
@@ -3863,7 +4369,6 @@ func getCheckedCapabilityController(
 
 func GetCheckedCapabilityControllerReference(
 	context interpreter.GetCapabilityControllerReferenceContext,
-	locationRange interpreter.LocationRange,
 	capabilityAddressValue interpreter.AddressValue,
 	capabilityIDValue interpreter.UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
@@ -3884,17 +4389,11 @@ func GetCheckedCapabilityControllerReference(
 
 	capabilityAddress := capabilityAddressValue.ToAddress()
 
-	return controller.ReferenceValue(
-		context,
-		capabilityAddress,
-		resultBorrowType,
-		locationRange,
-	)
+	return controller.ReferenceValue(context, capabilityAddress, resultBorrowType)
 }
 
 func BorrowCapabilityController(
 	context interpreter.BorrowCapabilityControllerContext,
-	locationRange interpreter.LocationRange,
 	capabilityAddress interpreter.AddressValue,
 	capabilityID interpreter.UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
@@ -3903,7 +4402,6 @@ func BorrowCapabilityController(
 ) interpreter.ReferenceValue {
 	referenceValue := GetCheckedCapabilityControllerReference(
 		context,
-		locationRange,
 		capabilityAddress,
 		capabilityID,
 		wantedBorrowType,
@@ -3918,11 +4416,7 @@ func BorrowCapabilityController(
 	// which reads the stored value
 	// and performs a dynamic type check
 
-	referencedValue := referenceValue.ReferencedValue(
-		context,
-		locationRange,
-		false,
-	)
+	referencedValue := referenceValue.ReferencedValue(context, false)
 	if referencedValue == nil {
 		return nil
 	}
@@ -3932,7 +4426,6 @@ func BorrowCapabilityController(
 
 func CheckCapabilityController(
 	context interpreter.CheckCapabilityControllerContext,
-	locationRange interpreter.LocationRange,
 	capabilityAddress interpreter.AddressValue,
 	capabilityID interpreter.UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
@@ -3942,7 +4435,6 @@ func CheckCapabilityController(
 
 	referenceValue := GetCheckedCapabilityControllerReference(
 		context,
-		locationRange,
 		capabilityAddress,
 		capabilityID,
 		wantedBorrowType,
@@ -3957,16 +4449,39 @@ func CheckCapabilityController(
 	// which reads the stored value
 	// and performs a dynamic type check
 
-	referencedValue := referenceValue.ReferencedValue(
-		context,
-		locationRange,
-		false,
-	)
+	referencedValue := referenceValue.ReferencedValue(context, false)
 
 	return referencedValue != nil
 }
 
-func newAccountCapabilitiesGetFunction(
+func nativeAccountCapabilitiesGetFunction(
+	controllerHandler CapabilityControllerHandler,
+	addressPointer *interpreter.AddressValue,
+	borrow bool,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		typeArguments interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
+		typeArgument := typeArguments.NextSema()
+
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
+
+		return AccountCapabilitiesGet(
+			context,
+			controllerHandler,
+			pathValue,
+			typeArgument,
+			borrow,
+			addressValue,
+		)
+	}
+}
+
+func newInterpreterAccountCapabilitiesGetFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	controllerHandler CapabilityControllerHandler,
@@ -3974,7 +4489,6 @@ func newAccountCapabilitiesGetFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		var funcType *sema.FunctionType
-
 		if borrow {
 			funcType = sema.Account_CapabilitiesTypeBorrowFunctionType
 		} else {
@@ -3985,29 +4499,35 @@ func newAccountCapabilitiesGetFunction(
 			context,
 			accountCapabilities,
 			funcType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-				typeParameter := invocation.TypeParameterTypes.Oldest().Value
-
-				// Get path argument
-				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountCapabilitiesGet(
-					invocationContext,
-					controllerHandler,
-					pathValue,
-					typeParameter,
-					borrow,
-					addressValue,
-					locationRange,
-				)
-			},
+			nativeAccountCapabilitiesGetFunction(controllerHandler, &addressValue, borrow),
 		)
+	}
+}
+
+func NewVMAccountCapabilitiesGetFunction(
+	controllerHandler CapabilityControllerHandler,
+	borrow bool,
+) VMFunction {
+
+	var (
+		funcName string
+		funcType *sema.FunctionType
+	)
+	if borrow {
+		funcName = sema.Account_CapabilitiesTypeBorrowFunctionName
+		funcType = sema.Account_CapabilitiesTypeBorrowFunctionType
+	} else {
+		funcName = sema.Account_CapabilitiesTypeGetFunctionName
+		funcType = sema.Account_CapabilitiesTypeGetFunctionType
+	}
+
+	return VMFunction{
+		BaseType: sema.Account_CapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			funcName,
+			funcType,
+			nativeAccountCapabilitiesGetFunction(controllerHandler, nil, borrow),
+		),
 	}
 }
 
@@ -4018,7 +4538,6 @@ func AccountCapabilitiesGet(
 	typeParameter sema.Type,
 	borrow bool,
 	addressValue interpreter.AddressValue,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 	if pathValue.Domain != common.PathDomainPublic {
 		panic(errors.NewUnreachableError())
@@ -4113,7 +4632,6 @@ func AccountCapabilitiesGet(
 	if getHandler != nil {
 		valid, err := getHandler(
 			invocationContext,
-			locationRange,
 			addressValue,
 			pathValue,
 			wantedBorrowType,
@@ -4135,7 +4653,6 @@ func AccountCapabilitiesGet(
 
 		resultValue = BorrowCapabilityController(
 			invocationContext,
-			locationRange,
 			capabilityAddress,
 			capabilityID,
 			wantedBorrowType,
@@ -4185,32 +4702,48 @@ func AccountCapabilitiesGet(
 	return resultValue
 }
 
-func newAccountCapabilitiesExistsFunction(
+func nativeAccountCapabilitiesExistsFunction(
+	addressPointer *interpreter.AddressValue,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
+
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
+
+		return AccountCapabilitiesExists(
+			context,
+			pathValue,
+			addressValue.ToAddress(),
+		)
+	}
+}
+
+func newInterpreterAccountCapabilitiesExistsFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		address := addressValue.ToAddress()
-
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				invocationContext := invocation.InvocationContext
-				pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountCapabilitiesExists(
-					invocationContext,
-					pathValue,
-					address,
-				)
-			},
+			nativeAccountCapabilitiesExistsFunction(&addressValue),
 		)
 	}
+}
+
+var VMAccountCapabilitiesExistsFunction = VMFunction{
+	BaseType: sema.Account_CapabilitiesType,
+	FunctionValue: vm.NewNativeFunctionValue(
+		sema.Account_CapabilitiesTypeExistsFunctionName,
+		sema.Account_CapabilitiesTypeExistsFunctionType,
+		nativeAccountCapabilitiesExistsFunction(nil),
+	),
 }
 
 func AccountCapabilitiesExists(
@@ -4237,7 +4770,6 @@ func AccountCapabilitiesExists(
 
 func getAccountCapabilityControllerReference(
 	context interpreter.CapabilityControllerReferenceContext,
-	locationRange interpreter.LocationRange,
 	address common.Address,
 	capabilityID uint64,
 	handler CapabilityControllerHandler,
@@ -4263,11 +4795,40 @@ func getAccountCapabilityControllerReference(
 		interpreter.UnauthorizedAccess,
 		accountCapabilityController,
 		sema.AccountCapabilityControllerType,
-		locationRange,
 	)
 }
 
-func newAccountAccountCapabilitiesGetControllerFunction(
+func nativeAccountAccountCapabilitiesGetControllerFunction(
+	handler CapabilityControllerHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		capabilityIDValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
+
+		capabilityID := uint64(capabilityIDValue)
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		referenceValue := getAccountCapabilityControllerReference(
+			context,
+			address,
+			capabilityID,
+			handler,
+		)
+		if referenceValue == nil {
+			return interpreter.Nil
+		}
+
+		return interpreter.NewSomeValueNonCopying(context, referenceValue)
+	}
+}
+
+func newInterpreterAccountAccountCapabilitiesGetControllerFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -4278,34 +4839,21 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get capability ID argument
-
-				capabilityIDValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityID := uint64(capabilityIDValue)
-
-				referenceValue := getAccountCapabilityControllerReference(
-					inter,
-					locationRange,
-					address,
-					capabilityID,
-					handler,
-				)
-				if referenceValue == nil {
-					return interpreter.Nil
-				}
-
-				return interpreter.NewSomeValueNonCopying(inter, referenceValue)
-			},
+			nativeAccountAccountCapabilitiesGetControllerFunction(handler, &address),
 		)
+	}
+}
+
+func NewVMAccountAccountCapabilitiesGetControllerFunction(
+	handler CapabilityControllerHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_AccountCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_AccountCapabilitiesTypeGetControllerFunctionName,
+			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
+			nativeAccountAccountCapabilitiesGetControllerFunction(handler, nil),
+		),
 	}
 }
 
@@ -4316,7 +4864,27 @@ var accountCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 	},
 }
 
-func newAccountAccountCapabilitiesGetControllersFunction(
+func nativeAccountAccountCapabilitiesGetControllersFunction(
+	handler CapabilityControllerHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return accountAccountCapabilitiesGetControllers(
+			context,
+			address,
+			handler,
+		)
+	}
+}
+
+func newInterpreterAccountAccountCapabilitiesGetControllersFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -4327,51 +4895,64 @@ func newAccountAccountCapabilitiesGetControllersFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get capability controllers iterator
-
-				nextCapabilityID, count :=
-					getAccountCapabilityControllerIDsIterator(inter, address)
-
-				var capabilityControllerIndex uint64 = 0
-
-				return interpreter.NewArrayValueWithIterator(
-					inter,
-					accountCapabilityControllerReferencesArrayStaticType,
-					common.Address{},
-					count,
-					func() interpreter.Value {
-						if capabilityControllerIndex >= count {
-							return nil
-						}
-						capabilityControllerIndex++
-
-						capabilityID, ok := nextCapabilityID()
-						if !ok {
-							return nil
-						}
-
-						referenceValue := getAccountCapabilityControllerReference(
-							inter,
-							locationRange,
-							address,
-							capabilityID,
-							handler,
-						)
-						if referenceValue == nil {
-							panic(errors.NewUnreachableError())
-						}
-
-						return referenceValue
-					},
-				)
-			},
+			nativeAccountAccountCapabilitiesGetControllersFunction(handler, &address),
 		)
 	}
+}
+
+func NewVMAccountAccountCapabilitiesGetControllersFunction(
+	handler CapabilityControllerHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_AccountCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_AccountCapabilitiesTypeGetControllersFunctionName,
+			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
+			nativeAccountAccountCapabilitiesGetControllersFunction(handler, nil),
+		),
+	}
+}
+
+func accountAccountCapabilitiesGetControllers(
+	context interpreter.InvocationContext,
+	address common.Address,
+	handler CapabilityControllerHandler,
+) interpreter.Value {
+	// Get capability controllers iterator
+
+	nextCapabilityID, count := getAccountCapabilityControllerIDsIterator(context, address)
+
+	var capabilityControllerIndex uint64 = 0
+
+	return interpreter.NewArrayValueWithIterator(
+		context,
+		accountCapabilityControllerReferencesArrayStaticType,
+		common.Address{},
+		count,
+		func() interpreter.Value {
+			if capabilityControllerIndex >= count {
+				return nil
+			}
+			capabilityControllerIndex++
+
+			capabilityID, ok := nextCapabilityID()
+			if !ok {
+				return nil
+			}
+
+			referenceValue := getAccountCapabilityControllerReference(
+				context,
+				address,
+				capabilityID,
+				handler,
+			)
+			if referenceValue == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			return referenceValue
+		},
+	)
 }
 
 // `(&AccountCapabilityController)` in
@@ -4388,15 +4969,43 @@ type CapabilityControllersMutatedDuringIterationError struct {
 	interpreter.LocationRange
 }
 
-var _ errors.UserError = CapabilityControllersMutatedDuringIterationError{}
+var _ errors.UserError = &CapabilityControllersMutatedDuringIterationError{}
+var _ interpreter.HasLocationRange = &CapabilityControllersMutatedDuringIterationError{}
 
-func (CapabilityControllersMutatedDuringIterationError) IsUserError() {}
+func (*CapabilityControllersMutatedDuringIterationError) IsUserError() {}
 
-func (CapabilityControllersMutatedDuringIterationError) Error() string {
+func (*CapabilityControllersMutatedDuringIterationError) Error() string {
 	return "capability controller iteration continued after changes to controllers"
 }
 
-func newAccountAccountCapabilitiesForEachControllerFunction(
+func nativeAccountAccountCapabilitiesForEachControllerFunction(
+	handler CapabilityControllerHandler,
+	addressPointer *common.Address,
+) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		receiver interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		functionValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
+
+		address := interpreter.GetAddress(receiver, addressPointer)
+
+		return AccountCapabilitiesForEachController(
+			context,
+			address,
+			functionValue,
+			handler,
+		)
+	}
+}
+
+func (e *CapabilityControllersMutatedDuringIterationError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
+}
+
+func newInterpreterAccountAccountCapabilitiesForEachControllerFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -4408,109 +5017,114 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				// Get function argument
-
-				functionValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				functionValueType := functionValue.FunctionType(invocationContext)
-				parameterTypes := functionValueType.ParameterTypes()
-				returnType := functionValueType.ReturnTypeAnnotation.Type
-
-				// Prevent mutations (record/unrecord) to account capability controllers
-				// for this address during iteration
-
-				addressPath := interpreter.AddressPath{
-					Address: address,
-				}
-				iterations := invocationContext.GetCapabilityControllerIterations()
-				iterations[addressPath]++
-				defer func() {
-					iterations[addressPath]--
-					if iterations[addressPath] <= 0 {
-						delete(iterations, addressPath)
-					}
-				}()
-
-				// Get capability controllers iterator
-
-				nextCapabilityID, _ :=
-					getAccountCapabilityControllerIDsIterator(invocationContext, address)
-
-				for {
-					capabilityID, ok := nextCapabilityID()
-					if !ok {
-						break
-					}
-
-					referenceValue := getAccountCapabilityControllerReference(
-						invocationContext,
-						locationRange,
-						address,
-						capabilityID,
-						handler,
-					)
-					if referenceValue == nil {
-						panic(errors.NewUnreachableError())
-					}
-
-					res, err := interpreter.InvokeFunctionValue(
-						invocationContext,
-						functionValue,
-						[]interpreter.Value{referenceValue},
-						accountAccountCapabilitiesForEachControllerCallbackTypeParams,
-						parameterTypes,
-						returnType,
-						locationRange,
-					)
-					if err != nil {
-						// interpreter panicked while invoking the inner function value
-						panic(err)
-					}
-
-					shouldContinue, ok := res.(interpreter.BoolValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					if !shouldContinue {
-						break
-					}
-
-					// It is not safe to check this at the beginning of the loop
-					// (i.e. on the next invocation of the callback),
-					// because if the mutation performed in the callback reorganized storage
-					// such that the iteration pointer is now at the end,
-					// we will not invoke the callback again but will still silently skip elements of storage.
-					//
-					// In order to be safe, we perform this check here to effectively enforce
-					// that users return `false` from their callback in all cases where storage is mutated.
-					if invocationContext.MutationDuringCapabilityControllerIteration() {
-						panic(CapabilityControllersMutatedDuringIterationError{
-							LocationRange: locationRange,
-						})
-					}
-				}
-
-				return interpreter.Void
-			},
+			nativeAccountAccountCapabilitiesForEachControllerFunction(handler, &address),
 		)
 	}
+}
+
+func NewVMAccountAccountCapabilitiesForEachControllerFunction(
+	handler CapabilityControllerHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_AccountCapabilitiesType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName,
+			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
+			nativeAccountAccountCapabilitiesForEachControllerFunction(handler, nil),
+		),
+	}
+}
+
+func AccountCapabilitiesForEachController(
+	invocationContext interpreter.InvocationContext,
+	address common.Address,
+	functionValue interpreter.FunctionValue,
+	handler CapabilityControllerHandler,
+) interpreter.Value {
+	functionValueType := functionValue.FunctionType(invocationContext)
+	parameterTypes := functionValueType.ParameterTypes()
+	returnType := functionValueType.ReturnTypeAnnotation.Type
+
+	// Prevent mutations (record/unrecord) to account capability controllers
+	// for this address during iteration
+
+	addressPath := interpreter.AddressPath{
+		Address: address,
+	}
+	iterations := invocationContext.GetCapabilityControllerIterations()
+	iterations[addressPath]++
+	defer func() {
+		iterations[addressPath]--
+		if iterations[addressPath] <= 0 {
+			delete(iterations, addressPath)
+		}
+	}()
+
+	// Get capability controllers iterator
+
+	nextCapabilityID, _ :=
+		getAccountCapabilityControllerIDsIterator(invocationContext, address)
+
+	for {
+		capabilityID, ok := nextCapabilityID()
+		if !ok {
+			break
+		}
+
+		referenceValue := getAccountCapabilityControllerReference(
+			invocationContext,
+			address,
+			capabilityID,
+			handler,
+		)
+		if referenceValue == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		res, err := interpreter.InvokeFunctionValue(
+			invocationContext,
+			functionValue,
+			[]interpreter.Value{referenceValue},
+			accountAccountCapabilitiesForEachControllerCallbackTypeParams,
+			parameterTypes,
+			returnType,
+		)
+		if err != nil {
+			// interpreter panicked while invoking the inner function value
+			panic(err)
+		}
+
+		shouldContinue, ok := res.(interpreter.BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if !shouldContinue {
+			break
+		}
+
+		// It is not safe to check this at the beginning of the loop
+		// (i.e. on the next invocation of the callback),
+		// because if the mutation performed in the callback reorganized storage
+		// such that the iteration pointer is now at the end,
+		// we will not invoke the callback again but will still silently skip elements of storage.
+		//
+		// In order to be safe, we perform this check here to effectively enforce
+		// that users return `false` from their callback in all cases where storage is mutated.
+		if invocationContext.MutationDuringCapabilityControllerIteration() {
+			panic(&CapabilityControllersMutatedDuringIterationError{})
+		}
+	}
+
+	return interpreter.Void
 }
 
 func newAccountCapabilityControllerDeleteFunction(
 	address common.Address,
 	controller *interpreter.AccountCapabilityControllerValue,
 	handler CapabilityControllerHandler,
-) func(interpreter.CapabilityControllerContext, interpreter.LocationRange) {
-	return func(context interpreter.CapabilityControllerContext, locationRange interpreter.LocationRange) {
+) func(interpreter.CapabilityControllerContext) {
+	return func(context interpreter.CapabilityControllerContext) {
 		capabilityID := controller.CapabilityID
 
 		unrecordAccountCapabilityController(
@@ -4526,15 +5140,10 @@ func newAccountCapabilityControllerDeleteFunction(
 
 		addressValue := interpreter.AddressValue(address)
 
-		handler.EmitEvent(
-			context,
-			locationRange,
-			AccountCapabilityControllerDeletedEventType,
-			[]interpreter.Value{
-				capabilityID,
-				addressValue,
-			},
-		)
+		handler.EmitEvent(context, AccountCapabilityControllerDeletedEventType, []interpreter.Value{
+			capabilityID,
+			addressValue,
+		})
 	}
 }
 

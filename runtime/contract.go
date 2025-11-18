@@ -20,13 +20,12 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
 
 type contractLoader interface {
 	interpreter.StorageMutationTracker
-	common.MemoryGauge
+	common.Gauge
 }
 
 func loadContractValue(
@@ -51,7 +50,7 @@ func loadContractValue(
 	}
 
 	if contractValue == nil {
-		panic(errors.NewDefaultUserError("failed to load contract: %s", location))
+		return nil
 	}
 
 	return contractValue.(*interpreter.CompositeValue)

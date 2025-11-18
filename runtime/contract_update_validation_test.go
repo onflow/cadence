@@ -82,13 +82,24 @@ func newContractRemovalTransaction(contractName string) string {
 	)
 }
 
-func newContractDeploymentTransactor(t *testing.T, config Config) func(code string) error {
+func newContractDeploymentTransactor(
+	t *testing.T,
+	config Config,
+) func(
+	code string,
+) error {
 	return newContractDeploymentTransactorWithVersion(t, config, "")
 }
 
-func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, version string) func(code string) error {
+func newContractDeploymentTransactorWithVersion(
+	t *testing.T,
+	config Config,
+	version string,
+) func(
+	code string,
+) error {
 
-	rt := NewTestInterpreterRuntimeWithConfig(config)
+	rt := NewTestRuntimeWithConfig(config)
 
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
@@ -131,6 +142,7 @@ func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, ver
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -667,7 +679,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	testWithValidators(t, "change imported field nominal type location", func(t *testing.T, config Config) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		makeDeployTransaction := func(name, code string) []byte {
 			return []byte(fmt.Sprintf(
@@ -739,6 +751,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -767,6 +780,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -793,6 +807,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -820,6 +835,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -831,7 +847,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	testWithValidators(t, "change imported non-field nominal type location", func(t *testing.T, config Config) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		makeDeployTransaction := func(name, code string) []byte {
 			return []byte(fmt.Sprintf(
@@ -903,6 +919,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -931,6 +948,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -955,6 +973,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -979,6 +998,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -987,7 +1007,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	testWithValidators(t, "change imported field nominal type location implicitly", func(t *testing.T, config Config) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		makeDeployTransaction := func(name, code string) []byte {
 			return []byte(fmt.Sprintf(
@@ -1082,6 +1102,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1110,6 +1131,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1136,6 +1158,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1163,6 +1186,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1747,7 +1771,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "error: field add has non-storable type: fun(Int, Int): Int")
+		assert.Contains(t, err.Error(), "error: field `add` has non-storable type: `fun(Int, Int): Int`")
 	})
 
 	testWithValidators(t, "Test conformance", func(t *testing.T, config Config) {
@@ -2864,7 +2888,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		contractLocation := common.AddressLocation{
 			Address: address,
@@ -2911,6 +2935,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2942,7 +2967,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		programGets locationAccessCounts,
 		programSets locationAccessCounts,
 	) {
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -3017,6 +3042,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 		}
@@ -3034,9 +3060,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 			programGets2,
 			programSets2,
 		} {
-			for location := range counts { //nolint:maprange
-				delete(counts, location)
-			}
+			clear(counts)
 		}
 	}
 
@@ -3054,7 +3078,12 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, runtimeInterface1.Programs[contractLocation])
 
-		require.Equal(t, locationAccessCounts{}, programGets1)
+		expectedGets := locationAccessCounts{}
+		if *compile {
+			expectedGets[txLocation] = 3
+		}
+
+		require.Equal(t, expectedGets, programGets1)
 		// NOTE: deployed contract is *correctly* *NOT* set,
 		// as contract deployments and updates are delayed to the end of the transaction,
 		// so should not influence program storage
@@ -3065,7 +3094,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		err = executeTransaction2(addTx)
 		require.NoError(t, err)
 		require.Nil(t, runtimeInterface2.Programs[contractLocation])
-		require.Equal(t, locationAccessCounts{}, programGets2)
+		require.Equal(t, expectedGets, programGets2)
 		// See NOTE above
 		require.Equal(t, locationAccessCounts{txLocation: 1}, programSets2)
 	})
@@ -3098,10 +3127,15 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		// NOTE: program in cache of second
 		assert.NotNil(t, runtimeInterface2.Programs[contractLocation])
 
+		expectedGets := locationAccessCounts{
+			contractLocation: 1,
+		}
+		if *compile {
+			expectedGets[txLocation] = 3
+		}
+
 		assert.Equal(t,
-			locationAccessCounts{
-				contractLocation: 1,
-			},
+			expectedGets,
 			programGets2,
 		)
 
@@ -3134,8 +3168,13 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		// NOTE: the program was not available in the cache (no successful get).
 		// The old code is only parsed, and program does not need to be set.
 
+		expectedGets1 := locationAccessCounts{}
+		if *compile {
+			expectedGets1[txLocation1] = 3
+		}
+
 		assert.Equal(t,
-			locationAccessCounts{},
+			expectedGets1,
 			programGets1,
 		)
 		assert.Equal(
@@ -3154,8 +3193,12 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		// NOTE: the program was available in the cache (successful get).
 		// The old code is only parsed, and does not need to be set.
 
+		expectedGets2 := locationAccessCounts{}
+		if *compile {
+			expectedGets2[txLocation2] = 3
+		}
 		assert.Equal(t,
-			locationAccessCounts{},
+			expectedGets2,
 			programGets2,
 		)
 		assert.Equal(
@@ -3615,7 +3658,7 @@ func TestRuntimeContractUpdateErrorsInOldProgram(t *testing.T) {
 
 	testWithValidators(t, "invalid old program", func(t *testing.T, config Config) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		var events []cadence.Event
 
@@ -3673,6 +3716,7 @@ func TestRuntimeContractUpdateErrorsInOldProgram(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 

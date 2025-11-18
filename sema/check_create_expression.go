@@ -51,7 +51,7 @@ func (checker *Checker) VisitCreateExpression(expression *ast.CreateExpression) 
 
 		checker.report(
 			&InvalidConstructionError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocation),
+				Pos: expression.StartPos,
 			},
 		)
 

@@ -32,41 +32,134 @@ func TestTypeAnnotation_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &TypeAnnotation{
-		IsResource: true,
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-	}
+	t.Run("non-resource, no type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("@"),
-			prettier.Text("R"),
-		},
-		ty.Doc(),
-	)
+		ty := &TypeAnnotation{}
+
+		assert.Equal(t,
+			prettier.Text(""),
+			ty.Doc(),
+		)
+	})
+
+	t.Run("non-resource, with type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Text("T"),
+			ty.Doc(),
+		)
+	})
+
+	t.Run("resource, no type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			IsResource: true,
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("@"),
+				prettier.Text(""),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("resource, with type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			IsResource: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "R",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("@"),
+				prettier.Text("R"),
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestTypeAnnotation_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &TypeAnnotation{
-		IsResource: true,
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-	}
+	t.Run("non-resource, no type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"@R",
-		ty.String(),
-	)
+		ty := &TypeAnnotation{}
+
+		assert.Equal(t,
+			"",
+			ty.String(),
+		)
+	})
+
+	t.Run("non-resource, with type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"T",
+			ty.String(),
+		)
+	})
+
+	t.Run("resource, no type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			IsResource: true,
+		}
+
+		assert.Equal(t,
+			"@",
+			ty.String(),
+		)
+	})
+
+	t.Run("resource, with type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			IsResource: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "R",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"@R",
+			ty.String(),
+		)
+	})
 }
 
 func TestTypeAnnotation_MarshalJSON(t *testing.T) {
@@ -261,39 +354,72 @@ func TestOptionalType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &OptionalType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-	}
+	t.Run("with type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("R"),
-			prettier.Text("?"),
-		},
-		ty.Doc(),
-	)
+		ty := &OptionalType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "R",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("R"),
+				prettier.Text("?"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Text("?"),
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestOptionalType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &OptionalType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-	}
+	t.Run("with type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"R?",
-		ty.String(),
-	)
+		ty := &OptionalType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "R",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"R?",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{}
+
+		assert.Equal(t,
+			"?",
+			ty.String(),
+		)
+	})
 }
 
 func TestOptionalType_MarshalJSON(t *testing.T) {
@@ -340,46 +466,90 @@ func TestVariableSizedType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &VariableSizedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "T",
-			},
-		},
-	}
+	t.Run("with type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("["),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.SoftLine{},
-					prettier.Text("T"),
+		ty := &VariableSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
 				},
 			},
-			prettier.SoftLine{},
-			prettier.Text("]"),
-		},
-		ty.Doc(),
-	)
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("T"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &VariableSizedType{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestVariableSizedType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &VariableSizedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "T",
-			},
-		},
-	}
+	t.Run("with type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"[T]",
-		ty.String(),
-	)
+		ty := &VariableSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"[T]",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &VariableSizedType{}
+
+		assert.Equal(t,
+			"[]",
+			ty.String(),
+		)
+	})
 }
 
 func TestVariableSizedType_MarshalJSON(t *testing.T) {
@@ -429,58 +599,200 @@ func TestConstantSizedType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &ConstantSizedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "T",
-			},
-		},
-		Size: &IntegerExpression{
-			PositiveLiteral: []byte("42"),
-			Value:           big.NewInt(42),
-			Base:            10,
-		},
-	}
+	t.Run("with type, with size", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("["),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.SoftLine{},
-					prettier.Text("T"),
-					prettier.Text("; "),
-					prettier.Text("42"),
+		ty := &ConstantSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
 				},
 			},
-			prettier.SoftLine{},
-			prettier.Text("]"),
-		},
-		ty.Doc(),
-	)
+			Size: &IntegerExpression{
+				PositiveLiteral: []byte("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("T"),
+							prettier.Text("; "),
+							prettier.Text("42"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type, with size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{
+			Size: &IntegerExpression{
+				PositiveLiteral: []byte("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+							prettier.Text("; "),
+							prettier.Text("42"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with type, nil size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("T"),
+							prettier.Text("; "),
+							prettier.Text(""),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type, nil size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+							prettier.Text("; "),
+							prettier.Text(""),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestConstantSizedType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &ConstantSizedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "T",
-			},
-		},
-		Size: &IntegerExpression{
-			PositiveLiteral: []byte("42"),
-			Value:           big.NewInt(42),
-			Base:            10,
-		},
-	}
+	t.Run("with type, with size", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"[T; 42]",
-		ty.String(),
-	)
+		ty := &ConstantSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+			Size: &IntegerExpression{
+				PositiveLiteral: []byte("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			"[T; 42]",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type, with size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{
+			Size: &IntegerExpression{
+				PositiveLiteral: []byte("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			"[; 42]",
+			ty.String(),
+		)
+	})
+
+	t.Run("with type, nil size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"[T; ]",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type, nil size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{}
+
+		assert.Equal(t,
+			"[; ]",
+			ty.String(),
+		)
+	})
 }
 
 func TestConstantSizedType_MarshalJSON(t *testing.T) {
@@ -547,58 +859,202 @@ func TestDictionaryType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &DictionaryType{
-		KeyType: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		ValueType: &NominalType{
-			Identifier: Identifier{
-				Identifier: "CD",
-			},
-		},
-	}
+	t.Run("with key, with value", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("{"),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.SoftLine{},
-					prettier.Text("AB"),
-					prettier.Text(": "),
-					prettier.Text("CD"),
+		ty := &DictionaryType{
+			KeyType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
 				},
 			},
-			prettier.SoftLine{},
-			prettier.Text("}"),
-		},
-		ty.Doc(),
-	)
+			ValueType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("AB"),
+							prettier.Text(": "),
+							prettier.Text("CD"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("without key, with value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{
+			ValueType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+							prettier.Text(": "),
+							prettier.Text("CD"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with key, without value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{
+			KeyType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("AB"),
+							prettier.Text(": "),
+							prettier.Text(""),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("without key, without value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+							prettier.Text(": "),
+							prettier.Text(""),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
 }
 
 func TestDictionaryType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &DictionaryType{
-		KeyType: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		ValueType: &NominalType{
-			Identifier: Identifier{
-				Identifier: "CD",
-			},
-		},
-	}
+	t.Run("with key, with value", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"{AB: CD}",
-		ty.String(),
-	)
+		ty := &DictionaryType{
+			KeyType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			ValueType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{AB: CD}",
+			ty.String(),
+		)
+	})
+
+	t.Run("without key, with value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{
+			ValueType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{: CD}",
+			ty.String(),
+		)
+	})
+
+	t.Run("with key, without value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{
+			KeyType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{AB: }",
+			ty.String(),
+		)
+	})
+
+	t.Run("without key, without value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{}
+
+		assert.Equal(t,
+			"{: }",
+			ty.String(),
+		)
+	})
+
 }
 
 func TestDictionaryType_MarshalJSON(t *testing.T) {
@@ -664,106 +1120,169 @@ func TestFunctionType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &FunctionType{
-		PurityAnnotation: FunctionPurityView,
-		ParameterTypeAnnotations: []*TypeAnnotation{
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "AB",
-					},
-				},
-			},
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "CD",
-					},
-				},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			Type: &NominalType{
-				Identifier: Identifier{
-					Identifier: "EF",
-				},
-			},
-		},
-	}
+	t.Run("with parameter types, with return type", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("view"),
-			prettier.Space,
-			prettier.Text("fun"),
-			prettier.Space,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("("),
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.SoftLine{},
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("AB"),
-							},
-							prettier.Text(","),
-							prettier.Line{},
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("CD"),
-							},
+		t.Parallel()
+
+		ty := &FunctionType{
+			PurityAnnotation: FunctionPurityView,
+			ParameterTypeAnnotations: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "AB",
 						},
 					},
-					prettier.SoftLine{},
-					prettier.Text(")"),
+				},
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "CD",
+						},
+					},
 				},
 			},
-			prettier.Text(": "),
-			prettier.Text("EF"),
-		},
-		ty.Doc(),
-	)
+			ReturnTypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("view"),
+				prettier.Space,
+				prettier.Text("fun"),
+				prettier.Space,
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Concat{
+									prettier.Text("@"),
+									prettier.Text("AB"),
+								},
+								prettier.Text(","),
+								prettier.Line{},
+								prettier.Concat{
+									prettier.Text("@"),
+									prettier.Text("CD"),
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+				prettier.Text(": "),
+				prettier.Text("EF"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil parameter type, nil return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &FunctionType{
+			ParameterTypeAnnotations: []*TypeAnnotation{
+				nil,
+			},
+			ReturnTypeAnnotation: nil,
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("fun"),
+				prettier.Space,
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+				prettier.Text(": "),
+				prettier.Text(""),
+			},
+			ty.Doc(),
+		)
+	})
+
 }
 
 func TestFunctionType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &FunctionType{
-		ParameterTypeAnnotations: []*TypeAnnotation{
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "AB",
-					},
-				},
-			},
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "CD",
-					},
-				},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			Type: &NominalType{
-				Identifier: Identifier{
-					Identifier: "EF",
-				},
-			},
-		},
-	}
+	t.Run("with parameter types, with return type", func(t *testing.T) {
 
-	assert.Equal(t,
-		"fun (@AB, @CD): EF",
-		ty.String(),
-	)
+		t.Parallel()
+
+		ty := &FunctionType{
+			ParameterTypeAnnotations: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "AB",
+						},
+					},
+				},
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "CD",
+						},
+					},
+				},
+			},
+			ReturnTypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"fun (@AB, @CD): EF",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil parameter type, nil return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &FunctionType{
+			ParameterTypeAnnotations: []*TypeAnnotation{
+				nil,
+			},
+			ReturnTypeAnnotation: nil,
+		}
+
+		assert.Equal(t,
+			"fun (): ",
+			ty.String(),
+		)
+	})
 }
 
 func TestFunctionType_MarshalJSON(t *testing.T) {
@@ -887,6 +1406,37 @@ func TestReferenceType_Doc(t *testing.T) {
 		)
 	})
 
+	t.Run("auth with nil entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &ConjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					nil,
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth"),
+				prettier.Text("("),
+				prettier.Text(""),
+				prettier.Text(")"),
+				prettier.Space,
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
 	t.Run("auth with mapping", func(t *testing.T) {
 
 		t.Parallel()
@@ -912,6 +1462,36 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("("),
 				prettier.Text("mapping "),
 				prettier.Text("X"),
+				prettier.Text(")"),
+				prettier.Space,
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("auth with nil mapping", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &MappedAccess{
+				EntitlementMap: nil,
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth"),
+				prettier.Text("("),
+				prettier.Text("mapping "),
+				prettier.Text(""),
 				prettier.Text(")"),
 				prettier.Space,
 				prettier.Text("&"),
@@ -1027,6 +1607,21 @@ func TestReferenceType_Doc(t *testing.T) {
 			ty.Doc(),
 		)
 	})
+
+	t.Run("un-auth, nil type", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("&"),
+				prettier.Text(""),
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestReferenceType_String(t *testing.T) {
@@ -1060,6 +1655,29 @@ func TestReferenceType_String(t *testing.T) {
 		)
 	})
 
+	t.Run("auth with nil entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &ConjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					nil,
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth() &T",
+			ty.String(),
+		)
+	})
+
 	t.Run("auth with mapping", func(t *testing.T) {
 
 		t.Parallel()
@@ -1081,6 +1699,27 @@ func TestReferenceType_String(t *testing.T) {
 
 		assert.Equal(t,
 			"auth(mapping X) &T",
+			ty.String(),
+		)
+	})
+
+	t.Run("auth with nil mapping", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &MappedAccess{
+				EntitlementMap: nil,
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth(mapping ) &T",
 			ty.String(),
 		)
 	})
@@ -1167,6 +1806,17 @@ func TestReferenceType_String(t *testing.T) {
 		)
 	})
 
+	t.Run("un-auth, nil type", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{}
+
+		assert.Equal(t,
+			"&",
+			ty.String(),
+		)
+	})
 }
 
 func TestReferenceType_MarshalJSON(t *testing.T) {
@@ -1252,23 +1902,74 @@ func TestIntersectionType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &IntersectionType{
-		Types: []*NominalType{
-			{
-				Identifier: Identifier{
-					Identifier: "CD",
-				},
-			},
-			{
-				Identifier: Identifier{
-					Identifier: "EF",
-				},
-			},
-		},
-	}
+	t.Run("no types", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
+		ty := &IntersectionType{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &IntersectionType{
+			Types: []*NominalType{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with types", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &IntersectionType{
+			Types: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("{"),
@@ -1285,34 +1986,69 @@ func TestIntersectionType_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-		},
-		ty.Doc(),
-	)
+			ty.Doc(),
+		)
+	})
 }
 
 func TestIntersectionType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &IntersectionType{
-		Types: []*NominalType{
-			{
-				Identifier: Identifier{
-					Identifier: "CD",
-				},
-			},
-			{
-				Identifier: Identifier{
-					Identifier: "EF",
-				},
-			},
-		},
-	}
+	t.Run("no types", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"{CD, EF}",
-		ty.String(),
-	)
+		ty := &IntersectionType{}
+
+		assert.Equal(t,
+			"{}",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &IntersectionType{
+			Types: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "T",
+					},
+				},
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"{T, }",
+			ty.String(),
+		)
+	})
+
+	t.Run("with types", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &IntersectionType{
+			Types: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{CD, EF}",
+			ty.String(),
+		)
+	})
 }
 
 func TestIntersectionType_MarshalJSON(t *testing.T) {
@@ -1383,93 +2119,240 @@ func TestInstantiationType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &InstantiationType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		TypeArguments: []*TypeAnnotation{
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "CD",
-					},
-				},
-			},
-			{
-				IsResource: false,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "EF",
-					},
-				},
-			},
-		},
-	}
+	t.Run("with type, no type arguments", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("AB"),
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("<"),
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.SoftLine{},
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("CD"),
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
 							},
-							prettier.Text(","),
-							prettier.Line{},
-							prettier.Text("EF"),
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type, no type arguments", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with type, type arguments", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "CD",
 						},
 					},
-					prettier.SoftLine{},
-					prettier.Text(">"),
+				},
+				{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "EF",
+						},
+					},
 				},
 			},
-		},
-		ty.Doc(),
-	)
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Concat{
+									prettier.Text("@"),
+									prettier.Text("CD"),
+								},
+								prettier.Text(","),
+								prettier.Line{},
+								prettier.Text("EF"),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with type, nil type argument", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestInstantiationType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &InstantiationType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		TypeArguments: []*TypeAnnotation{
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "CD",
-					},
-				},
-			},
-			{
-				IsResource: false,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "EF",
-					},
-				},
-			},
-		},
-	}
+	t.Run("with type, no type arguments", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"AB<@CD, EF>",
-		ty.String(),
-	)
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"AB<>",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type, no type arguments", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{}
+
+		assert.Equal(t,
+			"<>",
+			ty.String(),
+		)
+	})
+
+	t.Run("with type, type arguments", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "CD",
+						},
+					},
+				},
+				{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "EF",
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"AB<@CD, EF>",
+			ty.String(),
+		)
+	})
+
+	t.Run("with type, nil type argument", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"AB<>",
+			ty.String(),
+		)
+	})
 }
 
 func TestInstantiationType_MarshalJSON(t *testing.T) {

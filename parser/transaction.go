@@ -60,10 +60,8 @@ func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error)
 	}
 
 	p.skipSpace()
-	_, err = p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
+
+	parseDeclarationOpeningBrace(p, common.DeclarationKindTransaction)
 
 	// Fields
 
@@ -78,6 +76,7 @@ func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error)
 	var execute *ast.SpecialFunctionDeclaration
 
 	p.skipSpace()
+
 	if p.current.Is(lexer.TokenIdentifier) {
 
 		keyword := p.currentTokenSource()
@@ -109,12 +108,10 @@ func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error)
 			}
 
 		default:
-			return nil, p.syntaxError(
-				"unexpected identifier, expected keyword %q or %q, got %q",
-				KeywordPrepare,
-				KeywordExecute,
-				keyword,
-			)
+			return nil, &ExpectedPrepareOrExecuteError{
+				GotIdentifier: string(keyword),
+				Pos:           p.current.StartPos,
+			}
 		}
 	}
 
@@ -124,10 +121,13 @@ func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error)
 
 	if execute == nil {
 		p.skipSpace()
+
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 			preStartPos := p.current.StartPos
+
 			// Skip the `pre` keyword
-			p.next()
+			p.nextSemanticToken()
+
 			preConditions, err = parseConditions(p, preStartPos)
 			if err != nil {
 				return nil, err
@@ -152,12 +152,14 @@ func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error)
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
-
+			// Not possible to encounter a second prepare block at this point
 			keyword := p.currentTokenSource()
 			switch string(keyword) {
 			case KeywordExecute:
 				if execute != nil {
-					return nil, p.syntaxError("unexpected second %q block", KeywordExecute)
+					return nil, &DuplicateExecuteBlockError{
+						Pos: p.current.StartPos,
+					}
 				}
 
 				execute, err = parseTransactionExecute(p)
@@ -167,7 +169,9 @@ func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error)
 
 			case KeywordPost:
 				if sawPost {
-					return nil, p.syntaxError("unexpected second post-conditions")
+					return nil, &DuplicatePostConditionsError{
+						Pos: p.current.StartPos,
+					}
 				}
 				postStartPos := p.current.StartPos
 				// Skip the `post` keyword
@@ -179,12 +183,10 @@ func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error)
 				sawPost = true
 
 			default:
-				return nil, p.syntaxError(
-					"unexpected identifier, expected keyword %q or %q, got %q",
-					KeywordExecute,
-					KeywordPost,
-					keyword,
-				)
+				return nil, &ExpectedExecuteOrPostError{
+					GotIdentifier: string(keyword),
+					Pos:           p.current.StartPos,
+				}
 			}
 
 		case lexer.TokenBraceClose:
@@ -194,7 +196,9 @@ func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error)
 			atEnd = true
 
 		default:
-			return nil, p.syntaxError("unexpected token: %s", p.current.Type)
+			return nil, &UnexpectedTokenAtEndError{
+				Token: p.current,
+			}
 		}
 	}
 

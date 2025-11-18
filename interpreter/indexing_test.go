@@ -36,7 +36,7 @@ func TestInterpretIndexingExpressionTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           enum E: UInt8 {
               case First

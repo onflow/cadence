@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
@@ -40,15 +41,12 @@ func TestInterpretEnum(t *testing.T) {
       }
     `)
 
-	expectedType := &interpreter.HostFunctionValue{}
-
-	// TODO: enable once feature branch is merged
-	//var expectedType interpreter.Value
-	//if *compile {
-	//	expectedType = vm.CompiledFunctionValue{}
-	//} else {
-	//	expectedType = &interpreter.HostFunctionValue{}
-	//}
+	var expectedType interpreter.Value
+	if *compile {
+		expectedType = vm.CompiledFunctionValue{}
+	} else {
+		expectedType = &interpreter.HostFunctionValue{}
+	}
 
 	assert.IsType(t,
 		expectedType,
@@ -144,7 +142,6 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -180,7 +177,6 @@ func TestInterpretEnumConstructor(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -215,7 +211,6 @@ func TestInterpretEnumInstance(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -247,7 +242,7 @@ func TestInterpretEnumInContract(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
@@ -258,17 +253,13 @@ func TestInterpretEnumInContract(t *testing.T) {
 	contract, ok := c.(interpreter.MemberAccessibleValue)
 	require.True(t, ok)
 
-	eValue := contract.GetMember(inter, interpreter.EmptyLocationRange, "e")
+	eValue := contract.GetMember(inter, "e")
 	require.NotNil(t, eValue)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)
 	enumCase := eValue.(*interpreter.CompositeValue)
 
-	rawValue := enumCase.GetMember(
-		inter,
-		interpreter.EmptyLocationRange,
-		"rawValue",
-	)
+	rawValue := enumCase.GetMember(inter, "rawValue")
 
 	RequireValuesEqual(
 		t,

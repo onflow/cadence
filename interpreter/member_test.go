@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -78,7 +79,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -159,7 +160,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -246,7 +247,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         var foo: Int
                     }
@@ -335,7 +336,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         let foo: Int
                     }
@@ -379,7 +380,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 		})
 	})
 
-	t.Run("reference", func(t *testing.T) {
+	t.Run("ephemeral reference", func(t *testing.T) {
 
 		t.Run("non-optional", func(t *testing.T) {
 
@@ -387,7 +388,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -418,7 +419,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke("get", ref)
@@ -432,7 +432,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -471,7 +471,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke("get", ref)
@@ -492,7 +491,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -519,7 +518,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke(
@@ -535,7 +533,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -570,7 +568,6 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					interpreter.UnauthorizedAccess,
 					value,
 					sType,
-					interpreter.EmptyLocationRange,
 				)
 
 				_, err = inter.Invoke(
@@ -584,6 +581,113 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
+		})
+	})
+
+	t.Run("storage reference", func(t *testing.T) {
+
+		t.Run("valid", func(t *testing.T) {
+
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(t,
+				address,
+				true,
+				nil,
+				`
+                struct S {
+                    var foo: Int
+
+                    init() {
+                        self.foo = 1
+                    }
+                }
+
+                fun getStorageRef(): auth(Mutate) &S {
+                    account.storage.save(S(), to: /storage/x)
+                    return account.storage.borrow<auth(Mutate) &S>(from: /storage/x)!
+                }
+
+                fun get(ref: &S) {
+                    ref.foo
+                }
+
+                fun set(ref: &S) {
+                    ref.foo = 2
+                }
+            `,
+				sema.Config{},
+			)
+
+			storageRef, err := inter.Invoke("getStorageRef")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.StorageReferenceValue{}, storageRef)
+
+			_, err = inter.Invoke("get", storageRef)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("set", storageRef)
+			require.NoError(t, err)
+		})
+
+		t.Run("invalid", func(t *testing.T) {
+
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _ := testAccount(
+				t,
+				address,
+				true,
+				nil,
+				`
+                struct S {
+                    var foo: Int
+
+                    init() {
+                        self.foo = 1
+                    }
+                }
+
+                struct S2 {
+                    var foo: Int
+
+                    init() {
+                        self.foo = 2
+                    }
+                }
+
+                fun getStorageRef(): auth(Mutate) &S2 {
+                    account.storage.save(S2(), to: /storage/x)
+                    return account.storage.borrow<auth(Mutate) &S2>(from: /storage/x)!
+                }
+
+                fun get(ref: &S) {
+                    ref.foo
+                }
+
+                fun set(ref: &S) {
+                    ref.foo = 3
+                }
+                `,
+				sema.Config{},
+			)
+
+			storageRef, err := inter.Invoke("getStorageRef")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.StorageReferenceValue{}, storageRef)
+
+			_, err = inter.Invoke("get", storageRef)
+			RequireError(t, err)
+			var memberAccessTypeError *interpreter.MemberAccessTypeError
+			require.ErrorAs(t, err, &memberAccessTypeError)
+
+			_, err = inter.Invoke("set", storageRef)
+			RequireError(t, err)
+			require.ErrorAs(t, err, &memberAccessTypeError)
 		})
 	})
 }
@@ -1064,7 +1168,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("resource reference, attachment", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             attachment A for R {}
@@ -1085,7 +1189,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("attachment nested member", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             attachment A for R {
@@ -1125,7 +1229,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("anystruct swap on reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo {
                 var array: [Int]
                 init() {
@@ -1310,5 +1414,59 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+}
+
+func TestInterpretOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("method call", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            var x: Int? = nil
+
+            struct S {
+                fun getX(): Int? {
+                   return x
+                }
+            }
+
+            fun test(): Int? {
+                var s: S? = S()
+                return s?.getX()!
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                var x: Int?
+
+                init() {
+                   self.x = nil
+                }
+            }
+
+            fun test(): Int {
+                var s: S? = S()
+                return s?.x!
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		forceNilError := &interpreter.ForceNilError{}
+		require.ErrorAs(t, err, &forceNilError)
 	})
 }

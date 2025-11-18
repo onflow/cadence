@@ -61,7 +61,7 @@ func TestConstructor(t *testing.T) {
           let x = Foo(bar: 1)
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -87,7 +87,7 @@ func TestContract(t *testing.T) {
           let x = Test.Foo(bar: 1)
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},

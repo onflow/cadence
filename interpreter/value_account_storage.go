@@ -87,13 +87,13 @@ func NewAccountStorageValue(
 		return nil
 	}
 
-	computeField := func(name string, context MemberAccessibleContext, locationRange LocationRange) Value {
+	computeField := func(name string, context MemberAccessibleContext) Value {
 		switch name {
 		case sema.Account_StorageTypePublicPathsFieldName:
-			return publicAccountPaths(context, address, locationRange)
+			return publicAccountPaths(context, address)
 
 		case sema.Account_StorageTypeStoragePathsFieldName:
-			return storageAccountPaths(context, address, locationRange)
+			return storageAccountPaths(context, address)
 
 		case sema.Account_StorageTypeUsedFieldName:
 			return storageUsedGet(context)
@@ -118,10 +118,10 @@ func NewAccountStorageValue(
 	}
 
 	var str string
-	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(context, common.AccountStorageStringMemoryUsage)
-			addressStr := address.MeteredString(context, seenReferences, locationRange)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.Storage(%s)", addressStr)
 		}
 		return str
@@ -138,7 +138,7 @@ func NewAccountStorageValue(
 		methodsGetter,
 		nil,
 		stringer,
-	).WithPrivateField(accountTypePrivateAddressFieldName, address)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return storageValue
 }

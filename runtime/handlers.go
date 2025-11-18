@@ -42,19 +42,15 @@ func newCheckHandler(i *Interface) sema.CheckHandlerFunc {
 }
 
 func newCapabilityBorrowHandler(handler stdlib.CapabilityControllerHandler) interpreter.CapabilityBorrowHandlerFunc {
-
 	return func(
 		context interpreter.BorrowCapabilityControllerContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
 		wantedBorrowType *sema.ReferenceType,
 		capabilityBorrowType *sema.ReferenceType,
 	) interpreter.ReferenceValue {
-
 		return stdlib.BorrowCapabilityController(
 			context,
-			locationRange,
 			address,
 			capabilityID,
 			wantedBorrowType,
@@ -67,16 +63,13 @@ func newCapabilityBorrowHandler(handler stdlib.CapabilityControllerHandler) inte
 func newCapabilityCheckHandler(handler stdlib.CapabilityControllerHandler) interpreter.CapabilityCheckHandlerFunc {
 	return func(
 		context interpreter.CheckCapabilityControllerContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
 		wantedBorrowType *sema.ReferenceType,
 		capabilityBorrowType *sema.ReferenceType,
 	) interpreter.BoolValue {
-
 		return stdlib.CheckCapabilityController(
 			context,
-			locationRange,
 			address,
 			capabilityID,
 			wantedBorrowType,
@@ -89,7 +82,6 @@ func newCapabilityCheckHandler(handler stdlib.CapabilityControllerHandler) inter
 func newValidateAccountCapabilitiesGetHandler(i *Interface) interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
 	return func(
 		context interpreter.AccountCapabilityGetValidationContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
 		wantedBorrowType *sema.ReferenceType,
@@ -98,7 +90,6 @@ func newValidateAccountCapabilitiesGetHandler(i *Interface) interpreter.Validate
 
 		return (*i).ValidateAccountCapabilitiesGet(
 			context,
-			locationRange,
 			address,
 			path,
 			wantedBorrowType,
@@ -110,7 +101,6 @@ func newValidateAccountCapabilitiesGetHandler(i *Interface) interpreter.Validate
 func newValidateAccountCapabilitiesPublishHandler(i *Interface) interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
 	return func(
 		context interpreter.AccountCapabilityPublishValidationContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
 		capabilityBorrowType *interpreter.ReferenceStaticType,
@@ -118,7 +108,6 @@ func newValidateAccountCapabilitiesPublishHandler(i *Interface) interpreter.Vali
 
 		return (*i).ValidateAccountCapabilitiesPublish(
 			context,
-			locationRange,
 			address,
 			path,
 			capabilityBorrowType,
@@ -138,14 +127,12 @@ func configureVersionedFeatures(i Interface) {
 
 func newOnRecordTraceHandler(i *Interface) interpreter.OnRecordTraceFunc {
 	return func(
-		interpreter *interpreter.Interpreter,
 		functionName string,
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	) {
 		(*i).RecordTrace(
 			functionName,
-			interpreter.Location,
 			duration,
 			attrs,
 		)
@@ -188,7 +175,6 @@ func newInjectedCompositeFieldsHandler(accountHandler stdlib.AccountHandler) int
 					accountHandler,
 					addressValue,
 					interpreter.FullyEntitledAccountAccess,
-					interpreter.EmptyLocationRange,
 				),
 			}
 		}
@@ -216,13 +202,11 @@ func newResourceOwnerChangedHandler(i *Interface) interpreter.OnResourceOwnerCha
 func newOnEventEmittedHandler(i *Interface) interpreter.OnEventEmittedFunc {
 	return func(
 		context interpreter.ValueExportContext,
-		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		eventFields []interpreter.Value,
 	) error {
 		EmitEventFields(
 			context,
-			locationRange,
 			eventType,
 			eventFields,
 			(*i).EmitEvent,

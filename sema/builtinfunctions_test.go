@@ -283,9 +283,9 @@ func TestCheckRevertibleRandom(t *testing.T) {
 
 	newOptions := func() ParseAndCheckOptions {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(stdlib.NewRevertibleRandomFunction(&testRandomGenerator{}))
+		baseValueActivation.DeclareValue(stdlib.NewInterpreterRevertibleRandomFunction(&testRandomGenerator{}))
 		return ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},

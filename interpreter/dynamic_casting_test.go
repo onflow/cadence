@@ -34,6 +34,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 // dynamic casting operation -> returns optional
@@ -1367,7 +1368,6 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 						expectedDictionary := interpreter.NewDictionaryValue(
 							inter,
-							interpreter.EmptyLocationRange,
 							&interpreter.DictionaryStaticType{
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -1477,18 +1477,20 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	options := ParseCheckAndInterpretOptions{
-		CheckerConfig: &sema.Config{
-			BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
-				return baseValueActivation
+		ParseAndCheckOptions: &ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
-		Config: &interpreter.Config{
+		InterpreterConfig: &interpreter.Config{
 			BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 				return baseActivation
 			},
@@ -1500,7 +1502,7 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 		t.Run(operation.Symbol(), func(t *testing.T) {
 			t.Run("invalid cast", func(t *testing.T) {
 
-				inter, err := parseCheckAndInterpretWithOptions(t,
+				inter, err := parseCheckAndPrepareWithOptions(t,
 					fmt.Sprintf(
 						`
 							fun test(): InclusiveRange<UInt256>? {
@@ -3457,12 +3459,14 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 			interpreter.Declare(baseActivation, capabilityValueDeclaration)
 
 			options := ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -3478,7 +3482,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 							t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-								inter, err := parseCheckAndInterpretWithOptions(t,
+								inter, err := parseCheckAndPrepareWithOptions(t,
 									fmt.Sprintf(
 										`
                                   struct S {}
@@ -3519,7 +3523,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 							t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
 
-								inter, err := parseCheckAndInterpretWithOptions(t,
+								inter, err := parseCheckAndPrepareWithOptions(t,
 									fmt.Sprintf(
 										`
                                   struct S {}
@@ -3867,7 +3871,9 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 				var dereferenceError *interpreter.DereferenceError
 				require.ErrorAs(t, err, &dereferenceError)
 
-				assert.Equal(t, 22, dereferenceError.LocationRange.StartPosition().Line)
+				// Dereferencing fails when validating member-access types.
+				// `Value.StaticType()` doesn't takes a location-range argument,
+				// so the location info for the error is always empty.
 			})
 		}
 

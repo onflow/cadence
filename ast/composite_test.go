@@ -136,11 +136,11 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 					prettier.HardLine{},
 					prettier.Concat{
 						prettier.Text("static"),
-						prettier.Text(" "),
+						prettier.Space,
 						prettier.Text("native"),
-						prettier.Text(" "),
+						prettier.Space,
 						prettier.Text("let"),
-						prettier.Text(" "),
+						prettier.Space,
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("xyz"),
@@ -183,7 +183,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("let"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Concat{
 							prettier.Text("xyz"),
@@ -268,6 +268,28 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 						prettier.Text("@"),
 						prettier.Text("CD"),
 					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("without access, without kind, no type", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Access: AccessNotSpecified,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("xyz"),
 				},
 			},
 			decl.Doc(),
@@ -389,6 +411,23 @@ xyz: @CD`,
 		)
 	})
 
+	t.Run("without access, without kind, no type", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Access: AccessNotSpecified,
+			Identifier: Identifier{
+				Identifier: "xyz",
+			},
+		}
+
+		require.Equal(
+			t,
+			"xyz",
+			decl.String(),
+		)
+	})
 }
 
 func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
@@ -496,7 +535,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				prettier.Text("access(all)"),
 				prettier.HardLine{},
 				prettier.Text("resource"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("AB"),
 				prettier.Text(":"),
 				prettier.Group{
@@ -509,6 +548,49 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 								prettier.Line{},
 							},
 							prettier.Text("EF"),
+							prettier.Dedent{
+								Doc: prettier.Concat{
+									prettier.Line{},
+									prettier.Text("{}"),
+								},
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("nil members, nil conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessAll,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				nil,
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("access(all)"),
+				prettier.HardLine{},
+				prettier.Text("resource"),
+				prettier.Space,
+				prettier.Text("AB"),
+				prettier.Text(":"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Line{},
+							prettier.Text(""),
 							prettier.Dedent{
 								Doc: prettier.Concat{
 									prettier.Line{},
@@ -568,7 +650,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				prettier.Text("access(all)"),
 				prettier.HardLine{},
 				prettier.Text("resource"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("AB"),
 				prettier.Text(":"),
 				prettier.Group{
@@ -649,7 +731,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				prettier.Text("access(all)"),
 				prettier.HardLine{},
 				prettier.Text("event"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("AB"),
 				prettier.Group{
 					Doc: prettier.Concat{
@@ -706,7 +788,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				prettier.Text("access(all)"),
 				prettier.HardLine{},
 				prettier.Text("enum"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("AB"),
 				prettier.Text(":"),
 				prettier.Group{
@@ -775,6 +857,29 @@ func TestCompositeDeclaration_String(t *testing.T) {
 			t,
 			`access(all)
 resource AB: CD, EF {}`,
+			decl.String(),
+		)
+	})
+
+	t.Run("nil members, nil conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &CompositeDeclaration{
+			Access:        AccessAll,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+			},
+			Conformances: []*NominalType{
+				nil,
+			},
+		}
+
+		require.Equal(
+			t,
+			`access(all)
+resource AB:  {}`,
 			decl.String(),
 		)
 	})

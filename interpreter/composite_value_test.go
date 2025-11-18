@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretCompositeValue(t *testing.T) {
@@ -56,22 +57,22 @@ func TestInterpretCompositeValue(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("Apple"),
-			inter.Globals.Get("name").GetValue(inter),
+			inter.GetGlobal("name"),
 		)
 
 		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("Red"),
-			inter.Globals.Get("color").GetValue(inter),
+			inter.GetGlobal("color"),
 		)
 	})
 }
 
 // Utility methods
-func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
+func testCompositeValue(t *testing.T, code string) Invokable {
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
@@ -110,7 +111,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		map[string]interpreter.Value{
 			"name": interpreter.NewUnmeteredStringValue("Apple"),
 		},
-		func(name string, _ interpreter.MemberAccessibleContext, _ interpreter.LocationRange) interpreter.Value {
+		func(name string, _ interpreter.MemberAccessibleContext) interpreter.Value {
 			if name == "color" {
 				return interpreter.NewUnmeteredStringValue("Red")
 			}
@@ -142,27 +143,29 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseTypeActivation
-				},
-				CheckHandler: func(checker *sema.Checker, check func()) {
-					if checker.Location == TestLocation {
-						checker.Elaboration.SetCompositeType(
-							fruitType.ID(),
-							fruitType,
-						)
-					}
-					check()
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+					BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseTypeActivation
+					},
+					CheckHandler: func(checker *sema.Checker, check func()) {
+						if checker.Location == TestLocation {
+							checker.Elaboration.SetCompositeType(
+								fruitType.ID(),
+								fruitType,
+							)
+						}
+						check()
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				Storage: storage,
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation

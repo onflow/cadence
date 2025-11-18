@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/ccf"
@@ -39,6 +41,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -2580,7 +2583,10 @@ func TestDecodeWord128Invalid(t *testing.T) {
 			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		})
 		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: failed to decode Word128: cbor: cannot decode CBOR tag type to big.Int", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"failed to decode Word128: cbor: cannot decode CBOR tag type to big.Int",
+		)
 	}
 }
 
@@ -2680,7 +2686,10 @@ func TestDecodeWord256Invalid(t *testing.T) {
 			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		})
 		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: failed to decode Word256: cbor: cannot decode CBOR tag type to big.Int", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"failed to decode Word256: cbor: cannot decode CBOR tag type to big.Int",
+		)
 	}
 }
 
@@ -2784,6 +2793,129 @@ func TestEncodeFix64(t *testing.T) {
 	}...)
 }
 
+func TestEncodeFix128(t *testing.T) {
+
+	t.Parallel()
+
+	newFix128Value := func(s string) cadence.Fix128 {
+		v, err := cadence.NewUnmeteredFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			name:        "Zero",
+			val:         newFix128Value("0.0"),
+			expectedVal: cadence.Fix128(fix.NewFix128(0, 0)),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Fix128","value":"0.000000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [0, 0]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Fix128 type ID (99)
+				0x18, 0x63,
+				// array, 2 elements follow
+				0x82,
+				// hi-bits
+				0x0,
+				// low-bits
+				0x0,
+			},
+		},
+		{
+			name: "789.00123010",
+			val:  newFix128Value("789.00123010"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Fix128","value":"789.001230100000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(99), [42771842, 7164858704389603328]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Fix128 type ID (99)
+				0x18, 0x63,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (42771842)
+				0x1a, 0x02, 0x8c, 0xa5, 0x82, 0x1b,
+				// low-bits (7164858704389603328)
+				0x63, 0x6E, 0xB1, 0x07, 0xD5, 0x02, 0x00, 0x00,
+			},
+		},
+		{
+			name: "1234.056",
+			val:  newFix128Value("1234.056"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Fix128","value":"1234.056000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [66898309, 14913059639741382656]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Fix128 type ID (99)
+				0x18, 0x63,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (66898309)
+				0x1a, 0x03, 0xfc, 0xc9, 0x85,
+				// low-bits (14913059639741382656)
+				0x1b, 0xCE, 0xF5, 0xD4, 0xBA, 0xC5, 0x00, 0x00, 0x00,
+			},
+		},
+		{
+			name: "-12345.006789",
+			val:  newFix128Value("-12345.006789"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Fix128","value":"-12345.006789000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [18446744073040327457, 16508690484690944])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Fix128 type ID (99)
+				0x18, 0x63,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (18446744073040327457)
+				0x1b, 0xff, 0xff, 0xff, 0xff, 0xd8, 0x1c, 0x73, 0x21,
+				// low-bits (16508690484690944)
+				0x1b, 0x00, 0x3a, 0xa6, 0x91, 0x08, 0x0c, 0x00, 0x00,
+			},
+		},
+	}...)
+}
+
 func TestEncodeUFix64(t *testing.T) {
 
 	t.Parallel()
@@ -2856,6 +2988,102 @@ func TestEncodeUFix64(t *testing.T) {
 				0x17,
 				// 123405600000
 				0x1b, 0x00, 0x00, 0x00, 0x1c, 0xbb, 0x8c, 0x05, 0x00,
+			},
+		},
+	}...)
+}
+
+func TestEncodeUFix128(t *testing.T) {
+
+	t.Parallel()
+
+	newUFix128Value := func(s string) cadence.UFix128 {
+		v, err := cadence.NewUnmeteredUFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			name:        "Zero",
+			val:         newUFix128Value("0.0"),
+			expectedVal: cadence.UFix128(fix.NewUFix128(0, 0)),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"UFix128","value":"0.000000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [0, 0]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix128 type ID (101)
+				0x18, 0x65,
+				// array, 2 elements follow
+				0x82,
+				// hi-bits
+				0x0,
+				// low-bits
+				0x0,
+			},
+		},
+		{
+			name: "789.00123010",
+			val:  newUFix128Value("789.00123010"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"UFix128","value":"789.001230100000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(99), [42771842, 7164858704389603328]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix128 type ID (101)
+				0x18, 0x65,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (42771842)
+				0x1a, 0x02, 0x8c, 0xa5, 0x82, 0x1b,
+				// low-bits (7164858704389603328)
+				0x63, 0x6E, 0xB1, 0x07, 0xD5, 0x02, 0x00, 0x00,
+			},
+		},
+		{
+			name: "1234.056",
+			val:  newUFix128Value("1234.056"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"UFix128","value":"1234.056000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [66898309, 14913059639741382656]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix128 type ID (101)
+				0x18, 0x65,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (66898309)
+				0x1a, 0x03, 0xfc, 0xc9, 0x85,
+				// low-bits (14913059639741382656)
+				0x1b, 0xCE, 0xF5, 0xD4, 0xBA, 0xC5, 0x00, 0x00, 0x00,
 			},
 		},
 	}...)
@@ -4964,7 +5192,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 			},
 			AtreeStorageValidationEnabled: true,
 			AtreeValueValidationEnabled:   true,
-			Storage:                       interpreter.NewInMemoryStorage(nil),
+			Storage:                       NewUnmeteredInMemoryStorage(),
 		},
 	)
 	require.NoError(t, err)
@@ -4975,7 +5203,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 	result, err := inter.Invoke("main")
 	require.NoError(t, err)
 
-	exported, err := runtime.ExportValue(result, inter, interpreter.EmptyLocationRange)
+	exported, err := runtime.ExportValue(result, inter)
 	require.NoError(t, err)
 
 	return exported
@@ -8504,7 +8732,9 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		ccf.SimpleTypeWord128:                          cadence.Word128Type,
 		ccf.SimpleTypeWord256:                          cadence.Word256Type,
 		ccf.SimpleTypeFix64:                            cadence.Fix64Type,
+		ccf.SimpleTypeFix128:                           cadence.Fix128Type,
 		ccf.SimpleTypeUFix64:                           cadence.UFix64Type,
+		ccf.SimpleTypeUFix128:                          cadence.UFix128Type,
 		ccf.SimpleTypeBlock:                            cadence.BlockType,
 		ccf.SimpleTypePath:                             cadence.PathType,
 		ccf.SimpleTypeCapabilityPath:                   cadence.CapabilityPathType,
@@ -10698,7 +10928,10 @@ func TestEncodeType(t *testing.T) {
 
 		_, err := ccf.Decode(nil, encodedData)
 		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: unexpected empty intersection type", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"unexpected empty intersection type",
+		)
 
 	})
 
@@ -10729,7 +10962,10 @@ func TestEncodeType(t *testing.T) {
 
 		_, err := ccf.Decode(nil, encodedData)
 		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: unexpected empty intersection type", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"unexpected empty intersection type",
+		)
 	})
 
 	t.Run("with static intersection type", func(t *testing.T) {
@@ -12593,7 +12829,10 @@ func TestDecodeInvalidType(t *testing.T) {
 		for _, dm := range decModes {
 			_, err := dm.Decode(nil, encodedData)
 			require.Error(t, err)
-			assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: ``", err.Error())
+			assert.ErrorContains(t,
+				err,
+				"invalid type ID for built-in: ``",
+			)
 		}
 	})
 
@@ -12651,7 +12890,10 @@ func TestDecodeInvalidType(t *testing.T) {
 		for _, dm := range decModes {
 			_, err := dm.Decode(nil, encodedData)
 			require.Error(t, err)
-			assert.Equal(t, "ccf: failed to decode: invalid type ID `I`: invalid identifier location type ID: missing location", err.Error())
+			assert.ErrorContains(t,
+				err,
+				"invalid type ID `I`: invalid identifier location type ID: missing location",
+			)
 		}
 	})
 
@@ -12709,7 +12951,10 @@ func TestDecodeInvalidType(t *testing.T) {
 		for _, dm := range decModes {
 			_, err := dm.Decode(nil, encodedData)
 			require.Error(t, err)
-			assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: `N.PublicKey`", err.Error())
+			assert.ErrorContains(t,
+				err,
+				"invalid type ID for built-in: `N.PublicKey`",
+			)
 		}
 	})
 }
@@ -17074,7 +17319,7 @@ func TestDecodeFunctionTypeBackwardCompatibility(t *testing.T) {
 			TypeParameters: []cadence.TypeParameter{},
 			Parameters:     []cadence.Parameter{},
 			ReturnType:     cadence.VoidType,
-			Purity:         cadence.FunctionPurityUnspecified,
+			Purity:         cadence.FunctionPurityImpure,
 		},
 	}
 
@@ -17146,7 +17391,7 @@ func TestEncodeEventWithAttachment(t *testing.T) {
 }
 
 func exportEventFromScript(t *testing.T, script string) cadence.Event {
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var events []cadence.Event
 

@@ -60,6 +60,32 @@ func parseCheckAndPrepareWithOptions(
 	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile)
 }
 
+func parseCheckAndPrepareWithLogs(
+	tb testing.TB,
+	code string,
+) (
+	invokable Invokable,
+	getLogs func() []string,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithLogs(tb, code, *compile)
+}
+
+func parseCheckAndPrepareWithAtreeValidationsDisabled(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (Invokable, error) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithAtreeValidationsDisabled(
+		tb,
+		code,
+		options,
+		*compile,
+	)
+}
+
 func TestInterpreterOptionalBoxing(t *testing.T) {
 
 	t.Parallel()
@@ -171,7 +197,6 @@ func TestInterpreterBoxing(t *testing.T) {
 					),
 					ConvertAndBox(
 						inter,
-						EmptyLocationRange,
 						TrueValue,
 						sema.BoolType,
 						&sema.OptionalType{Type: anyType},
@@ -189,7 +214,6 @@ func TestInterpreterBoxing(t *testing.T) {
 					),
 					ConvertAndBox(
 						inter,
-						EmptyLocationRange,
 						NewUnmeteredSomeValueNonCopying(TrueValue),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},
@@ -226,7 +250,6 @@ func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {
 
 	array := NewArrayValue(
 		inter,
-		EmptyLocationRange,
 		typ,
 		owner,
 		values...,

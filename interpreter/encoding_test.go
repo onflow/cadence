@@ -48,7 +48,7 @@ type encodeDecodeTest struct {
 	deepEquality         bool
 	storage              Storage
 	slabStorageID        atree.SlabID
-	maxInlineElementSize uint64
+	maxInlineElementSize uint32
 }
 
 var testOwner = common.MustBytesToAddress([]byte{0x42})
@@ -56,7 +56,7 @@ var testOwner = common.MustBytesToAddress([]byte{0x42})
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 	if test.storage == nil {
-		test.storage = newUnmeteredInMemoryStorage()
+		test.storage = NewUnmeteredInMemoryStorage()
 	}
 
 	var encoded []byte
@@ -66,7 +66,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 			if test.storable == nil {
 				maxInlineElementSize := test.maxInlineElementSize
 				if maxInlineElementSize == 0 {
-					maxInlineElementSize = math.MaxUint64
+					maxInlineElementSize = math.MaxUint32
 				}
 				storable, err := test.value.Storable(
 					test.storage,
@@ -420,7 +420,6 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
@@ -452,7 +451,6 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -491,7 +489,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		expected := NewCompositeValue(
 			inter,
-			EmptyLocationRange,
 			TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
@@ -529,7 +526,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		expected := NewCompositeValue(
 			inter,
-			EmptyLocationRange,
 			TestLocation,
 			"TestResource",
 			common.CompositeKindResource,
@@ -686,7 +682,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected, EmptyLocationRange).(IntValue)
+			expected = expected.Mul(inter, expected).(IntValue)
 		}
 
 		testEncodeDecode(t,
@@ -1644,7 +1640,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected, EmptyLocationRange).(UIntValue)
+			expected = expected.Mul(inter, expected).(UIntValue)
 		}
 
 		testEncodeDecode(t,
@@ -2977,12 +2973,12 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		t.Parallel()
 
 		var str *StringValue
-		maxInlineElementSize := uint64(64) // use a small max inline size for testing
-		for i := uint64(0); i < maxInlineElementSize; i++ {
+		maxInlineElementSize := uint32(64) // use a small max inline size for testing
+		for i := uint32(0); i < maxInlineElementSize; i++ {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
-			if uint64(size) < maxInlineElementSize-values.CBORTagSize {
+			if size < maxInlineElementSize-values.CBORTagSize {
 				break
 			}
 		}
@@ -3023,12 +3019,12 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		)
 
 		var str *StringValue
-		maxInlineElementSize := uint64(64) // use a small max inline size for testing
-		for i := uint64(0); i < maxInlineElementSize; i++ {
+		maxInlineElementSize := uint32(64) // use a small max inline size for testing
+		for i := uint32(0); i < maxInlineElementSize; i++ {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
-			if uint64(size) < maxInlineElementSize-values.CBORTagSize-arraySize-nestedLevelsSize {
+			if size < maxInlineElementSize-values.CBORTagSize-arraySize-nestedLevelsSize {
 				break
 			}
 		}
@@ -3070,11 +3066,11 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		var str *StringValue
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
-		for i := uint64(0); i < maxInlineElementSize; i++ {
+		for i := uint32(0); i < maxInlineElementSize; i++ {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
-			if uint64(size) == maxInlineElementSize+1 {
+			if size == maxInlineElementSize+1 {
 				break
 			}
 		}
@@ -3105,11 +3101,11 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		var str *StringValue
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
-		for i := uint64(0); i < maxInlineElementSize; i++ {
+		for i := uint32(0); i < maxInlineElementSize; i++ {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
-			if uint64(size) == maxInlineElementSize+1 {
+			if size == maxInlineElementSize+1 {
 				break
 			}
 		}
@@ -3144,7 +3140,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		expected := NewUnmeteredSomeValueNonCopying(
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
@@ -3174,7 +3169,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		// Only test encoding here because decoding requires extra data section which is encoded in slab header.
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		storable, err := expected.Storable(
 			storage,
 			atree.Address(testOwner),
@@ -3196,7 +3191,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			NewUnmeteredSomeValueNonCopying(
 				NewArrayValue(
 					inter,
-					EmptyLocationRange,
 					&ConstantSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 						Size: 0,
@@ -3232,7 +3226,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		// Only test encoding here because decoding requires extra data section which is encoded in slab header.
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		storable, err := expected.Storable(
 			storage,
 			atree.Address(testOwner),
@@ -3255,7 +3249,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		expectedArray :=
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
@@ -3294,7 +3287,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		expectedArray :=
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
@@ -3336,7 +3328,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		expectedArray :=
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
@@ -3386,7 +3377,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		// Only test encoding here because decoding requires extra data section which is encoded in slab header.
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		storable, err := expected.Storable(
 			storage,
 			atree.Address(testOwner),
@@ -3862,7 +3853,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
-		for i := uint64(0); i < maxInlineElementSize; i++ {
+		for i := uint32(0); i < maxInlineElementSize; i++ {
 			borrowType = &OptionalStaticType{
 				Type: borrowType,
 			}
@@ -4758,7 +4749,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
-		for i := uint64(0); i < maxInlineElementSize; i++ {
+		for i := uint32(0); i < maxInlineElementSize; i++ {
 			borrowType = &OptionalStaticType{
 				Type: borrowType,
 			}

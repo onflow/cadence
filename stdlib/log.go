@@ -23,6 +23,8 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+const LogFunctionName = "log"
+
 var LogFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
 	[]sema.Parameter{
@@ -41,26 +43,50 @@ Logs a string representation of the given value
 
 type Logger interface {
 	// ProgramLog logs program logs.
-	ProgramLog(message string, locationRange interpreter.LocationRange) error
+	ProgramLog(message string) error
 }
 
-func NewLogFunction(logger Logger) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
-		"log",
+type FunctionLogger func(message string) error
+
+var _ Logger = FunctionLogger(nil)
+
+func (f FunctionLogger) ProgramLog(message string) error {
+	return f(message)
+}
+
+func NativeLogFunction(logger Logger) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		value := args[0]
+		return Log(
+			context,
+			logger,
+			value,
+		)
+	}
+}
+
+func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		LogFunctionName,
 		LogFunctionType,
 		logFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			value := invocation.Arguments[0]
-			locationRange := invocation.LocationRange
-			invocationContext := invocation.InvocationContext
+		NativeLogFunction(logger),
+		false,
+	)
+}
 
-			return Log(
-				invocationContext,
-				logger,
-				value,
-				locationRange,
-			)
-		},
+func NewVMLogFunction(logger Logger) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		LogFunctionName,
+		LogFunctionType,
+		logFunctionDocString,
+		NativeLogFunction(logger),
+		true,
 	)
 }
 
@@ -68,11 +94,10 @@ func Log(
 	context interpreter.ValueStringContext,
 	logger Logger,
 	value interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
-	message := value.MeteredString(context, interpreter.SeenReferences{}, locationRange)
+	message := value.MeteredString(context, interpreter.SeenReferences{})
 
-	err := logger.ProgramLog(message, locationRange)
+	err := logger.ProgramLog(message)
 	if err != nil {
 		panic(err)
 	}

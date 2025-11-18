@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/integer"
 )
 
 const TypeIDSeparator = '.'
@@ -191,7 +192,7 @@ type Type interface {
 	//
 	Unify(
 		other Type,
-		typeParameters *TypeParameterTypeOrderedMap,
+		typeArguments *TypeParameterTypeOrderedMap,
 		report func(err error),
 		memoryGauge common.MemoryGauge,
 		outerRange ast.HasPosition,
@@ -370,7 +371,7 @@ func CheckParameterizedTypeInstantiated(
 		if !typeParam.Optional && typeArgs[index] == nil {
 			report(
 				&MissingTypeArgumentError{
-					TypeArgumentName: typeParam.Name,
+					TypeParameterName: typeParam.Name,
 					Range: ast.NewRange(
 						memoryGauge,
 						pos.StartPosition(),
@@ -788,7 +789,7 @@ func (t *OptionalType) RewriteWithIntersectionTypes() (Type, bool) {
 
 func (t *OptionalType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -801,7 +802,7 @@ func (t *OptionalType) Unify(
 
 	return t.Type.Unify(
 		otherOptional.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -1013,13 +1014,13 @@ func (t *GenericType) RewriteWithIntersectionTypes() (result Type, rewritten boo
 
 func (t *GenericType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
 ) bool {
 
-	if unifiedType, ok := typeParameters.Get(t.TypeParameter); ok {
+	if unifiedType, ok := typeArguments.Get(t.TypeParameter); ok {
 
 		// If the type parameter is already unified with a type argument
 		// (either explicit by a type argument, or implicit through an argument's type),
@@ -1039,7 +1040,7 @@ func (t *GenericType) Unify(
 	} else {
 		// If the type parameter is not yet unified to a type argument, unify it.
 
-		typeParameters.Set(t.TypeParameter, other)
+		typeArguments.Set(t.TypeParameter, other)
 
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument's type is a subtype of the type bound.
@@ -1899,6 +1900,21 @@ var Fix64Type = NewFixedPointNumericType(Fix64TypeName).
 	})
 var Fix64TypeAnnotation = NewTypeAnnotation(Fix64Type)
 
+// Fix128Type represents the 128-bit signed decimal fixed-point type `Fix128`
+// which has a scale of Fix128Scale, and checks for overflow and underflow.
+var Fix128Type = NewFixedPointNumericType(Fix128TypeName).
+	WithTag(Fix128TypeTag).
+	WithIntRange(Fix128TypeMinIntBig, Fix128TypeMaxIntBig).
+	WithFractionalRange(Fix128TypeMinFractionalBig, Fix128TypeMaxFractionalBig).
+	WithScale(Fix128Scale).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Fix128TypeAnnotation = NewTypeAnnotation(Fix128Type)
+
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 // which has a scale of 1E9, and checks for overflow and underflow
 var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
@@ -1912,6 +1928,20 @@ var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
 		Multiply: true,
 	})
 var UFix64TypeAnnotation = NewTypeAnnotation(UFix64Type)
+
+// UFix128Type represents the 128-bit unsigned decimal fixed-point type `UFix128`
+// which has a scale of Fix128Scale, and checks for overflow and underflow.
+var UFix128Type = NewFixedPointNumericType(UFix128TypeName).
+	WithTag(UFix128TypeTag).
+	WithIntRange(UFix128TypeMinIntBig, UFix128TypeMaxIntBig).
+	WithFractionalRange(UFix128TypeMinFractionalBig, UFix128TypeMaxFractionalBig).
+	WithScale(Fix128Scale).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UFix128TypeAnnotation = NewTypeAnnotation(UFix128Type)
 
 // Numeric type ranges
 var (
@@ -1927,18 +1957,8 @@ var (
 	Int64TypeMinInt = new(big.Int).SetInt64(math.MinInt64)
 	Int64TypeMaxInt = new(big.Int).SetInt64(math.MaxInt64)
 
-	Int128TypeMinIntBig = func() *big.Int {
-		int128TypeMin := big.NewInt(-1)
-		int128TypeMin.Lsh(int128TypeMin, 127)
-		return int128TypeMin
-	}()
-
-	Int128TypeMaxIntBig = func() *big.Int {
-		int128TypeMax := big.NewInt(1)
-		int128TypeMax.Lsh(int128TypeMax, 127)
-		int128TypeMax.Sub(int128TypeMax, big.NewInt(1))
-		return int128TypeMax
-	}()
+	Int128TypeMinIntBig = integer.Int128TypeMinIntBig
+	Int128TypeMaxIntBig = integer.Int128TypeMaxIntBig
 
 	Int256TypeMinIntBig = func() *big.Int {
 		int256TypeMin := big.NewInt(-1)
@@ -1968,14 +1988,7 @@ var (
 	UInt64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
 
 	UInt128TypeMinIntBig = new(big.Int)
-
-	UInt128TypeMaxIntBig = func() *big.Int {
-		uInt128TypeMax := big.NewInt(1)
-		uInt128TypeMax.Lsh(uInt128TypeMax, 128)
-		uInt128TypeMax.Sub(uInt128TypeMax, big.NewInt(1))
-		return uInt128TypeMax
-
-	}()
+	UInt128TypeMaxIntBig = integer.UInt128TypeMaxIntBig
 
 	UInt256TypeMinIntBig = new(big.Int)
 
@@ -2024,6 +2037,8 @@ var (
 		return word256TypeMax
 	}()
 
+	// Fix64
+
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
 	Fix64TypeMinIntBig = fixedpoint.Fix64TypeMinIntBig
@@ -2032,11 +2047,33 @@ var (
 	Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
 	Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
 
+	// Fix128
+
+	Fix128FactorIntBig = fixedpoint.Fix128FactorAsBigInt
+
+	Fix128TypeMinIntBig = fixedpoint.Fix128TypeMinIntBig
+	Fix128TypeMaxIntBig = fixedpoint.Fix128TypeMaxIntBig
+
+	Fix128TypeMinFractionalBig = fixedpoint.Fix128TypeMinFractionalBig
+	Fix128TypeMaxFractionalBig = fixedpoint.Fix128TypeMaxFractionalBig
+
+	// UFix64
+
 	UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
 	UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
 
 	UFix64TypeMinFractionalBig = fixedpoint.UFix64TypeMinFractionalBig
 	UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
+
+	// UFix128
+
+	UFix128FactorIntBig = fixedpoint.UFix128FactorAsBigInt
+
+	UFix128TypeMinIntBig = fixedpoint.UFix128TypeMinIntBig
+	UFix128TypeMaxIntBig = fixedpoint.UFix128TypeMaxIntBig
+
+	UFix128TypeMinFractionalBig = fixedpoint.UFix128TypeMinFractionalBig
+	UFix128TypeMaxFractionalBig = fixedpoint.UFix128TypeMaxFractionalBig
 )
 
 // size constants (in bytes) for fixed-width numeric types
@@ -2057,6 +2094,8 @@ const (
 	UFix64TypeSize  uint = 8
 	Int128TypeSize  uint = 16
 	UInt128TypeSize uint = 16
+	Fix128TypeSize  uint = 16
+	UFix128TypeSize uint = 16
 	Word128TypeSize uint = 16
 	Int256TypeSize  uint = 32
 	UInt256TypeSize uint = 32
@@ -2071,6 +2110,8 @@ const Fix64TypeMaxInt = fixedpoint.Fix64TypeMaxInt
 
 const Fix64TypeMinFractional = fixedpoint.Fix64TypeMinFractional
 const Fix64TypeMaxFractional = fixedpoint.Fix64TypeMaxFractional
+
+const Fix128Scale = fixedpoint.Fix128Scale
 
 const UFix64TypeMinInt = fixedpoint.UFix64TypeMinInt
 const UFix64TypeMaxInt = fixedpoint.UFix64TypeMaxInt
@@ -3114,7 +3155,7 @@ func (t *VariableSizedType) IndexingType() Type {
 
 func (t *VariableSizedType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -3127,7 +3168,7 @@ func (t *VariableSizedType) Unify(
 
 	return t.Type.Unify(
 		otherArray.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -3154,6 +3195,7 @@ var arrayDictionaryEntitlements = func() *EntitlementSet {
 	set.Add(MutateType)
 	set.Add(InsertType)
 	set.Add(RemoveType)
+	set.Minimize()
 	return set
 }()
 
@@ -3301,7 +3343,7 @@ func (t *ConstantSizedType) IndexingType() Type {
 
 func (t *ConstantSizedType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -3318,7 +3360,7 @@ func (t *ConstantSizedType) Unify(
 
 	return t.Type.Unify(
 		otherArray.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -3582,7 +3624,7 @@ func (arity *Arity) Equal(other *Arity) bool {
 type FunctionPurity int
 
 const (
-	FunctionPurityImpure = iota
+	FunctionPurityImpure FunctionPurity = iota
 	FunctionPurityView
 )
 
@@ -3612,6 +3654,9 @@ type FunctionType struct {
 	// This is used for built-in functions like `Int`, `UInt8`, `String`, etc.
 	// which have members like `Int.fromString`, `UInt8.min`, `String.join`, etc.
 	TypeFunctionType Type
+
+	typeID     TypeID
+	typeIdOnce sync.Once
 }
 
 func NewSimpleFunctionType(
@@ -3725,37 +3770,40 @@ func (t *FunctionType) NamedQualifiedString(functionName string) string {
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
 func (t *FunctionType) ID() TypeID {
+	t.typeIdOnce.Do(func() {
+		purity := t.Purity.String()
 
-	purity := t.Purity.String()
-
-	typeParameterCount := len(t.TypeParameters)
-	var typeParameters []string
-	if typeParameterCount > 0 {
-		typeParameters = make([]string, typeParameterCount)
-		for i, typeParameter := range t.TypeParameters {
-			typeParameters[i] = typeParameter.IDPart()
+		typeParameterCount := len(t.TypeParameters)
+		var typeParameters []string
+		if typeParameterCount > 0 {
+			typeParameters = make([]string, typeParameterCount)
+			for i, typeParameter := range t.TypeParameters {
+				typeParameters[i] = typeParameter.IDPart()
+			}
 		}
-	}
 
-	parameterCount := len(t.Parameters)
-	var parameters []string
-	if parameterCount > 0 {
-		parameters = make([]string, parameterCount)
-		for i, parameter := range t.Parameters {
-			parameters[i] = string(parameter.TypeAnnotation.Type.ID())
+		parameterCount := len(t.Parameters)
+		var parameters []string
+		if parameterCount > 0 {
+			parameters = make([]string, parameterCount)
+			for i, parameter := range t.Parameters {
+				parameters[i] = string(parameter.TypeAnnotation.Type.ID())
+			}
 		}
-	}
 
-	returnTypeAnnotation := string(t.ReturnTypeAnnotation.Type.ID())
+		returnTypeAnnotation := string(t.ReturnTypeAnnotation.Type.ID())
 
-	return TypeID(
-		FormatFunctionTypeID(
-			purity,
-			typeParameters,
-			parameters,
-			returnTypeAnnotation,
-		),
-	)
+		t.typeID = TypeID(
+			FormatFunctionTypeID(
+				purity,
+				typeParameters,
+				parameters,
+				returnTypeAnnotation,
+			),
+		)
+	})
+
+	return t.typeID
 }
 
 // NOTE: parameter names and argument labels are intentionally *not* considered!
@@ -4015,7 +4063,7 @@ func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
 
 func (t *FunctionType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -4046,7 +4094,7 @@ func (t *FunctionType) Unify(
 		otherParameter := otherFunction.Parameters[i]
 		parameterUnified := parameter.TypeAnnotation.Type.Unify(
 			otherParameter.TypeAnnotation.Type,
-			typeParameters,
+			typeArguments,
 			report,
 			memoryGauge,
 			outerRange,
@@ -4058,7 +4106,7 @@ func (t *FunctionType) Unify(
 
 	returnTypeUnified := t.ReturnTypeAnnotation.Type.Unify(
 		otherFunction.ReturnTypeAnnotation.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -4273,10 +4321,12 @@ var BaseValueActivation = NewVariableActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
 	Fix64Type,
+	Fix128Type,
 }
 
 var AllUnsignedFixedPointTypes = []Type{
 	UFix64Type,
+	UFix128Type,
 }
 
 var AllFixedPointTypes = common.Concat(
@@ -6522,7 +6572,7 @@ type DictionaryEntryType struct {
 
 func (t *DictionaryType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -6535,7 +6585,7 @@ func (t *DictionaryType) Unify(
 
 	keyUnified := t.KeyType.Unify(
 		otherDictionary.KeyType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -6543,7 +6593,7 @@ func (t *DictionaryType) Unify(
 
 	valueUnified := t.ValueType.Unify(
 		otherDictionary.ValueType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -6738,15 +6788,12 @@ func (t *InclusiveRangeType) Instantiate(
 	}
 
 	// memberType must only be a leaf integer type.
-	for _, ty := range AllNonLeafIntegerTypes {
-		if memberType == ty {
-			report(&InvalidTypeArgumentError{
-				TypeArgumentName: inclusiveRangeTypeParameter.Name,
-				Range:            getRange(),
-				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
-			})
-			break
-		}
+	if slices.Contains(AllNonLeafIntegerTypes, memberType) {
+		report(&InvalidTypeArgumentError{
+			TypeArgumentName: inclusiveRangeTypeParameter.Name,
+			Range:            getRange(),
+			Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
+		})
 	}
 
 	return &InclusiveRangeType{
@@ -6907,7 +6954,7 @@ func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
 
 func (t *InclusiveRangeType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -6919,7 +6966,7 @@ func (t *InclusiveRangeType) Unify(
 
 	return t.MemberType.Unify(
 		otherRange.MemberType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -6949,6 +6996,9 @@ func (t *InclusiveRangeType) ContainFieldsOrElements() bool {
 type ReferenceType struct {
 	Type          Type
 	Authorization Access
+
+	typeID     TypeID
+	typeIdOnce sync.Once
 }
 
 var _ Type = &ReferenceType{}
@@ -7028,17 +7078,21 @@ func (t *ReferenceType) QualifiedString() string {
 }
 
 func (t *ReferenceType) ID() TypeID {
-	if t.Type == nil {
-		return "reference"
-	}
-	var authorization TypeID
-	if t.Authorization != UnauthorizedAccess {
-		authorization = t.Authorization.ID()
-	}
-	return FormatReferenceTypeID(
-		authorization,
-		t.Type.ID(),
-	)
+	t.typeIdOnce.Do(func() {
+		if t.Type == nil {
+			t.typeID = "reference"
+			return
+		}
+		var authorization TypeID
+		if t.Authorization != UnauthorizedAccess {
+			authorization = t.Authorization.ID()
+		}
+		t.typeID = FormatReferenceTypeID(
+			authorization,
+			t.Type.ID(),
+		)
+	})
+	return t.typeID
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -7191,7 +7245,7 @@ func (t *ReferenceType) IndexingType() Type {
 
 func (t *ReferenceType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -7203,7 +7257,7 @@ func (t *ReferenceType) Unify(
 
 	return t.Type.Unify(
 		otherReference.Type,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -7567,8 +7621,10 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case FixedPointType:
 		switch subType {
-		case FixedPointType, SignedFixedPointType,
-			UFix64Type:
+		case FixedPointType,
+			SignedFixedPointType,
+			UFix64Type,
+			UFix128Type:
 
 			return true
 
@@ -7578,7 +7634,9 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case SignedFixedPointType:
 		switch subType {
-		case SignedFixedPointType, Fix64Type:
+		case SignedFixedPointType,
+			Fix64Type,
+			Fix128Type:
 			return true
 
 		default:
@@ -8043,7 +8101,10 @@ func IsNilType(ty Type) bool {
 	return true
 }
 
+const TransactionTypeName = "transaction"
+
 type TransactionType struct {
+	Location            common.Location
 	Fields              []string
 	PrepareParameters   []Parameter
 	Parameters          []Parameter
@@ -8088,15 +8149,15 @@ func (t *TransactionType) Tag() TypeTag {
 }
 
 func (*TransactionType) String() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
 func (*TransactionType) QualifiedString() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
-func (*TransactionType) ID() TypeID {
-	return "Transaction"
+func (t *TransactionType) ID() TypeID {
+	return t.Location.TypeID(nil, TransactionTypeName)
 }
 
 func (*TransactionType) Equal(other Type) bool {
@@ -8204,6 +8265,9 @@ type IntersectionType struct {
 	supportedEntitlements        *EntitlementSet
 	// Deprecated
 	LegacyType Type
+
+	typeID     TypeID
+	typeIdOnce sync.Once
 }
 
 var _ Type = &IntersectionType{}
@@ -8267,9 +8331,21 @@ func formatIntersectionType[T ~string](separator string, interfaceStrings []T) s
 	return result.String()
 }
 
+func formatIntersectionTypeWithSingleInterface[T ~string](interfaceString T) string {
+	var result strings.Builder
+	result.WriteByte('{')
+	result.WriteString(string(interfaceString))
+	result.WriteByte('}')
+	return result.String()
+}
+
 func FormatIntersectionTypeID[T ~string](interfaceTypeIDs []T) T {
 	slices.Sort(interfaceTypeIDs)
 	return T(formatIntersectionType("", interfaceTypeIDs))
+}
+
+func FormatIntersectionTypeIDWithSingleInterface[T ~string](interfaceTypeID T) T {
+	return T(formatIntersectionTypeWithSingleInterface(interfaceTypeID))
 }
 
 func (t *IntersectionType) string(separator string, typeFormatter func(Type) string) string {
@@ -8297,16 +8373,20 @@ func (t *IntersectionType) QualifiedString() string {
 }
 
 func (t *IntersectionType) ID() TypeID {
-	var interfaceTypeIDs []TypeID
-	typeCount := len(t.Types)
-	if typeCount > 0 {
-		interfaceTypeIDs = make([]TypeID, 0, typeCount)
-		for _, typ := range t.Types {
-			interfaceTypeIDs = append(interfaceTypeIDs, typ.ID())
+	t.typeIdOnce.Do(func() {
+		var interfaceTypeIDs []TypeID
+		typeCount := len(t.Types)
+		if typeCount > 0 {
+			interfaceTypeIDs = make([]TypeID, 0, typeCount)
+			for _, typ := range t.Types {
+				interfaceTypeIDs = append(interfaceTypeIDs, typ.ID())
+			}
 		}
-	}
-	// FormatIntersectionTypeID sorts
-	return FormatIntersectionTypeID(interfaceTypeIDs)
+		// FormatIntersectionTypeID sorts
+		t.typeID = FormatIntersectionTypeID(interfaceTypeIDs)
+	})
+
+	return t.typeID
 }
 
 func (t *IntersectionType) Equal(other Type) bool {
@@ -8655,7 +8735,7 @@ func (t *CapabilityType) RewriteWithIntersectionTypes() (Type, bool) {
 
 func (t *CapabilityType) Unify(
 	other Type,
-	typeParameters *TypeParameterTypeOrderedMap,
+	typeArguments *TypeParameterTypeOrderedMap,
 	report func(err error),
 	memoryGauge common.MemoryGauge,
 	outerRange ast.HasPosition,
@@ -8671,7 +8751,7 @@ func (t *CapabilityType) Unify(
 
 	return t.BorrowType.Unify(
 		otherCap.BorrowType,
-		typeParameters,
+		typeArguments,
 		report,
 		memoryGauge,
 		outerRange,
@@ -8922,7 +9002,7 @@ var AccountKeyTypeAnnotation = NewTypeAnnotation(AccountKeyType)
 
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyTypePublicKeyFieldName = "publicKey"
-const PublicKeyTypeSignAlgoFieldName = "signatureAlgorithm"
+const PublicKeyTypeSignatureAlgorithmFieldName = "signatureAlgorithm"
 const PublicKeyTypeVerifyFunctionName = "verify"
 const PublicKeyTypeVerifyPoPFunctionName = "verifyPoP"
 
@@ -8934,12 +9014,12 @@ const publicKeySignAlgoFieldDocString = `
 The signature algorithm to be used with the key
 `
 
-const publicKeyVerifyFunctionDocString = `
+const publicKeyTypeVerifyFunctionDocString = `
 Verifies a signature. Checks whether the signature was produced by signing
 the given tag and data, using this public key and the given hash algorithm
 `
 
-const publicKeyVerifyPoPFunctionDocString = `
+const publicKeyTypeVerifyPoPFunctionDocString = `
 Verifies the proof of possession of the private key.
 This function is only implemented if the signature algorithm
 of the public key is BLS (BLS_BLS12_381).
@@ -8965,21 +9045,21 @@ var PublicKeyType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeyTypeSignAlgoFieldName,
+			PublicKeyTypeSignatureAlgorithmFieldName,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyTypeVerifyFunctionName,
-			PublicKeyVerifyFunctionType,
-			publicKeyVerifyFunctionDocString,
+			PublicKeyTypeVerifyFunctionType,
+			publicKeyTypeVerifyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyTypeVerifyPoPFunctionName,
-			PublicKeyVerifyPoPFunctionType,
-			publicKeyVerifyPoPFunctionDocString,
+			PublicKeyTypeVerifyPoPFunctionType,
+			publicKeyTypeVerifyPoPFunctionDocString,
 		),
 	}
 
@@ -8997,7 +9077,7 @@ var PublicKeyArrayType = &VariableSizedType{
 
 var PublicKeyArrayTypeAnnotation = NewTypeAnnotation(PublicKeyArrayType)
 
-var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
+var PublicKeyTypeVerifyFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
@@ -9020,7 +9100,7 @@ var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
 	BoolTypeAnnotation,
 )
 
-var PublicKeyVerifyPoPFunctionType = NewSimpleFunctionType(
+var PublicKeyTypeVerifyPoPFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{

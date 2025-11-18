@@ -18,7 +18,9 @@
 
 package values
 
+import "github.com/onflow/cadence/common"
+
 type EquatableValue interface {
 	Value
-	Equal(other Value) bool
+	Equal(gauge common.Gauge, other Value) bool
 }

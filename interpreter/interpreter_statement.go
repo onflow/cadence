@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"time"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -36,8 +38,6 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 
 	interpreter.statement = statement
 
-	common.UseComputation(interpreter, common.StatementComputationUsage)
-
 	config := interpreter.SharedState.Config
 
 	debugger := config.Debugger
@@ -49,6 +49,8 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 	if onStatement != nil {
 		onStatement(interpreter, statement)
 	}
+
+	common.UseComputation(interpreter, common.StatementComputationUsage)
 
 	return ast.AcceptStatement[StatementResult](statement, interpreter)
 }
@@ -78,13 +80,8 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		valueType := returnStatementTypes.ValueType
 		returnType := returnStatementTypes.ReturnType
 
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: statement.Expression,
-		}
-
 		// NOTE: copy on return
-		value = TransferAndConvert(interpreter, value, valueType, returnType, locationRange)
+		value = TransferIfNotResourceAndConvert(interpreter, value, valueType, returnType)
 	}
 
 	return ReturnResult{Value: value}
@@ -218,12 +215,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 		// If the test value and case values are equal,
 		// evaluate the case's statements
 
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: switchCase.Expression,
-		}
-
-		if testValue.Equal(interpreter, locationRange, caseValue) {
+		if testValue.Equal(interpreter, caseValue) {
 			return runStatements()
 		}
 
@@ -237,6 +229,8 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) StatementResult {
 
 	for {
+		// The first test expression has already been metered,
+		// because the while statement itself was metered
 
 		value, ok := interpreter.evalExpression(statement.Test).(BoolValue)
 		if !ok || !bool(value) {
@@ -257,6 +251,9 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 		case ReturnResult:
 			return result
 		}
+
+		// Meter next test expression
+		common.UseComputation(interpreter, common.StatementComputationUsage)
 	}
 }
 
@@ -266,11 +263,6 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: statement,
-	}
 
 	value := interpreter.evalExpression(statement.Value)
 
@@ -299,7 +291,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 		resume = !done
 
 		if statement.Index != nil {
-			index = index.Plus(interpreter, intOne, locationRange).(IntValue)
+			index = index.Plus(interpreter, intOne).(IntValue)
 		}
 
 		return
@@ -313,7 +305,6 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 		forStmtTypes.ValueVariableType,
 		executeBody,
 		transferElements,
-		locationRange,
 	)
 
 	return
@@ -362,22 +353,28 @@ func (interpreter *Interpreter) visitForStatementBody(
 
 func (interpreter *Interpreter) EmitEvent(
 	context ValueExportContext,
-	locationRange LocationRange,
 	eventType *sema.CompositeType,
 	eventFields []Value,
 ) {
+	if TracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.ReportEmitEventTrace(
+				string(eventType.ID()),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	config := interpreter.SharedState.Config
 
 	onEventEmitted := config.OnEventEmitted
 	if onEventEmitted == nil {
-		panic(&EventEmissionUnavailableError{
-			LocationRange: locationRange,
-		})
+		panic(&EventEmissionUnavailableError{})
 	}
 
 	err := onEventEmitted(
 		context,
-		locationRange,
 		eventType,
 		eventFields,
 	)
@@ -388,32 +385,43 @@ func (interpreter *Interpreter) EmitEvent(
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
 
-	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
+	invocationExpression := statement.InvocationExpression
+	arguments := invocationExpression.Arguments
+
+	var eventFields []Value
+	if len(arguments) > 0 {
+		eventFields = make([]Value, len(arguments))
+
+		elaboration := interpreter.Program.Elaboration
+		invocationExpressionTypes := elaboration.InvocationExpressionTypes(invocationExpression)
+
+		argumentTypes := invocationExpressionTypes.ArgumentTypes
+		parameterTypes := invocationExpressionTypes.ParameterTypes
+
+		for i, argument := range arguments {
+			value := interpreter.evalExpression(argument.Expression)
+
+			argumentType := argumentTypes[i]
+			parameterType := parameterTypes[i]
+
+			eventFields[i] = TransferAndConvert(
+				interpreter,
+				value,
+				argumentType,
+				parameterType,
+			)
+		}
 	}
 
 	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: statement,
-	}
-
-	eventFields := extractEventFields(interpreter, event, eventType)
-
-	interpreter.EmitEvent(
-		interpreter,
-		locationRange,
-		eventType,
-		eventFields,
-	)
+	interpreter.EmitEvent(interpreter, eventType, eventFields)
 
 	return nil
 }
 
 func extractEventFields(
-	gauge common.MemoryGauge,
+	gauge common.Gauge,
 	event *CompositeValue, eventType *sema.CompositeType) []Value {
 
 	count := len(eventType.ConstructorParameters)
@@ -433,32 +441,25 @@ func extractEventFields(
 
 func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.RemoveStatement) StatementResult {
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: removeStatement,
-	}
-
 	removeTarget := interpreter.evalExpression(removeStatement.Value)
 	base, ok := removeTarget.(*CompositeValue)
 
-	// we enforce this in the checker, but check defensively anyways
+	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
 		panic(&InvalidAttachmentOperationTargetError{
-			Value:         removeTarget,
-			LocationRange: locationRange,
+			Value: removeTarget,
 		})
 	}
 
 	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
 		panic(&AttachmentIterationMutationError{
-			Value:         base,
-			LocationRange: locationRange,
+			Value: base,
 		})
 	}
 
 	nominalType := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
 
-	removed := base.RemoveTypeKey(interpreter, locationRange, nominalType)
+	removed := base.RemoveTypeKey(interpreter, nominalType)
 
 	// attachment not present on this base
 	if removed == nil {
@@ -473,8 +474,8 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 
 	if attachment.IsResourceKinded(interpreter) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
-		attachment.setBaseValue(base)
-		attachment.Destroy(interpreter, locationRange)
+		attachment.SetBaseValue(base)
+		attachment.Destroy(interpreter)
 	}
 
 	return nil
@@ -523,12 +524,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	// If the resource was not moved out of the container,
 	// its contents get deleted.
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: declaration.Value,
-	}
-
-	getterSetter := interpreter.assignmentGetterSetter(declaration.Value, locationRange)
+	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
 
 	const allowMissing = false
 	result := getterSetter.get(allowMissing)
@@ -547,7 +543,6 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 		result,
 		valueType,
 		targetType,
-		locationRange,
 	)
 
 	// Assignment is a potential resource move.
@@ -560,7 +555,6 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 			valueType,
 			declaration.SecondValue,
 			secondValueType,
-			declaration,
 		)
 	}
 
@@ -575,18 +569,14 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 	target := assignment.Target
 	value := assignment.Value
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: target,
-	}
-
-	getterSetter := interpreter.assignmentGetterSetter(target, locationRange)
+	getterSetter := interpreter.assignmentGetterSetter(target)
 
 	interpreter.visitAssignment(
 		assignment.Transfer.Operation,
-		getterSetter, targetType,
-		value, valueType,
-		assignment,
+		getterSetter,
+		targetType,
+		value,
+		valueType,
 	)
 
 	return nil
@@ -602,21 +592,11 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 
 	// Evaluate the left side (target and key)
 
-	leftLocationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: swap.Left,
-	}
-
-	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left, leftLocationRange)
+	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
 
 	// Evaluate the right side (target and key)
 
-	rightLocationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: swap.Right,
-	}
-
-	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right, rightLocationRange)
+	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
 
 	// Get left and right values
 
@@ -631,11 +611,11 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// Set right value to left target,
 	// and left value to right target
 
-	CheckInvalidatedResourceOrResourceReference(rightValue, rightLocationRange, interpreter)
-	transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType, rightLocationRange)
+	CheckInvalidatedResourceOrResourceReference(rightValue, interpreter)
+	transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType)
 
-	CheckInvalidatedResourceOrResourceReference(leftValue, leftLocationRange, interpreter)
-	transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType, leftLocationRange)
+	CheckInvalidatedResourceOrResourceReference(leftValue, interpreter)
+	transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType)
 
 	leftGetterSetter.set(transferredRightValue)
 	rightGetterSetter.set(transferredLeftValue)
@@ -651,10 +631,6 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 	if expression, ok := expression.(*ast.MemberExpression); ok {
 		panic(&UseBeforeInitializationError{
 			Name: expression.Identifier.Identifier,
-			LocationRange: LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: expression,
-			},
 		})
 	}
 

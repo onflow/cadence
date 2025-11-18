@@ -23,6 +23,7 @@ package stdlib
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -34,141 +35,187 @@ type RLPDecodeStringError struct {
 	Msg string
 }
 
-var _ errors.UserError = RLPDecodeStringError{}
+var _ errors.UserError = &RLPDecodeStringError{}
+var _ interpreter.HasLocationRange = &RLPDecodeStringError{}
 
-func (RLPDecodeStringError) IsUserError() {}
+func (*RLPDecodeStringError) IsUserError() {}
 
-func (e RLPDecodeStringError) Error() string {
+func (e *RLPDecodeStringError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode string: %s", e.Msg)
+}
+
+func (e *RLPDecodeStringError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
 
-// rlpDecodeStringFunction is a static function
-var rlpDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
-	RLPTypeDecodeStringFunctionType,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		context := invocation.InvocationContext
-		locationRange := invocation.LocationRange
-
-		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
-		if err != nil {
-			panic(RLPDecodeStringError{
-				Msg:           err.Error(),
-				LocationRange: locationRange,
-			})
-		}
-
-		common.UseComputation(
-			context,
-			common.ComputationUsage{
-				Kind:      common.ComputationKindSTDLIBRLPDecodeString,
-				Intensity: uint64(input.Count()),
-			},
-		)
-
-		output, bytesRead, err := rlp.DecodeString(convertedInput, 0)
-		if err != nil {
-			panic(RLPDecodeStringError{
-				Msg:           err.Error(),
-				LocationRange: locationRange,
-			})
-		}
-
-		if bytesRead != len(convertedInput) {
-			panic(RLPDecodeStringError{
-				Msg:           rlpErrMsgInputContainsExtraBytes,
-				LocationRange: locationRange,
-			})
-		}
-
-		return interpreter.ByteSliceToByteArrayValue(context, output)
+// Native RLP functions
+var NativeRLPDecodeStringFunction = interpreter.NativeFunction(
+	func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return RLPDecodeString(input, context)
 	},
 )
+
+var NativeRLPDecodeListFunction = interpreter.NativeFunction(
+	func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return RLPDecodeList(input, context)
+	},
+)
+
+// interpreterRLPDecodeStringFunction is a static function
+var interpreterRLPDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
+	RLPTypeDecodeStringFunctionType,
+	NativeRLPDecodeStringFunction,
+)
+
+var VMRLPDecodeStringFunction = VMFunction{
+	BaseType: RLPType,
+	FunctionValue: vm.NewNativeFunctionValue(
+		RLPTypeDecodeStringFunctionName,
+		RLPTypeDecodeStringFunctionType,
+		NativeRLPDecodeStringFunction,
+	),
+}
+
+func RLPDecodeString(
+	input *interpreter.ArrayValue,
+	context interpreter.InvocationContext,
+) interpreter.Value {
+	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input)
+	if err != nil {
+		panic(&RLPDecodeStringError{
+			Msg: err.Error(),
+		})
+	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindSTDLIBRLPDecodeString,
+			Intensity: uint64(input.Count()),
+		},
+	)
+
+	output, bytesRead, err := rlp.DecodeString(convertedInput, 0)
+	if err != nil {
+		panic(&RLPDecodeStringError{
+			Msg: err.Error(),
+		})
+	}
+
+	if bytesRead != len(convertedInput) {
+		panic(&RLPDecodeStringError{
+			Msg: rlpErrMsgInputContainsExtraBytes,
+		})
+	}
+
+	return interpreter.ByteSliceToByteArrayValue(context, output)
+}
 
 type RLPDecodeListError struct {
 	interpreter.LocationRange
 	Msg string
 }
 
-var _ errors.UserError = RLPDecodeListError{}
+var _ errors.UserError = &RLPDecodeListError{}
+var _ interpreter.HasLocationRange = &RLPDecodeListError{}
 
-func (RLPDecodeListError) IsUserError() {}
+func (*RLPDecodeListError) IsUserError() {}
 
-func (e RLPDecodeListError) Error() string {
+func (e *RLPDecodeListError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode list: %s", e.Msg)
 }
 
-// rlpDecodeListFunction is a static function
-var rlpDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
+func (e *RLPDecodeListError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// interpreterRLPDecodeListFunction is a static function
+var interpreterRLPDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 	RLPTypeDecodeListFunctionType,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		context := invocation.InvocationContext
-		locationRange := invocation.LocationRange
-
-		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
-		if err != nil {
-			panic(RLPDecodeListError{
-				Msg:           err.Error(),
-				LocationRange: locationRange,
-			})
-		}
-
-		common.UseComputation(
-			context,
-			common.ComputationUsage{
-				Kind:      common.ComputationKindSTDLIBRLPDecodeList,
-				Intensity: uint64(input.Count()),
-			},
-		)
-
-		output, bytesRead, err := rlp.DecodeList(convertedInput, 0)
-
-		if err != nil {
-			panic(RLPDecodeListError{
-				Msg:           err.Error(),
-				LocationRange: locationRange,
-			})
-		}
-
-		if bytesRead != len(convertedInput) {
-			panic(RLPDecodeListError{
-				Msg:           rlpErrMsgInputContainsExtraBytes,
-				LocationRange: locationRange,
-			})
-		}
-
-		values := make([]interpreter.Value, len(output))
-		for i, b := range output {
-			values[i] = interpreter.ByteSliceToByteArrayValue(context, b)
-		}
-
-		return interpreter.NewArrayValue(
-			context,
-			locationRange,
-			interpreter.NewVariableSizedStaticType(
-				context,
-				interpreter.ByteArrayStaticType,
-			),
-			common.ZeroAddress,
-			values...,
-		)
-	},
+	NativeRLPDecodeListFunction,
 )
 
+var VMRLPDecodeListFunction = VMFunction{
+	BaseType: RLPType,
+	FunctionValue: vm.NewNativeFunctionValue(
+		RLPTypeDecodeListFunctionName,
+		RLPTypeDecodeListFunctionType,
+		NativeRLPDecodeListFunction,
+	),
+}
+
+func RLPDecodeList(
+	input *interpreter.ArrayValue,
+	context interpreter.InvocationContext,
+) interpreter.Value {
+	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input)
+	if err != nil {
+		panic(&RLPDecodeListError{
+			Msg: err.Error(),
+		})
+	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindSTDLIBRLPDecodeList,
+			Intensity: uint64(input.Count()),
+		},
+	)
+
+	output, bytesRead, err := rlp.DecodeList(convertedInput, 0)
+
+	if err != nil {
+		panic(&RLPDecodeListError{
+			Msg: err.Error(),
+		})
+	}
+
+	if bytesRead != len(convertedInput) {
+		panic(&RLPDecodeListError{
+			Msg: rlpErrMsgInputContainsExtraBytes,
+		})
+	}
+
+	outputLength := len(output)
+
+	var index int
+	return interpreter.NewArrayValueWithIterator(
+		context,
+		interpreter.NewVariableSizedStaticType(
+			context,
+			interpreter.ByteArrayStaticType,
+		),
+		common.ZeroAddress,
+		uint64(outputLength),
+		func() interpreter.Value {
+			if index >= outputLength {
+				return nil
+			}
+			result := interpreter.ByteSliceToByteArrayValue(context, output[index])
+			index++
+			return result
+		},
+	)
+}
+
 var rlpContractFields = map[string]interpreter.Value{
-	RLPTypeDecodeListFunctionName:   rlpDecodeListFunction,
-	RLPTypeDecodeStringFunctionName: rlpDecodeStringFunction,
+	RLPTypeDecodeListFunctionName:   interpreterRLPDecodeListFunction,
+	RLPTypeDecodeStringFunctionName: interpreterRLPDecodeStringFunction,
 }
 
 var RLPTypeStaticType = interpreter.ConvertSemaToStaticType(nil, RLPType)

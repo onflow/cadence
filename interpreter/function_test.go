@@ -19,8 +19,10 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -177,7 +180,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		var checkerErrors []error
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             access(all) resource R {
                 access(all) var id: UInt8
 				access(all) fun setID(_ id: UInt8) {
@@ -239,7 +242,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		var checkerErrors []error
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             access(all) resource R {
                 access(all) var id: UInt8
 
@@ -332,18 +335,18 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	parseCheckAndInterpretWithGenericFunction := func(
+	parseCheckAndPrepareWithGenericFunction := func(
 		tt *testing.T,
 		code string,
 		boundType sema.Type,
-	) (*interpreter.Interpreter, error) {
+	) (Invokable, error) {
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
 			TypeBound: boundType,
 		}
 
-		function1 := stdlib.NewStandardLibraryStaticFunction(
+		function1 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"foo",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -361,15 +364,17 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, function1)
 
-		return parseCheckAndInterpretWithOptions(t,
+		return parseCheckAndPrepareWithOptions(t,
 			code,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -381,7 +386,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("generic function as non-generic function", func(t *testing.T) {
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithGenericFunction(t, `
+		inter, err := parseCheckAndPrepareWithGenericFunction(t, `
             fun test() {
                 var boxedFunc: AnyStruct = foo  // fun<T Integer>(): Void
 
@@ -397,5 +402,162 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 
 		var typeErr *interpreter.ForceCastTypeMismatchError
 		require.ErrorAs(t, err, &typeErr)
+	})
+
+	t.Run("no transfer, result is used", func(t *testing.T) {
+		t.Parallel()
+
+		storage := NewUnmeteredInMemoryStorage()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              struct S {}
+
+              fun test(): S {
+                  post { result != nil }
+                  return S()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					Storage: storage,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+		require.NoError(t, err)
+
+		var expectedSlabIndex atree.SlabIndex
+		binary.BigEndian.PutUint64(expectedSlabIndex[:], 3)
+
+		require.Equal(
+			t,
+			atree.NewSlabID(
+				atree.AddressUndefined,
+				expectedSlabIndex,
+			),
+			slabID,
+		)
+	})
+
+	t.Run("no transfer, result is not used", func(t *testing.T) {
+		t.Parallel()
+
+		storage := NewUnmeteredInMemoryStorage()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              struct S {}
+
+              fun test(): S {
+                  post { true }
+                  return S()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					Storage: storage,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+		require.NoError(t, err)
+
+		var expectedSlabIndex atree.SlabIndex
+		binary.BigEndian.PutUint64(expectedSlabIndex[:], 3)
+
+		require.Equal(
+			t,
+			atree.NewSlabID(
+				atree.AddressUndefined,
+				expectedSlabIndex,
+			),
+			slabID,
+		)
+	})
+}
+
+func TestInvokeBoundFunctionsExternally(t *testing.T) {
+
+	t.Parallel()
+
+	invokable := parseCheckAndPrepare(
+		t,
+		`
+            access(all) fun test(): Bool? {
+                let opt: Type? = Type<Int>()
+                return opt.map(opt.isInstance)
+            }
+        `,
+	)
+
+	result, err := invokable.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(
+		t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.BoolValue(false),
+		),
+		result,
+	)
+}
+
+func TestInterpretConvertedResult(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+            fun test(): Int? {
+                post {
+                    result.getType() == Type<Int?>()
+                }
+                return 1
+            }`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("with errors", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t, `
+            fun test(): Int? {
+                post {
+                    result.map(mappingFunc) == 2
+                }
+                return 1
+            }
+
+            fun mappingFunc(value: Int): Int {
+                return value + 1
+            }`,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.PurityError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
 	})
 }

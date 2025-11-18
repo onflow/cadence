@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func parseCheckAndPrepareWithConditionLogs(
@@ -55,12 +56,17 @@ func parseCheckAndPrepareWithConditionLogs(
 
 	var logs []string
 
-	valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"conditionLog",
 		conditionLogFunctionType,
 		"",
-		func(invocation interpreter.Invocation) interpreter.Value {
-			value := invocation.Arguments[0]
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			value := args[0]
 			logs = append(logs, value.String())
 			return interpreter.TrueValue
 		},
@@ -75,12 +81,14 @@ func parseCheckAndPrepareWithConditionLogs(
 	invokable, err = parseCheckAndPrepareWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
@@ -180,11 +188,11 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.NewUnmeteredIntValueFromInt64(123),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(t,
 			interpreter.NewUnmeteredIntValueFromInt64(456),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 
@@ -1272,8 +1280,7 @@ func TestInterpretNestedInterfaceCast(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},

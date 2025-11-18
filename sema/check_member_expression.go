@@ -236,10 +236,21 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			// Optional chaining was used on a non-optional type, report an error
 
 			if !accessedType.IsInvalidType() {
+
+				// The length of the optional chaining operator `?.` is 2
+				const optionalChainingOperatorLength = 2
+
 				checker.report(
 					&InvalidOptionalChainingError{
-						Type:  accessedType,
-						Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+						Type: accessedType,
+						Range: ast.NewRange(
+							checker.memoryGauge,
+							expression.AccessEndPos.Shifted(
+								checker.memoryGauge,
+								-(optionalChainingOperatorLength-1),
+							),
+							expression.AccessEndPos,
+						),
 					},
 				)
 			}
@@ -270,7 +281,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 				&NotDeclaredMemberError{
 					Type:          accessedType,
 					Name:          identifier,
-					suggestMember: checker.Config.SuggestionsEnabled,
+					SuggestMember: checker.Config.SuggestionsEnabled,
 					Expression:    expression,
 					Range: ast.NewRange(
 						checker.memoryGauge,
@@ -311,7 +322,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 				RestrictingAccess:   member.Access,
 				PossessedAccess:     possessedAccess,
 				DeclarationKind:     member.DeclarationKind,
-				suggestEntitlements: checker.Config.SuggestionsEnabled,
+				SuggestEntitlements: checker.Config.SuggestionsEnabled,
 				Range:               ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)

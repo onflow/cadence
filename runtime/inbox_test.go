@@ -37,7 +37,7 @@ func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -85,6 +85,7 @@ func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -98,6 +99,7 @@ func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -127,7 +129,7 @@ func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -175,6 +177,7 @@ func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -188,6 +191,7 @@ func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -207,7 +211,7 @@ func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -255,6 +259,7 @@ func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -268,6 +273,7 @@ func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -297,7 +303,7 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -358,6 +364,7 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -372,6 +379,7 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -410,7 +418,7 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -485,6 +493,7 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -498,6 +507,7 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface2,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -511,6 +521,7 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -542,7 +553,7 @@ func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -609,6 +620,7 @@ func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -622,6 +634,7 @@ func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 		Context{
 			Interface: runtimeInterface2,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -652,7 +665,7 @@ func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -714,6 +727,7 @@ func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -727,6 +741,7 @@ func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 		Context{
 			Interface: runtimeInterface2,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -754,7 +769,7 @@ func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -816,6 +831,7 @@ func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -829,6 +845,7 @@ func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 		Context{
 			Interface: runtimeInterface2,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -857,7 +874,7 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -928,6 +945,7 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -941,6 +959,7 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 		Context{
 			Interface: runtimeInterface2,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -954,6 +973,7 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 		Context{
 			Interface: runtimeInterface2,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -985,7 +1005,7 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -1070,6 +1090,7 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -1083,6 +1104,7 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface3,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -1096,6 +1118,7 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface2,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 

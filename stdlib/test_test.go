@@ -35,6 +35,7 @@ import (
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -60,8 +61,8 @@ func newTestContractInterpreterWithTestFramework(
 	require.NoError(t, err)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(AssertFunction)
-	baseValueActivation.DeclareValue(PanicFunction)
+	baseValueActivation.DeclareValue(InterpreterAssertFunction)
+	baseValueActivation.DeclareValue(InterpreterPanicFunction)
 
 	checker, err := sema.NewChecker(
 		program,
@@ -98,13 +99,13 @@ func newTestContractInterpreterWithTestFramework(
 		return nil, err
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 
 	var uuid uint64 = 0
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, AssertFunction)
-	interpreter.Declare(baseActivation, PanicFunction)
+	interpreter.Declare(baseActivation, InterpreterAssertFunction)
+	interpreter.Declare(baseActivation, InterpreterPanicFunction)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -755,7 +756,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -782,7 +786,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -807,7 +814,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -844,7 +854,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("testNotEqual")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -892,7 +905,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("testNotEqual")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -929,7 +945,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("testNotEqual")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -966,7 +985,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("testNotEqual")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -1874,8 +1896,8 @@ func TestTestExpect(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
 
-		assertionErr := &AssertionError{}
-		assert.ErrorAs(t, err, assertionErr)
+		var assertionErr *AssertionError
+		require.ErrorAs(t, err, &assertionErr)
 		assert.Equal(t, "given value is: \"this string\"", assertionErr.Message)
 		assert.Equal(t, "test", assertionErr.LocationRange.Location.String())
 		assert.Equal(t, 6, assertionErr.LocationRange.StartPosition().Line)
@@ -2250,8 +2272,10 @@ func TestBlockchain(t *testing.T) {
 						assert.Nil(t, eventType)
 						return interpreter.NewArrayValue(
 							context,
-							interpreter.EmptyLocationRange,
-							interpreter.NewVariableSizedStaticType(context, interpreter.PrimitiveStaticTypeAnyStruct),
+							interpreter.NewVariableSizedStaticType(
+								context,
+								interpreter.PrimitiveStaticTypeAnyStruct,
+							),
 							common.Address{},
 						)
 					},
@@ -2304,8 +2328,10 @@ func TestBlockchain(t *testing.T) {
 
 						return interpreter.NewArrayValue(
 							context,
-							interpreter.EmptyLocationRange,
-							interpreter.NewVariableSizedStaticType(context, interpreter.PrimitiveStaticTypeAnyStruct),
+							interpreter.NewVariableSizedStaticType(
+								context,
+								interpreter.PrimitiveStaticTypeAnyStruct,
+							),
 							common.Address{},
 						)
 					},

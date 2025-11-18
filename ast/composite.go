@@ -158,7 +158,7 @@ func (d *CompositeDeclaration) EventDoc() prettier.Doc {
 	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			prettier.Text(d.Access.Keyword()),
+			docOrEmpty(d.Access),
 			prettier.HardLine{},
 		)
 	}
@@ -206,7 +206,7 @@ func CompositeDocument(
 	if access != AccessNotSpecified {
 		doc = append(
 			doc,
-			prettier.Text(access.Keyword()),
+			docOrEmpty(access),
 			prettier.HardLine{},
 		)
 	}
@@ -229,6 +229,8 @@ func CompositeDocument(
 		prettier.Text(identifier),
 	)
 
+	membersDoc := members.Doc()
+
 	if len(conformances) > 0 {
 
 		conformancesDoc := prettier.Concat{
@@ -245,7 +247,7 @@ func CompositeDocument(
 
 			conformancesDoc = append(
 				conformancesDoc,
-				conformance.Doc(),
+				docOrEmpty(conformance),
 			)
 		}
 
@@ -254,7 +256,7 @@ func CompositeDocument(
 			prettier.Dedent{
 				Doc: prettier.Concat{
 					prettier.Line{},
-					members.Doc(),
+					membersDoc,
 				},
 			},
 		)
@@ -273,7 +275,7 @@ func CompositeDocument(
 		doc = append(
 			doc,
 			prettier.Space,
-			members.Doc(),
+			membersDoc,
 		)
 	}
 
@@ -470,7 +472,7 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 
 	if d.Access != AccessNotSpecified {
 		doc = prettier.Concat{
-			prettier.Text(d.Access.Keyword()),
+			docOrEmpty(d.Access),
 			prettier.HardLine{},
 			doc,
 		}
@@ -581,7 +583,7 @@ func (d *EnumCaseDeclaration) Doc() prettier.Doc {
 	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			prettier.Text(d.Access.Keyword()),
+			docOrEmpty(d.Access),
 			prettier.HardLine{},
 		)
 	}
