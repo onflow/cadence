@@ -7062,7 +7062,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 								Kind: common.DeclarationKindUnknown,
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									Access:   ast.AccessNotSpecified,
-									Comments: ast.Comments{},
+									Comments: ast.EmptyComments,
 									Identifier: ast.Identifier{
 										Identifier: "unknown",
 										Pos:        ast.Position{Offset: 66, Line: 5, Column: 14},
@@ -7080,7 +7080,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									Access:   ast.AccessNotSpecified,
-									Comments: ast.Comments{},
+									Comments: ast.EmptyComments,
 									Identifier: ast.Identifier{
 										Identifier: "init",
 										Pos:        ast.Position{Offset: 121, Line: 8, Column: 14},
@@ -7098,7 +7098,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 								Kind: common.DeclarationKindDestructorLegacy,
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									Access:   ast.AccessNotSpecified,
-									Comments: ast.Comments{},
+									Comments: ast.EmptyComments,
 									Identifier: ast.Identifier{
 										Identifier: "destroy",
 										Pos:        ast.Position{Offset: 178, Line: 11, Column: 14},

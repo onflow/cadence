@@ -203,7 +203,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			startPos,
 			endPos,
 		),
-		ast.Comments{},
+		ast.EmptyComments,
 	), nil
 }
 
@@ -282,7 +282,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 				nil,
 			),
 			identifier.Pos,
-			ast.Comments{},
+			ast.EmptyComments,
 		),
 	), nil
 }

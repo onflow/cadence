@@ -291,7 +291,7 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 		}
 	}
 
-	comments := ast.Comments{}
+	comments := ast.EmptyComments
 	if endToken == nil {
 		comments = startToken.Comments
 	} else {
@@ -443,7 +443,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			p.memoryGauge,
 			[]ast.Statement{result},
 			ast.NewRangeFromPositioned(p.memoryGauge, result),
-			ast.Comments{},
+			ast.EmptyComments,
 		)
 		result = outer
 	}

@@ -963,7 +963,7 @@ func parseEventDeclaration(
 			nil,
 			nil,
 			parameterList.StartPos,
-			ast.Comments{},
+			ast.EmptyComments,
 		),
 	)
 

@@ -28,9 +28,10 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/onflow/cadence/parser/lexer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/parser/lexer"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"

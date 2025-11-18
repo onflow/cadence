@@ -22,8 +22,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/onflow/cadence/errors"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/errors"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/parser/lexer"

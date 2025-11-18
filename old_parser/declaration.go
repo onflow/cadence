@@ -415,7 +415,7 @@ func parseVariableDeclaration(
 		startPos,
 		secondTransfer,
 		secondValue,
-		ast.Comments{},
+		ast.EmptyComments,
 	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
@@ -710,7 +710,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			endPos,
 		),
 		locationPos,
-		ast.Comments{},
+		ast.EmptyComments,
 	), nil
 }
 
@@ -817,7 +817,7 @@ func parseEventDeclaration(
 			nil,
 			nil,
 			parameterList.StartPos,
-			ast.Comments{},
+			ast.EmptyComments,
 		),
 	)
 
@@ -840,7 +840,7 @@ func parseEventDeclaration(
 			startPos,
 			parameterList.EndPos,
 		),
-		ast.Comments{},
+		ast.EmptyComments,
 	), nil
 }
 
@@ -931,7 +931,7 @@ func parseFieldWithVariableKind(
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
-		ast.Comments{},
+		ast.EmptyComments,
 	), nil
 }
 
@@ -1065,7 +1065,7 @@ func parseCompositeOrInterfaceDeclaration(
 			[]*ast.NominalType{},
 			members,
 			declarationRange,
-			ast.Comments{},
+			ast.EmptyComments,
 		), nil
 	} else {
 		return ast.NewCompositeDeclaration(
@@ -1076,7 +1076,7 @@ func parseCompositeOrInterfaceDeclaration(
 			conformances,
 			members,
 			declarationRange,
-			ast.Comments{},
+			ast.EmptyComments,
 		), nil
 	}
 }
@@ -1168,7 +1168,7 @@ func parseAttachmentDeclaration(
 		conformances,
 		members,
 		declarationRange,
-		ast.Comments{},
+		ast.EmptyComments,
 	), nil
 }
 
@@ -1486,7 +1486,7 @@ func parseFieldDeclarationWithoutVariableKind(
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
-		ast.Comments{},
+		ast.EmptyComments,
 	), nil
 }
 
@@ -1552,7 +1552,7 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			ast.Comments{},
+			ast.EmptyComments,
 		),
 	), nil
 }
@@ -1589,7 +1589,7 @@ func parseEnumCase(
 		p.memoryGauge,
 		access,
 		identifier,
-		ast.Comments{},
+		ast.EmptyComments,
 		startPos,
 	), nil
 }
