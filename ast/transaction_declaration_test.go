@@ -60,7 +60,7 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 				NewComment(nil, []byte("///test")),
 			},
 		},
-		Execute:   nil,
+		Execute: nil,
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},

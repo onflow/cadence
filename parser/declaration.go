@@ -204,7 +204,7 @@ func parseDeclaration(p *parser) (ast.Declaration, error) {
 				if staticToken != nil {
 					p.reportSyntaxError("invalid second `static` modifier")
 				}
-				if nativeModifierEnabled && nativePos != nil {
+				if nativeModifierEnabled && nativeToken != nil {
 					p.reportSyntaxError("invalid `static` modifier after `native` modifier")
 				}
 				tok := p.current
@@ -712,7 +712,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				// Parse optional alias
 				alias := parseOptionalImportAlias(p)
 
-				p.skipSpaceAndComments()
+				p.skipSpace()
 
 				imports = append(
 					imports,
@@ -755,7 +755,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		// Parse optional alias
 		alias := parseOptionalImportAlias(p)
 
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -1678,8 +1678,8 @@ func parseMemberOrNestedDeclaration(p *parser) (ast.Declaration, error) {
 				)
 
 			case KeywordCase:
-				rejectNonAccessModifiers(p, staticPos, nativePos, purityPos, common.DeclarationKindEnumCase)
-				return parseEnumCase(p, access, accessPos, docString)
+				rejectNonAccessModifiers(p, staticToken, nativeToken, purityToken, common.DeclarationKindEnumCase)
+				return parseEnumCase(p, access, accessToken)
 
 			case KeywordFun:
 				return parseFunctionDeclaration(

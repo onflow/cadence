@@ -343,9 +343,7 @@ func parseFunctionDeclaration(
 		returnTypeAnnotation,
 		functionBlock,
 		startPos,
-		ast.Comments{
-			Leading: startToken.Leading,
-		},
+		ast.EmptyComments,
 	), nil
 }
 

@@ -22,10 +22,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/onflow/cadence/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
@@ -33,13 +33,6 @@ import (
 func TestParseBlockComment(t *testing.T) {
 
 	t.Parallel()
-
-	t.Run("empty", func(t *testing.T) {
-		t.Parallel()
-
-		_, errs := testParseExpression(`/**/ true`)
-		require.Empty(t, errs)
-	})
 
 	t.Run("nested", func(t *testing.T) {
 
@@ -83,6 +76,8 @@ func TestParseBlockComment(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO(preserve-comments): Extracting comments from operator tokens is a bit difficult,
+		// 	so let's handle this later as it seems a pretty edge case location to add comments.
 		result, errs := testParseExpression(" 1/*test  foo*/+/* bar  */ 2  ")
 		require.Empty(t, errs)
 
@@ -96,6 +91,11 @@ func TestParseBlockComment(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/*test  foo*/")),
+						},
 					},
 				},
 				Right: &ast.IntegerExpression{
@@ -202,13 +202,7 @@ func TestParseBlockComment(t *testing.T) {
 
 		tokens := &testTokenStream{
 			tokens: []lexer.Token{
-				{
-					Type: lexer.TokenBlockCommentStart,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Offset: 0, Column: 0},
-						EndPos:   ast.Position{Line: 1, Offset: 1, Column: 1},
-					},
-				},
+				// TODO(merge): is this correct?
 				{
 					Type: lexer.TokenIdentifier,
 					Range: ast.Range{
@@ -221,6 +215,7 @@ func TestParseBlockComment(t *testing.T) {
 			input: []byte(`/*foo`),
 		}
 
+		// TODO(merge): move and emit UnexpectedTokenInBlockCommentError from lexer
 		_, errs := ParseTokenStream(
 			nil,
 			tokens,
@@ -244,4 +239,145 @@ func TestParseBlockComment(t *testing.T) {
 			errs,
 		)
 	})
+}
+
+func TestParseWhileStatementComment(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := testParseStatements(`
+// before if
+if true {
+	// noop
+} // after if
+// before else-if
+else if true {
+	// noop
+} 
+// before second else-if
+else if true {
+	// noop
+} /* after else-if */ else {
+	// noop
+} // after else
+`)
+	require.Empty(t, errs)
+
+	AssertEqualWithDiff(t,
+		[]ast.Statement{
+			&ast.IfStatement{
+				Test: &ast.BoolExpression{
+					Value: true,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 3, Offset: 17},
+						EndPos:   ast.Position{Line: 3, Column: 6, Offset: 20},
+					},
+				},
+				Then: &ast.Block{
+					Statements: nil,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 8, Offset: 22},
+						EndPos:   ast.Position{Line: 5, Column: 0, Offset: 33},
+					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// noop")),
+							ast.NewComment(nil, []byte("// after if")),
+						},
+					},
+				},
+				Else: &ast.Block{
+					Statements: []ast.Statement{
+						&ast.IfStatement{
+							Test: &ast.BoolExpression{
+								Value: true,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 7, Column: 8, Offset: 73},
+									EndPos:   ast.Position{Line: 7, Column: 11, Offset: 76},
+								},
+							},
+							Then: &ast.Block{
+								Statements: nil,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 7, Column: 13, Offset: 78},
+									EndPos:   ast.Position{Line: 9, Column: 0, Offset: 89},
+								},
+								Comments: ast.Comments{
+									Trailing: []*ast.Comment{
+										ast.NewComment(nil, []byte("// noop")),
+									},
+								},
+							},
+							Else: &ast.Block{
+								Statements: []ast.Statement{
+									&ast.IfStatement{
+										Test: &ast.BoolExpression{
+											Value: true,
+											Range: ast.Range{
+												StartPos: ast.Position{Line: 11, Column: 8, Offset: 125},
+												EndPos:   ast.Position{Line: 11, Column: 11, Offset: 128},
+											},
+										},
+										Then: &ast.Block{
+											Statements: nil,
+											Range: ast.Range{
+												StartPos: ast.Position{Line: 11, Column: 13, Offset: 130},
+												EndPos:   ast.Position{Line: 13, Column: 0, Offset: 141},
+											},
+											Comments: ast.Comments{
+												Trailing: []*ast.Comment{
+													ast.NewComment(nil, []byte("// noop")),
+													ast.NewComment(nil, []byte("/* after else-if */")),
+												},
+											},
+										},
+										Else: &ast.Block{
+											Statements: nil,
+											Range: ast.Range{
+												StartPos: ast.Position{Line: 13, Column: 27, Offset: 168},
+												EndPos:   ast.Position{Line: 15, Column: 0, Offset: 179},
+											},
+											Comments: ast.Comments{
+												Trailing: []*ast.Comment{
+													ast.NewComment(nil, []byte("// noop")),
+													ast.NewComment(nil, []byte("// after else")),
+												},
+											},
+										},
+										StartPos: ast.Position{Line: 11, Column: 5, Offset: 122},
+										Comments: ast.Comments{
+											Leading: []*ast.Comment{
+												ast.NewComment(nil, []byte("// before second else-if")),
+											},
+										},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 11, Column: 5, Offset: 122},
+									EndPos:   ast.Position{Line: 15, Column: 0, Offset: 179},
+								},
+							},
+							StartPos: ast.Position{Line: 7, Column: 5, Offset: 70},
+							Comments: ast.Comments{
+								Leading: []*ast.Comment{
+									ast.NewComment(nil, []byte("// before else-if")),
+								},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 7, Column: 5, Offset: 70},
+						EndPos:   ast.Position{Line: 15, Column: 0, Offset: 179},
+					},
+				},
+				StartPos: ast.Position{Line: 3, Column: 0, Offset: 14},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// before if")),
+					},
+				},
+			},
+		},
+		result,
+	)
 }

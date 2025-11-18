@@ -194,9 +194,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 			returnTypeAnnotation,
 			functionBlock,
 			startToken.StartPos,
-			ast.Comments{
-				Leading: startToken.Comments.PackToList(),
-			},
+			ast.EmptyComments,
 		), nil
 	} else {
 		parameterList, returnTypeAnnotation, functionBlock, err :=

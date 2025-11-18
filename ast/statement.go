@@ -872,31 +872,18 @@ type SwitchCase struct {
 }
 
 func NewSwitchCase(
-	_ common.MemoryGauge,
-	expression Expression,
-	statements []Statement,
-	r Range,
-	comments Comments,
-) *SwitchCase {
-	return &SwitchCase{
-		Expression: expression,
-		Statements: statements,
-		Range:      r,
-		Comments:   comments,
-	}
-}
-
-func NewSwitchCase(
 	gauge common.MemoryGauge,
 	expression Expression,
 	statements []Statement,
 	astRange Range,
+	comments Comments,
 ) *SwitchCase {
 	common.UseMemory(gauge, common.SwitchCaseMemoryUsage)
 	return &SwitchCase{
 		Expression: expression,
 		Statements: statements,
 		Range:      astRange,
+		Comments:   comments,
 	}
 }
 

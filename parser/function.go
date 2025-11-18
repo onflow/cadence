@@ -175,9 +175,10 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		p.nextSemanticToken()
 	}
 
-	if !p.current.Is(lexer.TokenColon) {
+	colonToken := p.current
+	if !colonToken.Is(lexer.TokenColon) {
 		return nil, &MissingColonAfterParameterNameError{
-			GotToken: p.current,
+			GotToken: colonToken,
 		}
 	}
 

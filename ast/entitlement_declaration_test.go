@@ -289,7 +289,6 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 				Identifier: "AB",
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
-			DocString: "test",
 			Range: Range{
 				StartPos: Position{Offset: 7, Line: 8, Column: 9},
 				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -363,7 +362,6 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 				Identifier: "AB",
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
-			DocString: "test",
 			Range: Range{
 				StartPos: Position{Offset: 7, Line: 8, Column: 9},
 				EndPos:   Position{Offset: 10, Line: 11, Column: 12},

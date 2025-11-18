@@ -280,7 +280,6 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 	case lexer.TokenEOF, lexer.TokenSemicolon, lexer.TokenBraceClose:
 		tok := p.current
 		endToken = &tok
-		break
 	default:
 		if !sawNewLine {
 			expression, err = parseExpression(p, lowestBindingPower)
@@ -384,7 +383,6 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			elseToken := p.current
 			// Skip the `else` keyword
 			p.nextSemanticToken()
-
 
 			// The parser ignores the `else` token,
 			// so to preserve potential comments associated with else token,
@@ -543,7 +541,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		expression,
 		startToken.StartPos,
 		ast.Comments{
-			Leading:  startToken.Comments.PackToList(),
+			Leading: startToken.Comments.PackToList(),
 			// TODO(preserve-comments): handle inToken=nil
 			Trailing: inToken.Comments.PackToList(),
 		},

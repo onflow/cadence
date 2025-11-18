@@ -3975,11 +3975,9 @@ func (e *MissingCommentEndError) EndPosition(_ common.MemoryGauge) ast.Position 
 	return e.Pos
 }
 
+// TODO(merge): Move and emit from lexer
 func (e *MissingCommentEndError) Error() string {
-	return fmt.Sprintf(
-		"missing comment end (%#q)",
-		lexer.TokenBlockCommentEnd,
-	)
+	return "missing comment end (`*/`)"
 }
 
 func (*MissingCommentEndError) SecondaryError() string {

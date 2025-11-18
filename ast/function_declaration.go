@@ -20,6 +20,7 @@ package ast
 
 import (
 	"encoding/json"
+
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/common"

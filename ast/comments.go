@@ -2,14 +2,17 @@ package ast
 
 import (
 	"bytes"
-	"github.com/onflow/cadence/common"
 	"strings"
+
+	"github.com/onflow/cadence/common"
 )
 
 type Comments struct {
 	Leading  []*Comment `json:"-"`
 	Trailing []*Comment `json:"-"`
 }
+
+var EmptyComments = Comments{}
 
 func (c Comments) PackToList() []*Comment {
 	var comments []*Comment

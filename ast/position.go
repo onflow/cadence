@@ -20,6 +20,7 @@ package ast
 
 import (
 	"fmt"
+
 	"github.com/onflow/cadence/common"
 )
 
@@ -206,9 +207,9 @@ func (r Range) EndPosition(common.MemoryGauge) Position {
 	return r.EndPos
 }
 
-func (e Range) Source(input []byte) []byte {
-	startOffset := e.StartPos.Offset
-	endOffset := e.EndPos.Offset + 1
+func (r Range) Source(input []byte) []byte {
+	startOffset := r.StartPos.Offset
+	endOffset := r.EndPos.Offset + 1
 	return input[startOffset:endOffset]
 }
 

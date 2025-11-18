@@ -3308,7 +3308,6 @@ import "foo" /* After foo */`)
 		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
-					Identifiers: nil,
 					Location:    common.StringLocation("foo"),
 					LocationPos: ast.Position{Line: 3, Column: 7, Offset: 22},
 					Range: ast.Range{
@@ -4621,9 +4620,7 @@ func TestParseField(t *testing.T) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (ast.Declaration, error) {
-				return parseMemberOrNestedDeclaration(p)
-			},
+			parseMemberOrNestedDeclaration,
 			config,
 		)
 	}
@@ -5401,7 +5398,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 																Column: 19,
 															},
 														},
-														AccessPos: ast.Position{
+														AccessEndPos: ast.Position{
 															Offset: 172,
 															Line:   9,
 															Column: 18,
@@ -5521,7 +5518,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 															Column: 26,
 														},
 													},
-													AccessPos: ast.Position{
+													AccessEndPos: ast.Position{
 														Offset: 290,
 														Line:   14,
 														Column: 25,
@@ -10802,9 +10799,7 @@ func TestParseNestedPragma(t *testing.T) {
 		return Parse(
 			nil,
 			[]byte(input),
-			func(p *parser) (ast.Declaration, error) {
-				return parseMemberOrNestedDeclaration(p)
-			},
+			parseMemberOrNestedDeclaration,
 			config,
 		)
 	}
