@@ -4079,15 +4079,7 @@ func AccountCapabilitiesPublish(
 	identifier := pathValue.Identifier
 
 	staticType := capabilityValue.StaticType(invocationContext)
-
-	var borrowType interpreter.StaticType
-	if staticType != interpreter.PrimitiveStaticTypeCapability {
-		capabilityType, ok := staticType.(*interpreter.CapabilityStaticType)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		borrowType = capabilityType.BorrowType
-	}
+	borrowType := staticType.(*interpreter.CapabilityStaticType).BorrowType
 
 	// It is possible to have legacy capabilities without borrow type.
 	// So perform the validation only if the borrow type is present.

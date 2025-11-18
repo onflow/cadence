@@ -330,27 +330,25 @@ func CheckMemberAccessTargetType(
 	target Value,
 	expectedType StaticType,
 ) {
-	switch expectedType := expectedType.(type) {
-	//case *sema.TransactionType:
-	case nil:
-		// TODO: maybe also check transactions.
-		//   they are composites with a type ID which has an empty qualified ID, i.e. no type is available
-
-		return
-
-	case *CompositeStaticType:
-		// TODO: also check built-in values.
-		//   blocked by standard library values (RLP, BLS, etc.),
-		//   which are implemented as contracts, but currently do not have their type registered
-
-		if expectedType.Location == nil {
-			return
-		}
-	}
-
 	targetStaticType := target.StaticType(context)
 
-	if _, ok := expectedType.(*OptionalStaticType); ok {
+	switch expectedType := expectedType.(type) {
+	case *CompositeStaticType:
+		switch expectedType.Location.(type) {
+		case nil:
+			// `location == nil` means this is a built-in type. Skip them for now.
+			// TODO: also check built-in values.
+			//   blocked by standard library values (RLP, BLS, etc.),
+			//   which are implemented as contracts, but currently do not have their type registered
+			return
+
+		case common.TransactionLocation:
+			// Also skip transactions for now.
+			// TODO: Check transactions.
+			return
+		}
+
+	case *OptionalStaticType:
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
 			panic(&MemberAccessTypeError{
 				ExpectedType: expectedType,

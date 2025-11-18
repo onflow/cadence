@@ -339,8 +339,6 @@ func (c *Context) GetMethod(
 		location = staticType.Location
 	case *interpreter.InterfaceStaticType:
 		location = staticType.Location
-
-		// TODO: Anything else?
 	}
 
 	qualifiedFuncName := commons.StaticTypeQualifiedName(staticType, name)
@@ -430,6 +428,9 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) (semaType sema.Type) {
 	_, isPrimitiveType := staticType.(interpreter.PrimitiveStaticType)
 
+	// For primitive types, conversion is just a switch-case and returning a constant.
+	// It is efficient than a map lookup/update.
+	// So don't bother using the cache for primitive static types.
 	if !isPrimitiveType {
 		typeID := staticType.ID()
 		cachedSemaType, ok := c.semaTypeCache[typeID]

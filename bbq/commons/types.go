@@ -108,7 +108,7 @@ func TypeQualifier(typ sema.Type) string {
 
 func StaticTypeQualifier(typ interpreter.StaticType) string {
 	// IMPORTANT: Ensure this is in sync with `TypeQualifier` method above.
-	// TODO: try to unify
+	// TODO: Try to unify. Maybe generate the two functions from a single definition.
 
 	switch typ := typ.(type) {
 	case *interpreter.ConstantSizedStaticType:
