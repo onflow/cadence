@@ -73,7 +73,7 @@ func AreParamsContravariant(source, target *FunctionType) bool {
 	// Functions are contravariant in their parameter types
 	for i, subParameter := range source.Parameters {
 		superParameter := target.Parameters[i]
-		if !IsSubType(
+		if !IsSubTypeWithoutComparison(
 			superParameter.TypeAnnotation.Type,
 			subParameter.TypeAnnotation.Type,
 		) {
@@ -91,7 +91,7 @@ func AreReturnsCovariant(source, target *FunctionType) bool {
 			return false
 		}
 
-		if !IsSubType(
+		if !IsSubTypeWithoutComparison(
 			source.ReturnTypeAnnotation.Type,
 			target.ReturnTypeAnnotation.Type,
 		) {
@@ -114,7 +114,7 @@ func AreTypeArgumentsEqual(source, target ParameterizedType) bool {
 
 	for i, superTypeTypeArgument := range superTypeTypeArguments {
 		subTypeTypeArgument := subTypeTypeArguments[i]
-		if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
+		if !IsSubTypeWithoutComparison(subTypeTypeArgument, superTypeTypeArgument) {
 			return false
 		}
 	}
@@ -122,36 +122,6 @@ func AreTypeArgumentsEqual(source, target ParameterizedType) bool {
 	return true
 }
 
-func IsParameterizedSubType(subType Type, superType Type) bool {
-	typedSubType, ok := subType.(ParameterizedType)
-	if !ok {
-		return false
-	}
-
-	if baseType := typedSubType.BaseType(); baseType != nil {
-		return IsSubType(baseType, superType)
-	}
-
-	return false
-}
-
 func IsStorableType(typ Type) bool {
 	return typ.IsStorable(map[*Member]bool{})
-}
-
-type Equatable[T any] interface {
-	comparable
-	Equal(other T) bool
-}
-
-func deepEquals[T any, A, B Equatable[T]](source A, target B) bool {
-	var emptyA A
-	var emptyB B
-	if source == emptyA {
-		return target == emptyB
-	}
-
-	// Convert target to T to pass to source.Equal
-	targetAsT := any(target).(T)
-	return source.Equal(targetAsT)
 }

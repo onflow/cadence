@@ -130,7 +130,7 @@ func checkSubTypeFunctions(t *testing.T, subType sema.Type, superType sema.Type)
 		result,
 		generatedSemaResult,
 		"generated function in `sema` package produced different results for"+
-			" subType=%s, superType=%s: manual=%s, generated=%s",
+			" subType=%s, superType=%s: manual=%t, generated=%t",
 		subType,
 		superType,
 		result,
