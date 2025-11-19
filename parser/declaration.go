@@ -1694,27 +1694,27 @@ func parseMemberOrNestedDeclaration(p *parser) (ast.Declaration, error) {
 				)
 
 			case KeywordEvent:
-				rejectNonAccessModifiers(p, accessToken, accessToken, accessToken, common.DeclarationKindEvent)
+				rejectNonAccessModifiers(p, staticToken, nativeToken, purityToken, common.DeclarationKindEvent)
 				return parseEventDeclaration(p, access, accessToken)
 
 			case KeywordStruct:
-				rejectNonAccessModifiers(p, accessToken, accessToken, accessToken, common.DeclarationKindStructure)
+				rejectNonAccessModifiers(p, staticToken, nativeToken, purityToken, common.DeclarationKindStructure)
 				return parseCompositeOrInterfaceDeclaration(p, access, accessToken)
 
 			case KeywordResource:
-				rejectNonAccessModifiers(p, accessToken, accessToken, accessToken, common.DeclarationKindResource)
+				rejectNonAccessModifiers(p, staticToken, nativeToken, purityToken, common.DeclarationKindResource)
 				return parseCompositeOrInterfaceDeclaration(p, access, accessToken)
 
 			case KeywordContract:
-				rejectNonAccessModifiers(p, accessToken, accessToken, accessToken, common.DeclarationKindContract)
+				rejectNonAccessModifiers(p, staticToken, nativeToken, purityToken, common.DeclarationKindContract)
 				return parseCompositeOrInterfaceDeclaration(p, access, accessToken)
 
 			case KeywordEntitlement:
-				rejectNonAccessModifiers(p, accessToken, accessToken, accessToken, common.DeclarationKindEntitlement)
+				rejectNonAccessModifiers(p, staticToken, nativeToken, purityToken, common.DeclarationKindEntitlement)
 				return parseEntitlementOrMappingDeclaration(p, access, accessToken)
 
 			case KeywordEnum:
-				rejectNonAccessModifiers(p, accessToken, accessToken, accessToken, common.DeclarationKindEnum)
+				rejectNonAccessModifiers(p, staticToken, nativeToken, purityToken, common.DeclarationKindEnum)
 				return parseCompositeOrInterfaceDeclaration(p, access, accessToken)
 
 			case KeywordAttachment:
