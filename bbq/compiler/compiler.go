@@ -105,6 +105,8 @@ type Compiler[E, T any] struct {
 	// this table maps a global from its address qualified name to its original un-aliased typename
 	// used mainly for exporting imports for linking
 	globalRemoveAddressTable map[string]string
+
+	addedImports map[common.Location]struct{}
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
@@ -200,6 +202,7 @@ func newCompiler[E, T any](
 		codeGen:             codeGen,
 		typeGen:             typeGen,
 		postConditionsIndex: -1,
+		addedImports:        make(map[common.Location]struct{}),
 	}
 }
 
@@ -3756,6 +3759,11 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		return
 	}
 
+	// If the imports are already added for this location, then no need to add again.
+	if _, ok := c.addedImports[location]; ok {
+		return
+	}
+
 	if len(aliases) != 0 && c.globalAliasTable == nil {
 		// Lazy initialize the alias tables when needed.
 		c.globalAliasTable = make(map[string]string)
@@ -3791,6 +3799,8 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		qualifiedName := c.createGlobalAlias(location, function.QualifiedName, aliases, len(aliases) > 0)
 		c.addImportedGlobal(location, function.QualifiedName, qualifiedName)
 	}
+
+	c.addedImports[location] = struct{}{}
 
 	// Recursively add transitive imports.
 	for _, impt := range importedProgram.Imports {
