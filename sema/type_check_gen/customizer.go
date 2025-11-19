@@ -23,15 +23,6 @@ import (
 	"github.com/dave/dst/dstutil"
 )
 
-const (
-	typedSuperTypeVarName              = "typedSuperType"
-	typedSemaSuperTypeVarName          = "typedSemaSuperType"
-	typedSubTypeVarName                = "typedSubType"
-	typedSemaSubTypeVarName            = "typedSemaSubType"
-	typeConverter                      = "typeConverter"
-	staticToSemaTypeConversionFuncName = "SemaTypeFromStaticType"
-)
-
 func Update(decls []dst.Decl) []dst.Decl {
 	for i, decl := range decls {
 		for _, updater := range updaters {

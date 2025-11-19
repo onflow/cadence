@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/common"
+
 func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 	if subType == NeverType {
 		return true
@@ -26,7 +28,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 	switch typedSuperType := superType.(type) {
 	case *FunctionType:
-		return deepEquals(subType.Arity, typedSuperType.Arity)
+		return common.DeepEquals(subType.Arity, typedSuperType.Arity)
 
 	}
 
