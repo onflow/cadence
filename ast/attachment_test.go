@@ -302,6 +302,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
             "EndPos": {"Offset": 3, "Line": 2, "Column": 5},
             "Base":  {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": { 
                     "Identifier": "foo",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -314,6 +315,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
                 "Type": "InvocationExpression",
                 "InvokedExpression": {
                     "Type": "IdentifierExpression",
+                    "Comments": {},
                     "Identifier": { 
                         "Identifier": "bar",
                         "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -473,6 +475,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
             "EndPos": {"Offset": 3, "Line": 2, "Column": 5},
             "Value":  {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": { 
                     "Identifier": "baz",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},

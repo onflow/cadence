@@ -360,6 +360,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 											"Type": "InvocationExpression",
 											"InvokedExpression": {
 											   "Type": "IdentifierExpression",
+											   "Comments": {},
 											   "Identifier": {
 												   "Identifier": "foobar",
 												   "StartPos": {"Offset": 31, "Line": 32, "Column": 33},

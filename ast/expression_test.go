@@ -929,6 +929,7 @@ func TestIdentifierExpression_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "IdentifierExpression",
+            "Comments": {},
             "Identifier": {
                 "Identifier": "foobar",
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -2761,6 +2762,7 @@ func TestDestroyExpression_MarshalJSON(t *testing.T) {
             "Type": "DestroyExpression",
             "Expression": {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -3005,6 +3007,7 @@ func TestForceExpression_MarshalJSON(t *testing.T) {
             "Type": "ForceExpression",
             "Expression": {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -3834,6 +3837,7 @@ func TestInvocationExpression_MarshalJSON(t *testing.T) {
             "Type": "InvocationExpression",
             "InvokedExpression": {
                "Type": "IdentifierExpression",
+               "Comments": {},
                "Identifier": {
                    "Identifier": "foobar",
                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -4311,6 +4315,7 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
             "Type": "CastingExpression",
             "Expression": {
                "Type": "IdentifierExpression",
+               "Comments": {},
                "Identifier": {
                    "Identifier": "foobar",
                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -4709,6 +4714,7 @@ func TestCreateExpression_MarshalJSON(t *testing.T) {
                 "Type": "InvocationExpression",
                 "InvokedExpression": {
                    "Type": "IdentifierExpression",
+                   "Comments": {},
                    "Identifier": {
                        "Identifier": "foobar",
                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -4865,6 +4871,7 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
             "Type": "ReferenceExpression",
             "Expression": {
                "Type": "IdentifierExpression",
+               "Comments": {},
                "Identifier": {
                    "Identifier": "foobar",
                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
