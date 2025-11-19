@@ -42,17 +42,14 @@ import (
 )
 
 // assertGlobalsEqual compares GlobalInfo of globals
-func assertGlobalsEqual(t *testing.T, expected map[string]bbq.GlobalInfo, actual map[string]bbq.Global) {
+func assertGlobalsEqual(t *testing.T, expected []bbq.GlobalInfo, actual []bbq.Global) {
 	// Check that both maps have the same keys
-	assert.Equal(t, len(expected), len(actual), "globals maps have different lengths")
+	assert.Equal(t, len(expected), len(actual), "globals have different lengths")
 
-	for key, expectedGlobal := range expected {
-		actualGlobal, exists := actual[key]
-		if !assert.True(t, exists, "expected global %s not found in actual", key) {
-			continue
-		}
-
-		assert.Equal(t, expectedGlobal, actualGlobal.GetGlobalInfo())
+	for index, actualGlobal := range actual {
+		actualGlobalInfo := actualGlobal.GetGlobalInfo()
+		expectedGlobalInfo := expected[index]
+		assert.Equal(t, expectedGlobalInfo, actualGlobalInfo)
 	}
 }
 
@@ -9946,12 +9943,14 @@ func TestCompileImportAlias(t *testing.T) {
 
 		t.Parallel()
 
+		compiledPrograms := CompiledPrograms{}
+
 		importLocation := common.AddressLocation{
 			Address: common.MustBytesToAddress([]byte{0x1}),
 			Name:    "Foo",
 		}
 
-		importedChecker, err := ParseAndCheckWithOptions(t,
+		_ = ParseCheckAndCompile(t,
 			`
 				contract Foo {
 					fun hello(): String {
@@ -9959,19 +9958,11 @@ func TestCompileImportAlias(t *testing.T) {
 					}
 				}
             `,
-			ParseAndCheckOptions{
-				Location: importLocation,
-			},
+			importLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(importedChecker),
-			importedChecker.Location,
-		)
-		importedProgram := importCompiler.Compile()
-
-		checker, err := ParseAndCheckWithOptions(t,
+		program := ParseCheckAndCompile(t,
 			`
 				import Foo as Bar from 0x01
 
@@ -9979,31 +9970,9 @@ func TestCompileImportAlias(t *testing.T) {
 					return Bar.hello()
 				}
             `,
-			ParseAndCheckOptions{
-				CheckerConfig: &sema.Config{
-					LocationHandler: SingleIdentifierLocationResolver(t),
-					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-						require.Equal(t, importedChecker.Location, location)
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				},
-			},
+			TestLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-			require.Equal(t, importLocation, location)
-			return importedProgram
-		}
-
-		program := comp.Compile()
-
 		assert.Equal(
 			t,
 			[]bbq.Import{
@@ -10022,43 +9991,43 @@ func TestCompileImportAlias(t *testing.T) {
 		// Imported types are location qualified.
 		assertGlobalsEqual(
 			t,
-			map[string]bbq.GlobalInfo{
-				"test": {
+			[]bbq.GlobalInfo{
+				{
 					Location:      nil,
 					Name:          "test",
 					QualifiedName: "test",
 					Index:         0,
 				},
-				"A.0000000000000001.Foo": {
+				{
 					Location:      importLocation,
 					Name:          "Foo",
 					QualifiedName: "A.0000000000000001.Foo",
 					Index:         1,
 				},
-				"A.0000000000000001.Foo.hello": {
+				{
 					Location:      importLocation,
 					Name:          "Foo.hello",
 					QualifiedName: "A.0000000000000001.Foo.hello",
 					Index:         2,
 				},
 			},
-			comp.Globals,
+			program.Globals,
 		)
 
 	})
 
 	t.Run("interface", func(t *testing.T) {
 
-		t.SkipNow()
-
 		t.Parallel()
+
+		compiledPrograms := CompiledPrograms{}
 
 		importLocation := common.AddressLocation{
 			Address: common.MustBytesToAddress([]byte{0x1}),
 			Name:    "FooInterface",
 		}
 
-		importedChecker, err := ParseAndCheckWithOptions(t,
+		_ = ParseCheckAndCompile(t,
 			`
 				struct interface FooInterface {
 					fun hello(): String
@@ -10068,19 +10037,16 @@ func TestCompileImportAlias(t *testing.T) {
 					}
 				}
             `,
-			ParseAndCheckOptions{
-				Location: importLocation,
-			},
+			importLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(importedChecker),
-			importedChecker.Location,
-		)
-		importedProgram := importCompiler.Compile()
+		barLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "Bar",
+		}
 
-		checker, err := ParseAndCheckWithOptions(t,
+		program := ParseCheckAndCompile(t,
 			`
 				import FooInterface as FI from 0x01
 
@@ -10090,37 +10056,9 @@ func TestCompileImportAlias(t *testing.T) {
 					}
 				}
             `,
-			ParseAndCheckOptions{
-				CheckerConfig: &sema.Config{
-					LocationHandler: SingleIdentifierLocationResolver(t),
-					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-						require.Equal(t, importedChecker.Location, location)
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				},
-			},
+			barLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-			return importedProgram
-		}
-		comp.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
-			switch location {
-			case importLocation:
-				return compiler.NewDesugaredElaboration(importedChecker.Elaboration), nil
-			default:
-				return nil, fmt.Errorf("cannot find elaboration for %s", location)
-			}
-		}
-
-		program := comp.Compile()
 
 		assert.Equal(
 			t,
@@ -10136,52 +10074,51 @@ func TestCompileImportAlias(t *testing.T) {
 		// only imported function is a location qualified global.
 		assertGlobalsEqual(
 			t,
-			map[string]bbq.GlobalInfo{
-				"Bar": {
+			[]bbq.GlobalInfo{
+				{
 					Location:      nil,
 					Name:          "Bar",
 					QualifiedName: "Bar",
 					Index:         0,
 				},
-				"Bar.getType": {
+				{
 					Location:      nil,
 					Name:          "Bar.getType",
 					QualifiedName: "Bar.getType",
 					Index:         1,
 				},
-				"Bar.hello": {
-					Location:      nil,
-					Name:          "Bar.hello",
-					QualifiedName: "Bar.hello",
-					Index:         4,
-				},
-				"Bar.isInstance": {
+				{
 					Location:      nil,
 					Name:          "Bar.isInstance",
 					QualifiedName: "Bar.isInstance",
 					Index:         2,
 				},
-				"Bar.defaultHello": {
-					Location:      nil,
-					Name:          "Bar.defaultHello",
-					QualifiedName: "Bar.defaultHello",
-					Index:         5,
-				},
-				"A.0000000000000001.FooInterface.defaultHello": {
-					Location:      importLocation,
-					Name:          "FooInterface.defaultHello",
-					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
-					Index:         6,
-				},
-				"Bar.forEachAttachment": {
+				{
 					Location:      nil,
 					Name:          "Bar.forEachAttachment",
 					QualifiedName: "Bar.forEachAttachment",
 					Index:         3,
 				},
+				{
+					Location:      nil,
+					Name:          "Bar.hello",
+					QualifiedName: "Bar.hello",
+					Index:         4,
+				},
+				{
+					Location:      nil,
+					Name:          "Bar.defaultHello",
+					QualifiedName: "Bar.defaultHello",
+					Index:         5,
+				},
+				{
+					Location:      importLocation,
+					Name:          "FooInterface.defaultHello",
+					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
+					Index:         6,
+				},
 			},
-			comp.Globals,
+			program.Globals,
 		)
-
 	})
 }
