@@ -7485,7 +7485,7 @@ func IsPrimitiveOrContainerOfPrimitive(referencedType Type) bool {
 //     usage is, using IsSubType() method with a constant/pre-defined superType.
 //     e.g: IsSubType(<<someType>>, FixedPointType)
 func IsSubType(subType Type, superType Type) bool {
-	return isSubType(subType, superType, true)
+	return isSubType(subType, superType, CompareSubtypingResults)
 }
 
 func IsSubTypeWithoutComparison(subType Type, superType Type) bool {
@@ -7509,7 +7509,7 @@ func isSubType(subType Type, superType Type, compare bool) bool {
 		if generatedResult != result {
 			panic(errors.NewUnexpectedError(
 				"generated subtype checking function in `sema` package produced different results for"+
-					" subType=%s, superType=%s: expected=%t, generated=%t",
+					" subType=%s, superType=%s: expected=%t, found=%t",
 				subType,
 				superType,
 				result,
