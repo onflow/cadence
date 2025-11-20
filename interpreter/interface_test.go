@@ -19,8 +19,10 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -31,6 +33,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -1289,4 +1292,54 @@ func TestInterpretNestedInterfaceCast(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	require.NoError(t, err)
+}
+
+func TestInterpretInvokeDefaultFunction(t *testing.T) {
+	t.Parallel()
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          struct Foo {}
+
+          struct interface SI {
+              fun bar(_ foo: Foo): Foo {
+                  return foo
+              }
+          }
+
+          struct S: SI {}
+
+          fun test() {
+              let foo = Foo()
+              let s = S()
+              s.bar(foo)
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 7)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
 }
