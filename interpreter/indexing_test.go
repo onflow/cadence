@@ -19,11 +19,14 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 // TestInterpretIndexingExpressionTransfer tests if the indexing value
@@ -69,5 +72,91 @@ func TestInterpretIndexingExpressionTransfer(t *testing.T) {
 		// E.Third.rawValue
 		interpreter.UInt8Value(2),
 		result,
+	)
+}
+
+func TestInterpretIndexingExpressionTransferRead(t *testing.T) {
+	t.Parallel()
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test() {
+              let counts: {E: String} = {}
+              counts[E.A]
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 4)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
+}
+
+func TestInterpretIndexingExpressionTransferWrite(t *testing.T) {
+	t.Parallel()
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test() {
+              let counts: {E: String} = {}
+              counts[E.A] = "A"
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 6)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
 	)
 }
