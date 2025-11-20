@@ -3181,8 +3181,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	checker, err := ParseAndCheck(t, `
         struct interface IA {
-            fun test(): Int {
-                return 42
+            fun test(x: Int): Int {
+                return x
             }
         }
 
@@ -3243,8 +3243,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// Should be calling into interface's default function.
 	// ```
-	//     fun test(): Int {
-	//        return self.test()
+	//     fun test(x: Int): Int {
+	//        return self.test(x: x)
 	//    }
 	// ```
 
@@ -3259,13 +3259,15 @@ func TestCompileDefaultFunction(t *testing.T) {
 			// self.test()
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetMethod{Method: interfaceFunctionIndex}, // must be interface method's index
+			opcode.InstructionGetLocal{Local: 1},                        // argument x
+			// NOTE: no transfer or convert of argument
 			opcode.InstructionInvoke{
 				TypeArgs: nil,
-				ArgCount: 0,
+				ArgCount: 1,
 			},
 
 			// return
-			opcode.InstructionTransferAndConvert{Type: 6},
+			// NOTE: no transfer or convert of value
 			opcode.InstructionReturnValue{},
 		},
 		concreteTypeTestFunc.Code,
@@ -3282,8 +3284,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// Should contain the implementation.
 	// ```
-	//    fun test(): Int {
-	//        return 42
+	//    fun test(x: Int): Int {
+	//        return x
 	//    }
 	// ```
 
@@ -3291,8 +3293,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 
-			// 42
-			opcode.InstructionGetConstant{Constant: 0},
+			// x
+			opcode.InstructionGetLocal{Local: 1},
 			opcode.InstructionTransferAndConvert{Type: 6},
 
 			// return
@@ -3302,12 +3304,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.DecodedConstant{
-			{
-				Data: interpreter.NewUnmeteredIntValueFromInt64(42),
-				Kind: constant.Int,
-			},
-		},
+		[]constant.DecodedConstant(nil),
 		program.Constants,
 	)
 }
