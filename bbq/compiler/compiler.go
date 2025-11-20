@@ -1303,7 +1303,9 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 				// Must transfer and convert, so that `result` variable gets the
 				// correct converted value.
 				returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
-				c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+				if !returnTypes.PassWithoutTransferOrConvert {
+					c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+				}
 
 				c.emitSetLocal(tempResultVar.index)
 			} else {
@@ -1320,7 +1322,11 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 			// (1.b)
 			// If there are no post conditions, return then-and-there.
 			returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
-			c.emitTransferAndConvertAndReturnValue(returnTypes.ReturnType)
+			returnType := returnTypes.ReturnType
+			if !returnTypes.PassWithoutTransferOrConvert {
+				c.emitTransferIfNotResourceAndConvert(returnType)
+			}
+			c.emit(opcode.InstructionReturnValue{})
 		}
 	} else {
 		// (2) Empty return
@@ -1901,11 +1907,6 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 
 		c.emit(opcode.InstructionReturnValue{})
 	}()
-}
-
-func (c *Compiler[_, _]) emitTransferAndConvertAndReturnValue(returnType sema.Type) {
-	c.emitTransferIfNotResourceAndConvert(returnType)
-	c.emit(opcode.InstructionReturnValue{})
 }
 
 func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
@@ -2822,7 +2823,7 @@ func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTyp
 	for index, argument := range arguments {
 		c.compileExpression(argument.Expression)
 
-		if invocationTypes.SkipArgumentsTransfer {
+		if invocationTypes.PassArgumentsWithoutTransferOrConvert {
 			continue
 		}
 
