@@ -1636,10 +1636,7 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 				c.compileExpression(argument.Expression)
 
 				parameterType := invocationTypes.ParameterTypes[index]
-				parameterTypeIndex := c.getOrAddType(parameterType)
-				c.emit(opcode.InstructionConvert{
-					Type: parameterTypeIndex,
-				})
+				c.emitConvert(parameterType)
 			}
 
 			argCount := len(arguments)
@@ -2974,18 +2971,19 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 // compileIndexAccess compiles the index access, i.e. RemoveIndex or GetIndex.
 // It assumes the target and indexing/key expressions are already compiled on the stack.
 func (c *Compiler[_, _]) compileIndexAccess(expression *ast.IndexExpression) {
-	c.emitIndexKeyTransferAndConvert(expression)
+	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	indexedType := indexExpressionTypes.IndexedType
+	c.emitConvert(indexedType.IndexingType())
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
 		c.emit(opcode.InstructionRemoveIndex{})
 	} else {
 		c.emit(opcode.InstructionGetIndex{})
-	}
-
-	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
-	if !ok {
-		panic(errors.NewUnreachableError())
 	}
 
 	// Return a reference, if the element is accessed via a reference.
@@ -4117,6 +4115,13 @@ func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(targetType sema.Typ
 
 func (c *Compiler[_, _]) emitTransfer() {
 	c.emit(opcode.InstructionTransfer{})
+}
+
+func (c *Compiler[_, _]) emitConvert(targetType sema.Type) {
+	typeIndex := c.getOrAddType(targetType)
+	c.emit(opcode.InstructionConvert{
+		Type: typeIndex,
+	})
 }
 
 func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
