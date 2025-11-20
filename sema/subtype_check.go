@@ -24,10 +24,6 @@ import (
 
 //go:generate go run ./type_check_gen subtype_check.gen.go
 
-// CompareSubtypingResults is a flag to enable/disable comparison of the generated subtype checking results.
-// This was made a module level variable, since the `IsSubType` function is a static-function,
-var CompareSubtypingResults = true
-
 func IsResourceType(typ Type) bool {
 	return typ.IsResourceType()
 }
