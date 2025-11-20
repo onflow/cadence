@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/common"
+
 func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 	if subType == NeverType {
 		return true
@@ -47,8 +49,8 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		return IsHashableStructType(subType)
 
 	case PathType:
-		return IsSubType(subType, StoragePathType) ||
-			IsSubType(subType, CapabilityPathType)
+		return IsSubTypeWithoutComparison(subType, StoragePathType) ||
+			IsSubTypeWithoutComparison(subType, CapabilityPathType)
 
 	case StorableType:
 		return IsStorableType(subType)
@@ -69,15 +71,15 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return true
 		}
 
-		return IsSubType(subType, IntegerType) ||
-			IsSubType(subType, FixedPointType)
+		return IsSubTypeWithoutComparison(subType, IntegerType) ||
+			IsSubTypeWithoutComparison(subType, FixedPointType)
 
 	case SignedNumberType:
 
 		// TODO: Maybe remove since these predicates only need to check for strict-subtyping, without the "equality".
 		return subType == SignedNumberType ||
-			(IsSubType(subType, SignedIntegerType) ||
-				IsSubType(subType, SignedFixedPointType))
+			(IsSubTypeWithoutComparison(subType, SignedIntegerType) ||
+				IsSubTypeWithoutComparison(subType, SignedFixedPointType))
 
 	case IntegerType:
 		switch subType {
@@ -88,8 +90,8 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return true
 		}
 
-		return IsSubType(subType, SignedIntegerType) ||
-			IsSubType(subType, FixedSizeUnsignedIntegerType)
+		return IsSubTypeWithoutComparison(subType, SignedIntegerType) ||
+			IsSubTypeWithoutComparison(subType, FixedSizeUnsignedIntegerType)
 
 	case SignedIntegerType:
 		switch subType {
@@ -134,7 +136,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return true
 		}
 
-		return IsSubType(subType, SignedFixedPointType)
+		return IsSubTypeWithoutComparison(subType, SignedFixedPointType)
 
 	case SignedFixedPointType:
 		switch subType {
@@ -154,17 +156,17 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		// Optionals are covariant: T? <: U? if T <: U
 		switch typedSubType := subType.(type) {
 		case *OptionalType:
-			return IsSubType(typedSubType.Type, typedSuperType.Type)
+			return IsSubTypeWithoutComparison(typedSubType.Type, typedSuperType.Type)
 		}
 
 		// T <: U? if T <: U
-		return IsSubType(subType, typedSuperType.Type)
+		return IsSubTypeWithoutComparison(subType, typedSuperType.Type)
 
 	case *DictionaryType:
 		switch typedSubType := subType.(type) {
 		case *DictionaryType:
-			return IsSubType(typedSubType.ValueType, typedSuperType.ValueType) &&
-				IsSubType(typedSubType.KeyType, typedSuperType.KeyType)
+			return IsSubTypeWithoutComparison(typedSubType.ValueType, typedSuperType.ValueType) &&
+				IsSubTypeWithoutComparison(typedSubType.KeyType, typedSuperType.KeyType)
 		}
 
 		return false
@@ -172,7 +174,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 	case *VariableSizedType:
 		switch typedSubType := subType.(type) {
 		case *VariableSizedType:
-			return IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
+			return IsSubTypeWithoutComparison(typedSubType.ElementType(false), typedSuperType.ElementType(false))
 		}
 
 		return false
@@ -181,7 +183,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		switch typedSubType := subType.(type) {
 		case *ConstantSizedType:
 			return typedSuperType.Size == typedSubType.Size &&
-				IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
+				IsSubTypeWithoutComparison(typedSubType.ElementType(false), typedSuperType.ElementType(false))
 		}
 
 		return false
@@ -193,7 +195,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			// The authorization of the subtype reference must be usable in all situations where the supertype reference is usable.
 			return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
 				// References are covariant in their referenced type
-				IsSubType(typedSubType.Type, typedSuperType.Type)
+				IsSubTypeWithoutComparison(typedSubType.Type, typedSuperType.Type)
 		}
 
 		return false
@@ -211,7 +213,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 			case *CompositeType:
-				return deepEquals(typedSubTypeLegacyType, typedSuperType)
+				return common.DeepEquals(typedSubTypeLegacyType, typedSuperType)
 			}
 
 			return false
@@ -285,7 +287,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 					// Below two combination is repeated several times below.
 					// Maybe combine them to produce a single predicate.
 					return (typedSuperType.LegacyType == nil ||
-						IsSubType(typedSubType.LegacyType, typedSuperType.LegacyType)) &&
+						IsSubTypeWithoutComparison(typedSubType.LegacyType, typedSuperType.LegacyType)) &&
 						IsIntersectionSubset(typedSuperType, typedSubType)
 				}
 
@@ -297,14 +299,14 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 				case *CompositeType:
 					return (typedSuperType.LegacyType == nil ||
-						IsSubType(typedSubTypeLegacyType, typedSuperType.LegacyType)) &&
+						IsSubTypeWithoutComparison(typedSubTypeLegacyType, typedSuperType.LegacyType)) &&
 						IsIntersectionSubset(typedSuperType, typedSubTypeLegacyType)
 				}
 
 				return false
 			case ConformingType:
 				return (typedSuperType.LegacyType == nil ||
-					IsSubType(typedSubType, typedSuperType.LegacyType)) &&
+					IsSubTypeWithoutComparison(typedSubType, typedSuperType.LegacyType)) &&
 					IsIntersectionSubset(typedSuperType, typedSubType)
 			}
 
@@ -342,12 +344,12 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 				// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
 				// `Us` and `Ws` do *not* have to be subsets:
 				// The owner may freely restrict and unrestrict.
-				return deepEquals(typedSubTypeLegacyType, typedSuperType.LegacyType)
+				return common.DeepEquals(typedSubTypeLegacyType, typedSuperType.LegacyType)
 			}
 
 			return false
 		case *CompositeType:
-			return IsSubType(typedSubType, typedSuperType.LegacyType)
+			return IsSubTypeWithoutComparison(typedSubType, typedSuperType.LegacyType)
 		}
 
 		return false
@@ -373,7 +375,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 				for i, source := range typedSubTypeTypeParameters {
 					target := typedSuperTypeTypeParameters[i]
-					if !(deepEquals(source.TypeBound, target.TypeBound)) {
+					if !(common.DeepEquals(source.TypeBound, target.TypeBound)) {
 						return false
 					}
 				}
@@ -391,12 +393,12 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 					// Note the super-type is the subtype's parameter
 					// because the parameters are contravariant.
-					!(IsSubType(target.TypeAnnotation.Type, source.TypeAnnotation.Type)) {
+					!(IsSubTypeWithoutComparison(target.TypeAnnotation.Type, source.TypeAnnotation.Type)) {
 						return false
 					}
 				}
 
-				return deepEquals(typedSubType.Arity, typedSuperType.Arity) &&
+				return common.DeepEquals(typedSubType.Arity, typedSuperType.Arity) &&
 					// Functions are covariant in their return type.
 					(AreReturnsCovariant(typedSubType, typedSuperType) &&
 						typedSubType.IsConstructor == typedSuperType.IsConstructor)
@@ -412,7 +414,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		case ParameterizedType:
 			if typedSubType.BaseType() != nil {
 				if typedSuperType.BaseType() != nil {
-					if IsSubType(typedSubType.BaseType(), typedSuperType.BaseType()) {
+					if IsSubTypeWithoutComparison(typedSubType.BaseType(), typedSuperType.BaseType()) {
 						typedSubTypeTypeArguments := typedSubType.TypeArguments()
 						typedSuperTypeTypeArguments := typedSuperType.TypeArguments()
 						if len(typedSubTypeTypeArguments) != len(typedSuperTypeTypeArguments) {
@@ -421,7 +423,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 						for i, source := range typedSubTypeTypeArguments {
 							target := typedSuperTypeTypeArguments[i]
-							if !(IsSubType(source, target)) {
+							if !(IsSubTypeWithoutComparison(source, target)) {
 								return false
 							}
 						}
@@ -432,7 +434,7 @@ func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 					return false
 				}
 
-				return IsSubType(typedSubType.BaseType(), typedSuperType)
+				return IsSubTypeWithoutComparison(typedSubType.BaseType(), typedSuperType)
 			}
 
 		}

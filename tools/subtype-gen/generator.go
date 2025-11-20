@@ -27,6 +27,10 @@ import (
 	"github.com/dave/dst"
 )
 
+const (
+	commonsPkgPath = "github.com/onflow/cadence/common"
+)
+
 var neverType = SimpleType{
 	name: "Never",
 }
@@ -1202,7 +1206,10 @@ func (gen *SubTypeCheckGenerator) deepEqualsPredicate(equals DeepEqualsPredicate
 	case TypeExpression, MemberExpression, IdentifierExpression:
 		return []dst.Node{
 			gen.callExpression(
-				dst.NewIdent("deepEquals"),
+				&dst.Ident{
+					Path: commonsPkgPath,
+					Name: "DeepEquals",
+				},
 				gen.expressionIgnoreNegation(equals.Source),
 				gen.expressionIgnoreNegation(target),
 			),
@@ -1229,7 +1236,7 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression, ignoreNegation boo
 
 	name, ok := gen.findInScope(expr)
 	if ok {
-		return &dst.Ident{Name: name}
+		return dst.NewIdent(name)
 	}
 
 	switch expr := expr.(type) {

@@ -1,4 +1,3 @@
-// Code generated from rules.yaml. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -17,20 +16,24 @@
  * limitations under the License.
  */
 
-package sema
+package common
 
-import "github.com/onflow/cadence/common"
+type Equatable[T any] interface {
+	comparable
+	Equal(other T) bool
+}
 
-func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
-	if subType == NeverType {
-		return true
+func DeepEquals[T any, A, B Equatable[T]](source A, target B) bool {
+	var emptyA A
+	var emptyB B
+
+	if source == emptyA {
+		return target == emptyB
+	} else if target == emptyB {
+		return false
 	}
 
-	switch typedSuperType := superType.(type) {
-	case *FunctionType:
-		return common.DeepEquals(subType.Arity, typedSuperType.Arity)
-
-	}
-
-	return false
+	// Convert target to T to pass to source.Equal
+	targetAsT := any(target).(T)
+	return source.Equal(targetAsT)
 }

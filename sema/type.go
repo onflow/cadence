@@ -4942,8 +4942,11 @@ func IsHashableStructType(t Type) bool {
 		case NeverType, BoolType, CharacterType, StringType, MetaType, HashableStructType:
 			return true
 		default:
-			return IsSubType(typ, NumberType) ||
-				IsSubType(typ, PathType)
+			// The only other place this function is used is during super-type-inferring.
+			// It's not needed to compare results during the inferring.
+			// Hence, always skipping the comparison is OK.
+			return IsSubTypeWithoutComparison(typ, NumberType) ||
+				IsSubTypeWithoutComparison(typ, PathType)
 		}
 	}
 }
@@ -7482,6 +7485,14 @@ func IsPrimitiveOrContainerOfPrimitive(referencedType Type) bool {
 //     usage is, using IsSubType() method with a constant/pre-defined superType.
 //     e.g: IsSubType(<<someType>>, FixedPointType)
 func IsSubType(subType Type, superType Type) bool {
+	return isSubType(subType, superType, CompareSubtypingResults)
+}
+
+func IsSubTypeWithoutComparison(subType Type, superType Type) bool {
+	return isSubType(subType, superType, false)
+}
+
+func isSubType(subType Type, superType Type, compare bool) bool {
 
 	if subType == nil {
 		return false
@@ -7491,7 +7502,23 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
-	return CheckSubTypeWithoutEquality(subType, superType)
+	result := CheckSubTypeWithoutEquality(subType, superType)
+
+	if compare {
+		generatedResult := CheckSubTypeWithoutEquality_gen(subType, superType)
+		if generatedResult != result {
+			panic(errors.NewUnexpectedError(
+				"generated subtype checking function in `sema` package produced different results for"+
+					" subType=%s, superType=%s: expected=%t, found=%t",
+				subType,
+				superType,
+				result,
+				generatedResult,
+			))
+		}
+	}
+
+	return result
 }
 
 // IsSameTypeKind determines if the given subtype belongs to the
@@ -7557,16 +7584,16 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return IsHashableStructType(subType)
 
 	case PathType:
-		return IsSubType(subType, StoragePathType) ||
-			IsSubType(subType, CapabilityPathType)
+		return IsSubTypeWithoutComparison(subType, StoragePathType) ||
+			IsSubTypeWithoutComparison(subType, CapabilityPathType)
 
 	case StorableType:
 		storableResults := map[*Member]bool{}
 		return subType.IsStorable(storableResults)
 
 	case CapabilityPathType:
-		return IsSubType(subType, PrivatePathType) ||
-			IsSubType(subType, PublicPathType)
+		return IsSubTypeWithoutComparison(subType, PrivatePathType) ||
+			IsSubTypeWithoutComparison(subType, PublicPathType)
 
 	case NumberType:
 		switch subType {
@@ -7574,16 +7601,16 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return true
 		}
 
-		return IsSubType(subType, IntegerType) ||
-			IsSubType(subType, FixedPointType)
+		return IsSubTypeWithoutComparison(subType, IntegerType) ||
+			IsSubTypeWithoutComparison(subType, FixedPointType)
 
 	case SignedNumberType:
 		if subType == SignedNumberType {
 			return true
 		}
 
-		return IsSubType(subType, SignedIntegerType) ||
-			IsSubType(subType, SignedFixedPointType)
+		return IsSubTypeWithoutComparison(subType, SignedIntegerType) ||
+			IsSubTypeWithoutComparison(subType, SignedFixedPointType)
 
 	case IntegerType:
 		switch subType {
@@ -7593,7 +7620,8 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return true
 
 		default:
-			return IsSubType(subType, SignedIntegerType) || IsSubType(subType, FixedSizeUnsignedIntegerType)
+			return IsSubTypeWithoutComparison(subType, SignedIntegerType) ||
+				IsSubTypeWithoutComparison(subType, FixedSizeUnsignedIntegerType)
 		}
 
 	case SignedIntegerType:
@@ -7629,7 +7657,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return true
 
 		default:
-			return IsSubType(subType, SignedFixedPointType)
+			return IsSubTypeWithoutComparison(subType, SignedFixedPointType)
 		}
 
 	case SignedFixedPointType:
@@ -7649,10 +7677,10 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 		optionalSubType, ok := subType.(*OptionalType)
 		if !ok {
 			// T <: U? if T <: U
-			return IsSubType(subType, typedSuperType.Type)
+			return IsSubTypeWithoutComparison(subType, typedSuperType.Type)
 		}
 		// Optionals are covariant: T? <: U? if T <: U
-		return IsSubType(optionalSubType.Type, typedSuperType.Type)
+		return IsSubTypeWithoutComparison(optionalSubType.Type, typedSuperType.Type)
 
 	case *DictionaryType:
 		typedSubType, ok := subType.(*DictionaryType)
@@ -7660,8 +7688,8 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		return IsSubType(typedSubType.KeyType, typedSuperType.KeyType) &&
-			IsSubType(typedSubType.ValueType, typedSuperType.ValueType)
+		return IsSubTypeWithoutComparison(typedSubType.KeyType, typedSuperType.KeyType) &&
+			IsSubTypeWithoutComparison(typedSubType.ValueType, typedSuperType.ValueType)
 
 	case *VariableSizedType:
 		typedSubType, ok := subType.(*VariableSizedType)
@@ -7669,7 +7697,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		return IsSubType(
+		return IsSubTypeWithoutComparison(
 			typedSubType.ElementType(false),
 			typedSuperType.ElementType(false),
 		)
@@ -7684,7 +7712,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		return IsSubType(
+		return IsSubTypeWithoutComparison(
 			typedSubType.ElementType(false),
 			typedSuperType.ElementType(false),
 		)
@@ -7701,7 +7729,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 		}
 
 		// references are covariant in their referenced type
-		return IsSubType(typedSubType.Type, typedSuperType.Type)
+		return IsSubTypeWithoutComparison(typedSubType.Type, typedSuperType.Type)
 
 	case *FunctionType:
 		typedSubType, ok := subType.(*FunctionType)
@@ -7805,7 +7833,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// and `Vs` is a subset of `Us`.
 
 					if intersectionSuperType != nil &&
-						!IsSubType(intersectionSubtype, intersectionSuperType) {
+						!IsSubTypeWithoutComparison(intersectionSubtype, intersectionSuperType) {
 
 						return false
 					}
@@ -7822,7 +7850,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// `Us` and `Vs` do *not* have to be subsets.
 
 					if intersectionSuperType != nil &&
-						!IsSubType(intersectionSubtype, intersectionSuperType) {
+						!IsSubTypeWithoutComparison(intersectionSubtype, intersectionSuperType) {
 
 						return false
 					}
@@ -7840,7 +7868,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 				// and `T` conforms to `Us`.
 
 				if intersectionSuperType != nil &&
-					!IsSubType(typedSubType, intersectionSuperType) {
+					!IsSubTypeWithoutComparison(typedSubType, intersectionSuperType) {
 
 					return false
 				}
@@ -7891,7 +7919,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 			//
 			// The owner may freely restrict.
 
-			return IsSubType(typedSubType, intersectionSuperType)
+			return IsSubTypeWithoutComparison(typedSubType, intersectionSuperType)
 		}
 
 		return false
@@ -7985,7 +8013,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 			if subTypeBaseType := typedSubType.BaseType(); subTypeBaseType != nil {
 
-				if !IsSubType(subTypeBaseType, superTypeBaseType) {
+				if !IsSubTypeWithoutComparison(subTypeBaseType, superTypeBaseType) {
 					return false
 				}
 
@@ -7998,7 +8026,7 @@ func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// if T <: V
 
 			if baseType := typedSubType.BaseType(); baseType != nil {
-				return IsSubType(baseType, superType)
+				return IsSubTypeWithoutComparison(baseType, superType)
 			}
 		}
 

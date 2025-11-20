@@ -1,4 +1,5 @@
-// Code generated from rules.yaml. DO NOT EDIT.
+//go:build !compare_subtyping
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -19,18 +20,4 @@
 
 package sema
 
-import "github.com/onflow/cadence/common"
-
-func CheckSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
-	if subType == NeverType {
-		return true
-	}
-
-	switch typedSuperType := superType.(type) {
-	case *FunctionType:
-		return common.DeepEquals(subType.Arity, typedSuperType.Arity)
-
-	}
-
-	return false
-}
+const CompareSubtypingResults = false
