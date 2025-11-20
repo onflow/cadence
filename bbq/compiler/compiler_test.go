@@ -1782,7 +1782,8 @@ func TestCompileIndex(t *testing.T) {
 			// array[index]
 			opcode.InstructionGetLocal{Local: arrayIndex},
 			opcode.InstructionGetLocal{Local: indexIndex},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			// NOTE: no transfer
+			opcode.InstructionConvert{Type: 1},
 			opcode.InstructionGetIndex{},
 
 			// return
@@ -7445,7 +7446,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				// Evaluate the index expression, `y["r"]`, using temp locals.
 				opcode.InstructionGetLocal{Local: tempYIndex},
 				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
-				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionConvert{Type: 3},
 				opcode.InstructionRemoveIndex{},
 				opcode.InstructionTransferAndConvert{Type: 4},
 
@@ -8466,14 +8467,14 @@ func TestCompileSwapIndex(t *testing.T) {
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
-			opcode.InstructionTransferAndConvert{Type: 3},
+			opcode.InstructionConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex5},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
-			opcode.InstructionTransferAndConvert{Type: 3},
+			opcode.InstructionConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex6},
