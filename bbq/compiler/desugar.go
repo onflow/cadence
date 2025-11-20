@@ -1471,6 +1471,9 @@ func (d *Desugar) interfaceDelegationMethodCall(
 		// So the argument types to the invocation of `Interface.defaultFunc` are the same
 		// as the parameter types of `defaultFunc`/`Interface.defaultFunc`.
 		ArgumentTypes: parameterTypes,
+		// Given the function is synthetic, we may not transfer the arguments,
+		// to match interpreter behavior.
+		SkipArgumentsTransfer: true,
 	}
 
 	memberAccessInfo := sema.MemberAccessInfo{
