@@ -2658,7 +2658,7 @@ func TestLexBlockComment(t *testing.T) {
 				{
 					Token: Token{
 						Type:         TokenError,
-						SpaceOrError: errors.New(`missing comment end '*/'`),
+						SpaceOrError: MissingCommentEndError{},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 20, Offset: 20},
 							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
