@@ -68,7 +68,9 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
            }
 	    `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		_ = errs
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.CyclicConformanceError{}, errs[0])
+		assert.IsType(t, &sema.InterfaceMemberConflictError{}, errs[1])
 	})
 }

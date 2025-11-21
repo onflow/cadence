@@ -5891,8 +5891,14 @@ func (t *InterfaceType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		members := MembersMapAsResolvers(t.Members)
 
-		// add any inherited members from up the inheritance chain
+		// Add any inherited members from up the inheritance chain
 		for _, conformance := range t.EffectiveInterfaceConformances() {
+
+			// Prevent infinite recursion in case of self-conforming interfaces
+			if conformance.InterfaceType == t {
+				continue
+			}
+
 			for name, member := range conformance.InterfaceType.GetMembers() { //nolint:maprange
 				if _, ok := members[name]; !ok {
 					members[name] = member
