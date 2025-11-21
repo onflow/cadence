@@ -6124,6 +6124,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 								Pos:        ast.Position{Line: 1, Column: 32, Offset: 32},
 							},
 							nil,
+							ast.EmptyComments,
 						),
 					},
 					Range: ast.Range{

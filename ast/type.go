@@ -120,19 +120,6 @@ func NewNominalType(
 	memoryGauge common.MemoryGauge,
 	identifier Identifier,
 	nestedIdentifiers []Identifier,
-) *NominalType {
-	common.UseMemory(memoryGauge, common.NominalTypeMemoryUsage)
-	return &NominalType{
-		Identifier:        identifier,
-		NestedIdentifiers: nestedIdentifiers,
-	}
-}
-
-// TODO(preserve-comments): Should we remove this and use only NewNominalType (requires updating all dependants)
-func NewNominalTypeWithComments(
-	memoryGauge common.MemoryGauge,
-	identifier Identifier,
-	nestedIdentifiers []Identifier,
 	comments Comments,
 ) *NominalType {
 	common.UseMemory(memoryGauge, common.NominalTypeMemoryUsage)

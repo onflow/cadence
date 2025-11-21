@@ -2959,6 +2959,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 								Pos:        ast.Position{Line: 1, Column: 24, Offset: 24},
 							},
 							nil,
+							ast.EmptyComments,
 						),
 					},
 					Range: ast.Range{
@@ -3001,6 +3002,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 								Pos:        ast.Position{Line: 1, Column: 24, Offset: 24},
 							},
 							nil,
+							ast.EmptyComments,
 						),
 						ast.NewNominalType(
 							nil,
@@ -3009,6 +3011,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 								Pos:        ast.Position{Line: 1, Column: 28, Offset: 28},
 							},
 							nil,
+							ast.EmptyComments,
 						),
 					},
 					Range: ast.Range{

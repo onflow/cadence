@@ -208,7 +208,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 		trailingComments = nestedToken.Comments.PackToList()
 	}
 
-	return ast.NewNominalTypeWithComments(
+	return ast.NewNominalType(
 		p.memoryGauge,
 		p.tokenToIdentifier(token),
 		nestedIdentifiers,
@@ -1100,6 +1100,7 @@ func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPuri
 				endPos,
 			),
 			nil,
+			ast.EmptyComments,
 		)
 		returnTypeAnnotation = ast.NewTypeAnnotation(
 			p.memoryGauge,

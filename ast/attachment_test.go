@@ -46,6 +46,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
 			[]Identifier{},
+			EmptyComments,
 		),
 		Conformances: []*NominalType{
 			{
@@ -450,6 +451,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
 			[]Identifier{},
+			EmptyComments,
 		),
 		Value: NewIdentifierExpression(
 			nil,

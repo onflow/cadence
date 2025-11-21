@@ -219,6 +219,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 		p.memoryGauge,
 		p.tokenToIdentifier(token),
 		nestedIdentifiers,
+		ast.EmptyComments,
 	), nil
 }
 
