@@ -30,7 +30,7 @@ import (
 func TestCheckSelfReferencingDeclaration(t *testing.T) {
 	t.Parallel()
 
-	t.Run("self-attaching attachment, check instantiated", func(t *testing.T) {
+	t.Run("self-attaching attachment, direct, check instantiated", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -45,7 +45,25 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
 	})
 
-	t.Run("self-conforming interface, supported entitlements", func(t *testing.T) {
+	t.Run("self-attaching attachment, transitive, check instantiated", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            attachment A for B {}
+
+            attachment B for A {}
+
+			fun f(_: A) {}
+	    `)
+
+		errs := RequireCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[2])
+	})
+
+	t.Run("self-conforming interface, direct, supported entitlements", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -59,11 +77,52 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
 		assert.IsType(t, &sema.CyclicConformanceError{}, errs[0])
 	})
 
-	t.Run("self-conforming interface, members", func(t *testing.T) {
+	t.Run("self-conforming interface, transitive, supported entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			struct interface SI1: SI2 {
+				init()
+			}
+
+            struct interface SI2: SI1 {
+				init()
+			}
+	    `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.CyclicConformanceError{}, errs[0])
+	})
+
+	t.Run("self-conforming interface, direct, members", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
            struct interface SI: SI {
+               fun foo() {
+                   self.foo
+               }
+           }
+	    `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.CyclicConformanceError{}, errs[0])
+		assert.IsType(t, &sema.InterfaceMemberConflictError{}, errs[1])
+	})
+
+	t.Run("self-conforming interface, transitive, members", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           struct interface SI1: SI2 {
+               fun foo() {
+                   self.foo
+               }
+           }
+
+           struct interface SI2: SI1 {
                fun foo() {
                    self.foo
                }
