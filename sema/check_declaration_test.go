@@ -30,20 +30,22 @@ import (
 func TestCheckSelfReferencingDeclaration(t *testing.T) {
 	t.Parallel()
 
-	t.Run("attachment", func(t *testing.T) {
+	t.Run("self-attaching attachment, check instantiated", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            attachment A for A {
-                fun f(_: A) {}
-            }
+            attachment A for A {}
+
+			fun f(_: A) {}
 	    `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		_ = errs
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
 	})
 
-	t.Run("interface, initializer (supported entitlements)", func(t *testing.T) {
+	t.Run("self-conforming interface, supported entitlements", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -57,7 +59,7 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
 		assert.IsType(t, &sema.CyclicConformanceError{}, errs[0])
 	})
 
-	t.Run("struct interface", func(t *testing.T) {
+	t.Run("self-conforming interface, members", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `

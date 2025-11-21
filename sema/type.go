@@ -5435,10 +5435,13 @@ func (t *CompositeType) CheckInstantiated(pos ast.HasPosition, memoryGauge commo
 		t.EnumRawType.CheckInstantiated(pos, memoryGauge, report)
 	}
 
-	if t.baseType != nil {
+	// Check if base type is instantiated.
+	// Prevent infinite recursion in case of self-referencing attachment
+	if t.baseType != nil && t.baseType != t {
 		t.baseType.CheckInstantiated(pos, memoryGauge, report)
 	}
 
+	// Check if conformances are instantiated
 	for _, typ := range t.ExplicitInterfaceConformances {
 		typ.CheckInstantiated(pos, memoryGauge, report)
 	}
