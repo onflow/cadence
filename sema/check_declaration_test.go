@@ -34,10 +34,6 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
             attachment A for A {
                 fun f(_: A) {}
             }
-
-            fun main(): Int {
-                return 0
-            }
 	    `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -48,15 +44,9 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            resource R {
-                contract interface I: I {
-                    init()
-                }
-            }
-
-            fun main(): Int {
-                return 0
-            }
+			struct interface SI: SI {
+				init()
+			}
 	    `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -69,12 +59,8 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
 		_, err := ParseAndCheck(t, `
            struct interface SI: SI {
                fun foo() {
-                   (self.foo.foo.foo.foo)
+                   self.foo
                }
-           }
-
-           fun main(): Int {
-               return 0
            }
 	    `)
 
