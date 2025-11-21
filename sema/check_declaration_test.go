@@ -40,7 +40,7 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
 		_ = errs
 	})
 
-	t.Run("contract interface", func(t *testing.T) {
+	t.Run("interface, initializer (supported entitlements)", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
