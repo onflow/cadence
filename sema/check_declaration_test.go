@@ -21,6 +21,9 @@ package sema_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -50,7 +53,8 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
 	    `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		_ = errs
+
+		assert.IsType(t, &sema.CyclicConformanceError{}, errs[0])
 	})
 
 	t.Run("struct interface", func(t *testing.T) {
