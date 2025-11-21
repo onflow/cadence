@@ -198,12 +198,12 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		preConditions,
 		postConditions,
 		execute,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			endPos,
 		),
+		ast.EmptyComments,
 	), nil
 }
 
@@ -282,7 +282,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 				nil,
 			),
 			identifier.Pos,
-			"",
+			ast.EmptyComments,
 		),
 	), nil
 }
