@@ -413,12 +413,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				require.NoError(t, err)
 
 				sType := RequireGlobalType(t, inter, "S")
+				sStaticType := interpreter.ConvertSemaToStaticType(nil, sType)
 
 				ref := interpreter.NewUnmeteredEphemeralReferenceValue(
 					inter,
 					interpreter.UnauthorizedAccess,
 					value,
-					sType,
+					sStaticType,
 				)
 
 				_, err = inter.Invoke("get", ref)
@@ -465,12 +466,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				require.NoError(t, err)
 
 				sType := RequireGlobalType(t, inter, "S")
+				sStaticType := interpreter.ConvertSemaToStaticType(nil, sType)
 
 				ref := interpreter.NewUnmeteredEphemeralReferenceValue(
 					inter,
 					interpreter.UnauthorizedAccess,
 					value,
-					sType,
+					sStaticType,
 				)
 
 				_, err = inter.Invoke("get", ref)
@@ -512,12 +514,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				require.NoError(t, err)
 
 				sType := RequireGlobalType(t, inter, "S")
+				sStaticType := interpreter.ConvertSemaToStaticType(nil, sType)
 
 				ref := interpreter.NewUnmeteredEphemeralReferenceValue(
 					inter,
 					interpreter.UnauthorizedAccess,
 					value,
-					sType,
+					sStaticType,
 				)
 
 				_, err = inter.Invoke(
@@ -562,12 +565,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				require.NoError(t, err)
 
 				sType := RequireGlobalType(t, inter, "S")
+				sStaticType := interpreter.ConvertSemaToStaticType(nil, sType)
 
 				ref := interpreter.NewUnmeteredEphemeralReferenceValue(
 					inter,
 					interpreter.UnauthorizedAccess,
 					value,
-					sType,
+					sStaticType,
 				)
 
 				_, err = inter.Invoke(

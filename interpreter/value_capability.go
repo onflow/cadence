@@ -161,12 +161,12 @@ func (v *IDCapabilityValue) GetMethod(context MemberAccessibleContext, name stri
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+		borrowType, _ := v.BorrowType.(*ReferenceStaticType)
 		return capabilityBorrowFunction(context, v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+		borrowType, _ := v.BorrowType.(*ReferenceStaticType)
 		return capabilityCheckFunction(context, v, v.address, v.ID, borrowType)
 	}
 
