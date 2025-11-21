@@ -301,7 +301,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 			),
 			identifier.Pos,
 			ast.Comments{
-				Leading: identifierToken.Leading,
+				Leading: identifierToken.Comments.Leading,
 			},
 		),
 	), nil

@@ -205,7 +205,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 	if nestedToken == nil {
 		trailingComments = token.Comments.Trailing
 	} else {
-		trailingComments = nestedToken.Comments.PackToList()
+		trailingComments = nestedToken.Comments.All()
 	}
 
 	return ast.NewNominalType(

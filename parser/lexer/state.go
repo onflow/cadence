@@ -281,7 +281,8 @@ func spaceState(startIsNewline bool) stateFn {
 		common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
 
 		if containsNewline {
-			l.emitNewlineSentinelComment()
+			// Trailing comments end before the first newline.
+			l.markTrailingCommentsEnd()
 		}
 
 		l.emit(

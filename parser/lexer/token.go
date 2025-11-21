@@ -26,12 +26,10 @@ type Token struct {
 	SpaceOrError any
 	Type         TokenType
 	ast.Range
-	// TODO(preserve-comments): This is currently not true (first comment),
-	// 	as leading comments are just all comments after the trailing comments of the previous token.
-	// Leading comments span up to and including the first contiguous sequence of newlines characters.
-	// Trailing comments span up to, but not including, the next newline character.
-	// Not tracked for space token, since those are usually ignored in the parser.
-	ast.Comments
+	// Leading comments span from the end of the trailing comments of the last (non-space) token to the start of the next (non-space) token.
+	// Trailing comments span up to, but not including, the next newline character after the current (non-space) token.
+	// Important: comments are not tracked for space token, since those are usually ignored in the parser.
+	Comments ast.Comments
 }
 
 func (t Token) Is(ty TokenType) bool {

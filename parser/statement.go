@@ -193,10 +193,10 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(
 		startPos = funToken.StartPos
 	} else {
 		startPos = *ast.EarlierPosition(&funToken.StartPos, &purityToken.StartPos)
-		leadingComments = append(leadingComments, purityToken.Comments.PackToList()...)
+		leadingComments = append(leadingComments, purityToken.Comments.All()...)
 	}
 
-	leadingComments = append(leadingComments, funToken.Comments.PackToList()...)
+	leadingComments = append(leadingComments, funToken.Comments.All()...)
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
@@ -295,8 +295,8 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 	if endToken == nil {
 		comments = startToken.Comments
 	} else {
-		comments.Leading = startToken.Comments.PackToList()
-		comments.Trailing = endToken.Comments.PackToList()
+		comments.Leading = startToken.Comments.All()
+		comments.Trailing = endToken.Comments.All()
 	}
 
 	return ast.NewReturnStatement(
@@ -387,7 +387,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			// The parser ignores the `else` token,
 			// so to preserve potential comments associated with else token,
 			// we attach the comments to the (next) `if` token.
-			leadingComments := elseToken.Comments.PackToList()
+			leadingComments := elseToken.Comments.All()
 			leadingComments = append(leadingComments, p.current.Comments.Leading...)
 			p.current.Comments.Leading = leadingComments
 
@@ -418,7 +418,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			elseBlock,
 			startToken.StartPos,
 			ast.Comments{
-				Leading: startToken.Comments.PackToList(),
+				Leading: startToken.Comments.All(),
 			},
 		)
 
@@ -472,7 +472,7 @@ func parseWhileStatement(p *parser) (*ast.WhileStatement, error) {
 		block,
 		startToken.StartPos,
 		ast.Comments{
-			Leading: startToken.Comments.PackToList(),
+			Leading: startToken.Comments.All(),
 		},
 	), nil
 }
@@ -541,8 +541,8 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		expression,
 		startToken.StartPos,
 		ast.Comments{
-			Leading:  startToken.Comments.PackToList(),
-			Trailing: inToken.Comments.PackToList(),
+			Leading:  startToken.Comments.All(),
+			Trailing: inToken.Comments.All(),
 		},
 	), nil
 }
@@ -612,8 +612,8 @@ func parseBlock(p *parser) (*ast.Block, error) {
 			endToken.EndPos,
 		),
 		ast.Comments{
-			Leading:  startToken.Comments.PackToList(),
-			Trailing: endToken.Comments.PackToList(),
+			Leading:  startToken.Comments.All(),
+			Trailing: endToken.Comments.All(),
 		},
 	), nil
 }
@@ -682,8 +682,8 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 				endToken.EndPos,
 			),
 			ast.Comments{
-				Leading:  startToken.Leading,
-				Trailing: endToken.Trailing,
+				Leading:  startToken.Comments.Leading,
+				Trailing: endToken.Comments.Trailing,
 			},
 		),
 		res.preConditions,
@@ -798,7 +798,7 @@ func parseEmitStatement(p *parser) (*ast.EmitStatement, error) {
 		invocation,
 		startToken.StartPos,
 		ast.Comments{
-			Leading: startToken.Comments.PackToList(),
+			Leading: startToken.Comments.All(),
 		},
 	), nil
 }
@@ -836,8 +836,8 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 			endToken.EndPos,
 		),
 		ast.Comments{
-			Leading:  startToken.Comments.PackToList(),
-			Trailing: endToken.Comments.PackToList(),
+			Leading:  startToken.Comments.All(),
+			Trailing: endToken.Comments.All(),
 		},
 	), nil
 }
@@ -966,8 +966,8 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 			endPos,
 		),
 		ast.Comments{
-			Leading:  startToken.Comments.PackToList(),
-			Trailing: colonToken.Comments.PackToList(),
+			Leading:  startToken.Comments.All(),
+			Trailing: colonToken.Comments.All(),
 		},
 	), nil
 }
@@ -1010,8 +1010,8 @@ func parseRemoveStatement(
 		return nil, err
 	}
 
-	leadingComments := startToken.Comments.PackToList()
-	leadingComments = append(leadingComments, fromToken.Comments.PackToList()...)
+	leadingComments := startToken.Comments.All()
+	leadingComments = append(leadingComments, fromToken.Comments.All()...)
 
 	return ast.NewRemoveStatement(
 		p.memoryGauge,

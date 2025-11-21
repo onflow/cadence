@@ -514,9 +514,9 @@ func parseVariableDeclaration(
 	}
 
 	var leadingComments []*ast.Comment
-	leadingComments = append(leadingComments, startToken.Comments.PackToList()...)
-	leadingComments = append(leadingComments, identifierToken.PackToList()...)
-	leadingComments = append(leadingComments, transferToken.PackToList()...)
+	leadingComments = append(leadingComments, startToken.Comments.All()...)
+	leadingComments = append(leadingComments, identifierToken.Comments.All()...)
+	leadingComments = append(leadingComments, transferToken.Comments.All()...)
 
 	variableDeclaration := ast.NewVariableDeclaration(
 		p.memoryGauge,
@@ -834,7 +834,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		),
 		locationPos,
 		ast.Comments{
-			Leading:  startToken.Comments.PackToList(),
+			Leading:  startToken.Comments.All(),
 			Trailing: trailingComments,
 		},
 	), nil
@@ -2071,7 +2071,7 @@ func parseEnumCase(
 		p.memoryGauge,
 		access,
 		identifier,
-		ast.Comments{Leading: startToken.Comments.PackToList()},
+		ast.Comments{Leading: startToken.Comments.All()},
 		startToken.StartPos,
 	), nil
 }

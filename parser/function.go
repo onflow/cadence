@@ -115,7 +115,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 	if len(parameters) == 0 {
 		comments.Leading = append(
 			comments.Leading,
-			startToken.Comments.PackToList()...,
+			startToken.Comments.All()...,
 		)
 	} else {
 		comments.Leading = append(
@@ -130,7 +130,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 	}
 	comments.Trailing = append(
 		comments.Trailing,
-		endToken.Comments.PackToList()...,
+		endToken.Comments.All()...,
 	)
 
 	return ast.NewParameterList(
@@ -225,8 +225,8 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		startToken.StartPos,
 		ast.Comments{
 			Leading: append(
-				startToken.Comments.PackToList(),
-				colonToken.Comments.PackToList()...,
+				startToken.Comments.All(),
+				colonToken.Comments.All()...,
 			),
 		},
 	), nil

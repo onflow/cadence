@@ -56,6 +56,9 @@ const (
 	lexerModeStringInterpolation
 )
 
+// trailingCommentsEndMarker is a sentinel value for determining the end of trailing comments
+var trailingCommentsEndMarker *ast.Comment = nil
+
 type lexer struct {
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
@@ -204,7 +207,7 @@ func (l *lexer) run(state stateFn) (err error) {
 		state = state(l)
 	}
 
-	l.updatePreviousTrailingComments()
+	l.setPrevTokenTrailingComments()
 
 	return
 }
@@ -273,18 +276,6 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 
 	endPos := l.endPos()
 
-	// Only track trivia for non-space tokens
-	var leadingComments []*ast.Comment
-	shouldConsumeTrivia := ty != TokenSpace
-	if shouldConsumeTrivia {
-		l.updatePreviousTrailingComments()
-		leadingComments = l.currentComments
-		defer (func() {
-			// Mark as fully consumed
-			l.currentComments = []*ast.Comment{}
-		})()
-	}
-
 	token := Token{
 		Type:         ty,
 		SpaceOrError: spaceOrError,
@@ -298,11 +289,7 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 				endPos.column,
 			),
 		),
-		Comments: ast.Comments{
-			Leading: leadingComments,
-			// Trailing comments can't be determined, as it wasn't consumed yet at this point.
-			Trailing: nil,
-		},
+		Comments: l.tokenComments(ty),
 	}
 
 	l.tokens = append(l.tokens, token)
@@ -313,31 +300,56 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 	}
 }
 
-func (l *lexer) updatePreviousTrailingComments() {
+// tokenComments creates initial ast.Comments with leading comments, but empty trailing comments.
+// Trailing comments for the current token are determined when the next non-space token is consumed (in setPrevTokenTrailingComments).
+func (l *lexer) tokenComments(ty TokenType) ast.Comments {
+	if ty == TokenSpace {
+		return ast.EmptyComments
+	}
+
+	l.setPrevTokenTrailingComments()
+
+	leadingComments := l.currentComments
+	defer (func() {
+		// Mark as fully consumed
+		l.currentComments = []*ast.Comment{}
+	})()
+
+	return ast.Comments{
+		Leading: leadingComments,
+		// Trailing comments can't be determined yet, since we haven't consumed them.
+		Trailing: nil,
+	}
+}
+
+// setPrevTokenTrailingComments sets the trailing comments of the latest non-space token,
+// since they were not known yet at the time of calling tokenComments.
+func (l *lexer) setPrevTokenTrailingComments() {
 	if l.tokenCount == 0 {
 		return
 	}
 
-	lastNonSpaceTokenIndex := -1
+	latestNonSpaceTokenIndex := -1
 	for i := l.tokenCount - 1; i >= 0; i-- {
 		if l.tokens[i].Type != TokenSpace {
-			lastNonSpaceTokenIndex = i
+			latestNonSpaceTokenIndex = i
 			break
 		}
 	}
 
-	// Split the current comment into trailing comment of the previous token
-	// and leading comment of the next token.
-	var trailing []*ast.Comment
-	var leading []*ast.Comment
-
-	trailingTriviaEnded := lastNonSpaceTokenIndex == -1
+	// Split the current comments into two sets:
+	// - trailing comments of the previous token
+	// - leading comments of the next token
+	var trailing, leading []*ast.Comment
+	// If all previously seen tokens are spaces,
+	// we treat all comments as the leading set of the current token.
+	isLeadingSet := latestNonSpaceTokenIndex == -1
 	for _, comment := range l.currentComments {
-		if comment == nil {
-			trailingTriviaEnded = true
+		if comment == trailingCommentsEndMarker {
+			isLeadingSet = true
 			continue
 		}
-		if trailingTriviaEnded {
+		if isLeadingSet {
 			leading = append(leading, comment)
 		} else {
 			trailing = append(trailing, comment)
@@ -346,23 +358,18 @@ func (l *lexer) updatePreviousTrailingComments() {
 
 	l.currentComments = leading
 
-	if lastNonSpaceTokenIndex != -1 {
-		lastNonSpaceToken := &l.tokens[lastNonSpaceTokenIndex]
-
-		if len(trailing) == 0 {
-			return
+	if latestNonSpaceTokenIndex != -1 && len(trailing) > 0 {
+		lastNonSpaceToken := &l.tokens[latestNonSpaceTokenIndex]
+		if lastNonSpaceToken.Comments.Trailing == nil {
+			lastNonSpaceToken.Comments.Trailing = []*ast.Comment{}
 		}
 
-		if lastNonSpaceToken.Trailing == nil {
-			lastNonSpaceToken.Trailing = []*ast.Comment{}
-		}
-
-		lastNonSpaceToken.Trailing = append(lastNonSpaceToken.Trailing, trailing...)
+		lastNonSpaceToken.Comments.Trailing = append(lastNonSpaceToken.Comments.Trailing, trailing...)
 	}
 }
 
-func (l *lexer) emitNewlineSentinelComment() {
-	l.currentComments = append(l.currentComments, nil)
+func (l *lexer) markTrailingCommentsEnd() {
+	l.currentComments = append(l.currentComments, trailingCommentsEndMarker)
 }
 
 func (l *lexer) emitComment() {

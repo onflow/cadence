@@ -14,7 +14,8 @@ type Comments struct {
 
 var EmptyComments = Comments{}
 
-func (c Comments) PackToList() []*Comment {
+// All combines Leading and Trailing comments in a single array.
+func (c Comments) All() []*Comment {
 	var comments []*Comment
 	comments = append(comments, c.Leading...)
 	comments = append(comments, c.Trailing...)
