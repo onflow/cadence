@@ -106,9 +106,18 @@ type testAccountHandler struct {
 	removeAccountContractCode func(location common.AddressLocation) error
 	recordContractRemoval     func(location common.AddressLocation)
 	getAccountContractNames   func(address common.Address) ([]string, error)
+	createAccount             func(payer common.Address) (common.Address, error)
 }
 
 var _ stdlib.AccountHandler = &testAccountHandler{}
+var _ stdlib.AccountCreator = &testAccountHandler{}
+
+func (t *testAccountHandler) CreateAccount(payer common.Address) (common.Address, error) {
+	if t.createAccount == nil {
+		panic(errors.NewUnexpectedError("unexpected call to CreateAccount"))
+	}
+	return t.createAccount(payer)
+}
 
 func (t *testAccountHandler) GenerateAccountID(address common.Address) (uint64, error) {
 	if t.generateAccountID == nil {

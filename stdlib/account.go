@@ -362,13 +362,13 @@ func newAccountContractsValue(
 	return interpreter.NewAccountContractsValue(
 		context,
 		addressValue,
-		newInterpreterAccountContractsChangeFunction(
+		NewInterpreterAccountContractsChangeFunction(
 			context,
 			handler,
 			addressValue,
 			false,
 		),
-		newInterpreterAccountContractsChangeFunction(
+		NewInterpreterAccountContractsChangeFunction(
 			context,
 			handler,
 			addressValue,
@@ -1742,7 +1742,7 @@ func nativeAccountContractsChangeFunction(
 // newInterpreterAccountContractsChangeFunction called when e.g.
 // - adding: `Account.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
 // - updating: `Account.contracts.update(name: "Foo", code: [...])` (isUpdate = true)
-func newInterpreterAccountContractsChangeFunction(
+func NewInterpreterAccountContractsChangeFunction(
 	context interpreter.FunctionCreationContext,
 	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
@@ -1764,7 +1764,7 @@ func newInterpreterAccountContractsChangeFunction(
 	}
 }
 
-func newVMAccountContractsChangeFunction(
+func NewVMAccountContractsChangeFunction(
 	handler AccountContractAdditionAndNamesHandler,
 	isUpdate bool,
 ) VMFunction {

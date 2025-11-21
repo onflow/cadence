@@ -39,6 +39,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type testRandomGenerator struct{}
+
+func (*testRandomGenerator) ReadRandom([]byte) error {
+	return nil
+}
+
 type Transaction struct {
 	Name string
 	Body string
@@ -77,6 +83,14 @@ func init() {
 		createTransaction("GetSignerAccountStorageUsed", "", transactions.GetSignerAccountStorageUsedTransaction(700).GetPrepareBlock()),
 		createTransaction("GetSignerAccountStorageCapacity", "", transactions.GetSignerAccountStorageCapacityTransaction(30).GetPrepareBlock()),
 		createTransaction("BorrowSignerAccountFlowTokenVault", "import \"FungibleToken\"\nimport \"FlowToken\"", transactions.BorrowSignerAccountFlowTokenVaultTransaction(700).GetPrepareBlock()),
+		createTransaction("BorrowSignerAccountFungibleTokenReceiver", "import \"FungibleToken\"", transactions.BorrowSignerAccountFungibleTokenReceiverTransaction(400).GetPrepareBlock()),
+		createTransaction("TransferTokensToSelf", "import \"FungibleToken\"\nimport \"FlowToken\"", transactions.TransferTokensToSelfTransaction(30).GetPrepareBlock()),
+		createTransaction("CreateNewAccount", "", transactions.CreateNewAccountTransaction(10).GetPrepareBlock()),
+		createTransaction("CreateNewAccountWithContract", "", transactions.CreateNewAccountWithContractTransaction(10).GetPrepareBlock()),
+		createTransaction("DecodeHex", "", transactions.DecodeHexTransaction(900).GetPrepareBlock()),
+		createTransaction("RevertibleRandomNumber", "", transactions.RevertibleRandomTransaction(2000).GetPrepareBlock()),
+		createTransaction("NumberToStringConversion", "", transactions.NumberToStringConversionTransaction(3000).GetPrepareBlock()),
+		createTransaction("ConcatenateString", "", transactions.ConcatenateStringTransaction(2000).GetPrepareBlock()),
 	}
 }
 
@@ -139,12 +153,50 @@ func BenchmarkTransactions(b *testing.B) {
 		commitStorageTemporarily: func(context interpreter.ValueTransferContext) error {
 			return nil
 		},
+		createAccount: func(payer common.Address) (common.Address, error) {
+			return common.Address{}, nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+			return nil, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			return nil
+		},
+		recordContractUpdate: func(location common.AddressLocation, value *interpreter.CompositeValue) {
+			// NO-OP
+		},
+		contractUpdateRecorded: func(location common.AddressLocation) bool {
+			return false
+		},
+		parseAndCheckProgram: func(code []byte, location common.Location, getAndSetProgram bool) (*interpreter.Program, error) {
+			res, err := ParseAndCheck(b, string(code))
+			require.NoError(b, err)
+			return &interpreter.Program{
+				Program:     res.Program,
+				Elaboration: res.Elaboration,
+			}, nil
+		},
+		loadContractValue: func(location common.AddressLocation, program *interpreter.Program, name string, invocation stdlib.DeployedContractConstructorInvocation) (*interpreter.CompositeValue, error) {
+			return nil, nil
+		},
 	}
+
+	vmRevertibleRandomFunction := stdlib.NewVMRevertibleRandomFunction(&testRandomGenerator{})
+	accountConstructor := stdlib.NewVMAccountConstructor(accountHandler)
 
 	// set up sema/compiler
 	semaConfig := &sema.Config{
-		LocationHandler:            locationHandler,
-		BaseValueActivationHandler: TestBaseValueActivation,
+		LocationHandler: locationHandler,
+		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+			// Only need to make the checker happy
+			activation := sema.NewVariableActivation(sema.BaseValueActivation)
+			activation.DeclareValue(stdlib.VMPanicFunction)
+			activation.DeclareValue(stdlib.VMAssertFunction)
+			activation.DeclareValue(stdlib.NewVMGetAccountFunction(nil))
+			activation.DeclareValue(vmRevertibleRandomFunction)
+			activation.DeclareValue(accountConstructor)
+			return activation
+		},
 	}
 
 	compilerConfig := &compiler.Config{
@@ -173,6 +225,16 @@ func BenchmarkTransactions(b *testing.B) {
 			activation.Set(
 				stdlib.PanicFunctionName,
 				compiler.NewGlobalImport(stdlib.PanicFunctionName),
+			)
+
+			activation.Set(
+				vmRevertibleRandomFunction.Name,
+				compiler.NewGlobalImport(vmRevertibleRandomFunction.Name),
+			)
+
+			activation.Set(
+				accountConstructor.Name,
+				compiler.NewGlobalImport(accountConstructor.Name),
 			)
 
 			return activation
@@ -207,6 +269,32 @@ func BenchmarkTransactions(b *testing.B) {
 
 	// set up VM
 	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+
+	vmConfig.CapabilityBorrowHandler = func(
+		context interpreter.BorrowCapabilityControllerContext,
+		address interpreter.AddressValue,
+		capabilityID interpreter.UInt64Value,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) interpreter.ReferenceValue {
+		return stdlib.BorrowCapabilityController(
+			context,
+			address,
+			capabilityID,
+			wantedBorrowType,
+			capabilityBorrowType,
+			accountHandler,
+		)
+	}
+
+	vmConfig.OnEventEmitted = func(
+		_ interpreter.ValueExportContext,
+		_ *sema.CompositeType,
+		_ []interpreter.Value,
+	) error {
+		// NO-OP
+		return nil
+	}
 
 	vmConfig.AccountHandlerFunc = func(
 		context interpreter.AccountCreationContext,
@@ -272,6 +360,7 @@ func BenchmarkTransactions(b *testing.B) {
 			stdlib.NewVMAccountCapabilitiesPublishFunction(accountHandler),
 			stdlib.NewVMAccountStorageCapabilitiesIssueFunction(accountHandler),
 			stdlib.NewVMAccountCapabilitiesGetFunction(accountHandler, true),
+			stdlib.NewVMAccountContractsChangeFunction(accountHandler, false),
 		} {
 			variable := &interpreter.SimpleVariable{}
 			variable.InitializeWithValue(vmFunction.FunctionValue)
@@ -280,6 +369,18 @@ func BenchmarkTransactions(b *testing.B) {
 					vmFunction.BaseType,
 					vmFunction.FunctionValue.Name,
 				),
+				variable,
+			)
+		}
+
+		for _, nativeFunction := range []stdlib.StandardLibraryValue{
+			vmRevertibleRandomFunction,
+			accountConstructor,
+		} {
+			variable := &interpreter.SimpleVariable{}
+			variable.InitializeWithValue(nativeFunction.Value)
+			activation.Set(
+				nativeFunction.Name,
 				variable,
 			)
 		}
@@ -310,48 +411,85 @@ func BenchmarkTransactions(b *testing.B) {
 	nextTransactionLocation := NewTransactionLocationGenerator()
 	txLocation := nextTransactionLocation()
 
+	// setup account, mint tokens
+	setupAccountProgram := ParseCheckAndCompileCodeWithOptions(
+		b,
+		realFlowTokenSetupAccountTransaction,
+		txLocation,
+		ParseCheckAndCompileOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				Location:      txLocation,
+				CheckerConfig: semaConfig,
+			},
+			CompilerConfig: compilerConfig,
+		},
+		compiledPrograms,
+	)
+
+	setupAccountVM := vm.NewVM(txLocation, setupAccountProgram, vmConfig)
+
+	setupAccountAuthorizer := stdlib.NewAccountReferenceValue(
+		setupAccountVM.Context(),
+		accountHandler,
+		interpreter.NewAddressValue(nil, senderAddress),
+		interpreter.FullyEntitledAccountAccess,
+	)
+
+	err := setupAccountVM.InvokeTransaction(nil, setupAccountAuthorizer)
+	require.NoError(b, err)
+
+	txLocation = nextTransactionLocation()
+
+	mintTokensTxProgram := ParseCheckAndCompileCodeWithOptions(
+		b,
+		realFlowTokenMintTokensTransaction,
+		txLocation,
+		ParseCheckAndCompileOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				Location:      txLocation,
+				CheckerConfig: semaConfig,
+			},
+			CompilerConfig: compilerConfig,
+		},
+		compiledPrograms,
+	)
+
+	mintTxVM := vm.NewVM(txLocation, mintTokensTxProgram, vmConfig)
+
+	total := uint64(1000000) * sema.Fix64Factor
+
+	mintTxArgs := []vm.Value{
+		interpreter.AddressValue(senderAddress),
+		interpreter.NewUnmeteredUFix64Value(total),
+	}
+
+	// Use the same authorizations as the one defined in the transaction.
+	semaAuthorization := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{
+			sema.BorrowValueType,
+		},
+		sema.Conjunction,
+	)
+	authorization := interpreter.ConvertSemaAccessToStaticAuthorization(nil, semaAuthorization)
+
+	mintTxAuthorizer := stdlib.NewAccountReferenceValue(
+		mintTxVM.Context(),
+		accountHandler,
+		interpreter.AddressValue(contractsAddress),
+		authorization,
+	)
+
+	err = mintTxVM.InvokeTransaction(mintTxArgs, mintTxAuthorizer)
+	require.NoError(b, err)
+	require.Equal(b, 0, mintTxVM.StackSize())
+
+	// all benchmark transactions use the same location, this prevents compiledPrograms from blowing up
+	txLocation = nextTransactionLocation()
+
 	for _, transaction := range testTransactions {
 		b.Run(transaction.Name, func(b *testing.B) {
 			for b.Loop() {
 				b.StopTimer()
-
-				setupAccountProgram := ParseCheckAndCompileCodeWithOptions(
-					b,
-					`
-					import "FungibleToken"
-					import "FlowToken"
-
-					transaction {
-   						prepare(signer: auth(Capabilities, Storage) &Account) {
-							if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
-								// Create a new flowToken Vault and put it in storage
-								signer.storage.save(<-FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>()), to: /storage/flowTokenVault)
-							}
-						}
-					}
-					`,
-					txLocation,
-					ParseCheckAndCompileOptions{
-						ParseAndCheckOptions: &ParseAndCheckOptions{
-							Location:      txLocation,
-							CheckerConfig: semaConfig,
-						},
-						CompilerConfig: compilerConfig,
-					},
-					compiledPrograms,
-				)
-
-				setupAccountVM := vm.NewVM(txLocation, setupAccountProgram, vmConfig)
-
-				setupAccountAuthorizer := stdlib.NewAccountReferenceValue(
-					setupAccountVM.Context(),
-					accountHandler,
-					interpreter.NewAddressValue(nil, senderAddress),
-					interpreter.FullyEntitledAccountAccess,
-				)
-
-				err := setupAccountVM.InvokeTransaction(nil, setupAccountAuthorizer)
-				require.NoError(b, err)
 
 				program := ParseCheckAndCompileCodeWithOptions(
 					b,
@@ -378,7 +516,7 @@ func BenchmarkTransactions(b *testing.B) {
 
 				b.StartTimer()
 
-				err = vmInstance.InvokeTransaction(nil, authorizer)
+				err := vmInstance.InvokeTransaction(nil, authorizer)
 
 				b.StopTimer()
 				require.NoError(b, err)
