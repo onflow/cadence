@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence/errors"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -189,52 +188,6 @@ func TestParseBlockComment(t *testing.T) {
 				},
 				UnexpectedEOFError{
 					Pos: ast.Position{Offset: 33, Line: 1, Column: 33},
-				},
-			},
-			errs,
-		)
-	})
-
-	t.Run("invalid content", func(t *testing.T) {
-
-		t.Parallel()
-
-		// The lexer should never produce such an invalid token stream in the first place
-
-		tokens := &testTokenStream{
-			tokens: []lexer.Token{
-				// TODO(merge): is this correct?
-				{
-					Type: lexer.TokenIdentifier,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Offset: 2, Column: 2},
-						EndPos:   ast.Position{Line: 1, Offset: 4, Column: 4},
-					},
-				},
-				{Type: lexer.TokenEOF},
-			},
-			input: []byte(`/*foo`),
-		}
-
-		// TODO(merge): move and emit UnexpectedTokenInBlockCommentError from lexer
-		_, errs := ParseTokenStream(
-			nil,
-			tokens,
-			func(p *parser) (ast.Expression, error) {
-				return parseExpression(p, lowestBindingPower)
-			},
-			Config{},
-		)
-		AssertEqualWithDiff(t,
-			[]error{
-				&UnexpectedTokenInBlockCommentError{
-					GotToken: lexer.Token{
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
-							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
-						},
-						Type: lexer.TokenIdentifier,
-					},
 				},
 			},
 			errs,

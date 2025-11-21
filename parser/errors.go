@@ -3975,7 +3975,6 @@ func (e *MissingCommentEndError) EndPosition(_ common.MemoryGauge) ast.Position 
 	return e.Pos
 }
 
-// TODO(merge): Move and emit from lexer
 func (e *MissingCommentEndError) Error() string {
 	return "missing comment end (`*/`)"
 }
@@ -4003,43 +4002,6 @@ func (e *MissingCommentEndError) SuggestFixes(_ string) []errors.SuggestedFix[as
 			},
 		},
 	}
-}
-
-// UnexpectedTokenInBlockCommentError is reported when an unexpected token is found in a block comment.
-type UnexpectedTokenInBlockCommentError struct {
-	GotToken lexer.Token
-}
-
-var _ ParseError = &UnexpectedTokenInBlockCommentError{}
-var _ errors.UserError = &UnexpectedTokenInBlockCommentError{}
-var _ errors.SecondaryError = &UnexpectedTokenInBlockCommentError{}
-var _ errors.HasDocumentationLink = &UnexpectedTokenInBlockCommentError{}
-
-func (*UnexpectedTokenInBlockCommentError) isParseError() {}
-
-func (*UnexpectedTokenInBlockCommentError) IsUserError() {}
-
-func (e *UnexpectedTokenInBlockCommentError) StartPosition() ast.Position {
-	return e.GotToken.StartPos
-}
-
-func (e *UnexpectedTokenInBlockCommentError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.GotToken.EndPos
-}
-
-func (e *UnexpectedTokenInBlockCommentError) Error() string {
-	return fmt.Sprintf(
-		"unexpected token %s in block comment",
-		e.GotToken.Type,
-	)
-}
-
-func (*UnexpectedTokenInBlockCommentError) SecondaryError() string {
-	return "only text is allowed in a block comment"
-}
-
-func (*UnexpectedTokenInBlockCommentError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/syntax#comments"
 }
 
 // SpecialFunctionReturnTypeError is reported when a special function has a return type.
