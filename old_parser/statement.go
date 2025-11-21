@@ -155,7 +155,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 
 func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.Statement, error) {
 
-	startToken := p.current
+	startPos := p.current.StartPos
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
@@ -193,7 +193,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 			parameterList,
 			returnTypeAnnotation,
 			functionBlock,
-			startToken.StartPos,
+			startPos,
 			ast.EmptyComments,
 		), nil
 	} else {
@@ -211,7 +211,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 				parameterList,
 				returnTypeAnnotation,
 				functionBlock,
-				startToken.StartPos,
+				startPos,
 			),
 		), nil
 	}

@@ -820,9 +820,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							},
 						},
 					},
-					Comments: ast.Comments{
-						Leading: []*ast.Comment{ast.NewComment(nil, []byte("/// Test"))},
-					},
 					StartPos: ast.Position{Line: 2, Column: 0, Offset: 9},
 				},
 			},
@@ -860,12 +857,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							},
 						},
 					},
-					Comments: ast.Comments{
-						Leading: []*ast.Comment{
-							ast.NewComment(nil, []byte("/// First line")),
-							ast.NewComment(nil, []byte("/// Second line")),
-						},
-					},
 					StartPos: ast.Position{Line: 7, Column: 0, Offset: 39},
 				},
 			},
@@ -901,11 +892,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 								StartPos: ast.Position{Line: 7, Column: 10, Offset: 49},
 								EndPos:   ast.Position{Line: 7, Column: 11, Offset: 50},
 							},
-						},
-					},
-					Comments: ast.Comments{
-						Leading: []*ast.Comment{
-							ast.NewComment(nil, []byte("/** Cool dogs.\n\n Cool cats!! */")),
 						},
 					},
 					StartPos: ast.Position{Line: 7, Column: 0, Offset: 39},
@@ -6891,6 +6877,7 @@ func TestParseNestedPragma(t *testing.T) {
 
 }
 
+// Doc strings are not tracked anymore in the old parser, and can be safely ignored.
 func TestParseMemberDocStrings(t *testing.T) {
 
 	t.Parallel()
@@ -6928,11 +6915,6 @@ func TestParseMemberDocStrings(t *testing.T) {
 						[]ast.Declaration{
 							&ast.FunctionDeclaration{
 								Access: ast.AccessNotSpecified,
-								Comments: ast.Comments{
-									Leading: []*ast.Comment{
-										ast.NewComment(nil, []byte("/// noReturnNoBlock")),
-									},
-								},
 								Identifier: ast.Identifier{
 									Identifier: "noReturnNoBlock",
 									Pos:        ast.Position{Offset: 78, Line: 5, Column: 18},
@@ -6947,11 +6929,6 @@ func TestParseMemberDocStrings(t *testing.T) {
 							},
 							&ast.FunctionDeclaration{
 								Access: ast.AccessNotSpecified,
-								Comments: ast.Comments{
-									Leading: []*ast.Comment{
-										ast.NewComment(nil, []byte("/// returnNoBlock")),
-									},
-								},
 								Identifier: ast.Identifier{
 									Identifier: "returnNoBlock",
 									Pos:        ast.Position{Offset: 147, Line: 8, Column: 18},
@@ -6976,11 +6953,6 @@ func TestParseMemberDocStrings(t *testing.T) {
 							},
 							&ast.FunctionDeclaration{
 								Access: ast.AccessNotSpecified,
-								Comments: ast.Comments{
-									Leading: []*ast.Comment{
-										ast.NewComment(nil, []byte("/// returnAndBlock")),
-									},
-								},
 								Identifier: ast.Identifier{
 									Identifier: "returnAndBlock",
 									Pos:        ast.Position{Offset: 220, Line: 11, Column: 18},
@@ -7006,10 +6978,6 @@ func TestParseMemberDocStrings(t *testing.T) {
 										Range: ast.Range{
 											StartPos: ast.Position{Offset: 245, Line: 11, Column: 43},
 											EndPos:   ast.Position{Offset: 246, Line: 11, Column: 44},
-										},
-										Comments: ast.Comments{
-											Leading:  []*ast.Comment{},
-											Trailing: []*ast.Comment{},
 										},
 									},
 								},
@@ -7061,8 +7029,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindUnknown,
 								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access:   ast.AccessNotSpecified,
-									Comments: ast.EmptyComments,
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "unknown",
 										Pos:        ast.Position{Offset: 66, Line: 5, Column: 14},
@@ -7079,8 +7046,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access:   ast.AccessNotSpecified,
-									Comments: ast.EmptyComments,
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "init",
 										Pos:        ast.Position{Offset: 121, Line: 8, Column: 14},
@@ -7097,8 +7063,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindDestructorLegacy,
 								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access:   ast.AccessNotSpecified,
-									Comments: ast.EmptyComments,
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "destroy",
 										Pos:        ast.Position{Offset: 178, Line: 11, Column: 14},

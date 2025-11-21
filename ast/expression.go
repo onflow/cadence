@@ -47,7 +47,6 @@ type Expression interface {
 type BoolExpression struct {
 	Value bool
 	Range
-	Comments
 }
 
 var _ Element = &BoolExpression{}

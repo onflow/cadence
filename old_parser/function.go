@@ -297,8 +297,8 @@ func parseFunctionDeclaration(
 	nativePos *ast.Position,
 	docString string,
 ) (*ast.FunctionDeclaration, error) {
-	startToken := p.current
-	startPos := ast.EarliestPosition(startToken.StartPos, accessPos, staticPos, nativePos)
+
+	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, staticPos, nativePos)
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()

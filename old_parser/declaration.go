@@ -100,7 +100,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					accessPos,
 					staticPos,
 					nativePos,
-					"",
+					docString,
 				)
 
 			case keywordImport:
@@ -1498,7 +1498,6 @@ func parseSpecialFunctionDeclaration(
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	identifier ast.Identifier,
-	// Comments can be safely ignored
 	docString string,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
