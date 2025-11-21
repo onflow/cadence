@@ -20,6 +20,7 @@ package test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/onflow/cadence-standard-transactions/transactions"
@@ -46,13 +47,14 @@ func (*testRandomGenerator) ReadRandom([]byte) error {
 }
 
 type Transaction struct {
-	Name string
-	Body string
+	Name  string
+	Body  string
+	Setup string
 }
 
 var testTransactions []Transaction
 
-func createTransaction(name string, imports string, prepare string) Transaction {
+func createTransaction(name string, imports string, prepare string, setup string) Transaction {
 	return Transaction{
 		Name: name,
 		Body: fmt.Sprintf(
@@ -69,32 +71,71 @@ func createTransaction(name string, imports string, prepare string) Transaction 
 			imports,
 			prepare,
 		),
+		Setup: fmt.Sprintf(
+			`
+			transaction(){
+				prepare(signer: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
+					%s
+				}
+			}`,
+			setup,
+		),
 	}
+}
+
+func stringOfLen(length uint64) string {
+	someString := make([]byte, length)
+	for i := 0; i < len(someString); i++ {
+		someString[i] = 'x'
+	}
+	return string(someString)
+}
+
+func stringArrayOfLen(arrayLen uint64, stringLen uint64) string {
+	builder := strings.Builder{}
+	builder.WriteRune('[')
+	for i := uint64(0); i < arrayLen; i++ {
+		if i > 0 {
+			builder.WriteRune(',')
+		}
+		builder.WriteRune('"')
+		builder.WriteString(stringOfLen(stringLen))
+		builder.WriteRune('"')
+	}
+	builder.WriteRune(']')
+	return builder.String()
 }
 
 func init() {
 	testTransactions = []Transaction{
-		createTransaction("EmptyLoop", "", transactions.EmptyLoopTransaction(6000).GetPrepareBlock()),
-		createTransaction("AssertTrue", "", transactions.AssertTrueTransaction(3000).GetPrepareBlock()),
-		createTransaction("GetSignerAddress", "", transactions.GetSignerAddressTransaction(4000).GetPrepareBlock()),
-		createTransaction("GetSignerPublicAccount", "", transactions.GetSignerPublicAccountTransaction(3000).GetPrepareBlock()),
-		createTransaction("GetSignerAccountBalance", "", transactions.GetSignerAccountBalanceTransaction(30).GetPrepareBlock()),
-		createTransaction("GetSignerAccountAvailableBalance", "", transactions.GetSignerAccountAvailableBalanceTransaction(30).GetPrepareBlock()),
-		createTransaction("GetSignerAccountStorageUsed", "", transactions.GetSignerAccountStorageUsedTransaction(700).GetPrepareBlock()),
-		createTransaction("GetSignerAccountStorageCapacity", "", transactions.GetSignerAccountStorageCapacityTransaction(30).GetPrepareBlock()),
-		createTransaction("BorrowSignerAccountFlowTokenVault", "import \"FungibleToken\"\nimport \"FlowToken\"", transactions.BorrowSignerAccountFlowTokenVaultTransaction(700).GetPrepareBlock()),
-		createTransaction("BorrowSignerAccountFungibleTokenReceiver", "import \"FungibleToken\"", transactions.BorrowSignerAccountFungibleTokenReceiverTransaction(400).GetPrepareBlock()),
-		createTransaction("TransferTokensToSelf", "import \"FungibleToken\"\nimport \"FlowToken\"", transactions.TransferTokensToSelfTransaction(30).GetPrepareBlock()),
-		createTransaction("CreateNewAccount", "", transactions.CreateNewAccountTransaction(10).GetPrepareBlock()),
-		createTransaction("CreateNewAccountWithContract", "", transactions.CreateNewAccountWithContractTransaction(10).GetPrepareBlock()),
-		createTransaction("DecodeHex", "", transactions.DecodeHexTransaction(900).GetPrepareBlock()),
-		createTransaction("RevertibleRandomNumber", "", transactions.RevertibleRandomTransaction(2000).GetPrepareBlock()),
-		createTransaction("NumberToStringConversion", "", transactions.NumberToStringConversionTransaction(3000).GetPrepareBlock()),
-		createTransaction("ConcatenateString", "", transactions.ConcatenateStringTransaction(2000).GetPrepareBlock()),
+		createTransaction(
+			"EmptyLoop",
+			"",
+			transactions.EmptyLoopTransaction(6000).GetPrepareBlock(),
+			"",
+		),
+		createTransaction("AssertTrue", "", transactions.AssertTrueTransaction(3000).GetPrepareBlock(), ""),
+		createTransaction("GetSignerAddress", "", transactions.GetSignerAddressTransaction(4000).GetPrepareBlock(), ""),
+		createTransaction("GetSignerPublicAccount", "", transactions.GetSignerPublicAccountTransaction(3000).GetPrepareBlock(), ""),
+		createTransaction("GetSignerAccountBalance", "", transactions.GetSignerAccountBalanceTransaction(30).GetPrepareBlock(), ""),
+		createTransaction("GetSignerAccountAvailableBalance", "", transactions.GetSignerAccountAvailableBalanceTransaction(30).GetPrepareBlock(), ""),
+		createTransaction("GetSignerAccountStorageUsed", "", transactions.GetSignerAccountStorageUsedTransaction(700).GetPrepareBlock(), ""),
+		createTransaction("GetSignerAccountStorageCapacity", "", transactions.GetSignerAccountStorageCapacityTransaction(30).GetPrepareBlock(), ""),
+		createTransaction("BorrowSignerAccountFlowTokenVault", "import \"FungibleToken\"\nimport \"FlowToken\"", transactions.BorrowSignerAccountFlowTokenVaultTransaction(700).GetPrepareBlock(), ""),
+		createTransaction("BorrowSignerAccountFungibleTokenReceiver", "import \"FungibleToken\"", transactions.BorrowSignerAccountFungibleTokenReceiverTransaction(400).GetPrepareBlock(), ""),
+		createTransaction("TransferTokensToSelf", "import \"FungibleToken\"\nimport \"FlowToken\"", transactions.TransferTokensToSelfTransaction(30).GetPrepareBlock(), ""),
+		createTransaction("CreateNewAccount", "", transactions.CreateNewAccountTransaction(10).GetPrepareBlock(), ""),
+		createTransaction("CreateNewAccountWithContract", "", transactions.CreateNewAccountWithContractTransaction(10).GetPrepareBlock(), ""),
+		createTransaction("DecodeHex", "", transactions.DecodeHexTransaction(900).GetPrepareBlock(), ""),
+		createTransaction("RevertibleRandomNumber", "", transactions.RevertibleRandomTransaction(2000).GetPrepareBlock(), ""),
+		createTransaction("NumberToStringConversion", "", transactions.NumberToStringConversionTransaction(3000).GetPrepareBlock(), ""),
+		createTransaction("ConcatenateString", "", transactions.ConcatenateStringTransaction(2000).GetPrepareBlock(), ""),
+		createTransaction("BorrowString", "", transactions.BorrowStringTransaction.GetPrepareBlock(), fmt.Sprintf(transactions.BorrowStringTransaction.GetSetupTemplate(), stringArrayOfLen(20, 2000))),
+		createTransaction("CopyString", "", transactions.CopyStringTransaction.GetPrepareBlock(), fmt.Sprintf(transactions.CopyStringTransaction.GetSetupTemplate(), stringArrayOfLen(20, 2000))),
 	}
 }
 
-func BenchmarkTransactions(b *testing.B) {
+func BenchmarkTransactionsVM(b *testing.B) {
 	// create addresses
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
@@ -407,7 +448,6 @@ func BenchmarkTransactions(b *testing.B) {
 		contractValues[location] = contractValue
 	}
 
-	// all transactions use the same location, this prevents compiledPrograms from blowing up
 	nextTransactionLocation := NewTransactionLocationGenerator()
 	txLocation := nextTransactionLocation()
 
@@ -486,10 +526,36 @@ func BenchmarkTransactions(b *testing.B) {
 	// all benchmark transactions use the same location, this prevents compiledPrograms from blowing up
 	txLocation = nextTransactionLocation()
 
+	authorizer := stdlib.NewAccountReferenceValue(
+		mintTxVM.Context(), // ctx shouldn't matter
+		accountHandler,
+		interpreter.NewAddressValue(nil, senderAddress),
+		interpreter.FullyEntitledAccountAccess,
+	)
+
 	for _, transaction := range testTransactions {
 		b.Run(transaction.Name, func(b *testing.B) {
 			for b.Loop() {
 				b.StopTimer()
+
+				setupProgram := ParseCheckAndCompileCodeWithOptions(
+					b,
+					transaction.Setup,
+					txLocation,
+					ParseCheckAndCompileOptions{
+						ParseAndCheckOptions: &ParseAndCheckOptions{
+							Location:      txLocation,
+							CheckerConfig: semaConfig,
+						},
+						CompilerConfig: compilerConfig,
+					},
+					compiledPrograms,
+				)
+				setupVM := vm.NewVM(txLocation, setupProgram, vmConfig)
+
+				err := setupVM.InvokeTransaction(nil, authorizer)
+				require.NoError(b, err)
+				require.Equal(b, 0, setupVM.StackSize())
 
 				program := ParseCheckAndCompileCodeWithOptions(
 					b,
@@ -506,17 +572,9 @@ func BenchmarkTransactions(b *testing.B) {
 				)
 
 				vmInstance := vm.NewVM(txLocation, program, vmConfig)
-
-				authorizer := stdlib.NewAccountReferenceValue(
-					vmInstance.Context(),
-					accountHandler,
-					interpreter.NewAddressValue(nil, senderAddress),
-					interpreter.FullyEntitledAccountAccess,
-				)
-
 				b.StartTimer()
 
-				err := vmInstance.InvokeTransaction(nil, authorizer)
+				err = vmInstance.InvokeTransaction(nil, authorizer)
 
 				b.StopTimer()
 				require.NoError(b, err)

@@ -17,7 +17,7 @@ require (
 	github.com/leanovate/gopter v0.2.11
 	github.com/logrusorgru/aurora/v4 v4.0.0
 	github.com/onflow/atree v0.12.0
-	github.com/onflow/cadence-standard-transactions v0.0.0-20251118182655-c31f418b74bc
+	github.com/onflow/cadence-standard-transactions v0.0.0-00010101000000-000000000000
 	github.com/onflow/crypto v0.25.3
 	github.com/onflow/fixed-point v0.1.1
 	github.com/rivo/uniseg v0.4.7
