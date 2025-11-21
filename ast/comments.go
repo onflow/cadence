@@ -25,7 +25,7 @@ func (c Comments) PackToList() []*Comment {
 func (c Comments) LeadingDocString() string {
 	var s strings.Builder
 	for _, comment := range c.Leading {
-		if comment.Doc() {
+		if comment.IsDoc() {
 			if s.Len() > 0 {
 				s.WriteRune('\n')
 			}
@@ -40,7 +40,7 @@ type Comment struct {
 }
 
 func NewComment(memoryGauge common.MemoryGauge, source []byte) *Comment {
-	// TODO(preserve-comments): Track memory usage
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(source)))
 	return &Comment{
 		source: source,
 	}
@@ -56,7 +56,7 @@ func (c Comment) Multiline() bool {
 	return bytes.HasPrefix(c.source, blockCommentStringPrefix)
 }
 
-func (c Comment) Doc() bool {
+func (c Comment) IsDoc() bool {
 	if c.Multiline() {
 		return bytes.HasPrefix(c.source, blockCommentDocStringPrefix)
 	} else {

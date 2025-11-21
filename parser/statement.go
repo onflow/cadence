@@ -541,8 +541,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		expression,
 		startToken.StartPos,
 		ast.Comments{
-			Leading: startToken.Comments.PackToList(),
-			// TODO(preserve-comments): handle inToken=nil
+			Leading:  startToken.Comments.PackToList(),
 			Trailing: inToken.Comments.PackToList(),
 		},
 	), nil
@@ -1012,8 +1011,8 @@ func parseRemoveStatement(
 	}
 
 	leadingComments := startToken.Comments.PackToList()
-	// TODO(preserve-comments): Handle fromToken=nil
 	leadingComments = append(leadingComments, fromToken.Comments.PackToList()...)
+
 	return ast.NewRemoveStatement(
 		p.memoryGauge,
 		attachmentNominalType,

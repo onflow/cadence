@@ -597,7 +597,6 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 	actual, err := json.Marshal(decl)
 	require.NoError(t, err)
 
-	// TODO(preserve-comments): Do we need to include comments in the JSON AST?
 	assert.JSONEq(t,
 		// language=json
 		`

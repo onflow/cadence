@@ -278,7 +278,6 @@ func spaceState(startIsNewline bool) stateFn {
 
 		l.scanSpace()
 
-		// TODO(preserve-comments): Do we need to track memory for other token types as well?
 		common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
 
 		if containsNewline {

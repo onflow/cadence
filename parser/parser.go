@@ -503,7 +503,6 @@ func (p *parser) tokenToIdentifier(token lexer.Token) ast.Identifier {
 		p.memoryGauge,
 		string(p.tokenSource(token)),
 		token.StartPos,
-		// TODO(preserve-comments): Handle comments for identifiers (attach them to parent structs?)
 	)
 }
 
