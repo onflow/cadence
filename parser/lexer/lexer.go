@@ -613,3 +613,15 @@ func (l *lexer) scanFixedPointRemainder() {
 func isDecimalDigitOrUnderscore(r rune) bool {
 	return (r >= '0' && r <= '9') || r == '_'
 }
+
+func IsValidIdentifier(s string) bool {
+	// Note: func is used by downstream dependants, do not remove.
+
+	for _, r := range s {
+		if !IsIdentifierRune(r) {
+			return false
+		}
+	}
+
+	return true
+}
