@@ -34,7 +34,12 @@ type Block struct {
 
 var _ Element = &Block{}
 
-func NewBlock(memoryGauge common.MemoryGauge, statements []Statement, astRange Range, comments Comments) *Block {
+func NewBlock(
+	memoryGauge common.MemoryGauge,
+	statements []Statement,
+	astRange Range,
+	comments Comments,
+) *Block {
 	common.UseMemory(memoryGauge, common.BlockMemoryUsage)
 
 	return &Block{
