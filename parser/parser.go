@@ -264,13 +264,26 @@ func (p *parser) next() {
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			parseError, ok := err.(ParseError)
-			if !ok {
+
+			var parseError ParseError
+			switch err := err.(type) {
+			case ParseError:
+				// already a parse error, do nothing
+				parseError = err
+
+			case lexer.MissingCommentEndError:
+				parseError = &MissingCommentEndError{
+					Pos: token.StartPos,
+				}
+
+			default:
+				// wrap other errors as syntax errors
 				parseError = &SyntaxError{
 					Pos:     token.StartPos,
 					Message: err.Error(),
 				}
 			}
+
 			p.report(parseError)
 			continue
 		}

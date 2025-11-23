@@ -338,7 +338,7 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 		r := l.next()
 		switch r {
 		case EOF:
-			l.emitError(fmt.Errorf("missing comment end '*/'"))
+			l.emitError(MissingCommentEndError{})
 			return nil
 		case '/':
 			beforeSlashOffset := l.prevEndOffset
@@ -367,4 +367,12 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 
 		return blockCommentState(l, nesting)
 	}
+}
+
+type MissingCommentEndError struct{}
+
+var _ error = MissingCommentEndError{}
+
+func (MissingCommentEndError) Error() string {
+	return "missing comment end (`*/`)"
 }

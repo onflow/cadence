@@ -589,11 +589,6 @@ func generateErrors() []namedError {
 				Token: placeholderToken,
 			},
 		},
-		{"parser.UnexpectedTokenInBlockCommentError",
-			&parser.UnexpectedTokenInBlockCommentError{
-				GotToken: placeholderToken,
-			},
-		},
 		{"parser.UnexpectedTokenInExpressionError",
 			&parser.UnexpectedTokenInExpressionError{
 				GotToken: placeholderToken,
