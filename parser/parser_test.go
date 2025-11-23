@@ -163,7 +163,7 @@ func testParseTypeWithConfig(s string, config Config) (ast.Type, []error) {
 }
 
 func configWithCommentTracking(config Config) Config {
-	config.TrackComments = true
+	config.CommentTrackingEnabled = true
 	return config
 }
 
@@ -1119,7 +1119,7 @@ func TestParseComments(t *testing.T) {
 event MyEvent() // After MyEvent
 /// Ignored
 `),
-			Config{},
+			Config{CommentTrackingEnabled: true},
 		)
 
 		assert.Empty(t, errs)

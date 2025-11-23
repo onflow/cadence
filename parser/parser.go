@@ -55,8 +55,8 @@ type Config struct {
 	IgnoreLeadingIdentifierEnabled bool
 	// TypeParametersEnabled determines if type parameters are enabled
 	TypeParametersEnabled bool
-	// TrackComments enables comment tracking in the lexer and AST.
-	TrackComments bool
+	// CommentTrackingEnabled determines if comment should be parsed and tracked in lexer and parser.
+	CommentTrackingEnabled bool
 }
 
 type parser struct {
@@ -100,7 +100,7 @@ func Parse[T any](
 	config Config,
 ) (result T, errors []error) {
 	lex := func() (lexer.TokenStream, error) {
-		if config.TrackComments {
+		if config.CommentTrackingEnabled {
 			return lexer.LexWithComments(input, memoryGauge)
 		} else {
 			return lexer.Lex(input, memoryGauge)
