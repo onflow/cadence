@@ -43,7 +43,7 @@ func TestMappedAccess_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	e := NewNominalType(nil, NewIdentifier(nil, "E", Position{Offset: 1, Line: 2, Column: 3}), []Identifier{})
+	e := NewNominalType(nil, NewIdentifier(nil, "E", Position{Offset: 1, Line: 2, Column: 3}), []Identifier{}, EmptyComments)
 
 	access := NewMappedAccess(e, Position{Offset: 0, Line: 0, Column: 0})
 	actual, err := json.Marshal(access)
@@ -68,8 +68,8 @@ func TestEntitlementAccess_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	e := NewNominalType(nil, NewIdentifier(nil, "E", Position{Offset: 0, Line: 0, Column: 0}), []Identifier{})
-	f := NewNominalType(nil, NewIdentifier(nil, "F", Position{Offset: 1, Line: 2, Column: 3}), []Identifier{})
+	e := NewNominalType(nil, NewIdentifier(nil, "E", Position{Offset: 0, Line: 0, Column: 0}), []Identifier{}, EmptyComments)
+	f := NewNominalType(nil, NewIdentifier(nil, "F", Position{Offset: 1, Line: 2, Column: 3}), []Identifier{}, EmptyComments)
 
 	t.Run("conjunction", func(t *testing.T) {
 		t.Parallel()

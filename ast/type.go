@@ -111,6 +111,7 @@ func IsEmptyType(t Type) bool {
 type NominalType struct {
 	NestedIdentifiers []Identifier `json:",omitempty"`
 	Identifier        Identifier
+	Comments
 }
 
 var _ Type = &NominalType{}
@@ -119,11 +120,13 @@ func NewNominalType(
 	memoryGauge common.MemoryGauge,
 	identifier Identifier,
 	nestedIdentifiers []Identifier,
+	comments Comments,
 ) *NominalType {
 	common.UseMemory(memoryGauge, common.NominalTypeMemoryUsage)
 	return &NominalType{
 		Identifier:        identifier,
 		NestedIdentifiers: nestedIdentifiers,
+		Comments:          comments,
 	}
 }
 

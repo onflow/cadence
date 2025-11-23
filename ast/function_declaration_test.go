@@ -113,8 +113,10 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 				},
 			},
 		},
-		DocString: "test",
-		StartPos:  Position{Offset: 34, Line: 35, Column: 36},
+		Comments: Comments{
+			Leading: []*Comment{NewComment(nil, []byte("///test"))},
+		},
+		StartPos: Position{Offset: 34, Line: 35, Column: 36},
 	}
 
 	actual, err := json.Marshal(decl)
@@ -585,8 +587,10 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 					},
 				},
 			},
-			DocString: "test",
-			StartPos:  Position{Offset: 34, Line: 35, Column: 36},
+			Comments: Comments{
+				Leading: []*Comment{NewComment(nil, []byte("///test"))},
+			},
+			StartPos: Position{Offset: 34, Line: 35, Column: 36},
 		},
 	}
 

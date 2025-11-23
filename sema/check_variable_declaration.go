@@ -225,7 +225,7 @@ func (checker *Checker) declareVariableDeclaration(declaration *ast.VariableDecl
 	variable, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               identifier,
 		ty:                       declarationType,
-		docString:                declaration.DocString,
+		docString:                declaration.DeclarationDocString(),
 		access:                   checker.accessFromAstAccess(declaration.Access),
 		kind:                     declaration.DeclarationKind(),
 		pos:                      declaration.Identifier.Pos,

@@ -29,16 +29,23 @@ import (
 type Block struct {
 	Statements []Statement
 	Range
+	Comments
 }
 
 var _ Element = &Block{}
 
-func NewBlock(memoryGauge common.MemoryGauge, statements []Statement, astRange Range) *Block {
+func NewBlock(
+	memoryGauge common.MemoryGauge,
+	statements []Statement,
+	astRange Range,
+	comments Comments,
+) *Block {
 	common.UseMemory(memoryGauge, common.BlockMemoryUsage)
 
 	return &Block{
 		Statements: statements,
 		Range:      astRange,
+		Comments:   comments,
 	}
 }
 
