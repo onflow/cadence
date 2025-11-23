@@ -65,17 +65,21 @@ func (c Comment) IsDoc() bool {
 	}
 }
 
+var commentPrefixes = [][]byte{
+	blockCommentDocStringPrefix, // must be before blockCommentStringPrefix
+	blockCommentStringPrefix,
+	lineCommentDocStringPrefix, // must be before lineCommentStringPrefix
+	lineCommentStringPrefix,
+}
+
+var commentSuffixes = [][]byte{
+	blockCommentStringSuffix,
+}
+
 // Text without opening/closing comment characters /*, /**, */, //
 func (c Comment) Text() []byte {
-	withoutPrefixes := cutOptionalPrefixes(c.source, [][]byte{
-		blockCommentDocStringPrefix, // must be before blockCommentStringPrefix
-		blockCommentStringPrefix,
-		lineCommentDocStringPrefix, // must be before lineCommentStringPrefix
-		lineCommentStringPrefix,
-	})
-	return cutOptionalSuffixes(withoutPrefixes, [][]byte{
-		blockCommentStringSuffix,
-	})
+	withoutPrefixes := cutOptionalPrefixes(c.source, commentPrefixes)
+	return cutOptionalSuffixes(withoutPrefixes, commentSuffixes)
 }
 
 func cutOptionalPrefixes(input []byte, prefixes [][]byte) (output []byte) {
