@@ -88,8 +88,12 @@ type lexer struct {
 	mode lexerMode
 	// counts the number of unclosed brackets for string templates \((()))
 	openBrackets int
-	// currentComments stores the current leading and/or trailing comments
+	// indicates if tracking comments is enabled
+	trackComments bool
+	// currentComments stores the leading and/or trailing comments,
+	// waiting to be consumed and attached to respective tokens
 	// nil is used as sentinel value to track newlines
+	// Note: currentComments is only initialized when trackComments=true
 	currentComments []*ast.Comment
 }
 
@@ -172,6 +176,17 @@ func Lex(input []byte, memoryGauge common.MemoryGauge) (TokenStream, error) {
 	l.clear()
 	l.memoryGauge = memoryGauge
 	l.input = input
+	err := l.run(rootState)
+	return l, err
+}
+
+// LexWithComments is equivalent to Lex, but it enables comments tracking.
+func LexWithComments(input []byte, memoryGauge common.MemoryGauge) (TokenStream, error) {
+	l := pool.Get().(*lexer)
+	l.clear()
+	l.memoryGauge = memoryGauge
+	l.input = input
+	l.trackComments = true
 	err := l.run(rootState)
 	return l, err
 }
@@ -303,7 +318,7 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 // tokenComments creates initial ast.Comments with leading comments, but empty trailing comments.
 // Trailing comments for the current token are determined when the next non-space token is consumed (in setPrevTokenTrailingComments).
 func (l *lexer) tokenComments(ty TokenType) ast.Comments {
-	if ty == TokenSpace {
+	if ty == TokenSpace || !l.trackComments {
 		return ast.EmptyComments
 	}
 
@@ -325,7 +340,7 @@ func (l *lexer) tokenComments(ty TokenType) ast.Comments {
 // setPrevTokenTrailingComments sets the trailing comments of the latest non-space token,
 // since they were not known yet at the time of calling tokenComments.
 func (l *lexer) setPrevTokenTrailingComments() {
-	if l.tokenCount == 0 {
+	if l.tokenCount == 0 || !l.trackComments {
 		return
 	}
 
@@ -386,13 +401,15 @@ func (l *lexer) emitComment() {
 		),
 	)
 
-	if l.currentComments == nil {
-		l.currentComments = []*ast.Comment{}
-	}
-
-	l.currentComments = append(l.currentComments, ast.NewComment(l.memoryGauge, currentRange.Source(l.input)))
-
 	l.consume(endPos)
+
+	if l.trackComments {
+		if l.currentComments == nil {
+			l.currentComments = []*ast.Comment{}
+		}
+
+		l.currentComments = append(l.currentComments, ast.NewComment(l.memoryGauge, currentRange.Source(l.input)))
+	}
 }
 
 // endPos pre-computed end-position by calling l.endPos()

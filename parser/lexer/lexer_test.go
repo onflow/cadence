@@ -63,7 +63,7 @@ func testLex(t *testing.T, input string, expected []token) {
 
 	bytes := []byte(input)
 
-	tokenStream, err := Lex(bytes, nil)
+	tokenStream, err := LexWithComments(bytes, nil)
 	require.NoError(t, err)
 
 	withTokens(tokenStream, func(actualTokens []Token) {
