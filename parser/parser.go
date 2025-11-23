@@ -99,16 +99,8 @@ func Parse[T any](
 	parse func(*parser) (T, error),
 	config Config,
 ) (result T, errors []error) {
-	lex := func() (lexer.TokenStream, error) {
-		if config.CommentTrackingEnabled {
-			return lexer.LexWithComments(input, memoryGauge)
-		} else {
-			return lexer.Lex(input, memoryGauge)
-		}
-	}
-
 	// create a lexer, which turns the input string into tokens
-	tokens, err := lex()
+	tokens, err := lex(input, memoryGauge, config.CommentTrackingEnabled)
 	if err != nil {
 		errors = append(errors, err)
 		return
@@ -209,6 +201,14 @@ func ParseTokenStream[T any](
 	}
 
 	return result, p.errors
+}
+
+func lex(input []byte, memoryGauge common.MemoryGauge, trackComments bool) (lexer.TokenStream, error) {
+	if trackComments {
+		return lexer.LexWithComments(input, memoryGauge)
+	} else {
+		return lexer.Lex(input, memoryGauge)
+	}
 }
 
 func (p *parser) newSyntaxError(message string, params ...any) *SyntaxError {
@@ -674,7 +674,7 @@ func ParseArgumentList(
 }
 
 func ParseProgram(memoryGauge common.MemoryGauge, code []byte, config Config) (program *ast.Program, err error) {
-	tokens, err := lexer.Lex(code, memoryGauge)
+	tokens, err := lex(code, memoryGauge, config.CommentTrackingEnabled)
 	if err != nil {
 		return
 	}

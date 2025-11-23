@@ -51,6 +51,13 @@ func TestFiles(t *testing.T) {
 
 			inputPath := filepath.Join(dirPath, "test.cdc")
 
+			defer func() {
+				err := recover()
+				if err != nil {
+					t.Errorf("%s should not have panicked: %s", testName, err)
+				}
+			}()
+
 			gen(inputPath, outFile, "github.com/onflow/cadence/sema/gen/"+dirPath)
 
 			goldenPath := filepath.Join(dirPath, "test.golden.go")
