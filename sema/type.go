@@ -5886,32 +5886,36 @@ func (t *InterfaceType) SupportedEntitlements() *EntitlementSet {
 }
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = t.computeMembers(map[*InterfaceType]struct{}{})
+	})
 	return t.memberResolvers
 }
 
-func (t *InterfaceType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		members := MembersMapAsResolvers(t.Members)
+func (t *InterfaceType) computeMembers(seenInterfaces map[*InterfaceType]struct{}) map[string]MemberResolver {
 
-		// Add any inherited members from up the inheritance chain
-		for _, conformance := range t.EffectiveInterfaceConformances() {
+	members := MembersMapAsResolvers(t.Members)
 
-			// Prevent infinite recursion in case of self-conforming interfaces
-			if conformance.InterfaceType == t {
-				continue
+	if _, ok := seenInterfaces[t]; ok {
+		return members
+	}
+	seenInterfaces[t] = struct{}{}
+
+	// Add any inherited members from up the inheritance chain
+	for _, conformance := range t.EffectiveInterfaceConformances() {
+
+		// NOTE: call computeMembers instead of getMembers to prevent infinite recursion
+		// in case of cyclic interface conformances
+		for name, member := range conformance.InterfaceType.computeMembers(seenInterfaces) { //nolint:maprange
+			if _, ok := members[name]; !ok {
+				members[name] = member
 			}
-
-			for name, member := range conformance.InterfaceType.GetMembers() { //nolint:maprange
-				if _, ok := members[name]; !ok {
-					members[name] = member
-				}
-			}
-
 		}
 
-		t.memberResolvers = withBuiltinMembers(t, members)
-	})
+	}
+
+	members = withBuiltinMembers(t, members)
+	return members
 }
 
 func (t *InterfaceType) IsResourceType() bool {

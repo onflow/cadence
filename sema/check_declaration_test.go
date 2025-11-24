@@ -117,21 +117,23 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
            struct interface SI1: SI2 {
-               fun foo() {
-                   self.foo
+               fun bar() {
+                   self.foo()
                }
            }
 
            struct interface SI2: SI1 {
                fun foo() {
-                   self.foo
+                   self.bar()
                }
            }
 	    `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 4)
 
 		assert.IsType(t, &sema.CyclicConformanceError{}, errs[0])
 		assert.IsType(t, &sema.InterfaceMemberConflictError{}, errs[1])
+		assert.IsType(t, &sema.CyclicConformanceError{}, errs[2])
+		assert.IsType(t, &sema.InterfaceMemberConflictError{}, errs[3])
 	})
 }
