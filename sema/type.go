@@ -5011,9 +5011,9 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 }
 
 func newCompositeOrInterfaceSupportedEntitlementSet(
-	parent Type,
 	members *StringMemberOrderedMap,
 	effectiveInterfaceConformanceSet *InterfaceSet,
+	seenInterfaces map[*InterfaceType]struct{},
 ) *EntitlementSet {
 	set := &EntitlementSet{}
 
@@ -5057,10 +5057,12 @@ func newCompositeOrInterfaceSupportedEntitlementSet(
 	}
 
 	effectiveInterfaceConformanceSet.ForEach(func(it *InterfaceType) {
-		// Prevent infinite recursion in case of self-conforming interfaces
-		if it != parent {
-			set.Merge(it.SupportedEntitlements())
+		if _, ok := seenInterfaces[it]; ok {
+			return
 		}
+		seenInterfaces[it] = struct{}{}
+		defer delete(seenInterfaces, it)
+		set.Merge(it.computeSupportedEntitlements(seenInterfaces))
 	})
 
 	return set
@@ -5070,9 +5072,9 @@ func (t *CompositeType) SupportedEntitlements() *EntitlementSet {
 	t.supportedEntitlementsOnce.Do(func() {
 
 		set := newCompositeOrInterfaceSupportedEntitlementSet(
-			t,
 			t.Members,
 			t.EffectiveInterfaceConformanceSet(),
+			map[*InterfaceType]struct{}{},
 		)
 
 		// attachments support at least the entitlements supported by their base,
@@ -5876,13 +5878,17 @@ func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 
 func (t *InterfaceType) SupportedEntitlements() *EntitlementSet {
 	t.supportedEntitlementsOnce.Do(func() {
-		t.supportedEntitlements = newCompositeOrInterfaceSupportedEntitlementSet(
-			t,
-			t.Members,
-			t.EffectiveInterfaceConformanceSet(),
-		)
+		t.supportedEntitlements = t.computeSupportedEntitlements(map[*InterfaceType]struct{}{})
 	})
 	return t.supportedEntitlements
+}
+
+func (t *InterfaceType) computeSupportedEntitlements(seenInterfaces map[*InterfaceType]struct{}) *EntitlementSet {
+	return newCompositeOrInterfaceSupportedEntitlementSet(
+		t.Members,
+		t.EffectiveInterfaceConformanceSet(),
+		seenInterfaces,
+	)
 }
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
