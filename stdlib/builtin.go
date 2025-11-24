@@ -115,8 +115,8 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 		NewVMAccountContractsGetFunction(handler),
 		NewVMAccountContractsBorrowFunction(handler),
 
-		NewVMAccountContractsChangeFunction(handler, true),
-		NewVMAccountContractsChangeFunction(handler, false),
+		newVMAccountContractsChangeFunction(handler, true),
+		newVMAccountContractsChangeFunction(handler, false),
 		newVMAccountContractsTryUpdateFunction(handler),
 		newVMAccountContractsRemoveFunction(handler),
 
