@@ -54,13 +54,11 @@ func assertGlobalsEqual(t *testing.T, expected []bbq.GlobalInfo, actual []bbq.Gl
 }
 
 func assertTypesEqual(t *testing.T, expectedTypes, actualTypes []interpreter.StaticType) {
-	for _, expectedType := range expectedTypes {
-		_ = expectedType.ID()
+	require.Equal(t, len(expectedTypes), len(actualTypes))
+	for i, expectedType := range expectedTypes {
+		actualType := actualTypes[i]
+		assert.True(t, expectedType.Equal(actualType))
 	}
-	for _, actualType := range actualTypes {
-		_ = actualType.ID()
-	}
-	assert.Equal(t, expectedTypes, actualTypes)
 }
 
 func TestCompileRecursionFib(t *testing.T) {
