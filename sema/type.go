@@ -5057,6 +5057,8 @@ func newCompositeOrInterfaceSupportedEntitlementSet(
 	}
 
 	effectiveInterfaceConformanceSet.ForEach(func(it *InterfaceType) {
+		// NOTE: call computeSupportedEntitlements instead of SupportedEntitlements
+		// to prevent infinite recursion in case of cyclic interface conformances
 		if _, ok := seenInterfaces[it]; ok {
 			return
 		}
