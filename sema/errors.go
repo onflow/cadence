@@ -2125,28 +2125,28 @@ type CyclicConformanceError struct {
 	ast.Range
 }
 
-var _ SemanticError = CyclicConformanceError{}
-var _ errors.UserError = CyclicConformanceError{}
-var _ errors.SecondaryError = CyclicConformanceError{}
-var _ errors.HasDocumentationLink = CyclicConformanceError{}
+var _ SemanticError = &CyclicConformanceError{}
+var _ errors.UserError = &CyclicConformanceError{}
+var _ errors.SecondaryError = &CyclicConformanceError{}
+var _ errors.HasDocumentationLink = &CyclicConformanceError{}
 
-func (CyclicConformanceError) isSemanticError() {}
+func (*CyclicConformanceError) isSemanticError() {}
 
-func (CyclicConformanceError) IsUserError() {}
+func (*CyclicConformanceError) IsUserError() {}
 
-func (e CyclicConformanceError) Error() string {
+func (e *CyclicConformanceError) Error() string {
 	return fmt.Sprintf(
 		"%#q has a cyclic conformance to itself",
 		e.InterfaceType.QualifiedString(),
 	)
 }
 
-func (CyclicConformanceError) SecondaryError() string {
+func (*CyclicConformanceError) SecondaryError() string {
 	return "interfaces cannot have circular dependencies; " +
 		"break the cycle by removing one of the conformance declarations"
 }
 
-func (CyclicConformanceError) DocumentationLink() string {
+func (*CyclicConformanceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
