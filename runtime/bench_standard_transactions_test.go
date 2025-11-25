@@ -27,18 +27,19 @@ import (
 	"strings"
 	"testing"
 
+	flowsdk "github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence-standard-transactions/transactions"
+
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
-	flowsdk "github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/crypto"
 )
 
 var realCryptoContract = `
