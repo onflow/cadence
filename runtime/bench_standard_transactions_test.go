@@ -23,8 +23,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"strconv"
-	"strings"
 	"testing"
 
 	flowsdk "github.com/onflow/flow-go-sdk"
@@ -251,53 +249,6 @@ func createTransaction(name string, imports string, prepare string, setup string
 	}
 }
 
-func stringOfLen(length uint64) string {
-	someString := make([]byte, length)
-	for i := 0; i < len(someString); i++ {
-		someString[i] = 'x'
-	}
-	return string(someString)
-}
-
-func stringArrayOfLen(arrayLen uint64, stringLen uint64) string {
-	builder := strings.Builder{}
-	builder.WriteRune('[')
-	for i := uint64(0); i < arrayLen; i++ {
-		if i > 0 {
-			builder.WriteRune(',')
-		}
-		builder.WriteRune('"')
-		builder.WriteString(stringOfLen(stringLen))
-		builder.WriteRune('"')
-	}
-	builder.WriteRune(']')
-	return builder.String()
-}
-
-func stringDictOfLen(dictLen uint64, stringLen uint64) string {
-	builder := strings.Builder{}
-	builder.WriteRune('{')
-	for i := uint64(0); i < dictLen; i++ {
-		if i > 0 {
-			builder.WriteRune(',')
-		}
-		builder.WriteRune('"')
-		someString := make([]byte, stringLen)
-		for i := 0; i < len(someString); i++ {
-			someString[i] = 'x'
-		}
-		builder.WriteString(string(someString))
-		builder.WriteString(strconv.Itoa(int(i)))
-		builder.WriteRune('"')
-		builder.WriteRune(':')
-		builder.WriteRune('"')
-		builder.WriteString(string(someString))
-		builder.WriteRune('"')
-	}
-	builder.WriteRune('}')
-	return builder.String()
-}
-
 func init() {
 	// create key transactions
 	createKeyECDSAP256Transaction, err := transactions.CreateKeyECDSAP256Transaction(100)
@@ -469,7 +420,7 @@ func init() {
 			transactions.BorrowStringTransaction.GetPrepareBlock(),
 			fmt.Sprintf(
 				transactions.BorrowStringTransaction.GetSetupTemplate(),
-				stringArrayOfLen(20, 100),
+				transactions.StringArrayOfLen(20, 100),
 			),
 		),
 		createTransaction(
@@ -478,7 +429,7 @@ func init() {
 			transactions.CopyStringTransaction.GetPrepareBlock(),
 			fmt.Sprintf(
 				transactions.CopyStringTransaction.GetSetupTemplate(),
-				stringArrayOfLen(20, 100),
+				transactions.StringArrayOfLen(20, 100),
 			),
 		),
 		createTransaction(
@@ -487,7 +438,7 @@ func init() {
 			transactions.CopyStringAndSaveADuplicateTransaction.GetPrepareBlock(),
 			fmt.Sprintf(
 				transactions.CopyStringAndSaveADuplicateTransaction.GetSetupTemplate(),
-				stringArrayOfLen(20, 100),
+				transactions.StringArrayOfLen(20, 100),
 			),
 		),
 		createTransaction(
@@ -502,7 +453,7 @@ func init() {
 			transactions.StoreLoadAndDestroyDictStringTransaction.GetPrepareBlock(),
 			fmt.Sprintf(
 				transactions.StoreLoadAndDestroyDictStringTransaction.GetSetupTemplate(),
-				stringDictOfLen(100, 100),
+				transactions.StringDictOfLen(100, 100),
 			),
 		),
 		createTransaction(
@@ -511,7 +462,7 @@ func init() {
 			transactions.BorrowDictStringTransaction.GetPrepareBlock(),
 			fmt.Sprintf(
 				transactions.BorrowDictStringTransaction.GetSetupTemplate(),
-				stringDictOfLen(100, 100),
+				transactions.StringDictOfLen(100, 100),
 			),
 		),
 		createTransaction(
@@ -520,7 +471,7 @@ func init() {
 			transactions.CopyDictStringTransaction.GetPrepareBlock(),
 			fmt.Sprintf(
 				transactions.CopyDictStringTransaction.GetSetupTemplate(),
-				stringDictOfLen(30, 100),
+				transactions.StringDictOfLen(30, 100),
 			),
 		),
 		createTransaction(
@@ -529,7 +480,7 @@ func init() {
 			transactions.CopyDictStringAndSaveADuplicateTransaction.GetPrepareBlock(),
 			fmt.Sprintf(
 				transactions.CopyDictStringAndSaveADuplicateTransaction.GetSetupTemplate(),
-				stringDictOfLen(20, 100),
+				transactions.StringDictOfLen(20, 100),
 			),
 		),
 		createTransaction(
@@ -971,6 +922,7 @@ func benchmarkRuntimeTransactions(b *testing.B, useVM bool) {
 
 			for b.Loop() {
 				b.StopTimer()
+				// set up everything for the transaction
 				var err error
 				if transaction.Setup != "" {
 					err = runtime.ExecuteTransaction(
@@ -987,16 +939,18 @@ func benchmarkRuntimeTransactions(b *testing.B, useVM bool) {
 					)
 					require.NoError(b, err)
 				}
+				source := []byte(transaction.Body)
+				location := nextTransactionLocation()
 				b.StartTimer()
 
 				err = runtime.ExecuteTransaction(
 					Script{
-						Source:    []byte(transaction.Body),
+						Source:    source,
 						Arguments: nil,
 					},
 					Context{
 						Interface:   runtimeInterface,
-						Location:    nextTransactionLocation(),
+						Location:    location,
 						Environment: environment,
 						UseVM:       useVM,
 					},
