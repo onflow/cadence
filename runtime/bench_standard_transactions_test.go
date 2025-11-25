@@ -971,7 +971,3 @@ func BenchmarkRuntimeTransactionsInterpreter(b *testing.B) {
 func BenchmarkRuntimeTransactionsVM(b *testing.B) {
 	benchmarkRuntimeTransactions(b, true)
 }
-
-func BenchmarkRuntimeTransactions(b *testing.B) {
-	benchmarkRuntimeTransactions(b, false)
-}
