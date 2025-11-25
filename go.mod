@@ -1,6 +1,8 @@
 module github.com/onflow/cadence
 
-go 1.25.0
+go 1.24.0
+
+toolchain go1.24.3
 
 require (
 	github.com/SaveTheRbtz/mph v0.1.1-0.20240117162131-4166ec7869bc
@@ -17,10 +19,10 @@ require (
 	github.com/leanovate/gopter v0.2.11
 	github.com/logrusorgru/aurora/v4 v4.0.0
 	github.com/onflow/atree v0.12.0
-	github.com/onflow/cadence-standard-transactions v0.0.0-00010101000000-000000000000
+	github.com/onflow/cadence-standard-transactions v0.1.0
 	github.com/onflow/crypto v0.25.3
 	github.com/onflow/fixed-point v0.1.1
-	github.com/onflow/flow-go-sdk v1.9.3
+	github.com/onflow/flow-go-sdk v1.9.1
 	github.com/rivo/uniseg v0.4.7
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/stretchr/testify v1.11.1
@@ -69,5 +71,3 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/onflow/cadence-standard-transactions => /Users/rayz/Desktop/Work/cadence-standard-transactions
