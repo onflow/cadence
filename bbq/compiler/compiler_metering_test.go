@@ -51,14 +51,10 @@ func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	return nil
 }
 
-func (g *testMemoryGauge) getMemory(kind common.MemoryKind) int {
-	return int(g.meter[kind])
-}
-
 func assertMemoryIntensitiesContains(t *testing.T, actual, contains map[common.MemoryKind]uint64) {
 	for containKind, containAmount := range contains {
 		// If the memory kind doesn't exist, it is same as zero-intensity.
-		actualAmount, _ := actual[containKind]
+		actualAmount := actual[containKind]
 
 		assert.Equal(
 			t,
