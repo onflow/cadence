@@ -6,7 +6,7 @@ toolchain go1.24.3
 
 require (
 	github.com/SaveTheRbtz/mph v0.1.1-0.20240117162131-4166ec7869bc
-	github.com/bits-and-blooms/bitset v1.24.0
+	github.com/bits-and-blooms/bitset v1.24.4
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/dave/dst v0.27.3
 	github.com/fxamacker/cbor/v2 v2.9.1-0.20251019205732-39888e6be013
@@ -29,12 +29,12 @@ require (
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	github.com/tidwall/pretty v1.2.1
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
-	go.opentelemetry.io/otel v1.37.0
+	go.opentelemetry.io/otel v1.38.0
 	go.uber.org/goleak v1.3.0
-	golang.org/x/crypto v0.41.0
-	golang.org/x/mod v0.28.0
-	golang.org/x/text v0.28.0
-	golang.org/x/tools v0.37.0
+	golang.org/x/crypto v0.45.0
+	golang.org/x/mod v0.30.0
+	golang.org/x/text v0.31.0
+	golang.org/x/tools v0.39.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 )
 
@@ -62,10 +62,10 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/assert v1.3.0 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
-	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/term v0.34.0 // indirect
+	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
