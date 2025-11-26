@@ -27,10 +27,10 @@ jobs:
       contents: read
       security-events: write
       pull-requests: write
-    
+
     env:
       GOPRIVATE: "github.com/onflow"
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v5
@@ -38,7 +38,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version-file: go.mod
+        go-version: '1.25'
         cache: true
 
     - name: Initialize CodeQL
