@@ -269,15 +269,27 @@ const (
 	MemoryKindGoSliceLength
 
 	// Compiler
+
 	MemoryKindCompiler
 	MemoryKindCompilerGlobal
+	MemoryKindCompilerLocal
 	MemoryKindCompilerConstant
+	MemoryKindCompilerFunction
+	MemoryKindCompilerInstruction
+
+	MemoryKindCompilerBBQProgram
+	MemoryKindCompilerBBQConstant
+	MemoryKindCompilerBBQFunction
+	MemoryKindCompilerBBQImport
+	MemoryKindCompilerBBQVariable
+	MemoryKindCompilerBBQContract
 
 	// VM
+
 	MemoryKindImplicitReferenceVMValue
 	MemoryKindBoundFunctionVMValue
 
-	// Placeholder kind to allow consistent indexing
-	// this should always be the last kind
+	// MemoryKindLast is a placeholder kind to allow consistent indexing.
+	// This should always be the last kind.
 	MemoryKindLast
 )

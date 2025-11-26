@@ -336,10 +336,24 @@ var (
 
 	// Compiler
 
-	CompilerMemoryUsage         = NewConstantMemoryUsage(MemoryKindCompiler)
-	CompilerGlobalMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompilerGlobal)
-	CompilerConstantMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerConstant)
+	CompilerMemoryUsage            = NewConstantMemoryUsage(MemoryKindCompiler)
+	CompilerGlobalMemoryUsage      = NewConstantMemoryUsage(MemoryKindCompilerGlobal)
+	CompilerLocalMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompilerLocal)
+	CompilerConstantMemoryUsage    = NewConstantMemoryUsage(MemoryKindCompilerConstant)
+	CompilerFunctionMemoryUsage    = NewConstantMemoryUsage(MemoryKindCompilerFunction)
+	CompilerInstructionMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerInstruction)
+
+	CompilerBBQProgramMemoryUsage  = NewConstantMemoryUsage(MemoryKindCompilerBBQProgram)
+	CompilerBBQFunctionMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerBBQFunction)
+	CompilerBBQContractMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerBBQContract)
 )
+
+func NewMemoryUsage(kind MemoryKind, amount uint64) MemoryUsage {
+	return MemoryUsage{
+		Kind:   kind,
+		Amount: amount,
+	}
+}
 
 func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 	return MemoryUsage{
