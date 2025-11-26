@@ -29,7 +29,7 @@ jobs:
       pull-requests: write
     
     env:
-      GOPRIVATE: "github.com/onflow, github.com/axiomzen"
+      GOPRIVATE: "github.com/onflow"
     
     steps:
     - name: Checkout repository
@@ -41,9 +41,6 @@ jobs:
         go-version-file: go.mod
         cache: true
 
-    - name: Tidy Go and mod vendor
-      run: go mod tidy && go mod vendor
-
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
@@ -51,7 +48,7 @@ jobs:
         queries: security-extended
 
     - name: Build
-      run: CGO_ENABLED=0 go build -mod=vendor -tags=no_cgo ./...
+      run: make build
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
