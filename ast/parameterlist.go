@@ -19,7 +19,7 @@
 package ast
 
 import (
-	"sync"
+	"sync/atomic"
 
 	"github.com/turbolent/prettier"
 
@@ -27,10 +27,9 @@ import (
 )
 
 type ParameterList struct {
-	_parametersByIdentifier map[string]*Parameter
-	Parameters              []*Parameter
+	parametersByIdentifier atomic.Pointer[map[string]*Parameter]
+	Parameters             []*Parameter
 	Range
-	once sync.Once
 }
 
 func NewParameterList(
@@ -60,16 +59,18 @@ func (l *ParameterList) EffectiveArgumentLabels() []string {
 }
 
 func (l *ParameterList) ParametersByIdentifier() map[string]*Parameter {
-	l.once.Do(l.initialize)
-	return l._parametersByIdentifier
-}
-
-func (l *ParameterList) initialize() {
-	parametersByIdentifier := make(map[string]*Parameter, len(l.Parameters))
-	for _, parameter := range l.Parameters {
-		parametersByIdentifier[parameter.Identifier.Identifier] = parameter
+	// Return cached map if already computed
+	if cachedMap := l.parametersByIdentifier.Load(); cachedMap != nil {
+		return *cachedMap
 	}
-	l._parametersByIdentifier = parametersByIdentifier
+
+	// Compute map and cache it
+	computedMap := make(map[string]*Parameter, len(l.Parameters))
+	for _, parameter := range l.Parameters {
+		computedMap[parameter.Identifier.Identifier] = parameter
+	}
+	l.parametersByIdentifier.Store(&computedMap)
+	return computedMap
 }
 
 func (l *ParameterList) IsEmpty() bool {

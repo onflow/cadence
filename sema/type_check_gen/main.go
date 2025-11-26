@@ -69,6 +69,8 @@ func main() {
 	gen := subtypegen.NewSubTypeCheckGenerator(config)
 	decls := gen.GenerateCheckSubTypeWithoutEqualityFunction(rules)
 
+	decls = Update(decls)
+
 	// Write output
 	outFile, err := os.Create(outPath)
 	if err != nil {

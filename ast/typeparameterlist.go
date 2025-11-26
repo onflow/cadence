@@ -19,7 +19,7 @@
 package ast
 
 import (
-	"sync"
+	"sync/atomic"
 
 	"github.com/turbolent/prettier"
 
@@ -27,9 +27,8 @@ import (
 )
 
 type TypeParameterList struct {
-	once                        sync.Once
-	TypeParameters              []*TypeParameter
-	_typeParametersByIdentifier map[string]*TypeParameter
+	TypeParameters             []*TypeParameter
+	typeParametersByIdentifier atomic.Pointer[map[string]*TypeParameter]
 	Range
 }
 
@@ -46,16 +45,18 @@ func NewTypeParameterList(
 }
 
 func (l *TypeParameterList) TypeParametersByIdentifier() map[string]*TypeParameter {
-	l.once.Do(l.initialize)
-	return l._typeParametersByIdentifier
-}
-
-func (l *TypeParameterList) initialize() {
-	typeParametersByIdentifier := make(map[string]*TypeParameter, len(l.TypeParameters))
-	for _, typeParameter := range l.TypeParameters {
-		typeParametersByIdentifier[typeParameter.Identifier.Identifier] = typeParameter
+	// Return cached map if already computed
+	if cachedMap := l.typeParametersByIdentifier.Load(); cachedMap != nil {
+		return *cachedMap
 	}
-	l._typeParametersByIdentifier = typeParametersByIdentifier
+
+	// Compute map and cache it
+	computedMap := make(map[string]*TypeParameter, len(l.TypeParameters))
+	for _, typeParameter := range l.TypeParameters {
+		computedMap[typeParameter.Identifier.Identifier] = typeParameter
+	}
+	l.typeParametersByIdentifier.Store(&computedMap)
+	return computedMap
 }
 
 func (l *TypeParameterList) IsEmpty() bool {

@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -4016,4 +4017,88 @@ func TestInterpretRecursiveTransfers(t *testing.T) {
 
 	var recursiveTransferError *interpreter.RecursiveTransferError
 	require.ErrorAs(t, err, &recursiveTransferError)
+}
+
+func TestInterpretInheritedDefaultDestroyEvent(t *testing.T) {
+
+	t.Parallel()
+
+	type event struct {
+		Type   *sema.CompositeType
+		Fields []interpreter.Value
+	}
+
+	var events []event
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+              resource interface RI {
+                  let x: Int
+
+                  event ResourceDestroyed(x: Int = self.x)
+              }
+
+              resource R: RI {
+                  let x: Int
+
+                  event ResourceDestroyed(x: Int = self.x)
+
+                  init() {
+                      self.x = 1
+                  }
+              }
+
+              fun test() {
+                  let r <- create R()
+                  destroy r
+              }
+	    `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					events = append(events, event{
+						Type:   eventType,
+						Fields: eventFields,
+					})
+					return nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Len(t, events, 2)
+
+	assert.Equal(t, "RI.ResourceDestroyed", events[0].Type.QualifiedIdentifier())
+	require.Len(t, events[0].Fields, 1)
+	assert.Equal(t, 1, events[0].Fields[0].(interpreter.IntValue).ToInt())
+
+	assert.Equal(t, "R.ResourceDestroyed", events[1].Type.QualifiedIdentifier())
+	require.Len(t, events[1].Fields, 1)
+	assert.Equal(t, 1, events[1].Fields[0].(interpreter.IntValue).ToInt())
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 4)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
 }

@@ -93,7 +93,7 @@ COVER_PKGS := $(shell echo $(TEST_PKGS) | tr ' ' ',')
 
 .PHONY: test
 test: test-with-compiler test-with-tracing
-	go test $(TEST_PKGS)
+	go test -tags compare_subtyping $(TEST_PKGS)
 
 .PHONY: test-with-tracing
 test-with-tracing:

@@ -43,6 +43,10 @@ func LinkGlobals(
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) LinkedGlobals {
 
+	if linkedGlobals, ok := linkedGlobalsCache[location]; ok {
+		return linkedGlobals
+	}
+
 	executable := NewExecutableProgram(location, program, nil)
 
 	// reserved globals for the current program (exact)

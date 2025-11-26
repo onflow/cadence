@@ -108,37 +108,7 @@ func AreReturnsCovariant(source, target FunctionStaticType) bool {
 	return sema.AreReturnsCovariant(source.FunctionType, target.FunctionType)
 }
 
-func IsParameterizedSubType(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {
-	typedSubType, ok := subType.(ParameterizedStaticType)
-	if !ok {
-		return false
-	}
-
-	if baseType := typedSubType.BaseType(); baseType != nil {
-		return IsSubType(typeConverter, baseType, superType)
-	}
-
-	return false
-}
-
 func IsStorableType(typeConverter TypeConverter, typ StaticType) bool {
 	semaType := typeConverter.SemaTypeFromStaticType(typ)
 	return semaType.IsStorable(map[*sema.Member]bool{})
-}
-
-type Equatable[T any] interface {
-	comparable
-	Equal(other T) bool
-}
-
-func deepEquals[T any, A, B Equatable[T]](source A, target B) bool {
-	var emptyA A
-	var emptyB B
-	if source == emptyA {
-		return target == emptyB
-	}
-
-	// Convert target to T to pass to source.Equal
-	targetAsT := any(target).(T)
-	return source.Equal(targetAsT)
 }
