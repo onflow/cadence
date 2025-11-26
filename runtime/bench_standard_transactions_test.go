@@ -221,6 +221,18 @@ type Transaction struct {
 var testTransactions []Transaction
 
 func createTransaction(name string, imports string, prepare string, setup string) Transaction {
+	setupBody := ""
+	if setup != "" {
+		setupBody = fmt.Sprintf(
+			`
+			transaction(){
+				prepare(signer: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
+					%s
+				}
+			}`,
+			setup,
+		)
+	}
 	return Transaction{
 		Name: name,
 		Body: fmt.Sprintf(
@@ -237,15 +249,7 @@ func createTransaction(name string, imports string, prepare string, setup string
 			imports,
 			prepare,
 		),
-		Setup: fmt.Sprintf(
-			`
-			transaction(){
-				prepare(signer: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
-					%s
-				}
-			}`,
-			setup,
-		),
+		Setup: setupBody,
 	}
 }
 
@@ -577,7 +581,7 @@ func init() {
 			"",
 		),
 		createTransaction(
-			"IssueStorageCap",
+			"IssueStorageCapability",
 			"",
 			transactions.IssueStorageCapabilityTransaction(100).GetPrepareBlock(),
 			"",
