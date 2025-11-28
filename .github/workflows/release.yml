@@ -61,7 +61,7 @@ jobs:
           git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
       - name: Open Pull Request
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v7
         with:
           branch: release/${{ steps.version-gen.outputs.version }}
           title: 'Merge `release/${{ steps.version-gen.outputs.version }}` to `${{ inputs.base }}`'
