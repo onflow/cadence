@@ -162,7 +162,7 @@ func (v *EphemeralReferenceValue) SetMember(context ValueTransferContext, name s
 	return setMember(context, v.Value, name, value)
 }
 
-func (v *EphemeralReferenceValue) GetKey(context ValueComparisonContext, key Value) Value {
+func (v *EphemeralReferenceValue) GetKey(context ContainerReadContext, key Value) Value {
 	return v.Value.(ValueIndexableValue).
 		GetKey(context, key)
 }
@@ -186,10 +186,16 @@ func (v *EphemeralReferenceValue) GetTypeKey(context MemberAccessibleContext, ke
 	self := v.Value
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+
+		semaAccess, err := context.SemaAccessFromStaticAuthorization(v.Authorization)
+		if err != nil {
+			panic(err)
+		}
+
 		return selfComposite.getTypeKey(
 			context,
 			key,
-			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
+			semaAccess,
 		)
 	}
 
@@ -259,7 +265,7 @@ func (*EphemeralReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return NonStorable{Value: v}, nil
 }
 
@@ -345,8 +351,8 @@ func (i *ReferenceValueIterator) Next(context ValueIteratorContext) Value {
 	return i.iterator.Next(context)
 }
 
-func (i *ReferenceValueIterator) HasNext() bool {
-	return i.iterator.HasNext()
+func (i *ReferenceValueIterator) HasNext(context ValueIteratorContext) bool {
+	return i.iterator.HasNext(context)
 }
 
 func (i *ReferenceValueIterator) ValueID() (atree.ValueID, bool) {

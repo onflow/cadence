@@ -94,7 +94,7 @@ func (v CompiledFunctionValue) String() string {
 	return v.Type.String()
 }
 
-func (v CompiledFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v CompiledFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return interpreter.NonStorable{Value: v}, nil
 }
 
@@ -146,7 +146,7 @@ func (v CompiledFunctionValue) IsImportable(_ interpreter.ValueImportableContext
 }
 
 func (v CompiledFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *sema.FunctionType {
-	return v.Type.Type
+	return v.Type.FunctionType
 }
 
 func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
@@ -210,7 +210,7 @@ func (v *NativeFunctionValue) String() string {
 	return v.functionType.String()
 }
 
-func (v *NativeFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *NativeFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return interpreter.NonStorable{Value: v}, nil
 }
 
@@ -409,7 +409,7 @@ func (v *BoundFunctionValue) String() string {
 	return v.Method.String()
 }
 
-func (v *BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return interpreter.NonStorable{Value: v}, nil
 }
 

@@ -220,7 +220,7 @@ struct Account {
         /// or if the given name does not match the name of the contract/contract interface declaration in the code.
         ///
         /// Returns the deployment result.
-        /// Result would contain the deployed contract for the updated contract, if the update was successfull.
+        /// Result would contain the deployed contract for the updated contract, if the update was successful.
         /// Otherwise, the deployed contract would be nil.
         access(Contracts | UpdateContract)
         fun tryUpdate(name: String, code: [UInt8]): DeploymentResult

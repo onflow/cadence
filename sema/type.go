@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -678,9 +679,8 @@ func HasToStringFunction(ty Type) bool {
 
 // OptionalType represents the optional variant of another type
 type OptionalType struct {
-	Type                Type
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	Type            Type
+	memberResolvers atomic.Pointer[map[string]MemberResolver]
 }
 
 var _ Type = &OptionalType{}
@@ -842,48 +842,49 @@ Returns nil if this optional is nil
 const OptionalTypeMapFunctionName = "map"
 
 func (t *OptionalType) GetMembers() map[string]MemberResolver {
-	t.initializeMembers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *OptionalType) initializeMembers() {
-	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = withBuiltinMembers(
-			t,
-			map[string]MemberResolver{
-				OptionalTypeMapFunctionName: {
-					Kind: common.DeclarationKindFunction,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						targetRange ast.HasPosition,
-						report func(error),
-					) *Member {
+	// Compute members and cache them
+	computedMembers := withBuiltinMembers(
+		t,
+		map[string]MemberResolver{
+			OptionalTypeMapFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.HasPosition,
+					report func(error),
+				) *Member {
 
-						// It's invalid for an optional of a resource to have a `map` function
+					// It's invalid for an optional of a resource to have a `map` function
 
-						if t.Type.IsResourceType() {
-							report(
-								&InvalidResourceOptionalMemberError{
-									Name:            identifier,
-									DeclarationKind: common.DeclarationKindFunction,
-									Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-								},
-							)
-						}
-
-						return NewPublicFunctionMember(
-							memoryGauge,
-							t,
-							identifier,
-							OptionalTypeMapFunctionType(t.Type),
-							optionalTypeMapFunctionDocString,
+					if t.Type.IsResourceType() {
+						report(
+							&InvalidResourceOptionalMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindFunction,
+								Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+							},
 						)
-					},
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						OptionalTypeMapFunctionType(t.Type),
+						optionalTypeMapFunctionDocString,
+					)
 				},
 			},
-		)
-	})
+		},
+	)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func OptionalTypeMapFunctionType(typ Type) *FunctionType {
@@ -1191,10 +1192,9 @@ type NumericType struct {
 	minInt               *big.Int
 	maxInt               *big.Int
 	byteSize             int
-	memberResolvers      map[string]MemberResolver
+	memberResolvers      atomic.Pointer[map[string]MemberResolver]
 	name                 string
 	tag                  TypeTag
-	memberResolversOnce  sync.Once
 	saturatingArithmetic SaturatingArithmeticSupport
 	isSuperType          bool
 }
@@ -1354,18 +1354,17 @@ func (t *NumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *NumericType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *NumericType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		members := map[string]MemberResolver{}
-
-		addSaturatingArithmeticFunctions(t, members)
-
-		t.memberResolvers = withBuiltinMembers(t, members)
-	})
+	// Compute members and cache them
+	computedMembers := map[string]MemberResolver{}
+	addSaturatingArithmeticFunctions(t, computedMembers)
+	computedMembers = withBuiltinMembers(t, computedMembers)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (t *NumericType) AsSuperType() *NumericType {
@@ -1413,13 +1412,12 @@ func (t *NumericType) EffectiveInterfaceConformances() []Conformance {
 type FixedPointNumericType struct {
 	maxFractional        *big.Int
 	minFractional        *big.Int
-	memberResolvers      map[string]MemberResolver
+	memberResolvers      atomic.Pointer[map[string]MemberResolver]
 	minInt               *big.Int
 	maxInt               *big.Int
 	name                 string
 	tag                  TypeTag
 	scale                uint
-	memberResolversOnce  sync.Once
 	saturatingArithmetic SaturatingArithmeticSupport
 	isSuperType          bool
 }
@@ -1597,18 +1595,17 @@ func (t *FixedPointNumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *FixedPointNumericType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *FixedPointNumericType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		members := map[string]MemberResolver{}
-
-		addSaturatingArithmeticFunctions(t, members)
-
-		t.memberResolvers = withBuiltinMembers(t, members)
-	})
+	// Compute members and cache them
+	computedMembers := map[string]MemberResolver{}
+	addSaturatingArithmeticFunctions(t, computedMembers)
+	computedMembers = withBuiltinMembers(t, computedMembers)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (t *FixedPointNumericType) AsSuperType() *FixedPointNumericType {
@@ -3021,9 +3018,8 @@ func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *
 
 // VariableSizedType is a variable sized array type
 type VariableSizedType struct {
-	Type                Type
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	Type            Type
+	memberResolvers atomic.Pointer[map[string]MemberResolver]
 }
 
 var _ Type = &VariableSizedType{}
@@ -3072,14 +3068,15 @@ func (t *VariableSizedType) Equal(other Type) bool {
 }
 
 func (t *VariableSizedType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *VariableSizedType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = getArrayMembers(t)
-	})
+	// Compute members and cache them
+	computedMembers := getArrayMembers(t)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (t *VariableSizedType) IsResourceType() bool {
@@ -3205,10 +3202,9 @@ func (t *VariableSizedType) CheckInstantiated(pos ast.HasPosition, memoryGauge c
 
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
-	Type                Type
-	memberResolvers     map[string]MemberResolver
-	Size                int64
-	memberResolversOnce sync.Once
+	Type            Type
+	memberResolvers atomic.Pointer[map[string]MemberResolver]
+	Size            int64
 }
 
 var _ Type = &ConstantSizedType{}
@@ -3259,14 +3255,15 @@ func (t *ConstantSizedType) Equal(other Type) bool {
 }
 
 func (t *ConstantSizedType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *ConstantSizedType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = getArrayMembers(t)
-	})
+	// Compute members and cache them
+	computedMembers := getArrayMembers(t)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (t *ConstantSizedType) IsResourceType() bool {
@@ -3646,14 +3643,15 @@ type FunctionType struct {
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
 	Parameters               []Parameter
-	memberResolvers          map[string]MemberResolver
-	memberResolversOnce      sync.Once
+	memberResolvers          atomic.Pointer[map[string]MemberResolver]
 	IsConstructor            bool
 	// TypeFunctionType indicates that this function type is a "type function",
 	// a function that can have members (in a sense, "static" fields and functions).
 	// This is used for built-in functions like `Int`, `UInt8`, `String`, etc.
 	// which have members like `Int.fromString`, `UInt8.min`, `String.join`, etc.
 	TypeFunctionType Type
+
+	typeID atomic.Pointer[TypeID]
 }
 
 func NewSimpleFunctionType(
@@ -3767,6 +3765,12 @@ func (t *FunctionType) NamedQualifiedString(functionName string) string {
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
 func (t *FunctionType) ID() TypeID {
+	// Return cached type ID if already computed
+	if cachedTypeID := t.typeID.Load(); cachedTypeID != nil {
+		return *cachedTypeID
+	}
+
+	// Compute type ID and cache it
 
 	purity := t.Purity.String()
 
@@ -3790,7 +3794,7 @@ func (t *FunctionType) ID() TypeID {
 
 	returnTypeAnnotation := string(t.ReturnTypeAnnotation.Type.ID())
 
-	return TypeID(
+	computedTypeID := TypeID(
 		FormatFunctionTypeID(
 			purity,
 			typeParameters,
@@ -3798,6 +3802,9 @@ func (t *FunctionType) ID() TypeID {
 			returnTypeAnnotation,
 		),
 	)
+
+	t.typeID.Store(&computedTypeID)
+	return computedTypeID
 }
 
 // NOTE: parameter names and argument labels are intentionally *not* considered!
@@ -4156,18 +4163,19 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 }
 
 func (t *FunctionType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *FunctionType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		var memberResolvers map[string]MemberResolver
-		if t.Members != nil {
-			memberResolvers = MembersMapAsResolvers(t.Members)
-		}
-		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
-	})
+	// Compute members and cache them
+	var computedMembers map[string]MemberResolver
+	if t.Members != nil {
+		computedMembers = MembersMapAsResolvers(t.Members)
+	}
+	computedMembers = withBuiltinMembers(t, computedMembers)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (t *FunctionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
@@ -4798,25 +4806,21 @@ type CompositeType struct {
 		QualifiedIdentifier string
 	}
 	Members               *StringMemberOrderedMap
-	memberResolvers       map[string]MemberResolver
+	memberResolvers       atomic.Pointer[map[string]MemberResolver]
 	Identifier            string
 	Fields                []string
 	ConstructorParameters []Parameter
 	// an internal set of field `effectiveInterfaceConformances`
-	effectiveInterfaceConformanceSet     *InterfaceSet
-	effectiveInterfaceConformances       []Conformance
-	ExplicitInterfaceConformances        []*InterfaceType
-	Kind                                 common.CompositeKind
-	cachedIdentifiersLock                sync.RWMutex
-	effectiveInterfaceConformanceSetOnce sync.Once
-	effectiveInterfaceConformancesOnce   sync.Once
-	memberResolversOnce                  sync.Once
-	ConstructorPurity                    FunctionPurity
-	HasComputedMembers                   bool
+	effectiveInterfaceConformanceSet atomic.Pointer[InterfaceSet]
+	effectiveInterfaceConformances   atomic.Pointer[[]Conformance]
+	ExplicitInterfaceConformances    []*InterfaceType
+	Kind                             common.CompositeKind
+	cachedIdentifiersLock            sync.RWMutex
+	ConstructorPurity                FunctionPurity
+	HasComputedMembers               bool
 	// Only applicable for native composite types
-	ImportableBuiltin         bool
-	supportedEntitlementsOnce sync.Once
-	supportedEntitlements     *EntitlementSet
+	ImportableBuiltin     bool
+	supportedEntitlements atomic.Pointer[EntitlementSet]
 }
 
 var _ Type = &CompositeType{}
@@ -4832,30 +4836,34 @@ func (t *CompositeType) Tag() TypeTag {
 }
 
 func (t *CompositeType) EffectiveInterfaceConformanceSet() *InterfaceSet {
-	t.initializeEffectiveInterfaceConformanceSet()
-	return t.effectiveInterfaceConformanceSet
-}
+	// Return cached set if already computed
+	if cachedSet := t.effectiveInterfaceConformanceSet.Load(); cachedSet != nil {
+		return cachedSet
+	}
 
-func (t *CompositeType) initializeEffectiveInterfaceConformanceSet() {
-	t.effectiveInterfaceConformanceSetOnce.Do(func() {
-		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
-
-		for _, conformance := range t.EffectiveInterfaceConformances() {
-			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
-		}
-	})
+	// Compute set and cache it
+	computedSet := NewInterfaceSet()
+	for _, conformance := range t.EffectiveInterfaceConformances() {
+		computedSet.Add(conformance.InterfaceType)
+	}
+	t.effectiveInterfaceConformanceSet.Store(computedSet)
+	return computedSet
 }
 
 func (t *CompositeType) EffectiveInterfaceConformances() []Conformance {
-	t.effectiveInterfaceConformancesOnce.Do(func() {
-		t.effectiveInterfaceConformances = distinctConformances(
-			t.ExplicitInterfaceConformances,
-			nil,
-			map[*InterfaceType]struct{}{},
-		)
-	})
+	// Return cached set if already computed
+	if cachedSet := t.effectiveInterfaceConformances.Load(); cachedSet != nil {
+		return *cachedSet
+	}
 
-	return t.effectiveInterfaceConformances
+	// Compute set and cache it
+	set := distinctConformances(
+		t.ExplicitInterfaceConformances,
+		nil,
+		map[*InterfaceType]struct{}{},
+	)
+	t.effectiveInterfaceConformances.Store(&set)
+	return set
 }
 
 func (*CompositeType) IsType() {}
@@ -4936,8 +4944,11 @@ func IsHashableStructType(t Type) bool {
 		case NeverType, BoolType, CharacterType, StringType, MetaType, HashableStructType:
 			return true
 		default:
-			return IsSubType(typ, NumberType) ||
-				IsSubType(typ, PathType)
+			// The only other place this function is used is during super-type-inferring.
+			// It's not needed to compare results during the inferring.
+			// Hence, always skipping the comparison is OK.
+			return IsSubTypeWithoutComparison(typ, NumberType) ||
+				IsSubTypeWithoutComparison(typ, PathType)
 		}
 	}
 }
@@ -5057,24 +5068,26 @@ func newCompositeOrInterfaceSupportedEntitlementSet(
 }
 
 func (t *CompositeType) SupportedEntitlements() *EntitlementSet {
-	t.supportedEntitlementsOnce.Do(func() {
+	// Return cached set if already computed
+	if cachedSet := t.supportedEntitlements.Load(); cachedSet != nil {
+		return cachedSet
+	}
 
-		set := newCompositeOrInterfaceSupportedEntitlementSet(
-			t.Members,
-			t.EffectiveInterfaceConformanceSet(),
-		)
+	computedSet := newCompositeOrInterfaceSupportedEntitlementSet(
+		t.Members,
+		t.EffectiveInterfaceConformanceSet(),
+	)
 
-		// attachments support at least the entitlements supported by their base,
-		// and we must ensure there is no recursive case
-		if entitlementSupportingBase, isEntitlementSupportingBase :=
-			t.GetBaseType().(EntitlementSupportingType); isEntitlementSupportingBase && entitlementSupportingBase != t {
+	// attachments support at least the entitlements supported by their base,
+	// and we must ensure there is no recursive case
+	if entitlementSupportingBase, isEntitlementSupportingBase :=
+		t.GetBaseType().(EntitlementSupportingType); isEntitlementSupportingBase && entitlementSupportingBase != t {
 
-			set.Merge(entitlementSupportingBase.SupportedEntitlements())
-		}
+		computedSet.Merge(entitlementSupportingBase.SupportedEntitlements())
+	}
 
-		t.supportedEntitlements = set
-	})
-	return t.supportedEntitlements
+	t.supportedEntitlements.Store(computedSet)
+	return computedSet
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -5305,62 +5318,57 @@ func CompositeForEachAttachmentFunctionType(t common.CompositeKind) *FunctionTyp
 }
 
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
+
+	return t.ComputeAndCacheMembers()
 }
 
-func (t *CompositeType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(t.initializerMemberResolversFunc())
-}
+func (t *CompositeType) ComputeAndCacheMembers() map[string]MemberResolver {
+	// Compute members and cache them
+	computedMembers := MembersMapAsResolvers(t.Members)
 
-func (t *CompositeType) initializerMemberResolversFunc() func() {
-	return func() {
-		memberResolvers := MembersMapAsResolvers(t.Members)
+	// Check conformances.
+	// If this composite type results from a normal composite declaration,
+	// it must have members declared for all interfaces it conforms to.
+	// However, if this composite type is a type requirement,
+	// it acts like an interface and does not have to declare members.
 
-		// Check conformances.
-		// If this composite type results from a normal composite declaration,
-		// it must have members declared for all interfaces it conforms to.
-		// However, if this composite type is a type requirement,
-		// it acts like an interface and does not have to declare members.
-
-		t.EffectiveInterfaceConformanceSet().
-			ForEach(func(conformance *InterfaceType) {
-				for name, resolver := range conformance.GetMembers() { //nolint:maprange
-					if _, ok := memberResolvers[name]; !ok {
-						memberResolvers[name] = resolver
-					}
+	t.EffectiveInterfaceConformanceSet().
+		ForEach(func(conformance *InterfaceType) {
+			for name, resolver := range conformance.GetMembers() { //nolint:maprange
+				if _, ok := computedMembers[name]; !ok {
+					computedMembers[name] = resolver
 				}
-			})
-
-		// resource and struct composites have the ability to iterate over their attachments
-		if t.Kind.SupportsAttachments() {
-			memberResolvers[CompositeForEachAttachmentFunctionName] = MemberResolver{
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(
-					memoryGauge common.MemoryGauge,
-					identifier string,
-					_ ast.HasPosition,
-					_ func(error),
-				) *Member {
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						CompositeForEachAttachmentFunctionType(t.GetCompositeKind()),
-						compositeForEachAttachmentFunctionDocString,
-					)
-				},
 			}
+		})
+
+	// resource and struct composites have the ability to iterate over their attachments
+	if t.Kind.SupportsAttachments() {
+		computedMembers[CompositeForEachAttachmentFunctionName] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				_ ast.HasPosition,
+				_ func(error),
+			) *Member {
+				return NewPublicFunctionMember(
+					memoryGauge,
+					t,
+					identifier,
+					CompositeForEachAttachmentFunctionType(t.GetCompositeKind()),
+					compositeForEachAttachmentFunctionDocString,
+				)
+			},
 		}
-
-		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
 	}
-}
 
-func (t *CompositeType) ResolveMembers() {
-	if t.Members.Len() != len(t.GetMembers()) {
-		t.initializerMemberResolversFunc()()
-	}
+	computedMembers = withBuiltinMembers(t, computedMembers)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (t *CompositeType) FieldPosition(name string, declaration ast.CompositeLikeDeclaration) ast.Position {
@@ -5729,28 +5737,24 @@ type InterfaceType struct {
 	Location          common.Location
 	containerType     Type
 	Members           *StringMemberOrderedMap
-	memberResolvers   map[string]MemberResolver
+	memberResolvers   atomic.Pointer[map[string]MemberResolver]
 	NestedTypes       *StringTypeOrderedMap
 	cachedIdentifiers *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
 
-	Identifier                           string
-	Fields                               []string
-	InitializerParameters                []Parameter
-	CompositeKind                        common.CompositeKind
-	cachedIdentifiersLock                sync.RWMutex
-	memberResolversOnce                  sync.Once
-	effectiveInterfaceConformancesOnce   sync.Once
-	effectiveInterfaceConformanceSetOnce sync.Once
-	InitializerPurity                    FunctionPurity
+	Identifier            string
+	Fields                []string
+	InitializerParameters []Parameter
+	CompositeKind         common.CompositeKind
+	cachedIdentifiersLock sync.RWMutex
+	InitializerPurity     FunctionPurity
 
 	ExplicitInterfaceConformances    []*InterfaceType
-	effectiveInterfaceConformances   []Conformance
-	effectiveInterfaceConformanceSet *InterfaceSet
-	supportedEntitlementsOnce        sync.Once
-	supportedEntitlements            *EntitlementSet
+	effectiveInterfaceConformances   atomic.Pointer[[]Conformance]
+	effectiveInterfaceConformanceSet atomic.Pointer[InterfaceSet]
+	supportedEntitlements            atomic.Pointer[EntitlementSet]
 
 	DefaultDestroyEvent *CompositeType
 }
@@ -5861,36 +5865,42 @@ func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 }
 
 func (t *InterfaceType) SupportedEntitlements() *EntitlementSet {
-	t.supportedEntitlementsOnce.Do(func() {
-		t.supportedEntitlements = newCompositeOrInterfaceSupportedEntitlementSet(
-			t.Members,
-			t.EffectiveInterfaceConformanceSet(),
-		)
-	})
-	return t.supportedEntitlements
+	// Return cached set if already computed
+	if cachedSet := t.supportedEntitlements.Load(); cachedSet != nil {
+		return cachedSet
+	}
+
+	// Compute set and cache it
+	computedSet := newCompositeOrInterfaceSupportedEntitlementSet(
+		t.Members,
+		t.EffectiveInterfaceConformanceSet(),
+	)
+	t.supportedEntitlements.Store(computedSet)
+	return computedSet
 }
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *InterfaceType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		members := MembersMapAsResolvers(t.Members)
+	// Compute members and cache them
+	computedMembers := MembersMapAsResolvers(t.Members)
 
-		// add any inherited members from up the inheritance chain
-		for _, conformance := range t.EffectiveInterfaceConformances() {
-			for name, member := range conformance.InterfaceType.GetMembers() { //nolint:maprange
-				if _, ok := members[name]; !ok {
-					members[name] = member
-				}
+	// add any inherited members from up the inheritance chain
+	for _, conformance := range t.EffectiveInterfaceConformances() {
+		for name, member := range conformance.InterfaceType.GetMembers() { //nolint:maprange
+			if _, ok := computedMembers[name]; !ok {
+				computedMembers[name] = member
 			}
-
 		}
 
-		t.memberResolvers = withBuiltinMembers(t, members)
-	})
+	}
+
+	computedMembers = withBuiltinMembers(t, computedMembers)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (t *InterfaceType) IsResourceType() bool {
@@ -6009,30 +6019,34 @@ func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDec
 }
 
 func (t *InterfaceType) EffectiveInterfaceConformances() []Conformance {
-	t.effectiveInterfaceConformancesOnce.Do(func() {
-		t.effectiveInterfaceConformances = distinctConformances(
-			t.ExplicitInterfaceConformances,
-			nil,
-			map[*InterfaceType]struct{}{},
-		)
-	})
+	// Return cached set if already computed
+	if cachedConformances := t.effectiveInterfaceConformances.Load(); cachedConformances != nil {
+		return *cachedConformances
+	}
 
-	return t.effectiveInterfaceConformances
+	// Compute set and cache it
+	computedSet := distinctConformances(
+		t.ExplicitInterfaceConformances,
+		nil,
+		map[*InterfaceType]struct{}{},
+	)
+	t.effectiveInterfaceConformances.Store(&computedSet)
+	return computedSet
 }
 
 func (t *InterfaceType) EffectiveInterfaceConformanceSet() *InterfaceSet {
-	t.initializeEffectiveInterfaceConformanceSet()
-	return t.effectiveInterfaceConformanceSet
-}
+	// Return cached set if already computed
+	if cachedSet := t.effectiveInterfaceConformanceSet.Load(); cachedSet != nil {
+		return cachedSet
+	}
 
-func (t *InterfaceType) initializeEffectiveInterfaceConformanceSet() {
-	t.effectiveInterfaceConformanceSetOnce.Do(func() {
-		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
-
-		for _, conformance := range t.EffectiveInterfaceConformances() {
-			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
-		}
-	})
+	// Compute set and cache it
+	computedSet := NewInterfaceSet()
+	for _, conformance := range t.EffectiveInterfaceConformances() {
+		computedSet.Add(conformance.InterfaceType)
+	}
+	t.effectiveInterfaceConformanceSet.Store(computedSet)
+	return computedSet
 }
 
 func (t *InterfaceType) GetIdentifier() string {
@@ -6100,10 +6114,9 @@ func (t *InterfaceType) CheckInstantiated(pos ast.HasPosition, memoryGauge commo
 // and all values have to be a subtype of the value type.
 
 type DictionaryType struct {
-	KeyType             Type
-	ValueType           Type
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	KeyType         Type
+	ValueType       Type
+	memberResolvers atomic.Pointer[map[string]MemberResolver]
 }
 
 var _ Type = &DictionaryType{}
@@ -6290,175 +6303,175 @@ Returns the value as an optional if the dictionary contained the key, or nil if 
 `
 
 func (t *DictionaryType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *DictionaryType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
+	// Compute members and cache them
+	members := withBuiltinMembers(
+		t,
+		map[string]MemberResolver{
+			DictionaryTypeContainsKeyFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.HasPosition,
+					report func(error),
+				) *Member {
 
-		t.memberResolvers = withBuiltinMembers(
-			t,
-			map[string]MemberResolver{
-				DictionaryTypeContainsKeyFunctionName: {
-					Kind: common.DeclarationKindFunction,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						targetRange ast.HasPosition,
-						report func(error),
-					) *Member {
-
-						return NewPublicFunctionMember(
-							memoryGauge,
-							t,
-							identifier,
-							DictionaryContainsKeyFunctionType(t),
-							dictionaryTypeContainsKeyFunctionDocString,
-						)
-					},
-				},
-				"length": {
-					Kind: common.DeclarationKindField,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						_ ast.HasPosition,
-						_ func(error),
-					) *Member {
-						return NewPublicConstantFieldMember(
-							memoryGauge,
-							t,
-							identifier,
-							IntType,
-							dictionaryTypeLengthFieldDocString,
-						)
-					},
-				},
-				"keys": {
-					Kind: common.DeclarationKindField,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						targetRange ast.HasPosition,
-						report func(error),
-					) *Member {
-						// TODO: maybe allow for resource key type
-
-						if t.KeyType.IsResourceType() {
-							report(
-								&InvalidResourceDictionaryMemberError{
-									Name:            identifier,
-									DeclarationKind: common.DeclarationKindField,
-									Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-								},
-							)
-						}
-
-						return NewPublicConstantFieldMember(
-							memoryGauge,
-							t,
-							identifier,
-							&VariableSizedType{Type: t.KeyType},
-							dictionaryTypeKeysFieldDocString,
-						)
-					},
-				},
-				"values": {
-					Kind: common.DeclarationKindField,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						targetRange ast.HasPosition,
-						report func(error),
-					) *Member {
-						// TODO: maybe allow for resource value type
-
-						if t.ValueType.IsResourceType() {
-							report(
-								&InvalidResourceDictionaryMemberError{
-									Name:            identifier,
-									DeclarationKind: common.DeclarationKindField,
-									Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-								},
-							)
-						}
-
-						return NewPublicConstantFieldMember(
-							memoryGauge,
-							t,
-							identifier,
-							&VariableSizedType{Type: t.ValueType},
-							dictionaryTypeValuesFieldDocString,
-						)
-					},
-				},
-				DictionaryTypeInsertFunctionName: {
-					Kind: common.DeclarationKindFunction,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						_ ast.HasPosition,
-						_ func(error),
-					) *Member {
-						return NewFunctionMember(
-							memoryGauge,
-							t,
-							insertMutateEntitledAccess,
-							identifier,
-							DictionaryInsertFunctionType(t),
-							dictionaryTypeInsertFunctionDocString,
-						)
-					},
-				},
-				DictionaryTypeRemoveFunctionName: {
-					Kind: common.DeclarationKindFunction,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						_ ast.HasPosition,
-						_ func(error),
-					) *Member {
-						return NewFunctionMember(
-							memoryGauge,
-							t,
-							removeMutateEntitledAccess,
-							identifier,
-							DictionaryRemoveFunctionType(t),
-							dictionaryTypeRemoveFunctionDocString,
-						)
-					},
-				},
-				DictionaryTypeForEachKeyFunctionName: {
-					Kind: common.DeclarationKindFunction,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						targetRange ast.HasPosition,
-						report func(error),
-					) *Member {
-						if t.KeyType.IsResourceType() {
-							report(
-								&InvalidResourceDictionaryMemberError{
-									Name:            identifier,
-									DeclarationKind: common.DeclarationKindField,
-									Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-								},
-							)
-						}
-
-						return NewPublicFunctionMember(
-							memoryGauge,
-							t,
-							identifier,
-							DictionaryForEachKeyFunctionType(t),
-							dictionaryTypeForEachKeyFunctionDocString,
-						)
-					},
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						DictionaryContainsKeyFunctionType(t),
+						dictionaryTypeContainsKeyFunctionDocString,
+					)
 				},
 			},
-		)
-	})
+			"length": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					_ ast.HasPosition,
+					_ func(error),
+				) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						IntType,
+						dictionaryTypeLengthFieldDocString,
+					)
+				},
+			},
+			"keys": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.HasPosition,
+					report func(error),
+				) *Member {
+					// TODO: maybe allow for resource key type
+
+					if t.KeyType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+							},
+						)
+					}
+
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						&VariableSizedType{Type: t.KeyType},
+						dictionaryTypeKeysFieldDocString,
+					)
+				},
+			},
+			"values": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.HasPosition,
+					report func(error),
+				) *Member {
+					// TODO: maybe allow for resource value type
+
+					if t.ValueType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+							},
+						)
+					}
+
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						&VariableSizedType{Type: t.ValueType},
+						dictionaryTypeValuesFieldDocString,
+					)
+				},
+			},
+			DictionaryTypeInsertFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					_ ast.HasPosition,
+					_ func(error),
+				) *Member {
+					return NewFunctionMember(
+						memoryGauge,
+						t,
+						insertMutateEntitledAccess,
+						identifier,
+						DictionaryInsertFunctionType(t),
+						dictionaryTypeInsertFunctionDocString,
+					)
+				},
+			},
+			DictionaryTypeRemoveFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					_ ast.HasPosition,
+					_ func(error),
+				) *Member {
+					return NewFunctionMember(
+						memoryGauge,
+						t,
+						removeMutateEntitledAccess,
+						identifier,
+						DictionaryRemoveFunctionType(t),
+						dictionaryTypeRemoveFunctionDocString,
+					)
+				},
+			},
+			DictionaryTypeForEachKeyFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.HasPosition,
+					report func(error),
+				) *Member {
+					if t.KeyType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+							},
+						)
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						DictionaryForEachKeyFunctionType(t),
+						dictionaryTypeForEachKeyFunctionDocString,
+					)
+				},
+			},
+		},
+	)
+	t.memberResolvers.Store(&members)
+	return members
 }
 
 func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
@@ -6620,9 +6633,8 @@ func (t *DictionaryType) SupportedEntitlements() *EntitlementSet {
 // InclusiveRangeType
 
 type InclusiveRangeType struct {
-	MemberType          Type
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	MemberType      Type
+	memberResolvers atomic.Pointer[map[string]MemberResolver]
 }
 
 var _ Type = &InclusiveRangeType{}
@@ -6843,11 +6855,6 @@ const inclusiveRangeTypeContainsFunctionDocString = `
 Returns true if the given integer is in the InclusiveRange sequence
 `
 
-func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
-
 func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityView,
@@ -6862,84 +6869,90 @@ func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
 	)
 }
 
-func (t *InclusiveRangeType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = withBuiltinMembers(
-			t,
-			map[string]MemberResolver{
-				InclusiveRangeTypeStartFieldName: {
-					Kind: common.DeclarationKindField,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						_ ast.HasPosition,
-						_ func(error),
-					) *Member {
-						return NewPublicConstantFieldMember(
-							memoryGauge,
-							t,
-							identifier,
-							t.MemberType,
-							inclusiveRangeTypeStartFieldDocString,
-						)
-					},
-				},
-				InclusiveRangeTypeEndFieldName: {
-					Kind: common.DeclarationKindField,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						_ ast.HasPosition,
-						_ func(error),
-					) *Member {
-						return NewPublicConstantFieldMember(
-							memoryGauge,
-							t,
-							identifier,
-							t.MemberType,
-							inclusiveRangeTypeEndFieldDocString,
-						)
-					},
-				},
-				InclusiveRangeTypeStepFieldName: {
-					Kind: common.DeclarationKindField,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						_ ast.HasPosition,
-						_ func(error),
-					) *Member {
-						return NewPublicConstantFieldMember(
-							memoryGauge,
-							t,
-							identifier,
-							t.MemberType,
-							inclusiveRangeTypeStepFieldDocString,
-						)
-					},
-				},
-				InclusiveRangeTypeContainsFunctionName: {
-					Kind: common.DeclarationKindFunction,
-					Resolve: func(
-						memoryGauge common.MemoryGauge,
-						identifier string,
-						targetRange ast.HasPosition,
-						report func(error),
-					) *Member {
-						elementType := t.MemberType
+func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {
+	// Return cached member resolvers if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-						return NewPublicFunctionMember(
-							memoryGauge,
-							t,
-							identifier,
-							InclusiveRangeContainsFunctionType(elementType),
-							inclusiveRangeTypeContainsFunctionDocString,
-						)
-					},
+	// Compute members and cache them
+	computedMembers := withBuiltinMembers(
+		t,
+		map[string]MemberResolver{
+			InclusiveRangeTypeStartFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					_ ast.HasPosition,
+					_ func(error),
+				) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						t.MemberType,
+						inclusiveRangeTypeStartFieldDocString,
+					)
 				},
 			},
-		)
-	})
+			InclusiveRangeTypeEndFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					_ ast.HasPosition,
+					_ func(error),
+				) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						t.MemberType,
+						inclusiveRangeTypeEndFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeStepFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					_ ast.HasPosition,
+					_ func(error),
+				) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						t.MemberType,
+						inclusiveRangeTypeStepFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeContainsFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					targetRange ast.HasPosition,
+					report func(error),
+				) *Member {
+					elementType := t.MemberType
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						InclusiveRangeContainsFunctionType(elementType),
+						inclusiveRangeTypeContainsFunctionDocString,
+					)
+				},
+			},
+		},
+	)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
@@ -6990,6 +7003,8 @@ func (t *InclusiveRangeType) ContainFieldsOrElements() bool {
 type ReferenceType struct {
 	Type          Type
 	Authorization Access
+
+	typeID atomic.Pointer[TypeID]
 }
 
 var _ Type = &ReferenceType{}
@@ -7069,17 +7084,27 @@ func (t *ReferenceType) QualifiedString() string {
 }
 
 func (t *ReferenceType) ID() TypeID {
+	// Return cached type ID if already computed
+	if cachedTypeID := t.typeID.Load(); cachedTypeID != nil {
+		return *cachedTypeID
+	}
+
+	// Compute type ID and cache it
+	var computedTypeID TypeID
 	if t.Type == nil {
-		return "reference"
+		computedTypeID = "reference"
+	} else {
+		var authorization TypeID
+		if t.Authorization != UnauthorizedAccess {
+			authorization = t.Authorization.ID()
+		}
+		computedTypeID = FormatReferenceTypeID(
+			authorization,
+			t.Type.ID(),
+		)
 	}
-	var authorization TypeID
-	if t.Authorization != UnauthorizedAccess {
-		authorization = t.Authorization.ID()
-	}
-	return FormatReferenceTypeID(
-		authorization,
-		t.Type.ID(),
-	)
+	t.typeID.Store(&computedTypeID)
+	return computedTypeID
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -7271,8 +7296,7 @@ const AddressTypeName = "Address"
 
 // AddressType represents the address type
 type AddressType struct {
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	memberResolvers atomic.Pointer[map[string]MemberResolver]
 }
 
 var TheAddressType = &AddressType{}
@@ -7398,22 +7422,23 @@ Returns an array containing the byte representation of the address
 `
 
 func (t *AddressType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached member resolvers if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *AddressType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		memberResolvers := MembersAsResolvers([]*Member{
-			NewUnmeteredPublicFunctionMember(
-				t,
-				AddressTypeToBytesFunctionName,
-				AddressTypeToBytesFunctionType,
-				addressTypeToBytesFunctionDocString,
-			),
-		})
-		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
+	// Compute members and cache them
+	computedMembers := MembersAsResolvers([]*Member{
+		NewUnmeteredPublicFunctionMember(
+			t,
+			AddressTypeToBytesFunctionName,
+			AddressTypeToBytesFunctionType,
+			addressTypeToBytesFunctionDocString,
+		),
 	})
+	computedMembers = withBuiltinMembers(t, computedMembers)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 var addressTypeEffectiveInterfaceConformanceSet *InterfaceSet
@@ -7469,6 +7494,14 @@ func IsPrimitiveOrContainerOfPrimitive(referencedType Type) bool {
 //     usage is, using IsSubType() method with a constant/pre-defined superType.
 //     e.g: IsSubType(<<someType>>, FixedPointType)
 func IsSubType(subType Type, superType Type) bool {
+	return isSubType(subType, superType, CompareSubtypingResults)
+}
+
+func IsSubTypeWithoutComparison(subType Type, superType Type) bool {
+	return isSubType(subType, superType, false)
+}
+
+func isSubType(subType Type, superType Type, compare bool) bool {
 
 	if subType == nil {
 		return false
@@ -7478,7 +7511,23 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
-	return checkSubTypeWithoutEquality(subType, superType)
+	result := CheckSubTypeWithoutEquality(subType, superType)
+
+	if compare {
+		generatedResult := CheckSubTypeWithoutEquality_gen(subType, superType)
+		if generatedResult != result {
+			panic(errors.NewUnexpectedError(
+				"generated subtype checking function in `sema` package produced different results for"+
+					" subType=%s, superType=%s: expected=%t, found=%t",
+				subType,
+				superType,
+				result,
+				generatedResult,
+			))
+		}
+	}
+
+	return result
 }
 
 // IsSameTypeKind determines if the given subtype belongs to the
@@ -7506,16 +7555,16 @@ func IsProperSubType(subType Type, superType Type) bool {
 		return false
 	}
 
-	return checkSubTypeWithoutEquality(subType, superType)
+	return CheckSubTypeWithoutEquality(subType, superType)
 }
 
-// checkSubTypeWithoutEquality determines if the given subtype
+// CheckSubTypeWithoutEquality determines if the given subtype
 // is a subtype of the given supertype, BUT it does NOT check
 // the equality of the two types, so does NOT return a specific
 // value when the two types are equal or are not.
 //
 // Consider using IsSubType or IsProperSubType
-func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
+func CheckSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	if subType == NeverType {
 		return true
@@ -7544,16 +7593,16 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return IsHashableStructType(subType)
 
 	case PathType:
-		return IsSubType(subType, StoragePathType) ||
-			IsSubType(subType, CapabilityPathType)
+		return IsSubTypeWithoutComparison(subType, StoragePathType) ||
+			IsSubTypeWithoutComparison(subType, CapabilityPathType)
 
 	case StorableType:
 		storableResults := map[*Member]bool{}
 		return subType.IsStorable(storableResults)
 
 	case CapabilityPathType:
-		return IsSubType(subType, PrivatePathType) ||
-			IsSubType(subType, PublicPathType)
+		return IsSubTypeWithoutComparison(subType, PrivatePathType) ||
+			IsSubTypeWithoutComparison(subType, PublicPathType)
 
 	case NumberType:
 		switch subType {
@@ -7561,16 +7610,16 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return true
 		}
 
-		return IsSubType(subType, IntegerType) ||
-			IsSubType(subType, FixedPointType)
+		return IsSubTypeWithoutComparison(subType, IntegerType) ||
+			IsSubTypeWithoutComparison(subType, FixedPointType)
 
 	case SignedNumberType:
 		if subType == SignedNumberType {
 			return true
 		}
 
-		return IsSubType(subType, SignedIntegerType) ||
-			IsSubType(subType, SignedFixedPointType)
+		return IsSubTypeWithoutComparison(subType, SignedIntegerType) ||
+			IsSubTypeWithoutComparison(subType, SignedFixedPointType)
 
 	case IntegerType:
 		switch subType {
@@ -7580,7 +7629,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return true
 
 		default:
-			return IsSubType(subType, SignedIntegerType) || IsSubType(subType, FixedSizeUnsignedIntegerType)
+			return IsSubTypeWithoutComparison(subType, SignedIntegerType) ||
+				IsSubTypeWithoutComparison(subType, FixedSizeUnsignedIntegerType)
 		}
 
 	case SignedIntegerType:
@@ -7616,7 +7666,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return true
 
 		default:
-			return IsSubType(subType, SignedFixedPointType)
+			return IsSubTypeWithoutComparison(subType, SignedFixedPointType)
 		}
 
 	case SignedFixedPointType:
@@ -7636,10 +7686,10 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		optionalSubType, ok := subType.(*OptionalType)
 		if !ok {
 			// T <: U? if T <: U
-			return IsSubType(subType, typedSuperType.Type)
+			return IsSubTypeWithoutComparison(subType, typedSuperType.Type)
 		}
 		// Optionals are covariant: T? <: U? if T <: U
-		return IsSubType(optionalSubType.Type, typedSuperType.Type)
+		return IsSubTypeWithoutComparison(optionalSubType.Type, typedSuperType.Type)
 
 	case *DictionaryType:
 		typedSubType, ok := subType.(*DictionaryType)
@@ -7647,8 +7697,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		return IsSubType(typedSubType.KeyType, typedSuperType.KeyType) &&
-			IsSubType(typedSubType.ValueType, typedSuperType.ValueType)
+		return IsSubTypeWithoutComparison(typedSubType.KeyType, typedSuperType.KeyType) &&
+			IsSubTypeWithoutComparison(typedSubType.ValueType, typedSuperType.ValueType)
 
 	case *VariableSizedType:
 		typedSubType, ok := subType.(*VariableSizedType)
@@ -7656,7 +7706,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		return IsSubType(
+		return IsSubTypeWithoutComparison(
 			typedSubType.ElementType(false),
 			typedSuperType.ElementType(false),
 		)
@@ -7671,7 +7721,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		return IsSubType(
+		return IsSubTypeWithoutComparison(
 			typedSubType.ElementType(false),
 			typedSuperType.ElementType(false),
 		)
@@ -7688,7 +7738,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		}
 
 		// references are covariant in their referenced type
-		return IsSubType(typedSubType.Type, typedSuperType.Type)
+		return IsSubTypeWithoutComparison(typedSubType.Type, typedSuperType.Type)
 
 	case *FunctionType:
 		typedSubType, ok := subType.(*FunctionType)
@@ -7706,60 +7756,17 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// whereas, return types be *covariant/subtypes*. Since type parameters can be used in
 		// both parameters and return types, inorder to satisfies both above conditions,
 		// bound type of type parameters can only be strictly equal, but not subtypes/supertypes of one another.
-		if len(typedSubType.TypeParameters) != len(typedSuperType.TypeParameters) {
-			return false
-		}
 
-		for i, subTypeParameter := range typedSubType.TypeParameters {
-			superTypeParameter := typedSuperType.TypeParameters[i]
-			if !subTypeParameter.TypeBoundEqual(superTypeParameter.TypeBound) {
-				return false
-			}
-		}
+		return AreTypeParamsEqual(typedSubType, typedSuperType) &&
 
-		// Parameter arity must be equivalent.
-		if len(typedSubType.Parameters) != len(typedSuperType.Parameters) {
-			return false
-		}
+			// Functions are contravariant in their parameter types.
+			AreParamsContravariant(typedSubType, typedSuperType) &&
 
-		if !typedSubType.ArityEqual(typedSuperType.Arity) {
-			return false
-		}
+			// Functions are covariant in their return type.
+			AreReturnsCovariant(typedSubType, typedSuperType) &&
 
-		// Functions are contravariant in their parameter types
-		for i, subParameter := range typedSubType.Parameters {
-			superParameter := typedSuperType.Parameters[i]
-			if !IsSubType(
-				superParameter.TypeAnnotation.Type,
-				subParameter.TypeAnnotation.Type,
-			) {
-				return false
-			}
-		}
-
-		// Functions are covariant in their return type
-		if typedSubType.ReturnTypeAnnotation.Type != nil {
-			if typedSuperType.ReturnTypeAnnotation.Type == nil {
-				return false
-			}
-
-			if !IsSubType(
-				typedSubType.ReturnTypeAnnotation.Type,
-				typedSuperType.ReturnTypeAnnotation.Type,
-			) {
-				return false
-			}
-		} else if typedSuperType.ReturnTypeAnnotation.Type != nil {
-			return false
-		}
-
-		// Constructors?
-
-		if typedSubType.IsConstructor != typedSuperType.IsConstructor {
-			return false
-		}
-
-		return true
+			// Constructors?
+			typedSubType.IsConstructor == typedSuperType.IsConstructor
 
 	case *IntersectionType:
 
@@ -7835,7 +7842,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// and `Vs` is a subset of `Us`.
 
 					if intersectionSuperType != nil &&
-						!IsSubType(intersectionSubtype, intersectionSuperType) {
+						!IsSubTypeWithoutComparison(intersectionSubtype, intersectionSuperType) {
 
 						return false
 					}
@@ -7852,7 +7859,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// `Us` and `Vs` do *not* have to be subsets.
 
 					if intersectionSuperType != nil &&
-						!IsSubType(intersectionSubtype, intersectionSuperType) {
+						!IsSubTypeWithoutComparison(intersectionSubtype, intersectionSuperType) {
 
 						return false
 					}
@@ -7861,6 +7868,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 						IsSubsetOf(intersectionSubtype.EffectiveInterfaceConformanceSet())
 				}
 
+				return false
+
 			case ConformingType:
 				// A type `T`
 				// is a subtype of an intersection type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
@@ -7868,7 +7877,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				// and `T` conforms to `Us`.
 
 				if intersectionSuperType != nil &&
-					!IsSubType(typedSubType, intersectionSuperType) {
+					!IsSubTypeWithoutComparison(typedSubType, intersectionSuperType) {
 
 					return false
 				}
@@ -7877,50 +7886,52 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 			}
 
-		default:
-			// Supertype (intersection) has a non-Any* legacy type
+			return false
+		}
 
-			switch typedSubType := subType.(type) {
-			case *IntersectionType:
+		// Supertype (intersection) has a non-Any* legacy type
 
-				// An intersection type `T{Us}`
-				// is a subtype of an intersection type `V{Ws}`:
+		switch subType {
+		case AnyResourceType, AnyStructType, AnyType:
+			// A type `T`
+			// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+			// not statically.
+			return false
+		}
 
-				intersectionSubType := typedSubType.LegacyType //nolint:staticcheck
-				switch intersectionSubType {
-				case nil, AnyResourceType, AnyStructType, AnyType:
-					// When `T == AnyResource || T == AnyStruct || T == Any`:
-					// not statically.
-					return false
-				}
+		switch typedSubType := subType.(type) {
+		case *IntersectionType:
 
-				if intersectionSubType, ok := intersectionSubType.(*CompositeType); ok {
-					// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
-					//
-					// `Us` and `Ws` do *not* have to be subsets:
-					// The owner may freely restrict and unrestrict.
+			// An intersection type `T{Us}`
+			// is a subtype of an intersection type `V{Ws}`:
 
-					return intersectionSubType == intersectionSuperType
-				}
-
-			case *CompositeType:
-				// A type `T`
-				// is a subtype of an intersection type `U{Vs}`: if `T <: U`.
-				//
-				// The owner may freely restrict.
-
-				return IsSubType(typedSubType, intersectionSuperType)
-			}
-
-			switch subType {
-			case AnyResourceType, AnyStructType, AnyType:
-				// A type `T`
-				// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+			intersectionSubType := typedSubType.LegacyType //nolint:staticcheck
+			switch intersectionSubType {
+			case nil, AnyResourceType, AnyStructType, AnyType:
+				// When `T == AnyResource || T == AnyStruct || T == Any`:
 				// not statically.
-
 				return false
 			}
+
+			if intersectionSubType, ok := intersectionSubType.(*CompositeType); ok {
+				// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
+				//
+				// `Us` and `Ws` do *not* have to be subsets:
+				// The owner may freely restrict and unrestrict.
+
+				return intersectionSubType.Equal(intersectionSuperType)
+			}
+
+		case *CompositeType:
+			// A type `T`
+			// is a subtype of an intersection type `U{Vs}`: if `T <: U`.
+			//
+			// The owner may freely restrict.
+
+			return IsSubTypeWithoutComparison(typedSubType, intersectionSuperType)
 		}
+
+		return false
 
 	case *CompositeType:
 
@@ -7950,13 +7961,17 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				//
 				// The owner may freely unrestrict.
 
-				return intersectionSubType == typedSuperType
+				return intersectionSubType.Equal(typedSuperType)
 			}
+
+			return false
 
 		case *CompositeType:
 			// Non-equal composite types are never subtypes of each other
 			return false
 		}
+
+		return false
 
 	case *InterfaceType:
 
@@ -7992,48 +8007,40 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				Contains(typedSuperType)
 		}
 
+		return false
+
 	case ParameterizedType:
+		typedSubType, ok := subType.(ParameterizedType)
+		if !ok {
+			return false
+		}
+
 		if superTypeBaseType := typedSuperType.BaseType(); superTypeBaseType != nil {
 
 			// T<Us> <: V<Ws>
 			// if T <: V  && |Us| == |Ws| && U_i <: W_i
 
-			if typedSubType, ok := subType.(ParameterizedType); ok {
-				if subTypeBaseType := typedSubType.BaseType(); subTypeBaseType != nil {
+			if subTypeBaseType := typedSubType.BaseType(); subTypeBaseType != nil {
 
-					if !IsSubType(subTypeBaseType, superTypeBaseType) {
-						return false
-					}
-
-					subTypeTypeArguments := typedSubType.TypeArguments()
-					superTypeTypeArguments := typedSuperType.TypeArguments()
-
-					if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
-						return false
-					}
-
-					for i, superTypeTypeArgument := range superTypeTypeArguments {
-						subTypeTypeArgument := subTypeTypeArguments[i]
-						if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
-							return false
-						}
-					}
-
-					return true
+				if !IsSubTypeWithoutComparison(subTypeBaseType, superTypeBaseType) {
+					return false
 				}
+
+				return AreTypeArgumentsEqual(typedSubType, typedSuperType)
+			}
+		} else {
+			// TODO: enforce type arguments, remove this rule
+
+			// T<Us> <: V
+			// if T <: V
+
+			if baseType := typedSubType.BaseType(); baseType != nil {
+				return IsSubTypeWithoutComparison(baseType, superType)
 			}
 		}
-	}
 
-	// TODO: enforce type arguments, remove this rule
+		return false
 
-	// T<Us> <: V
-	// if T <: V
-
-	if typedSubType, ok := subType.(ParameterizedType); ok {
-		if baseType := typedSubType.BaseType(); baseType != nil {
-			return IsSubType(baseType, superType)
-		}
 	}
 
 	return false
@@ -8091,13 +8098,12 @@ func IsNilType(ty Type) bool {
 const TransactionTypeName = "transaction"
 
 type TransactionType struct {
-	Location            common.Location
-	Fields              []string
-	PrepareParameters   []Parameter
-	Parameters          []Parameter
-	Members             *StringMemberOrderedMap
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	Location          common.Location
+	Fields            []string
+	PrepareParameters []Parameter
+	Parameters        []Parameter
+	Members           *StringMemberOrderedMap
+	memberResolvers   atomic.Pointer[map[string]MemberResolver]
 }
 
 var _ Type = &TransactionType{}
@@ -8201,18 +8207,19 @@ func (t *TransactionType) RewriteWithIntersectionTypes() (Type, bool) {
 }
 
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *TransactionType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		var memberResolvers map[string]MemberResolver
-		if t.Members != nil {
-			memberResolvers = MembersMapAsResolvers(t.Members)
-		}
-		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
-	})
+	// Compute members and cache them
+	var computedMembers map[string]MemberResolver
+	if t.Members != nil {
+		computedMembers = MembersMapAsResolvers(t.Members)
+	}
+	computedMembers = withBuiltinMembers(t, computedMembers)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (*TransactionType) Unify(
@@ -8243,15 +8250,14 @@ func (t *TransactionType) CheckInstantiated(pos ast.HasPosition, memoryGauge com
 
 type IntersectionType struct {
 	// an internal set of field `Types`
-	effectiveIntersectionSet     *InterfaceSet
-	Types                        []*InterfaceType
-	effectiveIntersectionSetOnce sync.Once
-	memberResolvers              map[string]MemberResolver
-	memberResolversOnce          sync.Once
-	supportedEntitlementsOnce    sync.Once
-	supportedEntitlements        *EntitlementSet
+	effectiveIntersectionSet atomic.Pointer[InterfaceSet]
+	Types                    []*InterfaceType
+	memberResolvers          atomic.Pointer[map[string]MemberResolver]
+	supportedEntitlements    atomic.Pointer[EntitlementSet]
 	// Deprecated
 	LegacyType Type
+
+	typeID atomic.Pointer[TypeID]
 }
 
 var _ Type = &IntersectionType{}
@@ -8277,22 +8283,23 @@ func NewIntersectionType(memoryGauge common.MemoryGauge, legacyType Type, types 
 }
 
 func (t *IntersectionType) EffectiveIntersectionSet() *InterfaceSet {
-	t.initializeEffectiveIntersectionSet()
-	return t.effectiveIntersectionSet
-}
+	// Return cached set if already computed
+	if cachedSet := t.effectiveIntersectionSet.Load(); cachedSet != nil {
+		return cachedSet
+	}
 
-func (t *IntersectionType) initializeEffectiveIntersectionSet() {
-	t.effectiveIntersectionSetOnce.Do(func() {
-		t.effectiveIntersectionSet = NewInterfaceSet()
-		for _, typ := range t.Types {
-			t.effectiveIntersectionSet.Add(typ)
+	// Compute set and cache it
+	computedSet := NewInterfaceSet()
+	for _, typ := range t.Types {
+		computedSet.Add(typ)
 
-			// Also add the interfaces to which this restricting interface conforms.
-			for _, conformance := range typ.EffectiveInterfaceConformances() {
-				t.effectiveIntersectionSet.Add(conformance.InterfaceType)
-			}
+		// Also add the interfaces to which this restricting interface conforms.
+		for _, conformance := range typ.EffectiveInterfaceConformances() {
+			computedSet.Add(conformance.InterfaceType)
 		}
-	})
+	}
+	t.effectiveIntersectionSet.Store(computedSet)
+	return computedSet
 }
 
 func (*IntersectionType) IsType() {}
@@ -8357,6 +8364,12 @@ func (t *IntersectionType) QualifiedString() string {
 }
 
 func (t *IntersectionType) ID() TypeID {
+	// Return cached type ID if already computed
+	if cachedTypeID := t.typeID.Load(); cachedTypeID != nil {
+		return *cachedTypeID
+	}
+
+	// Compute type ID and cache it
 	var interfaceTypeIDs []TypeID
 	typeCount := len(t.Types)
 	if typeCount > 0 {
@@ -8366,7 +8379,9 @@ func (t *IntersectionType) ID() TypeID {
 		}
 	}
 	// FormatIntersectionTypeID sorts
-	return FormatIntersectionTypeID(interfaceTypeIDs)
+	computedTypeID := FormatIntersectionTypeID(interfaceTypeIDs)
+	t.typeID.Store(&computedTypeID)
+	return computedTypeID
 }
 
 func (t *IntersectionType) Equal(other Type) bool {
@@ -8470,43 +8485,45 @@ func (t *IntersectionType) RewriteWithIntersectionTypes() (Type, bool) {
 }
 
 func (t *IntersectionType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *IntersectionType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
+	// Compute members and cache them
+	computedMembers := map[string]MemberResolver{}
 
-		memberResolvers := map[string]MemberResolver{}
+	// Return the members of all types.
+	// The invariant that types may not have overlapping members is not checked here,
+	// but implicitly when the resource declaration's conformances are checked.
 
-		// Return the members of all types.
-		// The invariant that types may not have overlapping members is not checked here,
-		// but implicitly when the resource declaration's conformances are checked.
-
-		for _, typ := range t.Types {
-			for name, resolver := range typ.GetMembers() { //nolint:maprange
-				if _, ok := memberResolvers[name]; !ok {
-					memberResolvers[name] = resolver
-				}
+	for _, typ := range t.Types {
+		for name, resolver := range typ.GetMembers() { //nolint:maprange
+			if _, ok := computedMembers[name]; !ok {
+				computedMembers[name] = resolver
 			}
 		}
+	}
 
-		t.memberResolvers = memberResolvers
-	})
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (t *IntersectionType) SupportedEntitlements() *EntitlementSet {
-	t.supportedEntitlementsOnce.Do(func() {
-		// an intersection type supports all the entitlements of its interfaces
-		set := &EntitlementSet{}
-		t.EffectiveIntersectionSet().
-			ForEach(func(interfaceType *InterfaceType) {
-				set.Merge(interfaceType.SupportedEntitlements())
-			})
-		t.supportedEntitlements = set
-	})
+	// Return cached set if already computed
+	if cachedSet := t.supportedEntitlements.Load(); cachedSet != nil {
+		return cachedSet
+	}
 
-	return t.supportedEntitlements
+	// Compute set and cache it.
+	// An intersection type supports all the entitlements of its interfaces
+	computedSet := &EntitlementSet{}
+	t.EffectiveIntersectionSet().
+		ForEach(func(interfaceType *InterfaceType) {
+			computedSet.Merge(interfaceType.SupportedEntitlements())
+		})
+	t.supportedEntitlements.Store(computedSet)
+	return computedSet
 }
 
 func (*IntersectionType) Unify(
@@ -8570,9 +8587,8 @@ func (t *IntersectionType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryG
 // CapabilityType
 
 type CapabilityType struct {
-	BorrowType          Type
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	BorrowType      Type
+	memberResolvers atomic.Pointer[map[string]MemberResolver]
 }
 
 var _ Type = &CapabilityType{}
@@ -8882,40 +8898,41 @@ The ID of the capability
 `
 
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *CapabilityType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		members := MembersAsResolvers([]*Member{
-			NewUnmeteredPublicFunctionMember(
-				t,
-				CapabilityTypeBorrowFunctionName,
-				CapabilityTypeBorrowFunctionType(t.BorrowType),
-				capabilityTypeBorrowFunctionDocString,
-			),
-			NewUnmeteredPublicFunctionMember(
-				t,
-				CapabilityTypeCheckFunctionName,
-				CapabilityTypeCheckFunctionType(t.BorrowType),
-				capabilityTypeCheckFunctionDocString,
-			),
-			NewUnmeteredPublicConstantFieldMember(
-				t,
-				CapabilityTypeAddressFieldName,
-				CapabilityTypeAddressFieldType,
-				capabilityTypeAddressFieldDocString,
-			),
-			NewUnmeteredPublicConstantFieldMember(
-				t,
-				CapabilityTypeIDFieldName,
-				CapabilityTypeIDFieldType,
-				capabilityTypeIDFieldDocString,
-			),
-		})
-		t.memberResolvers = withBuiltinMembers(t, members)
+	// Compute members and cache them
+	computedMembers := MembersAsResolvers([]*Member{
+		NewUnmeteredPublicFunctionMember(
+			t,
+			CapabilityTypeBorrowFunctionName,
+			CapabilityTypeBorrowFunctionType(t.BorrowType),
+			capabilityTypeBorrowFunctionDocString,
+		),
+		NewUnmeteredPublicFunctionMember(
+			t,
+			CapabilityTypeCheckFunctionName,
+			CapabilityTypeCheckFunctionType(t.BorrowType),
+			capabilityTypeCheckFunctionDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			t,
+			CapabilityTypeAddressFieldName,
+			CapabilityTypeAddressFieldType,
+			capabilityTypeAddressFieldDocString,
+		),
+		NewUnmeteredPublicConstantFieldMember(
+			t,
+			CapabilityTypeIDFieldName,
+			CapabilityTypeIDFieldType,
+			capabilityTypeIDFieldDocString,
+		),
 	})
+	computedMembers = withBuiltinMembers(t, computedMembers)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 const AccountKeyTypeName = "AccountKey"

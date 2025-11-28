@@ -20,7 +20,6 @@ package commons
 
 import (
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -87,7 +86,7 @@ func TypeQualifier(typ sema.Type) string {
 		// TODO: Revisit. Probably this is not needed here?
 		return TypeQualifier(typ.Types[0])
 	case *sema.CapabilityType:
-		return interpreter.PrimitiveStaticTypeCapability.String()
+		return TypeQualifierCapability
 	case *sema.InclusiveRangeType:
 		return TypeQualifierInclusiveRange
 	default:

@@ -23,30 +23,30 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/google/pprof/profile"
+	pprof "github.com/google/pprof/profile"
 
 	"github.com/onflow/cadence/common"
 )
 
 type PProfExporter struct {
 	ComputationProfile *ComputationProfile
-	profile            *profile.Profile
-	locations          map[profile.Line]*profile.Location
-	functions          map[profiledFunction]*profile.Function
+	profile            *pprof.Profile
+	lineLocations      map[pprof.Line]*pprof.Location
+	functions          map[profiledFunction]*pprof.Function
 }
 
 func NewPProfExporter(computationProfile *ComputationProfile) *PProfExporter {
 	return &PProfExporter{
 		ComputationProfile: computationProfile,
-		locations:          make(map[profile.Line]*profile.Location),
-		functions:          make(map[profiledFunction]*profile.Function),
+		lineLocations:      make(map[pprof.Line]*pprof.Location),
+		functions:          make(map[profiledFunction]*pprof.Function),
 	}
 }
 
-func (e *PProfExporter) Export() (*profile.Profile, error) {
-	e.profile = &profile.Profile{}
+func (e *PProfExporter) Export() (*pprof.Profile, error) {
+	e.profile = &pprof.Profile{}
 
-	e.profile.SampleType = []*profile.ValueType{
+	e.profile.SampleType = []*pprof.ValueType{
 		{
 			Type: "computation",
 			Unit: "count",
@@ -54,7 +54,6 @@ func (e *PProfExporter) Export() (*profile.Profile, error) {
 	}
 
 	e.exportFunctions()
-
 	e.exportSamples()
 
 	return e.profile, nil
@@ -71,20 +70,20 @@ func (e *PProfExporter) exportFunctions() {
 	})
 
 	for _, location := range locations {
-		profiledFunction := e.ComputationProfile.locationFunctions[location]
+		functions := e.ComputationProfile.locationFunctions[location]
 
-		for _, profiledFunction := range profiledFunction.Values() {
-			function := &profile.Function{
+		for _, function := range functions.Values() {
+			pprofFunction := &pprof.Function{
 				ID:        e.nextFunctionID(),
-				Name:      profiledFunction.name,
+				Name:      function.name,
 				Filename:  e.ComputationProfile.sourcePathForLocation(location),
-				StartLine: int64(profiledFunction.startLine),
+				StartLine: int64(function.startLine),
 			}
 			e.profile.Function = append(
 				e.profile.Function,
-				function,
+				pprofFunction,
 			)
-			e.functions[profiledFunction] = function
+			e.functions[function] = pprofFunction
 		}
 	}
 }
@@ -105,7 +104,7 @@ func (e *PProfExporter) exportSamples() {
 	for _, aggregateKey := range aggregateKeys {
 		usage := e.ComputationProfile.stackTraceUsages[aggregateKey]
 
-		var sampleLocations []*profile.Location
+		var sampleLocations []*pprof.Location
 
 		for i := len(usage.stackTrace) - 1; i >= 0; i-- {
 			locationLine := usage.stackTrace[i]
@@ -117,16 +116,12 @@ func (e *PProfExporter) exportSamples() {
 
 			line := locationLine.Line
 
-			profiledFunction, ok := e.ComputationProfile.functionAtLine(locationLine)
+			function, ok := e.ComputationProfile.functionAtLine(locationLine)
 			if !ok {
-				panic(fmt.Errorf(
-					"missing profile function at %s:%d",
-					location,
-					line,
-				))
+				continue
 			}
 
-			function, ok := e.functions[profiledFunction]
+			pprofFunction, ok := e.functions[function]
 			if !ok {
 				panic(fmt.Errorf(
 					"missing exported function at %s:%d",
@@ -135,11 +130,11 @@ func (e *PProfExporter) exportSamples() {
 				))
 			}
 
-			sampleLocation := e.getOrAddLocation(function, line)
+			sampleLocation := e.getOrAddLocation(pprofFunction, line)
 			sampleLocations = append(sampleLocations, sampleLocation)
 		}
 
-		sample := &profile.Sample{
+		pprofSample := &pprof.Sample{
 			Location: sampleLocations,
 			Value: []int64{
 				int64(usage.computation),
@@ -148,33 +143,33 @@ func (e *PProfExporter) exportSamples() {
 
 		e.profile.Sample = append(
 			e.profile.Sample,
-			sample,
+			pprofSample,
 		)
 	}
 }
 
-func (e *PProfExporter) getOrAddLocation(function *profile.Function, line int) *profile.Location {
-	pLine := profile.Line{
-		Function: function,
+func (e *PProfExporter) getOrAddLocation(pprofFunction *pprof.Function, line int) *pprof.Location {
+	pprofLine := pprof.Line{
+		Function: pprofFunction,
 		Line:     int64(line),
 	}
 
-	location, ok := e.locations[pLine]
+	pprofLocation, ok := e.lineLocations[pprofLine]
 	if ok {
-		return location
+		return pprofLocation
 	}
 
-	location = &profile.Location{
+	pprofLocation = &pprof.Location{
 		ID:   e.nextLocationID(),
-		Line: []profile.Line{pLine},
+		Line: []pprof.Line{pprofLine},
 	}
-	e.locations[pLine] = location
+	e.lineLocations[pprofLine] = pprofLocation
 	e.profile.Location = append(
 		e.profile.Location,
-		location,
+		pprofLocation,
 	)
 
-	return location
+	return pprofLocation
 }
 
 func (e *PProfExporter) nextLocationID() uint64 {

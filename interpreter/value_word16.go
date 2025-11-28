@@ -288,7 +288,7 @@ func (v Word16Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord16 (1 byte)
 // - uint16 value encoded in big-endian (2 bytes)
-func (v Word16Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Word16Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
 	return scratch[:3]
@@ -423,7 +423,7 @@ func (Word16Value) IsStorable() bool {
 	return true
 }
 
-func (v Word16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Word16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

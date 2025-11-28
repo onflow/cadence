@@ -21,6 +21,7 @@ package values
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/format"
 )
 
@@ -50,7 +51,7 @@ func (v BoolValue) Negate() BoolValue {
 	return TrueValue
 }
 
-func (v BoolValue) Equal(other Value) bool {
+func (v BoolValue) Equal(_ common.Gauge, other Value) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
@@ -58,23 +59,23 @@ func (v BoolValue) Equal(other Value) bool {
 	return bool(v) == bool(otherBool)
 }
 
-func (v BoolValue) Less(other BoolValue) bool {
+func (v BoolValue) Less(_ common.Gauge, other BoolValue) bool {
 	return bool(!v && other)
 }
 
-func (v BoolValue) LessEqual(other BoolValue) bool {
+func (v BoolValue) LessEqual(_ common.Gauge, other BoolValue) bool {
 	return bool(!v || other)
 }
 
-func (v BoolValue) Greater(other BoolValue) bool {
+func (v BoolValue) Greater(_ common.Gauge, other BoolValue) bool {
 	return bool(v && !other)
 }
 
-func (v BoolValue) GreaterEqual(other BoolValue) bool {
+func (v BoolValue) GreaterEqual(_ common.Gauge, other BoolValue) bool {
 	return bool(v || !other)
 }
 
-func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

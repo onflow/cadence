@@ -1,0 +1,7 @@
+rules:
+  - super: AnyType
+    predicate:
+      always
+  - super: VariableSizedType
+    predicate:
+      always

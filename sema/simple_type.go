@@ -19,7 +19,7 @@
 package sema
 
 import (
-	"sync"
+	"sync/atomic"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -34,31 +34,28 @@ type ValueIndexingInfo struct {
 
 // SimpleType represents a simple nominal type.
 type SimpleType struct {
-	ValueIndexingInfo   ValueIndexingInfo
-	NestedTypes         *StringTypeOrderedMap
-	memberResolvers     map[string]MemberResolver
-	Members             func(*SimpleType) map[string]MemberResolver
-	QualifiedName       string
-	TypeID              TypeID
-	Name                string
-	TypeTag             TypeTag
-	memberResolversOnce sync.Once
-	Importable          bool
-	Exportable          bool
-	Equatable           bool
-	Comparable          bool
-	Storable            bool
-	Primitive           bool
-	IsResource          bool
-	ContainFields       bool
+	ValueIndexingInfo ValueIndexingInfo
+	NestedTypes       *StringTypeOrderedMap
+	memberResolvers   atomic.Pointer[map[string]MemberResolver]
+	Members           func(*SimpleType) map[string]MemberResolver
+	QualifiedName     string
+	TypeID            TypeID
+	Name              string
+	TypeTag           TypeTag
+	Importable        bool
+	Exportable        bool
+	Equatable         bool
+	Comparable        bool
+	Storable          bool
+	Primitive         bool
+	IsResource        bool
+	ContainFields     bool
 
 	// allow simple types to define a set of interfaces it conforms to
 	// e.g. StructStringer
-	conformances                         []*InterfaceType
-	effectiveInterfaceConformanceSet     *InterfaceSet
-	effectiveInterfaceConformances       []Conformance
-	effectiveInterfaceConformanceSetOnce sync.Once
-	effectiveInterfaceConformancesOnce   sync.Once
+	conformances                     []*InterfaceType
+	effectiveInterfaceConformanceSet atomic.Pointer[InterfaceSet]
+	effectiveInterfaceConformances   atomic.Pointer[[]Conformance]
 }
 
 var _ Type = &SimpleType{}
@@ -151,18 +148,19 @@ func (t *SimpleType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *SimpleType) GetMembers() map[string]MemberResolver {
-	t.initializeMembers()
-	return t.memberResolvers
-}
+	// Return cached members if already computed
+	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
+		return *cachedMembers
+	}
 
-func (t *SimpleType) initializeMembers() {
-	t.memberResolversOnce.Do(func() {
-		var members map[string]MemberResolver
-		if t.Members != nil {
-			members = t.Members(t)
-		}
-		t.memberResolvers = withBuiltinMembers(t, members)
-	})
+	// Compute members and cache them
+	var computedMembers map[string]MemberResolver
+	if t.Members != nil {
+		computedMembers = t.Members(t)
+	}
+	computedMembers = withBuiltinMembers(t, computedMembers)
+	t.memberResolvers.Store(&computedMembers)
+	return computedMembers
 }
 
 func (t *SimpleType) IsContainerType() bool {
@@ -202,28 +200,32 @@ func (t *SimpleType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, 
 }
 
 func (t *SimpleType) EffectiveInterfaceConformanceSet() *InterfaceSet {
-	t.initializeEffectiveInterfaceConformanceSet()
-	return t.effectiveInterfaceConformanceSet
-}
+	// Return cached set if already computed
+	if cachedSet := t.effectiveInterfaceConformanceSet.Load(); cachedSet != nil {
+		return cachedSet
+	}
 
-func (t *SimpleType) initializeEffectiveInterfaceConformanceSet() {
-	t.effectiveInterfaceConformanceSetOnce.Do(func() {
-		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
-
-		for _, conformance := range t.conformances {
-			t.effectiveInterfaceConformanceSet.Add(conformance)
-		}
-	})
+	// Compute set and cache it
+	computedSet := NewInterfaceSet()
+	for _, conformance := range t.conformances {
+		computedSet.Add(conformance)
+	}
+	t.effectiveInterfaceConformanceSet.Store(computedSet)
+	return computedSet
 }
 
 func (t *SimpleType) EffectiveInterfaceConformances() []Conformance {
-	t.effectiveInterfaceConformancesOnce.Do(func() {
-		t.effectiveInterfaceConformances = distinctConformances(
-			t.conformances,
-			nil,
-			map[*InterfaceType]struct{}{},
-		)
-	})
+	// Return cached conformances if already computed
+	if cachedConformances := t.effectiveInterfaceConformances.Load(); cachedConformances != nil {
+		return *cachedConformances
+	}
 
-	return t.effectiveInterfaceConformances
+	// Compute conformances and cache them
+	computedConformances := distinctConformances(
+		t.conformances,
+		nil,
+		map[*InterfaceType]struct{}{},
+	)
+	t.effectiveInterfaceConformances.Store(&computedConformances)
+	return computedConformances
 }

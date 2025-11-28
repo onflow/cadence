@@ -1,0 +1,7 @@
+rules:
+  - super: FunctionType
+    predicate:
+      deepEquals:
+        source: sub.Arity
+        target: super.Arity
+

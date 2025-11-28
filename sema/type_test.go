@@ -981,7 +981,7 @@ func TestCommonSuperType(t *testing.T) {
 						Types: []*InterfaceType{interfaceType2},
 					}
 					// just initialize for equality
-					typ.initializeEffectiveIntersectionSet()
+					_ = typ.EffectiveIntersectionSet()
 					return typ
 				}(),
 			},
@@ -996,7 +996,7 @@ func TestCommonSuperType(t *testing.T) {
 						Types: []*InterfaceType{interfaceType1, interfaceType2},
 					}
 					// just initialize for equality
-					typ.initializeEffectiveIntersectionSet()
+					_ = typ.EffectiveIntersectionSet()
 					return typ
 				}(),
 			},
@@ -1021,7 +1021,7 @@ func TestCommonSuperType(t *testing.T) {
 					}
 
 					// just initialize for equality
-					typ.initializeEffectiveIntersectionSet()
+					_ = typ.EffectiveIntersectionSet()
 					return typ
 				}(),
 			},

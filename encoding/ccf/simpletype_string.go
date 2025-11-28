@@ -102,7 +102,8 @@ func _() {
 	_ = x[SimpleTypeFixedSizeUnsignedInteger-98]
 	_ = x[SimpleTypeFix128-99]
 	_ = x[SimpleTypeUFix128-101]
-	_ = x[SimpleType_Count-103]
+	_ = x[SimpleTypeStorable-103]
+	_ = x[SimpleType_Count-104]
 }
 
 const (
@@ -110,12 +111,13 @@ const (
 	_SimpleType_name_1 = "SimpleTypeDeployedContract"
 	_SimpleType_name_2 = "SimpleTypeBlockSimpleTypeAnySimpleTypeAnyStructSimpleTypeAnyResourceSimpleTypeMetaTypeSimpleTypeNeverSimpleTypeNumberSimpleTypeSignedNumberSimpleTypeIntegerSimpleTypeSignedIntegerSimpleTypeFixedPointSimpleTypeSignedFixedPointSimpleTypeBytesSimpleTypeVoidSimpleTypeFunctionSimpleTypeWord128SimpleTypeWord256SimpleTypeAnyStructAttachmentTypeSimpleTypeAnyResourceAttachmentTypeSimpleTypeStorageCapabilityControllerSimpleTypeAccountCapabilityControllerSimpleTypeAccountSimpleTypeAccount_ContractsSimpleTypeAccount_KeysSimpleTypeAccount_InboxSimpleTypeAccount_StorageCapabilitiesSimpleTypeAccount_AccountCapabilitiesSimpleTypeAccount_CapabilitiesSimpleTypeAccount_StorageSimpleTypeMutateSimpleTypeInsertSimpleTypeRemoveSimpleTypeIdentitySimpleTypeStorageSimpleTypeSaveValueSimpleTypeLoadValueSimpleTypeCopyValueSimpleTypeBorrowValueSimpleTypeContractsSimpleTypeAddContractSimpleTypeUpdateContractSimpleTypeRemoveContractSimpleTypeKeysSimpleTypeAddKeySimpleTypeRevokeKeySimpleTypeInboxSimpleTypePublishInboxCapabilitySimpleTypeUnpublishInboxCapabilitySimpleTypeClaimInboxCapabilitySimpleTypeCapabilitiesSimpleTypeStorageCapabilitiesSimpleTypeAccountCapabilitiesSimpleTypePublishCapabilitySimpleTypeUnpublishCapabilitySimpleTypeGetStorageCapabilityControllerSimpleTypeIssueStorageCapabilityControllerSimpleTypeGetAccountCapabilityControllerSimpleTypeIssueAccountCapabilityControllerSimpleTypeCapabilitiesMappingSimpleTypeAccountMappingSimpleTypeHashableStructSimpleTypeFixedSizeUnsignedIntegerSimpleTypeFix128"
 	_SimpleType_name_3 = "SimpleTypeUFix128"
-	_SimpleType_name_4 = "SimpleType_Count"
+	_SimpleType_name_4 = "SimpleTypeStorableSimpleType_Count"
 )
 
 var (
 	_SimpleType_index_0 = [...]uint16{0, 14, 30, 49, 66, 79, 93, 108, 123, 138, 154, 170, 184, 199, 215, 231, 247, 264, 281, 296, 312, 328, 344, 359, 375, 389, 413, 434, 454, 475}
 	_SimpleType_index_2 = [...]uint16{0, 15, 28, 47, 68, 86, 101, 117, 139, 156, 179, 199, 225, 240, 254, 272, 289, 306, 339, 374, 411, 448, 465, 492, 514, 537, 574, 611, 641, 666, 682, 698, 714, 732, 749, 768, 787, 806, 827, 846, 867, 891, 915, 929, 945, 964, 979, 1011, 1045, 1075, 1097, 1126, 1155, 1182, 1211, 1251, 1293, 1333, 1375, 1404, 1428, 1452, 1486, 1502}
+	_SimpleType_index_4 = [...]uint8{0, 18, 34}
 )
 
 func (i SimpleType) String() string {
@@ -129,8 +131,9 @@ func (i SimpleType) String() string {
 		return _SimpleType_name_2[_SimpleType_index_2[i]:_SimpleType_index_2[i+1]]
 	case i == 101:
 		return _SimpleType_name_3
-	case i == 103:
-		return _SimpleType_name_4
+	case 103 <= i && i <= 104:
+		i -= 103
+		return _SimpleType_name_4[_SimpleType_index_4[i]:_SimpleType_index_4[i+1]]
 	default:
 		return "SimpleType(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

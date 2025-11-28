@@ -1219,11 +1219,6 @@ func TestStaticTypeConversion(t *testing.T) {
 			staticType: PrimitiveStaticTypePath,
 		},
 		{
-			name:       "Capability",
-			semaType:   &sema.CapabilityType{},
-			staticType: PrimitiveStaticTypeCapability,
-		},
-		{
 			name:       "StoragePath",
 			semaType:   sema.StoragePathType,
 			staticType: PrimitiveStaticTypeStoragePath,
@@ -1482,9 +1477,15 @@ func TestStaticTypeConversion(t *testing.T) {
 		},
 
 		{
+			name:           "Capability",
+			staticType:     PrimitiveStaticTypeCapability,
+			semaType:       &sema.CapabilityType{},
+			noSemaToStatic: true,
+		},
+		{
 			name:       "Unparameterized Capability",
 			semaType:   &sema.CapabilityType{},
-			staticType: PrimitiveStaticTypeCapability,
+			staticType: &CapabilityStaticType{},
 		},
 		{
 			name: "Parameterized  Capability",
@@ -1604,7 +1605,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:     "Function",
 			semaType: testFunctionType,
 			staticType: FunctionStaticType{
-				Type: testFunctionType,
+				FunctionType: testFunctionType,
 			},
 		},
 		{
@@ -1620,6 +1621,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			staticType: InclusiveRangeStaticType{
 				ElementType: PrimitiveStaticTypeInt,
 			},
+		},
+		{
+			name:       "Storable",
+			semaType:   sema.StorableType,
+			staticType: PrimitiveStaticTypeStorable,
 		},
 		// Deprecated primitive static types, only exist for migration purposes
 		{
@@ -1774,6 +1780,10 @@ func (s staticTypeConversionHandler) MeterMemory(_ common.MemoryUsage) error {
 
 func (s staticTypeConversionHandler) SemaTypeFromStaticType(staticType StaticType) sema.Type {
 	return MustConvertStaticToSemaType(staticType, s)
+}
+
+func (s staticTypeConversionHandler) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
+	return ConvertStaticAuthorizationToSemaAccess(auth, s)
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {

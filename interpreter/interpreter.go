@@ -737,6 +737,8 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 			var variable Variable
 
 			variable = NewVariableWithGetter(interpreter, func() Value {
+				common.UseComputation(interpreter, common.StatementComputationUsage)
+
 				result := interpreter.visitVariableDeclaration(declaration, false)
 
 				// Global variables are lazily loaded. Therefore, start resource tracking also
@@ -1691,6 +1693,15 @@ func EnumLookupFunction(
 			if !ok {
 				return Nil
 			}
+
+			caseValue = caseValue.Transfer(
+				inter,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+				true, // value is standalone.
+			)
 
 			return NewSomeValueNonCopying(inter, caseValue)
 		},
@@ -2755,7 +2766,7 @@ func StoredValueExists(
 	if accountStorage == nil {
 		return false
 	}
-	return accountStorage.ValueExists(identifier)
+	return accountStorage.ValueExists(context, identifier)
 }
 
 func (interpreter *Interpreter) ReadStored(
@@ -2787,7 +2798,7 @@ type TypedStringValueParser struct {
 
 // StringValueParser is a function that attempts to create a Cadence value from a string,
 // e.g. parsing a number from a string
-type StringValueParser func(common.MemoryGauge, string) OptionalValue
+type StringValueParser func(common.Gauge, string) OptionalValue
 
 func newFromStringFunction(typedParser TypedStringValueParser) FunctionValue {
 	functionType := sema.FromStringFunctionType(typedParser.ReceiverType)
@@ -2807,16 +2818,24 @@ func unsignedIntValueParser[ValueType Value, IntType any](
 	toValue func(common.MemoryGauge, func() IntType) ValueType,
 	fromUInt64 func(uint64) IntType,
 ) StringValueParser {
-	return func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+	return func(gauge common.Gauge, input string) OptionalValue {
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindUintParse,
+				Intensity: uint64(len(input)),
+			},
+		)
+
 		val, err := strconv.ParseUint(input, 10, bitSize)
 		if err != nil {
 			return NilOptionalValue
 		}
 
-		converted := toValue(memoryGauge, func() IntType {
+		converted := toValue(gauge, func() IntType {
 			return fromUInt64(val)
 		})
-		return NewSomeValueNonCopying(memoryGauge, converted)
+		return NewSomeValueNonCopying(gauge, converted)
 	}
 }
 
@@ -2829,26 +2848,43 @@ func signedIntValueParser[ValueType Value, IntType any](
 	fromInt64 func(int64) IntType,
 ) StringValueParser {
 
-	return func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+	return func(gauge common.Gauge, input string) OptionalValue {
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindIntParse,
+				Intensity: uint64(len(input)),
+			},
+		)
+
 		val, err := strconv.ParseInt(input, 10, bitSize)
 		if err != nil {
 			return NilOptionalValue
 		}
 
-		converted := toValue(memoryGauge, func() IntType {
+		converted := toValue(gauge, func() IntType {
 			return fromInt64(val)
 		})
-		return NewSomeValueNonCopying(memoryGauge, converted)
+		return NewSomeValueNonCopying(gauge, converted)
 	}
 }
 
 // No need to use metered constructors for values represented by big.Ints,
 // since estimation is more granular than fixed-size types.
 func bigIntValueParser(convert func(*big.Int) (Value, bool)) StringValueParser {
-	return func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+	return func(gauge common.Gauge, input string) OptionalValue {
+
 		literalKind := common.IntegerLiteralKindDecimal
 		estimatedSize := common.OverEstimateBigIntFromString(input, literalKind)
-		common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(estimatedSize))
+		common.UseMemory(gauge, common.NewBigIntMemoryUsage(estimatedSize))
+
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindBigIntParse,
+				Intensity: uint64(len(input)),
+			},
+		)
 
 		val, ok := new(big.Int).SetString(input, literalKind.Base())
 		if !ok {
@@ -2860,7 +2896,7 @@ func bigIntValueParser(convert func(*big.Int) (Value, bool)) StringValueParser {
 		if !ok {
 			return NilOptionalValue
 		}
-		return NewSomeValueNonCopying(memoryGauge, converted)
+		return NewSomeValueNonCopying(gauge, converted)
 	}
 }
 
@@ -2996,28 +3032,46 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 		// Fix*
 		{
 			ReceiverType: sema.Fix64Type,
-			Parser: func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+			Parser: func(gauge common.Gauge, input string) OptionalValue {
+
+				common.UseComputation(
+					gauge,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindFixParse,
+						Intensity: uint64(len(input)),
+					},
+				)
+
 				n, err := fixedpoint.ParseFix64(input)
 				if err != nil {
 					return NilOptionalValue
 				}
 
-				val := NewFix64Value(memoryGauge, n.Int64)
-				return NewSomeValueNonCopying(memoryGauge, val)
+				val := NewFix64Value(gauge, n.Int64)
+				return NewSomeValueNonCopying(gauge, val)
 
 			},
 		},
 		{
 			ReceiverType: sema.Fix128Type,
-			Parser: func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+			Parser: func(gauge common.Gauge, input string) OptionalValue {
+
+				common.UseComputation(
+					gauge,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindFixParse,
+						Intensity: uint64(len(input)),
+					},
+				)
+
 				n, err := fixedpoint.ParseFix128(input)
 				if err != nil {
 					return NilOptionalValue
 				}
 
 				// No need to check ranges, as `ParseFix128` already does that.
-				val := NewFix128ValueFromBigInt(memoryGauge, n)
-				return NewSomeValueNonCopying(memoryGauge, val)
+				val := NewFix128ValueFromBigInt(gauge, n)
+				return NewSomeValueNonCopying(gauge, val)
 
 			},
 		},
@@ -3025,26 +3079,45 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 		// UFix*
 		{
 			ReceiverType: sema.UFix64Type,
-			Parser: func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+			Parser: func(gauge common.Gauge, input string) OptionalValue {
+
+				common.UseComputation(
+					gauge,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindUfixParse,
+						Intensity: uint64(len(input)),
+					},
+				)
+
 				n, err := fixedpoint.ParseUFix64(input)
 				if err != nil {
 					return NilOptionalValue
 				}
-				val := NewUFix64Value(memoryGauge, n.Uint64)
-				return NewSomeValueNonCopying(memoryGauge, val)
+
+				val := NewUFix64Value(gauge, n.Uint64)
+				return NewSomeValueNonCopying(gauge, val)
 			},
 		},
 		{
 			ReceiverType: sema.UFix128Type,
-			Parser: func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+			Parser: func(gauge common.Gauge, input string) OptionalValue {
+
+				common.UseComputation(
+					gauge,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindUfixParse,
+						Intensity: uint64(len(input)),
+					},
+				)
+
 				n, err := fixedpoint.ParseUFix128(input)
 				if err != nil {
 					return NilOptionalValue
 				}
 
 				// No need to check ranges, as `ParseUFix128` already does that.
-				val := NewUFix128ValueFromBigInt(memoryGauge, n)
-				return NewSomeValueNonCopying(memoryGauge, val)
+				val := NewUFix128ValueFromBigInt(gauge, n)
+				return NewSomeValueNonCopying(gauge, val)
 
 			},
 		},
@@ -3621,7 +3694,7 @@ func ConstructDictionaryTypeValue(
 	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 	if keyType == nil ||
 		!sema.IsSubType(
-			MustConvertStaticToSemaType(keyType, context),
+			context.SemaTypeFromStaticType(keyType),
 			sema.HashableStructType,
 		) {
 		return Nil
@@ -3665,7 +3738,7 @@ func ConstructFunctionTypeValue(
 	parameterTypeValues *ArrayValue,
 	returnTypeValue TypeValue,
 ) Value {
-	returnType := MustConvertStaticToSemaType(returnTypeValue.Type, invocationContext)
+	returnType := invocationContext.SemaTypeFromStaticType(returnTypeValue.Type)
 
 	var parameterTypes []sema.Parameter
 	parameterCount := parameterTypeValues.Count()
@@ -3674,7 +3747,7 @@ func ConstructFunctionTypeValue(
 		parameterTypeValues.Iterate(
 			invocationContext,
 			func(param Value) bool {
-				semaType := MustConvertStaticToSemaType(param.(TypeValue).Type, invocationContext)
+				semaType := invocationContext.SemaTypeFromStaticType(param.(TypeValue).Type)
 				parameterTypes = append(
 					parameterTypes,
 					sema.Parameter{
@@ -3863,7 +3936,7 @@ func ConstructInclusiveRangeTypeValue(
 	ty := typeValue.Type
 
 	// InclusiveRanges must hold integers
-	elemSemaTy := MustConvertStaticToSemaType(ty, context)
+	elemSemaTy := context.SemaTypeFromStaticType(ty)
 	if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
 		return Nil
 	}
@@ -4357,13 +4430,13 @@ func domainPaths(context StorageContext, address common.Address, domain common.P
 	if storageMap == nil {
 		return []Value{}
 	}
-	iterator := storageMap.Iterator(context)
+	iterator := storageMap.Iterator()
 	var paths []Value
 
 	count := storageMap.Count()
 	if count > 0 {
 		paths = make([]Value, 0, count)
-		for key := iterator.NextKey(); key != nil; key = iterator.NextKey() {
+		for key := iterator.NextKey(context); key != nil; key = iterator.NextKey(context) {
 			// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
 			identifier := string(key.(StringAtreeValue))
 			path := NewPathValue(context, domain, identifier)
@@ -4477,13 +4550,13 @@ func AccountStorageIterate(
 		// if nothing is stored, no iteration is required
 		return Void
 	}
-	storageIterator := storageMap.Iterator(invocationContext)
+	storageIterator := storageMap.Iterator()
 
 	wasInIteration := invocationContext.InStorageIteration()
 	invocationContext.SetInStorageIteration(true)
 	defer invocationContext.SetInStorageIteration(wasInIteration)
 
-	for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
+	for key, value := storageIterator.Next(invocationContext); key != nil && value != nil; key, value = storageIterator.Next(invocationContext) {
 
 		staticType := value.StaticType(invocationContext)
 
@@ -4882,9 +4955,9 @@ func AccountStorageRead(
 	valueStaticType := value.StaticType(invocationContext)
 
 	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
-		valueSemaType := MustConvertStaticToSemaType(valueStaticType, invocationContext)
+		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
 
-		panic(&ForceCastTypeMismatchError{
+		panic(&StoredValueTypeMismatchError{
 			ExpectedType: typeParameter,
 			ActualType:   valueSemaType,
 		})
@@ -5121,17 +5194,6 @@ func (interpreter *Interpreter) GetEntitlementMapType(typeID common.TypeID) (*se
 	}
 
 	return ty, nil
-}
-
-func MustConvertStaticAuthorizationToSemaAccess(
-	handler StaticAuthorizationConversionHandler,
-	auth Authorization,
-) sema.Access {
-	access, err := ConvertStaticAuthorizationToSemaAccess(auth, handler)
-	if err != nil {
-		panic(err)
-	}
-	return access
 }
 
 func (interpreter *Interpreter) getElaboration(location common.Location) *sema.Elaboration {
@@ -5533,7 +5595,7 @@ func checkContainerMutation(
 
 	if !IsSubType(context, actualElementType, elementType) {
 		panic(&ContainerMutationError{
-			ExpectedType: MustConvertStaticToSemaType(elementType, context),
+			ExpectedType: context.SemaTypeFromStaticType(elementType),
 			ActualType:   MustSemaTypeOfValue(element, context),
 		})
 	}
@@ -5937,7 +5999,7 @@ func NativeCapabilityBorrowFunction(
 		var addressValue AddressValue
 
 		if capabilityBorrowTypePointer == nil {
-			// vm does not provide the borrow type
+			// VM does not provide the borrow type
 			var idCapabilityValue *IDCapabilityValue
 
 			switch capabilityValue := receiver.(type) {
@@ -6044,7 +6106,7 @@ func NativeCapabilityCheckFunction(
 		var addressValue AddressValue
 
 		if capabilityBorrowTypePointer == nil {
-			// vm does not provide the borrow type
+			// VM does not provide the borrow type
 			var idCapabilityValue *IDCapabilityValue
 
 			switch capabilityValue := receiver.(type) {
@@ -6334,6 +6396,10 @@ func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
 	}
 
 	return member
+}
+
+func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
+	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
 }
 
 func StorageReference(

@@ -131,7 +131,7 @@ type Value interface {
 
 type ValueIndexableValue interface {
 	Value
-	GetKey(context ValueComparisonContext, key Value) Value
+	GetKey(context ContainerReadContext, key Value) Value
 	SetKey(context ContainerMutationContext, key Value, value Value)
 	RemoveKey(context ContainerMutationContext, key Value) Value
 	InsertKey(context ContainerMutationContext, key Value, value Value)
@@ -158,7 +158,7 @@ type MemberAccessibleValue interface {
 }
 
 type ValueComparisonContext interface {
-	common.MemoryGauge
+	common.Gauge
 	ValueStaticTypeContext
 }
 
@@ -244,14 +244,14 @@ type OwnedValue interface {
 }
 
 type ValueIteratorContext interface {
-	common.MemoryGauge
+	common.Gauge
 	NumberValueArithmeticContext
 }
 
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
-	HasNext() bool
+	HasNext(context ValueIteratorContext) bool
 	Next(context ValueIteratorContext) Value
 	ValueID() (atree.ValueID, bool)
 }

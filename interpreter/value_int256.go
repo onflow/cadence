@@ -508,7 +508,7 @@ func (v Int256Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt256 (1 byte)
 // - big int value encoded in big-endian (n bytes)
-func (v Int256Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Int256Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	b := values.SignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
@@ -697,7 +697,7 @@ func (v Int256Value) ConformsToStaticType(
 	return true
 }
 
-func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 

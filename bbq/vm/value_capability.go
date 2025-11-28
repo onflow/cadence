@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -27,7 +28,7 @@ import (
 // Members
 
 func init() {
-	typeName := interpreter.PrimitiveStaticTypeCapability.String()
+	typeName := commons.TypeQualifierCapability
 
 	// Capability.borrow
 	registerBuiltinTypeBoundFunction(

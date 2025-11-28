@@ -19,8 +19,10 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -266,5 +268,47 @@ func TestInterpretEnumInContract(t *testing.T) {
 		inter,
 		interpreter.NewUnmeteredUInt8Value(0),
 		rawValue,
+	)
+}
+
+func TestInterpretEnumLookup(t *testing.T) {
+	t.Parallel()
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test(): E {
+              return E(rawValue: 0)!
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 4)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
 	)
 }

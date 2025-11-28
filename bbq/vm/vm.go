@@ -695,8 +695,7 @@ func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 	vm.push(c)
 }
 
-func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
-	localIndex := ins.Local
+func getLocal(vm *VM, localIndex uint16) Value {
 	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	local := vm.locals[absoluteIndex]
 
@@ -706,6 +705,11 @@ func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
 		local = implicitReference.ReferencedValue(vm.context)
 	}
 
+	return local
+}
+
+func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
+	local := getLocal(vm, ins.Local)
 	vm.push(local)
 }
 
@@ -1038,17 +1042,15 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	memberAccessibleValue.SetMember(vm.context, fieldName, fieldValue)
 }
 
-func opGetField(vm *VM, ins opcode.InstructionGetField) {
-	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
+func getField(vm *VM, memberAccessibleValue interpreter.MemberAccessibleValue, fieldNameIndex uint16, accessedTypeIndex uint16) Value {
 
 	checkMemberAccessTargetType(
 		vm,
-		ins.AccessedType,
+		accessedTypeIndex,
 		memberAccessibleValue,
 	)
 
 	// VM assumes the field name is always a string.
-	fieldNameIndex := ins.FieldName
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName)
@@ -1057,6 +1059,14 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 			Name: fieldName,
 		})
 	}
+
+	return fieldValue
+}
+
+func opGetField(vm *VM, ins opcode.InstructionGetField) {
+	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
+
+	fieldValue := getField(vm, memberAccessibleValue, ins.FieldName, ins.AccessedType)
 
 	vm.push(fieldValue)
 }
@@ -1383,7 +1393,7 @@ func opIterator(vm *VM) {
 func opIteratorHasNext(vm *VM) {
 	value := vm.pop()
 	iterator := value.(*IteratorWrapperValue)
-	result := interpreter.BoolValue(iterator.HasNext())
+	result := interpreter.BoolValue(iterator.HasNext(vm.context))
 	vm.push(result)
 }
 
@@ -1422,7 +1432,11 @@ func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 		valuesStr = append(valuesStr, s.Str)
 	}
 
-	vm.push(interpreter.BuildStringTemplate(valuesStr, expressions))
+	vm.push(interpreter.BuildStringTemplate(
+		vm.context,
+		valuesStr,
+		expressions,
+	))
 }
 
 func opGetTypeIndex(vm *VM, ins opcode.InstructionGetTypeIndex) {
@@ -1538,6 +1552,14 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 		attachment.SetBaseValue(base)
 		attachment.Destroy(vm.context)
 	}
+}
+
+func opGetFieldLocal(vm *VM, ins opcode.InstructionGetFieldLocal) {
+	local := getLocal(vm, ins.Local)
+	memberAccessibleValue := local.(interpreter.MemberAccessibleValue)
+	fieldValue := getField(vm, memberAccessibleValue, ins.FieldName, ins.AccessedType)
+
+	vm.push(fieldValue)
 }
 
 func (vm *VM) run() {
@@ -1721,6 +1743,8 @@ func (vm *VM) run() {
 			opRemoveTypeIndex(vm, ins)
 		case opcode.InstructionSetAttachmentBase:
 			opSetAttachmentBase(vm)
+		case opcode.InstructionGetFieldLocal:
+			opGetFieldLocal(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}

@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -125,13 +126,13 @@ var AnyResourceType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyResource)
 var AnyStructAttachmentType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyStructAttachment)
 var AnyResourceAttachmentType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyResourceAttachment)
 var HashableStructType = PrimitiveType(interpreter.PrimitiveStaticTypeHashableStruct)
-
 var BoolType = PrimitiveType(interpreter.PrimitiveStaticTypeBool)
 var AddressType = PrimitiveType(interpreter.PrimitiveStaticTypeAddress)
 var StringType = PrimitiveType(interpreter.PrimitiveStaticTypeString)
 var CharacterType = PrimitiveType(interpreter.PrimitiveStaticTypeCharacter)
 var MetaType = PrimitiveType(interpreter.PrimitiveStaticTypeMetaType)
 var BlockType = PrimitiveType(interpreter.PrimitiveStaticTypeBlock)
+var StorableType = PrimitiveType(interpreter.PrimitiveStaticTypeStorable)
 
 var NumberType = PrimitiveType(interpreter.PrimitiveStaticTypeNumber)
 var SignedNumberType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedNumber)
@@ -1637,10 +1638,9 @@ const Conjunction = sema.Conjunction
 const Disjunction = sema.Disjunction
 
 type EntitlementSetAuthorization struct {
-	Entitlements       []common.TypeID
-	Kind               EntitlementSetKind
-	entitlementSet     map[common.TypeID]struct{}
-	entitlementSetOnce sync.Once
+	Entitlements   []common.TypeID
+	Kind           EntitlementSetKind
+	entitlementSet atomic.Pointer[map[common.TypeID]struct{}]
 }
 
 var _ Authorization = &EntitlementSetAuthorization{}
@@ -1695,18 +1695,19 @@ func (a *EntitlementSetAuthorization) Equal(auth Authorization) bool {
 	return false
 }
 
-func (a *EntitlementSetAuthorization) initializeEntitlementSet() {
-	a.entitlementSetOnce.Do(func() {
-		a.entitlementSet = make(map[common.TypeID]struct{}, len(a.Entitlements))
-		for _, e := range a.Entitlements {
-			a.entitlementSet[e] = struct{}{}
-		}
-	})
-}
-
 func (a *EntitlementSetAuthorization) getEntitlementSet() map[common.TypeID]struct{} {
-	a.initializeEntitlementSet()
-	return a.entitlementSet
+	// Return cached set if already computed
+	if cachedSet := a.entitlementSet.Load(); cachedSet != nil {
+		return *cachedSet
+	}
+
+	// Compute set and cache it
+	computedSet := make(map[common.TypeID]struct{}, len(a.Entitlements))
+	for _, e := range a.Entitlements {
+		computedSet[e] = struct{}{}
+	}
+	a.entitlementSet.Store(&computedSet)
+	return computedSet
 }
 
 type EntitlementMapAuthorization struct {
@@ -1979,9 +1980,8 @@ func formatDeprecatedRestrictedTypeID(typeString string, restrictionStrings []st
 type IntersectionSet = map[Type]struct{}
 
 type IntersectionType struct {
-	Types               []Type
-	intersectionSet     IntersectionSet
-	intersectionSetOnce sync.Once
+	Types           []Type
+	intersectionSet atomic.Pointer[IntersectionSet]
 }
 
 func NewIntersectionType(
@@ -2038,18 +2038,19 @@ func (t *IntersectionType) Equal(other Type) bool {
 	return true
 }
 
-func (t *IntersectionType) initializeIntersectionSet() {
-	t.intersectionSetOnce.Do(func() {
-		t.intersectionSet = make(IntersectionSet, len(t.Types))
-		for _, typ := range t.Types {
-			t.intersectionSet[typ] = struct{}{}
-		}
-	})
-}
-
 func (t *IntersectionType) IntersectionSet() IntersectionSet {
-	t.initializeIntersectionSet()
-	return t.intersectionSet
+	// Return cached members if already computed
+	if cachedSet := t.intersectionSet.Load(); cachedSet != nil {
+		return *cachedSet
+	}
+
+	// Compute members and cache them
+	computedSet := make(IntersectionSet, len(t.Types))
+	for _, typ := range t.Types {
+		computedSet[typ] = struct{}{}
+	}
+	t.intersectionSet.Store(&computedSet)
+	return computedSet
 }
 
 // CapabilityType

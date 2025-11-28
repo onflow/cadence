@@ -336,10 +336,24 @@ var (
 
 	// Compiler
 
-	CompilerMemoryUsage         = NewConstantMemoryUsage(MemoryKindCompiler)
-	CompilerGlobalMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompilerGlobal)
-	CompilerConstantMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerConstant)
+	CompilerMemoryUsage            = NewConstantMemoryUsage(MemoryKindCompiler)
+	CompilerGlobalMemoryUsage      = NewConstantMemoryUsage(MemoryKindCompilerGlobal)
+	CompilerLocalMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompilerLocal)
+	CompilerConstantMemoryUsage    = NewConstantMemoryUsage(MemoryKindCompilerConstant)
+	CompilerFunctionMemoryUsage    = NewConstantMemoryUsage(MemoryKindCompilerFunction)
+	CompilerInstructionMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerInstruction)
+
+	CompilerBBQProgramMemoryUsage  = NewConstantMemoryUsage(MemoryKindCompilerBBQProgram)
+	CompilerBBQFunctionMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerBBQFunction)
+	CompilerBBQContractMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerBBQContract)
 )
+
+func NewMemoryUsage(kind MemoryKind, amount uint64) MemoryUsage {
+	return MemoryUsage{
+		Kind:   kind,
+		Amount: amount,
+	}
+}
 
 func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
 	return MemoryUsage{
@@ -910,6 +924,20 @@ func NewAtreeEncodedSlabMemoryUsage(slabsCount uint) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindAtreeEncodedSlab,
 		Amount: uint64(slabsCount),
+	}
+}
+
+func minSliceLength[T []U, U any](a, b T) int {
+	if len(a) < len(b) {
+		return len(a)
+	}
+	return len(b)
+}
+
+func NewBigIntsWordSliceOperation(v *big.Int, o *big.Int) ComputationUsage {
+	return ComputationUsage{
+		Kind:      ComputationKindWordSliceOperation,
+		Intensity: uint64(minSliceLength(v.Bits(), o.Bits())),
 	}
 }
 

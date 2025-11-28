@@ -1,0 +1,5 @@
+rules:
+  - super: AnyResourceAttachmentType
+    predicate:
+      isAttachment: sub
+

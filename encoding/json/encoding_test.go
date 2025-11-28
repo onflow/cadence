@@ -35,6 +35,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -203,6 +204,7 @@ func TestDecodeInvalidAddress(t *testing.T) {
 	t.Run("valid UTF-8 prefix", func(t *testing.T) {
 		t.Parallel()
 
+		// language=json
 		msg := `{"type":"Address","value":"000000000102030405"}`
 
 		_, err := Decode(nil, []byte(msg))
@@ -212,6 +214,7 @@ func TestDecodeInvalidAddress(t *testing.T) {
 	t.Run("invalid UTF-8 prefix", func(t *testing.T) {
 		t.Parallel()
 
+		// language=json
 		msg := `{"type":"Address","value":"\u1234"}`
 
 		_, err := Decode(nil, []byte(msg))
@@ -1196,7 +1199,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 			},
 			AtreeStorageValidationEnabled: true,
 			AtreeValueValidationEnabled:   true,
-			Storage:                       interpreter.NewInMemoryStorage(nil),
+			Storage:                       NewUnmeteredInMemoryStorage(),
 		},
 	)
 	require.NoError(t, err)
@@ -1529,24 +1532,24 @@ func TestEncodeInclusiveRange(t *testing.T) {
 		).WithType(cadence.NewInclusiveRangeType(cadence.Int256Type)),
 		// language=json
 		`
-			{
-				"type": "InclusiveRange",
-				"value": {
-					"start": {
-						"type": "Int256",
-						"value": "10"
-					},
-					"end": {
-						"type": "Int256",
-						"value": "20"
-					},
-					"step": {
-						"type": "Int256",
-						"value": "5"
-					}
-				}
-			}
-		`,
+            {
+                "type": "InclusiveRange",
+                "value": {
+                    "start": {
+                        "type": "Int256",
+                        "value": "10"
+                    },
+                    "end": {
+                        "type": "Int256",
+                        "value": "20"
+                    },
+                    "step": {
+                        "type": "Int256",
+                        "value": "5"
+                    }
+                }
+            }
+        `,
 	}
 
 	testAllEncodeAndDecode(t, simpleInclusiveRange)
@@ -1952,18 +1955,18 @@ func TestEncodeType(t *testing.T) {
 			},
 			// language=json
 			`
-				{
-				"type": "Type",
-				"value": {
-					"staticType": {
-					"kind": "InclusiveRange",
-					"element": {
-						"kind": "Int"
-					}
-					}
-				}
-				}
-			`,
+                {
+                "type": "Type",
+                "value": {
+                    "staticType": {
+                        "kind": "InclusiveRange",
+                        "element": {
+                            "kind": "Int"
+                        }
+                    }
+                }
+                }
+            `,
 		)
 
 	})
@@ -2478,9 +2481,9 @@ func TestEncodeType(t *testing.T) {
                       "kind": "Int"
                     },
                     "authorization": {
-						"kind": "Unauthorized",
-						"entitlements": null
-					}
+                        "kind": "Unauthorized",
+                        "entitlements": null
+                    }
                   }
                 }
               }
@@ -2511,17 +2514,17 @@ func TestEncodeType(t *testing.T) {
                       "kind": "Int"
                     },
                     "authorization": {
-						"kind": "EntitlementMapAuthorization",
-						"entitlements": [
-							{
-								"kind": "EntitlementMap",
-								"typeID": "foo",
-								"type": null,
-								"fields": null, 
-								"initializers": null
-							}
-						]
-					}
+                        "kind": "EntitlementMapAuthorization",
+                        "entitlements": [
+                            {
+                                "kind": "EntitlementMap",
+                                "typeID": "foo",
+                                "type": null,
+                                "fields": null,
+                                "initializers": null
+                            }
+                        ]
+                    }
                   }
                 }
               }
@@ -2553,24 +2556,24 @@ func TestEncodeType(t *testing.T) {
                       "kind": "Int"
                     },
                     "authorization": {
-						"kind": "EntitlementConjunctionSet",
-						"entitlements": [
-							{
-								"kind": "Entitlement",
-								"typeID": "X",
-								"type": null,
-								"fields": null, 
-								"initializers": null
-							},
-							{
-								"kind": "Entitlement",
-								"typeID": "Y",
-								"type": null,
-								"fields": null, 
-								"initializers": null
-							}
-						]
-					}
+                        "kind": "EntitlementConjunctionSet",
+                        "entitlements": [
+                            {
+                                "kind": "Entitlement",
+                                "typeID": "X",
+                                "type": null,
+                                "fields": null,
+                                "initializers": null
+                            },
+                            {
+                                "kind": "Entitlement",
+                                "typeID": "Y",
+                                "type": null,
+                                "fields": null,
+                                "initializers": null
+                            }
+                        ]
+                    }
                   }
                 }
               }
@@ -2602,24 +2605,24 @@ func TestEncodeType(t *testing.T) {
                       "kind": "Int"
                     },
                     "authorization": {
-						"kind": "EntitlementDisjunctionSet",
-						"entitlements": [
-							{
-								"kind": "Entitlement",
-								"typeID": "X",
-								"type": null,
-								"fields": null, 
-								"initializers": null
-							},
-							{
-								"kind": "Entitlement",
-								"typeID": "Y",
-								"type": null,
-								"fields": null, 
-								"initializers": null
-							}
-						]
-					}
+                        "kind": "EntitlementDisjunctionSet",
+                        "entitlements": [
+                            {
+                                "kind": "Entitlement",
+                                "typeID": "X",
+                                "type": null,
+                                "fields": null,
+                                "initializers": null
+                            },
+                            {
+                                "kind": "Entitlement",
+                                "typeID": "Y",
+                                "type": null,
+                                "fields": null,
+                                "initializers": null
+                            }
+                        ]
+                    }
                   }
                 }
               }
@@ -2649,7 +2652,7 @@ func TestEncodeType(t *testing.T) {
                 "value": {
                   "staticType": {
                     "kind": "Function",
-					"purity": "",
+                    "purity": "",
                     "typeID": "fun<T:AnyStruct>(String):Int",
                     "return": {
                       "kind": "Int"
@@ -2693,20 +2696,29 @@ func TestEncodeType(t *testing.T) {
 					TypeParameters: []cadence.TypeParameter{},
 				},
 			},
-			`{"type":"Type","value":{"staticType":
-				{	
-					"kind" : "Function",
-					"purity": "view",
-                    "typeID": "view fun(String):Int",
-					"return" : {"kind" : "Int"},
-					"typeParameters": [],
-					"parameters" : [
-						{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
-					]}
-				}
-			}`,
+			// language=json
+			`
+                {
+                    "type": "Type",
+                    "value": {
+                        "staticType": {
+                            "kind" : "Function",
+                            "purity": "view",
+                            "typeID": "view fun(String):Int",
+                            "return" : {"kind": "Int"},
+                            "typeParameters": [],
+                            "parameters": [
+                                {
+                                    "label": "qux",
+                                    "id": "baz",
+                                    "type": {"kind" : "String"}
+                                }
+                            ]
+                        }
+                    }
+                }
+            `,
 		)
-
 	})
 
 	t.Run("with static function, without type parameters (decode only)", func(t *testing.T) {
@@ -2750,16 +2762,26 @@ func TestEncodeType(t *testing.T) {
 
 	t.Run("with implicit purity", func(t *testing.T) {
 
-		encodedValue := `{"type":"Type","value":{"staticType":
-			{	
-				"kind" : "Function",
-				"return" : {"kind" : "Int"},
-				"typeParameters": [],
-				"parameters" : [
-					{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
-				]}
-			}
-		}`
+		//language=json
+		encodedValue := `
+            {
+                "type": "Type",
+                "value": {
+                    "staticType": {
+                        "kind" : "Function",
+                        "return": {"kind" : "Int"},
+                        "typeParameters": [],
+                        "parameters": [
+                            {
+                                "label": "qux",
+                                "id" : "baz",
+                                "type": {"kind": "String"}
+                            }
+                        ]
+                    }
+                }
+            }
+        `
 
 		value := cadence.TypeValue{
 			StaticType: &cadence.FunctionType{
@@ -2826,6 +2848,79 @@ func TestEncodeType(t *testing.T) {
                       {
                         "kind": "String"
                       }
+                    ]
+                  }
+                }
+              }
+            `,
+		)
+
+	})
+
+	t.Run("with static attachment", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.NewAttachmentType(
+					TestLocation,
+					"A",
+					cadence.NewResourceType(
+						TestLocation,
+						"R",
+						[]cadence.Field{
+							{Identifier: "foo", Type: cadence.IntType},
+						},
+						[][]cadence.Parameter{},
+					),
+					[]cadence.Field{
+						{Identifier: "bar", Type: cadence.StringType},
+					},
+					[][]cadence.Parameter{
+						{{Label: "bar", Identifier: "baz", Type: cadence.StringType}},
+					},
+				),
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Attachment",
+                    "type": {
+                      "kind": "Resource",
+                      "type": "",
+                      "typeID": "S.test.R",
+                      "fields": [
+                        {
+                          "id": "foo",
+                          "type": {
+                            "kind": "Int"
+                          }
+                        }
+                      ],
+                      "initializers": []
+                    },
+                    "typeID": "S.test.A",
+                    "fields": [
+                      {
+                        "id": "bar",
+                        "type": {
+                          "kind": "String"
+                        }
+                      }
+                    ],
+                    "initializers": [
+                      [
+                        {
+                          "label": "bar",
+                          "id": "baz",
+                          "type": {
+                            "kind": "String"
+                          }
+                        }
+                      ]
                     ]
                   }
                 }
@@ -2921,16 +3016,16 @@ func TestDecodeCapability(t *testing.T) {
 			t,
 			// language=json
 			`
-		  {
-		    "type": "Capability",
-		    "value": {
-		      "borrowType": {
-		        "kind": "Int"
-		      },
-		      "address": "0x0000000102030405",
-		      "id": "6"
-		    }
-		  }
+          {
+            "type": "Capability",
+            "value": {
+              "borrowType": {
+                "kind": "Int"
+              },
+              "address": "0x0000000102030405",
+              "id": "6"
+            }
+          }
         `,
 			cadence.NewCapability(
 				6,
@@ -2948,23 +3043,23 @@ func TestDecodeCapability(t *testing.T) {
 			t,
 			// language=json
 			`
-			{
-			  "type": "Capability",
-			  "value": {
-				"path": {
-				  "type": "Path",
-				  "value": {
-					"domain": "public",
-					"identifier": "foo"
-				  }
-				},
-				"borrowType": {
-				  "kind": "Int"
-				},
-				"address": "0x0000000102030405"
-			  }
-			}
-		  `,
+            {
+              "type": "Capability",
+              "value": {
+                "path": {
+                  "type": "Path",
+                  "value": {
+                    "domain": "public",
+                    "identifier": "foo"
+                  }
+                },
+                "borrowType": {
+                  "kind": "Int"
+                },
+                "address": "0x0000000102030405"
+              }
+            }
+          `,
 			cadence.NewDeprecatedPathCapability( //nolint:staticcheck
 				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				cadence.Path{
@@ -2981,27 +3076,28 @@ func TestDecodeCapability(t *testing.T) {
 		t.Parallel()
 
 		_, err := Decode(nil, []byte(
+			// language=json
 			`
-			{
-			  "type": "Capability",
-			  "value": {
-				"path": {
-				  "type": "Path",
-				  "value": {
-					"domain": "public",
-					"identifier": "foo"
-				  }
-				},
-				"borrowType": {
-				  "kind": "Int"
-				},
-				"address": "0x0000000102030405"
-			  }
-			}
-		  `,
+            {
+              "type": "Capability",
+              "value": {
+                "path": {
+                  "type": "Path",
+                  "value": {
+                    "domain": "public",
+                    "identifier": "foo"
+                  }
+                },
+                "borrowType": {
+                  "kind": "Int"
+                },
+                "address": "0x0000000102030405"
+              }
+            }
+          `,
 		))
-		require.Error(t, err)
-
+		assert.ErrorContains(t, err, "invalid capability: path is not supported")
+		assert.ErrorContains(t, err, "at .value")
 	})
 }
 
@@ -3045,7 +3141,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: "12.300000000",
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "invalid scale")
 					},
 				},
 				{
@@ -3111,7 +3207,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: "12.000000003",
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "invalid scale")
 					},
 				},
 				{
@@ -3131,7 +3227,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: fmt.Sprintf("%d.1", params.maxInt+1),
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "out of range")
 					},
 				},
 				{
@@ -3143,7 +3239,17 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: fmt.Sprintf("%d.1", params.minInt-1),
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						switch ty {
+						case cadence.UFix64Type:
+							assert.ErrorContains(t, err, "invalid negative integer part")
+
+						case cadence.Fix64Type:
+							assert.ErrorContains(t, err, "out of range")
+
+						default:
+							t.Fatal("unknown type")
+
+						}
 					},
 				},
 				{
@@ -3155,7 +3261,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				{
 					input: fmt.Sprintf("%d.%d", params.maxInt, params.maxFrac+1),
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "out of range")
 					},
 				},
 				{
@@ -3170,7 +3276,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 				tests = append(tests, test{
 					input: fmt.Sprintf("%d.%d", params.minInt, -(params.minFrac - 1)),
 					check: func(t *testing.T, actual cadence.Value, err error) {
-						assert.Error(t, err)
+						assert.ErrorContains(t, err, "out of range")
 					},
 				})
 			}
@@ -3200,7 +3306,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		// language=json
 		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": "1.-1"}`))
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "invalid sign in fractional part")
 	})
 
 	t.Run("plus sign in fractional", func(t *testing.T) {
@@ -3209,7 +3315,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		// language=json
 		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": "1.+1"}`))
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "invalid sign in fractional part")
 	})
 
 	t.Run("missing integer", func(t *testing.T) {
@@ -3218,7 +3324,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		// language=json
 		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": ".1"}`))
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "invalid integer part")
 	})
 
 	t.Run("missing fractional", func(t *testing.T) {
@@ -3227,7 +3333,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 		// language=json
 		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": "1."}`))
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "invalid fractional part")
 	})
 }
 
@@ -3251,7 +3357,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
                     "type": {
                       "kind": "Int"
                     },
-                    "authorized": true 
+                    "authorized": true
                   }
                 }
               }
@@ -3272,20 +3378,22 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 
 		// Decode with error if reference is not supported
 		_, err := Decode(nil, []byte(`
-	              {
-	                "type": "Type",
-	                "value": {
-	                  "staticType": {
-	                    "kind": "Reference",
-	                    "type": {
-	                      "kind": "Int"
-	                    },
-	                    "authorized": true 
-	                  }
-	                }
-	              }
-	            `))
-		require.Error(t, err)
+          {
+            "type": "Type",
+            "value": {
+              "staticType": {
+                "kind": "Reference",
+                "type": {
+                  "kind": "Int"
+                },
+                "authorized": true
+              }
+            }
+          }
+        `))
+
+		assert.ErrorContains(t, err, "missing property: authorization")
+		assert.ErrorContains(t, err, "at .value.staticType")
 	})
 
 	t.Run("with static restricted type", func(t *testing.T) {
@@ -3587,7 +3695,7 @@ func TestEncodePath(t *testing.T) {
 			// language=json
 			`{"type":"Path","value":{"domain":"Storage","identifier":"foo"}}`,
 		))
-		require.ErrorContains(t, err, "unknown domain in path")
+		assert.ErrorContains(t, err, "unknown domain in path")
 	})
 }
 
@@ -3626,8 +3734,10 @@ func TestDecodeInvalidType(t *testing.T) {
           }
         `
 		_, err := Decode(nil, []byte(encodedValue))
-		require.Error(t, err)
-		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: ``", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"invalid type ID for built-in: `` (at .value.id)",
+		)
 	})
 
 	t.Run("invalid type ID", func(t *testing.T) {
@@ -3644,8 +3754,10 @@ func TestDecodeInvalidType(t *testing.T) {
           }
         `
 		_, err := Decode(nil, []byte(encodedValue))
-		require.Error(t, err)
-		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID `I`: invalid identifier location type ID: missing location", err.Error())
+		assert.ErrorContains(t,
+			err,
+			"invalid type ID `I`: invalid identifier location type ID: missing location (at .value.id)",
+		)
 	})
 
 	t.Run("unknown location prefix", func(t *testing.T) {
@@ -3662,8 +3774,8 @@ func TestDecodeInvalidType(t *testing.T) {
           }
         `
 		_, err := Decode(nil, []byte(encodedValue))
-		require.Error(t, err)
-		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: `N.PublicKey`", err.Error())
+		assert.ErrorContains(t, err, "invalid type ID for built-in: `N.PublicKey`")
+		assert.ErrorContains(t, err, "at .value.id")
 	})
 }
 
@@ -3758,7 +3870,7 @@ func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
 		t.Parallel()
 
 		_, err := Decode(nil, []byte(encoded))
-		require.Error(t, err)
+		assert.ErrorContains(t, err, "expected JSON object, got &Int")
 	})
 
 }
@@ -4023,4 +4135,154 @@ func TestSimpleTypes(t *testing.T) {
 
 		test(cadenceType, semaType)
 	}
+}
+
+func TestDecodeErrorContext(t *testing.T) {
+	t.Parallel()
+
+	t.Run("missing type at root", func(t *testing.T) {
+		t.Parallel()
+
+		// language=json
+		msg := `{"value": "test"}`
+		_, err := Decode(nil, []byte(msg))
+		assert.ErrorContains(t, err, "missing property: type")
+	})
+
+	t.Run("missing type in array element", func(t *testing.T) {
+		t.Parallel()
+
+		//language=json
+		msg := `{
+            "type": "Array",
+            "value": [
+                {
+                    "value": "test"
+                }
+            ]
+        }`
+		_, err := Decode(nil, []byte(msg))
+		assert.ErrorContains(t, err, "missing property: type")
+		assert.ErrorContains(t, err, "at .value[0]")
+	})
+
+	t.Run("missing type in nested array element", func(t *testing.T) {
+		t.Parallel()
+
+		//language=json
+		msg := `
+            {
+                "type": "Array",
+                "value": [
+                    {
+                        "type": "Array",
+                        "value": [
+                            {
+                                "value": "test"
+                            }
+                        ]
+                    }
+                ]
+            }
+        `
+		_, err := Decode(nil, []byte(msg))
+		assert.ErrorContains(t, err, "missing property: type")
+		assert.ErrorContains(t, err, "at .value[0].value[0]")
+	})
+
+	t.Run("missing type in struct field", func(t *testing.T) {
+		t.Parallel()
+
+		//language=json
+		msg := `
+          {
+              "type": "Struct",
+              "value": {
+                  "id": "S.test.MyStruct",
+                  "fields": [
+                      {
+                          "name": "myField",
+                          "value": {
+                              "value": "test"
+                          }
+                      }
+                  ]
+              }
+          }
+        `
+		_, err := Decode(nil, []byte(msg))
+		assert.ErrorContains(t, err, "missing property: type")
+		assert.ErrorContains(t, err, "at .value.fields[0].value")
+	})
+
+	t.Run("missing kind in type", func(t *testing.T) {
+		t.Parallel()
+
+		//language=json
+		msg := `
+            {
+                "type": "Type",
+                "value": {
+                    "staticType": {
+                    }
+                }
+            }
+        `
+		_, err := Decode(nil, []byte(msg))
+		assert.ErrorContains(t, err, "missing property: kind")
+		assert.ErrorContains(t, err, "at .value.staticType")
+	})
+
+	t.Run("missing value in array element field", func(t *testing.T) {
+		t.Parallel()
+
+		//language=json
+		msg := `
+            {
+                "type": "Array",
+                "value": [
+                    {
+                        "type": "Struct",
+                        "value": {
+                            "id": "S.test.MyStruct",
+                            "fields": [
+                                {
+                                    "name": "nested"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        `
+		_, err := Decode(nil, []byte(msg))
+		assert.ErrorContains(t, err, "missing property: value")
+		assert.ErrorContains(t, err, "at .value[0].value.fields[0]")
+	})
+
+	t.Run("missing value in dictionary key-value pair", func(t *testing.T) {
+		t.Parallel()
+
+		//language=json
+		msg := `
+          {
+            "type": "Dictionary",
+            "value": [
+              {
+                "key": {
+                  "type": "String",
+                  "value": "a"
+                },
+                "value": {
+                  "type": "Int"
+                }
+              }
+            ]
+          }
+        `
+		_, err := Decode(nil, []byte(msg))
+		assert.ErrorContains(t, err, "expected JSON object with keys `type` and `value`")
+		assert.ErrorContains(t, err, "at .value[0].value")
+	})
+
 }

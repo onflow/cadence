@@ -1,0 +1,7 @@
+rules:
+  - super: InterfaceType
+    predicate:
+      setContains:
+        set: sub.EffectiveInterfaceConformanceSet
+        element: super
+

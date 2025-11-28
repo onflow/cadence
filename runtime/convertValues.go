@@ -661,7 +661,7 @@ func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) (cadence
 func exportTypeValue(v interpreter.TypeValue, converter interpreter.TypeConverter) cadence.TypeValue {
 	var typ sema.Type
 	if v.Type != nil {
-		typ = interpreter.MustConvertStaticToSemaType(v.Type, converter)
+		typ = converter.SemaTypeFromStaticType(v.Type)
 	}
 	return cadence.NewMeteredTypeValue(
 		converter,
@@ -673,7 +673,7 @@ func exportCapabilityValue(
 	v *interpreter.IDCapabilityValue,
 	typeConverter interpreter.TypeConverter,
 ) (cadence.Capability, error) {
-	borrowType := interpreter.MustConvertStaticToSemaType(v.BorrowType, typeConverter)
+	borrowType := typeConverter.SemaTypeFromStaticType(v.BorrowType)
 	exportedBorrowType := ExportMeteredType(typeConverter, borrowType, map[sema.TypeID]cadence.Type{})
 
 	return cadence.NewMeteredCapability(
@@ -691,7 +691,7 @@ func exportPathCapabilityValue(
 	var exportedBorrowType cadence.Type
 
 	if v.BorrowType != nil {
-		borrowType := interpreter.MustConvertStaticToSemaType(v.BorrowType, typeConverter)
+		borrowType := typeConverter.SemaTypeFromStaticType(v.BorrowType)
 		exportedBorrowType = ExportMeteredType(typeConverter, borrowType, map[sema.TypeID]cadence.Type{})
 	}
 

@@ -42,17 +42,22 @@ import (
 )
 
 // assertGlobalsEqual compares GlobalInfo of globals
-func assertGlobalsEqual(t *testing.T, expected map[string]bbq.GlobalInfo, actual map[string]bbq.Global) {
+func assertGlobalsEqual(t *testing.T, expected []bbq.GlobalInfo, actual []bbq.Global) {
 	// Check that both maps have the same keys
-	assert.Equal(t, len(expected), len(actual), "globals maps have different lengths")
+	assert.Equal(t, len(expected), len(actual), "globals have different lengths")
 
-	for key, expectedGlobal := range expected {
-		actualGlobal, exists := actual[key]
-		if !assert.True(t, exists, "expected global %s not found in actual", key) {
-			continue
-		}
+	for index, actualGlobal := range actual {
+		actualGlobalInfo := actualGlobal.GetGlobalInfo()
+		expectedGlobalInfo := expected[index]
+		assert.Equal(t, expectedGlobalInfo, actualGlobalInfo)
+	}
+}
 
-		assert.Equal(t, expectedGlobal, actualGlobal.GetGlobalInfo())
+func assertTypesEqual(t *testing.T, expectedTypes, actualTypes []interpreter.StaticType) {
+	require.Equal(t, len(expectedTypes), len(actualTypes))
+	for i, expectedType := range expectedTypes {
+		actualType := actualTypes[i]
+		assert.True(t, expectedType.Equal(actualType))
 	}
 }
 
@@ -138,10 +143,11 @@ func TestCompileRecursionFib(t *testing.T) {
 		program.Constants,
 	)
 
-	assert.Equal(t,
+	assertTypesEqual(
+		t,
 		[]bbq.StaticType{
 			interpreter.FunctionStaticType{
-				Type: sema.NewSimpleFunctionType(
+				FunctionType: sema.NewSimpleFunctionType(
 					sema.FunctionPurityImpure,
 					[]sema.Parameter{
 						{
@@ -304,10 +310,11 @@ func TestCompileImperativeFib(t *testing.T) {
 		program.Constants,
 	)
 
-	assert.Equal(t,
+	assertTypesEqual(
+		t,
 		[]bbq.StaticType{
 			interpreter.FunctionStaticType{
-				Type: sema.NewSimpleFunctionType(
+				FunctionType: sema.NewSimpleFunctionType(
 					sema.FunctionPurityImpure,
 					[]sema.Parameter{
 						{
@@ -1324,7 +1331,7 @@ func TestCompileEmit(t *testing.T) {
 			opcode.InstructionStatement{},
 			// x
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionConvert{Type: 1},
 			// emit
 			opcode.InstructionEmitEvent{
 				Type:     2,
@@ -1773,7 +1780,8 @@ func TestCompileIndex(t *testing.T) {
 			// array[index]
 			opcode.InstructionGetLocal{Local: arrayIndex},
 			opcode.InstructionGetLocal{Local: indexIndex},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			// NOTE: no transfer
+			opcode.InstructionConvert{Type: 1},
 			opcode.InstructionGetIndex{},
 
 			// return
@@ -3172,8 +3180,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	checker, err := ParseAndCheck(t, `
         struct interface IA {
-            fun test(): Int {
-                return 42
+            fun test(x: Int): Int {
+                return x
             }
         }
 
@@ -3234,8 +3242,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// Should be calling into interface's default function.
 	// ```
-	//     fun test(): Int {
-	//        return self.test()
+	//     fun test(x: Int): Int {
+	//        return self.test(x: x)
 	//    }
 	// ```
 
@@ -3250,13 +3258,15 @@ func TestCompileDefaultFunction(t *testing.T) {
 			// self.test()
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetMethod{Method: interfaceFunctionIndex}, // must be interface method's index
+			opcode.InstructionGetLocal{Local: 1},                        // argument x
+			// NOTE: no transfer or convert of argument
 			opcode.InstructionInvoke{
 				TypeArgs: nil,
-				ArgCount: 0,
+				ArgCount: 1,
 			},
 
 			// return
-			opcode.InstructionTransferAndConvert{Type: 6},
+			// NOTE: no transfer or convert of value
 			opcode.InstructionReturnValue{},
 		},
 		concreteTypeTestFunc.Code,
@@ -3273,8 +3283,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// Should contain the implementation.
 	// ```
-	//    fun test(): Int {
-	//        return 42
+	//    fun test(x: Int): Int {
+	//        return x
 	//    }
 	// ```
 
@@ -3282,8 +3292,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 
-			// 42
-			opcode.InstructionGetConstant{Constant: 0},
+			// x
+			opcode.InstructionGetLocal{Local: 1},
 			opcode.InstructionTransferAndConvert{Type: 6},
 
 			// return
@@ -3293,12 +3303,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.DecodedConstant{
-			{
-				Data: interpreter.NewUnmeteredIntValueFromInt64(42),
-				Kind: constant.Int,
-			},
-		},
+		[]constant.DecodedConstant(nil),
 		program.Constants,
 	)
 }
@@ -6669,10 +6674,11 @@ func TestCompileArgument(t *testing.T) {
 		functions[1].Code,
 	)
 
-	assert.Equal(t,
+	assertTypesEqual(
+		t,
 		[]bbq.StaticType{
 			interpreter.FunctionStaticType{
-				Type: sema.NewSimpleFunctionType(
+				FunctionType: sema.NewSimpleFunctionType(
 					sema.FunctionPurityImpure,
 					[]sema.Parameter{
 						{
@@ -6687,7 +6693,7 @@ func TestCompileArgument(t *testing.T) {
 				),
 			},
 			interpreter.FunctionStaticType{
-				Type: sema.NewSimpleFunctionType(
+				FunctionType: sema.NewSimpleFunctionType(
 					sema.FunctionPurityImpure,
 					[]sema.Parameter{},
 					sema.VoidTypeAnnotation,
@@ -7438,7 +7444,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				// Evaluate the index expression, `y["r"]`, using temp locals.
 				opcode.InstructionGetLocal{Local: tempYIndex},
 				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
-				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionConvert{Type: 3},
 				opcode.InstructionRemoveIndex{},
 				opcode.InstructionTransferAndConvert{Type: 4},
 
@@ -8459,14 +8465,14 @@ func TestCompileSwapIndex(t *testing.T) {
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
-			opcode.InstructionTransferAndConvert{Type: 3},
+			opcode.InstructionConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex5},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
-			opcode.InstructionTransferAndConvert{Type: 3},
+			opcode.InstructionConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex6},
@@ -9946,12 +9952,14 @@ func TestCompileImportAlias(t *testing.T) {
 
 		t.Parallel()
 
+		compiledPrograms := CompiledPrograms{}
+
 		importLocation := common.AddressLocation{
 			Address: common.MustBytesToAddress([]byte{0x1}),
 			Name:    "Foo",
 		}
 
-		importedChecker, err := ParseAndCheckWithOptions(t,
+		_ = ParseCheckAndCompile(t,
 			`
 				contract Foo {
 					fun hello(): String {
@@ -9959,19 +9967,11 @@ func TestCompileImportAlias(t *testing.T) {
 					}
 				}
             `,
-			ParseAndCheckOptions{
-				Location: importLocation,
-			},
+			importLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(importedChecker),
-			importedChecker.Location,
-		)
-		importedProgram := importCompiler.Compile()
-
-		checker, err := ParseAndCheckWithOptions(t,
+		program := ParseCheckAndCompile(t,
 			`
 				import Foo as Bar from 0x01
 
@@ -9979,31 +9979,9 @@ func TestCompileImportAlias(t *testing.T) {
 					return Bar.hello()
 				}
             `,
-			ParseAndCheckOptions{
-				CheckerConfig: &sema.Config{
-					LocationHandler: SingleIdentifierLocationResolver(t),
-					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-						require.Equal(t, importedChecker.Location, location)
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				},
-			},
+			TestLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-			require.Equal(t, importLocation, location)
-			return importedProgram
-		}
-
-		program := comp.Compile()
-
 		assert.Equal(
 			t,
 			[]bbq.Import{
@@ -10022,27 +10000,27 @@ func TestCompileImportAlias(t *testing.T) {
 		// Imported types are location qualified.
 		assertGlobalsEqual(
 			t,
-			map[string]bbq.GlobalInfo{
-				"test": {
+			[]bbq.GlobalInfo{
+				{
 					Location:      nil,
 					Name:          "test",
 					QualifiedName: "test",
 					Index:         0,
 				},
-				"A.0000000000000001.Foo": {
+				{
 					Location:      importLocation,
 					Name:          "Foo",
 					QualifiedName: "A.0000000000000001.Foo",
 					Index:         1,
 				},
-				"A.0000000000000001.Foo.hello": {
+				{
 					Location:      importLocation,
 					Name:          "Foo.hello",
 					QualifiedName: "A.0000000000000001.Foo.hello",
 					Index:         2,
 				},
 			},
-			comp.Globals,
+			program.Globals,
 		)
 
 	})
@@ -10051,12 +10029,14 @@ func TestCompileImportAlias(t *testing.T) {
 
 		t.Parallel()
 
+		compiledPrograms := CompiledPrograms{}
+
 		importLocation := common.AddressLocation{
 			Address: common.MustBytesToAddress([]byte{0x1}),
 			Name:    "FooInterface",
 		}
 
-		importedChecker, err := ParseAndCheckWithOptions(t,
+		_ = ParseCheckAndCompile(t,
 			`
 				struct interface FooInterface {
 					fun hello(): String
@@ -10066,19 +10046,16 @@ func TestCompileImportAlias(t *testing.T) {
 					}
 				}
             `,
-			ParseAndCheckOptions{
-				Location: importLocation,
-			},
+			importLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(importedChecker),
-			importedChecker.Location,
-		)
-		importedProgram := importCompiler.Compile()
+		barLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "Bar",
+		}
 
-		checker, err := ParseAndCheckWithOptions(t,
+		program := ParseCheckAndCompile(t,
 			`
 				import FooInterface as FI from 0x01
 
@@ -10088,37 +10065,9 @@ func TestCompileImportAlias(t *testing.T) {
 					}
 				}
             `,
-			ParseAndCheckOptions{
-				CheckerConfig: &sema.Config{
-					LocationHandler: SingleIdentifierLocationResolver(t),
-					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-						require.Equal(t, importedChecker.Location, location)
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				},
-			},
+			barLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-			return importedProgram
-		}
-		comp.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
-			switch location {
-			case importLocation:
-				return compiler.NewDesugaredElaboration(importedChecker.Elaboration), nil
-			default:
-				return nil, fmt.Errorf("cannot find elaboration for %s", location)
-			}
-		}
-
-		program := comp.Compile()
 
 		assert.Equal(
 			t,
@@ -10134,52 +10083,385 @@ func TestCompileImportAlias(t *testing.T) {
 		// only imported function is a location qualified global.
 		assertGlobalsEqual(
 			t,
-			map[string]bbq.GlobalInfo{
-				"Bar": {
+			[]bbq.GlobalInfo{
+				{
 					Location:      nil,
 					Name:          "Bar",
 					QualifiedName: "Bar",
 					Index:         0,
 				},
-				"Bar.getType": {
+				{
 					Location:      nil,
 					Name:          "Bar.getType",
 					QualifiedName: "Bar.getType",
 					Index:         1,
 				},
-				"Bar.hello": {
-					Location:      nil,
-					Name:          "Bar.hello",
-					QualifiedName: "Bar.hello",
-					Index:         4,
-				},
-				"Bar.isInstance": {
+				{
 					Location:      nil,
 					Name:          "Bar.isInstance",
 					QualifiedName: "Bar.isInstance",
 					Index:         2,
 				},
-				"Bar.defaultHello": {
-					Location:      nil,
-					Name:          "Bar.defaultHello",
-					QualifiedName: "Bar.defaultHello",
-					Index:         5,
-				},
-				"A.0000000000000001.FooInterface.defaultHello": {
-					Location:      importLocation,
-					Name:          "FooInterface.defaultHello",
-					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
-					Index:         6,
-				},
-				"Bar.forEachAttachment": {
+				{
 					Location:      nil,
 					Name:          "Bar.forEachAttachment",
 					QualifiedName: "Bar.forEachAttachment",
 					Index:         3,
 				},
+				{
+					Location:      nil,
+					Name:          "Bar.hello",
+					QualifiedName: "Bar.hello",
+					Index:         4,
+				},
+				{
+					Location:      nil,
+					Name:          "Bar.defaultHello",
+					QualifiedName: "Bar.defaultHello",
+					Index:         5,
+				},
+				{
+					Location:      importLocation,
+					Name:          "FooInterface.defaultHello",
+					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
+					Index:         6,
+				},
 			},
-			comp.Globals,
+			program.Globals,
+		)
+	})
+}
+
+func TestPeepholeOptimizer(t *testing.T) {
+	t.Parallel()
+
+	t.Run("constant transfer and convert", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test(): Int {
+				let x = 1
+				return x
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			// this transfer can be optimized out
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		},
+			functions[0].Code,
 		)
 
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.PeepholeOptimizationsEnabled = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			// transfer gone
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		}, functions2[0].Code)
 	})
+
+	t.Run("patch jumps", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test2(): Int {
+				return 32
+			}
+			fun test(): Int {
+				var x = 0
+				var y = test2()
+				if x > 0 {
+					y = test2()
+				} else {
+					y = 64
+				}
+				return y
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 2)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			opcode.InstructionGreater{},
+			opcode.InstructionJumpIfFalse{Target: 20},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionJump{Target: 24},
+			// 20
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x2},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			// 24
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		},
+			functions[1].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.PeepholeOptimizationsEnabled = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 2)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			// transfers removed
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			// combined instrs
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			opcode.InstructionGreater{},
+			opcode.InstructionJumpIfFalse{Target: 19},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x0},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x1},
+			opcode.InstructionJump{Target: 22},
+			// 17, jumps to correct statement after patching
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x2},
+			opcode.InstructionSetLocal{Local: 0x1},
+			// 20
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		}, functions2[1].Code)
+	})
+
+	t.Run("getFieldLocal", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct Test {
+				var x: Int
+
+				init() {
+					self.x = 32
+				}
+			}
+
+			fun test(): Int {
+				let test = Test()
+				return test.x
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 5)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x1},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			// common pattern
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionGetField{FieldName: 0x0, AccessedType: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x2},
+			opcode.InstructionReturnValue{},
+		},
+			functions[0].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.PeepholeOptimizationsEnabled = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 5)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 0x1},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			// combined instr
+			opcode.InstructionGetFieldLocal{FieldName: 0x0, AccessedType: 0x1, Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x2},
+			opcode.InstructionReturnValue{},
+		}, functions2[0].Code)
+	})
+
+	t.Run("peephole avoid jump targets", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test(): Int? {
+				var x: Int? = true ? 123 : nil
+				return x
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionTrue{},
+			opcode.InstructionJumpIfFalse{Target: 0x5},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionJump{Target: 0x6},
+			opcode.InstructionNil{},
+			// this transfer after nil cannot be optimized out because it is a jump target
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		},
+			functions[0].Code,
+		)
+
+		comp2 := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp2.Config.PeepholeOptimizationsEnabled = true
+		program2 := comp2.Compile()
+
+		functions2 := program2.Functions
+		require.Len(t, functions2, 1)
+
+		assert.Equal(t, []opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionTrue{},
+			opcode.InstructionJumpIfFalse{Target: 0x5},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionJump{Target: 0x6},
+			opcode.InstructionNil{},
+			// expect this transfer to still be here
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0x0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionReturnValue{},
+		}, functions2[0].Code)
+	})
+}
+
+func BenchmarkCompileTime(b *testing.B) {
+	checker, err := ParseAndCheck(b, `
+	struct Foo {
+		var id : Int
+
+		init(_ id: Int) {
+			self.id = id
+		}
+	}
+
+	fun test(count: Int) {
+		var i = 0
+		while i < count {
+			Foo(i)
+			i = i + 1
+		}
+	}
+	`)
+	require.NoError(b, err)
+
+	for b.Loop() {
+		b.StopTimer()
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.PeepholeOptimizationsEnabled = true
+		b.ReportAllocs()
+		b.StartTimer()
+		comp.Compile()
+	}
 }

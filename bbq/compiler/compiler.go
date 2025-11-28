@@ -108,6 +108,7 @@ type Compiler[E, T any] struct {
 
 	// Passed to the vm to avoid repeated conversions from static-types to sema-types.
 	semaTypeCache map[sema.TypeID]sema.Type
+	addedImports  map[common.Location]struct{}
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
@@ -204,6 +205,7 @@ func newCompiler[E, T any](
 		codeGen:             codeGen,
 		typeGen:             typeGen,
 		postConditionsIndex: -1,
+		addedImports:        make(map[common.Location]struct{}),
 	}
 }
 
@@ -378,6 +380,7 @@ func (c *Compiler[E, _]) newFunction(
 	functionTypeIndex := c.getOrAddType(functionType)
 
 	return newFunction[E](
+		c.Config.MemoryGauge,
 		c.currentFunction,
 		name,
 		qualifiedName,
@@ -725,6 +728,16 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		}
 	}
 
+	if c.Config.PeepholeOptimizationsEnabled {
+		optimizer := NewPeepholeOptimizer(c)
+
+		for i, function := range functions {
+			functions[i].Code = optimizer.Optimize(function.Code)
+		}
+	}
+
+	common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQProgramMemoryUsage)
+
 	return &bbq.Program[E, T]{
 		Functions:     functions,
 		Constants:     constants,
@@ -956,6 +969,15 @@ func (c *Compiler[_, _]) exportConstants() []constant.DecodedConstant {
 
 	count := len(c.constants)
 	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
+		common.UseMemory(
+			c.Config.MemoryGauge,
+			common.NewMemoryUsage(
+				common.MemoryKindCompilerBBQConstant,
+				uint64(count),
+			),
+		)
+
 		constants = make([]constant.DecodedConstant, 0, count)
 		for _, c := range c.constants {
 			constants = append(
@@ -976,7 +998,10 @@ func (c *Compiler[_, T]) exportTypes() []T {
 }
 
 func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
-	globals := make([]bbq.Global, len(c.Globals))
+	globalsCount := len(c.Globals)
+
+	common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(globalsCount))
+	globals := make([]bbq.Global, globalsCount)
 
 	for _, global := range c.Globals { //nolint:maprange
 		index := int(global.GetGlobalInfo().Index)
@@ -1014,6 +1039,15 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 
 	count := len(c.usedImportedGlobals)
 	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
+		common.UseMemory(
+			c.Config.MemoryGauge,
+			common.NewMemoryUsage(
+				common.MemoryKindCompilerBBQImport,
+				uint64(count),
+			),
+		)
+
 		exportedImports = make([]bbq.Import, 0, count)
 		for _, importedGlobal := range c.usedImportedGlobals {
 			name := c.removeAlias(importedGlobal.GetGlobalInfo().Name)
@@ -1033,7 +1067,9 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 
 	count := len(c.functions)
 	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
 		functions = make([]bbq.Function[E], 0, count)
+
 		for _, function := range c.functions {
 			newFunction := c.newBBQFunction(function)
 			functions = append(
@@ -1061,6 +1097,7 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 }
 
 func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
+	common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQFunctionMemoryUsage)
 	return bbq.Function[E]{
 		Name:           function.name,
 		QualifiedName:  function.qualifiedName,
@@ -1077,6 +1114,15 @@ func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
 
 	count := len(c.globalVariables)
 	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
+		common.UseMemory(
+			c.Config.MemoryGauge,
+			common.NewMemoryUsage(
+				common.MemoryKindCompilerBBQVariable,
+				uint64(count),
+			),
+		)
+
 		globalVariables = make([]bbq.Variable[E], 0, count)
 
 		for _, variable := range c.globalVariables {
@@ -1131,6 +1177,7 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 		location := contractType.GetLocation()
 		name := contractType.GetIdentifier()
 
+		common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQContractMemoryUsage)
 		contract := bbq.Contract{
 			Name:     name,
 			Location: location,
@@ -1297,7 +1344,9 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 				// Must transfer and convert, so that `result` variable gets the
 				// correct converted value.
 				returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
-				c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+				if !returnTypes.PassWithoutTransferOrConvert {
+					c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+				}
 
 				c.emitSetLocal(tempResultVar.index)
 			} else {
@@ -1314,7 +1363,11 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 			// (1.b)
 			// If there are no post conditions, return then-and-there.
 			returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
-			c.emitTransferAndConvertAndReturnValue(returnTypes.ReturnType)
+			returnType := returnTypes.ReturnType
+			if !returnTypes.PassWithoutTransferOrConvert {
+				c.emitTransferIfNotResourceAndConvert(returnType)
+			}
+			c.emit(opcode.InstructionReturnValue{})
 		}
 	} else {
 		// (2) Empty return
@@ -1518,7 +1571,10 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 		indexLocal = c.emitDeclareLocal(index.Identifier)
 	}
 
-	entryLocal := c.currentFunction.declareLocal(statement.Identifier.Identifier)
+	entryLocal := c.currentFunction.declareLocal(
+		c.Config.MemoryGauge,
+		statement.Identifier.Identifier,
+	)
 
 	testOffset := c.codeGen.Offset()
 	controlFlow := c.pushControlFlow(testOffset)
@@ -1616,7 +1672,16 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 			invocationExpression := statement.InvocationExpression
 			arguments := invocationExpression.Arguments
 			invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(invocationExpression)
-			c.compileArguments(arguments, invocationTypes)
+
+			// Instead of compiling arguments as usual (via compileArguments),
+			// only convert the arguments and don't transfer them.
+
+			for index, argument := range arguments {
+				c.compileExpression(argument.Expression)
+
+				parameterType := invocationTypes.ParameterTypes[index]
+				c.emitConvert(parameterType)
+			}
 
 			argCount := len(arguments)
 			if argCount >= math.MaxUint16 {
@@ -1702,7 +1767,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 
 		// Value can be nil only for synthetic-result variable.
 		if declaration.Value == nil {
-			c.currentFunction.declareLocal(name)
+			c.currentFunction.declareLocal(c.Config.MemoryGauge, name)
 			return
 		}
 
@@ -1885,13 +1950,8 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 	}()
 }
 
-func (c *Compiler[_, _]) emitTransferAndConvertAndReturnValue(returnType sema.Type) {
-	c.emitTransferIfNotResourceAndConvert(returnType)
-	c.emit(opcode.InstructionReturnValue{})
-}
-
 func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
-	local := c.currentFunction.declareLocal(name)
+	local := c.currentFunction.declareLocal(c.Config.MemoryGauge, name)
 	c.emitSetLocal(local.index)
 	return local
 }
@@ -2185,73 +2245,167 @@ func (c *Compiler[_, _]) emitIntegerConstant(
 	integerType sema.Type,
 ) {
 	constantKind := constant.FromSemaType(integerType)
+	memoryGauge := c.Config.MemoryGauge
 
 	var data constant.ConstantData
 
 	switch constantKind {
 	case constant.Int:
-		data = interpreter.NewUnmeteredIntValueFromBigInt(value)
+		memoryUsage := common.NewBigIntMemoryUsage(
+			common.BigIntByteLength(value),
+		)
+		data = interpreter.NewIntValueFromBigInt(
+			memoryGauge,
+			memoryUsage,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Int8:
-		data = interpreter.NewUnmeteredInt8Value(int8(value.Int64()))
+		data = interpreter.NewInt8Value(
+			memoryGauge,
+			func() int8 {
+				return int8(value.Int64())
+			},
+		)
 
 	case constant.Int16:
-		data = interpreter.NewUnmeteredInt16Value(int16(value.Int64()))
+		data = interpreter.NewInt16Value(
+			memoryGauge,
+			func() int16 {
+				return int16(value.Int64())
+			},
+		)
 
 	case constant.Int32:
-		data = interpreter.NewUnmeteredInt32Value(int32(value.Int64()))
+		data = interpreter.NewInt32Value(
+			memoryGauge,
+			func() int32 {
+				return int32(value.Int64())
+			},
+		)
 
 	case constant.Int64:
-		data = interpreter.NewUnmeteredInt64Value(value.Int64())
+		data = interpreter.NewInt64Value(memoryGauge, value.Int64)
 
 	case constant.Int128:
-		data = interpreter.NewUnmeteredInt128ValueFromBigInt(value)
+		data = interpreter.NewInt128ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Int256:
-		data = interpreter.NewUnmeteredInt256ValueFromBigInt(value)
+		data = interpreter.NewInt256ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.UInt:
-		data = interpreter.NewUnmeteredUIntValueFromBigInt(value)
+		memoryUsage := common.NewBigIntMemoryUsage(
+			common.BigIntByteLength(value),
+		)
+		data = interpreter.NewUIntValueFromBigInt(
+			memoryGauge,
+			memoryUsage,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.UInt8:
-		data = interpreter.NewUnmeteredUInt8Value(uint8(value.Uint64()))
+		data = interpreter.NewUInt8Value(
+			memoryGauge,
+			func() uint8 {
+				return uint8(value.Uint64())
+			},
+		)
 
 	case constant.UInt16:
-		data = interpreter.NewUnmeteredUInt16Value(uint16(value.Uint64()))
+		data = interpreter.NewUInt16Value(
+			memoryGauge,
+			func() uint16 {
+				return uint16(value.Uint64())
+			},
+		)
 
 	case constant.UInt32:
-		data = interpreter.NewUnmeteredUInt32Value(uint32(value.Uint64()))
+		data = interpreter.NewUInt32Value(
+			memoryGauge,
+			func() uint32 {
+				return uint32(value.Uint64())
+			},
+		)
 
 	case constant.UInt64:
-		data = interpreter.NewUnmeteredUInt64Value(value.Uint64())
+		data = interpreter.NewUInt64Value(memoryGauge, value.Uint64)
 
 	case constant.UInt128:
-		data = interpreter.NewUnmeteredUInt128ValueFromBigInt(value)
+		data = interpreter.NewUInt128ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.UInt256:
-		data = interpreter.NewUnmeteredUInt256ValueFromBigInt(value)
+		data = interpreter.NewUInt256ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Word8:
-		data = interpreter.NewUnmeteredWord8Value(uint8(value.Uint64()))
+		data = interpreter.NewWord8Value(
+			memoryGauge,
+			func() uint8 {
+				return uint8(value.Uint64())
+			},
+		)
 
 	case constant.Word16:
-		data = interpreter.NewUnmeteredWord16Value(uint16(value.Uint64()))
+		data = interpreter.NewWord16Value(
+			memoryGauge,
+			func() uint16 {
+				return uint16(value.Uint64())
+			},
+		)
 
 	case constant.Word32:
-		data = interpreter.NewUnmeteredWord32Value(uint32(value.Uint64()))
+		data = interpreter.NewWord32Value(
+			memoryGauge,
+			func() uint32 {
+				return uint32(value.Uint64())
+			},
+		)
 
 	case constant.Word64:
-		data = interpreter.NewUnmeteredWord64Value(value.Uint64())
+		data = interpreter.NewWord64Value(memoryGauge, value.Uint64)
 
 	case constant.Word128:
-		data = interpreter.NewUnmeteredWord128ValueFromBigInt(value)
+		data = interpreter.NewWord128ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Word256:
-		data = interpreter.NewUnmeteredWord256ValueFromBigInt(value)
+		data = interpreter.NewWord256ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Address:
 		data = interpreter.NewAddressValueFromBytes(
-			c.Config.MemoryGauge,
+			memoryGauge,
 			func() []byte {
 				return value.Bytes()
 			},
@@ -2299,36 +2453,38 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 	var constantValue interpreter.Value
 	var constantKind constant.Kind
 
+	memoryGauge := c.Config.MemoryGauge
+
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
 		constantKind = constant.Fix64
-		constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
+		constantValue = interpreter.NewFix64Value(memoryGauge, value.Int64)
 
 	case sema.UFix64Type:
 		constantKind = constant.UFix64
-		constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
+		constantValue = interpreter.NewUFix64Value(memoryGauge, value.Uint64)
 
 	case sema.Fix128Type:
 		constantKind = constant.Fix128
 		constantValue = interpreter.NewFix128ValueFromBigInt(
-			c.Config.MemoryGauge,
+			memoryGauge,
 			value,
 		)
 
 	case sema.UFix128Type:
 		constantKind = constant.UFix128
 		constantValue = interpreter.NewUFix128ValueFromBigInt(
-			c.Config.MemoryGauge,
+			memoryGauge,
 			value,
 		)
 
 	case sema.FixedPointType:
 		if expression.Negative {
 			constantKind = constant.Fix64
-			constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
+			constantValue = interpreter.NewFix64Value(memoryGauge, value.Int64)
 		} else {
 			constantKind = constant.UFix64
-			constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
+			constantValue = interpreter.NewUFix64Value(memoryGauge, value.Uint64)
 		}
 	default:
 		panic(errors.NewUnreachableError())
@@ -2366,13 +2522,11 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 		c.emitTransferIfNotResourceAndConvert(elementExpectedType)
 	}
 
-	c.emit(
-		opcode.InstructionNewArray{
-			Type:       typeIndex,
-			Size:       uint16(size),
-			IsResource: arrayTypes.ArrayType.IsResourceType(),
-		},
-	)
+	c.emit(opcode.InstructionNewArray{
+		Type:       typeIndex,
+		Size:       uint16(size),
+		IsResource: arrayTypes.ArrayType.IsResourceType(),
+	})
 
 	return
 }
@@ -2396,13 +2550,11 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 		c.emitTransferIfNotResourceAndConvert(dictionaryType.ValueType)
 	}
 
-	c.emit(
-		opcode.InstructionNewDictionary{
-			Type:       typeIndex,
-			Size:       uint16(size),
-			IsResource: dictionaryType.IsResourceType(),
-		},
-	)
+	c.emit(opcode.InstructionNewDictionary{
+		Type:       typeIndex,
+		Size:       uint16(size),
+		IsResource: dictionaryType.IsResourceType(),
+	})
 
 	return
 }
@@ -2791,9 +2943,8 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 		return isDynamicMethodInvocation(typ.Type)
 	case *sema.OptionalType:
 		return isDynamicMethodInvocation(typ.Type)
-	case *sema.IntersectionType:
-		return true
-	case *sema.InterfaceType:
+	case *sema.IntersectionType,
+		*sema.InterfaceType:
 		return true
 	default:
 		return false
@@ -2804,7 +2955,7 @@ func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTyp
 	for index, argument := range arguments {
 		c.compileExpression(argument.Expression)
 
-		if invocationTypes.SkipArgumentsTransfer {
+		if invocationTypes.PassArgumentsWithoutTransferOrConvert {
 			continue
 		}
 
@@ -2826,6 +2977,7 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 
 	var typeArgs []uint16
 	if typeArgsCount > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(typeArgsCount))
 		typeArgs = make([]uint16, 0, typeArgsCount)
 
 		typeArguments.Foreach(func(key *sema.TypeParameter, typeParam sema.Type) {
@@ -2955,18 +3107,19 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 // compileIndexAccess compiles the index access, i.e. RemoveIndex or GetIndex.
 // It assumes the target and indexing/key expressions are already compiled on the stack.
 func (c *Compiler[_, _]) compileIndexAccess(expression *ast.IndexExpression) {
-	c.emitIndexKeyTransferAndConvert(expression)
+	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	indexedType := indexExpressionTypes.IndexedType
+	c.emitConvert(indexedType.IndexingType())
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
 		c.emit(opcode.InstructionRemoveIndex{})
 	} else {
 		c.emit(opcode.InstructionGetIndex{})
-	}
-
-	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
-	if !ok {
-		panic(errors.NewUnreachableError())
 	}
 
 	// Return a reference, if the element is accessed via a reference.
@@ -3353,15 +3506,17 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	// otherwise, base is declared as the second parameter after self.
 	c.declareParameters(parameterList, false, false)
 
+	memoryGauge := c.Config.MemoryGauge
+
 	var base *local
 	// must do this before declaring self
 	if kind == common.CompositeKindAttachment {
 		// base is provided as an argument at the end of the argument list implicitly
-		base = c.currentFunction.declareLocal(sema.BaseIdentifier)
+		base = c.currentFunction.declareLocal(memoryGauge, sema.BaseIdentifier)
 	}
 
 	// Declare `self`
-	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
+	self := c.currentFunction.declareLocal(memoryGauge, sema.SelfIdentifier)
 
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
@@ -3531,7 +3686,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		// (i.e: doesn't rely on where this function is located in the AST; doesn't inherit from other functions, etc.).
 		declaration = c.desugar.DesugarInnerFunction(declaration)
 
-		innerFunctionLocal = c.currentFunction.declareLocal(identifier)
+		innerFunctionLocal = c.currentFunction.declareLocal(c.Config.MemoryGauge, identifier)
 	}
 
 	if parameterCount >= math.MaxUint16 {
@@ -3743,7 +3898,7 @@ func (c *Compiler[_, _]) createGlobalAlias(location common.Location, name string
 	// if alias exists or we want to force qualify (e.g. for aliased methods)
 	if ok || forceQualify {
 		// we want a table pointing from the alias -> address qualifier (Foo1 -> A.0001.Foo)
-		addressQualifiedName := string(location.TypeID(nil, name))
+		addressQualifiedName := string(location.TypeID(c.Config.MemoryGauge, name))
 		// check if alias exists in case of force qualification
 		if ok {
 			c.globalAliasTable[alias] = addressQualifiedName
@@ -3758,6 +3913,11 @@ func (c *Compiler[_, _]) createGlobalAlias(location common.Location, name string
 func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location, aliases map[string]string) {
 	// Built-in location has no program.
 	if location == nil {
+		return
+	}
+
+	// If the imports are already added for this location, then no need to add again.
+	if _, ok := c.addedImports[location]; ok {
 		return
 	}
 
@@ -3796,6 +3956,8 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		qualifiedName := c.createGlobalAlias(location, function.QualifiedName, aliases, len(aliases) > 0)
 		c.addImportedGlobal(location, function.QualifiedName, qualifiedName)
 	}
+
+	c.addedImports[location] = struct{}{}
 
 	// Recursively add transitive imports.
 	for _, impt := range importedProgram.Imports {
@@ -3855,7 +4017,7 @@ func (c *Compiler[_, _]) VisitTransactionDeclaration(declaration *ast.Transactio
 			modifiedParamName := commons.TransactionGeneratedParamPrefix +
 				parameter.Identifier.Identifier
 
-			local := c.currentFunction.declareLocal(modifiedParamName)
+			local := c.currentFunction.declareLocal(c.Config.MemoryGauge, modifiedParamName)
 			c.emitGetLocal(local.index)
 
 			global := c.findGlobal(parameter.Identifier.Identifier)
@@ -3973,16 +4135,20 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.emitSetLocal(baseLocalIndex)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
+
 	baseTyp, ok := baseType.(sema.EntitlementSupportingType)
 	if !ok {
 		// simulates defensive check in interpreter
 		panic(errors.NewUnreachableError())
 	}
+
 	baseAccess := baseTyp.SupportedEntitlements().Access()
-	refType := &sema.ReferenceType{
-		Type:          baseTyp,
-		Authorization: baseAccess,
-	}
+	refType := sema.NewReferenceType(
+		c.Config.MemoryGauge,
+		baseAccess,
+		baseTyp,
+	)
+
 	// create reference to base to pass as implicit arg
 	c.emit(opcode.InstructionNewRef{
 		Type:       c.getOrAddType(refType),
@@ -4093,6 +4259,13 @@ func (c *Compiler[_, _]) emitTransfer() {
 	c.emit(opcode.InstructionTransfer{})
 }
 
+func (c *Compiler[_, _]) emitConvert(targetType sema.Type) {
+	typeIndex := c.getOrAddType(targetType)
+	c.emit(opcode.InstructionConvert{
+		Type: typeIndex,
+	})
+}
+
 func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
 	typeID := ty.ID()
 
@@ -4123,22 +4296,24 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 }
 
 func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declareReceiver bool, declareBase bool) {
+	memoryGauge := c.Config.MemoryGauge
+
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
-		c.currentFunction.declareLocal(sema.SelfIdentifier)
+		c.currentFunction.declareLocal(memoryGauge, sema.SelfIdentifier)
 	}
 
 	if declareBase {
 		// Declare base receiver as `base`
 		// Always at index one of params.
-		c.currentFunction.declareLocal(sema.BaseIdentifier)
+		c.currentFunction.declareLocal(memoryGauge, sema.BaseIdentifier)
 	}
 
 	if paramList != nil {
 		for _, parameter := range paramList.Parameters {
 			parameterName := parameter.Identifier.Identifier
-			c.currentFunction.declareLocal(parameterName)
+			c.currentFunction.declareLocal(memoryGauge, parameterName)
 		}
 	}
 }
@@ -4174,6 +4349,8 @@ func (c *Compiler[_, _]) emitCloseUpvalue(localIndex uint16) {
 }
 
 func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
+	common.UseMemory(c.Config.MemoryGauge, common.CompilerInstructionMemoryUsage)
+
 	// Get the index of the instruction to be emitted.
 	// This is the offset before emitting the current instruction.
 	instructionIndex := c.codeGen.Offset()

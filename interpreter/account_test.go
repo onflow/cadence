@@ -417,62 +417,66 @@ type NoOpReferenceCreationContext struct{}
 
 var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
 
-func (n NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
+func (NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
-func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
-	// NO-OP
-	return nil
-}
-
-func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
-	// NO-OP
-}
-
-func (n NoOpReferenceCreationContext) MeterMemory(_ common.MemoryUsage) error {
+func (NoOpReferenceCreationContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) MeterComputation(_ common.ComputationUsage) error {
+func (NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
+	// NO-OP
+}
+
+func (NoOpReferenceCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) ReadStored(_ common.Address, _ common.StorageDomain, _ interpreter.StorageMapKey) interpreter.Value {
+func (NoOpReferenceCreationContext) MeterComputation(_ common.ComputationUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementType(_ interpreter.TypeID) (*sema.EntitlementType, error) {
+func (NoOpReferenceCreationContext) ReadStored(_ common.Address, _ common.StorageDomain, _ interpreter.StorageMapKey) interpreter.Value {
+	// NO-OP
+	return nil
+}
+
+func (NoOpReferenceCreationContext) GetEntitlementType(_ interpreter.TypeID) (*sema.EntitlementType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementMapType(_ interpreter.TypeID) (*sema.EntitlementMapType, error) {
+func (NoOpReferenceCreationContext) GetEntitlementMapType(_ interpreter.TypeID) (*sema.EntitlementMapType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetInterfaceType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.InterfaceType, error) {
+func (NoOpReferenceCreationContext) GetInterfaceType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.InterfaceType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetCompositeType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.CompositeType, error) {
+func (NoOpReferenceCreationContext) GetCompositeType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.CompositeType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(_ common.Location) bool {
+func (NoOpReferenceCreationContext) IsTypeInfoRecovered(_ common.Location) bool {
 	// NO-OP
 	return false
 }
 
-func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(_ interpreter.StaticType) sema.Type {
+func (NoOpReferenceCreationContext) SemaTypeFromStaticType(_ interpreter.StaticType) sema.Type {
 	// NO-OP
 	return nil
+}
+
+func (NoOpReferenceCreationContext) SemaAccessFromStaticAuthorization(interpreter.Authorization) (sema.Access, error) {
+	panic(errors.NewUnreachableError())
 }
 
 type NoOpFunctionCreationContext struct {
@@ -482,28 +486,28 @@ type NoOpFunctionCreationContext struct {
 
 var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
 
-func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
+func (NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) ReferencedResourceKindedValues(
+func (NoOpFunctionCreationContext) ReferencedResourceKindedValues(
 	_ atree.ValueID,
 ) map[*interpreter.EphemeralReferenceValue]struct{} {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(
+func (NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(
 	_ interpreter.Value,
 ) {
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
+func (NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) MeterMemory(_ common.MemoryUsage) error {
+func (NoOpFunctionCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
@@ -697,9 +701,9 @@ func testAccountWithErrorHandlerWithCompiler(
 		accountValues := make(map[storageKey]interpreter.Value)
 
 		for storageMapKey, accountStorage := range storage.(interpreter.InMemoryStorage).DomainStorageMaps {
-			iterator := accountStorage.Iterator(invokable)
+			iterator := accountStorage.Iterator()
 			for {
-				key, value := iterator.Next()
+				key, value := iterator.Next(invokable)
 				if key == nil {
 					break
 				}
@@ -957,8 +961,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadR2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1035,8 +1039,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadS2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1122,8 +1126,8 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 		_, err = inter.Invoke("copyS2")
 		RequireError(t, err)
 
-		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+		var typeMismatchError *interpreter.StoredValueTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
 
 		// NOTE: check loaded value was *not* removed from storage
 		require.Len(t, getAccountValues(), 1)
@@ -1283,8 +1287,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowR2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1463,8 +1467,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowS2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1630,7 +1634,7 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 	require.IsType(t, interpreter.TypeValue{}, loadType)
 	assert.Equal(t,
 		interpreter.FunctionStaticType{
-			Type: sema.Account_StorageTypeLoadFunctionType,
+			FunctionType: sema.Account_StorageTypeLoadFunctionType,
 		},
 		loadType.(interpreter.TypeValue).Type,
 	)
@@ -1640,7 +1644,7 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 	require.IsType(t, interpreter.TypeValue{}, copyType)
 	assert.Equal(t,
 		interpreter.FunctionStaticType{
-			Type: sema.Account_StorageTypeCopyFunctionType,
+			FunctionType: sema.Account_StorageTypeCopyFunctionType,
 		},
 		copyType.(interpreter.TypeValue).Type,
 	)

@@ -83,7 +83,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	var uuid uint64
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
