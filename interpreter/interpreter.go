@@ -526,6 +526,10 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) 
 	return interpreter.invokeVariable(functionName, arguments)
 }
 
+func (interpreter *Interpreter) InvokeWithoutComparison(functionName string, arguments ...Value) (value Value, err error) {
+	return interpreter.Invoke(functionName, arguments...)
+}
+
 // InvokeFunction invokes a function value with the given invocation
 func InvokeFunction(errorHandler ErrorHandler, function FunctionValue, invocation Invocation) (value Value, err error) {
 

@@ -274,8 +274,6 @@ func TestInterpretEnumInContract(t *testing.T) {
 func TestInterpretEnumLookup(t *testing.T) {
 	t.Parallel()
 
-	t.SkipNow()
-
 	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := parseCheckAndPrepareWithOptions(t,

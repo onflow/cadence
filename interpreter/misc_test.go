@@ -13480,7 +13480,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 
 		assert.Equal(t, 0, getKeyInvocationsCount)
 
-		_, err = inter.Invoke("test")
+		_, err = inter.InvokeWithoutComparison("test")
 		require.NoError(t, err)
 
 		assert.Equal(t, 1, getKeyInvocationsCount)
@@ -13568,7 +13568,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		assert.Equal(t, 0, getKey1InvocationsCount)
 		assert.Equal(t, 0, getKey2InvocationsCount)
 
-		_, err = inter.Invoke("test")
+		_, err = inter.InvokeWithoutComparison("test")
 		require.NoError(t, err)
 
 		// Target expression must be evaluated only once.
@@ -13643,7 +13643,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 
 		assert.Equal(t, 0, getKeyInvocationsCount)
 
-		_, err = inter.Invoke("test")
+		_, err = inter.InvokeWithoutComparison("test")
 		require.NoError(t, err)
 
 		// Target expression must be evaluated only once.
@@ -13734,7 +13734,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		assert.Equal(t, 0, getKey1InvocationsCount)
 		assert.Equal(t, 0, getKey2InvocationsCount)
 
-		_, err = inter.Invoke("test")
+		_, err = inter.InvokeWithoutComparison("test")
 		require.NoError(t, err)
 
 		// Target expression must be evaluated only once.
@@ -13810,7 +13810,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 
 		assert.Equal(t, 0, getKeyInvocationsCount)
 
-		_, err = inter.Invoke("test")
+		_, err = inter.InvokeWithoutComparison("test")
 		require.NoError(t, err)
 
 		// Target expression must be evaluated only once.

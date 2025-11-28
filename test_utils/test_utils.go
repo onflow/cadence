@@ -23,6 +23,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/test_utils/runtime_utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -33,6 +35,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq/compiler"
@@ -74,6 +77,10 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 	v.vmInstance.Reset()
 
 	return
+}
+
+func (v *VMInvokable) InvokeWithoutComparison(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
+	return v.Invoke(functionName, arguments...)
 }
 
 func (v *VMInvokable) InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) (err error) {
@@ -303,6 +310,8 @@ func ParseCheckAndPrepareWithOptions(
 		}
 	}
 
+	var interpreterBaseActivation *interpreter.VariableActivation
+
 	if interpreterConfig != nil {
 		vmConfig.MemoryGauge = interpreterConfig.MemoryGauge
 		vmConfig.ComputationGauge = interpreterConfig.ComputationGauge
@@ -320,7 +329,7 @@ func ParseCheckAndPrepareWithOptions(
 		// If there are builtin functions provided externally (e.g: for tests),
 		// then convert them to corresponding functions in compiler and in vm.
 		if interpreterConfig.BaseActivationHandler != nil {
-			interpreterBaseActivation := interpreterConfig.BaseActivationHandler(nil)
+			interpreterBaseActivation = interpreterConfig.BaseActivationHandler(nil)
 
 			// Only iterate through values defined at the current-level.
 			// Do not get the values defined in the parent activation/scope.
@@ -522,29 +531,148 @@ func ParseCheckAndPrepareWithOptions(
 
 	vmInvokable := NewVMInvokable(vmInstance, elaboration)
 
-	// Also interpreter, for comparison.
-	// Reset the meters for the interpreter and checker to avoid double metering.
-	if options.InterpreterConfig != nil {
-		options.InterpreterConfig.MemoryGauge = nil
-		options.InterpreterConfig.ComputationGauge = nil
+	// We can't use `ParseCheckAndInterpretWithOptions` directly,
+	// because we need to reset certain configurations to void double-counting.
+	interpreterInvokable, err := prepareWithInterpreter(
+		tb,
+		code,
+		options,
+		interpreterConfig,
+		interpreterBaseActivation,
+		vmInvokable,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCombinedInvokable(interpreterInvokable, vmInvokable), nil
+}
+
+func prepareWithInterpreter(tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	interpreterConfig *interpreter.Config,
+	interpreterBaseActivation *interpreter.VariableActivation,
+	vmInvokable *VMInvokable,
+) (*interpreter.Interpreter, error) {
+	// Use a fresh storage for the interpreter comparison.
+	var interpreterStorage interpreter.Storage
+	if interpreterConfig != nil {
+		if _, ok := interpreterConfig.Storage.(*runtime.Storage); ok {
+			ledger := runtime_utils.NewTestLedger(nil, nil)
+			interpreterStorage = runtime.NewStorage(
+				ledger,
+				nil,
+				nil,
+				runtime.StorageConfig{},
+			)
+		}
+	}
+	if interpreterStorage == nil {
+		interpreterStorage = NewUnmeteredInMemoryStorage()
+	}
+
+	// Reset the meters, event-collectors, log-collectors for the interpreter and checker
+	// to avoid double counting.
+	if interpreterConfig != nil {
+		interpreterConfig.MemoryGauge = nil
+		interpreterConfig.ComputationGauge = nil
+		interpreterConfig.OnEventEmitted = nil
 	}
 	if options.ParseAndCheckOptions != nil {
 		options.ParseAndCheckOptions.MemoryGauge = nil
 	}
-
 	if options.HandleCheckerError != nil {
 		// If there's an error handler, replace it with a No-Op.
 		options.HandleCheckerError = func(err error) {
 			// NO-OP
 		}
 	}
+	if interpreterBaseActivation != nil {
+		const (
+			logFuncName          = "log"
+			conditionLogFuncName = "conditionLog"
+			checkFuncName        = "check"
+		)
 
-	interpreterInvokable, err := ParseCheckAndInterpretWithOptions(tb, code, options)
-	if err != nil {
-		return nil, err
+		interpreterBaseActivation.Clone()
+
+		conditionLogStdLib := interpreterBaseActivation.Find(conditionLogFuncName)
+		if conditionLogStdLib != nil {
+			// Set a No-Op Conditions-log function, to avoid double logging.
+			noOpConditionsLogFunc := interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
+				ConditionLogFunctionType,
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.Value,
+					args []interpreter.Value,
+				) interpreter.Value {
+					return interpreter.TrueValue
+				},
+			)
+			interpreterBaseActivation.Set(
+				conditionLogFuncName,
+				interpreter.NewVariableWithValue(
+					nil,
+					noOpConditionsLogFunc,
+				),
+			)
+		}
+
+		logStdLib := interpreterBaseActivation.Find(logFuncName)
+		if logStdLib != nil {
+			// Set a No-Op log function, to avoid double logging.
+			noOpLogFunc := interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
+				stdlib.LogFunctionType,
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.Value,
+					args []interpreter.Value,
+				) interpreter.Value {
+					return interpreter.Void
+				},
+			)
+			interpreterBaseActivation.Set(
+				logFuncName,
+				interpreter.NewVariableWithValue(
+					nil,
+					noOpLogFunc,
+				),
+			)
+		}
+
+		// Only needed for `TestInterpretEphemeralReferencesInForLoop`.
+		checkStdLib := interpreterBaseActivation.Find(checkFuncName)
+		if checkStdLib != nil {
+			// Set a No-Op check function
+
+			value := checkStdLib.GetValue(vmInvokable)
+			functionValue := value.(*interpreter.HostFunctionValue)
+			noOpCheckFunc := interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
+				functionValue.Type,
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.Value,
+					args []interpreter.Value,
+				) interpreter.Value {
+					return interpreter.Void
+				},
+			)
+			interpreterBaseActivation.Set(
+				checkFuncName,
+				interpreter.NewVariableWithValue(
+					nil,
+					noOpCheckFunc,
+				),
+			)
+		}
+
 	}
 
-	return NewCombinedInvokable(interpreterInvokable, vmInvokable), nil
+	return ParseCheckAndInterpretWithOptions(tb, code, options)
 }
 
 func ParseCheckAndPrepareWithAtreeValidationsDisabled(
@@ -727,3 +855,15 @@ type TestEvent struct {
 	EventType   *sema.CompositeType
 	EventFields []interpreter.Value
 }
+
+var ConditionLogFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
+		{
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: sema.AnyStructTypeAnnotation,
+		},
+	},
+	sema.BoolTypeAnnotation,
+)
