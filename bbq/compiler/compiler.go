@@ -106,7 +106,9 @@ type Compiler[E, T any] struct {
 	// used mainly for exporting imports for linking
 	globalRemoveAddressTable map[string]string
 
-	addedImports map[common.Location]struct{}
+	// Passed to the vm to avoid repeated conversions from static-types to sema-types.
+	semaTypeCache map[sema.TypeID]sema.Type
+	addedImports  map[common.Location]struct{}
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
@@ -196,6 +198,7 @@ func newCompiler[E, T any](
 		importedGlobals:      importedGlobals,
 		typesInPool:          make(map[sema.TypeID]uint16),
 		constantsInPool:      make(map[constantUniqueKey]*DecodedConstant),
+		semaTypeCache:        make(map[sema.TypeID]sema.Type),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
@@ -736,13 +739,14 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQProgramMemoryUsage)
 
 	return &bbq.Program[E, T]{
-		Functions: functions,
-		Constants: constants,
-		Types:     types,
-		Imports:   imports,
-		Contracts: contracts,
-		Variables: variables,
-		Globals:   globals,
+		Functions:     functions,
+		Constants:     constants,
+		Types:         types,
+		Imports:       imports,
+		Contracts:     contracts,
+		Variables:     variables,
+		Globals:       globals,
+		SemaTypeCache: c.semaTypeCache,
 	}
 }
 
@@ -4274,6 +4278,8 @@ func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
 		data := c.typeGen.CompileType(staticType)
 		index = c.addCompiledType(ty, data)
 		c.typesInPool[typeID] = index
+
+		c.semaTypeCache[typeID] = ty
 	}
 
 	return index
