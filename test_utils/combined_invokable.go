@@ -1,21 +1,30 @@
 package test_utils
 
 import (
+	"bytes"
 	"fmt"
 	"slices"
 
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
-	compareSlabID = func(a, b atree.SlabID) int {
-		return a.Compare(b)
+	compareSlabs = func(a, b atree.Slab) int {
+		return a.SlabID().Compare(b.SlabID())
 	}
 
-	equalSlabID = func(a, b atree.SlabID) bool {
-		return a.Compare(b) == 0
+	equalSlab = func(slab1, slab2 atree.Slab) bool {
+		if mapDataSlab1, ok := slab1.(*atree.MapDataSlab); ok {
+			if mapDataSlab2, ok := slab2.(*atree.MapDataSlab); ok {
+				compareMapDataSlabs(mapDataSlab1, mapDataSlab2)
+				return true
+			}
+		}
+
+		return assert.ObjectsAreEqual(slab1, slab2)
 	}
 )
 
@@ -44,7 +53,7 @@ func (i *CombinedInvokable) Invoke(functionName string, arguments ...interpreter
 
 	_, _ = i.interpreter.Invoke(functionName, arguments...)
 
-	vmStorage := i.interpreter.Storage()
+	vmStorage := i.VMInvokable.Storage()
 	interpreterStorage := i.interpreter.Storage()
 
 	if vmStorage.Count() != interpreterStorage.Count() {
@@ -57,46 +66,130 @@ func (i *CombinedInvokable) Invoke(functionName string, arguments ...interpreter
 
 	// Collect VM slabs
 
-	vmSlabIDs, err := sortedSlabIDsFromStorage(vmStorage)
+	vmSlabs, err := sortedSlabIDsFromStorage(vmStorage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Collect Interpreter slabs
-	interpreterSlabIDs, err := sortedSlabIDsFromStorage(interpreterStorage)
+	interpreterSlabs, err := sortedSlabIDsFromStorage(interpreterStorage)
 	if err != nil {
 		return nil, err
 	}
 
-	if !slices.EqualFunc(vmSlabIDs, interpreterSlabIDs, equalSlabID) {
+	if !slices.EqualFunc(vmSlabs, interpreterSlabs, equalSlab) {
 		return nil, fmt.Errorf(
 			"slab IDs does not match!\ninterpreter: %v\nvm: %v",
-			interpreterSlabIDs,
-			vmSlabIDs,
+			interpreterSlabs,
+			vmSlabs,
 		)
 	}
 
 	return vmResult, nil
 }
 
-func sortedSlabIDsFromStorage(storage interpreter.Storage) ([]atree.SlabID, error) {
+func sortedSlabIDsFromStorage(storage interpreter.Storage) ([]atree.Slab, error) {
 	storageItr, err := storage.SlabIterator()
 	if err != nil {
 		return nil, err
 	}
 
-	var slabIDs []atree.SlabID
+	var slabs []atree.Slab
 	for {
-		slabId, slab := storageItr()
+		_, slab := storageItr()
 		if slab == nil {
 			break
 		}
-		slabIDs = append(slabIDs, slabId)
+		slabs = append(slabs, slab)
 	}
-	slices.SortFunc(slabIDs, compareSlabID)
-	return slabIDs, nil
+	slices.SortFunc(slabs, compareSlabs)
+	return slabs, nil
 }
 
 func (i *CombinedInvokable) InvokeWithoutComparison(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
 	return i.VMInvokable.Invoke(functionName, arguments...)
+}
+
+func compareMapDataSlabs(slab1 *atree.MapDataSlab, slab2 *atree.MapDataSlab) {
+
+	if slab1.Count() != slab2.Count() {
+		fmt.Printf("Different count: %d vs %d\n", slab1.Count(), slab2.Count())
+	}
+
+	entries1 := make(map[string]mapEntry)
+	err := slab1.Iterate(nil, newMapDataSlabIndexer(entries1))
+	if err != nil {
+		panic(fmt.Errorf("Error iterating slab 1: %w\n", err))
+	}
+
+	entries2 := make(map[string]mapEntry)
+	err = slab2.Iterate(nil, newMapDataSlabIndexer(entries2))
+	if err != nil {
+		panic(fmt.Errorf("Error iterating slab 2: %w\n", err))
+	}
+
+	for encodedKey, entry1 := range entries1 { //nolint:maprange
+		entry2, ok := entries2[encodedKey]
+		if !ok {
+			fmt.Printf("Key %q missing in slab 2\n", entry1.key)
+			continue
+		}
+
+		value1 := entry1.value
+		value2 := entry2.value
+
+		if mapDataSlabValue1, ok := value1.(*atree.MapDataSlab); ok {
+			if mapDataSlabValue2, ok := value2.(*atree.MapDataSlab); ok {
+				compareMapDataSlabs(mapDataSlabValue1, mapDataSlabValue2)
+				continue
+			}
+		}
+
+		if !bytes.Equal(encodeStorable(value1), encodeStorable(value2)) {
+			fmt.Printf(
+				"Different value for key %q: %q vs %q\n",
+				entry1.key,
+				value1,
+				value2,
+			)
+		}
+	}
+
+	for encodedKey, entry2 := range entries2 { //nolint:maprange
+		_, ok := entries1[encodedKey]
+		if !ok {
+			fmt.Printf("Key %q missing in slab 1\n", entry2.key)
+		}
+	}
+}
+
+func encodeStorable(storable atree.Storable) []byte {
+	var buf bytes.Buffer
+	encoder := atree.NewEncoder(&buf, interpreter.CBOREncMode)
+	err := storable.Encode(encoder)
+	if err != nil {
+		panic(fmt.Errorf("failed to encode storable: %w", err))
+	}
+
+	err = encoder.CBOR.Flush()
+	if err != nil {
+		panic(fmt.Errorf("failed to flush encoder: %w", err))
+	}
+
+	return buf.Bytes()
+}
+
+type mapEntry struct {
+	key   atree.MapKey
+	value atree.MapValue
+}
+
+func newMapDataSlabIndexer(entries map[string]mapEntry) func(key atree.MapKey, value atree.MapValue) error {
+	return func(key atree.MapKey, value atree.MapValue) error {
+		entries[string(encodeStorable(key))] = mapEntry{
+			key:   key,
+			value: value,
+		}
+		return nil
+	}
 }
