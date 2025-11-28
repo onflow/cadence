@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -45,23 +46,12 @@ func parseCheckAndPrepareWithConditionLogs(
 	getLogs func() []string,
 	err error,
 ) {
-	conditionLogFunctionType := sema.NewSimpleFunctionType(
-		sema.FunctionPurityView,
-		[]sema.Parameter{
-			{
-				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     "value",
-				TypeAnnotation: sema.AnyStructTypeAnnotation,
-			},
-		},
-		sema.BoolTypeAnnotation,
-	)
 
 	var logs []string
 
 	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"conditionLog",
-		conditionLogFunctionType,
+		test_utils.ConditionLogFunctionType,
 		"",
 		func(
 			_ interpreter.NativeFunctionContext,

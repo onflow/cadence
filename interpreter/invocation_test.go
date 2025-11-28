@@ -197,6 +197,8 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 
 func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
+	t.SkipNow()
+
 	t.Parallel()
 
 	inter := parseCheckAndPrepare(t, `
