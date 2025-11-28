@@ -140,15 +140,6 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 		InterpreterConfig: interpreterConfig,
 	}
 
-	if !compile {
-		invokable, err = ParseCheckAndInterpretWithOptions(
-			tb,
-			code,
-			parseCheckAndInterpretOptions,
-		)
-		return invokable, getEvents, err
-	}
-
 	invokable, err = ParseCheckAndPrepareWithOptions(tb, code, parseCheckAndInterpretOptions, compile)
 	require.NoError(tb, err)
 
@@ -529,7 +520,31 @@ func ParseCheckAndPrepareWithOptions(
 
 	elaboration := programs[location].DesugaredElaboration
 
-	return NewVMInvokable(vmInstance, elaboration), nil
+	vmInvokable := NewVMInvokable(vmInstance, elaboration)
+
+	// Also interpreter, for comparison.
+	// Reset the meters for the interpreter and checker to avoid double metering.
+	if options.InterpreterConfig != nil {
+		options.InterpreterConfig.MemoryGauge = nil
+		options.InterpreterConfig.ComputationGauge = nil
+	}
+	if options.ParseAndCheckOptions != nil {
+		options.ParseAndCheckOptions.MemoryGauge = nil
+	}
+
+	if options.HandleCheckerError != nil {
+		// If there's an error handler, replace it with a No-Op.
+		options.HandleCheckerError = func(err error) {
+			// NO-OP
+		}
+	}
+
+	interpreterInvokable, err := ParseCheckAndInterpretWithOptions(tb, code, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCombinedInvokable(interpreterInvokable, vmInvokable), nil
 }
 
 func ParseCheckAndPrepareWithAtreeValidationsDisabled(

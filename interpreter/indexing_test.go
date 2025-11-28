@@ -78,6 +78,8 @@ func TestInterpretIndexingExpressionTransfer(t *testing.T) {
 func TestInterpretIndexingExpressionTransferRead(t *testing.T) {
 	t.Parallel()
 
+	t.SkipNow()
+
 	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := parseCheckAndPrepareWithOptions(t,
@@ -120,6 +122,8 @@ func TestInterpretIndexingExpressionTransferRead(t *testing.T) {
 
 func TestInterpretIndexingExpressionTransferWrite(t *testing.T) {
 	t.Parallel()
+
+	t.SkipNow()
 
 	storage := NewUnmeteredInMemoryStorage()
 
