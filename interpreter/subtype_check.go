@@ -27,6 +27,23 @@ import (
 
 var FunctionPurityView = sema.FunctionPurityView
 
+// IsSameTypeKind determines if the given subtype belongs to the
+// same kind as the supertype.
+//
+// e.g: 'Never' type is a subtype of 'Integer', but not of the
+// same kind as 'Integer'. Whereas, 'Int8' is both a subtype
+// and also of same kind as 'Integer'.
+//
+// Note: Must be equivalent to `sema.IsSameTypeKind` method.
+func IsSameTypeKind(context TypeConverter, subType StaticType, superType StaticType) bool {
+
+	if subType == PrimitiveStaticTypeNever {
+		return false
+	}
+
+	return IsSubType(context, subType, superType)
+}
+
 func isAttachmentType(typeConverter TypeConverter, typ StaticType) bool {
 	switch typ {
 	case PrimitiveStaticTypeAnyResourceAttachment, PrimitiveStaticTypeAnyStructAttachment:

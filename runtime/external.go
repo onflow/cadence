@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 )
 
 // ExternalInterface is an implementation of runtime.Interface which forwards all calls to the embedded Interface.
@@ -484,8 +483,8 @@ func (e ExternalInterface) ValidateAccountCapabilitiesGet(
 	context interpreter.AccountCapabilityGetValidationContext,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
 ) (
 	valid bool,
 	err error,
