@@ -107,7 +107,7 @@ ci-with-tracing: test-with-tracing test-with-compiler-and-tracing
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	go test -coverprofile=coverage.txt -covermode=atomic -race -coverpkg $(COVER_PKGS) $(TEST_PKGS)
+	go test -tags compare_subtyping -coverprofile=coverage.txt -covermode=atomic -race -coverpkg $(COVER_PKGS) $(TEST_PKGS)
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 
