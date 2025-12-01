@@ -21,18 +21,16 @@ package bbq
 import (
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
-	"github.com/onflow/cadence/sema"
 )
 
 type Program[E, T any] struct {
-	Contracts     []*Contract
-	Imports       []Import
-	Functions     []Function[E]
-	Constants     []constant.DecodedConstant
-	Variables     []Variable[E]
-	Types         []T
-	Globals       []Global
-	SemaTypeCache map[sema.TypeID]sema.Type
+	Contracts []*Contract
+	Imports   []Import
+	Functions []Function[E]
+	Constants []constant.DecodedConstant
+	Variables []Variable[E]
+	Types     []T
+	Globals   []Global
 }
 
 type InstructionProgram = Program[opcode.Instruction, StaticType]

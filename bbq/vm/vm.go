@@ -67,7 +67,6 @@ func NewVM(
 	vm.configureContext()
 
 	context.recoverErrors = vm.RecoverErrors
-	context.semaTypeCache = program.SemaTypeCache
 
 	// Link global variables and functions.
 	linkedGlobals := context.linkGlobals(
