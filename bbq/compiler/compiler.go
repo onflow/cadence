@@ -3113,7 +3113,8 @@ func (c *Compiler[_, _]) compileIndexAccess(expression *ast.IndexExpression) {
 	}
 
 	indexedType := indexExpressionTypes.IndexedType
-	c.emitConvert(indexedType.IndexingType())
+	// TODO: optimize: once interpreter is removed, avoid redundant transfer and only convert
+	c.emitTransferIfNotResourceAndConvert(indexedType.IndexingType())
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
