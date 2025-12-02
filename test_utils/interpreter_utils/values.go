@@ -24,10 +24,12 @@ import (
 	"testing"
 
 	"github.com/kr/pretty"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/test_utils/common_utils"
 )
 
 func RequireValuesEqual(t testing.TB, context interpreter.ValueComparisonContext, expected, actual interpreter.Value) {
@@ -170,4 +172,25 @@ func DictionaryEntries[K, V any](
 	)
 
 	return res, iterStatus
+}
+
+type testValueCreationContext struct {
+	storage interpreter.Storage
+	common_utils.Invokable
+}
+
+var _ interpreter.MemberAccessibleContext = &testValueCreationContext{}
+var _ interpreter.ValueCreationContext = &testValueCreationContext{}
+
+func NewTestValueCreationContext(invokable common_utils.Invokable) *testValueCreationContext {
+	return &testValueCreationContext{
+		// Have a separate storage for creating values inside the test Go-code.
+		// Then it'll not interfere with cadence program's storage.
+		storage:   NewUnmeteredInMemoryStorage(),
+		Invokable: invokable,
+	}
+}
+
+func (c *testValueCreationContext) Storage() interpreter.Storage {
+	return c.storage
 }

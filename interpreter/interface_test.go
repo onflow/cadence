@@ -1322,7 +1322,7 @@ func TestInterpretInvokeDefaultFunction(t *testing.T) {
 	require.NoError(t, err)
 
 	var expectedSlabIndex atree.SlabIndex
-	binary.BigEndian.PutUint64(expectedSlabIndex[:], 7)
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
 
 	require.Equal(
 		t,

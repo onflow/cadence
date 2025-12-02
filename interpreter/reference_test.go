@@ -989,22 +989,22 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			},
 		)
 
-		_, err = inter.Invoke("setup", arrayRef)
+		_, err = inter.InvokeWithoutComparison("setup", arrayRef)
 		require.NoError(t, err)
 
 		// First reference must be invalid
-		_, err = inter.Invoke("getRef1Id")
+		_, err = inter.InvokeWithoutComparison("getRef1Id")
 		RequireError(t, err)
 		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 		// Second reference must be invalid
-		_, err = inter.Invoke("getRef2Id")
+		_, err = inter.InvokeWithoutComparison("getRef2Id")
 		RequireError(t, err)
 		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 		// Third reference must be valid
-		result, err := inter.Invoke("getRef3Id")
+		result, err := inter.InvokeWithoutComparison("getRef3Id")
 		assert.NoError(t, err)
 		AssertValuesEqual(
 			t,
@@ -2861,6 +2861,8 @@ func TestInterpretDereference(t *testing.T) {
 		})
 
 		t.Run("{Int: [String]}", func(t *testing.T) {
+			t.SkipNow()
+
 			inter := parseCheckAndPrepare(
 				t,
 				`

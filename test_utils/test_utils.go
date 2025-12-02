@@ -23,8 +23,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/test_utils/runtime_utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -32,10 +30,12 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/pretty"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	"github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq/compiler"
@@ -244,7 +244,11 @@ func ParseCheckAndPrepareWithOptions(
 
 	var storage interpreter.Storage
 	if interpreterConfig != nil {
-		storage = interpreterConfig.Storage
+		switch interpreterConfig.Storage.(type) {
+		case *runtime.Storage:
+			// Keep using it
+			storage = interpreterConfig.Storage
+		}
 	}
 	if storage == nil {
 		storage = interpreter.NewInMemoryStorage(
@@ -555,21 +559,22 @@ func prepareWithInterpreter(tb testing.TB,
 	interpreterBaseActivation *interpreter.VariableActivation,
 	vmInvokable *VMInvokable,
 ) (*interpreter.Interpreter, error) {
+
 	// Use a fresh storage for the interpreter comparison.
-	var interpreterStorage interpreter.Storage
 	if interpreterConfig != nil {
-		if _, ok := interpreterConfig.Storage.(*runtime.Storage); ok {
+		switch interpreterConfig.Storage.(type) {
+		case *runtime.Storage:
 			ledger := runtime_utils.NewTestLedger(nil, nil)
-			interpreterStorage = runtime.NewStorage(
+			interpreterConfig.Storage = runtime.NewStorage(
 				ledger,
 				nil,
 				nil,
 				runtime.StorageConfig{},
 			)
+
+		default:
+			interpreterConfig.Storage = NewUnmeteredInMemoryStorage()
 		}
-	}
-	if interpreterStorage == nil {
-		interpreterStorage = NewUnmeteredInMemoryStorage()
 	}
 
 	// Reset the meters, event-collectors, log-collectors for the interpreter and checker
@@ -577,7 +582,13 @@ func prepareWithInterpreter(tb testing.TB,
 	if interpreterConfig != nil {
 		interpreterConfig.MemoryGauge = nil
 		interpreterConfig.ComputationGauge = nil
-		interpreterConfig.OnEventEmitted = nil
+		interpreterConfig.OnEventEmitted = func(
+			_ interpreter.ValueExportContext,
+			_ *sema.CompositeType,
+			_ []interpreter.Value,
+		) error {
+			return nil
+		}
 	}
 	if options.ParseAndCheckOptions != nil {
 		options.ParseAndCheckOptions.MemoryGauge = nil

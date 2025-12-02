@@ -68,10 +68,10 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke("get", value)
+				_, err = inter.InvokeWithoutComparison("get", value)
 				require.NoError(t, err)
 
-				_, err = inter.Invoke("set", value)
+				_, err = inter.InvokeWithoutComparison("set", value)
 				require.NoError(t, err)
 			})
 

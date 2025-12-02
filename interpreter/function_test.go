@@ -433,7 +433,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		require.NoError(t, err)
 
 		var expectedSlabIndex atree.SlabIndex
-		binary.BigEndian.PutUint64(expectedSlabIndex[:], 3)
+		binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
 
 		require.Equal(
 			t,
@@ -474,7 +474,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		require.NoError(t, err)
 
 		var expectedSlabIndex atree.SlabIndex
-		binary.BigEndian.PutUint64(expectedSlabIndex[:], 3)
+		binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
 
 		require.Equal(
 			t,

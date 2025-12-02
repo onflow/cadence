@@ -301,7 +301,7 @@ func TestInterpretEnumLookup(t *testing.T) {
 	require.NoError(t, err)
 
 	var expectedSlabIndex atree.SlabIndex
-	binary.BigEndian.PutUint64(expectedSlabIndex[:], 4)
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
 
 	require.Equal(
 		t,
