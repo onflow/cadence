@@ -2664,6 +2664,7 @@ func TestLexBlockComment(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
 						},
 					},
+					// Error occurs at the EOF, which doesn't have a position within the source.
 					Source: "\000",
 				},
 				{

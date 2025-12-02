@@ -390,26 +390,26 @@ func (l *lexer) markTrailingCommentsEnd() {
 func (l *lexer) emitComment() {
 	endPos := l.endPos()
 
-	currentRange := ast.NewRange(
-		l.memoryGauge,
-		l.startPosition(),
-		ast.NewPosition(
-			l.memoryGauge,
-			l.endOffset-1,
-			endPos.line,
-			endPos.column,
-		),
-	)
-
-	l.consume(endPos)
-
 	if l.trackComments {
 		if l.currentComments == nil {
 			l.currentComments = []*ast.Comment{}
 		}
 
-		l.currentComments = append(l.currentComments, ast.NewComment(l.memoryGauge, currentRange.Source(l.input)))
+		commentRange := ast.NewRange(
+			l.memoryGauge,
+			l.startPosition(),
+			ast.NewPosition(
+				l.memoryGauge,
+				l.endOffset-1,
+				endPos.line,
+				endPos.column,
+			),
+		)
+
+		l.currentComments = append(l.currentComments, ast.NewComment(l.memoryGauge, commentRange.Source(l.input)))
 	}
+
+	l.consume(endPos)
 }
 
 // endPos pre-computed end-position by calling l.endPos()

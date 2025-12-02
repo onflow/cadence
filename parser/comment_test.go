@@ -34,6 +34,13 @@ func TestParseBlockComment(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseExpression(`/**/ true`)
+		require.Empty(t, errs)
+	})
+
 	t.Run("nested", func(t *testing.T) {
 
 		t.Parallel()
