@@ -2841,7 +2841,7 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 3)
 
-		conformanceError := sema.CyclicConformanceError{}
+		var conformanceError *sema.CyclicConformanceError
 		require.ErrorAs(t, errs[0], &conformanceError)
 		assert.Equal(t, "Foo", conformanceError.InterfaceType.QualifiedIdentifier())
 
