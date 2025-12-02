@@ -156,7 +156,7 @@ func (l *lexer) clear() {
 	l.tokenCount = 0
 	l.mode = lexerModeNormal
 	l.openBrackets = 0
-	l.currentComments = nil
+	l.currentComments = l.currentComments[:0]
 	l.trackComments = false
 }
 
