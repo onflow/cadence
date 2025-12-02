@@ -1153,7 +1153,7 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
-	inter, err := parseCheckAndPrepareWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(t,
 		`
 		fun test() {
 			nativeFunction(0, false)

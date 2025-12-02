@@ -4988,8 +4988,6 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		storage := NewUnmeteredInMemoryStorage()
-
 		var err error
 		inter, err = parseCheckAndPrepareWithOptionsWithoutStorageComparison(t,
 			`
@@ -5027,7 +5025,6 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 					},
 				},
 				InterpreterConfig: &interpreter.Config{
-					Storage: storage,
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -5047,6 +5044,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			nil,
 			true, // r is standalone.
 		)
+
+		storage := inter.Storage()
 
 		domain := storagePath.Domain.StorageDomain()
 		storageMap := storage.GetDomainStorageMap(inter, storageAddress, domain, true)

@@ -864,6 +864,12 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
         `)
 		require.NoError(t, err)
 
+		// Explicitly initialize the contracts, if it's the VM.
+		if vmInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
+			_, err = vmInvokable.InitializeContract("C")
+			require.NoError(t, err)
+		}
+
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 

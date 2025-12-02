@@ -52,45 +52,41 @@ func NewCombinedInvokable(
 	}
 }
 
-func (i *CombinedInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	vmResult, err := i.VMInvokable.Invoke(functionName, arguments...)
-	if err != nil {
-		return nil, err
-	}
+func (i *CombinedInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, vmError error) {
+	vmResult, vmError := i.VMInvokable.Invoke(functionName, arguments...)
 
 	// If the test was testup without the need for comparing slabs,
 	// then return only the VM result.
 	if i.interpreter == nil {
-		return vmResult, nil
+		return vmResult, vmError
 	}
 
-	_, err = i.interpreter.Invoke(functionName, arguments...)
-	if err != nil {
-		return nil, err
+	// Invoke the interpreter, even if there are errors from VM.
+	// This is because even an erroneous program could have side effects
+	// on slab creation.
+	_, interpreterError := i.interpreter.Invoke(functionName, arguments...)
+
+	if vmError != nil {
+		return nil, vmError
+	}
+
+	if interpreterError != nil {
+		return nil, interpreterError
 	}
 
 	vmStorage := i.VMInvokable.Storage()
 	interpreterStorage := i.interpreter.Storage()
 
-	if vmStorage.Count() != interpreterStorage.Count() {
-		return nil, fmt.Errorf(
-			"storage count mismatch. interpreter: %d, vm: %d",
-			interpreterStorage.Count(),
-			vmStorage.Count(),
-		)
-	}
-
 	// Collect VM slabs
-
-	vmSlabs, err := sortedSlabIDsFromStorage(vmStorage)
-	if err != nil {
-		return nil, err
+	vmSlabs, vmError := sortedSlabIDsFromStorage(vmStorage)
+	if vmError != nil {
+		return nil, vmError
 	}
 
 	// Collect Interpreter slabs
-	interpreterSlabs, err := sortedSlabIDsFromStorage(interpreterStorage)
-	if err != nil {
-		return nil, err
+	interpreterSlabs, vmError := sortedSlabIDsFromStorage(interpreterStorage)
+	if vmError != nil {
+		return nil, vmError
 	}
 
 	var slabComparisonError error

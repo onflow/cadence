@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -2743,6 +2744,13 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 			})
 
 		require.NoError(t, err)
+
+		// Explicitly initialize the contracts, if it's the VM.
+		if vmInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
+			_, err = vmInvokable.InitializeContract("base")
+			require.NoError(t, err)
+		}
+
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
