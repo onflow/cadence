@@ -108,7 +108,28 @@ func (v *VMInvokable) InitializeContract(contractName string, arguments ...inter
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
 
-	invokable, err := ParseCheckAndPrepareWithOptions(tb, code, ParseCheckAndInterpretOptions{}, compile)
+	invokable, err := ParseCheckAndPrepareWithOptions(
+		tb,
+		code,
+		ParseCheckAndInterpretOptions{},
+		compile,
+		true,
+	)
+	require.NoError(tb, err)
+
+	return invokable
+}
+
+func ParseCheckAndPrepareWithoutStorageComparison(tb testing.TB, code string, compile bool) Invokable {
+	tb.Helper()
+
+	invokable, err := ParseCheckAndPrepareWithOptions(
+		tb,
+		code,
+		ParseCheckAndInterpretOptions{},
+		compile,
+		false,
+	)
 	require.NoError(tb, err)
 
 	return invokable
@@ -147,7 +168,13 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 		InterpreterConfig: interpreterConfig,
 	}
 
-	invokable, err = ParseCheckAndPrepareWithOptions(tb, code, parseCheckAndInterpretOptions, compile)
+	invokable, err = ParseCheckAndPrepareWithOptions(
+		tb,
+		code,
+		parseCheckAndInterpretOptions,
+		compile,
+		true,
+	)
 	require.NoError(tb, err)
 
 	return invokable, getEvents, err
@@ -187,7 +214,8 @@ func ParseCheckAndPrepareWithLogs(
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
-	invokable, err = ParseCheckAndPrepareWithOptions(tb,
+	invokable, err = ParseCheckAndPrepareWithOptions(
+		tb,
 		code,
 		ParseCheckAndInterpretOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
@@ -204,6 +232,7 @@ func ParseCheckAndPrepareWithLogs(
 			},
 		},
 		compile,
+		true,
 	)
 
 	getLogs = func() []string {
@@ -218,6 +247,7 @@ func ParseCheckAndPrepareWithOptions(
 	code string,
 	options ParseCheckAndInterpretOptions,
 	compile bool,
+	compare bool,
 ) (
 	invokable Invokable,
 	err error,
@@ -535,18 +565,22 @@ func ParseCheckAndPrepareWithOptions(
 
 	vmInvokable := NewVMInvokable(vmInstance, elaboration)
 
-	// We can't use `ParseCheckAndInterpretWithOptions` directly,
-	// because we need to reset certain configurations to void double-counting.
-	interpreterInvokable, err := prepareWithInterpreter(
-		tb,
-		code,
-		options,
-		interpreterConfig,
-		interpreterBaseActivation,
-		vmInvokable,
-	)
-	if err != nil {
-		return nil, err
+	var interpreterInvokable *interpreter.Interpreter
+
+	if compare {
+		// We can't use `ParseCheckAndInterpretWithOptions` directly,
+		// because we need to reset certain configurations to void double-counting.
+		interpreterInvokable, err = prepareWithInterpreter(
+			tb,
+			code,
+			options,
+			interpreterConfig,
+			interpreterBaseActivation,
+			vmInvokable,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return NewCombinedInvokable(interpreterInvokable, vmInvokable), nil
@@ -707,7 +741,13 @@ func ParseCheckAndPrepareWithAtreeValidationsDisabled(
 	interpreterConfig.AtreeStorageValidationEnabled = false
 	interpreterConfig.AtreeValueValidationEnabled = false
 
-	invokable, err := ParseCheckAndPrepareWithOptions(tb, code, options, compile)
+	invokable, err := ParseCheckAndPrepareWithOptions(
+		tb,
+		code,
+		options,
+		compile,
+		true,
+	)
 	return invokable, err
 }
 

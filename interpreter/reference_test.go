@@ -910,7 +910,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndPrepareWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(t, `
             resource R {
                 access(all) var id: Int
 
@@ -989,22 +989,22 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			},
 		)
 
-		_, err = inter.InvokeWithoutComparison("setup", arrayRef)
+		_, err = inter.Invoke("setup", arrayRef)
 		require.NoError(t, err)
 
 		// First reference must be invalid
-		_, err = inter.InvokeWithoutComparison("getRef1Id")
+		_, err = inter.Invoke("getRef1Id")
 		RequireError(t, err)
 		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 		// Second reference must be invalid
-		_, err = inter.InvokeWithoutComparison("getRef2Id")
+		_, err = inter.Invoke("getRef2Id")
 		RequireError(t, err)
 		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 		// Third reference must be valid
-		result, err := inter.InvokeWithoutComparison("getRef3Id")
+		result, err := inter.Invoke("getRef3Id")
 		assert.NoError(t, err)
 		AssertValuesEqual(
 			t,

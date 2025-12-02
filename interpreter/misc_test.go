@@ -4991,7 +4991,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		storage := NewUnmeteredInMemoryStorage()
 
 		var err error
-		inter, err = parseCheckAndPrepareWithOptions(t,
+		inter, err = parseCheckAndPrepareWithOptionsWithoutStorageComparison(t,
 			`
 	              resource interface RI {}
 
@@ -5036,7 +5036,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		r, err := inter.InvokeWithoutComparison("createR")
+		r, err := inter.Invoke("createR")
 		require.NoError(t, err)
 
 		r = r.Transfer(
@@ -5053,7 +5053,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		storageMapKey := interpreter.StringStorageMapKey(storagePath.Identifier)
 		storageMap.WriteValue(inter, storageMapKey, r)
 
-		result, err := inter.InvokeWithoutComparison("testValidUnauthorized")
+		result, err := inter.Invoke("testValidUnauthorized")
 		require.NoError(t, err)
 
 		assert.IsType(t,
@@ -5061,7 +5061,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			result,
 		)
 
-		result, err = inter.InvokeWithoutComparison("testValidAuthorized")
+		result, err = inter.Invoke("testValidAuthorized")
 		require.NoError(t, err)
 
 		assert.IsType(t,
@@ -5069,7 +5069,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			result,
 		)
 
-		result, err = inter.InvokeWithoutComparison("testValidIntersection")
+		result, err = inter.Invoke("testValidIntersection")
 		require.NoError(t, err)
 
 		assert.IsType(t,
@@ -12740,7 +12740,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 		newInter := func() Invokable {
 
-			inter, err := parseCheckAndPrepareWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(t,
 				code,
 				ParseCheckAndInterpretOptions{
 					InterpreterConfig: &interpreter.Config{
@@ -12762,7 +12762,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 		inter := newInter()
 
-		foo, err := inter.InvokeWithoutComparison("setup")
+		foo, err := inter.Invoke("setup")
 		require.NoError(t, err)
 
 		address := common.MustBytesToAddress([]byte{0x1})
@@ -12825,7 +12825,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 			nil,
 		)
 
-		result, err := inter.InvokeWithoutComparison("update", ref)
+		result, err := inter.Invoke("update", ref)
 		require.NoError(t, err)
 		assert.Equal(t, interpreter.TrueValue, result)
 
@@ -12853,7 +12853,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 			nil,
 		)
 
-		result, err = inter.InvokeWithoutComparison("updateAgain", ref)
+		result, err = inter.Invoke("updateAgain", ref)
 		require.NoError(t, err)
 		assert.Equal(t, interpreter.TrueValue, result)
 	}
@@ -13454,7 +13454,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, getKeyFunction)
 
-		inter, err := parseCheckAndPrepareWithOptions(
+		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			fmt.Sprintf(`
                 resource R {
@@ -13495,7 +13495,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 
 		assert.Equal(t, 0, getKeyInvocationsCount)
 
-		_, err = inter.InvokeWithoutComparison("test")
+		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
 		assert.Equal(t, 1, getKeyInvocationsCount)
@@ -13543,7 +13543,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		interpreter.Declare(baseActivation, getKey1Function)
 		interpreter.Declare(baseActivation, getKey2Function)
 
-		inter, err := parseCheckAndPrepareWithOptions(
+		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			`
                 resource R {
@@ -13583,7 +13583,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		assert.Equal(t, 0, getKey1InvocationsCount)
 		assert.Equal(t, 0, getKey2InvocationsCount)
 
-		_, err = inter.InvokeWithoutComparison("test")
+		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
 		// Target expression must be evaluated only once.
@@ -13619,7 +13619,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, getKeyFunction)
 
-		inter, err := parseCheckAndPrepareWithOptions(
+		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			`
                 resource R {
@@ -13658,7 +13658,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 
 		assert.Equal(t, 0, getKeyInvocationsCount)
 
-		_, err = inter.InvokeWithoutComparison("test")
+		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
 		// Target expression must be evaluated only once.
@@ -13707,7 +13707,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		interpreter.Declare(baseActivation, getKey1Function)
 		interpreter.Declare(baseActivation, getKey2Function)
 
-		inter, err := parseCheckAndPrepareWithOptions(
+		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			`
                 resource R {
@@ -13749,7 +13749,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		assert.Equal(t, 0, getKey1InvocationsCount)
 		assert.Equal(t, 0, getKey2InvocationsCount)
 
-		_, err = inter.InvokeWithoutComparison("test")
+		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
 		// Target expression must be evaluated only once.
@@ -13785,7 +13785,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, getKeyFunction)
 
-		inter, err := parseCheckAndPrepareWithOptions(
+		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			`
                 resource R {
@@ -13825,7 +13825,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 
 		assert.Equal(t, 0, getKeyInvocationsCount)
 
-		_, err = inter.InvokeWithoutComparison("test")
+		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
 		// Target expression must be evaluated only once.

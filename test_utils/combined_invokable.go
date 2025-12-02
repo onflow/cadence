@@ -58,6 +58,12 @@ func (i *CombinedInvokable) Invoke(functionName string, arguments ...interpreter
 		return nil, err
 	}
 
+	// If the test was testup without the need for comparing slabs,
+	// then return only the VM result.
+	if i.interpreter == nil {
+		return vmResult, nil
+	}
+
 	_, err = i.interpreter.Invoke(functionName, arguments...)
 	if err != nil {
 		return nil, err

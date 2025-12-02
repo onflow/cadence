@@ -44,7 +44,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndPrepare(t, `
+				inter := parseCheckAndPrepareWithoutStorageComparison(t, `
                     struct S {
                         var foo: Int
 
@@ -68,10 +68,10 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S")
 				require.NoError(t, err)
 
-				_, err = inter.InvokeWithoutComparison("get", value)
+				_, err = inter.Invoke("get", value)
 				require.NoError(t, err)
 
-				_, err = inter.InvokeWithoutComparison("set", value)
+				_, err = inter.Invoke("set", value)
 				require.NoError(t, err)
 			})
 
@@ -208,7 +208,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndPrepare(t, `
+				inter := parseCheckAndPrepareWithoutStorageComparison(t, `
                     struct interface SI {
                         var foo: Int
                     }
@@ -388,7 +388,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndPrepare(t, `
+				inter := parseCheckAndPrepareWithoutStorageComparison(t, `
                     struct S {
                         var foo: Int
 
