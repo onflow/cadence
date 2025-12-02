@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
-	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 // TestInterpretIndexingExpressionTransfer tests if the indexing value
@@ -78,9 +77,7 @@ func TestInterpretIndexingExpressionTransfer(t *testing.T) {
 func TestInterpretIndexingExpressionTransferReadStatement(t *testing.T) {
 	t.Parallel()
 
-	storage := NewUnmeteredInMemoryStorage()
-
-	inter, err := parseCheckAndPrepareWithOptions(t,
+	inter := parseCheckAndPrepare(t,
 		`
           enum E: UInt8 {
               case A
@@ -91,22 +88,18 @@ func TestInterpretIndexingExpressionTransferReadStatement(t *testing.T) {
               counts[E.A]
           }
         `,
-		ParseCheckAndInterpretOptions{
-			InterpreterConfig: &interpreter.Config{
-				Storage: storage,
-			},
-		},
 	)
+
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	_, err = inter.Invoke("test")
-	require.NoError(t, err)
+	storage := inter.Storage().(interpreter.InMemoryStorage)
 
 	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 	require.NoError(t, err)
 
 	var expectedSlabIndex atree.SlabIndex
-	binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 5)
 
 	require.Equal(
 		t,
@@ -121,9 +114,7 @@ func TestInterpretIndexingExpressionTransferReadStatement(t *testing.T) {
 func TestInterpretIndexingExpressionTransferReadExpression(t *testing.T) {
 	t.Parallel()
 
-	storage := NewUnmeteredInMemoryStorage()
-
-	inter, err := parseCheckAndPrepareWithOptions(t,
+	inter := parseCheckAndPrepare(t,
 		`
           enum E: UInt8 {
               case A
@@ -134,22 +125,18 @@ func TestInterpretIndexingExpressionTransferReadExpression(t *testing.T) {
               let count = counts[E.A]
           }
         `,
-		ParseCheckAndInterpretOptions{
-			InterpreterConfig: &interpreter.Config{
-				Storage: storage,
-			},
-		},
 	)
+
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	_, err = inter.Invoke("test")
-	require.NoError(t, err)
+	storage := inter.Storage().(interpreter.InMemoryStorage)
 
 	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 	require.NoError(t, err)
 
 	var expectedSlabIndex atree.SlabIndex
-	binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 5)
 
 	require.Equal(
 		t,
@@ -164,9 +151,7 @@ func TestInterpretIndexingExpressionTransferReadExpression(t *testing.T) {
 func TestInterpretIndexingExpressionTransferWrite(t *testing.T) {
 	t.Parallel()
 
-	storage := NewUnmeteredInMemoryStorage()
-
-	inter, err := parseCheckAndPrepareWithOptions(t,
+	inter := parseCheckAndPrepare(t,
 		`
           enum E: UInt8 {
               case A
@@ -177,22 +162,18 @@ func TestInterpretIndexingExpressionTransferWrite(t *testing.T) {
               counts[E.A] = "A"
           }
         `,
-		ParseCheckAndInterpretOptions{
-			InterpreterConfig: &interpreter.Config{
-				Storage: storage,
-			},
-		},
 	)
+
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	_, err = inter.Invoke("test")
-	require.NoError(t, err)
+	storage := inter.Storage().(interpreter.InMemoryStorage)
 
 	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 	require.NoError(t, err)
 
 	var expectedSlabIndex atree.SlabIndex
-	binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 6)
 
 	require.Equal(
 		t,

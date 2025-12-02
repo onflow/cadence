@@ -274,9 +274,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 func TestInterpretEnumLookup(t *testing.T) {
 	t.Parallel()
 
-	storage := NewUnmeteredInMemoryStorage()
-
-	inter, err := parseCheckAndPrepareWithOptions(t,
+	inter := parseCheckAndPrepare(t,
 		`
           enum E: UInt8 {
               case A
@@ -286,22 +284,18 @@ func TestInterpretEnumLookup(t *testing.T) {
               return E(rawValue: 0)!
           }
         `,
-		ParseCheckAndInterpretOptions{
-			InterpreterConfig: &interpreter.Config{
-				Storage: storage,
-			},
-		},
 	)
+
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	_, err = inter.Invoke("test")
-	require.NoError(t, err)
+	storage := inter.Storage().(interpreter.InMemoryStorage)
 
 	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 	require.NoError(t, err)
 
 	var expectedSlabIndex atree.SlabIndex
-	binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 4)
 
 	require.Equal(
 		t,

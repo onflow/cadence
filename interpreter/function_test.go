@@ -407,9 +407,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("no transfer, result is used", func(t *testing.T) {
 		t.Parallel()
 
-		storage := NewUnmeteredInMemoryStorage()
-
-		inter, err := parseCheckAndPrepareWithOptions(t,
+		inter := parseCheckAndPrepare(t,
 			`
               struct S {}
 
@@ -418,22 +416,18 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
                   return S()
               }
             `,
-			ParseCheckAndInterpretOptions{
-				InterpreterConfig: &interpreter.Config{
-					Storage: storage,
-				},
-			},
 		)
+
+		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		_, err = inter.Invoke("test")
-		require.NoError(t, err)
+		storage := inter.Storage().(interpreter.InMemoryStorage)
 
 		slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 		require.NoError(t, err)
 
 		var expectedSlabIndex atree.SlabIndex
-		binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
+		binary.BigEndian.PutUint64(expectedSlabIndex[:], 3)
 
 		require.Equal(
 			t,
@@ -448,9 +442,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("no transfer, result is not used", func(t *testing.T) {
 		t.Parallel()
 
-		storage := NewUnmeteredInMemoryStorage()
-
-		inter, err := parseCheckAndPrepareWithOptions(t,
+		inter := parseCheckAndPrepare(t,
 			`
               struct S {}
 
@@ -459,22 +451,18 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
                   return S()
               }
             `,
-			ParseCheckAndInterpretOptions{
-				InterpreterConfig: &interpreter.Config{
-					Storage: storage,
-				},
-			},
 		)
+
+		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		_, err = inter.Invoke("test")
-		require.NoError(t, err)
+		storage := inter.Storage().(interpreter.InMemoryStorage)
 
 		slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 		require.NoError(t, err)
 
 		var expectedSlabIndex atree.SlabIndex
-		binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
+		binary.BigEndian.PutUint64(expectedSlabIndex[:], 3)
 
 		require.Equal(
 			t,

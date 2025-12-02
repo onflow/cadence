@@ -4038,8 +4038,6 @@ func TestInterpretInheritedDefaultDestroyEvent(t *testing.T) {
 
 	var events []event
 
-	storage := NewUnmeteredInMemoryStorage()
-
 	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
               resource interface RI {
@@ -4065,7 +4063,6 @@ func TestInterpretInheritedDefaultDestroyEvent(t *testing.T) {
 	    `,
 		ParseCheckAndInterpretOptions{
 			InterpreterConfig: &interpreter.Config{
-				Storage: storage,
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					eventType *sema.CompositeType,
@@ -4095,11 +4092,13 @@ func TestInterpretInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, events[1].Fields, 1)
 	assert.Equal(t, 1, events[1].Fields[0].(interpreter.IntValue).ToInt())
 
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
 	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 	require.NoError(t, err)
 
 	var expectedSlabIndex atree.SlabIndex
-	binary.BigEndian.PutUint64(expectedSlabIndex[:], 1)
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 4)
 
 	require.Equal(
 		t,
