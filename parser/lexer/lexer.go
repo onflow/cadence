@@ -157,6 +157,7 @@ func (l *lexer) clear() {
 	l.mode = lexerModeNormal
 	l.openBrackets = 0
 	l.currentComments = nil
+	l.trackComments = false
 }
 
 func (l *lexer) Reclaim() {
