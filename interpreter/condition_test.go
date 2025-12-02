@@ -1238,7 +1238,7 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 		require.NoError(tt, err)
 
 		// Explicitly initialize the contracts, if it's the VM.
-		if vmInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
 			_, err = vmInvokable.InitializeContract("C1")
 			require.NoError(t, err)
 

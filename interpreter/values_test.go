@@ -215,9 +215,6 @@ func withoutAtreeStorageValidationEnabled[T any](invokable Invokable, f func() T
 		// Skip it here once implemented.
 		return f()
 
-	case *test_utils.CombinedInvokable:
-		return withoutAtreeStorageValidationEnabled[T](invokable.VMInvokable, f)
-
 	default:
 		panic(fmt.Errorf("unsupported invokable type %T", invokable))
 	}

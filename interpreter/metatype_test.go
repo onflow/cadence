@@ -1079,16 +1079,13 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
 		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
 
-		if combinedInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
-			vmInvokable := combinedInvokable.VMInvokable
-			if vmInvokable != nil {
-				vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
-					if loc == location {
-						return &bbq.InstructionProgram{}
-					}
-
-					return nil
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == location {
+					return &bbq.InstructionProgram{}
 				}
+
+				return nil
 			}
 		}
 
@@ -1129,12 +1126,9 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
 		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
 
-		if combinedInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
-			vmInvokable := combinedInvokable.VMInvokable
-			if vmInvokable != nil {
-				vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
-					panic(importErr)
-				}
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				panic(importErr)
 			}
 		}
 
@@ -1200,16 +1194,13 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		if combinedInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
-			vmInvokable := combinedInvokable.VMInvokable
-			if vmInvokable != nil {
-				vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
-					if loc == addressLocation {
-						return &bbq.InstructionProgram{}
-					}
-
-					return nil
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == addressLocation {
+					return &bbq.InstructionProgram{}
 				}
+
+				return nil
 			}
 		}
 
@@ -1258,16 +1249,13 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		if combinedInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
-			vmInvokable := combinedInvokable.VMInvokable
-			if vmInvokable != nil {
-				vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
-					if loc == stringLocation {
-						return &bbq.InstructionProgram{}
-					}
-
-					return nil
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == stringLocation {
+					return &bbq.InstructionProgram{}
 				}
+
+				return nil
 			}
 		}
 
@@ -1407,16 +1395,13 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		if combinedInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
-			vmInvokable := combinedInvokable.VMInvokable
-			if vmInvokable != nil {
-				vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
-					if loc == addressLocation {
-						return &bbq.InstructionProgram{}
-					}
-
-					return nil
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == addressLocation {
+					return &bbq.InstructionProgram{}
 				}
+
+				return nil
 			}
 		}
 
@@ -1479,16 +1464,13 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		if combinedInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
-			vmInvokable := combinedInvokable.VMInvokable
-			if vmInvokable != nil {
-				vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
-					if loc == stringLocation {
-						return &bbq.InstructionProgram{}
-					}
-
-					return nil
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == stringLocation {
+					return &bbq.InstructionProgram{}
 				}
+
+				return nil
 			}
 		}
 

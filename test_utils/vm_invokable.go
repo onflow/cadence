@@ -24,47 +24,51 @@ import (
 	"slices"
 
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/interpreter"
-	. "github.com/onflow/cadence/test_utils/common_utils"
+
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/bbq/compiler"
+	"github.com/onflow/cadence/bbq/vm"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
-var (
-	compareSlabs = func(a, b atree.Slab) int {
-		return a.SlabID().Compare(b.SlabID())
-	}
-)
+type VMInvokable struct {
+	vmInstance *vm.VM
+	*vm.Context
+	elaboration *compiler.DesugaredElaboration
 
-type CombinedInvokable struct {
+	// For slabs comparison
 	interpreter *interpreter.Interpreter
-	*VMInvokable
 }
 
-var _ Invokable = &CombinedInvokable{}
+var _ Invokable = &VMInvokable{}
 
-func NewCombinedInvokable(
-	interpreterInvokable *interpreter.Interpreter,
-	vmInvokable *VMInvokable,
-) *CombinedInvokable {
-	return &CombinedInvokable{
-		interpreter: interpreterInvokable,
-		VMInvokable: vmInvokable,
+func NewVMInvokable(
+	vmInstance *vm.VM,
+	elaboration *compiler.DesugaredElaboration,
+) *VMInvokable {
+	return &VMInvokable{
+		vmInstance:  vmInstance,
+		Context:     vmInstance.Context(),
+		elaboration: elaboration,
 	}
 }
 
-func (i *CombinedInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, vmError error) {
-	vmResult, vmError := i.VMInvokable.Invoke(functionName, arguments...)
+func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, vmError error) {
+	vmResult, vmError := v.invoke(functionName, arguments...)
 
 	// If the test was testup without the need for comparing slabs,
 	// then return only the VM result.
-	if i.interpreter == nil {
+	if v.interpreter == nil {
 		return vmResult, vmError
 	}
 
 	// Invoke the interpreter, even if there are errors from VM.
 	// This is because even an erroneous program could have side effects
 	// on slab creation.
-	_, interpreterError := i.interpreter.Invoke(functionName, arguments...)
+	_, interpreterError := v.interpreter.Invoke(functionName, arguments...)
 
 	if vmError != nil {
 		return nil, vmError
@@ -74,8 +78,8 @@ func (i *CombinedInvokable) Invoke(functionName string, arguments ...interpreter
 		return nil, interpreterError
 	}
 
-	vmStorage := i.VMInvokable.Storage()
-	interpreterStorage := i.interpreter.Storage()
+	vmStorage := v.Storage()
+	interpreterStorage := v.interpreter.Storage()
 
 	// Collect VM slabs
 	vmSlabs, vmError := sortedSlabIDsFromStorage(vmStorage)
@@ -128,8 +132,40 @@ func (i *CombinedInvokable) Invoke(functionName string, arguments ...interpreter
 	return vmResult, nil
 }
 
-func (i *CombinedInvokable) InvokeWithoutComparison(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	return i.VMInvokable.Invoke(functionName, arguments...)
+func (v *VMInvokable) invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
+	value, err = v.vmInstance.InvokeExternally(functionName, arguments...)
+
+	// Reset the VM after a function invocation,
+	// so the same vm can be re-used for subsequent invocation.
+	v.vmInstance.Reset()
+
+	return
+}
+
+func (v *VMInvokable) InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) (err error) {
+	err = v.vmInstance.InvokeTransaction(arguments, signers...)
+
+	// Reset the VM after a function invocation,
+	// so the same vm can be re-used for subsequent invocation.
+	v.vmInstance.Reset()
+
+	return
+}
+
+func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
+	return v.vmInstance.Global(name)
+}
+
+func (v *VMInvokable) GetGlobalType(name string) (*sema.Variable, bool) {
+	return v.elaboration.GetGlobalType(name)
+}
+
+func (v *VMInvokable) InitializeContract(contractName string, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+	return v.vmInstance.InitializeContract(contractName, arguments...)
+}
+
+func compareSlabs(a, b atree.Slab) int {
+	return a.SlabID().Compare(b.SlabID())
 }
 
 func sortedSlabIDsFromStorage(storage interpreter.Storage) ([]atree.Slab, error) {

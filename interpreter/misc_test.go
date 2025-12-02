@@ -3823,7 +3823,7 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 
 			// Explicitly initialize the contract, if it's the VM.
 			if compositeKind == common.CompositeKindContract {
-				if vmInvokable, ok := invokable.(*test_utils.CombinedInvokable); ok {
+				if vmInvokable, ok := invokable.(*test_utils.VMInvokable); ok {
 					_, err = vmInvokable.InitializeContract(identifier, argument)
 					require.NoError(t, err)
 				}
@@ -12137,16 +12137,13 @@ func TestInterpretCompositeTypeHandler(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	if combinedInvokable, ok := inter.(*test_utils.CombinedInvokable); ok {
-		vmInvokable := combinedInvokable.VMInvokable
-		if vmInvokable != nil {
-			vmInvokable.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-				if _, ok := location.(stdlib.FlowLocation); ok {
-					return &bbq.InstructionProgram{}
-				}
-
-				return nil
+	if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+		vmInvokable.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			if _, ok := location.(stdlib.FlowLocation); ok {
+				return &bbq.InstructionProgram{}
 			}
+
+			return nil
 		}
 	}
 

@@ -50,61 +50,6 @@ type ParseCheckAndInterpretOptions struct {
 	HandleCheckerError   func(error)
 }
 
-type VMInvokable struct {
-	vmInstance *vm.VM
-	*vm.Context
-	elaboration *compiler.DesugaredElaboration
-}
-
-var _ Invokable = &VMInvokable{}
-
-func NewVMInvokable(
-	vmInstance *vm.VM,
-	elaboration *compiler.DesugaredElaboration,
-) *VMInvokable {
-	return &VMInvokable{
-		vmInstance:  vmInstance,
-		Context:     vmInstance.Context(),
-		elaboration: elaboration,
-	}
-}
-
-func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	value, err = v.vmInstance.InvokeExternally(functionName, arguments...)
-
-	// Reset the VM after a function invocation,
-	// so the same vm can be re-used for subsequent invocation.
-	v.vmInstance.Reset()
-
-	return
-}
-
-func (v *VMInvokable) InvokeWithoutComparison(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	return v.Invoke(functionName, arguments...)
-}
-
-func (v *VMInvokable) InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) (err error) {
-	err = v.vmInstance.InvokeTransaction(arguments, signers...)
-
-	// Reset the VM after a function invocation,
-	// so the same vm can be re-used for subsequent invocation.
-	v.vmInstance.Reset()
-
-	return
-}
-
-func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
-	return v.vmInstance.Global(name)
-}
-
-func (v *VMInvokable) GetGlobalType(name string) (*sema.Variable, bool) {
-	return v.elaboration.GetGlobalType(name)
-}
-
-func (v *VMInvokable) InitializeContract(contractName string, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
-	return v.vmInstance.InitializeContract(contractName, arguments...)
-}
-
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
 
@@ -565,12 +510,10 @@ func ParseCheckAndPrepareWithOptions(
 
 	vmInvokable := NewVMInvokable(vmInstance, elaboration)
 
-	var interpreterInvokable *interpreter.Interpreter
-
 	if compare {
 		// We can't use `ParseCheckAndInterpretWithOptions` directly,
 		// because we need to reset certain configurations to void double-counting.
-		interpreterInvokable, err = prepareWithInterpreter(
+		interpreterInvokable, err := prepareWithInterpreter(
 			tb,
 			code,
 			options,
@@ -581,9 +524,11 @@ func ParseCheckAndPrepareWithOptions(
 		if err != nil {
 			return nil, err
 		}
+
+		vmInvokable.interpreter = interpreterInvokable
 	}
 
-	return NewCombinedInvokable(interpreterInvokable, vmInvokable), nil
+	return vmInvokable, nil
 }
 
 func prepareWithInterpreter(tb testing.TB,
