@@ -4989,6 +4989,10 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		var err error
+
+		// This test manipulates the storage externally.
+		// But it only does that to the VM's storage.
+		// So comparing the storage is not possible.
 		inter, err = parseCheckAndPrepareWithOptionsWithoutStorageComparison(t,
 			`
 	              resource interface RI {}
@@ -12736,6 +12740,9 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 		newInter := func() Invokable {
 
+			// This test manipulates the storage externally.
+			// But it only does that to the VM's storage.
+			// So comparing the storage is not possible.
 			inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(t,
 				code,
 				ParseCheckAndInterpretOptions{
@@ -13450,6 +13457,8 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, getKeyFunction)
 
+		// Uses a standard library with a closure.
+		// Using it in the interpreter make it count twice.
 		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			fmt.Sprintf(`
@@ -13539,6 +13548,8 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		interpreter.Declare(baseActivation, getKey1Function)
 		interpreter.Declare(baseActivation, getKey2Function)
 
+		// Uses a standard library with a closure.
+		// Using it in the interpreter make it count twice.
 		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			`
@@ -13615,6 +13626,8 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, getKeyFunction)
 
+		// Uses a standard library with a closure.
+		// Using it in the interpreter make it count twice.
 		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			`
@@ -13703,6 +13716,8 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		interpreter.Declare(baseActivation, getKey1Function)
 		interpreter.Declare(baseActivation, getKey2Function)
 
+		// Uses a standard library with a closure.
+		// Using it in the interpreter make it count twice.
 		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			`
@@ -13781,6 +13796,8 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, getKeyFunction)
 
+		// Uses a standard library with a closure.
+		// Using it in the interpreter make it count twice.
 		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(
 			t,
 			`

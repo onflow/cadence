@@ -59,7 +59,7 @@ func NewVMInvokable(
 func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, vmError error) {
 	vmResult, vmError := v.invoke(functionName, arguments...)
 
-	// If the test was testup without the need for comparing slabs,
+	// If the test was set up without the need for comparing slabs,
 	// then return only the VM result.
 	if v.interpreter == nil {
 		return vmResult, vmError

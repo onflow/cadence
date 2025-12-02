@@ -910,6 +910,9 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
+		// The passed in argument is created with VM.
+		// Therefore, the value's slabs are only visible to VM's storage.
+		// So comparing the storage is not possible.
 		inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(t, `
             resource R {
                 access(all) var id: Int
@@ -2861,7 +2864,6 @@ func TestInterpretDereference(t *testing.T) {
 		})
 
 		t.Run("{Int: [String]}", func(t *testing.T) {
-			t.SkipNow()
 
 			inter := parseCheckAndPrepare(
 				t,
