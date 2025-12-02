@@ -5018,6 +5018,7 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 func newCompositeOrInterfaceSupportedEntitlementSet(
 	members *StringMemberOrderedMap,
 	effectiveInterfaceConformanceSet *InterfaceSet,
+	seenInterfaces map[*InterfaceType]struct{},
 ) *EntitlementSet {
 	set := &EntitlementSet{}
 
@@ -5061,7 +5062,14 @@ func newCompositeOrInterfaceSupportedEntitlementSet(
 	}
 
 	effectiveInterfaceConformanceSet.ForEach(func(it *InterfaceType) {
-		set.Merge(it.SupportedEntitlements())
+		// NOTE: call computeSupportedEntitlements instead of SupportedEntitlements
+		// to prevent infinite recursion in case of cyclic interface conformances
+		if _, ok := seenInterfaces[it]; ok {
+			return
+		}
+		seenInterfaces[it] = struct{}{}
+		defer delete(seenInterfaces, it)
+		set.Merge(it.computeSupportedEntitlements(seenInterfaces))
 	})
 
 	return set
@@ -5076,6 +5084,7 @@ func (t *CompositeType) SupportedEntitlements() *EntitlementSet {
 	computedSet := newCompositeOrInterfaceSupportedEntitlementSet(
 		t.Members,
 		t.EffectiveInterfaceConformanceSet(),
+		map[*InterfaceType]struct{}{},
 	)
 
 	// attachments support at least the entitlements supported by their base,
@@ -5432,10 +5441,13 @@ func (t *CompositeType) CheckInstantiated(pos ast.HasPosition, memoryGauge commo
 		t.EnumRawType.CheckInstantiated(pos, memoryGauge, report)
 	}
 
-	if t.baseType != nil {
+	// Check if base type is instantiated.
+	// Prevent infinite recursion in case of self-referencing attachment
+	if t.baseType != nil && t.baseType != t {
 		t.baseType.CheckInstantiated(pos, memoryGauge, report)
 	}
 
+	// Check if conformances are instantiated
 	for _, typ := range t.ExplicitInterfaceConformances {
 		typ.CheckInstantiated(pos, memoryGauge, report)
 	}
@@ -5871,12 +5883,17 @@ func (t *InterfaceType) SupportedEntitlements() *EntitlementSet {
 	}
 
 	// Compute set and cache it
-	computedSet := newCompositeOrInterfaceSupportedEntitlementSet(
-		t.Members,
-		t.EffectiveInterfaceConformanceSet(),
-	)
+	computedSet := t.computeSupportedEntitlements(map[*InterfaceType]struct{}{})
 	t.supportedEntitlements.Store(computedSet)
 	return computedSet
+}
+
+func (t *InterfaceType) computeSupportedEntitlements(seenInterfaces map[*InterfaceType]struct{}) *EntitlementSet {
+	return newCompositeOrInterfaceSupportedEntitlementSet(
+		t.Members,
+		t.EffectiveInterfaceConformanceSet(),
+		seenInterfaces,
+	)
 }
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
@@ -5886,21 +5903,37 @@ func (t *InterfaceType) GetMembers() map[string]MemberResolver {
 	}
 
 	// Compute members and cache them
-	computedMembers := MembersMapAsResolvers(t.Members)
-
-	// add any inherited members from up the inheritance chain
-	for _, conformance := range t.EffectiveInterfaceConformances() {
-		for name, member := range conformance.InterfaceType.GetMembers() { //nolint:maprange
-			if _, ok := computedMembers[name]; !ok {
-				computedMembers[name] = member
-			}
-		}
-
-	}
+	computedMembers := t.computeMembers(map[*InterfaceType]struct{}{})
 
 	computedMembers = withBuiltinMembers(t, computedMembers)
 	t.memberResolvers.Store(&computedMembers)
 	return computedMembers
+
+}
+
+func (t *InterfaceType) computeMembers(seenInterfaces map[*InterfaceType]struct{}) map[string]MemberResolver {
+
+	members := MembersMapAsResolvers(t.Members)
+
+	if _, ok := seenInterfaces[t]; ok {
+		return members
+	}
+	seenInterfaces[t] = struct{}{}
+
+	// Add any inherited members from up the inheritance chain
+	for _, conformance := range t.EffectiveInterfaceConformances() {
+
+		// NOTE: call computeMembers instead of getMembers to prevent infinite recursion
+		// in case of cyclic interface conformances
+		for name, member := range conformance.InterfaceType.computeMembers(seenInterfaces) { //nolint:maprange
+			if _, ok := members[name]; !ok {
+				members[name] = member
+			}
+		}
+	}
+
+	members = withBuiltinMembers(t, members)
+	return members
 }
 
 func (t *InterfaceType) IsResourceType() bool {

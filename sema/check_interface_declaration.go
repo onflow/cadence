@@ -66,7 +66,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		// If the currently checking type is also in its own conformance list,
 		// then this is a direct/indirect cyclic conformance.
 		if conformance.InterfaceType == interfaceType {
-			checker.report(CyclicConformanceError{
+			checker.report(&CyclicConformanceError{
 				InterfaceType: interfaceType,
 				Range:         ast.NewRangeFromPositioned(checker.memoryGauge, declaration.Identifier),
 			})
