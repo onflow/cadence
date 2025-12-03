@@ -100,24 +100,20 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 		case *atree.MapDataSlab:
 			if mapDataSlab2, ok := slab2.(*atree.MapDataSlab); ok {
 				slabComparisonError = compareMapDataSlabs(slab1, mapDataSlab2)
-				if slabComparisonError != nil {
-					return false
-				}
+				return slabComparisonError == nil
 			}
 
 		case *atree.ArrayDataSlab:
 			if arrayDataSlab2, ok := slab2.(*atree.ArrayDataSlab); ok {
 				slabComparisonError = compareArrayDataSlabs(slab1, arrayDataSlab2)
-				if slabComparisonError != nil {
-					return false
-				}
+				return slabComparisonError == nil
 			}
 
 		default:
 			return assert.ObjectsAreEqual(slab1, slab2)
 		}
 
-		return true
+		return false
 	}
 
 	if !slices.EqualFunc(vmSlabs, interpreterSlabs, equalSlab) {

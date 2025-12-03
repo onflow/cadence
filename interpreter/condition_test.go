@@ -1192,9 +1192,9 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(tt *testing.T, condition string) {
+	test := func(t *testing.T, condition string) {
 
-		inter, err := parseCheckAndPrepareWithOptions(tt,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			fmt.Sprintf(
 				`
                    contract interface CI {
@@ -1235,7 +1235,7 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 				},
 			},
 		)
-		require.NoError(tt, err)
+		require.NoError(t, err)
 
 		// Explicitly initialize the contracts, if it's the VM.
 		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
@@ -1247,18 +1247,18 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 		}
 
 		_, err = inter.Invoke("test1")
-		require.NoError(tt, err)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test2")
-		RequireError(tt, err)
+		RequireError(t, err)
 	}
 
-	t.Run("isInstance", func(tt *testing.T) {
-		test(tt, "x.isInstance(self.getType())")
+	t.Run("isInstance", func(t *testing.T) {
+		test(t, "x.isInstance(self.getType())")
 	})
 
-	t.Run("equality", func(tt *testing.T) {
-		test(tt, "x.getType() == self.getType()")
+	t.Run("equality", func(t *testing.T) {
+		test(t, "x.getType() == self.getType()")
 	})
 }
 
