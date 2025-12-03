@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -2742,6 +2743,13 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 			})
 
 		require.NoError(t, err)
+
+		// Explicitly initialize the contracts, if it's the VM.
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			_, err = vmInvokable.InitializeContract("base")
+			require.NoError(t, err)
+		}
+
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
@@ -4029,8 +4037,6 @@ func TestInterpretInheritedDefaultDestroyEvent(t *testing.T) {
 
 	var events []event
 
-	storage := NewUnmeteredInMemoryStorage()
-
 	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
               resource interface RI {
@@ -4056,7 +4062,6 @@ func TestInterpretInheritedDefaultDestroyEvent(t *testing.T) {
 	    `,
 		ParseCheckAndInterpretOptions{
 			InterpreterConfig: &interpreter.Config{
-				Storage: storage,
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					eventType *sema.CompositeType,
@@ -4085,6 +4090,8 @@ func TestInterpretInheritedDefaultDestroyEvent(t *testing.T) {
 	assert.Equal(t, "R.ResourceDestroyed", events[1].Type.QualifiedIdentifier())
 	require.Len(t, events[1].Fields, 1)
 	assert.Equal(t, 1, events[1].Fields[0].(interpreter.IntValue).ToInt())
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
 
 	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 	require.NoError(t, err)
