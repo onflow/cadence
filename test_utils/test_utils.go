@@ -325,6 +325,9 @@ func ParseCheckAndPrepareWithOptions(
 		vmConfig.UUIDHandler = interpreterConfig.UUIDHandler
 		vmConfig.AtreeValueValidationEnabled = interpreterConfig.AtreeValueValidationEnabled
 		vmConfig.AtreeStorageValidationEnabled = interpreterConfig.AtreeStorageValidationEnabled
+		if interpreterConfig.OnRecordTrace != nil {
+			vmConfig.Tracer = interpreter.CallbackTracer(interpreterConfig.OnRecordTrace)
+		}
 
 		// If there are builtin functions provided externally (e.g: for tests),
 		// then convert them to corresponding functions in compiler and in vm.
