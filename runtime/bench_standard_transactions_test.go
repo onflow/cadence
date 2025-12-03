@@ -815,7 +815,7 @@ func benchmarkRuntimeTransactions(b *testing.B, useVM bool) {
 	}
 
 	// Helper function to setup a fresh runtime with contracts deployed
-	setupRuntime := func() (TestRuntime, func() common.TransactionLocation, *TestRuntimeInterface) {
+	setupRuntime := func(b *testing.B) (TestRuntime, func() common.TransactionLocation, *TestRuntimeInterface) {
 
 		runtimeInterface := createRuntimeInterface()
 		signerAccount = contractsAddress
