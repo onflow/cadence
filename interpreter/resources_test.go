@@ -22,10 +22,9 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/interpreter"
@@ -4101,4 +4100,30 @@ func TestInterpretInheritedDefaultDestroyEvent(t *testing.T) {
 		),
 		slabID,
 	)
+}
+
+func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+      resource R {}
+
+      fun drop(_ r: @AnyResource) {
+          destroy r
+      }
+
+      fun test() {
+          var i = 0
+          while i < 2 {
+              var r: @R? <- nil
+              r <-! create R()
+              drop(<-r!)
+              i = i + 1
+          }
+      }
+    `)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
 }
