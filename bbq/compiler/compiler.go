@@ -1408,6 +1408,13 @@ func (c *Compiler[_, _]) emitSetLocal(localIndex uint16) {
 	})
 }
 
+func (c *Compiler[_, _]) emitSetTempLocal(localIndex uint16) {
+	c.emit(opcode.InstructionSetLocal{
+		Local:     localIndex,
+		IsTempVar: true,
+	})
+}
+
 func (c *Compiler[_, _]) hasPostConditions() bool {
 	return c.postConditionsIndex >= 0
 }
@@ -1458,7 +1465,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			c.compileVariableDeclaration(test, varDeclTypes, true)
 
 			tempIndex := c.currentFunction.generateLocalIndex()
-			c.emitSetLocal(tempIndex)
+			c.emitSetTempLocal(tempIndex)
 
 			// Test: check if the optional is nil,
 			// and jump to the else branch if it is
@@ -1545,9 +1552,8 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	// Get an iterator to the resulting value, and store it in a local index.
 	c.emit(opcode.InstructionIterator{})
 	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
-	c.emit(opcode.InstructionSetLocal{
-		Local: iteratorLocalIndex,
-	})
+	c.emitSetLocal(iteratorLocalIndex)
+
 	// Push the iterator local index to the active iterators.
 	c.currentFunction.activeIteratorLocalIndices = append(
 		c.currentFunction.activeIteratorLocalIndices,
@@ -1700,7 +1706,7 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
 	c.compileExpression(statement.Expression)
 	localIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(localIndex)
+	c.emitSetTempLocal(localIndex)
 
 	// Pass an invalid start offset to pushControlFlow to indicate that this is a switch statement,
 	// which does not allow jumps to the start (i.e., no continue statements).
@@ -1848,7 +1854,7 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		// Evaluate the first value's parent once, and store in a temp-local.
 		c.compileExpression(firstValue.Expression)
 		memberExprParentLocal := c.currentFunction.generateLocalIndex()
-		c.emitSetLocal(memberExprParentLocal)
+		c.emitSetTempLocal(memberExprParentLocal)
 
 		// Evaluate the first value. i.e: Get the member value.
 		// Transfer and leave it on the stack.
@@ -1881,11 +1887,11 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		// First evaluate the sub-expressions of index expression once, and store them in temp-locals.
 		c.compileExpression(firstValue.TargetExpression)
 		indexExprTargetLocal := c.currentFunction.generateLocalIndex()
-		c.emitSetLocal(indexExprTargetLocal)
+		c.emitSetTempLocal(indexExprTargetLocal)
 
 		c.compileExpression(firstValue.IndexingExpression)
 		indexExprIndexLocal := c.currentFunction.generateLocalIndex()
-		c.emitSetLocal(indexExprIndexLocal)
+		c.emitSetTempLocal(indexExprIndexLocal)
 
 		// Evaluate the first value . i.e: index expression.
 		// Transfer and leave it on the stack.
@@ -2073,7 +2079,7 @@ func (c *Compiler[_, _]) compileSwapTarget(sideExpression ast.Expression) (targe
 	}
 
 	targetLocalIndex = c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(targetLocalIndex)
+	c.emitSetTempLocal(targetLocalIndex)
 
 	return
 }
@@ -2093,7 +2099,7 @@ func (c *Compiler[_, _]) compileSwapKey(sideExpression ast.Expression) (keyLocal
 	}
 
 	keyLocalIndex = c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(keyLocalIndex)
+	c.emitSetTempLocal(keyLocalIndex)
 
 	return
 }
@@ -2134,7 +2140,7 @@ func (c *Compiler[_, _]) compileSwapGet(
 	c.mustEmitTransferAndConvert(targetType)
 
 	valueIndex = c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(valueIndex)
+	c.emitSetTempLocal(valueIndex)
 
 	return
 }
@@ -2898,7 +2904,7 @@ func (c *Compiler[_, _]) compileOptionalChainingNilJump(
 	}
 
 	tempIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(tempIndex)
+	c.emitSetTempLocal(tempIndex)
 
 	// If the value is nil, return nil. by jumping to the instruction where nil is returned.
 	c.emitGetLocal(tempIndex)
@@ -4129,7 +4135,7 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.compileExpression(expression.Base)
 	// store base locally
 	baseLocalIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(baseLocalIndex)
+	c.emitSetTempLocal(baseLocalIndex)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
 
@@ -4152,7 +4158,7 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 		IsImplicit: false,
 	})
 	refLocalIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(refLocalIndex)
+	c.emitSetTempLocal(refLocalIndex)
 
 	// create the attachment
 	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, refLocalIndex, baseType)
