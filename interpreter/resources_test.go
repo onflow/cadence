@@ -4113,7 +4113,7 @@ func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("simple", func(t *testing.T) {
+	t.Run("variable declaration, one value", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -4121,7 +4121,7 @@ func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
 
           fun drop(_ r: @AnyResource) {
               destroy r
-         }
+          }
 
           fun test() {
               var i = 0
@@ -4138,14 +4138,39 @@ func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("second value assignment", func(t *testing.T) {
+	t.Run("variable declarations, two values, variable", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
           resource R {}
 
           fun test() {
-              let array: @[R?] <- [ <- create R(), <- create R(), <- create R()]
+              var r: @R? <- create R()
+
+              var i = 0
+              while i < 2 {
+                  let r2 <- r <- nil
+                  r <-! r2
+                  i = i + 1
+              }
+
+              destroy r
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("variable declarations, two values, index", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          fun test() {
+              let array: @[R?] <- [<-create R(), <-create R()]
+
               var i = 0
               while i < 2 {
                   let r <- array[i] <- nil
@@ -4161,15 +4186,73 @@ func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("swap", func(t *testing.T) {
+	t.Run("variable declarations, two values, member", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource Foo {
+              var bar: @Bar?
+
+              init() {
+                  self.bar <- create Bar()
+              }
+          }
+
+          resource Bar {}
+
+          fun test() {
+              let foo <- create Foo()
+
+              var i = 0
+              while i < 2 {
+                  let bar <- foo.bar <- nil
+                  foo.bar <-! bar
+                  i = i + 1
+              }
+
+              destroy foo
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("swap, variable", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
           resource R {}
 
           fun test() {
-              let array1: @[R?] <- [ <- create R(), <- create R(), <- create R()]
-              let array2: @[R?] <- [ <- create R(), <- create R(), <- create R()]
+              var r1 <- create R()
+              var r2 <- create R()
+
+              var i = 0
+              while i < 2 {
+                  r1 <-> r2
+                  i = i + 1
+              }
+
+              destroy r1
+              destroy r2
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("swap, index", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          fun test() {
+              let array1: @[R?] <- [<-create R(), <-create R()]
+              let array2: @[R?] <- [<-create R(), <-create R()]
+
               var i = 0
               while i < 2 {
                   array1[i] <-> array2[i]
@@ -4178,6 +4261,39 @@ func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
 
               destroy array1
               destroy array2
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("swap, member", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource Foo {
+              var bar: @Bar
+
+              init() {
+                  self.bar <- create Bar()
+              }
+          }
+
+          resource Bar {}
+
+          fun test() {
+              let foo1 <- create Foo()
+              let foo2 <- create Foo()
+
+              var i = 0
+              while i < 2 {
+                  foo1.bar <-> foo2.bar
+                  i = i + 1
+              }
+
+              destroy foo1
+              destroy foo2
           }
         `)
 
@@ -4219,7 +4335,7 @@ func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
           attachment A for R {}
 
           fun test() {
-              let collection: @[R?] <- [ nil, nil, nil]
+              let collection: @[R?] <- [nil, nil]
 
               var i = 0
               while i < 2 {
@@ -4240,9 +4356,7 @@ func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
-          resource R {
-              fun foo() {}
-          }
+          resource R {}
 
           fun test() {
               var i = 0
@@ -4253,12 +4367,10 @@ func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
                   }
                   i = i + 1
               }
-
           }
         `)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
-
 }
