@@ -19,14 +19,10 @@
 package runtime_test
 
 import (
-	"crypto/rand"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"testing"
 
-	flowsdk "github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/crypto"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence-standard-transactions/transactions"
@@ -254,66 +250,31 @@ func createTransaction(name string, imports string, prepare string, setup string
 }
 
 func init() {
-	// create key transactions
-	createKeyECDSAP256Transaction, err := transactions.CreateKeyECDSAP256Transaction(100)
-	if err != nil {
-		panic(err)
-	}
-	createKeyECDSAsecp256k1Transaction, err := transactions.CreateKeyECDSAsecp256k1Transaction(100)
-	if err != nil {
-		panic(err)
-	}
-	createKeyBLSBLS12381Transaction, err := transactions.CreateKeyBLSBLS12381Transaction(100)
-	if err != nil {
-		panic(err)
-	}
+	// placeholder hex-encoded zero value
+	placeholderHexValue := "0000000000000000000000000000000000000000000000000000000000000000"
 
 	// verify signature transaction
 	numKeys := uint64(15)
 	message := []byte("hello world")
 
 	rawKeys := make([]string, numKeys)
-	signers := make([]crypto.Signer, numKeys)
 	signatures := make([]string, numKeys)
 
 	for i := 0; i < int(numKeys); i++ {
-		seed := make([]byte, crypto.MinSeedLength)
-		_, err := rand.Read(seed)
-		if err != nil {
-			panic(fmt.Errorf("failed to generate seed: %w", err))
-		}
-
-		privateKey, err := crypto.GeneratePrivateKey(crypto.ECDSA_P256, seed)
-		if err != nil {
-			panic(fmt.Errorf("failed to generate private key: %w", err))
-		}
-		rawKeys[i] = hex.EncodeToString(privateKey.PublicKey().Encode())
-		sig, err := crypto.NewInMemorySigner(privateKey, crypto.SHA3_256)
-		if err != nil {
-			panic(fmt.Errorf("failed to generate signer: %w", err))
-		}
-		signers[i] = sig
+		rawKeys[i] = placeholderHexValue
+		signatures[i] = placeholderHexValue
 	}
 
-	for i := 0; i < int(numKeys); i++ {
-		sig, err := flowsdk.SignUserMessage(signers[i], message)
-		if err != nil {
-			panic(fmt.Errorf("failed to sign message: %w", err))
-		}
-		signatures[i] = hex.EncodeToString(sig)
-	}
 	verifySignatureTransaction := transactions.VerifySignatureTransaction(numKeys, message, rawKeys, signatures)
 
 	// bls
-	blsAggregateKeysTransaction, err := transactions.AggregateBLSAggregateKeysTransaction(42)
-	if err != nil {
-		panic(err)
+	numBLSKeys := 42
+	pks := make([]string, numBLSKeys)
+	for i := 0; i < numBLSKeys; i++ {
+		pks[i] = placeholderHexValue
 	}
-
-	blsVerifyProofOfPossessionTransaction, err := transactions.BLSVerifyProofOfPossessionTransaction(8)
-	if err != nil {
-		panic(err)
-	}
+	blsAggregateKeysTransaction := transactions.AggregateBLSAggregateKeysTransaction(numBLSKeys, pks)
+	blsVerifyProofOfPossessionTransaction := transactions.BLSVerifyProofOfPossessionTransaction(8, placeholderHexValue, placeholderHexValue)
 
 	testTransactions = []Transaction{
 		createTransaction(
@@ -595,19 +556,19 @@ func init() {
 		createTransaction(
 			"CreateKeyECDSAP256",
 			"",
-			createKeyECDSAP256Transaction.GetPrepareBlock(),
+			transactions.CreateKeyECDSAP256Transaction(100, placeholderHexValue).GetPrepareBlock(),
 			"",
 		),
 		createTransaction(
 			"CreateKeyECDSAsecp256k1",
 			"",
-			createKeyECDSAsecp256k1Transaction.GetPrepareBlock(),
+			transactions.CreateKeyECDSAsecp256k1Transaction(100, placeholderHexValue).GetPrepareBlock(),
 			"",
 		),
 		createTransaction(
 			"CreateKeyBLSBLS12381",
 			"",
-			createKeyBLSBLS12381Transaction.GetPrepareBlock(),
+			transactions.CreateKeyBLSBLS12381Transaction(100, placeholderHexValue).GetPrepareBlock(),
 			"",
 		),
 		createTransaction(
@@ -697,6 +658,210 @@ func init() {
 	}
 }
 
+func createRuntimeInterface(b *testing.B, signerAccount *common.Address, contractsAddress *common.Address) *TestRuntimeInterface {
+	accountCodes := map[common.Location][]byte{}
+	accountCounter := uint64(4)
+	created := false
+	*signerAccount = *contractsAddress
+
+	return &TestRuntimeInterface{
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]common.Address, error) {
+			return []common.Address{*signerAccount}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+		OnGetAccountBalance: func(address common.Address) (uint64, error) {
+			return 0, nil
+		},
+		OnGetAccountAvailableBalance: func(address common.Address) (uint64, error) {
+			return 0, nil
+		},
+		OnGetStorageUsed: func(address common.Address) (uint64, error) {
+			return 0, nil
+		},
+		OnGetStorageCapacity: func(address common.Address) (uint64, error) {
+			return 0, nil
+		},
+		OnCreateAccount: func(payer Address) (address Address, err error) {
+			accountCounter++
+			addressBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(addressBytes, accountCounter)
+			result := interpreter.NewUnmeteredAddressValueFromBytes(addressBytes)
+			return result.ToAddress(), nil
+		},
+		OnValidatePublicKey: func(key *stdlib.PublicKey) error {
+			return nil
+		},
+		OnVerifySignature: func(
+			signature []byte,
+			tag string,
+			signedData []byte,
+			publicKey []byte,
+			signatureAlgorithm SignatureAlgorithm,
+			hashAlgorithm HashAlgorithm,
+		) (bool, error) {
+			return true, nil
+		},
+		OnHash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
+			return data, nil
+		},
+		OnBLSVerifyPOP: func(pk *stdlib.PublicKey, s []byte) (bool, error) {
+			return true, nil
+		},
+		OnBLSAggregateSignatures: func(sigs [][]byte) ([]byte, error) {
+			if len(sigs) == 0 {
+				return nil, fmt.Errorf("no signatures to aggregate")
+			}
+			return sigs[0], nil
+		},
+		OnBLSAggregatePublicKeys: func(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error) {
+			if len(keys) == 0 {
+				return nil, fmt.Errorf("no keys to aggregate")
+			}
+			return keys[0], nil
+		},
+		OnAddAccountKey: func(address Address, publicKey *stdlib.PublicKey, hashAlgo HashAlgorithm, weight int) (*stdlib.AccountKey, error) {
+			return &stdlib.AccountKey{PublicKey: publicKey, HashAlgo: hashAlgo, Weight: weight}, nil
+		},
+		OnGetAccountKey: func(address Address, index uint32) (*stdlib.AccountKey, error) {
+			return &stdlib.AccountKey{KeyIndex: index, PublicKey: &stdlib.PublicKey{}}, nil
+		},
+		OnRemoveAccountKey: func(address Address, index uint32) (*stdlib.AccountKey, error) {
+			return &stdlib.AccountKey{KeyIndex: index, PublicKey: &stdlib.PublicKey{}}, nil
+		},
+		OnAccountKeysCount: func(address Address) (uint32, error) {
+			return 1, nil
+		},
+		OnGetAccountContractNames: func(address Address) ([]string, error) {
+			if created {
+				// ensures GetContractsTransaction only creates the contracts once
+				return []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+					"11", "12", "13", "14", "15", "16", "17", "18", "19", "20"}, nil
+			}
+			created = true
+			return []string{}, nil
+		},
+	}
+}
+
+func setupRuntime(b *testing.B, signerAccount *common.Address, contractsAddress *common.Address, senderAddress *common.Address, receiverAddress *common.Address, environment Environment, useVM bool) (TestRuntime, func() common.TransactionLocation, *TestRuntimeInterface) {
+	runtimeInterface := createRuntimeInterface(b, signerAccount, contractsAddress)
+	*signerAccount = *contractsAddress
+
+	runtime := NewTestRuntime()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy Fungible Token contract
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"FungibleToken",
+				[]byte(modifiedFungibleTokenContractInterface),
+			),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       useVM,
+		},
+	)
+	require.NoError(b, err)
+
+	// Deploy Flow Token contract
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction("FlowToken", []byte(modifiedFlowContract)),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       useVM,
+		},
+	)
+	require.NoError(b, err)
+
+	// Deploy Crypto contract
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction("Crypto", []byte(realCryptoContract)),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       useVM,
+		},
+	)
+	require.NoError(b, err)
+
+	// Setup both user accounts for Flow Token
+	for _, address := range []common.Address{
+		*senderAddress,
+		*receiverAddress,
+	} {
+		*signerAccount = address
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(realSetupFlowTokenAccountTransaction),
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
+				UseVM:       useVM,
+			},
+		)
+		require.NoError(b, err)
+	}
+
+	// Mint 1000 FLOW to sender
+	mintAmount, err := cadence.NewUFix64("100000000000.0")
+	require.NoError(b, err)
+
+	*signerAccount = *contractsAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(realMintFlowTokenTransaction),
+			Arguments: encodeArgs([]cadence.Value{
+				cadence.Address(*senderAddress),
+				mintAmount,
+			}),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       useVM,
+		},
+	)
+	require.NoError(b, err)
+
+	// Set signer account to sender for benchmark transactions
+	*signerAccount = *senderAddress
+
+	return runtime, nextTransactionLocation, runtimeInterface
+}
+
 func benchmarkRuntimeTransactions(b *testing.B, useVM bool) {
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
@@ -711,218 +876,19 @@ func benchmarkRuntimeTransactions(b *testing.B, useVM bool) {
 		environment = NewBaseInterpreterEnvironment(Config{})
 	}
 
-	// Helper function to create a fresh runtime interface with isolated storage
-	createRuntimeInterface := func() *TestRuntimeInterface {
-		accountCodes := map[common.Location][]byte{}
-		accountCounter := uint64(4)
-		created := false
-		signerAccount = contractsAddress
-
-		return &TestRuntimeInterface{
-			OnGetCode: func(location common.Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			Storage: NewTestLedger(nil, nil),
-			OnGetSigningAccounts: func() ([]common.Address, error) {
-				return []common.Address{signerAccount}, nil
-			},
-			OnResolveLocation: NewSingleIdentifierLocationResolver(b),
-			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-				accountCodes[location] = code
-				return nil
-			},
-			OnEmitEvent: func(event cadence.Event) error {
-				return nil
-			},
-			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(nil, b)
-			},
-			OnGetAccountBalance: func(address common.Address) (uint64, error) {
-				return 0, nil
-			},
-			OnGetAccountAvailableBalance: func(address common.Address) (uint64, error) {
-				return 0, nil
-			},
-			OnGetStorageUsed: func(address common.Address) (uint64, error) {
-				return 0, nil
-			},
-			OnGetStorageCapacity: func(address common.Address) (uint64, error) {
-				return 0, nil
-			},
-			OnCreateAccount: func(payer Address) (address Address, err error) {
-				accountCounter++
-				addressBytes := make([]byte, 8)
-				binary.BigEndian.PutUint64(addressBytes, accountCounter)
-				result := interpreter.NewUnmeteredAddressValueFromBytes(addressBytes)
-				return result.ToAddress(), nil
-			},
-			OnValidatePublicKey: func(key *stdlib.PublicKey) error {
-				return nil
-			},
-			OnVerifySignature: func(
-				signature []byte,
-				tag string,
-				signedData []byte,
-				publicKey []byte,
-				signatureAlgorithm SignatureAlgorithm,
-				hashAlgorithm HashAlgorithm,
-			) (bool, error) {
-				return true, nil
-			},
-			OnHash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
-				return data, nil
-			},
-			OnBLSVerifyPOP: func(pk *stdlib.PublicKey, s []byte) (bool, error) {
-				return true, nil
-			},
-			OnBLSAggregateSignatures: func(sigs [][]byte) ([]byte, error) {
-				if len(sigs) == 0 {
-					return nil, fmt.Errorf("no signatures to aggregate")
-				}
-				return sigs[0], nil
-			},
-			OnBLSAggregatePublicKeys: func(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error) {
-				if len(keys) == 0 {
-					return nil, fmt.Errorf("no keys to aggregate")
-				}
-				return keys[0], nil
-			},
-			OnAddAccountKey: func(address Address, publicKey *stdlib.PublicKey, hashAlgo HashAlgorithm, weight int) (*stdlib.AccountKey, error) {
-				return &stdlib.AccountKey{PublicKey: publicKey, HashAlgo: hashAlgo, Weight: weight}, nil
-			},
-			OnGetAccountKey: func(address Address, index uint32) (*stdlib.AccountKey, error) {
-				return &stdlib.AccountKey{KeyIndex: index, PublicKey: &stdlib.PublicKey{}}, nil
-			},
-			OnRemoveAccountKey: func(address Address, index uint32) (*stdlib.AccountKey, error) {
-				return &stdlib.AccountKey{KeyIndex: index, PublicKey: &stdlib.PublicKey{}}, nil
-			},
-			OnAccountKeysCount: func(address Address) (uint32, error) {
-				return 1, nil
-			},
-			OnGetAccountContractNames: func(address Address) ([]string, error) {
-				if created {
-					// ensures GetContractsTransaction only creates the contracts once
-					return []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
-						"11", "12", "13", "14", "15", "16", "17", "18", "19", "20"}, nil
-				}
-				created = true
-				return []string{}, nil
-			},
-		}
-	}
-
-	// Helper function to setup a fresh runtime with contracts deployed
-	setupRuntime := func(b *testing.B) (TestRuntime, func() common.TransactionLocation, *TestRuntimeInterface) {
-
-		runtimeInterface := createRuntimeInterface()
-		signerAccount = contractsAddress
-
-		runtime := NewTestRuntime()
-		nextTransactionLocation := NewTransactionLocationGenerator()
-
-		// Deploy Fungible Token contract
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: DeploymentTransaction(
-					"FungibleToken",
-					[]byte(modifiedFungibleTokenContractInterface),
-				),
-			},
-			Context{
-				Interface:   runtimeInterface,
-				Location:    nextTransactionLocation(),
-				Environment: environment,
-				UseVM:       useVM,
-			},
-		)
-		require.NoError(b, err)
-
-		// Deploy Flow Token contract
-		err = runtime.ExecuteTransaction(
-			Script{
-				Source: DeploymentTransaction("FlowToken", []byte(modifiedFlowContract)),
-			},
-			Context{
-				Interface:   runtimeInterface,
-				Location:    nextTransactionLocation(),
-				Environment: environment,
-				UseVM:       useVM,
-			},
-		)
-		require.NoError(b, err)
-
-		// Deploy Crypto contract
-		err = runtime.ExecuteTransaction(
-			Script{
-				Source: DeploymentTransaction("Crypto", []byte(realCryptoContract)),
-			},
-			Context{
-				Interface:   runtimeInterface,
-				Location:    nextTransactionLocation(),
-				Environment: environment,
-				UseVM:       useVM,
-			},
-		)
-		require.NoError(b, err)
-
-		// Setup both user accounts for Flow Token
-		for _, address := range []common.Address{
-			senderAddress,
-			receiverAddress,
-		} {
-			signerAccount = address
-
-			err = runtime.ExecuteTransaction(
-				Script{
-					Source: []byte(realSetupFlowTokenAccountTransaction),
-				},
-				Context{
-					Interface:   runtimeInterface,
-					Location:    nextTransactionLocation(),
-					Environment: environment,
-					UseVM:       useVM,
-				},
-			)
-			require.NoError(b, err)
-		}
-
-		// Mint 1000 FLOW to sender
-		mintAmount, err := cadence.NewUFix64("100000000000.0")
-		require.NoError(b, err)
-
-		signerAccount = contractsAddress
-
-		err = runtime.ExecuteTransaction(
-			Script{
-				Source: []byte(realMintFlowTokenTransaction),
-				Arguments: encodeArgs([]cadence.Value{
-					cadence.Address(senderAddress),
-					mintAmount,
-				}),
-			},
-			Context{
-				Interface:   runtimeInterface,
-				Location:    nextTransactionLocation(),
-				Environment: environment,
-				UseVM:       useVM,
-			},
-		)
-		require.NoError(b, err)
-
-		// Set signer account to sender for benchmark transactions
-		signerAccount = senderAddress
-
-		return runtime, nextTransactionLocation, runtimeInterface
-	}
-
 	for _, transaction := range testTransactions {
 
 		b.Run(transaction.Name, func(b *testing.B) {
 			// Create fresh runtime and storage for this sub-benchmark
-			runtime, nextTransactionLocation, runtimeInterface := setupRuntime()
+			runtime, nextTransactionLocation, runtimeInterface := setupRuntime(
+				b,
+				&signerAccount,
+				&contractsAddress,
+				&senderAddress,
+				&receiverAddress,
+				environment,
+				useVM,
+			)
 
 			for b.Loop() {
 				b.StopTimer()
