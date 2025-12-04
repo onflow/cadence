@@ -160,15 +160,15 @@ func TestPrintInstruction(t *testing.T) {
 	t.Parallel()
 
 	instructions := map[string][]byte{
-		"GetConstant constant:258": {byte(GetConstant), 1, 2},
-		"GetLocal local:258":       {byte(GetLocal), 1, 2},
-		"SetLocal local:258":       {byte(SetLocal), 1, 2},
-		"GetUpvalue upvalue:258":   {byte(GetUpvalue), 1, 2},
-		"SetUpvalue upvalue:258":   {byte(SetUpvalue), 1, 2},
-		"CloseUpvalue local:258":   {byte(CloseUpvalue), 1, 2},
-		"GetGlobal global:258":     {byte(GetGlobal), 1, 2},
-		"SetGlobal global:258":     {byte(SetGlobal), 1, 2},
-		"GetMethod method:258":     {byte(GetMethod), 1, 2},
+		"GetConstant constant:258":          {byte(GetConstant), 1, 2},
+		"GetLocal local:258":                {byte(GetLocal), 1, 2},
+		"SetLocal local:258 isTempVar:true": {byte(SetLocal), 1, 2, 1},
+		"GetUpvalue upvalue:258":            {byte(GetUpvalue), 1, 2},
+		"SetUpvalue upvalue:258":            {byte(SetUpvalue), 1, 2},
+		"CloseUpvalue local:258":            {byte(CloseUpvalue), 1, 2},
+		"GetGlobal global:258":              {byte(GetGlobal), 1, 2},
+		"SetGlobal global:258":              {byte(SetGlobal), 1, 2},
+		"GetMethod method:258":              {byte(GetMethod), 1, 2},
 
 		"Jump target:258":        {byte(Jump), 1, 2},
 		"JumpIfFalse target:258": {byte(JumpIfFalse), 1, 2},
