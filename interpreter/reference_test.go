@@ -3566,3 +3566,56 @@ func TestInterpretCreatingCircularDependentResource(t *testing.T) {
 		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
+
+func TestInterpretInterfaceReferenceToSelfVariable(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource interface", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            resource interface RI {
+                fun foo(): &{RI} {
+                    return &self as &{RI}
+                }
+            }
+
+            resource R: RI {}
+
+            fun main() {
+                let r: @R <- create R()
+                let riRef: &{RI} = r.foo()
+                let rRef: &R = riRef as! &R
+
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("struct interface", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct interface SI {
+                fun foo(): &{SI} {
+                    return &self as &{SI}
+                }
+            }
+
+            struct S: SI {}
+
+            fun main() {
+                let s: S = S()
+                let siRef: &{SI} = s.foo()
+                let sRef: &S = siRef as! &S
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+}

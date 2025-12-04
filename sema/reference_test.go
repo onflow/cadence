@@ -3957,3 +3957,44 @@ func TestCheckOptionalReference(t *testing.T) {
 		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
 	})
 }
+
+func TestInterpretInterfaceReferenceToSelfVariable(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource interface", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface RI {
+                fun foo(): &{RI} {
+                    return &self as &{RI}
+                }
+
+                fun bar() {
+                    self.foo()
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct interface", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface SI {
+                fun foo(): &{SI} {
+                    return &self as &{SI}
+                }
+
+                fun bar() {
+                    self.foo()
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
