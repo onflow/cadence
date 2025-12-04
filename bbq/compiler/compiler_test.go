@@ -846,7 +846,10 @@ func TestCompileIfLet(t *testing.T) {
 			// let y' = x
 			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionTransferAndConvert{Type: 1},
-			opcode.InstructionSetLocal{Local: tempYIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempYIndex,
+				IsTempVar: true,
+			},
 
 			// if nil
 			opcode.InstructionGetLocal{Local: tempYIndex},
@@ -944,7 +947,10 @@ func TestCompileIfLetScope(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: yIndex},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIfLetIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempIfLetIndex,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIfLetIndex},
 			opcode.InstructionJumpIfNil{Target: 22},
@@ -1025,8 +1031,8 @@ func TestCompileSwitch(t *testing.T) {
 		xIndex = iota
 		// aIndex is the index of the local variable `a`, which is the first local variable
 		aIndex
-		// switchIndex is the index of the local variable used to store the value of the switch expression
-		switchIndex
+		// tempSwitchValueIndex is the index of the local variable used to store the value of the switch expression
+		tempSwitchValueIndex
 	)
 
 	assert.Equal(t,
@@ -1040,10 +1046,13 @@ func TestCompileSwitch(t *testing.T) {
 			// switch x
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSetLocal{Local: switchIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempSwitchValueIndex,
+				IsTempVar: true,
+			},
 
 			// case 1:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 16},
@@ -1058,7 +1067,7 @@ func TestCompileSwitch(t *testing.T) {
 			opcode.InstructionJump{Target: 29},
 
 			// case 2:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 25},
@@ -1141,8 +1150,8 @@ func TestSwitchBreak(t *testing.T) {
 	const (
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		xIndex = iota
-		// switchIndex is the index of the local variable used to store the value of the switch expression
-		switchIndex
+		// tempSwitchValueIndex is the index of the local variable used to store the value of the switch expression
+		tempSwitchValueIndex
 	)
 
 	assert.Equal(t,
@@ -1150,10 +1159,13 @@ func TestSwitchBreak(t *testing.T) {
 			// switch x
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSetLocal{Local: switchIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempSwitchValueIndex,
+				IsTempVar: true,
+			},
 
 			// case 1:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 10},
@@ -1164,7 +1176,7 @@ func TestSwitchBreak(t *testing.T) {
 			opcode.InstructionJump{Target: 19},
 
 			// case 1:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 17},
@@ -1230,8 +1242,8 @@ func TestWhileSwitchBreak(t *testing.T) {
 	const (
 		// xIndex is the index of the local variable `x`, which is the first local variable
 		xIndex = iota
-		// switchIndex is the index of the local variable used to store the value of the switch expression
-		switchIndex
+		// tempSwitchValueIndex is the index of the local variable used to store the value of the switch expression
+		tempSwitchValueIndex
 	)
 
 	assert.Equal(t,
@@ -1252,10 +1264,13 @@ func TestWhileSwitchBreak(t *testing.T) {
 			// switch x
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSetLocal{Local: switchIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempSwitchValueIndex,
+				IsTempVar: true,
+			},
 
 			// case 1:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 18},
@@ -7178,7 +7193,10 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Store the value in a temp index for the nil check.
 				opcode.InstructionGetLocal{Local: fooIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempIndex,
+					IsTempVar: true,
+				},
 
 				// Nil check
 				opcode.InstructionGetLocal{Local: tempIndex},
@@ -7258,7 +7276,10 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Store the receiver in a temp index for the nil check.
 				opcode.InstructionGetLocal{Local: fooIndex},
-				opcode.InstructionSetLocal{Local: optionalValueTempIndex},
+				opcode.InstructionSetLocal{
+					Local:     optionalValueTempIndex,
+					IsTempVar: true,
+				},
 
 				// Nil check
 				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
@@ -7434,11 +7455,17 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				// Evaluate `y` and store in a temp local.
 				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionSetLocal{Local: tempYIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempYIndex,
+					IsTempVar: true,
+				},
 
 				// evaluate "r", and store in a temp local.
 				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionSetLocal{Local: tempIndexingValueIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempIndexingValueIndex,
+					IsTempVar: true,
+				},
 
 				// Evaluate the index expression, `y["r"]`, using temp locals.
 				opcode.InstructionGetLocal{Local: tempYIndex},
@@ -7539,7 +7566,10 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				// Evaluate `y` and store in a temp local.
 				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionSetLocal{Local: tempYIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempYIndex,
+					IsTempVar: true,
+				},
 
 				// Evaluate the member access, `y.bar`, using temp local.
 				opcode.InstructionGetLocal{Local: tempYIndex},
@@ -7640,7 +7670,10 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionSetLocal{Local: yIndex},
 
 				// Store the previously loaded `y`s old value on the temp local.
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempIndex,
+					IsTempVar: true,
+				},
 
 				// nil check on temp y.
 				opcode.InstructionGetLocal{Local: tempIndex},
@@ -7785,7 +7818,10 @@ func TestCompileEnum(t *testing.T) {
 				// let temp = rawValue
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempIndex,
+					IsTempVar: true,
+				},
 
 				// switch temp
 
@@ -8260,18 +8296,30 @@ func TestCompileSwapIdentifiers(t *testing.T) {
 			opcode.InstructionStatement{},
 
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSetLocal{Local: tempIndex1},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex1,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: yIndex},
-			opcode.InstructionSetLocal{Local: tempIndex2},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex2,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
-			opcode.InstructionSetLocal{Local: tempIndex3},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex3,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
-			opcode.InstructionSetLocal{Local: tempIndex4},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex4,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionSetLocal{Local: xIndex},
@@ -8352,20 +8400,32 @@ func TestCompileSwapMembers(t *testing.T) {
 			opcode.InstructionStatement{},
 
 			opcode.InstructionGetLocal{Local: sIndex},
-			opcode.InstructionSetLocal{Local: tempIndex1},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex1,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: sIndex},
-			opcode.InstructionSetLocal{Local: tempIndex2},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex2,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIndex3},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex3,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetField{FieldName: 1, AccessedType: 1},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIndex4},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex4,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex4},
@@ -8451,30 +8511,48 @@ func TestCompileSwapIndex(t *testing.T) {
 			opcode.InstructionStatement{},
 
 			opcode.InstructionGetLocal{Local: charsIndex},
-			opcode.InstructionSetLocal{Local: tempIndex1},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex1,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetConstant{Constant: 2},
-			opcode.InstructionSetLocal{Local: tempIndex2},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex2,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: charsIndex},
-			opcode.InstructionSetLocal{Local: tempIndex3},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex3,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetConstant{Constant: 3},
-			opcode.InstructionSetLocal{Local: tempIndex4},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex4,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIndex5},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex5,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIndex6},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex6,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
@@ -9347,11 +9425,17 @@ func TestCompileAttachments(t *testing.T) {
 				// get s on stack
 				opcode.InstructionGetLocal{Local: sLocalIndex},
 				// store s in a separate local, put on stack
-				opcode.InstructionSetLocal{Local: sTmpLocalIndex},
+				opcode.InstructionSetLocal{
+					Local:     sTmpLocalIndex,
+					IsTempVar: true,
+				},
 				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
 				// create a reference to s and store locally
 				opcode.InstructionNewRef{Type: 2, IsImplicit: false},
-				opcode.InstructionSetLocal{Local: sRefLocalIndex},
+				opcode.InstructionSetLocal{
+					Local:     sRefLocalIndex,
+					IsTempVar: true,
+				},
 				// get A constructor
 				opcode.InstructionGetGlobal{Global: aConstructorGlobalIndex},
 				// get 3
@@ -9375,7 +9459,10 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionGetLocal{Local: sLocalIndex},
 				// access A on s: s[A], returns attachment reference as optional
 				opcode.InstructionGetTypeIndex{Type: 4},
-				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionSetLocal{
+					Local:     attachmentLocalIndex,
+					IsTempVar: true,
+				},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionJumpIfNil{Target: 32},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
@@ -9533,7 +9620,10 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: siIndex},
-			opcode.InstructionSetLocal{Local: tempIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex,
+				IsTempVar: true,
+			},
 			opcode.InstructionGetLocal{Local: tempIndex},
 			opcode.InstructionJumpIfNil{Target: 11},
 			opcode.InstructionGetLocal{Local: tempIndex},
