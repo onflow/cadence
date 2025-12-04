@@ -2475,10 +2475,22 @@ func (checker *Checker) declareLowerScopedValue(
 func (checker *Checker) declareSelfValue(fnAccess Access, selfType Type, selfDocString string) {
 	// inside of an attachment, self is a reference to the attachment's type, because
 	// attachments are never first class values, they must always exist inside references
-	if typedSelfType, ok := selfType.(*CompositeType); ok && typedSelfType.Kind == common.CompositeKindAttachment {
-		// the `self` value in an attachment is entitled to the same entitlements required by the containing function
-		selfType = NewReferenceType(checker.memoryGauge, fnAccess, typedSelfType)
+	switch typedSelfType := selfType.(type) {
+	case *CompositeType:
+		if typedSelfType.Kind == common.CompositeKindAttachment {
+			// the `self` value in an attachment is entitled to the same entitlements required by the containing function
+			selfType = NewReferenceType(checker.memoryGauge, fnAccess, typedSelfType)
+		}
+	case *InterfaceType:
+		selfType = NewIntersectionType(
+			checker.memoryGauge,
+			nil,
+			[]*InterfaceType{
+				typedSelfType,
+			},
+		)
 	}
+
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
 

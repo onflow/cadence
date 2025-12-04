@@ -709,7 +709,7 @@ func generateErrors() []namedError {
 			},
 		},
 		{"sema.CyclicConformanceError",
-			sema.CyclicConformanceError{
+			&sema.CyclicConformanceError{
 				InterfaceType: placeholderInterfaceType,
 				Range:         placeholderRange,
 			},
