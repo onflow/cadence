@@ -255,26 +255,36 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 		return nil
 	}
 
-	var members *StringMemberOrderedMap
-	switch containerType := variable.Type.(type) {
-	case *CompositeType:
-		members = containerType.Members
-	case *InterfaceType:
-		members = containerType.Members
-	case *TransactionType:
-		members = containerType.Members
-	case *ReferenceType:
-		// self can only be a reference type if the container is an attachment, which is a composite
-		members = containerType.Type.(*CompositeType).Members
-	default:
-		panic(errors.NewUnreachableError())
-	}
+	members := membersForType(variable.Type)
 
 	fieldName := memberExpression.Identifier.Identifier
 
 	// caller handles the non-existing fieldNames
 	member, _ := members.Get(fieldName)
 	return member
+}
+
+func membersForType(typ Type) *StringMemberOrderedMap {
+	switch containerType := typ.(type) {
+	case *CompositeType:
+		return containerType.Members
+	case *InterfaceType:
+		return containerType.Members
+	case *TransactionType:
+		return containerType.Members
+	case *ReferenceType:
+		// self can only be a reference type if the container is an attachment, which is a composite
+		return containerType.Type.(*CompositeType).Members
+	case *IntersectionType:
+		intersectionTypes := containerType.Types
+		if len(intersectionTypes) == 0 {
+			panic(errors.NewUnreachableError())
+		}
+
+		return membersForType(intersectionTypes[0])
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (checker *Checker) withAssignment(b bool, f func() Type) Type {
