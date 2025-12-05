@@ -19,7 +19,10 @@
 
 package interpreter
 
-import "github.com/onflow/cadence/sema"
+import (
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
+)
 
 func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {
 	if subType == PrimitiveStaticTypeNever {
@@ -213,7 +216,7 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 			case *CompositeStaticType:
-				return deepEquals(typedSubTypeLegacyType, typedSuperType)
+				return common.DeepEquals(typedSubTypeLegacyType, typedSuperType)
 			}
 
 			return false
@@ -350,7 +353,7 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 				// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
 				// `Us` and `Ws` do *not* have to be subsets:
 				// The owner may freely restrict and unrestrict.
-				return deepEquals(typedSubTypeLegacyType, typedSuperType.LegacyType)
+				return common.DeepEquals(typedSubTypeLegacyType, typedSuperType.LegacyType)
 			}
 
 			return false
@@ -381,7 +384,7 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 				for i, source := range typedSubTypeTypeParameters {
 					target := typedSuperTypeTypeParameters[i]
-					if !(deepEquals(source.TypeBound, target.TypeBound)) {
+					if !(common.DeepEquals(source.TypeBound, target.TypeBound)) {
 						return false
 					}
 				}
@@ -404,7 +407,7 @@ func CheckSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 					}
 				}
 
-				return deepEquals(typedSubType.Arity, typedSuperType.Arity) &&
+				return common.DeepEquals(typedSubType.Arity, typedSuperType.Arity) &&
 					// Functions are covariant in their return type.
 					(AreReturnsCovariant(typedSubType, typedSuperType) &&
 						typedSubType.IsConstructor == typedSuperType.IsConstructor)

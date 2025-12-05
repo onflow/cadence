@@ -19,8 +19,10 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -30,6 +32,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -42,23 +45,12 @@ func parseCheckAndPrepareWithConditionLogs(
 	getLogs func() []string,
 	err error,
 ) {
-	conditionLogFunctionType := sema.NewSimpleFunctionType(
-		sema.FunctionPurityView,
-		[]sema.Parameter{
-			{
-				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     "value",
-				TypeAnnotation: sema.AnyStructTypeAnnotation,
-			},
-		},
-		sema.BoolTypeAnnotation,
-	)
 
 	var logs []string
 
 	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"conditionLog",
-		conditionLogFunctionType,
+		test_utils.ConditionLogFunctionType,
 		"",
 		func(
 			_ interpreter.NativeFunctionContext,
@@ -871,6 +863,12 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
         `)
 		require.NoError(t, err)
 
+		// Explicitly initialize the contracts, if it's the VM.
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			_, err = vmInvokable.InitializeContract("C")
+			require.NoError(t, err)
+		}
+
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
@@ -1289,4 +1287,48 @@ func TestInterpretNestedInterfaceCast(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	require.NoError(t, err)
+}
+
+func TestInterpretInvokeDefaultFunction(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t,
+		`
+          struct Foo {}
+
+          struct interface SI {
+              fun bar(_ foo: Foo): Foo {
+                  return foo
+              }
+          }
+
+          struct S: SI {}
+
+          fun test() {
+              let foo = Foo()
+              let s = S()
+              s.bar(foo)
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 7)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
 }

@@ -39,6 +39,11 @@ func parseCheckAndPrepare(tb testing.TB, code string) Invokable {
 	return test_utils.ParseCheckAndPrepare(tb, code, *compile)
 }
 
+func parseCheckAndPrepareWithoutStorageComparison(tb testing.TB, code string) Invokable {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithoutStorageComparison(tb, code, *compile)
+}
+
 func parseCheckAndPrepareWithEvents(tb testing.TB, code string) (
 	invokable Invokable,
 	getEvents func() []test_utils.TestEvent,
@@ -57,7 +62,19 @@ func parseCheckAndPrepareWithOptions(
 	err error,
 ) {
 	tb.Helper()
-	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile)
+	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile, true)
+}
+
+func parseCheckAndPrepareWithOptionsWithoutStorageComparison(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (
+	invokable Invokable,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile, false)
 }
 
 func parseCheckAndPrepareWithLogs(

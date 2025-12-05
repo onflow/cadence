@@ -19,16 +19,17 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -2742,6 +2743,13 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 			})
 
 		require.NoError(t, err)
+
+		// Explicitly initialize the contracts, if it's the VM.
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			_, err = vmInvokable.InitializeContract("base")
+			require.NoError(t, err)
+		}
+
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
@@ -4016,4 +4024,353 @@ func TestInterpretRecursiveTransfers(t *testing.T) {
 
 	var recursiveTransferError *interpreter.RecursiveTransferError
 	require.ErrorAs(t, err, &recursiveTransferError)
+}
+
+func TestInterpretInheritedDefaultDestroyEvent(t *testing.T) {
+
+	t.Parallel()
+
+	type event struct {
+		Type   *sema.CompositeType
+		Fields []interpreter.Value
+	}
+
+	var events []event
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+              resource interface RI {
+                  let x: Int
+
+                  event ResourceDestroyed(x: Int = self.x)
+              }
+
+              resource R: RI {
+                  let x: Int
+
+                  event ResourceDestroyed(x: Int = self.x)
+
+                  init() {
+                      self.x = 1
+                  }
+              }
+
+              fun test() {
+                  let r <- create R()
+                  destroy r
+              }
+	    `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				OnEventEmitted: func(
+					_ interpreter.ValueExportContext,
+					eventType *sema.CompositeType,
+					eventFields []interpreter.Value,
+				) error {
+					events = append(events, event{
+						Type:   eventType,
+						Fields: eventFields,
+					})
+					return nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Len(t, events, 2)
+
+	assert.Equal(t, "RI.ResourceDestroyed", events[0].Type.QualifiedIdentifier())
+	require.Len(t, events[0].Fields, 1)
+	assert.Equal(t, 1, events[0].Fields[0].(interpreter.IntValue).ToInt())
+
+	assert.Equal(t, "R.ResourceDestroyed", events[1].Type.QualifiedIdentifier())
+	require.Len(t, events[1].Fields, 1)
+	assert.Equal(t, 1, events[1].Fields[0].(interpreter.IntValue).ToInt())
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 4)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
+}
+
+func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("variable declaration, one value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          fun drop(_ r: @AnyResource) {
+              destroy r
+          }
+
+          fun test() {
+              var i = 0
+              while i < 2 {
+                  var r: @R? <- nil
+                  r <-! create R()
+                  drop(<-r!)
+                  i = i + 1
+              }
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("variable declarations, two values, variable", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          fun test() {
+              var r: @R? <- create R()
+
+              var i = 0
+              while i < 2 {
+                  let r2 <- r <- nil
+                  r <-! r2
+                  i = i + 1
+              }
+
+              destroy r
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("variable declarations, two values, index", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          fun test() {
+              let array: @[R?] <- [<-create R(), <-create R()]
+
+              var i = 0
+              while i < 2 {
+                  let r <- array[i] <- nil
+                  destroy r
+                  i = i + 1
+              }
+
+              destroy array
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("variable declarations, two values, member", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource Foo {
+              var bar: @Bar?
+
+              init() {
+                  self.bar <- create Bar()
+              }
+          }
+
+          resource Bar {}
+
+          fun test() {
+              let foo <- create Foo()
+
+              var i = 0
+              while i < 2 {
+                  let bar <- foo.bar <- nil
+                  foo.bar <-! bar
+                  i = i + 1
+              }
+
+              destroy foo
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("swap, variable", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          fun test() {
+              var r1 <- create R()
+              var r2 <- create R()
+
+              var i = 0
+              while i < 2 {
+                  r1 <-> r2
+                  i = i + 1
+              }
+
+              destroy r1
+              destroy r2
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("swap, index", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          fun test() {
+              let array1: @[R?] <- [<-create R(), <-create R()]
+              let array2: @[R?] <- [<-create R(), <-create R()]
+
+              var i = 0
+              while i < 2 {
+                  array1[i] <-> array2[i]
+                  i = i + 1
+              }
+
+              destroy array1
+              destroy array2
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("swap, member", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource Foo {
+              var bar: @Bar
+
+              init() {
+                  self.bar <- create Bar()
+              }
+          }
+
+          resource Bar {}
+
+          fun test() {
+              let foo1 <- create Foo()
+              let foo2 <- create Foo()
+
+              var i = 0
+              while i < 2 {
+                  foo1.bar <-> foo2.bar
+                  i = i + 1
+              }
+
+              destroy foo1
+              destroy foo2
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("optional chaining", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {
+              fun foo() {}
+          }
+
+          fun test() {
+              let r: @R? <- create R()
+
+              var i = 0
+              while i < 2 {
+                  let ignore = r?.foo()
+                  i = i + 1
+              }
+
+              destroy r
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          attachment A for R {}
+
+          fun test() {
+              let collection: @[R?] <- [nil, nil]
+
+              var i = 0
+              while i < 2 {
+                  let r: @R <- create R()
+                  collection[i] <-! attach A() to <- r
+                  i = i + 1
+              }
+
+              destroy collection
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("if-let", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          fun test() {
+              var i = 0
+              while i < 2 {
+                  let r1: @R? <- create R()
+                  if let r2 <- r1 {
+                      destroy r2
+                  }
+                  i = i + 1
+              }
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }

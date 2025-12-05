@@ -44,7 +44,10 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndPrepare(t, `
+				// The passed in argument is created with VM.
+				// Therefore, the updates are only visible to VM.
+				// So comparing the storage is not possible.
+				inter := parseCheckAndPrepareWithoutStorageComparison(t, `
                     struct S {
                         var foo: Int
 
@@ -208,7 +211,10 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndPrepare(t, `
+				// The passed in argument is created with VM.
+				// Therefore, the updates are only visible to VM.
+				// So comparing the storage is not possible.
+				inter := parseCheckAndPrepareWithoutStorageComparison(t, `
                     struct interface SI {
                         var foo: Int
                     }
@@ -388,7 +394,10 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndPrepare(t, `
+				// The passed in argument is created with VM.
+				// Therefore, the updates are only visible to VM.
+				// So comparing the storage is not possible.
+				inter := parseCheckAndPrepareWithoutStorageComparison(t, `
                     struct S {
                         var foo: Int
 

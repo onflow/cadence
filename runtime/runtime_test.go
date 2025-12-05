@@ -3704,8 +3704,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachment(t *testing.T)
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: requires support for attachments in the VM
-			//UseVM: *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3717,8 +3716,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachment(t *testing.T)
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: requires support for attachments in the VM
-			//UseVM: *compile,
+			UseVM:     *compile,
 		})
 	require.NoError(t, err)
 
@@ -3830,8 +3828,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachmentUnloadedContra
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: requires support for attachments in the VM
-			//UseVM: *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3843,8 +3840,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachmentUnloadedContra
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: requires support for attachments in the VM
-			//UseVM: *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3856,9 +3852,9 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachmentUnloadedContra
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: requires support for attachments in the VM
-			//UseVM: *compile,
-		})
+			UseVM:     *compile,
+		},
+	)
 	require.NoError(t, err)
 
 	require.Len(t, events, 5)

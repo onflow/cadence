@@ -22,6 +22,8 @@
   operands:
     - name: "local"
       type: "localIndex"
+    - name: "isTempVar"
+      type: "bool"
   valueEffects:
     pop:
       - name: "value"

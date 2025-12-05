@@ -200,10 +200,10 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 	}
 }
 
-func withoutAtreeStorageValidationEnabled[T any](inter Invokable, f func() T) T {
-	switch inter := inter.(type) {
+func withoutAtreeStorageValidationEnabled[T any](invokable Invokable, f func() T) T {
+	switch invokable := invokable.(type) {
 	case *interpreter.Interpreter:
-		config := inter.SharedState.Config
+		config := invokable.SharedState.Config
 		original := config.AtreeStorageValidationEnabled
 		config.AtreeStorageValidationEnabled = false
 		result := f()
@@ -216,7 +216,7 @@ func withoutAtreeStorageValidationEnabled[T any](inter Invokable, f func() T) T 
 		return f()
 
 	default:
-		panic(fmt.Errorf("unsupported invokable type %T", inter))
+		panic(fmt.Errorf("unsupported invokable type %T", invokable))
 	}
 }
 

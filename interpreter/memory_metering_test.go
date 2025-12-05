@@ -122,16 +122,7 @@ func ifCompile[T any](compileValue, interpretValue T) T {
 func newMeteredLogFunction(meter *testMemoryGauge, loggedString *string) stdlib.StandardLibraryValue {
 	return stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"log",
-		&sema.FunctionType{
-			Parameters: []sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.AnyStructTypeAnnotation,
-				},
-			},
-			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-		},
+		stdlib.LogFunctionType,
 		``,
 		func(
 			context interpreter.NativeFunctionContext,

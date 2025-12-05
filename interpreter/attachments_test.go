@@ -512,8 +512,7 @@ func TestInterpretAttachExecutionOrdering(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: enable after merging master in
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {
                 fun bar(): Int? {
                     return self[A]?.bar()

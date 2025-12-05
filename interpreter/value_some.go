@@ -406,8 +406,17 @@ func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
-	return v.value == nil || v.IsDestroyed()
+func (v *SomeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+	if v.value == nil || v.IsDestroyed() {
+		return true
+	}
+
+	inner, ok := v.value.(ResourceKindedValue)
+	if !ok {
+		return false
+	}
+
+	return inner.isInvalidatedResource(context)
 }
 
 type SomeStorable struct {
