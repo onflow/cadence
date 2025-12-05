@@ -49,8 +49,6 @@ import (
 
 type ParseCheckAndInterpretOptions = test_utils.ParseCheckAndInterpretOptions
 
-var parseCheckAndInterpret = test_utils.ParseCheckAndInterpret
-
 var parseCheckAndInterpretWithOptions = test_utils.ParseCheckAndInterpretWithOptions
 
 type testEvent = test_utils.TestEvent

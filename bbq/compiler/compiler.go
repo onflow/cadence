@@ -2640,10 +2640,10 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 
-	argumentCount := uint16(len(expression.Arguments))
-	if argumentCount >= math.MaxUint16 {
+	if len(expression.Arguments) >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of arguments"))
 	}
+	argumentCount := uint16(len(expression.Arguments))
 
 	invokedExpr := expression.InvokedExpression
 
@@ -2661,7 +2661,7 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				memberInfo,
 				memberExpression,
 				invocationTypes,
-				uint16(argumentCount),
+				argumentCount,
 				implicitArgIndex,
 			)
 			return
@@ -2684,7 +2684,7 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 
 	c.emit(opcode.InstructionInvoke{
 		TypeArgs: typeArgs,
-		ArgCount: uint16(argumentCount),
+		ArgCount: argumentCount,
 	})
 	return
 }
@@ -2698,15 +2698,12 @@ func (c *Compiler[_, _]) addImplicitArgument(implicitArgIndex *uint16, argumentC
 	// Used in attachments, the attachment constructor/init expects an implicit argument:
 	// a reference to the base value used to set base.
 	// This hides the base argument away from the user.
-	argumentCount += 1
-	if argumentCount >= math.MaxUint16 {
-		panic(errors.NewDefaultUserError("invalid number of arguments"))
-	}
+
 	// Load implicit argument from locals
 	// Base is at the back of the argument list, only for attachment initialization.
 	c.emitGetLocal(*implicitArgIndex)
 
-	return argumentCount
+	return argumentCount + 1
 }
 
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
