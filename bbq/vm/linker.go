@@ -224,7 +224,7 @@ func functionValueFromBBQFunction(
 ) FunctionValue {
 	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
-	return CompiledFunctionValue{
+	return &CompiledFunctionValue{
 		Function:   function,
 		Executable: executable,
 		Type:       funcStaticType,
