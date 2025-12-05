@@ -40,10 +40,14 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 		return interpreter.identifierExpressionGetterSetter(expression)
 
 	case *ast.IndexExpression:
+		// NOTE: check `AttachmentAccessTypes` instead of switching on `TypeIndexableValue` or `ValueIndexableValue`.
+		// An `*EphemeralReferenceValue` value is both a `TypeIndexableValue` and a `ValueIndexableValue` statically,
+		// but at runtime can only be used as one or the other.
 		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
 			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
+		} else {
+			return interpreter.valueIndexExpressionGetterSetter(expression)
 		}
-		return interpreter.valueIndexExpressionGetterSetter(expression)
 
 	case *ast.MemberExpression:
 		return interpreter.memberExpressionGetterSetter(expression)
@@ -1029,27 +1033,14 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
-	// note that this check in `AttachmentAccessTypes` must proceed the casting to the `TypeIndexableValue`
-	// or `ValueIndexableValue` interfaces. A `*EphemeralReferenceValue` value is both a `TypeIndexableValue`
-	// and a `ValueIndexableValue` statically, but at runtime can only be used as one or the other. Whether
-	// or not an expression is present in this map allows us to disambiguate between these two cases.
+	const allowMissing = false
+	// NOTE: check `AttachmentAccessTypes` instead of switching on `TypeIndexableValue` or `ValueIndexableValue`.
+	// An `*EphemeralReferenceValue` value is both a `TypeIndexableValue` and a `ValueIndexableValue` statically,
+	// but at runtime can only be used as one or the other.
 	if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
-		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(TypeIndexableValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		return typedResult.GetTypeKey(interpreter, attachmentType)
+		return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType).get(allowMissing)
 	} else {
-		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		indexingValue := interpreter.evalExpression(expression.IndexingExpression)
-		value := typedResult.GetKey(interpreter, indexingValue)
-
-		// If the indexing value is a reference, then return a reference for the resulting value.
-		return interpreter.maybeGetReference(expression, value)
+		return interpreter.valueIndexExpressionGetterSetter(expression).get(allowMissing)
 	}
 }
 

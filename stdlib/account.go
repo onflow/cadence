@@ -2313,8 +2313,6 @@ func updateAccountContractCode(
 type DeployedContractConstructorInvocation struct {
 	ContractType         *sema.CompositeType
 	ConstructorArguments []interpreter.Value
-	ArgumentTypes        []sema.Type
-	ParameterTypes       []sema.Type
 	Address              common.Address
 }
 
@@ -2350,22 +2348,20 @@ func instantiateContract(
 	constructorArguments []interpreter.Value,
 	argumentTypes []sema.Type,
 ) (*interpreter.CompositeValue, error) {
-	parameterTypes := make([]sema.Type, len(contractType.ConstructorParameters))
-
-	for i, constructorParameter := range contractType.ConstructorParameters {
-		parameterTypes[i] = constructorParameter.TypeAnnotation.Type
-	}
 
 	// Check argument count
 
+	constructorParameters := contractType.ConstructorParameters
+
 	argumentCount := len(argumentTypes)
-	parameterCount := len(parameterTypes)
+	parameterCount := len(constructorParameters)
 
 	if argumentCount < parameterCount {
+		parameter := constructorParameters[argumentCount]
 		return nil, errors.NewDefaultUserError(
 			"invalid argument count, too few arguments: expected %d, got %d, next missing argument: `%s`",
 			parameterCount, argumentCount,
-			parameterTypes[argumentCount],
+			parameter.TypeAnnotation.Type,
 		)
 	} else if argumentCount > parameterCount {
 		return nil, errors.NewDefaultUserError(
@@ -2381,12 +2377,14 @@ func instantiateContract(
 
 	for argumentIndex := 0; argumentIndex < argumentCount; argumentIndex++ {
 		argumentType := argumentTypes[argumentIndex]
-		parameterTye := parameterTypes[argumentIndex]
-		if !sema.IsSubType(argumentType, parameterTye) {
+		parameter := constructorParameters[argumentIndex]
+		parameterType := parameter.TypeAnnotation.Type
+
+		if !sema.IsSubType(argumentType, parameterType) {
 
 			return nil, &InvalidContractArgumentError{
 				Index:        argumentIndex,
-				ExpectedType: parameterTye,
+				ExpectedType: parameterType,
 				ActualType:   argumentType,
 			}
 		}
@@ -2408,8 +2406,6 @@ func instantiateContract(
 			Address:              location.Address,
 			ContractType:         contractType,
 			ConstructorArguments: constructorArguments,
-			ArgumentTypes:        argumentTypes,
-			ParameterTypes:       parameterTypes,
 		},
 	)
 }

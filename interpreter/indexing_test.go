@@ -19,8 +19,10 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
@@ -69,5 +71,116 @@ func TestInterpretIndexingExpressionTransfer(t *testing.T) {
 		// E.Third.rawValue
 		interpreter.UInt8Value(2),
 		result,
+	)
+}
+
+func TestInterpretIndexingExpressionTransferReadStatement(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test() {
+              let counts: {E: String} = {}
+              counts[E.A]
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 5)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
+}
+
+func TestInterpretIndexingExpressionTransferReadExpression(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test() {
+              let counts: {E: String} = {}
+              let count = counts[E.A]
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 5)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
+}
+
+func TestInterpretIndexingExpressionTransferWrite(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test() {
+              let counts: {E: String} = {}
+              counts[E.A] = "A"
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 6)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
 	)
 }

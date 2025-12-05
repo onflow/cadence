@@ -24,11 +24,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
@@ -364,4 +366,137 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectSuccess,
 		})
 	})
+}
+
+func TestRuntimeContractDeploymentInitializerArgument(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+
+	contract := []byte(`
+      access(all) contract Test {
+          init(arg: {Int: Int}) {
+              check(arg)
+          }
+      }
+    `)
+
+	deploy := fmt.Sprintf(
+		`
+          transaction {
+              prepare(signer: auth(Contracts) &Account) {
+                  let arg: {Int: Int} = {}
+                  signer.contracts.add(name: "Test", code: "%s".decodeHex(), arg: arg)
+              }
+          }
+        `,
+		hex.EncodeToString(contract),
+	)
+
+	var accountCode []byte
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{Address(addressValue)}, nil
+		},
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	check := func(value interpreter.Value) {
+		dictionaryValue, ok := value.(*interpreter.DictionaryValue)
+		require.True(t, ok)
+
+		assert.Equal(t,
+			atree.ValueID{
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x6,
+			},
+			dictionaryValue.ValueID(),
+		)
+	}
+
+	transactionEnvironment := newTransactionEnvironment()
+
+	functionType := sema.NewSimpleFunctionType(
+		sema.FunctionPurityView,
+		[]sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "arg",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.NewDictionaryType(nil, sema.IntType, sema.IntType),
+				),
+			},
+		},
+		sema.VoidTypeAnnotation,
+	)
+
+	var function interpreter.FunctionValue
+
+	const functionName = "check"
+	if *compile {
+		function = vm.NewNativeFunctionValue(
+			functionName,
+			functionType,
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
+				check(args[0])
+				return interpreter.Void
+			},
+		)
+	} else {
+		function = interpreter.NewStaticHostFunctionValue(
+			nil,
+			functionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				check(invocation.Arguments[0])
+				return interpreter.Void
+			},
+		)
+	}
+
+	transactionEnvironment.DeclareValue(
+		stdlib.StandardLibraryValue{
+			Name:  functionName,
+			Type:  functionType,
+			Kind:  common.DeclarationKindFunction,
+			Value: function,
+		},
+		nil,
+	)
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(deploy),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Environment: transactionEnvironment,
+			Location:    nextTransactionLocation(),
+			UseVM:       *compile,
+		},
+	)
+	require.NoError(t, err)
 }

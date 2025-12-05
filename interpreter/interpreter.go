@@ -1698,6 +1698,15 @@ func EnumLookupFunction(
 				return Nil
 			}
 
+			caseValue = caseValue.Transfer(
+				inter,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+				true, // value is standalone.
+			)
+
 			return NewSomeValueNonCopying(inter, caseValue)
 		},
 	)

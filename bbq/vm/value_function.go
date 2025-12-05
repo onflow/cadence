@@ -485,13 +485,9 @@ func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueSta
 
 func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
 	context := invocation.InvocationContext
-
-	arguments := make([]Value, 0, len(invocation.Arguments))
-	arguments = append(arguments, invocation.Arguments...)
-
 	return context.InvokeFunction(
 		v,
-		arguments,
+		invocation.Arguments,
 	)
 }
 

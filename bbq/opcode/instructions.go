@@ -88,7 +88,8 @@ func DecodeGetLocal(ip *uint16, code []byte) (i InstructionGetLocal) {
 //
 // Pops a value off the stack and then sets the local at the given index to that value.
 type InstructionSetLocal struct {
-	Local uint16
+	Local     uint16
+	IsTempVar bool
 }
 
 var _ Instruction = InstructionSetLocal{}
@@ -107,6 +108,8 @@ func (i InstructionSetLocal) String() string {
 func (i InstructionSetLocal) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isTempVar", i.IsTempVar, colorize)
 }
 
 func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder,
@@ -116,15 +119,19 @@ func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "isTempVar", i.IsTempVar, colorize)
 }
 
 func (i InstructionSetLocal) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.Local)
+	emitBool(code, i.IsTempVar)
 }
 
 func DecodeSetLocal(ip *uint16, code []byte) (i InstructionSetLocal) {
 	i.Local = decodeUint16(ip, code)
+	i.IsTempVar = decodeBool(ip, code)
 	return i
 }
 

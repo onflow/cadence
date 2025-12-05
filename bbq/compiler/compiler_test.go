@@ -42,28 +42,23 @@ import (
 )
 
 // assertGlobalsEqual compares GlobalInfo of globals
-func assertGlobalsEqual(t *testing.T, expected map[string]bbq.GlobalInfo, actual map[string]bbq.Global) {
+func assertGlobalsEqual(t *testing.T, expected []bbq.GlobalInfo, actual []bbq.Global) {
 	// Check that both maps have the same keys
-	assert.Equal(t, len(expected), len(actual), "globals maps have different lengths")
+	assert.Equal(t, len(expected), len(actual), "globals have different lengths")
 
-	for key, expectedGlobal := range expected {
-		actualGlobal, exists := actual[key]
-		if !assert.True(t, exists, "expected global %s not found in actual", key) {
-			continue
-		}
-
-		assert.Equal(t, expectedGlobal, actualGlobal.GetGlobalInfo())
+	for index, actualGlobal := range actual {
+		actualGlobalInfo := actualGlobal.GetGlobalInfo()
+		expectedGlobalInfo := expected[index]
+		assert.Equal(t, expectedGlobalInfo, actualGlobalInfo)
 	}
 }
 
 func assertTypesEqual(t *testing.T, expectedTypes, actualTypes []interpreter.StaticType) {
-	for _, expectedType := range expectedTypes {
-		_ = expectedType.ID()
+	require.Equal(t, len(expectedTypes), len(actualTypes))
+	for i, expectedType := range expectedTypes {
+		actualType := actualTypes[i]
+		assert.True(t, expectedType.Equal(actualType))
 	}
-	for _, actualType := range actualTypes {
-		_ = actualType.ID()
-	}
-	assert.Equal(t, expectedTypes, actualTypes)
 }
 
 func TestCompileRecursionFib(t *testing.T) {
@@ -851,7 +846,10 @@ func TestCompileIfLet(t *testing.T) {
 			// let y' = x
 			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionTransferAndConvert{Type: 1},
-			opcode.InstructionSetLocal{Local: tempYIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempYIndex,
+				IsTempVar: true,
+			},
 
 			// if nil
 			opcode.InstructionGetLocal{Local: tempYIndex},
@@ -949,7 +947,10 @@ func TestCompileIfLetScope(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: yIndex},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIfLetIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempIfLetIndex,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIfLetIndex},
 			opcode.InstructionJumpIfNil{Target: 22},
@@ -1030,8 +1031,8 @@ func TestCompileSwitch(t *testing.T) {
 		xIndex = iota
 		// aIndex is the index of the local variable `a`, which is the first local variable
 		aIndex
-		// switchIndex is the index of the local variable used to store the value of the switch expression
-		switchIndex
+		// tempSwitchValueIndex is the index of the local variable used to store the value of the switch expression
+		tempSwitchValueIndex
 	)
 
 	assert.Equal(t,
@@ -1045,10 +1046,13 @@ func TestCompileSwitch(t *testing.T) {
 			// switch x
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSetLocal{Local: switchIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempSwitchValueIndex,
+				IsTempVar: true,
+			},
 
 			// case 1:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 16},
@@ -1063,7 +1067,7 @@ func TestCompileSwitch(t *testing.T) {
 			opcode.InstructionJump{Target: 29},
 
 			// case 2:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 25},
@@ -1146,8 +1150,8 @@ func TestSwitchBreak(t *testing.T) {
 	const (
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		xIndex = iota
-		// switchIndex is the index of the local variable used to store the value of the switch expression
-		switchIndex
+		// tempSwitchValueIndex is the index of the local variable used to store the value of the switch expression
+		tempSwitchValueIndex
 	)
 
 	assert.Equal(t,
@@ -1155,10 +1159,13 @@ func TestSwitchBreak(t *testing.T) {
 			// switch x
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSetLocal{Local: switchIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempSwitchValueIndex,
+				IsTempVar: true,
+			},
 
 			// case 1:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 10},
@@ -1169,7 +1176,7 @@ func TestSwitchBreak(t *testing.T) {
 			opcode.InstructionJump{Target: 19},
 
 			// case 1:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 17},
@@ -1235,8 +1242,8 @@ func TestWhileSwitchBreak(t *testing.T) {
 	const (
 		// xIndex is the index of the local variable `x`, which is the first local variable
 		xIndex = iota
-		// switchIndex is the index of the local variable used to store the value of the switch expression
-		switchIndex
+		// tempSwitchValueIndex is the index of the local variable used to store the value of the switch expression
+		tempSwitchValueIndex
 	)
 
 	assert.Equal(t,
@@ -1257,10 +1264,13 @@ func TestWhileSwitchBreak(t *testing.T) {
 			// switch x
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSetLocal{Local: switchIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempSwitchValueIndex,
+				IsTempVar: true,
+			},
 
 			// case 1:
-			opcode.InstructionGetLocal{Local: switchIndex},
+			opcode.InstructionGetLocal{Local: tempSwitchValueIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionEqual{},
 			opcode.InstructionJumpIfFalse{Target: 18},
@@ -3184,8 +3194,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	checker, err := ParseAndCheck(t, `
         struct interface IA {
-            fun test(): Int {
-                return 42
+            fun test(x: Int): Int {
+                return x
             }
         }
 
@@ -3246,8 +3256,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// Should be calling into interface's default function.
 	// ```
-	//     fun test(): Int {
-	//        return self.test()
+	//     fun test(x: Int): Int {
+	//        return self.test(x: x)
 	//    }
 	// ```
 
@@ -3262,13 +3272,15 @@ func TestCompileDefaultFunction(t *testing.T) {
 			// self.test()
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetMethod{Method: interfaceFunctionIndex}, // must be interface method's index
+			opcode.InstructionGetLocal{Local: 1},                        // argument x
+			// NOTE: no transfer or convert of argument
 			opcode.InstructionInvoke{
 				TypeArgs: nil,
-				ArgCount: 0,
+				ArgCount: 1,
 			},
 
 			// return
-			opcode.InstructionTransferAndConvert{Type: 6},
+			// NOTE: no transfer or convert of value
 			opcode.InstructionReturnValue{},
 		},
 		concreteTypeTestFunc.Code,
@@ -3285,8 +3297,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// Should contain the implementation.
 	// ```
-	//    fun test(): Int {
-	//        return 42
+	//    fun test(x: Int): Int {
+	//        return x
 	//    }
 	// ```
 
@@ -3294,8 +3306,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 
-			// 42
-			opcode.InstructionGetConstant{Constant: 0},
+			// x
+			opcode.InstructionGetLocal{Local: 1},
 			opcode.InstructionTransferAndConvert{Type: 6},
 
 			// return
@@ -3305,12 +3317,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.DecodedConstant{
-			{
-				Data: interpreter.NewUnmeteredIntValueFromInt64(42),
-				Kind: constant.Int,
-			},
-		},
+		[]constant.DecodedConstant(nil),
 		program.Constants,
 	)
 }
@@ -7186,7 +7193,10 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Store the value in a temp index for the nil check.
 				opcode.InstructionGetLocal{Local: fooIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempIndex,
+					IsTempVar: true,
+				},
 
 				// Nil check
 				opcode.InstructionGetLocal{Local: tempIndex},
@@ -7266,7 +7276,10 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Store the receiver in a temp index for the nil check.
 				opcode.InstructionGetLocal{Local: fooIndex},
-				opcode.InstructionSetLocal{Local: optionalValueTempIndex},
+				opcode.InstructionSetLocal{
+					Local:     optionalValueTempIndex,
+					IsTempVar: true,
+				},
 
 				// Nil check
 				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
@@ -7442,11 +7455,17 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				// Evaluate `y` and store in a temp local.
 				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionSetLocal{Local: tempYIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempYIndex,
+					IsTempVar: true,
+				},
 
 				// evaluate "r", and store in a temp local.
 				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionSetLocal{Local: tempIndexingValueIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempIndexingValueIndex,
+					IsTempVar: true,
+				},
 
 				// Evaluate the index expression, `y["r"]`, using temp locals.
 				opcode.InstructionGetLocal{Local: tempYIndex},
@@ -7547,7 +7566,10 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				// Evaluate `y` and store in a temp local.
 				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionSetLocal{Local: tempYIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempYIndex,
+					IsTempVar: true,
+				},
 
 				// Evaluate the member access, `y.bar`, using temp local.
 				opcode.InstructionGetLocal{Local: tempYIndex},
@@ -7648,7 +7670,10 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionSetLocal{Local: yIndex},
 
 				// Store the previously loaded `y`s old value on the temp local.
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempIndex,
+					IsTempVar: true,
+				},
 
 				// nil check on temp y.
 				opcode.InstructionGetLocal{Local: tempIndex},
@@ -7793,7 +7818,10 @@ func TestCompileEnum(t *testing.T) {
 				// let temp = rawValue
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionSetLocal{
+					Local:     tempIndex,
+					IsTempVar: true,
+				},
 
 				// switch temp
 
@@ -8268,18 +8296,30 @@ func TestCompileSwapIdentifiers(t *testing.T) {
 			opcode.InstructionStatement{},
 
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSetLocal{Local: tempIndex1},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex1,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: yIndex},
-			opcode.InstructionSetLocal{Local: tempIndex2},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex2,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
-			opcode.InstructionSetLocal{Local: tempIndex3},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex3,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
-			opcode.InstructionSetLocal{Local: tempIndex4},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex4,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionSetLocal{Local: xIndex},
@@ -8360,20 +8400,32 @@ func TestCompileSwapMembers(t *testing.T) {
 			opcode.InstructionStatement{},
 
 			opcode.InstructionGetLocal{Local: sIndex},
-			opcode.InstructionSetLocal{Local: tempIndex1},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex1,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: sIndex},
-			opcode.InstructionSetLocal{Local: tempIndex2},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex2,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIndex3},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex3,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetField{FieldName: 1, AccessedType: 1},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIndex4},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex4,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex4},
@@ -8459,30 +8511,48 @@ func TestCompileSwapIndex(t *testing.T) {
 			opcode.InstructionStatement{},
 
 			opcode.InstructionGetLocal{Local: charsIndex},
-			opcode.InstructionSetLocal{Local: tempIndex1},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex1,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetConstant{Constant: 2},
-			opcode.InstructionSetLocal{Local: tempIndex2},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex2,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: charsIndex},
-			opcode.InstructionSetLocal{Local: tempIndex3},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex3,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetConstant{Constant: 3},
-			opcode.InstructionSetLocal{Local: tempIndex4},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex4,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIndex5},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex5,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionSetLocal{Local: tempIndex6},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex6,
+				IsTempVar: true,
+			},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
@@ -9355,11 +9425,17 @@ func TestCompileAttachments(t *testing.T) {
 				// get s on stack
 				opcode.InstructionGetLocal{Local: sLocalIndex},
 				// store s in a separate local, put on stack
-				opcode.InstructionSetLocal{Local: sTmpLocalIndex},
+				opcode.InstructionSetLocal{
+					Local:     sTmpLocalIndex,
+					IsTempVar: true,
+				},
 				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
 				// create a reference to s and store locally
 				opcode.InstructionNewRef{Type: 2, IsImplicit: false},
-				opcode.InstructionSetLocal{Local: sRefLocalIndex},
+				opcode.InstructionSetLocal{
+					Local:     sRefLocalIndex,
+					IsTempVar: true,
+				},
 				// get A constructor
 				opcode.InstructionGetGlobal{Global: aConstructorGlobalIndex},
 				// get 3
@@ -9368,7 +9444,7 @@ func TestCompileAttachments(t *testing.T) {
 				// get s reference
 				opcode.InstructionGetLocal{Local: sRefLocalIndex},
 				// invoke A constructor with &s as arg, puts A on stack
-				opcode.InstructionInvoke{TypeArgs: []uint16{1}, ArgCount: 2},
+				opcode.InstructionInvoke{ArgCount: 2},
 				// get s back on stack
 				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
 				// attachment operation, attach A to s-copy
@@ -9383,7 +9459,10 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionGetLocal{Local: sLocalIndex},
 				// access A on s: s[A], returns attachment reference as optional
 				opcode.InstructionGetTypeIndex{Type: 4},
-				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionSetLocal{
+					Local:     attachmentLocalIndex,
+					IsTempVar: true,
+				},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionJumpIfNil{Target: 32},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
@@ -9541,7 +9620,10 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: siIndex},
-			opcode.InstructionSetLocal{Local: tempIndex},
+			opcode.InstructionSetLocal{
+				Local:     tempIndex,
+				IsTempVar: true,
+			},
 			opcode.InstructionGetLocal{Local: tempIndex},
 			opcode.InstructionJumpIfNil{Target: 11},
 			opcode.InstructionGetLocal{Local: tempIndex},
@@ -9959,12 +10041,14 @@ func TestCompileImportAlias(t *testing.T) {
 
 		t.Parallel()
 
+		compiledPrograms := CompiledPrograms{}
+
 		importLocation := common.AddressLocation{
 			Address: common.MustBytesToAddress([]byte{0x1}),
 			Name:    "Foo",
 		}
 
-		importedChecker, err := ParseAndCheckWithOptions(t,
+		_ = ParseCheckAndCompile(t,
 			`
 				contract Foo {
 					fun hello(): String {
@@ -9972,19 +10056,11 @@ func TestCompileImportAlias(t *testing.T) {
 					}
 				}
             `,
-			ParseAndCheckOptions{
-				Location: importLocation,
-			},
+			importLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(importedChecker),
-			importedChecker.Location,
-		)
-		importedProgram := importCompiler.Compile()
-
-		checker, err := ParseAndCheckWithOptions(t,
+		program := ParseCheckAndCompile(t,
 			`
 				import Foo as Bar from 0x01
 
@@ -9992,31 +10068,9 @@ func TestCompileImportAlias(t *testing.T) {
 					return Bar.hello()
 				}
             `,
-			ParseAndCheckOptions{
-				CheckerConfig: &sema.Config{
-					LocationHandler: SingleIdentifierLocationResolver(t),
-					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-						require.Equal(t, importedChecker.Location, location)
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				},
-			},
+			TestLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-			require.Equal(t, importLocation, location)
-			return importedProgram
-		}
-
-		program := comp.Compile()
-
 		assert.Equal(
 			t,
 			[]bbq.Import{
@@ -10035,27 +10089,27 @@ func TestCompileImportAlias(t *testing.T) {
 		// Imported types are location qualified.
 		assertGlobalsEqual(
 			t,
-			map[string]bbq.GlobalInfo{
-				"test": {
+			[]bbq.GlobalInfo{
+				{
 					Location:      nil,
 					Name:          "test",
 					QualifiedName: "test",
 					Index:         0,
 				},
-				"A.0000000000000001.Foo": {
+				{
 					Location:      importLocation,
 					Name:          "Foo",
 					QualifiedName: "A.0000000000000001.Foo",
 					Index:         1,
 				},
-				"A.0000000000000001.Foo.hello": {
+				{
 					Location:      importLocation,
 					Name:          "Foo.hello",
 					QualifiedName: "A.0000000000000001.Foo.hello",
 					Index:         2,
 				},
 			},
-			comp.Globals,
+			program.Globals,
 		)
 
 	})
@@ -10064,12 +10118,14 @@ func TestCompileImportAlias(t *testing.T) {
 
 		t.Parallel()
 
+		compiledPrograms := CompiledPrograms{}
+
 		importLocation := common.AddressLocation{
 			Address: common.MustBytesToAddress([]byte{0x1}),
 			Name:    "FooInterface",
 		}
 
-		importedChecker, err := ParseAndCheckWithOptions(t,
+		_ = ParseCheckAndCompile(t,
 			`
 				struct interface FooInterface {
 					fun hello(): String
@@ -10079,19 +10135,16 @@ func TestCompileImportAlias(t *testing.T) {
 					}
 				}
             `,
-			ParseAndCheckOptions{
-				Location: importLocation,
-			},
+			importLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
 
-		importCompiler := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(importedChecker),
-			importedChecker.Location,
-		)
-		importedProgram := importCompiler.Compile()
+		barLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "Bar",
+		}
 
-		checker, err := ParseAndCheckWithOptions(t,
+		program := ParseCheckAndCompile(t,
 			`
 				import FooInterface as FI from 0x01
 
@@ -10101,37 +10154,9 @@ func TestCompileImportAlias(t *testing.T) {
 					}
 				}
             `,
-			ParseAndCheckOptions{
-				CheckerConfig: &sema.Config{
-					LocationHandler: SingleIdentifierLocationResolver(t),
-					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-						require.Equal(t, importedChecker.Location, location)
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
-					},
-				},
-			},
+			barLocation,
+			compiledPrograms,
 		)
-		require.NoError(t, err)
-
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-			return importedProgram
-		}
-		comp.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
-			switch location {
-			case importLocation:
-				return compiler.NewDesugaredElaboration(importedChecker.Elaboration), nil
-			default:
-				return nil, fmt.Errorf("cannot find elaboration for %s", location)
-			}
-		}
-
-		program := comp.Compile()
 
 		assert.Equal(
 			t,
@@ -10147,53 +10172,52 @@ func TestCompileImportAlias(t *testing.T) {
 		// only imported function is a location qualified global.
 		assertGlobalsEqual(
 			t,
-			map[string]bbq.GlobalInfo{
-				"Bar": {
+			[]bbq.GlobalInfo{
+				{
 					Location:      nil,
 					Name:          "Bar",
 					QualifiedName: "Bar",
 					Index:         0,
 				},
-				"Bar.getType": {
+				{
 					Location:      nil,
 					Name:          "Bar.getType",
 					QualifiedName: "Bar.getType",
 					Index:         1,
 				},
-				"Bar.hello": {
-					Location:      nil,
-					Name:          "Bar.hello",
-					QualifiedName: "Bar.hello",
-					Index:         4,
-				},
-				"Bar.isInstance": {
+				{
 					Location:      nil,
 					Name:          "Bar.isInstance",
 					QualifiedName: "Bar.isInstance",
 					Index:         2,
 				},
-				"Bar.defaultHello": {
-					Location:      nil,
-					Name:          "Bar.defaultHello",
-					QualifiedName: "Bar.defaultHello",
-					Index:         5,
-				},
-				"A.0000000000000001.FooInterface.defaultHello": {
-					Location:      importLocation,
-					Name:          "FooInterface.defaultHello",
-					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
-					Index:         6,
-				},
-				"Bar.forEachAttachment": {
+				{
 					Location:      nil,
 					Name:          "Bar.forEachAttachment",
 					QualifiedName: "Bar.forEachAttachment",
 					Index:         3,
 				},
+				{
+					Location:      nil,
+					Name:          "Bar.hello",
+					QualifiedName: "Bar.hello",
+					Index:         4,
+				},
+				{
+					Location:      nil,
+					Name:          "Bar.defaultHello",
+					QualifiedName: "Bar.defaultHello",
+					Index:         5,
+				},
+				{
+					Location:      importLocation,
+					Name:          "FooInterface.defaultHello",
+					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
+					Index:         6,
+				},
 			},
-			comp.Globals,
+			program.Globals,
 		)
-
 	})
 }
 

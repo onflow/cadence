@@ -22,6 +22,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -263,10 +264,9 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 // EntitlementMapAccess
 
 type EntitlementMapAccess struct {
-	Type       *EntitlementMapType
-	domain     EntitlementSetAccess
-	domainOnce sync.Once
-	images     sync.Map
+	Type   *EntitlementMapType
+	domain atomic.Pointer[EntitlementSetAccess]
+	images sync.Map
 }
 
 var _ Access = &EntitlementMapAccess{}
@@ -323,16 +323,21 @@ func (e *EntitlementMapAccess) PermitsAccess(other Access) bool {
 }
 
 func (e *EntitlementMapAccess) Domain() EntitlementSetAccess {
-	e.domainOnce.Do(func() {
-		domain := common.MappedSliceWithNoDuplicates(
-			e.Type.Relations,
-			func(r EntitlementRelation) *EntitlementType {
-				return r.Input
-			},
-		)
-		e.domain = NewEntitlementSetAccess(domain, Conjunction)
-	})
-	return e.domain
+	// Return cached domain if already computed
+	if cachedDomain := e.domain.Load(); cachedDomain != nil {
+		return *cachedDomain
+	}
+
+	// Compute domain and cache it
+	relations := common.MappedSliceWithNoDuplicates(
+		e.Type.Relations,
+		func(r EntitlementRelation) *EntitlementType {
+			return r.Input
+		},
+	)
+	computedDomain := NewEntitlementSetAccess(relations, Conjunction)
+	e.domain.Store(&computedDomain)
+	return computedDomain
 }
 
 // produces the image set of a single entitlement through a map

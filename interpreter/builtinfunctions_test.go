@@ -1153,7 +1153,9 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
-	inter, err := parseCheckAndPrepareWithOptions(t,
+	// The native function is only for the VM when `compile` flag is on.
+	// Running the interpreter with that is not possible.
+	inter, err := parseCheckAndPrepareWithOptionsWithoutStorageComparison(t,
 		`
 		fun test() {
 			nativeFunction(0, false)
