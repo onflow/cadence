@@ -197,7 +197,7 @@ func fill(slice []Value, n int) []Value {
 	return slice
 }
 
-func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value, arguments []Value) {
+func (vm *VM) pushCallFrame(functionValue *CompiledFunctionValue, receiver Value, arguments []Value) {
 	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
 		panic(&interpreter.CallStackLimitExceededError{
 			Limit: vm.context.StackDepthLimit,
@@ -225,16 +225,16 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 		vm.ipStack[len(vm.ipStack)-1] = vm.ip
 	}
 
-	var startTime time.Time
+	var tracingInfo tracingInfo
 	if interpreter.TracingEnabled {
-		startTime = time.Now()
+		tracingInfo = newTracingInfo(time.Now())
 	}
 
 	callFrame := callFrame{
 		localsCount:  localsCount,
 		localsOffset: offset,
 		function:     functionValue,
-		startTime:    startTime,
+		tracingInfo:  tracingInfo,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -247,7 +247,7 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 func (vm *VM) popCallFrame() {
 
 	if interpreter.TracingEnabled {
-		startTime := vm.callFrame.startTime
+		startTime := vm.callFrame.tracingInfo.StartTime()
 		function := vm.callFrame.function
 		defer func() {
 			vm.context.ReportInvokeTrace(
@@ -869,7 +869,7 @@ func invokeFunction(
 	var receiver Value
 
 	switch functionValue := functionValue.(type) {
-	case CompiledFunctionValue:
+	case *CompiledFunctionValue:
 		if isBoundFunction {
 			// For compiled functions, pass the receiver as an implicit-reference.
 			// Because the `self` value can be accessed by user-code.
@@ -1793,7 +1793,7 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 
 	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
-	vm.push(CompiledFunctionValue{
+	vm.push(&CompiledFunctionValue{
 		Function:   function,
 		Executable: executable,
 		Upvalues:   upvalues,
@@ -1930,7 +1930,7 @@ func (vm *VM) LocationRange() interpreter.LocationRange {
 	return locationRangeOfInstruction(currentFunction, lastInstructionIndex)
 }
 
-func locationRangeOfInstruction(function CompiledFunctionValue, instructionIndex uint16) interpreter.LocationRange {
+func locationRangeOfInstruction(function *CompiledFunctionValue, instructionIndex uint16) interpreter.LocationRange {
 	lineNumbers := function.Function.LineNumbers
 	position := lineNumbers.GetSourcePosition(instructionIndex)
 

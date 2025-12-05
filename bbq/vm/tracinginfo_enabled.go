@@ -1,3 +1,5 @@
+//go:build cadence_tracing
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -18,16 +20,18 @@
 
 package vm
 
-type callFrame struct {
-	// Important: keep tracingInfo as the first field, because its size may vary depending on build tags
-	// (zero when tracing is disabled, the default).
-	// This does not work when it is the last field, see https://i.hsfzxjy.site/zst-at-the-rear-of-go-struct/
-	tracingInfo tracingInfo
+import "time"
 
-	openUpvalues map[int]*Upvalue
+type tracingInfo struct {
+	startTime time.Time
+}
 
-	function *CompiledFunctionValue
+func newTracingInfo(startTime time.Time) tracingInfo {
+	return tracingInfo{
+		startTime: startTime,
+	}
+}
 
-	localsOffset uint16
-	localsCount  uint16
+func (ti tracingInfo) StartTime() time.Time {
+	return ti.startTime
 }
