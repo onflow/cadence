@@ -145,6 +145,8 @@ func NewVMAccountConstructor(creator AccountCreator) StandardLibraryValue {
 	)
 }
 
+var AccountReferenceStaticType = interpreter.ConvertSemaToStaticType(nil, sema.AccountReferenceType)
+
 func NewAccount(
 	context interpreter.MemberAccessibleContext,
 	payer interpreter.MemberAccessibleValue,
@@ -154,7 +156,7 @@ func NewAccount(
 	interpreter.ExpectType(
 		context,
 		payer,
-		sema.AccountReferenceType,
+		AccountReferenceStaticType,
 	)
 
 	payerValue := payer.GetMember(context, sema.AccountTypeAddressFieldName)
@@ -289,7 +291,7 @@ func NewAccountReferenceValue(
 		context,
 		authorization,
 		account,
-		sema.AccountType,
+		interpreter.PrimitiveStaticTypeAccount,
 	)
 }
 
@@ -1149,7 +1151,7 @@ func nativeAccountInboxUnpublishFunction(
 		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
-		borrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		providerValue := interpreter.GetAddressValue(receiver, providerPointer)
 
@@ -1194,7 +1196,7 @@ func NewVMAccountInboxUnpublishFunction(
 func AccountInboxUnpublish(
 	context interpreter.InvocationContext,
 	providerValue interpreter.AddressValue,
-	borrowType sema.Type,
+	borrowType interpreter.StaticType,
 	nameValue *interpreter.StringValue,
 	handler EventEmitter,
 ) interpreter.Value {
@@ -1215,12 +1217,12 @@ func AccountInboxUnpublish(
 		panic(errors.NewUnreachableError())
 	}
 
-	capabilityType := sema.NewCapabilityType(context, borrowType)
+	capabilityType := interpreter.NewCapabilityStaticType(context, borrowType)
 	publishedType := publishedValue.Value.StaticType(context)
-	if !interpreter.IsSubTypeOfSemaType(context, publishedType, capabilityType) {
+	if !interpreter.IsSubType(context, publishedType, capabilityType) {
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType: capabilityType,
-			ActualType:   context.SemaTypeFromStaticType(publishedType),
+			ActualType:   publishedType,
 		})
 	}
 
@@ -1260,7 +1262,7 @@ func nativeAccountInboxClaimFunction(
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 		providerValue := interpreter.AssertValueOfType[interpreter.AddressValue](args[1])
-		borrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		recipientValue := interpreter.GetAddressValue(receiver, recipientPointer)
 
@@ -1308,7 +1310,7 @@ func AccountInboxClaim(
 	providerValue interpreter.AddressValue,
 	recipientValue interpreter.AddressValue,
 	nameValue *interpreter.StringValue,
-	borrowType sema.Type,
+	borrowType interpreter.StaticType,
 	handler EventEmitter,
 ) interpreter.Value {
 	providerAddress := providerValue.ToAddress()
@@ -1333,12 +1335,12 @@ func AccountInboxClaim(
 		return interpreter.Nil
 	}
 
-	ty := sema.NewCapabilityType(context, borrowType)
+	ty := interpreter.NewCapabilityStaticType(context, borrowType)
 	publishedType := publishedValue.Value.StaticType(context)
-	if !interpreter.IsSubTypeOfSemaType(context, publishedType, ty) {
+	if !interpreter.IsSubType(context, publishedType, ty) {
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType: ty,
-			ActualType:   context.SemaTypeFromStaticType(publishedType),
+			ActualType:   publishedType,
 		})
 	}
 
@@ -1535,7 +1537,7 @@ func nativeAccountContractsBorrowFunction(
 		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
-		borrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -1583,18 +1585,18 @@ func AccountContractsBorrow(
 	invocationContext interpreter.InvocationContext,
 	address common.Address,
 	nameValue *interpreter.StringValue,
-	borrowType sema.Type,
+	borrowType interpreter.StaticType,
 	handler AccountContractsHandler,
 ) interpreter.Value {
 	name := nameValue.Str
 	location := common.NewAddressLocation(invocationContext, address, name)
 
-	referenceType, ok := borrowType.(*sema.ReferenceType)
+	referenceType, ok := borrowType.(*interpreter.ReferenceStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	if referenceType.Authorization != sema.UnauthorizedAccess {
+	if referenceType.Authorization != interpreter.UnauthorizedAccess {
 		panic(errors.NewDefaultUserError("cannot borrow a reference with an authorization"))
 	}
 
@@ -1622,7 +1624,7 @@ func AccountContractsBorrow(
 	// Check the type
 
 	staticType := contractValue.StaticType(invocationContext)
-	if !interpreter.IsSubTypeOfSemaType(invocationContext, staticType, referenceType.Type) {
+	if !interpreter.IsSubType(invocationContext, staticType, referenceType.ReferencedType) {
 		return interpreter.Nil
 	}
 
@@ -1632,7 +1634,7 @@ func AccountContractsBorrow(
 		invocationContext,
 		interpreter.UnauthorizedAccess,
 		contractValue,
-		referenceType.Type,
+		referenceType.ReferencedType,
 	)
 
 	return interpreter.NewSomeValueNonCopying(
@@ -3079,7 +3081,7 @@ func nativeAccountStorageCapabilitiesIssueFunction(
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		borrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -3127,7 +3129,7 @@ func AccountStorageCapabilitiesIssue(
 	invocationContext interpreter.InvocationContext,
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
-	typeParameter sema.Type,
+	typeParameter interpreter.StaticType,
 ) interpreter.Value {
 
 	// Get path argument
@@ -3213,11 +3215,6 @@ func AccountStorageCapabilitiesIssueWithType(
 		panic(errors.NewUnreachableError())
 	}
 
-	ty, err := interpreter.ConvertStaticToSemaType(invocationContext, typeValue.Type)
-	if err != nil {
-		panic(errors.NewUnexpectedErrorFromCause(err))
-	}
-
 	// Issue capability controller and return capability
 
 	return checkAndIssueStorageCapabilityControllerWithType(
@@ -3225,7 +3222,7 @@ func AccountStorageCapabilitiesIssueWithType(
 		handler,
 		address,
 		targetPathValue,
-		ty,
+		typeValue.Type,
 	)
 }
 
@@ -3234,10 +3231,10 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
-	ty sema.Type,
+	ty interpreter.StaticType,
 ) *interpreter.IDCapabilityValue {
 
-	borrowType, ok := ty.(*sema.ReferenceType)
+	borrowType, ok := ty.(*interpreter.ReferenceStaticType)
 	if !ok {
 		panic(&interpreter.InvalidCapabilityIssueTypeError{
 			ExpectedTypeDescription: "reference type",
@@ -3247,13 +3244,11 @@ func checkAndIssueStorageCapabilityControllerWithType(
 
 	// Issue capability controller
 
-	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(context, borrowType)
-
 	capabilityIDValue := IssueStorageCapabilityController(
 		context,
 		handler,
 		address,
-		borrowStaticType,
+		borrowType,
 		targetPathValue,
 	)
 
@@ -3267,7 +3262,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 		context,
 		capabilityIDValue,
 		interpreter.NewAddressValue(context, address),
-		borrowStaticType,
+		borrowType,
 	)
 }
 
@@ -3330,7 +3325,7 @@ func nativeAccountAccountCapabilitiesIssueFunction(
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		borrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -3383,18 +3378,13 @@ func nativeAccountAccountCapabilitiesIssueWithTypeFunction(
 		args []interpreter.Value,
 	) interpreter.Value {
 		typeValue := interpreter.AssertValueOfType[interpreter.TypeValue](args[0])
-		ty, err := interpreter.ConvertStaticToSemaType(context, typeValue.Type)
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
-		}
-
 		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return checkAndIssueAccountCapabilityControllerWithType(
 			context,
 			handler,
 			address,
-			ty,
+			typeValue.Type,
 		)
 	}
 }
@@ -3432,34 +3422,32 @@ func checkAndIssueAccountCapabilityControllerWithType(
 	context interpreter.CapabilityControllerContext,
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
-	ty sema.Type,
+	ty interpreter.StaticType,
 ) *interpreter.IDCapabilityValue {
 
 	// Get and check borrow type
 
-	typeBound := sema.AccountReferenceType
-	if !sema.IsSubType(ty, typeBound) {
+	typeBound := AccountReferenceStaticType
+	if !interpreter.IsSubType(context, ty, typeBound) {
 		panic(&interpreter.InvalidCapabilityIssueTypeError{
-			ExpectedTypeDescription: fmt.Sprintf("`%s`", typeBound.QualifiedString()),
+			ExpectedTypeDescription: fmt.Sprintf("`%s`", typeBound.String()),
 			ActualType:              ty,
 		})
 	}
 
-	borrowType, ok := ty.(*sema.ReferenceType)
+	borrowType, ok := ty.(*interpreter.ReferenceStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	// Issue capability controller
 
-	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(context, borrowType)
-
 	capabilityIDValue :=
 		IssueAccountCapabilityController(
 			context,
 			handler,
 			address,
-			borrowStaticType,
+			borrowType,
 		)
 
 	if capabilityIDValue == interpreter.InvalidCapabilityID {
@@ -3472,7 +3460,7 @@ func checkAndIssueAccountCapabilityControllerWithType(
 		context,
 		capabilityIDValue,
 		interpreter.NewAddressValue(context, address),
-		borrowStaticType,
+		borrowType,
 	)
 }
 
@@ -3664,7 +3652,7 @@ func getStorageCapabilityControllerReference(
 		context,
 		interpreter.UnauthorizedAccess,
 		storageCapabilityController,
-		sema.StorageCapabilityControllerType,
+		interpreter.PrimitiveStaticTypeStorageCapabilityController,
 	)
 }
 
@@ -4086,12 +4074,8 @@ func AccountCapabilitiesPublish(
 	domain := pathValue.Domain.StorageDomain()
 	identifier := pathValue.Identifier
 
-	capabilityType, ok := capabilityValue.StaticType(invocationContext).(*interpreter.CapabilityStaticType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	borrowType := capabilityType.BorrowType
+	staticType := capabilityValue.StaticType(invocationContext)
+	borrowType := staticType.(*interpreter.CapabilityStaticType).BorrowType
 
 	// It is possible to have legacy capabilities without borrow type.
 	// So perform the validation only if the borrow type is present.
@@ -4137,7 +4121,7 @@ func AccountCapabilitiesPublish(
 		})
 	}
 
-	capabilityValue, ok = capabilityValue.Transfer(
+	capabilityValue, ok := capabilityValue.Transfer(
 		invocationContext,
 		atree.Address(accountAddress),
 		true,
@@ -4300,38 +4284,50 @@ func AccountCapabilitiesUnpublish(
 }
 
 func canBorrow(
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	typeConverter interpreter.TypeConverter,
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
 ) bool {
 
 	// Ensure the wanted borrow type is not more permissive than the capability borrow type
 
-	if !wantedBorrowType.Authorization.
-		PermitsAccess(capabilityBorrowType.Authorization) {
+	if !interpreter.PermitsAccess(
+		typeConverter,
+		wantedBorrowType.Authorization,
+		capabilityBorrowType.Authorization,
+	) {
 
 		return false
 	}
 
 	// Ensure the wanted borrow type is a subtype or supertype of the capability borrow type
 
-	return sema.IsSubType(wantedBorrowType.Type, capabilityBorrowType.Type) ||
-		sema.IsSubType(capabilityBorrowType.Type, wantedBorrowType.Type)
+	return interpreter.IsSubType(
+		typeConverter,
+		wantedBorrowType.ReferencedType,
+		capabilityBorrowType.ReferencedType,
+	) ||
+		interpreter.IsSubType(
+			typeConverter,
+			capabilityBorrowType.ReferencedType,
+			wantedBorrowType.ReferencedType,
+		)
 }
 
 func getCheckedCapabilityController(
 	context interpreter.GetCapabilityControllerContext,
 	capabilityAddressValue interpreter.AddressValue,
 	capabilityIDValue interpreter.UInt64Value,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
 	handler CapabilityControllerHandler,
 ) (
 	interpreter.CapabilityControllerValue,
-	*sema.ReferenceType,
+	*interpreter.ReferenceStaticType,
 ) {
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else if !canBorrow(wantedBorrowType, capabilityBorrowType) {
+	} else if !canBorrow(context, wantedBorrowType, capabilityBorrowType) {
 		return nil, nil
 	}
 
@@ -4350,13 +4346,7 @@ func getCheckedCapabilityController(
 
 	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
 
-	controllerBorrowType, ok :=
-		interpreter.MustConvertStaticToSemaType(controllerBorrowStaticType, context).(*sema.ReferenceType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	if !canBorrow(wantedBorrowType, controllerBorrowType) {
+	if !canBorrow(context, wantedBorrowType, controllerBorrowStaticType) {
 		return nil, nil
 	}
 
@@ -4367,8 +4357,8 @@ func GetCheckedCapabilityControllerReference(
 	context interpreter.GetCapabilityControllerReferenceContext,
 	capabilityAddressValue interpreter.AddressValue,
 	capabilityIDValue interpreter.UInt64Value,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
 	handler CapabilityControllerHandler,
 ) interpreter.ReferenceValue {
 	controller, resultBorrowType := getCheckedCapabilityController(
@@ -4392,8 +4382,8 @@ func BorrowCapabilityController(
 	context interpreter.BorrowCapabilityControllerContext,
 	capabilityAddress interpreter.AddressValue,
 	capabilityID interpreter.UInt64Value,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
 	handler CapabilityControllerHandler,
 ) interpreter.ReferenceValue {
 	referenceValue := GetCheckedCapabilityControllerReference(
@@ -4424,8 +4414,8 @@ func CheckCapabilityController(
 	context interpreter.CheckCapabilityControllerContext,
 	capabilityAddress interpreter.AddressValue,
 	capabilityID interpreter.UInt64Value,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
 	handler CapabilityControllerHandler,
 ) interpreter.BoolValue {
 
@@ -4462,7 +4452,7 @@ func nativeAccountCapabilitiesGetFunction(
 		args []interpreter.Value,
 	) interpreter.Value {
 		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
-		typeArgument := typeArguments.NextSema()
+		typeArgument := typeArguments.NextStatic()
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
@@ -4531,7 +4521,7 @@ func AccountCapabilitiesGet(
 	invocationContext interpreter.InvocationContext,
 	controllerHandler CapabilityControllerHandler,
 	pathValue interpreter.PathValue,
-	typeParameter sema.Type,
+	typeParameter interpreter.StaticType,
 	borrow bool,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
@@ -4545,7 +4535,7 @@ func AccountCapabilitiesGet(
 	// Get borrow type type argument
 
 	// `Never` is never a supertype of any stored value
-	if typeParameter.Equal(sema.NeverType) {
+	if typeParameter == interpreter.PrimitiveStaticTypeNever {
 		if borrow {
 			return interpreter.Nil
 		} else {
@@ -4557,7 +4547,7 @@ func AccountCapabilitiesGet(
 		}
 	}
 
-	wantedBorrowType, ok := typeParameter.(*sema.ReferenceType)
+	wantedBorrowType, ok := typeParameter.(*interpreter.ReferenceStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -4570,7 +4560,7 @@ func AccountCapabilitiesGet(
 			interpreter.NewInvalidCapabilityValue(
 				invocationContext,
 				addressValue,
-				interpreter.ConvertSemaToStaticType(invocationContext, wantedBorrowType),
+				wantedBorrowType,
 			)
 	}
 
@@ -4618,8 +4608,7 @@ func AccountCapabilitiesGet(
 		panic(errors.NewUnreachableError())
 	}
 
-	capabilityBorrowType, ok :=
-		interpreter.MustConvertStaticToSemaType(capabilityStaticBorrowType, invocationContext).(*sema.ReferenceType)
+	capabilityBorrowType, ok := capabilityStaticBorrowType.(*interpreter.ReferenceStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -4669,17 +4658,11 @@ func AccountCapabilitiesGet(
 			controllerHandler,
 		)
 		if controller != nil {
-			resultBorrowStaticType :=
-				interpreter.ConvertSemaReferenceTypeToStaticReferenceType(invocationContext, resultBorrowType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
 			resultValue = interpreter.NewCapabilityValue(
 				invocationContext,
 				capabilityID,
 				capabilityAddress,
-				resultBorrowStaticType,
+				resultBorrowType,
 			)
 		}
 	}
@@ -4790,7 +4773,7 @@ func getAccountCapabilityControllerReference(
 		context,
 		interpreter.UnauthorizedAccess,
 		accountCapabilityController,
-		sema.AccountCapabilityControllerType,
+		interpreter.PrimitiveStaticTypeAccountCapabilityController,
 	)
 }
 

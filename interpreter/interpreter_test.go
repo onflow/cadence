@@ -113,7 +113,9 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		value := BoxOptional(
 			inter,
 			TrueValue,
-			&sema.OptionalType{Type: sema.BoolType},
+			&OptionalStaticType{
+				Type: PrimitiveStaticTypeBool,
+			},
 		)
 		assert.Equal(t,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
@@ -127,7 +129,9 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		value := BoxOptional(
 			inter,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
-			&sema.OptionalType{Type: sema.BoolType},
+			&OptionalStaticType{
+				Type: PrimitiveStaticTypeBool,
+			},
 		)
 		assert.Equal(t,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
@@ -141,9 +145,9 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		value := BoxOptional(
 			inter,
 			NewUnmeteredSomeValueNonCopying(TrueValue),
-			&sema.OptionalType{
-				Type: &sema.OptionalType{
-					Type: sema.BoolType,
+			&OptionalStaticType{
+				Type: &OptionalStaticType{
+					Type: PrimitiveStaticTypeBool,
 				},
 			},
 		)
@@ -162,9 +166,9 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		value := BoxOptional(
 			inter,
 			Nil,
-			&sema.OptionalType{
-				Type: &sema.OptionalType{
-					Type: sema.BoolType,
+			&OptionalStaticType{
+				Type: &OptionalStaticType{
+					Type: PrimitiveStaticTypeBool,
 				},
 			},
 		)
@@ -181,9 +185,9 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		value := BoxOptional(
 			inter,
 			NewUnmeteredSomeValueNonCopying(Nil),
-			&sema.OptionalType{
-				Type: &sema.OptionalType{
-					Type: sema.BoolType,
+			&OptionalStaticType{
+				Type: &OptionalStaticType{
+					Type: PrimitiveStaticTypeBool,
 				},
 			},
 		)

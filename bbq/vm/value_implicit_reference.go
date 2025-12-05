@@ -47,7 +47,7 @@ func NewImplicitReferenceValue(context interpreter.ReferenceCreationContext, val
 		}
 	}
 
-	semaType := interpreter.MustSemaTypeOfValue(value, context)
+	staticType := value.StaticType(context)
 
 	// Create an explicit reference to represent the implicit reference behavior of 'self' value.
 	// Authorization doesn't matter, we just need a reference to add to tracking.
@@ -55,7 +55,7 @@ func NewImplicitReferenceValue(context interpreter.ReferenceCreationContext, val
 		context,
 		interpreter.UnauthorizedAccess,
 		value,
-		semaType,
+		staticType,
 	)
 
 	return ImplicitReferenceValue{

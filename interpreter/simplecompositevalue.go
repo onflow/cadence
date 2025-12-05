@@ -118,7 +118,7 @@ func (v *SimpleCompositeValue) StaticType(_ ValueStaticTypeContext) StaticType {
 func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool {
 	// Check type is importable
 	staticType := v.StaticType(context)
-	semaType := MustConvertStaticToSemaType(staticType, context)
+	semaType := context.SemaTypeFromStaticType(staticType)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}

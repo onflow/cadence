@@ -119,8 +119,8 @@ type CapabilityBorrowHandlerFunc func(
 	context BorrowCapabilityControllerContext,
 	address AddressValue,
 	capabilityID UInt64Value,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *ReferenceStaticType,
+	capabilityBorrowType *ReferenceStaticType,
 ) ReferenceValue
 
 // CapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
@@ -128,8 +128,8 @@ type CapabilityCheckHandlerFunc func(
 	context CheckCapabilityControllerContext,
 	address AddressValue,
 	capabilityID UInt64Value,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *ReferenceStaticType,
+	capabilityBorrowType *ReferenceStaticType,
 ) BoolValue
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
@@ -165,8 +165,8 @@ type ValidateAccountCapabilitiesGetHandlerFunc func(
 	context AccountCapabilityGetValidationContext,
 	address AddressValue,
 	path PathValue,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *ReferenceStaticType,
+	capabilityBorrowType *ReferenceStaticType,
 ) (bool, error)
 
 // ValidateAccountCapabilitiesPublishHandlerFunc is a function that is used to handle when a capability of an account is got.
@@ -935,7 +935,9 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		return auth
 	}
 
-	if optionalType, ok := returnType.(*sema.OptionalType); ok {
+	returnStaticType := ConvertSemaToStaticType(interpreter, returnType)
+
+	if optionalType, ok := returnStaticType.(*OptionalStaticType); ok {
 		switch returnValue := returnValue.(type) {
 		// If this value is an optional value (T?), then transform it into an optional reference (&T)?.
 		case *SomeValue:
@@ -958,7 +960,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		interpreter,
 		resultAuth(returnType),
 		returnValue,
-		returnType,
+		returnStaticType,
 	)
 }
 
@@ -1511,14 +1513,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				var self Value = value
 				if declaration.Kind() == common.CompositeKindAttachment {
 
-					attachmentType := MustSemaTypeOfValue(value, invocationContext).(*sema.CompositeType)
+					attachmentStaticType := value.StaticType(invocationContext)
+					attachmentType := invocationContext.SemaTypeFromStaticType(attachmentStaticType).(*sema.CompositeType)
 					// Self's type in the constructor is fully entitled, since
 					// the constructor can only be called when in possession of the base resource
 
 					access := attachmentType.SupportedEntitlements().Access()
 					auth := ConvertSemaAccessToStaticAuthorization(invocationContext, access)
 
-					self = NewEphemeralReferenceValue(invocationContext, auth, value, attachmentType)
+					self = NewEphemeralReferenceValue(invocationContext, auth, value, attachmentStaticType)
 
 					// set the base to the implicitly provided value, and remove this implicit argument from the list
 					implicitArgumentPos := len(invocation.Arguments) - 1
@@ -1604,7 +1607,8 @@ func (interpreter *Interpreter) declareEnumLookupFunction(
 
 	location := interpreter.Location
 
-	intType := sema.IntType
+	intType := PrimitiveStaticTypeInt
+	enumRawStaticType := ConvertSemaToStaticType(interpreter, compositeType.EnumRawType)
 
 	enumCases := declaration.Members.EnumCases()
 	caseValues := make([]EnumCase, len(enumCases))
@@ -1618,7 +1622,7 @@ func (interpreter *Interpreter) declareEnumLookupFunction(
 			interpreter,
 			NewIntValueFromInt64(interpreter, int64(i)),
 			intType,
-			compositeType.EnumRawType,
+			enumRawStaticType,
 		).(IntegerValue)
 
 		caseValueFields := []CompositeField{
@@ -1899,6 +1903,22 @@ func TransferAndConvert(
 	value Value,
 	valueType, targetType sema.Type,
 ) Value {
+	valueStaticType := ConvertSemaToStaticType(context, valueType)
+	targetStaticType := ConvertSemaToStaticType(context, targetType)
+
+	return TransferAndConvertToStaticType(
+		context,
+		value,
+		valueStaticType,
+		targetStaticType,
+	)
+}
+
+func TransferAndConvertToStaticType(
+	context ValueConversionContext,
+	value Value,
+	valueType, targetType StaticType,
+) Value {
 
 	transferredValue := value.Transfer(
 		context,
@@ -1909,7 +1929,7 @@ func TransferAndConvert(
 		true, // value is standalone.
 	)
 
-	return ConvertAndBoxWithValidation(
+	return ConvertAndBoxToStaticTypeWithValidation(
 		context,
 		transferredValue,
 		valueType,
@@ -1923,7 +1943,24 @@ func ConvertAndBoxWithValidation(
 	valueType sema.Type,
 	targetType sema.Type,
 ) Value {
-	result := ConvertAndBox(
+	valueStaticType := ConvertSemaToStaticType(context, valueType)
+	targetStaticType := ConvertSemaToStaticType(context, targetType)
+
+	return ConvertAndBoxToStaticTypeWithValidation(
+		context,
+		transferredValue,
+		valueStaticType,
+		targetStaticType,
+	)
+}
+
+func ConvertAndBoxToStaticTypeWithValidation(
+	context ValueConversionContext,
+	transferredValue Value,
+	valueType StaticType,
+	targetType StaticType,
+) Value {
+	result := ConvertAndBoxToStaticType(
 		context,
 		transferredValue,
 		valueType,
@@ -1934,13 +1971,11 @@ func ConvertAndBoxWithValidation(
 	resultStaticType := result.StaticType(context)
 
 	if targetType != nil &&
-		!IsSubTypeOfSemaType(context, resultStaticType, targetType) {
-
-		resultSemaType := context.SemaTypeFromStaticType(resultStaticType)
+		!IsSubType(context, resultStaticType, targetType) {
 
 		panic(&ValueTransferTypeError{
 			ExpectedType: targetType,
-			ActualType:   resultSemaType,
+			ActualType:   resultStaticType,
 		})
 	}
 
@@ -1978,6 +2013,20 @@ func ConvertAndBox(
 	value Value,
 	valueType, targetType sema.Type,
 ) Value {
+	valueStaticType := ConvertSemaToStaticType(context, valueType)
+	targetStaticType := ConvertSemaToStaticType(context, targetType)
+
+	value = convert(context, value, valueStaticType, targetStaticType)
+	return BoxOptional(context, value, targetStaticType)
+}
+
+// ConvertAndBoxToStaticType converts a value to a target static type,
+// and boxes in optionals and any value, if necessary.
+func ConvertAndBoxToStaticType(
+	context ValueCreationContext,
+	value Value,
+	valueType, targetType StaticType,
+) Value {
 	value = convert(context, value, valueType, targetType)
 	return BoxOptional(context, value, targetType)
 }
@@ -1989,20 +2038,20 @@ func ConvertAndBox(
 func convertStaticType(
 	gauge common.MemoryGauge,
 	valueStaticType StaticType,
-	targetSemaType sema.Type,
+	targetSemaType StaticType,
 ) StaticType {
 	switch valueStaticType := valueStaticType.(type) {
 	case *ReferenceStaticType:
-		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
+		if targetReferenceType, isReferenceType := targetSemaType.(*ReferenceStaticType); isReferenceType {
 			return NewReferenceStaticType(
 				gauge,
-				ConvertSemaAccessToStaticAuthorization(gauge, targetReferenceType.Authorization),
+				targetReferenceType.Authorization,
 				valueStaticType.ReferencedType,
 			)
 		}
 
 	case *OptionalStaticType:
-		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
+		if targetOptionalType, isOptionalType := targetSemaType.(*OptionalStaticType); isOptionalType {
 			return NewOptionalStaticType(
 				gauge,
 				convertStaticType(
@@ -2014,7 +2063,7 @@ func convertStaticType(
 		}
 
 	case *DictionaryStaticType:
-		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
+		if targetDictionaryType, isDictionaryType := targetSemaType.(*DictionaryStaticType); isDictionaryType {
 			return NewDictionaryStaticType(
 				gauge,
 				convertStaticType(
@@ -2031,7 +2080,7 @@ func convertStaticType(
 		}
 
 	case *VariableSizedStaticType:
-		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
+		if targetArrayType, isArrayType := targetSemaType.(*VariableSizedStaticType); isArrayType {
 			return NewVariableSizedStaticType(
 				gauge,
 				convertStaticType(
@@ -2043,7 +2092,7 @@ func convertStaticType(
 		}
 
 	case *ConstantSizedStaticType:
-		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
+		if targetArrayType, isArrayType := targetSemaType.(*ConstantSizedStaticType); isArrayType {
 			return NewConstantSizedStaticType(
 				gauge,
 				convertStaticType(
@@ -2056,7 +2105,7 @@ func convertStaticType(
 		}
 
 	case *CapabilityStaticType:
-		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
+		if targetCapabilityType, isCapabilityType := targetSemaType.(*CapabilityStaticType); isCapabilityType {
 			return NewCapabilityStaticType(
 				gauge,
 				convertStaticType(
@@ -2074,16 +2123,16 @@ func convert(
 	context ValueCreationContext,
 	value Value,
 	valueType,
-	targetType sema.Type,
+	targetType StaticType,
 ) Value {
 	if valueType == nil {
 		return value
 	}
 
-	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
+	unwrappedTargetType := UnwrapOptionalType(targetType)
 
 	// if the value is optional, convert the inner value to the unwrapped target type
-	if optionalValueType, valueIsOptional := valueType.(*sema.OptionalType); valueIsOptional {
+	if optionalValueType, valueIsOptional := valueType.(*OptionalStaticType); valueIsOptional {
 		switch value := value.(type) {
 		case NilValue:
 			return value
@@ -2103,129 +2152,130 @@ func convert(
 	}
 
 	switch unwrappedTargetType {
-	case sema.IntType:
+	case PrimitiveStaticTypeInt:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt(context, value)
 		}
 
-	case sema.UIntType:
+	case PrimitiveStaticTypeUInt:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt(context, value)
 		}
 
 	// Int*
-	case sema.Int8Type:
+	case PrimitiveStaticTypeInt8:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt8(context, value)
 		}
 
-	case sema.Int16Type:
+	case PrimitiveStaticTypeInt16:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt16(context, value)
 		}
 
-	case sema.Int32Type:
+	case PrimitiveStaticTypeInt32:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt32(context, value)
 		}
 
-	case sema.Int64Type:
+	case PrimitiveStaticTypeInt64:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt64(context, value)
 		}
 
-	case sema.Int128Type:
+	case PrimitiveStaticTypeInt128:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt128(context, value)
 		}
 
-	case sema.Int256Type:
+	case PrimitiveStaticTypeInt256:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt256(context, value)
 		}
 
 	// UInt*
-	case sema.UInt8Type:
+	case PrimitiveStaticTypeUInt8:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt8(context, value)
 		}
 
-	case sema.UInt16Type:
+	case PrimitiveStaticTypeUInt16:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt16(context, value)
 		}
 
-	case sema.UInt32Type:
+	case PrimitiveStaticTypeUInt32:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt32(context, value)
 		}
 
-	case sema.UInt64Type:
+	case PrimitiveStaticTypeUInt64:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt64(context, value)
 		}
 
-	case sema.UInt128Type:
+	case PrimitiveStaticTypeUInt128:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt128(context, value)
 		}
 
-	case sema.UInt256Type:
+	case PrimitiveStaticTypeUInt256:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt256(context, value)
 		}
 
 	// Word*
-	case sema.Word8Type:
+	case PrimitiveStaticTypeWord8:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord8(context, value)
 		}
 
-	case sema.Word16Type:
+	case PrimitiveStaticTypeWord16:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord16(context, value)
 		}
 
-	case sema.Word32Type:
+	case PrimitiveStaticTypeWord32:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord32(context, value)
 		}
 
-	case sema.Word64Type:
+	case PrimitiveStaticTypeWord64:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord64(context, value)
 		}
 
-	case sema.Word128Type:
+	case PrimitiveStaticTypeWord128:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord128(context, value)
 		}
 
-	case sema.Word256Type:
+	case PrimitiveStaticTypeWord256:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord256(context, value)
 		}
 
 	// Fix*
 
-	case sema.Fix64Type:
+	case PrimitiveStaticTypeFix64:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertFix64(context, value)
 		}
 
-	case sema.UFix64Type:
+	case PrimitiveStaticTypeUFix64:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUFix64(context, value)
+		}
+
+	case PrimitiveStaticTypeAddress:
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertAddress(context, value)
 		}
 	}
 
 	switch unwrappedTargetType := unwrappedTargetType.(type) {
-	case *sema.AddressType:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertAddress(context, value)
-		}
 
-	case sema.ArrayType:
+	case ArrayStaticType:
 		if arrayValue, isArray := value.(*ArrayValue); isArray && !valueType.Equal(unwrappedTargetType) {
 
 			oldArrayStaticType := arrayValue.StaticType(context)
@@ -2235,7 +2285,7 @@ func convert(
 				return value
 			}
 
-			targetElementType := context.SemaTypeFromStaticType(arrayStaticType.ElementType())
+			targetElementType := arrayStaticType.ElementType()
 
 			array := arrayValue.array
 
@@ -2259,13 +2309,13 @@ func convert(
 					}
 
 					value := MustConvertStoredValue(context, element)
-					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
+					valueType := value.StaticType(context)
 					return convert(context, value, valueType, targetElementType)
 				},
 			)
 		}
 
-	case *sema.DictionaryType:
+	case *DictionaryStaticType:
 		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
 
 			oldDictStaticType := dictValue.StaticType(context)
@@ -2275,8 +2325,8 @@ func convert(
 				return value
 			}
 
-			targetKeyType := context.SemaTypeFromStaticType(dictStaticType.KeyType)
-			targetValueType := context.SemaTypeFromStaticType(dictStaticType.ValueType)
+			targetKeyType := dictStaticType.KeyType
+			targetValueType := dictStaticType.ValueType
 
 			dictionary := dictValue.dictionary
 
@@ -2304,8 +2354,8 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					value := MustConvertStoredValue(context, v)
 
-					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
-					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
+					keyType := key.StaticType(context)
+					valueType := value.StaticType(context)
 
 					convertedKey := convert(context, key, keyType, targetKeyType)
 					convertedValue := convert(context, value, valueType, targetValueType)
@@ -2315,9 +2365,9 @@ func convert(
 			)
 		}
 
-	case *sema.CapabilityType:
+	case *CapabilityStaticType:
 		if !valueType.Equal(unwrappedTargetType) && unwrappedTargetType.BorrowType != nil {
-			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
+			targetBorrowType := unwrappedTargetType.BorrowType.(*ReferenceStaticType)
 
 			switch capability := value.(type) {
 			case *IDCapabilityValue:
@@ -2338,8 +2388,8 @@ func convert(
 			}
 		}
 
-	case *sema.ReferenceType:
-		targetAuthorization := ConvertSemaAccessToStaticAuthorization(context, unwrappedTargetType.Authorization)
+	case *ReferenceStaticType:
+		targetAuthorization := unwrappedTargetType.Authorization
 		switch ref := value.(type) {
 		case *EphemeralReferenceValue:
 			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
@@ -2348,7 +2398,7 @@ func convert(
 					context,
 					targetAuthorization,
 					ref.Value,
-					unwrappedTargetType.Type,
+					unwrappedTargetType.ReferencedType,
 				)
 			}
 
@@ -2360,7 +2410,7 @@ func convert(
 					targetAuthorization,
 					ref.TargetStorageAddress,
 					ref.TargetPath,
-					unwrappedTargetType.Type,
+					unwrappedTargetType.ReferencedType,
 				)
 			}
 
@@ -2372,23 +2422,35 @@ func convert(
 	return value
 }
 
+// UnwrapOptionalType returns the type if it is not an optional type,
+// or the inner-most type if it is (optional types are repeatedly unwrapped)
+func UnwrapOptionalType(ty StaticType) StaticType {
+	for {
+		optionalType, ok := ty.(*OptionalStaticType)
+		if !ok {
+			return ty
+		}
+		ty = optionalType.Type
+	}
+}
+
 func shouldConvertReference(
 	ref ReferenceValue,
-	valueType sema.Type,
-	unwrappedTargetType *sema.ReferenceType,
+	valueType StaticType,
+	unwrappedTargetType *ReferenceStaticType,
 	targetAuthorization Authorization,
 ) bool {
 	if !valueType.Equal(unwrappedTargetType) {
 		return true
 	}
 
-	return !ref.BorrowType().Equal(unwrappedTargetType.Type) ||
+	return !ref.BorrowType().Equal(unwrappedTargetType.ReferencedType) ||
 		!ref.GetAuthorization().Equal(targetAuthorization)
 }
 
-func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType) {
+func checkMappedEntitlements(unwrappedTargetType *ReferenceStaticType) {
 	// check defensively that we never create a runtime mapped entitlement value
-	if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
+	if _, isMappedAuth := unwrappedTargetType.Authorization.(*EntitlementMapAuthorization); isMappedAuth {
 		panic(&UnexpectedMappedEntitlementError{
 			Type: unwrappedTargetType,
 		})
@@ -2396,12 +2458,12 @@ func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType) {
 }
 
 // BoxOptional boxes a value in optionals, if necessary
-func BoxOptional(gauge common.MemoryGauge, value Value, targetType sema.Type) Value {
+func BoxOptional(gauge common.MemoryGauge, value Value, targetType StaticType) Value {
 
 	inner := value
 
 	for {
-		optionalType, ok := targetType.(*sema.OptionalType)
+		optionalType, ok := targetType.(*OptionalStaticType)
 		if !ok {
 			break
 		}
@@ -3693,9 +3755,10 @@ func ConstructDictionaryTypeValue(
 
 	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 	if keyType == nil ||
-		!sema.IsSubType(
-			context.SemaTypeFromStaticType(keyType),
-			sema.HashableStructType,
+		!IsSubType(
+			context,
+			keyType,
+			PrimitiveStaticTypeHashableStruct,
 		) {
 		return Nil
 	}
@@ -3936,8 +3999,7 @@ func ConstructInclusiveRangeTypeValue(
 	ty := typeValue.Type
 
 	// InclusiveRanges must hold integers
-	elemSemaTy := context.SemaTypeFromStaticType(ty)
-	if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
+	if !IsSameTypeKind(context, ty, PrimitiveStaticTypeInteger) {
 		return Nil
 	}
 
@@ -4393,9 +4455,7 @@ func IsSubType(typeConverter TypeConverter, subType StaticType, superType Static
 		return true
 	}
 
-	semaType := typeConverter.SemaTypeFromStaticType(superType)
-
-	return IsSubTypeOfSemaType(typeConverter, subType, semaType)
+	return CheckSubTypeWithoutEquality_gen(typeConverter, subType, superType)
 }
 
 func IsSubTypeOfSemaType(typeConverter TypeConverter, staticSubType StaticType, superType sema.Type) bool {
@@ -4668,6 +4728,12 @@ func checkValue(
 		}
 	}()
 
+	// For all values, try to load the type and see if it's not broken.
+	_, valueError = ConvertStaticToSemaType(context, staticType)
+	if valueError != nil {
+		return valueError
+	}
+
 	// Here, the value at the path could be either:
 	//	1) The actual stored value (storage path)
 	//	2) A capability to the value at the storage (private/public paths)
@@ -4680,13 +4746,7 @@ func checkValue(
 		// Capability values always have a `CapabilityStaticType` static type.
 		borrowType := staticType.(*CapabilityStaticType).BorrowType
 
-		var borrowSemaType sema.Type
-		borrowSemaType, valueError = ConvertStaticToSemaType(context, borrowType)
-		if valueError != nil {
-			return valueError
-		}
-
-		referenceType, ok := borrowSemaType.(*sema.ReferenceType)
+		referenceType, ok := borrowType.(*ReferenceStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -4700,11 +4760,6 @@ func checkValue(
 			referenceType,
 			referenceType,
 		)
-
-	} else {
-		// For all other values, trying to load the type is sufficient.
-		// Here it is only interested in whether the type can be properly loaded.
-		_, valueError = ConvertStaticToSemaType(context, staticType)
 	}
 
 	return
@@ -4898,12 +4953,12 @@ func NativeAccountStorageReadFunction(
 		args []Value,
 	) Value {
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
-		semaBorrowType := typeArguments.NextSema()
+		borrowType := typeArguments.NextStatic()
 
 		return AccountStorageRead(
 			context,
 			args,
-			semaBorrowType,
+			borrowType,
 			address,
 			clear,
 		)
@@ -4929,7 +4984,7 @@ func authAccountReadFunction(
 func AccountStorageRead(
 	invocationContext InvocationContext,
 	arguments []Value,
-	typeParameter sema.Type,
+	typeParameter StaticType,
 	address common.Address,
 	clear bool,
 ) Value {
@@ -4954,12 +5009,10 @@ func AccountStorageRead(
 
 	valueStaticType := value.StaticType(invocationContext)
 
-	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
-		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
-
+	if !IsSubType(invocationContext, valueStaticType, typeParameter) {
 		panic(&StoredValueTypeMismatchError{
 			ExpectedType: typeParameter,
-			ActualType:   valueSemaType,
+			ActualType:   valueStaticType,
 		})
 	}
 
@@ -4999,7 +5052,7 @@ func NativeAccountStorageBorrowFunction(
 		args []Value,
 	) Value {
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
-		typeParameter := typeArguments.NextSema()
+		typeParameter := typeArguments.NextStatic()
 
 		return AccountStorageBorrow(
 			context,
@@ -5027,7 +5080,7 @@ func authAccountStorageBorrowFunction(
 func AccountStorageBorrow(
 	invocationContext InvocationContext,
 	arguments []Value,
-	typeParameter sema.Type,
+	typeParameter StaticType,
 	address common.Address,
 ) Value {
 	path, ok := arguments[0].(PathValue)
@@ -5035,17 +5088,17 @@ func AccountStorageBorrow(
 		panic(errors.NewUnreachableError())
 	}
 
-	referenceType, ok := typeParameter.(*sema.ReferenceType)
+	referenceType, ok := typeParameter.(*ReferenceStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	reference := NewStorageReferenceValue(
 		invocationContext,
-		ConvertSemaAccessToStaticAuthorization(invocationContext, referenceType.Authorization),
+		referenceType.Authorization,
 		address,
 		path,
-		referenceType.Type,
+		referenceType.ReferencedType,
 	)
 
 	// Attempt to dereference,
@@ -5572,16 +5625,14 @@ func setMember(
 func ExpectType(
 	context ValueStaticTypeContext,
 	value Value,
-	expectedType sema.Type,
+	expectedType StaticType,
 ) {
 	valueStaticType := value.StaticType(context)
 
-	if !IsSubTypeOfSemaType(context, valueStaticType, expectedType) {
-		valueSemaType := context.SemaTypeFromStaticType(valueStaticType)
-
+	if !IsSubType(context, valueStaticType, expectedType) {
 		panic(&TypeMismatchError{
 			ExpectedType: expectedType,
-			ActualType:   valueSemaType,
+			ActualType:   valueStaticType,
 		})
 	}
 }
@@ -5595,8 +5646,8 @@ func checkContainerMutation(
 
 	if !IsSubType(context, actualElementType, elementType) {
 		panic(&ContainerMutationError{
-			ExpectedType: context.SemaTypeFromStaticType(elementType),
-			ActualType:   MustSemaTypeOfValue(element, context),
+			ExpectedType: elementType,
+			ActualType:   actualElementType,
 		})
 	}
 }
@@ -5986,7 +6037,7 @@ func (interpreter *Interpreter) Storage() Storage {
 func NativeCapabilityBorrowFunction(
 	addressValuePointer *AddressValue,
 	capabilityIDPointer *UInt64Value,
-	capabilityBorrowTypePointer *sema.ReferenceType,
+	capabilityBorrowTypePointer *ReferenceStaticType,
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -5994,7 +6045,7 @@ func NativeCapabilityBorrowFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		var capabilityBorrowType *sema.ReferenceType
+		var capabilityBorrowType *ReferenceStaticType
 		var capabilityID UInt64Value
 		var addressValue AddressValue
 
@@ -6019,7 +6070,7 @@ func NativeCapabilityBorrowFunction(
 				return Nil
 			}
 
-			capabilityBorrowType = context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
+			capabilityBorrowType = idCapabilityValue.BorrowType.(*ReferenceStaticType)
 			addressValue = idCapabilityValue.Address()
 		} else {
 			capabilityBorrowType = capabilityBorrowTypePointer
@@ -6027,7 +6078,7 @@ func NativeCapabilityBorrowFunction(
 			addressValue = *addressValuePointer
 		}
 
-		typeArgument := typeArguments.NextSema()
+		typeArgument := typeArguments.NextStatic()
 
 		return CapabilityBorrow(
 			context,
@@ -6044,32 +6095,34 @@ func capabilityBorrowFunction(
 	capabilityValue CapabilityValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	capabilityBorrowType *ReferenceStaticType,
 ) FunctionValue {
+
+	capabilityBorrowSemaType := context.SemaTypeFromStaticType(capabilityBorrowType)
 
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
-		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
+		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowSemaType),
 		NativeCapabilityBorrowFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
 
 func CapabilityBorrow(
 	invocationContext InvocationContext,
-	typeArgument sema.Type,
+	typeArgument StaticType,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	capabilityBorrowType *ReferenceStaticType,
 ) Value {
 	if capabilityID == InvalidCapabilityID {
 		return Nil
 	}
 
-	var wantedBorrowType *sema.ReferenceType
+	var wantedBorrowType *ReferenceStaticType
 	if typeArgument != nil {
 		var ok bool
-		wantedBorrowType, ok = typeArgument.(*sema.ReferenceType)
+		wantedBorrowType, ok = typeArgument.(*ReferenceStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -6093,7 +6146,7 @@ func CapabilityBorrow(
 func NativeCapabilityCheckFunction(
 	addressValuePointer *AddressValue,
 	capabilityIDPointer *UInt64Value,
-	capabilityBorrowTypePointer *sema.ReferenceType,
+	capabilityBorrowTypePointer *ReferenceStaticType,
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -6101,7 +6154,7 @@ func NativeCapabilityCheckFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		var capabilityBorrowType *sema.ReferenceType
+		var capabilityBorrowType *ReferenceStaticType
 		var capabilityID UInt64Value
 		var addressValue AddressValue
 
@@ -6127,7 +6180,7 @@ func NativeCapabilityCheckFunction(
 				return FalseValue
 			}
 
-			capabilityBorrowType = context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
+			capabilityBorrowType = idCapabilityValue.BorrowType.(*ReferenceStaticType)
 			addressValue = idCapabilityValue.Address()
 		} else {
 			capabilityBorrowType = capabilityBorrowTypePointer
@@ -6135,7 +6188,7 @@ func NativeCapabilityCheckFunction(
 			addressValue = *addressValuePointer
 		}
 
-		typeArgument := typeArguments.NextSema()
+		typeArgument := typeArguments.NextStatic()
 
 		return CapabilityCheck(
 			context,
@@ -6152,33 +6205,35 @@ func capabilityCheckFunction(
 	capabilityValue CapabilityValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	capabilityBorrowType *ReferenceStaticType,
 ) FunctionValue {
+
+	capabilityBorrowSemaType := context.SemaTypeFromStaticType(capabilityBorrowType)
 
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
-		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
+		sema.CapabilityTypeCheckFunctionType(capabilityBorrowSemaType),
 		NativeCapabilityCheckFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
 
 func CapabilityCheck(
 	invocationContext InvocationContext,
-	typeArgument sema.Type,
+	typeArgument StaticType,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	capabilityBorrowType *ReferenceStaticType,
 ) Value {
 
 	if capabilityID == InvalidCapabilityID {
 		return FalseValue
 	}
 
-	var wantedBorrowType *sema.ReferenceType
+	var wantedBorrowType *ReferenceStaticType
 	if typeArgument != nil {
 		var ok bool
-		wantedBorrowType, ok = typeArgument.(*sema.ReferenceType)
+		wantedBorrowType, ok = typeArgument.(*ReferenceStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -6381,6 +6436,10 @@ func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) se
 	return MustConvertStaticToSemaType(staticType, interpreter)
 }
 
+func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
+	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
+}
+
 func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
 	storageReference *StorageReferenceValue,
 	referencedValue Value,
@@ -6396,10 +6455,6 @@ func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
 	}
 
 	return member
-}
-
-func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
-	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
 }
 
 func StorageReference(
@@ -6428,6 +6483,6 @@ func StorageReference(
 		storageReference.Authorization,
 		storageReference.TargetStorageAddress,
 		storageReference.TargetPath,
-		context.SemaTypeFromStaticType(referencedValueStaticType),
+		referencedValueStaticType,
 	)
 }

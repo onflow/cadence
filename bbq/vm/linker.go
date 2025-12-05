@@ -201,16 +201,12 @@ func linkImportedGlobal(
 				contractValue := global.GetValue(context)
 
 				staticType := contractValue.StaticType(context)
-				semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
-				if err != nil {
-					panic(err)
-				}
 
 				return interpreter.NewEphemeralReferenceValue(
 					context,
 					interpreter.UnauthorizedAccess,
 					contractValue,
-					semaType,
+					staticType,
 				)
 			},
 		)

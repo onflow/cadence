@@ -637,6 +637,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		address := common.Address{0x1}
 
 		rType := RequireGlobalType(t, inter, "R").(*sema.CompositeType)
+		rStaticType := interpreter.ConvertSemaToStaticType(nil, rType)
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -655,8 +656,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 				sema.Conjunction,
 			),
 			array,
-			&sema.VariableSizedType{
-				Type: rType,
+			&interpreter.VariableSizedStaticType{
+				Type: rStaticType,
 			},
 		)
 
@@ -742,13 +743,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
         `)
 
 		rType := RequireGlobalType(t, inter, "R").(*sema.CompositeType)
+		rStaticType := interpreter.ConvertSemaToStaticType(nil, rType)
 
 		// Resource array in account 0x01
 
 		array1 := interpreter.NewArrayValue(
 			inter,
 			&interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(nil, rType),
+				Type: rStaticType,
 			},
 			common.Address{0x1},
 		)
@@ -762,8 +764,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 				sema.Conjunction,
 			),
 			array1,
-			&sema.VariableSizedType{
-				Type: rType,
+			&interpreter.VariableSizedStaticType{
+				Type: rStaticType,
 			},
 		)
 
@@ -772,7 +774,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array2 := interpreter.NewArrayValue(
 			inter,
 			&interpreter.VariableSizedStaticType{
-				Type: interpreter.ConvertSemaToStaticType(nil, rType),
+				Type: rStaticType,
 			},
 			common.Address{0x2},
 		)
@@ -786,8 +788,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 				sema.Conjunction,
 			),
 			array2,
-			&sema.VariableSizedType{
-				Type: rType,
+			&interpreter.VariableSizedStaticType{
+				Type: rStaticType,
 			},
 		)
 
@@ -840,6 +842,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		address := common.Address{0x1}
 
 		rType := RequireGlobalType(t, inter, "R").(*sema.CompositeType)
+		rStaticType := interpreter.ConvertSemaToStaticType(nil, rType)
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -858,8 +861,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 				sema.Conjunction,
 			),
 			array,
-			&sema.VariableSizedType{
-				Type: rType,
+			&interpreter.VariableSizedStaticType{
+				Type: rStaticType,
 			},
 		)
 
@@ -969,6 +972,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		address := common.Address{0x1}
 
 		rType := RequireGlobalType(t, inter, "R").(*sema.CompositeType)
+		rStaticType := interpreter.ConvertSemaToStaticType(nil, rType)
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -987,8 +991,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 				sema.Conjunction,
 			),
 			array,
-			&sema.VariableSizedType{
-				Type: rType,
+			&interpreter.VariableSizedStaticType{
+				Type: rStaticType,
 			},
 		)
 
@@ -3144,7 +3148,7 @@ func TestInterpretOptionalReference(t *testing.T) {
 			t,
 			&interpreter.EphemeralReferenceValue{
 				Value:         interpreter.NewUnmeteredIntValueFromInt64(1),
-				BorrowedType:  sema.IntType,
+				BorrowedType:  interpreter.PrimitiveStaticTypeInt,
 				Authorization: interpreter.UnauthorizedAccess,
 			},
 			value,

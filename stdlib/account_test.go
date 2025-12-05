@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
@@ -114,10 +115,13 @@ func TestCanBorrow(t *testing.T) {
 			for _, b := range types {
 				a2, b2 := instantiate(a, b)
 
-				t.Run(fmt.Sprintf("%s / %s", a2, b2), func(t *testing.T) {
+				staticA2 := interpreter.ConvertSemaToStaticType(nil, a2).(*interpreter.ReferenceStaticType)
+				staticB2 := interpreter.ConvertSemaToStaticType(nil, b2).(*interpreter.ReferenceStaticType)
+
+				t.Run(fmt.Sprintf("%s / %s", staticA2, staticB2), func(t *testing.T) {
 					t.Parallel()
 
-					require.Equal(t, expected, canBorrow(a2, b2))
+					require.Equal(t, expected, canBorrow(inter, staticA2, staticB2))
 				})
 			}
 		}

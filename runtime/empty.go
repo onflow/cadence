@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 )
 
 // EmptyRuntimeInterface is an empty implementation of runtime.Interface.
@@ -214,8 +213,8 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
 	_ interpreter.AccountCapabilityGetValidationContext,
 	_ interpreter.AddressValue,
 	_ interpreter.PathValue,
-	_ *sema.ReferenceType,
-	_ *sema.ReferenceType,
+	_ *interpreter.ReferenceStaticType,
+	_ *interpreter.ReferenceStaticType,
 ) (bool, error) {
 	panic("unexpected call to ValidateAccountCapabilitiesGet")
 }
