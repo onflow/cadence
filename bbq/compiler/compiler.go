@@ -2635,16 +2635,15 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 
 func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	expression *ast.InvocationExpression,
-	implicitArgIndex uint16,
-	implicitArgType sema.Type,
+	implicitArgIndex *uint16,
 ) (_ struct{}) {
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 
-	argumentCount := len(expression.Arguments)
-	if argumentCount >= math.MaxUint16 {
+	if len(expression.Arguments) >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of arguments"))
 	}
+	argumentCount := uint16(len(expression.Arguments))
 
 	invokedExpr := expression.InvokedExpression
 
@@ -2662,7 +2661,8 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				memberInfo,
 				memberExpression,
 				invocationTypes,
-				uint16(argumentCount),
+				argumentCount,
+				implicitArgIndex,
 			)
 			return
 		}
@@ -2678,32 +2678,36 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 
 	// Compile arguments
 	c.compileArguments(expression.Arguments, invocationTypes)
+	argumentCount = c.addImplicitArgument(implicitArgIndex, argumentCount)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
-	if implicitArgType != nil {
-		// Add the implicit argument to the end of the argument list, if it exists.
-		// Used in attachments, the attachment constructor/init expects an implicit argument:
-		// a reference to the base value used to set base.
-		// This hides the base argument away from the user.
-		typeArgs = append(typeArgs, c.getOrAddType(implicitArgType))
-		argumentCount += 1
-		if argumentCount >= math.MaxUint16 {
-			panic(errors.NewDefaultUserError("invalid number of arguments"))
-		}
-		// Load implicit argument from locals
-		// Base is at the back of the argument list, only for attachment initialization.
-		c.emitGetLocal(implicitArgIndex)
-	}
 
 	c.emit(opcode.InstructionInvoke{
 		TypeArgs: typeArgs,
-		ArgCount: uint16(argumentCount),
+		ArgCount: argumentCount,
 	})
 	return
 }
 
+func (c *Compiler[_, _]) addImplicitArgument(implicitArgIndex *uint16, argumentCount uint16) (newArgCount uint16) {
+	if implicitArgIndex == nil {
+		return argumentCount
+	}
+
+	// Add the implicit argument to the end of the argument list, if it exists.
+	// Used in attachments, the attachment constructor/init expects an implicit argument:
+	// a reference to the base value used to set base.
+	// This hides the base argument away from the user.
+
+	// Load implicit argument from locals
+	// Base is at the back of the argument list, only for attachment initialization.
+	c.emitGetLocal(*implicitArgIndex)
+
+	return argumentCount + 1
+}
+
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	c.visitInvocationExpressionWithImplicitArgument(expression, 0, nil)
+	c.visitInvocationExpressionWithImplicitArgument(expression, nil)
 
 	return
 }
@@ -2735,12 +2739,12 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
 	argumentCount uint16,
+	implicitArgIndex *uint16,
 ) {
 	var funcName string
 
 	invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 	if invocationType.IsConstructor {
-
 		funcName = c.maybeApplyAddressQualifierToFunctionName(
 			invokedExpr.Identifier.Identifier,
 			memberInfo.AccessedType,
@@ -2757,6 +2761,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 		// Compile arguments
 		c.compileArguments(expression.Arguments, invocationTypes)
+		argumentCount = c.addImplicitArgument(implicitArgIndex, argumentCount)
 
 		typeArgs := c.loadTypeArguments(invocationTypes)
 
@@ -2765,6 +2770,10 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			ArgCount: argumentCount,
 		})
 		return
+	}
+
+	if implicitArgIndex != nil {
+		panic(errors.NewUnexpectedError("implicit arguments can only be present for constructor invocations"))
 	}
 
 	isOptional := memberInfo.IsOptional
@@ -4161,7 +4170,7 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.emitSetTempLocal(refLocalIndex)
 
 	// create the attachment
-	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, refLocalIndex, baseType)
+	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, &refLocalIndex)
 	// attachment on stack
 
 	// base back on stack
