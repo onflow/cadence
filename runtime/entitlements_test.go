@@ -301,8 +301,7 @@ func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
-			// TODO: requires support for attachments in the VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -314,8 +313,7 @@ func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
-			// TODO: requires support for attachments in the VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -327,8 +325,7 @@ func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
-			// TODO: requires support for attachments in the VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 
