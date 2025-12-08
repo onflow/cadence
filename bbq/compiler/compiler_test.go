@@ -2827,29 +2827,20 @@ func TestCompileMethodInvocation(t *testing.T) {
 		)
 	}
 
-	{
-		const parameterCount = 0
-
-		const selfIndex = parameterCount
-
-		assert.Equal(t,
-			[]opcode.Instruction{
-				// Foo()
-				opcode.InstructionNewComposite{
-					Kind: common.CompositeKindStructure,
-					Type: 1,
-				},
-
-				// assign to self
-				opcode.InstructionSetLocal{Local: selfIndex},
-
-				// return self
-				opcode.InstructionGetLocal{Local: selfIndex},
-				opcode.InstructionReturnValue{},
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// Foo()
+			opcode.InstructionNewComposite{
+				Kind: common.CompositeKindStructure,
+				Type: 1,
 			},
-			functions[initFuncIndex].Code,
-		)
-	}
+
+			// NOTE: no redundant set-local / get-local for self in struct init
+
+			opcode.InstructionReturnValue{},
+		},
+		functions[initFuncIndex].Code,
+	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -2917,29 +2908,20 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 		)
 	}
 
-	{
-		const parameterCount = 0
-
-		const selfIndex = parameterCount
-
-		assert.Equal(t,
-			[]opcode.Instruction{
-				// Foo()
-				opcode.InstructionNewComposite{
-					Kind: common.CompositeKindResource,
-					Type: 1,
-				},
-
-				// assign to self
-				opcode.InstructionSetLocal{Local: selfIndex},
-
-				// return self
-				opcode.InstructionGetLocal{Local: selfIndex},
-				opcode.InstructionReturnValue{},
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// Foo()
+			opcode.InstructionNewComposite{
+				Kind: common.CompositeKindResource,
+				Type: 1,
 			},
-			functions[initFuncIndex].Code,
-		)
-	}
+
+			// NOTE: no redundant set-local / get-local for self in resource init
+
+			opcode.InstructionReturnValue{},
+		},
+		functions[initFuncIndex].Code,
+	)
 }
 
 func TestCompilePath(t *testing.T) {
@@ -5065,8 +5047,6 @@ func TestCompileTransaction(t *testing.T) {
 				Kind: common.CompositeKindStructure,
 				Type: 1,
 			},
-			opcode.InstructionSetLocal{Local: 0},
-			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionReturnValue{},
 		},
 		constructor.Code,
