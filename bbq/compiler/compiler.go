@@ -3631,19 +3631,25 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		})
 	}
 
-	c.emitSetLocal(self.index)
+	// Avoid emitting a redundant set-local/get-local if the initializer has no body,
+	// or if the return value is already in `self` (for non-attachment types).
+	if !declaration.FunctionDeclaration.FunctionBlock.IsEmpty() ||
+		returnLocalIndex != self.index {
 
-	// emit for the statements in `init()` body.
-	c.compileFunctionBlock(
-		declaration.FunctionDeclaration.FunctionBlock,
-		declaration.Kind,
+		c.emitSetLocal(self.index)
 
-		// The return type of the initializer is the type itself.
-		enclosingType,
-	)
+		// emit for the statements in `init()` body.
+		c.compileFunctionBlock(
+			declaration.FunctionDeclaration.FunctionBlock,
+			declaration.Kind,
 
-	// Constructor should return the created the struct. i.e: return `self`
-	c.emitGetLocal(returnLocalIndex)
+			// The return type of the initializer is the type itself.
+			enclosingType,
+		)
+
+		// Constructor should return the created the struct. i.e: return `self`
+		c.emitGetLocal(returnLocalIndex)
+	}
 
 	// No need to transfer, since the type is same as the constructed value, for initializers.
 	c.emit(opcode.InstructionReturnValue{})
