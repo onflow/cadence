@@ -10554,3 +10554,115 @@ func BenchmarkCompileTime(b *testing.B) {
 		comp.Compile()
 	}
 }
+
+func TestCompileBoundFunctionClosure(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      contract Test {
+          fun getAnswer(): Int {
+              return 42
+          }
+
+          fun getAnswerClosure(): fun(): Int {
+              return fun(): Int {
+                  return self.getAnswer()
+              }
+          }
+
+          fun getAnswerDirect(): Int {
+              return self.getAnswer()
+          }
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 7)
+
+	const (
+		initFuncIndex = iota
+		// Next three indexes are for builtin methods (i.e: getType, isInstance)
+		_
+		_
+		getAnswerFuncIndex
+		getAnswerClosureFuncIndex
+		getAnswerClosureInnerFuncIndex
+		getAnswerDirectFuncIndex
+	)
+
+	{
+		const selfLocalIndex = 0
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionNewComposite{Kind: common.CompositeKindContract, Type: 1},
+				opcode.InstructionDup{},
+				opcode.InstructionSetGlobal{Global: 0},
+				opcode.InstructionSetLocal{Local: selfLocalIndex},
+				opcode.InstructionGetLocal{Local: selfLocalIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[initFuncIndex].Code,
+		)
+	}
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionReturnValue{},
+		},
+		functions[getAnswerFuncIndex].Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionNewClosure{
+				Function: 5,
+				Upvalues: []opcode.Upvalue{
+					{
+						TargetIndex: 0,
+						IsLocal:     true,
+					},
+				},
+			},
+			opcode.InstructionTransferAndConvert{Type: 4},
+			opcode.InstructionReturnValue{},
+		},
+		functions[getAnswerClosureFuncIndex].Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetUpvalue{Upvalue: 0},
+			opcode.InstructionGetMethod{Method: 4},
+			opcode.InstructionInvoke{ArgCount: 0},
+			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionReturnValue{},
+		},
+		functions[getAnswerClosureInnerFuncIndex].Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionGetMethod{Method: 4},
+			opcode.InstructionInvoke{ArgCount: 0},
+			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionReturnValue{},
+		},
+		functions[getAnswerDirectFuncIndex].Code,
+	)
+}
