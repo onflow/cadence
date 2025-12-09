@@ -140,7 +140,11 @@ func TestInterpretIDCapability(t *testing.T) {
 			noopReferenceTracker{},
 			interpreter.UnauthorizedAccess,
 			interpreter.NewUnmeteredStringValue("mock"),
-			sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.StringType),
+			interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.PrimitiveStaticTypeString,
+			),
 		)
 
 		inter, err := test(t,
@@ -154,8 +158,8 @@ func TestInterpretIDCapability(t *testing.T) {
 					_ interpreter.BorrowCapabilityControllerContext,
 					address interpreter.AddressValue,
 					capabilityID interpreter.UInt64Value,
-					_ *sema.ReferenceType,
-					_ *sema.ReferenceType,
+					_ *interpreter.ReferenceStaticType,
+					_ *interpreter.ReferenceStaticType,
 				) interpreter.ReferenceValue {
 					assert.Equal(t, interpreter.AddressValue{0x42}, address)
 					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
@@ -188,8 +192,8 @@ func TestInterpretIDCapability(t *testing.T) {
 					_ interpreter.CheckCapabilityControllerContext,
 					address interpreter.AddressValue,
 					capabilityID interpreter.UInt64Value,
-					_ *sema.ReferenceType,
-					_ *sema.ReferenceType,
+					_ *interpreter.ReferenceStaticType,
+					_ *interpreter.ReferenceStaticType,
 				) interpreter.BoolValue {
 					assert.Equal(t, interpreter.AddressValue{0x42}, address)
 					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)

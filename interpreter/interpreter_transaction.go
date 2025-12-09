@@ -51,8 +51,13 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	postConditionsRewrite :=
 		interpreter.Program.Elaboration.PostConditionsRewrite(declaration.PostConditions)
 
-	const qualifiedIdentifier = ""
-	staticType := NewCompositeStaticTypeComputeTypeID(interpreter, interpreter.Location, qualifiedIdentifier)
+	staticType := NewCompositeStaticTypeComputeTypeID(
+		interpreter,
+		interpreter.Location,
+
+		// This is to be consistent with `sema.TransactionType`
+		sema.TransactionTypeName,
+	)
 
 	self := NewSimpleCompositeValue(
 		interpreter,

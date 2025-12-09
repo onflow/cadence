@@ -44,7 +44,7 @@ func newAccountReferenceValueFromAddress(
 		context,
 		staticAuthorization,
 		accountValue,
-		sema.AccountType,
+		interpreter.PrimitiveStaticTypeAccount,
 	)
 }
 

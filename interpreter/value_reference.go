@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/sema"
 )
 
 type ReferenceValue interface {
@@ -30,7 +29,7 @@ type ReferenceValue interface {
 	AuthorizedValue
 	isReference()
 	ReferencedValue(context ValueStaticTypeContext, errorOnFailedDereference bool) *Value
-	BorrowType() sema.Type
+	BorrowType() StaticType
 }
 
 func DereferenceValue(

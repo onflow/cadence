@@ -111,11 +111,11 @@ var _ Variable = &SelfVariable{}
 func NewSelfVariableWithValue(interpreter *Interpreter, value Value) Variable {
 	common.UseMemory(interpreter, variableMemoryUsage)
 
-	semaType := MustSemaTypeOfValue(value, interpreter)
+	staticType := value.StaticType(interpreter)
 
 	// Create an explicit reference to represent the implicit reference behavior of 'self' value.
 	// Authorization doesn't matter, we just need a reference to add to tracking.
-	selfRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, semaType)
+	selfRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, staticType)
 
 	return &SelfVariable{
 		value:   value,

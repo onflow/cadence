@@ -332,14 +332,16 @@ func (c *Context) GetMethod(
 ) interpreter.FunctionValue {
 	staticType := value.StaticType(c)
 
-	semaType := c.SemaTypeFromStaticType(staticType)
-
 	var location common.Location
-	if locatedType, ok := semaType.(sema.LocatedType); ok {
-		location = locatedType.GetLocation()
+
+	switch staticType := staticType.(type) {
+	case *interpreter.CompositeStaticType:
+		location = staticType.Location
+	case *interpreter.InterfaceStaticType:
+		location = staticType.Location
 	}
 
-	qualifiedFuncName := commons.TypeQualifiedName(semaType, name)
+	qualifiedFuncName := commons.StaticTypeQualifiedName(staticType, name)
 
 	method := c.GetFunction(location, qualifiedFuncName)
 	if method == nil {
@@ -423,22 +425,48 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 	return eventValues
 }
 
-func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
-	typeID := staticType.ID()
-	semaType, ok := c.semaTypeCache[typeID]
-	if ok {
-		return semaType
+func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) (semaType sema.Type) {
+	_, isPrimitiveType := staticType.(interpreter.PrimitiveStaticType)
+
+	// For primitive types, conversion is just a switch-case and returning a constant.
+	// It is efficient than a map lookup/update.
+	// So don't bother using the cache for primitive static types.
+	if !isPrimitiveType {
+		typeID := staticType.ID()
+		cachedSemaType, ok := c.semaTypeCache[typeID]
+		if ok {
+			return cachedSemaType
+		}
+
+		defer func() {
+			if c.semaTypeCache == nil {
+				c.semaTypeCache = make(map[sema.TypeID]sema.Type)
+			}
+			c.semaTypeCache[typeID] = semaType
+		}()
 	}
 
 	// TODO: avoid the sema-type conversion
-	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
+	return interpreter.MustConvertStaticToSemaType(staticType, c)
+}
 
-	if c.semaTypeCache == nil {
-		c.semaTypeCache = make(map[sema.TypeID]sema.Type)
+func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorization) (sema.Access, error) {
+	semaAccess, ok := c.semaAccessCache[auth]
+	if ok {
+		return semaAccess, nil
 	}
-	c.semaTypeCache[typeID] = semaType
 
-	return semaType
+	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.semaAccessCache == nil {
+		c.semaAccessCache = make(map[interpreter.Authorization]sema.Access)
+	}
+	c.semaAccessCache[auth] = semaAccess
+
+	return semaAccess, nil
 }
 
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
@@ -531,23 +559,4 @@ func (c *Context) GetEntitlementMapType(
 
 func (c *Context) LocationRange() interpreter.LocationRange {
 	return c.getLocationRange()
-}
-
-func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorization) (sema.Access, error) {
-	semaAccess, ok := c.semaAccessCache[auth]
-	if ok {
-		return semaAccess, nil
-	}
-
-	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c)
-	if err != nil {
-		return nil, err
-	}
-
-	if c.semaAccessCache == nil {
-		c.semaAccessCache = make(map[interpreter.Authorization]sema.Access)
-	}
-	c.semaAccessCache[auth] = semaAccess
-
-	return semaAccess, nil
 }

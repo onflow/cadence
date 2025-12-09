@@ -112,8 +112,8 @@ type TestRuntimeInterface struct {
 		context interpreter.AccountCapabilityGetValidationContext,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
-		wantedBorrowType *sema.ReferenceType,
-		capabilityBorrowType *sema.ReferenceType,
+		wantedBorrowType *interpreter.ReferenceStaticType,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) (bool, error)
 	OnValidateAccountCapabilitiesPublish func(
 		context interpreter.AccountCapabilityPublishValidationContext,
@@ -560,8 +560,8 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
 	context interpreter.AccountCapabilityGetValidationContext,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
-	wantedBorrowType *sema.ReferenceType,
-	capabilityBorrowType *sema.ReferenceType,
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
 ) (bool, error) {
 	if i.OnValidateAccountCapabilitiesGet == nil {
 		return true, nil

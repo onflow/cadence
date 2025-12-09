@@ -123,8 +123,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		var mutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeString, mutationError.ExpectedType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt, mutationError.ActualType)
 	})
 
 	t.Run("nested array invalid", func(t *testing.T) {
@@ -143,8 +143,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		var mutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeString, mutationError.ExpectedType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt, mutationError.ActualType)
 	})
 
 	t.Run("array append valid", func(t *testing.T) {
@@ -197,8 +197,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		var mutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeString, mutationError.ExpectedType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt, mutationError.ActualType)
 	})
 
 	t.Run("array appendAll invalid", func(t *testing.T) {
@@ -217,8 +217,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		var mutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeString, mutationError.ExpectedType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt, mutationError.ActualType)
 	})
 
 	t.Run("array insert valid", func(t *testing.T) {
@@ -271,8 +271,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		var mutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeString, mutationError.ExpectedType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt, mutationError.ActualType)
 	})
 
 	t.Run("array concat mismatching values", func(t *testing.T) {
@@ -332,8 +332,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		var mutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeString, mutationError.ExpectedType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt, mutationError.ActualType)
 	})
 
 	t.Run("host function mutation", func(t *testing.T) {
@@ -520,18 +520,18 @@ func TestInterpretArrayMutation(t *testing.T) {
 		require.ErrorAs(t, err, &mutationError)
 
 		// Expected type
-		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
-		optionalType := mutationError.ExpectedType.(*sema.OptionalType)
+		require.IsType(t, &interpreter.OptionalStaticType{}, mutationError.ExpectedType)
+		optionalType := mutationError.ExpectedType.(*interpreter.OptionalStaticType)
 
-		require.IsType(t, &sema.FunctionType{}, optionalType.Type)
-		funcType := optionalType.Type.(*sema.FunctionType)
+		require.IsType(t, interpreter.FunctionStaticType{}, optionalType.Type)
+		funcType := optionalType.Type.(interpreter.FunctionStaticType)
 
 		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
 		assert.Empty(t, funcType.Parameters)
 
 		// Actual type
-		assert.IsType(t, &sema.FunctionType{}, mutationError.ActualType)
-		actualFuncType := mutationError.ActualType.(*sema.FunctionType)
+		assert.IsType(t, interpreter.FunctionStaticType{}, mutationError.ActualType)
+		actualFuncType := mutationError.ActualType.(interpreter.FunctionStaticType)
 
 		assert.Equal(t, sema.VoidType, actualFuncType.ReturnTypeAnnotation.Type)
 		assert.Len(t, actualFuncType.Parameters, 1)
@@ -586,15 +586,15 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t,
-			&sema.OptionalType{
-				Type: sema.StringType,
+			&interpreter.OptionalStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
 			},
 			mutationError.ExpectedType,
 		)
 
 		assert.Equal(t,
-			&sema.OptionalType{
-				Type: sema.IntType,
+			&interpreter.OptionalStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 			mutationError.ActualType,
 		)
@@ -663,8 +663,8 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		var mutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeString, mutationError.ExpectedType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt, mutationError.ActualType)
 	})
 
 	t.Run("dictionary insert invalid key", func(t *testing.T) {
@@ -683,8 +683,8 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		var mutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &mutationError)
 
-		assert.Equal(t, sema.PublicPathType, mutationError.ExpectedType)
-		assert.Equal(t, sema.PrivatePathType, mutationError.ActualType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypePublicPath, mutationError.ExpectedType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypePrivatePath, mutationError.ActualType)
 	})
 
 	t.Run("invalid update through reference", func(t *testing.T) {
@@ -705,14 +705,14 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t,
-			&sema.OptionalType{
-				Type: sema.StringType,
+			&interpreter.OptionalStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
 			},
 			mutationError.ExpectedType,
 		)
 		assert.Equal(t,
-			&sema.OptionalType{
-				Type: sema.IntType,
+			&interpreter.OptionalStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 			mutationError.ActualType,
 		)
@@ -903,21 +903,21 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		require.ErrorAs(t, err, &mutationError)
 
 		// Expected type
-		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
-		optionalType := mutationError.ExpectedType.(*sema.OptionalType)
+		require.IsType(t, &interpreter.OptionalStaticType{}, mutationError.ExpectedType)
+		optionalType := mutationError.ExpectedType.(*interpreter.OptionalStaticType)
 
-		require.IsType(t, &sema.FunctionType{}, optionalType.Type)
-		funcType := optionalType.Type.(*sema.FunctionType)
+		require.IsType(t, interpreter.FunctionStaticType{}, optionalType.Type)
+		funcType := optionalType.Type.(interpreter.FunctionStaticType)
 
 		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
 		assert.Empty(t, funcType.Parameters)
 
 		// Actual type
-		require.IsType(t, &sema.OptionalType{}, mutationError.ActualType)
-		actualOptionalType := mutationError.ActualType.(*sema.OptionalType)
+		require.IsType(t, &interpreter.OptionalStaticType{}, mutationError.ActualType)
+		actualOptionalType := mutationError.ActualType.(*interpreter.OptionalStaticType)
 
-		require.IsType(t, &sema.FunctionType{}, actualOptionalType.Type)
-		actualFuncType := actualOptionalType.Type.(*sema.FunctionType)
+		require.IsType(t, interpreter.FunctionStaticType{}, actualOptionalType.Type)
+		actualFuncType := actualOptionalType.Type.(interpreter.FunctionStaticType)
 
 		assert.Equal(t, sema.VoidType, actualFuncType.ReturnTypeAnnotation.Type)
 		assert.Len(t, actualFuncType.Parameters, 1)

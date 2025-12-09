@@ -320,54 +320,51 @@ func (interpreter *Interpreter) checkMemberAccess(
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
+	expectedStaticType := ConvertSemaToStaticType(interpreter, expectedType)
+
 	CheckMemberAccessTargetType(
 		interpreter,
 		target,
-		expectedType,
+		expectedStaticType,
 	)
 }
 
 func CheckMemberAccessTargetType(
 	context ValueStaticTypeContext,
 	target Value,
-	expectedType sema.Type,
+	expectedType StaticType,
 ) {
-	switch expectedType := expectedType.(type) {
-	case *sema.TransactionType:
-		// TODO: maybe also check transactions.
-		//   they are composites with a type ID which has an empty qualified ID, i.e. no type is available
-
-		return
-
-	case *sema.CompositeType:
-		// TODO: also check built-in values.
-		//   blocked by standard library values (RLP, BLS, etc.),
-		//   which are implemented as contracts, but currently do not have their type registered
-
-		if expectedType.Location == nil {
-			return
-		}
-	}
-
 	targetStaticType := target.StaticType(context)
 
-	if _, ok := expectedType.(*sema.OptionalType); ok {
-		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
+	switch expectedType := expectedType.(type) {
+	case *CompositeStaticType:
+		switch expectedType.Location.(type) {
+		case nil:
+			// `location == nil` means this is a built-in type. Skip them for now.
+			// TODO: also check built-in values.
+			//   blocked by standard library values (RLP, BLS, etc.),
+			//   which are implemented as contracts, but currently do not have their type registered
+			return
 
+		case common.TransactionLocation:
+			// Also skip transactions for now.
+			// TODO: Check transactions.
+			return
+		}
+
+	case *OptionalStaticType:
+		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
 			panic(&MemberAccessTypeError{
 				ExpectedType: expectedType,
-				ActualType:   targetSemaType,
+				ActualType:   targetStaticType,
 			})
 		}
 	}
 
-	if !IsSubTypeOfSemaType(context, targetStaticType, expectedType) {
-		targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
-
+	if !IsSubType(context, targetStaticType, expectedType) {
 		panic(&MemberAccessTypeError{
 			ExpectedType: expectedType,
-			ActualType:   targetSemaType,
+			ActualType:   targetStaticType,
 		})
 	}
 }
@@ -1248,6 +1245,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
 	expectedType := castingExpressionTypes.TargetType
+	expectedStaticType := ConvertSemaToStaticType(interpreter, expectedType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1267,9 +1265,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// otherwise dynamic cast now always unboxes optionals
 			value = Unbox(value)
 		}
-		valueSemaType := MustSemaTypeOfValue(value, interpreter)
-		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
-		isSubType := IsSubTypeOfSemaType(interpreter, valueStaticType, expectedType)
+
+		valueStaticType := value.StaticType(interpreter)
+		isSubType := IsSubType(interpreter, valueStaticType, expectedStaticType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
@@ -1280,8 +1278,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		case ast.OperationForceCast:
 			if !isSubType {
 				panic(&ForceCastTypeMismatchError{
-					ExpectedType: expectedType,
-					ActualType:   valueSemaType,
+					ExpectedType: expectedStaticType,
+					ActualType:   valueStaticType,
 				})
 			}
 
@@ -1290,7 +1288,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		value = ConvertAndBox(interpreter, value, valueSemaType, expectedType)
+		value = ConvertAndBoxToStaticType(interpreter, value, valueStaticType, expectedStaticType)
 
 		if expression.Operation == ast.OperationFailableCast {
 			// Failable casting is a resource invalidation
@@ -1302,9 +1300,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		return value
 
 	case ast.OperationCast:
-		staticValueType := castingExpressionTypes.StaticValueType
+		staticValueType := ConvertSemaToStaticType(interpreter, castingExpressionTypes.StaticValueType)
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-		return ConvertAndBox(interpreter, value, staticValueType, expectedType)
+		return ConvertAndBoxToStaticType(interpreter, value, staticValueType, expectedStaticType)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -1345,6 +1343,21 @@ func CreateReferenceValue(
 	value Value,
 	isImplicit bool,
 ) Value {
+	borrowStaticType := ConvertSemaToStaticType(context, borrowType)
+	return CreateReferenceValueFromStaticType(
+		context,
+		borrowStaticType,
+		value,
+		isImplicit,
+	)
+}
+
+func CreateReferenceValueFromStaticType(
+	context ReferenceCreationContext,
+	borrowType StaticType,
+	value Value,
+	isImplicit bool,
+) Value {
 
 	// There are four potential cases:
 	// (1) Target type is optional, actual value is also optional
@@ -1357,7 +1370,7 @@ func CreateReferenceValue(
 	// (4) Target type is non-optional, actual value is non-optional
 
 	switch typ := borrowType.(type) {
-	case *sema.OptionalType:
+	case *OptionalStaticType:
 
 		innerType := typ.Type
 
@@ -1371,7 +1384,7 @@ func CreateReferenceValue(
 
 			innerValue := value.InnerValue()
 
-			referenceValue := CreateReferenceValue(context, innerType, innerValue, false)
+			referenceValue := CreateReferenceValueFromStaticType(context, innerType, innerValue, false)
 
 			// Wrap the reference with an optional (since an optional is expected).
 			return NewSomeValueNonCopying(context, referenceValue)
@@ -1385,20 +1398,20 @@ func CreateReferenceValue(
 			// Case (2):
 			// If the referenced value is non-optional,
 			// but the target type is optional.
-			referenceValue := CreateReferenceValue(context, innerType, value, false)
+			referenceValue := CreateReferenceValueFromStaticType(context, innerType, value, false)
 
 			// Wrap the reference with an optional (since an optional is expected).
 			return NewSomeValueNonCopying(context, referenceValue)
 		}
 
-	case *sema.ReferenceType:
+	case *ReferenceStaticType:
 
 		switch value := value.(type) {
 		case *SomeValue:
 			// Case (3.a): target type is non-optional, actual value is optional.
 			innerValue := value.InnerValue()
 
-			return CreateReferenceValue(context, typ, innerValue, false)
+			return CreateReferenceValueFromStaticType(context, typ, innerValue, false)
 
 		case NilValue:
 			// Case (3.b) value is nil.
@@ -1416,10 +1429,10 @@ func CreateReferenceValue(
 				// Additionally, it is only safe to "compress" reference types like this when the desired
 				// result reference type is unauthorized
 				staticType := value.StaticType(context)
-				if typ.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(context, staticType, typ) {
+				if typ.Authorization != UnauthorizedAccess || !IsSubType(context, staticType, typ) {
 					panic(&InvalidMemberReferenceError{
 						ExpectedType: typ,
-						ActualType:   MustConvertStaticToSemaType(staticType, context),
+						ActualType:   staticType,
 					})
 				}
 
@@ -1440,16 +1453,13 @@ func CreateReferenceValue(
 func newEphemeralReference(
 	context ReferenceCreationContext,
 	value Value,
-	typ *sema.ReferenceType,
+	typ *ReferenceStaticType,
 ) *EphemeralReferenceValue {
-
-	auth := ConvertSemaAccessToStaticAuthorization(context, typ.Authorization)
-
 	return NewEphemeralReferenceValue(
 		context,
-		auth,
+		typ.Authorization,
 		value,
-		typ.Type,
+		typ.ReferencedType,
 	)
 }
 
@@ -1511,11 +1521,13 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
 
+	baseStaticType := base.StaticType(interpreter)
+
 	baseValue := NewEphemeralReferenceValue(
 		interpreter,
 		auth,
 		base,
-		MustSemaTypeOfValue(base, interpreter).(*sema.CompositeType),
+		baseStaticType,
 	)
 
 	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(

@@ -106,16 +106,12 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 			}
 
 			staticType := compositeValue.StaticType(interpreter)
-			semaType, err := ConvertStaticToSemaType(interpreter, staticType)
-			if err != nil {
-				panic(err)
-			}
 
 			return NewEphemeralReferenceValue(
 				interpreter,
 				UnauthorizedAccess,
 				compositeValue,
-				semaType,
+				staticType,
 			)
 		}
 

@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 )
 
 type Interface interface {
@@ -143,8 +142,8 @@ type Interface interface {
 		context interpreter.AccountCapabilityGetValidationContext,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
-		wantedBorrowType *sema.ReferenceType,
-		capabilityBorrowType *sema.ReferenceType,
+		wantedBorrowType *interpreter.ReferenceStaticType,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) (bool, error)
 	ValidateAccountCapabilitiesPublish(
 		context interpreter.AccountCapabilityPublishValidationContext,

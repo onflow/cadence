@@ -999,8 +999,8 @@ func TestStringer(t *testing.T) {
 					inter,
 					UnauthorizedAccess,
 					array,
-					&sema.VariableSizedType{
-						Type: sema.AnyStructType,
+					&VariableSizedStaticType{
+						Type: PrimitiveStaticTypeAnyStruct,
 					},
 				)
 
@@ -1064,9 +1064,9 @@ func TestStringer(t *testing.T) {
 					inter,
 					UnauthorizedAccess,
 					NewUnmeteredStringValue("hello"),
-					&sema.ReferenceType{
-						Authorization: sema.UnauthorizedAccess,
-						Type:          sema.StringType,
+					&ReferenceStaticType{
+						Authorization:  UnauthorizedAccess,
+						ReferencedType: PrimitiveStaticTypeString,
 					},
 				)
 			},
@@ -3739,7 +3739,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					inter,
 					UnauthorizedAccess,
 					TrueValue,
-					sema.BoolType,
+					PrimitiveStaticTypeBool,
 				)
 			},
 			true,
@@ -3751,7 +3751,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					inter,
 					UnauthorizedAccess,
 					TrueValue,
-					sema.StringType,
+					PrimitiveStaticTypeString,
 				)
 			},
 			false,
@@ -3768,7 +3768,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
-					sema.BoolType,
+					PrimitiveStaticTypeBool,
 				)
 			},
 			true,
@@ -3780,7 +3780,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
-					sema.StringType,
+					PrimitiveStaticTypeString,
 				)
 			},
 			false,
