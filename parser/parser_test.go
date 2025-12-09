@@ -1159,7 +1159,9 @@ fun second() {} /**
 Trailing multi-line comment of second
 */
 `),
-			Config{},
+			Config{
+				CommentTrackingEnabled: true,
+			},
 		)
 
 		assert.Empty(t, errs)

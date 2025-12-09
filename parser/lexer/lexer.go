@@ -113,6 +113,13 @@ func (l *lexer) Next() Token {
 			endPos.column,
 		)
 
+		var comments ast.Comments
+		if len(l.currentComments) > 0 {
+			comments = ast.Comments{
+				Leading: l.currentComments,
+			}
+		}
+
 		return Token{
 			Type: TokenEOF,
 			Range: ast.NewRange(
@@ -120,9 +127,7 @@ func (l *lexer) Next() Token {
 				pos,
 				pos,
 			),
-			Comments: ast.Comments{
-				Leading: l.currentComments,
-			},
+			Comments: comments,
 		}
 
 	}

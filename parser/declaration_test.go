@@ -548,7 +548,9 @@ func TestParseParameterList(t *testing.T) {
 				parameters, err := parseParameterList(p, false)
 				return parameters, err
 			},
-			Config{},
+			Config{
+				CommentTrackingEnabled: true,
+			},
 		)
 	}
 
