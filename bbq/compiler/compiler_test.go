@@ -10578,21 +10578,15 @@ func TestCompileBoundFunctionClosure(t *testing.T) {
 		getAnswerDirectFuncIndex
 	)
 
-	{
-		const selfLocalIndex = 0
-
-		assert.Equal(t,
-			[]opcode.Instruction{
-				opcode.InstructionNewComposite{Kind: common.CompositeKindContract, Type: 1},
-				opcode.InstructionDup{},
-				opcode.InstructionSetGlobal{Global: 0},
-				opcode.InstructionSetLocal{Local: selfLocalIndex},
-				opcode.InstructionGetLocal{Local: selfLocalIndex},
-				opcode.InstructionReturnValue{},
-			},
-			functions[initFuncIndex].Code,
-		)
-	}
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionNewComposite{Kind: common.CompositeKindContract, Type: 1},
+			opcode.InstructionDup{},
+			opcode.InstructionSetGlobal{Global: 0},
+			opcode.InstructionReturnValue{},
+		},
+		functions[initFuncIndex].Code,
+	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
