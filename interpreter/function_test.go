@@ -549,3 +549,36 @@ func TestInterpretConvertedResult(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretSelfClosure(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+          struct Computer {
+              fun getAnswer(): Int {
+                  return 42
+              }
+
+              fun newAnswerGetter(): fun(): Int {
+                  return fun(): Int {
+                      return self.getAnswer()
+                  }
+              }
+          }
+
+          fun test(): Int {
+              let getAnswer = Computer().newAnswerGetter()
+              return getAnswer()
+          }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(
+		t,
+		interpreter.NewUnmeteredIntValueFromInt64(42),
+		result,
+	)
+}

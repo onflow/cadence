@@ -22,6 +22,7 @@ import (
 	goErrors "errors"
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/rivo/uniseg"
 
@@ -2695,7 +2696,12 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 
 func (checker *Checker) beforeExtractor() *BeforeExtractor {
 	if checker._beforeExtractor == nil {
-		checker._beforeExtractor = NewBeforeExtractor(checker.memoryGauge, checker.report)
+		checker._beforeExtractor = NewBeforeExtractor(
+			checker.memoryGauge,
+			// TODO: improve
+			strings.ReplaceAll(checker.Location.ID(), ".", "\x00"),
+			checker.report,
+		)
 	}
 	return checker._beforeExtractor
 }

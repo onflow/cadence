@@ -67,6 +67,7 @@ func (f Transfer) MarshalJSON() ([]byte, error) {
 var copyTransferDoc prettier.Doc = prettier.Text("=")
 var moveTransferDoc prettier.Doc = prettier.Text("<-")
 var forceMoveTransferDoc prettier.Doc = prettier.Text("<-!")
+var noTransferDoc prettier.Doc = prettier.Text("$noTransfer")
 
 func (f Transfer) Doc() prettier.Doc {
 	switch f.Operation {
@@ -76,6 +77,9 @@ func (f Transfer) Doc() prettier.Doc {
 		return moveTransferDoc
 	case TransferOperationMoveForced:
 		return forceMoveTransferDoc
+	case TransferOperationInternalNoTransfer:
+		return noTransferDoc
+	// no transfer operation, e.g. in a variable declaration
 	case TransferOperationUnknown:
 		return prettier.Text("")
 	}

@@ -27,6 +27,9 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
@@ -1658,4 +1661,135 @@ func TestInterpretFunctionExpressionPostConditions(t *testing.T) {
 			result,
 		)
 	})
+}
+
+func TestInterpretFunctionBeforePostConditionAndInheritedBeforePostCondition(t *testing.T) {
+
+	t.Parallel()
+
+	importLocation := common.NewAddressLocation(
+		nil,
+		common.MustBytesToAddress([]byte{0x1}),
+		"",
+	)
+
+	const importCode = `
+       struct interface SI {
+
+           fun test(a: Int, b: Int) {
+               post {
+                   before(a) == 0
+               }
+           }
+       }
+    `
+
+	const testCode = `
+      import SI from 0x1
+
+      struct S: SI {
+
+          fun test(a: Int, b: Int) {
+              post {
+                  before(b) == 1
+              }
+          }
+      }
+
+      fun test() {
+          S().test(a: 0, b: 1)
+      }
+    `
+
+	if *compile {
+
+		programs := CompiledPrograms{}
+
+		_ = ParseCheckAndCompile(t,
+			importCode,
+			importLocation,
+			programs,
+		)
+
+		_, err := compilerUtils.CompileAndInvokeWithOptionsAndPrograms(t,
+			testCode,
+			"test",
+			compilerUtils.CompilerAndVMOptions{
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+								importedProgram, ok := programs[importedLocation]
+								if !ok {
+									return nil, fmt.Errorf("cannot find program for location %s", importedLocation)
+								}
+
+								return sema.ElaborationImport{
+									Elaboration: importedProgram.DesugaredElaboration.OriginalElaboration(),
+								}, nil
+							},
+						},
+					},
+					CompilerConfig: &compiler.Config{
+						ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+							return programs[location].Program
+						},
+						LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+							return []sema.ResolvedLocation{
+								{
+									Location:    location,
+									Identifiers: identifiers,
+								},
+							}, nil
+						},
+					},
+				},
+			},
+			programs,
+		)
+		require.NoError(t, err)
+
+	} else {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			importCode,
+			ParseAndCheckOptions{
+				Location: importLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			testCode,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
+
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	}
 }

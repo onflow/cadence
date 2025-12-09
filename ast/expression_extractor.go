@@ -146,6 +146,7 @@ type ExpressionExtractor struct {
 	ReferenceExtractor      ReferenceExtractor
 	MemberExtractor         MemberExtractor
 	PathExtractor           PathExtractor
+	IdentifierPrefix        string
 	nextIdentifier          int
 }
 
@@ -156,19 +157,18 @@ func (extractor *ExpressionExtractor) Extract(expression Expression) ExpressionE
 }
 
 func (extractor *ExpressionExtractor) FreshIdentifier() string {
-	defer func() {
-		extractor.nextIdentifier++
-	}()
+	identifier := extractor.nextIdentifier
+	extractor.nextIdentifier++
+	return extractor.FormatIdentifier(identifier)
+}
+
+func (extractor *ExpressionExtractor) FormatIdentifier(identifier int) string {
 	// TODO: improve
 	// NOTE: to avoid naming clashes with identifiers in the program,
 	// include characters that can't be represented in source:
 	//   - \x00 = Null character
 	//   - \x1F = Information Separator One
-	return extractor.FormatIdentifier(extractor.nextIdentifier)
-}
-
-func (extractor *ExpressionExtractor) FormatIdentifier(identifier int) string {
-	return fmt.Sprintf("\x00exp\x1F%d", identifier)
+	return fmt.Sprintf("\x00%s\x1F%d", extractor.IdentifierPrefix, identifier)
 }
 
 type ExtractedExpression struct {

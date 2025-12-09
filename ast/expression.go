@@ -276,8 +276,25 @@ func (e *StringTemplateExpression) Doc() prettier.Doc {
 		return prettier.Text(QuoteString(e.Values[0]))
 	}
 
-	// TODO: must reproduce expressions as literals
-	panic("not implemented")
+	concat := make(prettier.Concat, 0, 2+len(e.Values)+(3*len(e.Expressions)))
+	concat = append(concat, prettier.Text(`"`))
+	for i, value := range e.Values {
+		var sb strings.Builder
+		QuoteStringInner(value, &sb)
+		concat = append(concat, prettier.Text(sb.String()))
+
+		if i < len(e.Expressions) {
+			e := e.Expressions[i]
+			concat = append(
+				concat,
+				prettier.Text(`\(`),
+				e.Doc(),
+				prettier.Text(`)`),
+			)
+		}
+	}
+	concat = append(concat, prettier.Text(`"`))
+	return concat
 }
 
 func (e *StringTemplateExpression) MarshalJSON() ([]byte, error) {

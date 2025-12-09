@@ -697,14 +697,17 @@ func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 func getLocal(vm *VM, localIndex uint16) Value {
 	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	local := vm.locals[absoluteIndex]
-
-	// Some local variables can be implicit references. e.g: receiver of a bound function.
-	// TODO: maybe perform this check only if `localIndex == 0`?
-	if implicitReference, ok := local.(ImplicitReferenceValue); ok {
-		local = implicitReference.ReferencedValue(vm.context)
-	}
-
+	local = maybeUnwrapImplicitReference(vm, local)
 	return local
+}
+
+func maybeUnwrapImplicitReference(vm *VM, local Value) Value {
+	// Some local variables can be implicit references. e.g: receiver of a bound function.
+	implicitReference, ok := local.(ImplicitReferenceValue)
+	if !ok {
+		return local
+	}
+	return implicitReference.ReferencedValue(vm.context)
 }
 
 func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
@@ -733,6 +736,7 @@ func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
 	if value == nil {
 		value = vm.locals[upvalue.absoluteLocalsIndex]
 	}
+	value = maybeUnwrapImplicitReference(vm, value)
 	vm.push(value)
 }
 

@@ -27,6 +27,12 @@ import (
 func QuoteString(s string) string {
 	var b strings.Builder
 	b.WriteByte('"')
+	QuoteStringInner(s, &b)
+	b.WriteByte('"')
+	return b.String()
+}
+
+func QuoteStringInner(s string, b *strings.Builder) {
 	for _, r := range s {
 		switch r {
 		case 0:
@@ -56,6 +62,4 @@ func QuoteString(s string) string {
 			}
 		}
 	}
-	b.WriteByte('"')
-	return b.String()
 }
