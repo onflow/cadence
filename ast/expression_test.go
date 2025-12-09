@@ -5709,3 +5709,112 @@ func TestFunctionExpression_String(t *testing.T) {
 		)
 	})
 }
+
+func TestStringTemplateExpression_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &StringTemplateExpression{
+		Values: []string{"Hello, ", "!"},
+		Expressions: []Expression{
+			&IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "name",
+					Pos:        Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+		},
+		Range: Range{
+			StartPos: Position{Offset: 4, Line: 5, Column: 6},
+			EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+		},
+	}
+
+	actual, err := json.Marshal(expr)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		// language=json
+		`
+          {
+              "Type": "StringTemplateExpression",
+              "Values": ["Hello, ", "!"],
+              "Expressions": [
+                  {
+                      "Type": "IdentifierExpression",
+                      "Identifier": {
+                          "Identifier": "name",
+                          "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                          "EndPos": {"Offset": 4, "Line": 2, "Column": 6}
+                      },
+                      "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                      "EndPos": {"Offset": 4, "Line": 2, "Column": 6}
+                  }
+              ],
+              "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+              "EndPos": {"Offset": 7, "Line": 8, "Column": 9}
+          }
+        `,
+		string(actual),
+	)
+}
+
+func TestStringExpressionTemplate_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &StringTemplateExpression{
+		Values: []string{"Hello, ", "!"},
+		Expressions: []Expression{
+			&IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "name",
+					Pos:        Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+		},
+		Range: Range{
+			StartPos: Position{Offset: 4, Line: 5, Column: 6},
+			EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text(`"`),
+			prettier.Text(`Hello, `),
+			prettier.Text(`\(`),
+			prettier.Text(`name`),
+			prettier.Text(`)`),
+			prettier.Text(`!`),
+			prettier.Text(`"`),
+		},
+		expr.Doc(),
+	)
+}
+
+func TestStringExpressionTemplate_String(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &StringTemplateExpression{
+		Values: []string{"Hello, ", "!"},
+		Expressions: []Expression{
+			&IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "name",
+					Pos:        Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+		},
+		Range: Range{
+			StartPos: Position{Offset: 4, Line: 5, Column: 6},
+			EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+		},
+	}
+
+	assert.Equal(t,
+		`"Hello, \(name)!"`,
+		expr.String(),
+	)
+}
