@@ -116,7 +116,9 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			startToken.StartPos,
 			endToken.EndPos,
 		),
-		ast.Comments{},
+		ast.Comments{
+			Trailing: endToken.Comments.Trailing,
+		},
 	), nil
 }
 
