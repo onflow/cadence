@@ -76,6 +76,10 @@ var commentSuffixes = [][]byte{
 	blockCommentStringSuffix,
 }
 
+func (c Comment) String() string {
+	return string(c.source)
+}
+
 // Text without opening/closing comment characters /*, /**, */, //
 func (c Comment) Text() []byte {
 	withoutPrefixes := cutOptionalPrefixes(c.source, commentPrefixes)

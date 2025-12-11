@@ -56,7 +56,7 @@ const (
 	lexerModeStringInterpolation
 )
 
-// trailingCommentsEndMarker is a sentinel value for determining the end of trailing comments
+// trailingCommentsEndMarker is a sentinel value for determining the end of trailing comments (before the first newline).
 var trailingCommentsEndMarker *ast.Comment = nil
 
 type lexer struct {
@@ -324,6 +324,8 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 // tokenComments creates initial ast.Comments with leading comments, but empty trailing comments.
 // Trailing comments for the current token are determined when the next non-space token is consumed (in setPrevTokenTrailingComments).
 func (l *lexer) tokenComments(ty TokenType) ast.Comments {
+	// Do not attach comments to space tokens, since those are usually ignored during parsing,
+	// so mapping token comments to AST nodes would require extra effort.
 	if ty == TokenSpace || !l.trackComments {
 		return ast.EmptyComments
 	}
@@ -332,7 +334,7 @@ func (l *lexer) tokenComments(ty TokenType) ast.Comments {
 
 	leadingComments := l.currentComments
 	defer (func() {
-		// Mark as fully consumed
+		// Mark as fully consumed (clear by reallocating).
 		l.currentComments = []*ast.Comment{}
 	})()
 
@@ -363,7 +365,8 @@ func (l *lexer) setPrevTokenTrailingComments() {
 	// - leading comments of the next token
 	var trailing, leading []*ast.Comment
 	// If all previously seen tokens are spaces,
-	// we treat all comments as the leading set of the current token.
+	// treat all comments as the leading set for the current token,
+	// since comments shouldn't be attached to space tokens.
 	isLeadingSet := latestNonSpaceTokenIndex == -1
 	for _, comment := range l.currentComments {
 		if comment == trailingCommentsEndMarker {
@@ -379,6 +382,8 @@ func (l *lexer) setPrevTokenTrailingComments() {
 
 	l.currentComments = leading
 
+	// If there is a trailing set, attach it to the latest non-space token (if any),
+	// since comments shouldn't be attached to space tokens.
 	if latestNonSpaceTokenIndex != -1 && len(trailing) > 0 {
 		lastNonSpaceToken := &l.tokens[latestNonSpaceTokenIndex]
 		if lastNonSpaceToken.Comments.Trailing == nil {

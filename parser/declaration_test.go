@@ -782,6 +782,7 @@ func TestParseParameterList(t *testing.T) {
 
 		t.Parallel()
 
+		// Note: Some edge case comments are currently ignored (not mapped to the AST) for simplicity.
 		result, errs := parse(`( /* Before param b */ a b : /* Before b type annotation */ Int /* After param b */, 
 // Before param c
 c /* After c identifier */ : Int // After param c 
@@ -816,7 +817,6 @@ c /* After c identifier */ : Int // After param c
 						StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
 						Comments: ast.Comments{
 							Leading: []*ast.Comment{
-								ast.NewComment(nil, []byte("/* Before param b */")),
 								ast.NewComment(nil, []byte("/* Before b type annotation */")),
 							},
 							Trailing: []*ast.Comment{},

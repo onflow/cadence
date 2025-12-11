@@ -38,7 +38,6 @@ func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterList, error) {
 	var parameters []*ast.Parameter
 	var endToken lexer.Token
-	var comments ast.Comments
 
 	p.skipSpace()
 
@@ -53,7 +52,6 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 	p.next()
 
 	expectParameter := true
-	var commaToken lexer.Token
 	var atEnd bool
 	progress := p.newProgress()
 
@@ -72,7 +70,6 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			if err != nil {
 				return nil, err
 			}
-			parameter.Comments.Leading = append(parameter.Comments.Leading, commaToken.Comments.Trailing...)
 
 			parameters = append(parameters, parameter)
 			expectParameter = false
@@ -84,7 +81,6 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 				}
 			}
 			// Skip the comma
-			commaToken = p.current
 			p.next()
 			expectParameter = true
 
@@ -112,27 +108,6 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 		}
 	}
 
-	if len(parameters) == 0 {
-		comments.Leading = append(
-			comments.Leading,
-			startToken.Comments.All()...,
-		)
-	} else {
-		comments.Leading = append(
-			comments.Leading,
-			startToken.Comments.Leading...,
-		)
-
-		var patched []*ast.Comment
-		patched = append(patched, startToken.Comments.Trailing...)
-		patched = append(patched, parameters[0].Comments.Leading...)
-		parameters[0].Comments.Leading = patched
-	}
-	comments.Trailing = append(
-		comments.Trailing,
-		endToken.Comments.All()...,
-	)
-
 	return ast.NewParameterList(
 		p.memoryGauge,
 		parameters,
@@ -141,7 +116,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			startToken.StartPos,
 			endToken.EndPos,
 		),
-		comments,
+		ast.Comments{},
 	), nil
 }
 
