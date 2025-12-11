@@ -105,6 +105,8 @@ type Compiler[E, T any] struct {
 	// this table maps a global from its address qualified name to its original un-aliased typename
 	// used mainly for exporting imports for linking
 	globalRemoveAddressTable map[string]string
+
+	addedImports map[common.Location]struct{}
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
@@ -200,6 +202,7 @@ func newCompiler[E, T any](
 		codeGen:             codeGen,
 		typeGen:             typeGen,
 		postConditionsIndex: -1,
+		addedImports:        make(map[common.Location]struct{}),
 	}
 }
 
@@ -1300,7 +1303,9 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 				// Must transfer and convert, so that `result` variable gets the
 				// correct converted value.
 				returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
-				c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+				if !returnTypes.PassWithoutTransferOrConvert {
+					c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+				}
 
 				c.emitSetLocal(tempResultVar.index)
 			} else {
@@ -1317,7 +1322,11 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 			// (1.b)
 			// If there are no post conditions, return then-and-there.
 			returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
-			c.emitTransferAndConvertAndReturnValue(returnTypes.ReturnType)
+			returnType := returnTypes.ReturnType
+			if !returnTypes.PassWithoutTransferOrConvert {
+				c.emitTransferIfNotResourceAndConvert(returnType)
+			}
+			c.emit(opcode.InstructionReturnValue{})
 		}
 	} else {
 		// (2) Empty return
@@ -1619,7 +1628,16 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 			invocationExpression := statement.InvocationExpression
 			arguments := invocationExpression.Arguments
 			invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(invocationExpression)
-			c.compileArguments(arguments, invocationTypes)
+
+			// Instead of compiling arguments as usual (via compileArguments),
+			// only convert the arguments and don't transfer them.
+
+			for index, argument := range arguments {
+				c.compileExpression(argument.Expression)
+
+				parameterType := invocationTypes.ParameterTypes[index]
+				c.emitConvert(parameterType)
+			}
 
 			argCount := len(arguments)
 			if argCount >= math.MaxUint16 {
@@ -1886,11 +1904,6 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 
 		c.emit(opcode.InstructionReturnValue{})
 	}()
-}
-
-func (c *Compiler[_, _]) emitTransferAndConvertAndReturnValue(returnType sema.Type) {
-	c.emitTransferIfNotResourceAndConvert(returnType)
-	c.emit(opcode.InstructionReturnValue{})
 }
 
 func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
@@ -2807,7 +2820,7 @@ func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTyp
 	for index, argument := range arguments {
 		c.compileExpression(argument.Expression)
 
-		if invocationTypes.SkipArgumentsTransfer {
+		if invocationTypes.PassArgumentsWithoutTransferOrConvert {
 			continue
 		}
 
@@ -2958,18 +2971,19 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 // compileIndexAccess compiles the index access, i.e. RemoveIndex or GetIndex.
 // It assumes the target and indexing/key expressions are already compiled on the stack.
 func (c *Compiler[_, _]) compileIndexAccess(expression *ast.IndexExpression) {
-	c.emitIndexKeyTransferAndConvert(expression)
+	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	indexedType := indexExpressionTypes.IndexedType
+	c.emitConvert(indexedType.IndexingType())
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
 		c.emit(opcode.InstructionRemoveIndex{})
 	} else {
 		c.emit(opcode.InstructionGetIndex{})
-	}
-
-	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
-	if !ok {
-		panic(errors.NewUnreachableError())
 	}
 
 	// Return a reference, if the element is accessed via a reference.
@@ -3764,6 +3778,11 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		return
 	}
 
+	// If the imports are already added for this location, then no need to add again.
+	if _, ok := c.addedImports[location]; ok {
+		return
+	}
+
 	if len(aliases) != 0 && c.globalAliasTable == nil {
 		// Lazy initialize the alias tables when needed.
 		c.globalAliasTable = make(map[string]string)
@@ -3799,6 +3818,8 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		qualifiedName := c.createGlobalAlias(location, function.QualifiedName, aliases, len(aliases) > 0)
 		c.addImportedGlobal(location, function.QualifiedName, qualifiedName)
 	}
+
+	c.addedImports[location] = struct{}{}
 
 	// Recursively add transitive imports.
 	for _, impt := range importedProgram.Imports {
@@ -4094,6 +4115,13 @@ func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(targetType sema.Typ
 
 func (c *Compiler[_, _]) emitTransfer() {
 	c.emit(opcode.InstructionTransfer{})
+}
+
+func (c *Compiler[_, _]) emitConvert(targetType sema.Type) {
+	typeIndex := c.getOrAddType(targetType)
+	c.emit(opcode.InstructionConvert{
+		Type: typeIndex,
+	})
 }
 
 func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {

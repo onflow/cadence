@@ -1283,6 +1283,9 @@ func (d *Desugar) inheritedDefaultFunctions(
 				sema.ReturnStatementTypes{
 					ValueType:  funcReturnType,
 					ReturnType: funcReturnType,
+					// Given the delegation function this invocation appears in is synthetic,
+					// we may not transfer the result, to match interpreter behavior.
+					PassWithoutTransferOrConvert: true,
 				},
 			)
 
@@ -1481,6 +1484,9 @@ func (d *Desugar) interfaceDelegationMethodCall(
 		// So the argument types to the invocation of `Interface.defaultFunc` are the same
 		// as the parameter types of `defaultFunc`/`Interface.defaultFunc`.
 		ArgumentTypes: parameterTypes,
+		// Given the delegation function this invocation appears in is synthetic,
+		// we may not transfer the arguments, to match interpreter behavior.
+		PassArgumentsWithoutTransferOrConvert: true,
 	}
 
 	memberAccessInfo := sema.MemberAccessInfo{
@@ -2413,10 +2419,10 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	d.elaboration.SetInvocationExpressionTypes(
 		invocation,
 		sema.InvocationExpressionTypes{
-			ReturnType:            sema.VoidType,
-			ArgumentTypes:         eventTypes,
-			ParameterTypes:        eventTypes,
-			SkipArgumentsTransfer: true,
+			ReturnType:                            sema.VoidType,
+			ArgumentTypes:                         eventTypes,
+			ParameterTypes:                        eventTypes,
+			PassArgumentsWithoutTransferOrConvert: true,
 		},
 	)
 

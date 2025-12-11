@@ -1694,6 +1694,15 @@ func EnumLookupFunction(
 				return Nil
 			}
 
+			caseValue = caseValue.Transfer(
+				inter,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+				true, // value is standalone.
+			)
+
 			return NewSomeValueNonCopying(inter, caseValue)
 		},
 	)
@@ -3685,7 +3694,7 @@ func ConstructDictionaryTypeValue(
 	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 	if keyType == nil ||
 		!sema.IsSubType(
-			MustConvertStaticToSemaType(keyType, context),
+			context.SemaTypeFromStaticType(keyType),
 			sema.HashableStructType,
 		) {
 		return Nil
@@ -3729,7 +3738,7 @@ func ConstructFunctionTypeValue(
 	parameterTypeValues *ArrayValue,
 	returnTypeValue TypeValue,
 ) Value {
-	returnType := MustConvertStaticToSemaType(returnTypeValue.Type, invocationContext)
+	returnType := invocationContext.SemaTypeFromStaticType(returnTypeValue.Type)
 
 	var parameterTypes []sema.Parameter
 	parameterCount := parameterTypeValues.Count()
@@ -3738,7 +3747,7 @@ func ConstructFunctionTypeValue(
 		parameterTypeValues.Iterate(
 			invocationContext,
 			func(param Value) bool {
-				semaType := MustConvertStaticToSemaType(param.(TypeValue).Type, invocationContext)
+				semaType := invocationContext.SemaTypeFromStaticType(param.(TypeValue).Type)
 				parameterTypes = append(
 					parameterTypes,
 					sema.Parameter{
@@ -3927,7 +3936,7 @@ func ConstructInclusiveRangeTypeValue(
 	ty := typeValue.Type
 
 	// InclusiveRanges must hold integers
-	elemSemaTy := MustConvertStaticToSemaType(ty, context)
+	elemSemaTy := context.SemaTypeFromStaticType(ty)
 	if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
 		return Nil
 	}
@@ -4946,7 +4955,7 @@ func AccountStorageRead(
 	valueStaticType := value.StaticType(invocationContext)
 
 	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
-		valueSemaType := MustConvertStaticToSemaType(valueStaticType, invocationContext)
+		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
 
 		panic(&StoredValueTypeMismatchError{
 			ExpectedType: typeParameter,
@@ -5185,17 +5194,6 @@ func (interpreter *Interpreter) GetEntitlementMapType(typeID common.TypeID) (*se
 	}
 
 	return ty, nil
-}
-
-func MustConvertStaticAuthorizationToSemaAccess(
-	handler StaticAuthorizationConversionHandler,
-	auth Authorization,
-) sema.Access {
-	access, err := ConvertStaticAuthorizationToSemaAccess(auth, handler)
-	if err != nil {
-		panic(err)
-	}
-	return access
 }
 
 func (interpreter *Interpreter) getElaboration(location common.Location) *sema.Elaboration {
@@ -5597,7 +5595,7 @@ func checkContainerMutation(
 
 	if !IsSubType(context, actualElementType, elementType) {
 		panic(&ContainerMutationError{
-			ExpectedType: MustConvertStaticToSemaType(elementType, context),
+			ExpectedType: context.SemaTypeFromStaticType(elementType),
 			ActualType:   MustSemaTypeOfValue(element, context),
 		})
 	}
@@ -6398,6 +6396,10 @@ func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
 	}
 
 	return member
+}
+
+func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
+	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
 }
 
 func StorageReference(

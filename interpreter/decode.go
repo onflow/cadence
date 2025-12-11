@@ -1659,7 +1659,7 @@ func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	}
 }
 
-func (d TypeDecoder) decodePrimitiveStaticType() (PrimitiveStaticType, error) {
+func (d TypeDecoder) decodePrimitiveStaticType() (StaticType, error) {
 	encoded, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1668,7 +1668,13 @@ func (d TypeDecoder) decodePrimitiveStaticType() (PrimitiveStaticType, error) {
 		}
 		return PrimitiveStaticTypeUnknown, err
 	}
-	return PrimitiveStaticType(encoded), nil
+
+	var staticType StaticType = PrimitiveStaticType(encoded)
+	if staticType == PrimitiveStaticTypeCapability { //nolint:staticcheck
+		staticType = NewCapabilityStaticType(d.memoryGauge, nil)
+	}
+
+	return staticType, nil
 }
 
 func (d TypeDecoder) decodeOptionalStaticType() (StaticType, error) {

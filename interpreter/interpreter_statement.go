@@ -404,7 +404,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 			argumentType := argumentTypes[i]
 			parameterType := parameterTypes[i]
 
-			eventFields[i] = TransferAndConvert(
+			eventFields[i] = ConvertAndBoxWithValidation(
 				interpreter,
 				value,
 				argumentType,

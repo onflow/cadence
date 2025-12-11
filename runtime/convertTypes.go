@@ -172,6 +172,8 @@ func ExportMeteredType(
 			return cadence.AccountType
 		case sema.DeployedContractType:
 			return cadence.DeployedContractType
+		case sema.StorableType:
+			return cadence.StorableType
 
 		case sema.MutateType:
 			return cadence.MutateType
@@ -775,13 +777,14 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		)
 
 	case *cadence.CapabilityType:
-		if t.BorrowType == nil {
-			return interpreter.PrimitiveStaticTypeCapability
+		var borrowType interpreter.StaticType
+		if t.BorrowType != nil {
+			borrowType = ImportType(memoryGauge, t.BorrowType)
 		}
 
 		return interpreter.NewCapabilityStaticType(
 			memoryGauge,
-			ImportType(memoryGauge, t.BorrowType),
+			borrowType,
 		)
 
 	default:

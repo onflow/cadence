@@ -146,7 +146,7 @@ func (v CompiledFunctionValue) IsImportable(_ interpreter.ValueImportableContext
 }
 
 func (v CompiledFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *sema.FunctionType {
-	return v.Type.Type
+	return v.Type.FunctionType
 }
 
 func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
