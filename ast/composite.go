@@ -56,7 +56,7 @@ type CompositeDeclaration struct {
 	Range
 	Access        Access
 	CompositeKind common.CompositeKind
-	Comments
+	Comments      Comments
 }
 
 var _ Element = &CompositeDeclaration{}
@@ -313,7 +313,7 @@ type FieldDeclaration struct {
 	Access       Access
 	VariableKind VariableKind
 	Flags        FieldDeclarationFlags
-	Comments
+	Comments     Comments
 }
 
 var _ Element = &FieldDeclaration{}

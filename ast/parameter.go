@@ -32,7 +32,7 @@ type Parameter struct {
 	Label           string
 	Identifier      Identifier
 	StartPos        Position `json:"-"`
-	Comments
+	Comments        Comments
 }
 
 func NewParameter(

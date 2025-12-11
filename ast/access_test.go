@@ -52,6 +52,7 @@ func TestMappedAccess_MarshalJSON(t *testing.T) {
 	assert.JSONEq(t, `{
 		"EntitlementMap": {
 			"Type": "NominalType",
+			"Comments": {},
 			"Identifier": {
 				"Identifier": "E",
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -82,6 +83,7 @@ func TestEntitlementAccess_MarshalJSON(t *testing.T) {
 			"ConjunctiveElements": [
 				{
 					"Type": "NominalType",
+					"Comments": {},
 					"Identifier": {
 						"Identifier": "E",
 						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
@@ -92,6 +94,7 @@ func TestEntitlementAccess_MarshalJSON(t *testing.T) {
 				},
 				{
 					"Type": "NominalType",
+					"Comments": {},
 					"Identifier": {
 						"Identifier": "F",
 						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -115,6 +118,7 @@ func TestEntitlementAccess_MarshalJSON(t *testing.T) {
 			"DisjunctiveElements": [
 				{
 					"Type": "NominalType",
+					"Comments": {},
 					"Identifier": {
 						"Identifier": "E",
 						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
@@ -125,6 +129,7 @@ func TestEntitlementAccess_MarshalJSON(t *testing.T) {
 				},
 				{
 					"Type": "NominalType",
+					"Comments": {},
 					"Identifier": {
 						"Identifier": "F",
 						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},

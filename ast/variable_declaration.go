@@ -37,7 +37,7 @@ type VariableDeclaration struct {
 	StartPos          Position `json:"-"`
 	Access            Access
 	IsConstant        bool
-	Comments
+	Comments          Comments
 }
 
 var _ Element = &VariableDeclaration{}

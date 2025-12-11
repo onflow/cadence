@@ -31,8 +31,8 @@ import (
 type EntitlementDeclaration struct {
 	Access     Access
 	Identifier Identifier
+	Comments   Comments
 	Range
-	Comments
 }
 
 var _ Element = &EntitlementDeclaration{}
@@ -169,8 +169,8 @@ type EntitlementMappingDeclaration struct {
 	Access     Access
 	Identifier Identifier
 	Elements   []EntitlementMapElement
+	Comments   Comments
 	Range
-	Comments
 }
 
 var _ Element = &EntitlementMappingDeclaration{}

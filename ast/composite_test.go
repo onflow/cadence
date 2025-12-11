@@ -70,6 +70,7 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "FieldDeclaration",
+            "Comments": {},
             "Access": "AccessAll",
             "IsStatic": true,
             "IsNative": true,
@@ -83,6 +84,7 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
                 "IsResource": true,
                 "AnnotatedType": {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "CD",
                         "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -469,6 +471,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "CompositeDeclaration",
+            "Comments": {},
             "Access": "AccessAll", 
             "CompositeKind": "CompositeKindResource",
             "Identifier": {
@@ -479,6 +482,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
             "Conformances": [
                 {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "CD",
                         "StartPos": {"Offset": 4, "Line": 5, "Column": 6},

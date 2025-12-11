@@ -34,8 +34,8 @@ type TransactionDeclaration struct {
 	PostConditions *Conditions
 	DocString      string
 	Fields         []*FieldDeclaration
+	Comments       Comments
 	Range
-	Comments
 }
 
 var _ Element = &TransactionDeclaration{}

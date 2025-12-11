@@ -57,6 +57,7 @@ func TestBlock_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "Block",
+            "Comments": {},
             "Statements": [
                 {
                     "Type": "ExpressionStatement",
@@ -225,6 +226,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
                 "Type": "FunctionBlock",
                 "Block": {
                     "Type": "Block",
+                    "Comments": {},
                     "Statements": [
                         {
                             "Type": "ExpressionStatement",
@@ -329,6 +331,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 							"Type": "FunctionBlock",
 							"Block": {
 								"Type": "Block",
+								"Comments": {},
 								"Statements": [],
 								"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 								"EndPos": {"Offset": 4, "Line": 5, "Column": 6}
@@ -356,6 +359,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 									},
 									{
 										"Type": "EmitCondition",
+										"Comments": {},
 										"InvocationExpression": {
 											"Type": "InvocationExpression",
 											"InvokedExpression": {

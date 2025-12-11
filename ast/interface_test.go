@@ -62,6 +62,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 			`
         {
             "Type": "InterfaceDeclaration",
+            "Comments": {},
             "Access": "AccessAll",
             "CompositeKind": "CompositeKindResource",
             "Identifier": {
@@ -118,6 +119,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 			`
         {
             "Type": "InterfaceDeclaration",
+            "Comments": {},
             "Access": "AccessAll", 
             "CompositeKind": "CompositeKindResource",
             "Identifier": {
@@ -128,6 +130,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
             "Conformances": [
                 {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "CD",
                         "StartPos": {"Offset": 4, "Line": 5, "Column": 6},

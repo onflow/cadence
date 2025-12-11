@@ -28,8 +28,8 @@ import (
 
 type Block struct {
 	Statements []Statement
+	Comments   Comments
 	Range
-	Comments
 }
 
 var _ Element = &Block{}

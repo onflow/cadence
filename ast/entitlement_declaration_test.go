@@ -56,6 +56,7 @@ func TestEntitlementDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "EntitlementDeclaration",
+            "Comments": {},
             "Access": "AccessAll", 
             "Identifier": {
                 "Identifier": "AB",
@@ -176,6 +177,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "EntitlementMappingDeclaration",
+            "Comments": {},
             "Access": "AccessAll", 
             "Identifier": {
                 "Identifier": "AB",
@@ -185,6 +187,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 			"Elements": [
 				{
 					"Type": "NominalType",
+					"Comments": {},
 						"Identifier": { 
 							"Identifier": "X",
 							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -196,6 +199,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 				{
 					"Input": {
 						"Type": "NominalType",
+						"Comments": {},
 						"Identifier": {
 							"Identifier": "X",
 							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -206,6 +210,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 					},
 					"Output":  {
 						"Type": "NominalType",
+						"Comments": {},
 						"Identifier": {
 							"Identifier": "Y",
 							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},

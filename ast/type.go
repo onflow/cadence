@@ -111,7 +111,7 @@ func IsEmptyType(t Type) bool {
 type NominalType struct {
 	NestedIdentifiers []Identifier `json:",omitempty"`
 	Identifier        Identifier
-	Comments
+	Comments          Comments
 }
 
 var _ Type = &NominalType{}

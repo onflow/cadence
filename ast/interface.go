@@ -35,7 +35,7 @@ type InterfaceDeclaration struct {
 	Range
 	Access        Access
 	CompositeKind common.CompositeKind
-	Comments
+	Comments      Comments
 }
 
 var _ Element = &InterfaceDeclaration{}

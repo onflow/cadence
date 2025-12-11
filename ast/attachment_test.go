@@ -77,6 +77,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 		`
         {
             "Type": "AttachmentDeclaration",
+            "Comments": {},
             "Access": "AccessAll",
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -87,6 +88,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
             },
             "BaseType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "Bar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -99,6 +101,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
             "Conformances": [
                 {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "Baz",
                         "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -473,6 +476,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 		`
         {
             "Type": "RemoveStatement",
+            "Comments": {},
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 3, "Line": 2, "Column": 5},
             "Value":  {
@@ -488,6 +492,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
             },
             "Attachment": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": { 
                     "Identifier": "E",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},

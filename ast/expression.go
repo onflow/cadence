@@ -301,8 +301,8 @@ type IntegerExpression struct {
 	Value           *big.Int `json:"-"`
 	PositiveLiteral []byte
 	Range
-	Base int
-	Comments
+	Base     int
+	Comments Comments
 }
 
 var _ Element = &IntegerExpression{}

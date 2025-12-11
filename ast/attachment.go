@@ -34,8 +34,8 @@ type AttachmentDeclaration struct {
 	BaseType     *NominalType
 	Conformances []*NominalType
 	Members      *Members
+	Comments     Comments
 	Range
-	Comments
 }
 
 var _ Element = &AttachmentDeclaration{}
@@ -292,7 +292,7 @@ type RemoveStatement struct {
 	Attachment *NominalType
 	Value      Expression
 	StartPos   Position `json:"-"`
-	Comments
+	Comments   Comments
 }
 
 var _ Element = &RemoveStatement{}

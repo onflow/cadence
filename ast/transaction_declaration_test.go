@@ -75,7 +75,9 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "TransactionDeclaration",
+            "Comments": {},
             "ParameterList":  {
+                "Comments": {},
                 "Parameters": [],
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 4, "Line": 5, "Column": 6}

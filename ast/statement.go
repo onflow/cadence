@@ -38,8 +38,8 @@ type Statement interface {
 
 type ReturnStatement struct {
 	Expression Expression
+	Comments   Comments
 	Range
-	Comments
 }
 
 var _ Element = &ReturnStatement{}
@@ -103,8 +103,8 @@ func (s *ReturnStatement) MarshalJSON() ([]byte, error) {
 // BreakStatement
 
 type BreakStatement struct {
+	Comments Comments
 	Range
-	Comments
 }
 
 var _ Element = &BreakStatement{}
@@ -152,8 +152,8 @@ func (s *BreakStatement) MarshalJSON() ([]byte, error) {
 // ContinueStatement
 
 type ContinueStatement struct {
+	Comments Comments
 	Range
-	Comments
 }
 
 var _ Element = &ContinueStatement{}
@@ -323,7 +323,7 @@ type WhileStatement struct {
 	Test     Expression
 	Block    *Block
 	StartPos Position `json:"-"`
-	Comments
+	Comments Comments
 }
 
 var _ Element = &WhileStatement{}
@@ -402,7 +402,7 @@ type ForStatement struct {
 	Block      *Block
 	Identifier Identifier
 	StartPos   Position `json:"-"`
-	Comments
+	Comments   Comments
 }
 
 var _ Element = &ForStatement{}
@@ -500,7 +500,7 @@ func (s *ForStatement) MarshalJSON() ([]byte, error) {
 type EmitStatement struct {
 	InvocationExpression *InvocationExpression
 	StartPos             Position `json:"-"`
-	Comments
+	Comments             Comments
 }
 
 var _ Element = &EmitStatement{}
@@ -768,8 +768,8 @@ func (s *ExpressionStatement) String() string {
 type SwitchStatement struct {
 	Expression Expression
 	Cases      []*SwitchCase
+	Comments   Comments
 	Range
-	Comments
 }
 
 var _ Element = &SwitchStatement{}
@@ -867,8 +867,8 @@ func (s *SwitchStatement) MarshalJSON() ([]byte, error) {
 type SwitchCase struct {
 	Expression Expression
 	Statements []Statement
+	Comments   Comments
 	Range
-	Comments
 }
 
 func NewSwitchCase(

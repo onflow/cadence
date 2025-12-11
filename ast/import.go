@@ -42,7 +42,7 @@ type ImportDeclaration struct {
 	Imports  []Import
 	Range
 	LocationPos Position
-	Comments
+	Comments    Comments
 }
 
 var _ Element = &ImportDeclaration{}

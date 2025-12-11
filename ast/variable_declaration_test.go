@@ -87,6 +87,7 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
         {
             "Type": "VariableDeclaration",
             "Access": "AccessAll",
+            "Comments": {},
             "IsConstant": true,
             "Identifier": {
                 "Identifier": "foo",
@@ -99,6 +100,7 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
                 "IsResource": true,
                 "AnnotatedType": {
                     "Type": "NominalType",
+                    "Comments": {},
                     "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
                     "EndPos": {"Offset": 5, "Line": 5, "Column": 7},
                     "Identifier": {

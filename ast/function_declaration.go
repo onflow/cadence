@@ -73,7 +73,7 @@ type FunctionDeclaration struct {
 	StartPos             Position `json:"-"`
 	Access               Access
 	Flags                FunctionDeclarationFlags
-	Comments
+	Comments             Comments
 }
 
 var _ Element = &FunctionDeclaration{}
