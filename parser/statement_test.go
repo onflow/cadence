@@ -80,6 +80,68 @@ func TestParseReturnStatement(t *testing.T) {
 		)
 	})
 
+	t.Run("no expression, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before return
+return // After return
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ReturnStatement{
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+						EndPos:   ast.Position{Line: 3, Column: 5, Offset: 23},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before return")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After return")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no expression, semicolon, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before return
+return ; // After return
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ReturnStatement{
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+						EndPos:   ast.Position{Line: 3, Column: 5, Offset: 23},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before return")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After return")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("expression on same line", func(t *testing.T) {
 
 		t.Parallel()
@@ -102,6 +164,49 @@ func TestParseReturnStatement(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("expression on same line, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before return
+return 1 // After return
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ReturnStatement{
+					Expression: &ast.IntegerExpression{
+						PositiveLiteral: []byte("1"),
+						Value:           big.NewInt(1),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 7, Offset: 25},
+							EndPos:   ast.Position{Line: 3, Column: 7, Offset: 25},
+						},
+						Comments: ast.Comments{
+							// TODO(preserve-comments): Should we attach this to expression or statement node?
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// After return")),
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+						EndPos:   ast.Position{Line: 3, Column: 7, Offset: 25},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before return")),
+						},
 					},
 				},
 			},
@@ -577,42 +682,6 @@ func TestParseIfStatement(t *testing.T) {
 	})
 }
 
-func TestParseWhileStatement(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("empty block", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseStatements("while true { }")
-		require.Empty(t, errs)
-
-		AssertEqualWithDiff(t,
-			[]ast.Statement{
-				&ast.WhileStatement{
-					Test: &ast.BoolExpression{
-						Value: true,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
-						},
-					},
-					Block: &ast.Block{
-						Statements: nil,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
-							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
-						},
-					},
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-				},
-			},
-			result,
-		)
-	})
-}
-
 func TestParseAssignmentStatement(t *testing.T) {
 
 	t.Parallel()
@@ -828,6 +897,58 @@ func TestParseForStatement(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("empty block, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before for
+for /* after for */ x /* before in */ in /* after in */ y { }
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ForStatement{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Line: 3, Column: 20, Offset: 35},
+						// TODO(preserve-comments): Handle identifier comments
+						//Comments: ast.Comments{
+						//	Trailing: []*ast.Comment{
+						//		ast.NewComment(nil, []byte("/* before in */")),
+						//	},
+						//},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 3, Column: 56, Offset: 71},
+						},
+					},
+					Block: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 58, Offset: 73},
+							EndPos:   ast.Position{Line: 3, Column: 60, Offset: 75},
+						},
+					},
+					StartPos: ast.Position{Line: 3, Column: 0, Offset: 15},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before for")),
+							ast.NewComment(nil, []byte("/* after for */")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* after in */")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseForStatementIndexBinding(t *testing.T) {
@@ -1025,6 +1146,42 @@ func TestParseEmit(t *testing.T) {
 		assert.Equal(t,
 			"emit T(",
 			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("simple, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before emit 1
+/* Before emit 2 */ emit T()
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.EmitStatement{
+					InvocationExpression: &ast.InvocationExpression{
+						InvokedExpression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "T",
+								Pos:        ast.Position{Line: 3, Column: 25, Offset: 43},
+							},
+						},
+						ArgumentsStartPos: ast.Position{Line: 3, Column: 26, Offset: 44},
+						EndPos:            ast.Position{Line: 3, Column: 27, Offset: 45},
+					},
+					StartPos: ast.Position{Line: 3, Column: 20, Offset: 38},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before emit 1")),
+							ast.NewComment(nil, []byte("/* Before emit 2 */")),
+						},
+					},
+				},
+			},
+			result,
 		)
 	})
 }
@@ -1378,6 +1535,46 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		)
 	})
 
+	t.Run("basic, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before remove
+remove A
+// Before from
+from b
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.RemoveStatement{
+					Attachment: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "A",
+							Pos:        ast.Position{Line: 3, Column: 7, Offset: 25},
+						},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "b",
+							Pos:        ast.Position{Line: 5, Column: 5, Offset: 47},
+						},
+					},
+					StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before remove")),
+							ast.NewComment(nil, []byte("// Before from")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("namespaced attachment", func(t *testing.T) {
 
 		t.Parallel()
@@ -1695,6 +1892,132 @@ func TestParseSwitchStatement(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 4, Column: 3, Offset: 40},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("two cases, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+			// Before switch
+			switch x { 
+				// Before first case
+				case true : // After first case
+					true
+				// Before default case
+				default : /* After default case */ false
+			} // After switch
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.SwitchStatement{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 3, Column: 10, Offset: 31},
+						},
+					},
+					Cases: []*ast.SwitchCase{
+						{
+							Expression: &ast.BoolExpression{
+								Value: true,
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 70,
+										Line:   5,
+										Column: 9,
+									},
+									EndPos: ast.Position{
+										Offset: 73,
+										Line:   5,
+										Column: 12,
+									},
+								},
+							},
+							Statements: []ast.Statement{
+								&ast.ExpressionStatement{
+									Expression: &ast.BoolExpression{
+										Value: true,
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 102,
+												Line:   6,
+												Column: 5,
+											},
+											EndPos: ast.Position{
+												Offset: 105,
+												Line:   6,
+												Column: 8,
+											},
+										},
+									},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 5, Column: 4, Offset: 65},
+								EndPos:   ast.Position{Line: 6, Column: 8, Offset: 105},
+							},
+							Comments: ast.Comments{
+								Leading: []*ast.Comment{
+									ast.NewComment(nil, []byte("// Before first case")),
+								},
+								Trailing: []*ast.Comment{
+									ast.NewComment(nil, []byte("// After first case")),
+								},
+							},
+						},
+						{
+							Statements: []ast.Statement{
+								&ast.ExpressionStatement{
+									Expression: &ast.BoolExpression{
+										Value: false,
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 173,
+												Line:   8,
+												Column: 39,
+											},
+											EndPos: ast.Position{
+												Offset: 177,
+												Line:   8,
+												Column: 43,
+											},
+										},
+									},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 8, Column: 4, Offset: 138},
+								EndPos:   ast.Position{Line: 8, Column: 43, Offset: 177},
+							},
+							Comments: ast.Comments{
+								Leading: []*ast.Comment{
+									ast.NewComment(nil, []byte("// Before default case")),
+								},
+								Trailing: []*ast.Comment{
+									ast.NewComment(nil, []byte("/* After default case */")),
+								},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 3, Offset: 24},
+						EndPos:   ast.Position{Line: 9, Column: 3, Offset: 182},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before switch")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After switch")),
+						},
 					},
 				},
 			},
@@ -2122,11 +2445,153 @@ func TestParseIfStatementNoElse(t *testing.T) {
 	)
 }
 
-func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
+func TestParseIfStatementWithComments(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `
+	result, errs := testParseStatements(`
+// before if
+if true {
+	// noop
+} // after if
+// before else-if
+else if true {
+	// noop
+} 
+// before second else-if
+else if true {
+	// noop
+} /* after else-if */ else {
+	// noop
+} // after else
+`)
+	require.Empty(t, errs)
+
+	AssertEqualWithDiff(t,
+		[]ast.Statement{
+			&ast.IfStatement{
+				Test: &ast.BoolExpression{
+					Value: true,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 3, Offset: 17},
+						EndPos:   ast.Position{Line: 3, Column: 6, Offset: 20},
+					},
+				},
+				Then: &ast.Block{
+					Statements: nil,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 8, Offset: 22},
+						EndPos:   ast.Position{Line: 5, Column: 0, Offset: 33},
+					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// noop")),
+							ast.NewComment(nil, []byte("// after if")),
+						},
+					},
+				},
+				Else: &ast.Block{
+					Statements: []ast.Statement{
+						&ast.IfStatement{
+							Test: &ast.BoolExpression{
+								Value: true,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 7, Column: 8, Offset: 73},
+									EndPos:   ast.Position{Line: 7, Column: 11, Offset: 76},
+								},
+							},
+							Then: &ast.Block{
+								Statements: nil,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 7, Column: 13, Offset: 78},
+									EndPos:   ast.Position{Line: 9, Column: 0, Offset: 89},
+								},
+								Comments: ast.Comments{
+									Trailing: []*ast.Comment{
+										ast.NewComment(nil, []byte("// noop")),
+									},
+								},
+							},
+							Else: &ast.Block{
+								Statements: []ast.Statement{
+									&ast.IfStatement{
+										Test: &ast.BoolExpression{
+											Value: true,
+											Range: ast.Range{
+												StartPos: ast.Position{Line: 11, Column: 8, Offset: 125},
+												EndPos:   ast.Position{Line: 11, Column: 11, Offset: 128},
+											},
+										},
+										Then: &ast.Block{
+											Statements: nil,
+											Range: ast.Range{
+												StartPos: ast.Position{Line: 11, Column: 13, Offset: 130},
+												EndPos:   ast.Position{Line: 13, Column: 0, Offset: 141},
+											},
+											Comments: ast.Comments{
+												Trailing: []*ast.Comment{
+													ast.NewComment(nil, []byte("// noop")),
+													ast.NewComment(nil, []byte("/* after else-if */")),
+												},
+											},
+										},
+										Else: &ast.Block{
+											Statements: nil,
+											Range: ast.Range{
+												StartPos: ast.Position{Line: 13, Column: 27, Offset: 168},
+												EndPos:   ast.Position{Line: 15, Column: 0, Offset: 179},
+											},
+											Comments: ast.Comments{
+												Trailing: []*ast.Comment{
+													ast.NewComment(nil, []byte("// noop")),
+													ast.NewComment(nil, []byte("// after else")),
+												},
+											},
+										},
+										StartPos: ast.Position{Line: 11, Column: 5, Offset: 122},
+										Comments: ast.Comments{
+											Leading: []*ast.Comment{
+												ast.NewComment(nil, []byte("// before second else-if")),
+											},
+										},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 11, Column: 5, Offset: 122},
+									EndPos:   ast.Position{Line: 15, Column: 0, Offset: 179},
+								},
+							},
+							StartPos: ast.Position{Line: 7, Column: 5, Offset: 70},
+							Comments: ast.Comments{
+								Leading: []*ast.Comment{
+									ast.NewComment(nil, []byte("// before else-if")),
+								},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 7, Column: 5, Offset: 70},
+						EndPos:   ast.Position{Line: 15, Column: 0, Offset: 179},
+					},
+				},
+				StartPos: ast.Position{Line: 3, Column: 0, Offset: 14},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// before if")),
+					},
+				},
+			},
+		},
+		result,
+	)
+}
+
+func TestParseWhileStatement(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("while in function", func(t *testing.T) {
+		const code = `
 	    fun test() {
             while true {
               return
@@ -2135,74 +2600,204 @@ func TestParseWhileStatementInFunctionDeclaration(t *testing.T) {
             }
         }
 	`
-	result, errs := testParseProgram(code)
+		result, errs := testParseProgram(code)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
+					Identifier: ast.Identifier{
+						Identifier: "test",
+						Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
+					},
+					ParameterList: &ast.ParameterList{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
+							EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
+						},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Statements: []ast.Statement{
+								&ast.WhileStatement{
+									Test: &ast.BoolExpression{
+										Value: true,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 37, Line: 3, Column: 18},
+											EndPos:   ast.Position{Offset: 40, Line: 3, Column: 21},
+										},
+									},
+									Block: &ast.Block{
+										Statements: []ast.Statement{
+											&ast.ReturnStatement{
+												Expression: nil,
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 58, Line: 4, Column: 14},
+													EndPos:   ast.Position{Offset: 63, Line: 4, Column: 19},
+												},
+											},
+											&ast.BreakStatement{
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 79, Line: 5, Column: 14},
+													EndPos:   ast.Position{Offset: 83, Line: 5, Column: 18},
+												},
+											},
+											&ast.ContinueStatement{
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 99, Line: 6, Column: 14},
+													EndPos:   ast.Position{Offset: 106, Line: 6, Column: 21},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 42, Line: 3, Column: 23},
+											EndPos:   ast.Position{Offset: 120, Line: 7, Column: 12},
+										},
+									},
+									StartPos: ast.Position{Offset: 31, Line: 3, Column: 12},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+								EndPos:   ast.Position{Offset: 130, Line: 8, Column: 8},
+							},
+						},
+					},
+					StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
+				},
+			},
+			result.Declarations(),
+		)
+	})
+
+	t.Run("while, comments", func(t *testing.T) {
+		const code = `
+		// before while
+	    while true { 
+			// ignore
+		} // after while
+	`
+		result, errs := testParseStatements(code)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.WhileStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 30, Line: 3, Column: 11},
+							EndPos:   ast.Position{Offset: 33, Line: 3, Column: 14},
+						},
+					},
+					Block: &ast.Block{
+						Statements: []ast.Statement{},
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 35, Line: 3, Column: 16},
+							EndPos:   ast.Position{Offset: 53, Line: 5, Column: 2},
+						},
+						Comments: ast.Comments{
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// ignore")),
+								ast.NewComment(nil, []byte("// after while")),
+							},
+						},
+					},
+					StartPos: ast.Position{Offset: 24, Line: 3, Column: 5},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// before while")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+}
+
+func TestParseReturnBreakContinueWithComments(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+	    // Before return
+        return // After return
+		// Before return semicolon
+        return /* After return, before semicolon */ ; // After semicolon
+		// Before break
+        break // After break
+		// Before continue
+        continue // After continue
+	`
+	result, errs := testParseStatements(code)
 	require.Empty(t, errs)
 
 	AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.FunctionDeclaration{
-				Access: ast.AccessNotSpecified,
-				Identifier: ast.Identifier{
-					Identifier: "test",
-					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
+		[]ast.Statement{
+			&ast.ReturnStatement{
+				Expression: nil,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 31, Line: 3, Column: 8},
+					EndPos:   ast.Position{Offset: 36, Line: 3, Column: 13},
 				},
-				ParameterList: &ast.ParameterList{
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
-						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// Before return")),
+					},
+					Trailing: []*ast.Comment{
+						ast.NewComment(nil, []byte("// After return")),
 					},
 				},
-				FunctionBlock: &ast.FunctionBlock{
-					Block: &ast.Block{
-						Statements: []ast.Statement{
-							&ast.WhileStatement{
-								Test: &ast.BoolExpression{
-									Value: true,
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 37, Line: 3, Column: 18},
-										EndPos:   ast.Position{Offset: 40, Line: 3, Column: 21},
-									},
-								},
-								Block: &ast.Block{
-									Statements: []ast.Statement{
-										&ast.ReturnStatement{
-											Expression: nil,
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 58, Line: 4, Column: 14},
-												EndPos:   ast.Position{Offset: 63, Line: 4, Column: 19},
-											},
-										},
-										&ast.BreakStatement{
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 79, Line: 5, Column: 14},
-												EndPos:   ast.Position{Offset: 83, Line: 5, Column: 18},
-											},
-										},
-										&ast.ContinueStatement{
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 99, Line: 6, Column: 14},
-												EndPos:   ast.Position{Offset: 106, Line: 6, Column: 21},
-											},
-										},
-									},
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 42, Line: 3, Column: 23},
-										EndPos:   ast.Position{Offset: 120, Line: 7, Column: 12},
-									},
-								},
-								StartPos: ast.Position{Offset: 31, Line: 3, Column: 12},
-							},
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
-							EndPos:   ast.Position{Offset: 130, Line: 8, Column: 8},
-						},
+			},
+			&ast.ReturnStatement{
+				Expression: nil,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 91, Line: 5, Column: 8},
+					EndPos:   ast.Position{Offset: 96, Line: 5, Column: 13},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// Before return semicolon")),
+						ast.NewComment(nil, []byte("/* After return, before semicolon */")),
+					},
+					Trailing: []*ast.Comment{
+						ast.NewComment(nil, []byte("// After semicolon")),
 					},
 				},
-				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
+			},
+			&ast.BreakStatement{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 182, Line: 7, Column: 8},
+					EndPos:   ast.Position{Offset: 186, Line: 7, Column: 12},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// Before break")),
+					},
+					Trailing: []*ast.Comment{
+						ast.NewComment(nil, []byte("// After break")),
+					},
+				},
+			},
+			&ast.ContinueStatement{
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 232, Line: 9, Column: 8},
+					EndPos:   ast.Position{Offset: 239, Line: 9, Column: 15},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("// Before continue")),
+					},
+					Trailing: []*ast.Comment{
+						ast.NewComment(nil, []byte("// After continue")),
+					},
+				},
 			},
 		},
-		result.Declarations(),
+		result,
 	)
 }
 

@@ -146,8 +146,7 @@ func rootState(l *lexer) stateFn {
 			case '/':
 				return lineCommentState
 			case '*':
-				l.emitType(TokenBlockCommentStart)
-				return blockCommentState(0)
+				return blockCommentState(l, 0)
 			default:
 				l.backupOne()
 				l.emitType(TokenSlash)
@@ -266,6 +265,8 @@ func numberState(l *lexer) stateFn {
 	return rootState
 }
 
+// Space must be preserved alongside the new comment structs,
+// since some parsing code depends on it.
 type Space struct {
 	ContainsNewline bool
 }
@@ -275,16 +276,22 @@ func spaceState(startIsNewline bool) stateFn {
 		containsNewline := l.scanSpace()
 		containsNewline = containsNewline || startIsNewline
 
+		l.scanSpace()
+
 		common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
+
+		if containsNewline {
+			// Trailing comments end before the first newline.
+			l.markTrailingCommentsEnd()
+		}
 
 		l.emit(
 			TokenSpace,
-			Space{
-				ContainsNewline: containsNewline,
-			},
+			Space{ContainsNewline: containsNewline},
 			l.startPosition(),
 			true,
 		)
+
 		return rootState
 	}
 }
@@ -317,12 +324,13 @@ func stringState(l *lexer) stateFn {
 
 func lineCommentState(l *lexer) stateFn {
 	l.scanLineComment()
-	l.emitType(TokenLineComment)
+	l.emitComment()
 	return rootState
 }
 
-func blockCommentState(nesting int) stateFn {
+func blockCommentState(l *lexer, nesting int) stateFn {
 	if nesting < 0 {
+		l.emitComment()
 		return rootState
 	}
 
@@ -330,6 +338,7 @@ func blockCommentState(nesting int) stateFn {
 		r := l.next()
 		switch r {
 		case EOF:
+			l.emitError(MissingCommentEndError{})
 			return nil
 		case '/':
 			beforeSlashOffset := l.prevEndOffset
@@ -337,11 +346,9 @@ func blockCommentState(nesting int) stateFn {
 				if beforeSlashOffset-l.startOffset > 0 {
 					starOffset := l.endOffset
 					l.endOffset = beforeSlashOffset
-					l.emitType(TokenBlockCommentContent)
 					l.endOffset = starOffset
 				}
-				l.emitType(TokenBlockCommentStart)
-				return blockCommentState(nesting + 1)
+				return blockCommentState(l, nesting+1)
 			}
 
 		case '*':
@@ -350,14 +357,22 @@ func blockCommentState(nesting int) stateFn {
 				if beforeStarOffset-l.startOffset > 0 {
 					slashOffset := l.endOffset
 					l.endOffset = beforeStarOffset
-					l.emitType(TokenBlockCommentContent)
 					l.endOffset = slashOffset
 				}
-				l.emitType(TokenBlockCommentEnd)
-				return blockCommentState(nesting - 1)
+				return blockCommentState(l, nesting-1)
 			}
+
+			return blockCommentState(l, nesting)
 		}
 
-		return blockCommentState(nesting)
+		return blockCommentState(l, nesting)
 	}
+}
+
+type MissingCommentEndError struct{}
+
+var _ error = MissingCommentEndError{}
+
+func (MissingCommentEndError) Error() string {
+	return "missing comment end (`*/`)"
 }

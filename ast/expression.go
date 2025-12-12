@@ -318,7 +318,8 @@ type IntegerExpression struct {
 	Value           *big.Int `json:"-"`
 	PositiveLiteral []byte
 	Range
-	Base int
+	Base     int
+	Comments Comments
 }
 
 var _ Element = &IntegerExpression{}
@@ -330,6 +331,7 @@ func NewIntegerExpression(
 	value *big.Int,
 	base int,
 	tokenRange Range,
+	comments Comments,
 ) *IntegerExpression {
 	common.UseMemory(gauge, common.IntegerExpressionMemoryUsage)
 
@@ -338,6 +340,7 @@ func NewIntegerExpression(
 		Value:           value,
 		Base:            base,
 		Range:           tokenRange,
+		Comments:        comments,
 	}
 }
 
@@ -691,6 +694,7 @@ func (e DictionaryEntry) Doc() prettier.Doc {
 
 type IdentifierExpression struct {
 	Identifier Identifier
+	Comments   Comments
 }
 
 var _ Element = &IdentifierExpression{}
@@ -699,11 +703,13 @@ var _ Expression = &IdentifierExpression{}
 func NewIdentifierExpression(
 	gauge common.MemoryGauge,
 	identifier Identifier,
+	comments Comments,
 ) *IdentifierExpression {
 	common.UseMemory(gauge, common.IdentifierExpressionMemoryUsage)
 
 	return &IdentifierExpression{
 		Identifier: identifier,
+		Comments:   comments,
 	}
 }
 
