@@ -77,7 +77,9 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 		`
         {
             "Type": "AttachmentDeclaration",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll",
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6},

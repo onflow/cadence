@@ -62,7 +62,9 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 			`
         {
             "Type": "InterfaceDeclaration",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll",
             "CompositeKind": "CompositeKindResource",
             "Identifier": {
@@ -119,7 +121,9 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 			`
         {
             "Type": "InterfaceDeclaration",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll", 
             "CompositeKind": "CompositeKindResource",
             "Identifier": {

@@ -70,7 +70,9 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "FieldDeclaration",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll",
             "IsStatic": true,
             "IsNative": true,
@@ -471,7 +473,9 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "CompositeDeclaration",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll", 
             "CompositeKind": "CompositeKindResource",
             "Identifier": {

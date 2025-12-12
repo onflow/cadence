@@ -75,7 +75,9 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "TransactionDeclaration",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "ParameterList":  {
                 "Comments": {},
                 "Parameters": [],

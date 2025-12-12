@@ -2,14 +2,15 @@ package ast
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 
 	"github.com/onflow/cadence/common"
 )
 
 type Comments struct {
-	Leading  []*Comment `json:"-"`
-	Trailing []*Comment `json:"-"`
+	Leading  []*Comment
+	Trailing []*Comment
 }
 
 var EmptyComments = Comments{}
@@ -102,4 +103,27 @@ func cutOptionalSuffixes(input []byte, suffixes [][]byte) (output []byte) {
 		output = cut
 	}
 	return
+}
+
+func (c Comments) MarshalJSON() ([]byte, error) {
+	cj := struct {
+		Leading  []string `json:"Leading,omitempty"`
+		Trailing []string `json:"Trailing,omitempty"`
+	}{}
+
+	if len(c.Leading) > 0 {
+		cj.Leading = make([]string, len(c.Leading))
+		for i, comment := range c.Leading {
+			cj.Leading[i] = comment.String()
+		}
+	}
+
+	if len(c.Trailing) > 0 {
+		cj.Trailing = make([]string, len(c.Trailing))
+		for i, comment := range c.Trailing {
+			cj.Trailing[i] = comment.String()
+		}
+	}
+
+	return json.Marshal(cj)
 }

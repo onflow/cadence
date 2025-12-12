@@ -128,7 +128,9 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
         {
             "Type": "FunctionDeclaration",
             "Access": "AccessAll",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "IsStatic": true,
             "IsNative": true,
             "Identifier": {
@@ -613,7 +615,9 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
             "FunctionDeclaration": {
                 "Type": "FunctionDeclaration",
                 "Access": "AccessNotSpecified",
-                "Comments": {},
+                "Comments": {
+                    "Leading": ["///test"]
+                },
                 "IsStatic": false,
                 "IsNative": true,
                 "Identifier": {

@@ -19,9 +19,11 @@
 package parser
 
 import (
+	"encoding/json"
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/errors"
@@ -197,6 +199,49 @@ func TestParseBlockComment(t *testing.T) {
 				},
 			},
 			errs,
+		)
+	})
+}
+
+func TestCommentsJSONSerialization(t *testing.T) {
+	t.Parallel()
+
+	t.Run("comments with leading and trailing", func(t *testing.T) {
+		t.Parallel()
+
+		comments := ast.Comments{
+			Leading: []*ast.Comment{
+				ast.NewComment(nil, []byte("// leading comment 1")),
+				ast.NewComment(nil, []byte("/* leading comment 2 */")),
+			},
+			Trailing: []*ast.Comment{
+				ast.NewComment(nil, []byte("// trailing comment")),
+			},
+		}
+
+		jsonBytes, err := json.Marshal(comments)
+		require.NoError(t, err)
+
+		assert.JSONEq(t,
+			`{
+				"Leading": ["// leading comment 1", "/* leading comment 2 */"],
+				"Trailing": ["// trailing comment"]
+			}`,
+			string(jsonBytes),
+		)
+	})
+
+	t.Run("empty comments", func(t *testing.T) {
+		t.Parallel()
+
+		comments := ast.Comments{}
+
+		jsonBytes, err := json.Marshal(comments)
+		require.NoError(t, err)
+
+		assert.JSONEq(t,
+			`{}`,
+			string(jsonBytes),
 		)
 	})
 }

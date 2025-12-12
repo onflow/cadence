@@ -56,7 +56,9 @@ func TestEntitlementDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "EntitlementDeclaration",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll", 
             "Identifier": {
                 "Identifier": "AB",
@@ -177,7 +179,9 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "EntitlementMappingDeclaration",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll", 
             "Identifier": {
                 "Identifier": "AB",

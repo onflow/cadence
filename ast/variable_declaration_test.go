@@ -87,7 +87,9 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
         {
             "Type": "VariableDeclaration",
             "Access": "AccessAll",
-            "Comments": {},
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "IsConstant": true,
             "Identifier": {
                 "Identifier": "foo",
