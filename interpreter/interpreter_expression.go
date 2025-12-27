@@ -332,6 +332,11 @@ func CheckMemberAccessTargetType(
 	target Value,
 	expectedType sema.Type,
 ) {
+	var (
+		targetStaticType StaticType
+		targetSemaType   sema.Type
+	)
+
 	switch expectedType := expectedType.(type) {
 	case *sema.TransactionType:
 		// TODO: maybe also check transactions.
@@ -340,20 +345,35 @@ func CheckMemberAccessTargetType(
 		return
 
 	case *sema.CompositeType:
-		// TODO: also check built-in values.
-		//   blocked by standard library values (RLP, BLS, etc.),
-		//   which are implemented as contracts, but currently do not have their type registered
-
 		if expectedType.Location == nil {
-			return
+			// TODO: also check values of built-in types.
+			//   This is currently not always possible, because for some standard library values (RLP, BLS, etc.),
+			//   which are implemented as contracts, we do not have their type registered.
+			//   We can at least check built-in types when their type is available (PublicKey, SignatureAlgorithm, etc.)
+
+			targetStaticType = target.StaticType(context)
+
+			var err error
+			targetSemaType, err = ConvertStaticToSemaType(context, targetStaticType)
+			if targetSemaType == nil || err != nil {
+				// We don't have type information, cannot check further
+				return
+			}
 		}
 	}
 
-	targetStaticType := target.StaticType(context)
+	// Get target static type, if not done already
+	if targetStaticType == nil {
+		targetStaticType = target.StaticType(context)
+	}
 
 	if _, ok := expectedType.(*sema.OptionalType); ok {
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
+
+			// Convert target static type to sema type, if not done already
+			if targetSemaType == nil {
+				targetSemaType = MustConvertStaticToSemaType(targetStaticType, context)
+			}
 
 			panic(&MemberAccessTypeError{
 				ExpectedType: expectedType,
@@ -363,7 +383,11 @@ func CheckMemberAccessTargetType(
 	}
 
 	if !IsSubTypeOfSemaType(context, targetStaticType, expectedType) {
-		targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
+
+		// Convert target static type to sema type, if not done already
+		if targetSemaType == nil {
+			targetSemaType = MustConvertStaticToSemaType(targetStaticType, context)
+		}
 
 		panic(&MemberAccessTypeError{
 			ExpectedType: expectedType,
