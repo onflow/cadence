@@ -1501,6 +1501,139 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 	})
 }
 
+func TestRuntimeImportStructValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            access(all) struct Foo {
+                access(all) let bar: Int
+
+                init(bar: Int) {
+                    self.bar = bar
+                }
+            }
+
+            access(all) fun main(foo: Foo) {}
+        `
+
+		fooStructType := cadence.NewStructType(
+			common.ScriptLocation{},
+			"Foo",
+			fooFields,
+			nil,
+		)
+
+		arg := cadence.NewStruct([]cadence.Value{
+			cadence.NewInt(42),
+		}).WithType(fooStructType)
+
+		_, err := executeTestScript(t, script, arg)
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid - missing field", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+		   access(all) struct Foo {
+		       access(all) let bar: Int
+
+		       init(bar: Int) {
+		           self.bar = bar
+		       }
+		   }
+
+		   access(all) fun main(foo: Foo) {}
+		`
+
+		rt := NewTestRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		// NOTE: manual encoding of argument to circumvent field count check in JSON encoding
+		//
+		//    arg := cadence.NewStruct([]cadence.Value{
+		//        cadence.NewInt(42),
+		//    }).WithType(fooStructType)
+
+		// language=json
+		encodedArg := `
+            {
+                "type": "Struct",
+                "value":{
+                    "id":"s.0000000000000000000000000000000000000000000000000000000000000000.Foo",
+                    "fields": []
+                }
+            }
+        `
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(encodedArg),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
+			},
+		)
+		RequireError(t, err)
+		assert.Contains(t,
+			err.Error(),
+			"invalid argument at index 0: value does not conform to expected type `s.0000000000000000000000000000000000000000000000000000000000000000.Foo`",
+		)
+	})
+
+	t.Run("invalid - extra field", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+        access(all) struct Foo {
+            access(all) let bar: Int
+
+            init(bar: Int) {
+                self.bar = bar
+            }
+        }
+
+        access(all) fun main(foo: Foo) {}
+    `
+
+		fooStructType := cadence.NewStructType(
+			common.ScriptLocation{},
+			"Foo",
+			fooFields,
+			nil,
+		)
+
+		arg := cadence.NewStruct([]cadence.Value{
+			cadence.NewInt(42),
+			cadence.NewInt(99), // extra field
+		}).WithType(fooStructType)
+
+		_, err := executeTestScript(t, script, arg)
+		RequireError(t, err)
+		assert.Contains(t,
+			err.Error(),
+			"invalid argument at index 0: value does not conform to expected type `s.0000000000000000000000000000000000000000000000000000000000000000.Foo`",
+		)
+	})
+}
+
 func TestRuntimeExportStructValue(t *testing.T) {
 
 	t.Parallel()
@@ -4995,102 +5128,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		assert.Nil(t, value)
 	})
 
-	t.Run("Extra field", func(t *testing.T) {
-		script := `
-            access(all) fun main(key: PublicKey): [UInt8] {
-                return key.publicKey
-            }
-        `
-
-		jsonCdc := `
-            {
-                "type":"Struct",
-                "value":{
-                    "id":"PublicKey",
-                    "fields":[
-                        {
-                            "name":"publicKey",
-                            "value":{
-                                "type":"Array",
-                                "value":[
-                                    {
-                                        "type":"UInt8",
-                                        "value":"1"
-                                    },
-                                    {
-                                        "type":"UInt8",
-                                        "value":"2"
-                                    }
-                                ]
-                            }
-                        },
-                        {
-                            "name":"signatureAlgorithm",
-                            "value":{
-                                "type":"Enum",
-                                "value":{
-                                    "id":"SignatureAlgorithm",
-                                    "fields":[
-                                        {
-                                            "name":"rawValue",
-                                            "value":{
-                                                "type":"UInt8",
-                                                "value":"1"
-                                            }
-                                        } 
-                                    ]
-                                }
-                            }
-                        },
-                        {
-                            "name":"foo",
-                            "value":{
-                                "type":"UInt8",
-                                "value":"1"
-                            }
-                        }
-                    ]
-                }
-            }
-        `
-
-		rt := NewTestRuntime()
-
-		var publicKeyValidated bool
-
-		storage := NewTestLedger(nil, nil)
-
-		runtimeInterface := &TestRuntimeInterface{
-			Storage: storage,
-			OnValidatePublicKey: func(publicKey *stdlib.PublicKey) error {
-				publicKeyValidated = true
-				return nil
-			},
-			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(nil, b)
-			},
-		}
-
-		value, err := rt.ExecuteScript(
-			Script{
-				Source: []byte(script),
-				Arguments: [][]byte{
-					[]byte(jsonCdc),
-				},
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
-			},
-		)
-
-		RequireError(t, err)
-		assert.Contains(t, err.Error(),
-			"invalid argument at index 0: cannot import value of type 'PublicKey'. invalid field 'foo'")
-		assert.False(t, publicKeyValidated)
-		assert.Nil(t, value)
-	})
 }
 
 func TestRuntimeImportExportComplex(t *testing.T) {
