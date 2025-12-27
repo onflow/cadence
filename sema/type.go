@@ -5169,7 +5169,11 @@ func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
 		break
 	// attachments can be imported iff they are attached to a structure
 	case common.CompositeKindAttachment:
-		return t.baseType.IsImportable(results)
+		// TODO: once fixed
+		//if !t.baseType.IsImportable(results) {
+		//	return false
+		//}
+		return false
 	default:
 		return false
 	}
