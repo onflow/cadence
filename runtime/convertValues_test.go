@@ -4995,6 +4995,102 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		assert.Nil(t, value)
 	})
 
+	t.Run("Extra field", func(t *testing.T) {
+		script := `
+            access(all) fun main(key: PublicKey): [UInt8] {
+                return key.publicKey
+            }
+        `
+
+		jsonCdc := `
+            {
+                "type":"Struct",
+                "value":{
+                    "id":"PublicKey",
+                    "fields":[
+                        {
+                            "name":"publicKey",
+                            "value":{
+                                "type":"Array",
+                                "value":[
+                                    {
+                                        "type":"UInt8",
+                                        "value":"1"
+                                    },
+                                    {
+                                        "type":"UInt8",
+                                        "value":"2"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name":"signatureAlgorithm",
+                            "value":{
+                                "type":"Enum",
+                                "value":{
+                                    "id":"SignatureAlgorithm",
+                                    "fields":[
+                                        {
+                                            "name":"rawValue",
+                                            "value":{
+                                                "type":"UInt8",
+                                                "value":"1"
+                                            }
+                                        } 
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name":"foo",
+                            "value":{
+                                "type":"UInt8",
+                                "value":"1"
+                            }
+                        }
+                    ]
+                }
+            }
+        `
+
+		rt := NewTestRuntime()
+
+		var publicKeyValidated bool
+
+		storage := NewTestLedger(nil, nil)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnValidatePublicKey: func(publicKey *stdlib.PublicKey) error {
+				publicKeyValidated = true
+				return nil
+			},
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		value, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
+			},
+		)
+
+		RequireError(t, err)
+		assert.Contains(t, err.Error(),
+			"invalid argument at index 0: cannot import value of type 'PublicKey'. invalid field 'foo'")
+		assert.False(t, publicKeyValidated)
+		assert.Nil(t, value)
+	})
 }
 
 func TestRuntimeImportExportComplex(t *testing.T) {
