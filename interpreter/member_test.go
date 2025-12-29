@@ -124,6 +124,36 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				RequireError(t, err)
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
+
+			t.Run("invalid, built-in", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter := parseCheckAndPrepare(t, `
+                    struct Foo {
+                        let publicKey: [UInt8]
+                        init() {
+                            self.publicKey = []
+                        }
+                    }
+
+                    fun get(pubKey: PublicKey) {
+                        pubKey.publicKey
+                    }
+                `)
+
+				// Construct an instance of type Foo
+				// by calling its constructor function of the same name
+
+				value, err := inter.Invoke("Foo")
+				require.NoError(t, err)
+
+				_, err = inter.Invoke("get", value)
+				RequireError(t, err)
+
+				var memberAccessTypeError *interpreter.MemberAccessTypeError
+				require.ErrorAs(t, err, &memberAccessTypeError)
+			})
 		})
 
 		t.Run("optional", func(t *testing.T) {

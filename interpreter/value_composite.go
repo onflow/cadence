@@ -327,7 +327,13 @@ func (v *CompositeValue) IsImportable(context ValueImportableContext) bool {
 	importable := true
 	v.ForEachField(
 		context,
-		func(_ string, value Value) (resume bool) {
+		func(fieldName string, value Value) (resume bool) {
+
+			if strings.HasPrefix(fieldName, unrepresentableNamePrefix) {
+				importable = false
+				return false
+			}
+
 			if !value.IsImportable(context) {
 				importable = false
 				// stop iteration
@@ -1094,13 +1100,12 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	fieldsLen := v.FieldCount()
 
 	computedFields := v.GetComputedFields()
-	if computedFields != nil {
-		fieldsLen += len(computedFields)
-	}
+	//if computedFields != nil {
+	//	fieldsLen += len(computedFields)
+	//}
 
-	// The composite might store additional fields
-	// which are not statically declared in the composite type.
-	if fieldsLen < len(compositeType.Fields) {
+	// Values for all declared fields must be present
+	if fieldsLen != len(compositeType.Fields) {
 		return false
 	}
 

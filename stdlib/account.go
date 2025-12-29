@@ -1719,11 +1719,12 @@ func nativeAccountContractsChangeFunction(
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		argumentTypes := make([]sema.Type, len(args))
+
+		argumentValueTypes := make([]sema.Type, len(args))
 		for i := 0; i < len(args); i++ {
 			// TODO: optimize, avoid gathering the types
 			staticType := args[i].StaticType(context)
-			argumentTypes[i] = context.SemaTypeFromStaticType(staticType)
+			argumentValueTypes[i] = context.SemaTypeFromStaticType(staticType)
 		}
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
@@ -1731,7 +1732,9 @@ func nativeAccountContractsChangeFunction(
 		return changeAccountContracts(
 			context,
 			args,
-			argumentTypes,
+			argumentValueTypes,
+			// TODO: get static types from invocation
+			nil,
 			addressValue,
 			handler,
 			isUpdate,
@@ -1755,11 +1758,43 @@ func newInterpreterAccountContractsChangeFunction(
 	}
 
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewBoundHostFunctionValue(
+		// TODO: use nativeAccountContractsChangeFunction,
+		//   but needs support for passing static argument types
+
+		hostFunc := interpreter.NewStaticHostFunctionValue(
 			context,
-			accountContracts,
 			functionType,
-			nativeAccountContractsChangeFunction(handler, &addressValue, isUpdate),
+			func(invocation interpreter.Invocation) interpreter.Value {
+				invocationContext := invocation.InvocationContext
+
+				args := invocation.Arguments
+
+				argumentValueTypes := make([]sema.Type, len(args))
+				for i := 0; i < len(args); i++ {
+					// TODO: optimize, avoid gathering the types
+					staticType := args[i].StaticType(context)
+					argumentValueTypes[i] = context.SemaTypeFromStaticType(staticType)
+				}
+
+				return changeAccountContracts(
+					invocationContext,
+					args,
+					argumentValueTypes,
+					invocation.ArgumentTypes,
+					addressValue,
+					handler,
+					isUpdate,
+				)
+			},
+		)
+
+		var self interpreter.Value = accountContracts
+
+		return interpreter.NewBoundFunctionValue(
+			context,
+			hostFunc,
+			&self,
+			nil,
 		)
 	}
 }
@@ -1815,7 +1850,8 @@ func (e *OldProgramError) ImportLocation() common.Location {
 func changeAccountContracts(
 	context interpreter.InvocationContext,
 	arguments []interpreter.Value,
-	argumentTypes []sema.Type,
+	argumentValueTypes []sema.Type,
+	argumentStaticTypes []sema.Type,
 	addressValue interpreter.AddressValue,
 	handler AccountContractAdditionAndNamesHandler,
 	isUpdate bool,
@@ -1834,7 +1870,14 @@ func changeAccountContracts(
 	}
 
 	constructorArguments := arguments[requiredArgumentCount:]
-	constructorArgumentTypes := argumentTypes[requiredArgumentCount:]
+
+	constructorArgumentValueTypes := argumentValueTypes[requiredArgumentCount:]
+
+	var constructorArgumentStaticTypes []sema.Type
+	// TODO: add support for invocation argument types to compiler/VM
+	if len(argumentStaticTypes) > 0 {
+		constructorArgumentStaticTypes = argumentStaticTypes[requiredArgumentCount:]
+	}
 
 	newCode, err := interpreter.ByteArrayValueToByteSlice(context, newCodeValue)
 	if err != nil {
@@ -2031,7 +2074,8 @@ func changeAccountContracts(
 		newCode,
 		contractType,
 		constructorArguments,
-		constructorArgumentTypes,
+		constructorArgumentValueTypes,
+		constructorArgumentStaticTypes,
 		updateAccountContractCodeOptions{
 			createContract: !isUpdate,
 		},
@@ -2123,6 +2167,7 @@ func nativeAccountContractsTryUpdateFunction(
 			context,
 			args,
 			argumentTypes,
+			nil,
 			addressValue,
 			handler,
 			true, // isUpdate = true for TryUpdate
@@ -2246,7 +2291,8 @@ func updateAccountContractCode(
 	code []byte,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
-	constructorArgumentTypes []sema.Type,
+	constructorArgumentValueTypes []sema.Type,
+	constructorArgumentStaticTypes []sema.Type,
 	options updateAccountContractCodeOptions,
 ) error {
 
@@ -2281,7 +2327,8 @@ func updateAccountContractCode(
 			program,
 			contractType,
 			constructorArguments,
-			constructorArgumentTypes,
+			constructorArgumentValueTypes,
+			constructorArgumentStaticTypes,
 		)
 
 		if err != nil {
@@ -2344,14 +2391,15 @@ func instantiateContract(
 	program *interpreter.Program,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
-	argumentTypes []sema.Type,
+	constructorArgumentValueTypes []sema.Type,
+	constructorArgumentStaticTypes []sema.Type,
 ) (*interpreter.CompositeValue, error) {
 
 	// Check argument count
 
 	constructorParameters := contractType.ConstructorParameters
 
-	argumentCount := len(argumentTypes)
+	argumentCount := len(constructorArgumentValueTypes)
 	parameterCount := len(constructorParameters)
 
 	if argumentCount < parameterCount {
@@ -2374,16 +2422,31 @@ func instantiateContract(
 	// Check arguments match parameter
 
 	for argumentIndex := 0; argumentIndex < argumentCount; argumentIndex++ {
-		argumentType := argumentTypes[argumentIndex]
+		argumentValueType := constructorArgumentValueTypes[argumentIndex]
 		parameter := constructorParameters[argumentIndex]
 		parameterType := parameter.TypeAnnotation.Type
 
-		if !sema.IsSubType(argumentType, parameterType) {
+		if !sema.IsSubType(argumentValueType, parameterType) {
 
 			return nil, &InvalidContractArgumentError{
 				Index:        argumentIndex,
 				ExpectedType: parameterType,
-				ActualType:   argumentType,
+				ActualType:   argumentValueType,
+			}
+		}
+
+		// If static type is provided, check it as well
+		// TODO: requires support in compiler/VM to pass static argument types
+
+		if argumentIndex < len(constructorArgumentStaticTypes) {
+			argumentStaticType := constructorArgumentStaticTypes[argumentIndex]
+
+			if !sema.IsSubType(argumentStaticType, parameterType) {
+				return nil, &InvalidContractArgumentError{
+					Index:        argumentIndex,
+					ExpectedType: parameterType,
+					ActualType:   argumentStaticType,
+				}
 			}
 		}
 	}
