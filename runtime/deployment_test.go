@@ -105,14 +105,11 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		}
 	}
 
-	type argument interface {
-		interpreter.Value
-	}
-
 	type testCase struct {
-		check     func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type)
-		contract  string
-		arguments []argument
+		check         func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type)
+		contract      string
+		arguments     []string
+		declaredValue stdlib.StandardLibraryValue
 	}
 
 	test := func(t *testing.T, test testCase) {
@@ -124,13 +121,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			hex.EncodeToString([]byte(test.contract)),
 		)
 
-		argumentCodes := make([]string, len(test.arguments))
-
-		for i, argument := range test.arguments {
-			argumentCodes[i] = argument.String()
-		}
-
-		argumentCode := strings.Join(argumentCodes, ", ")
+		argumentCode := strings.Join(test.arguments, ", ")
 		if len(test.arguments) > 0 {
 			argumentCode = ", " + argumentCode
 		}
@@ -171,14 +162,24 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			},
 		}
 
+		environment := newTransactionEnvironment()
+
+		if test.declaredValue.Value != nil {
+			environment.DeclareValue(
+				test.declaredValue,
+				nil,
+			)
+		}
+
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Environment: environment,
+				Location:    common.TransactionLocation{},
+				UseVM:       *compile,
 			},
 		)
 		exportedEventType := ExportType(
@@ -193,7 +194,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			contract: `
               access(all) contract Test {}
             `,
-			arguments: []argument{},
+			arguments: []string{},
 			check:     expectSuccess,
 		})
 	})
@@ -205,8 +206,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
                   init(_ x: Int) {}
               }
             `,
-			arguments: []argument{
-				interpreter.NewUnmeteredIntValueFromInt64(1),
+			arguments: []string{
+				`1`,
 			},
 			check: expectSuccess,
 		})
@@ -227,8 +228,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
                   init(_ x: Int) {}
               }
             `,
-			arguments: []argument{
-				interpreter.TrueValue,
+			arguments: []string{
+				`true`,
 			},
 			check: expectFailure(
 				expectedErrorMessage,
@@ -250,8 +251,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			contract: `
               access(all) contract Test {}
             `,
-			arguments: []argument{
-				interpreter.NewUnmeteredIntValueFromInt64(1),
+			arguments: []string{
+				`1`,
 			},
 			check: expectFailure(
 				expectedErrorMessage,
@@ -290,7 +291,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
               fun testCase() {}
             `,
-			arguments: []argument{},
+			arguments: []string{},
 			check: expectFailure(
 				expectedErrorMessage,
 				2,
@@ -317,7 +318,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			contract: `
               X
             `,
-			arguments: []argument{},
+			arguments: []string{},
 			check: expectFailure(
 				expectedErrorMessage,
 				1,
@@ -345,7 +346,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
                   access(all) fun test() { X }
               }
             `,
-			arguments: []argument{},
+			arguments: []string{},
 			check: expectFailure(
 				expectedErrorMessage,
 				2,
@@ -360,12 +361,39 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
                   init(_ path: StoragePath) {}
               }
             `,
-			arguments: []argument{
-				interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+			arguments: []string{
+				`/storage/test`,
 			},
 			check: expectSuccess,
 		})
 	})
+
+	// TODO: add support for static argument type checking in Account.Contracts.add to compiler/VM
+	if !*compile {
+		t.Run("Type confusion", func(t *testing.T) {
+			const declaredValueName = `injectedValue`
+			test(t, testCase{
+				contract: `
+                  access(all) contract Test {
+                      init(_ bool: Bool) {}
+                  }
+                `,
+				arguments: []string{
+					declaredValueName,
+				},
+				declaredValue: stdlib.StandardLibraryValue{
+					Name:  declaredValueName,
+					Type:  sema.IntType,
+					Kind:  common.DeclarationKindValue,
+					Value: interpreter.TrueValue,
+				},
+				check: expectFailure(
+					"Execution failed:\nerror: invalid argument at index 0: expected type `Bool`, got `Int`",
+					2,
+				),
+			})
+		})
+	}
 }
 
 func TestRuntimeContractDeploymentInitializerArgument(t *testing.T) {
