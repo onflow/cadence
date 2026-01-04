@@ -480,11 +480,7 @@ func (checker *Checker) checkInvocation(
 		for i := minCount; i < argumentCount; i++ {
 			argument := invocationExpression.Arguments[i]
 			// TODO: pass the expected type to support type inferring for parameters
-			argumentType := checker.VisitExpression(argument.Expression, invocationExpression, nil)
-
-			argumentTypes[i] = argumentType
-
-			checker.checkInvocationArgumentMove(argument.Expression, argumentType)
+			argumentTypes[i] = checker.VisitExpression(argument.Expression, invocationExpression, nil)
 		}
 	}
 

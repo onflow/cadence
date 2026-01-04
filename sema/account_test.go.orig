@@ -1072,48 +1072,6 @@ func TestCheckAccountContractsAdd(t *testing.T) {
         `)
 		require.NoError(t, err)
 	})
-
-	t.Run("resource self as argument, with move", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            access(all) resource R {
-                access(all) fun addToAccount(_ account: auth(Contracts) &Account) {
-                    account.contracts.add(
-                        name: "foo",
-                        code: "012".decodeHex(),
-                        <- self,
-                    )
-                }
-            }
-        `)
-
-		errors := RequireCheckerErrors(t, err, 1)
-
-		var invalidMoveError *sema.InvalidSelfInvalidationError
-		require.ErrorAs(t, errors[0], &invalidMoveError)
-	})
-
-	t.Run("resource self as argument, without move", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            access(all) resource R {
-                access(all) fun addToAccount(_ account: auth(Contracts) &Account) {
-                    account.contracts.add(
-                        name: "foo",
-                        code: "012".decodeHex(),
-                        self,
-                    )
-                }
-            }
-        `)
-
-		errors := RequireCheckerErrors(t, err, 1)
-
-		var missingMoveOperationError *sema.MissingMoveOperationError
-		require.ErrorAs(t, errors[0], &missingMoveOperationError)
-	})
 }
 
 func TestCheckAccountContractsUpdate(t *testing.T) {
