@@ -43,3 +43,4 @@ tools/maprange/maprange
 tools/unkeyed/unkeyed
 *.so
 
+*.orig
