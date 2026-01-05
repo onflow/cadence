@@ -7225,7 +7225,19 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, mapping, ty string, valid bool) {
+	expectInvalid := func(t *testing.T, err error) {
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
+	}
+
+	expectInvalidAndInvalidReferenceToOptional := func(t *testing.T, err error) {
+		errs := RequireCheckerErrors(t, err, 3)
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[2])
+	}
+
+	test := func(t *testing.T, mapping, ty string, checkErr func(t *testing.T, err error)) {
 
 		testName := fmt.Sprintf("%s, %s", mapping, ty)
 
@@ -7263,142 +7275,137 @@ func TestCheckMappingAccessFieldType(t *testing.T) {
 					ty,
 				),
 			)
-			if valid {
-				require.NoError(t, err)
-			} else {
-				errs := RequireCheckerErrors(t, err, 1)
-				assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
-			}
+			checkErr(t, err)
 		})
 	}
 
 	for _, mapping := range []string{"Identity", "M"} {
 		// Primitive
-		test(t, mapping, "Int", true)
-		test(t, mapping, "Int?", true)
+		test(t, mapping, "Int", expectSuccess)
+		test(t, mapping, "Int?", expectSuccess)
 		// Reference to primitive
-		test(t, mapping, "&Int", false)
-		test(t, mapping, "(&Int)?", false)
-		test(t, mapping, "&(Int?)", false)
+		test(t, mapping, "&Int", expectInvalid)
+		test(t, mapping, "(&Int)?", expectInvalid)
+		test(t, mapping, "&(Int?)", expectInvalidAndInvalidReferenceToOptional)
 
 		// AnyStruct
-		test(t, mapping, "AnyStruct", false)
-		test(t, mapping, "AnyStruct?", false)
+		test(t, mapping, "AnyStruct", expectInvalid)
+		test(t, mapping, "AnyStruct?", expectInvalid)
 		// Reference to AnyStruct
-		test(t, mapping, "&AnyStruct", false)
-		test(t, mapping, "(&AnyStruct)?", false)
-		test(t, mapping, "&(AnyStruct?)", false)
+		test(t, mapping, "&AnyStruct", expectInvalid)
+		test(t, mapping, "(&AnyStruct)?", expectInvalid)
+		test(t, mapping, "&(AnyStruct?)", expectInvalidAndInvalidReferenceToOptional)
 
 		// Struct with reference field
-		test(t, mapping, "T", true)
-		test(t, mapping, "T?", true)
+		test(t, mapping, "T", expectSuccess)
+		test(t, mapping, "T?", expectSuccess)
 		// Reference to struct with reference field
-		test(t, mapping, "&T", false)
-		test(t, mapping, "(&T)?", false)
-		test(t, mapping, "&(T?)", false)
+		test(t, mapping, "&T", expectInvalid)
+		test(t, mapping, "(&T)?", expectInvalid)
+		test(t, mapping, "&(T?)", expectInvalidAndInvalidReferenceToOptional)
 
 		// Array
-		test(t, mapping, "[Int]", true)
-		test(t, mapping, "[&Int]", true)
-		test(t, mapping, "[AnyStruct]", true)
-		test(t, mapping, "[&AnyStruct]", true)
-		test(t, mapping, "[T]", true)
-		test(t, mapping, "[&T]", true)
+		test(t, mapping, "[Int]", expectSuccess)
+		test(t, mapping, "[&Int]", expectSuccess)
+		test(t, mapping, "[AnyStruct]", expectSuccess)
+		test(t, mapping, "[&AnyStruct]", expectSuccess)
+		test(t, mapping, "[T]", expectSuccess)
+		test(t, mapping, "[&T]", expectSuccess)
 		// Optional array
-		test(t, mapping, "[Int]?", true)
-		test(t, mapping, "[&Int]?", true)
-		test(t, mapping, "[AnyStruct]?", true)
-		test(t, mapping, "[&AnyStruct]?", true)
-		test(t, mapping, "[T]?", true)
-		test(t, mapping, "[&T]?", true)
+		test(t, mapping, "[Int]?", expectSuccess)
+		test(t, mapping, "[&Int]?", expectSuccess)
+		test(t, mapping, "[AnyStruct]?", expectSuccess)
+		test(t, mapping, "[&AnyStruct]?", expectSuccess)
+		test(t, mapping, "[T]?", expectSuccess)
+		test(t, mapping, "[&T]?", expectSuccess)
 		// Array of optional
-		test(t, mapping, "[Int?]", true)
-		test(t, mapping, "[&Int?]", true)
-		test(t, mapping, "[AnyStruct?]", true)
-		test(t, mapping, "[&AnyStruct?]", true)
-		test(t, mapping, "[T?]", true)
-		test(t, mapping, "[&T?]", true)
+		test(t, mapping, "[Int?]", expectSuccess)
+		test(t, mapping, "[&Int?]", expectSuccess)
+		test(t, mapping, "[AnyStruct?]", expectSuccess)
+		test(t, mapping, "[&AnyStruct?]", expectSuccess)
+		test(t, mapping, "[T?]", expectSuccess)
+		test(t, mapping, "[&T?]", expectSuccess)
 		// Reference to array
-		test(t, mapping, "&[Int]", false)
-		test(t, mapping, "&[&Int]", false)
-		test(t, mapping, "&[AnyStruct]", false)
-		test(t, mapping, "&[&AnyStruct]", false)
-		test(t, mapping, "&[T]", false)
-		test(t, mapping, "&[&T]", false)
+		test(t, mapping, "&[Int]", expectInvalid)
+		test(t, mapping, "&[&Int]", expectInvalid)
+		test(t, mapping, "&[AnyStruct]", expectInvalid)
+		test(t, mapping, "&[&AnyStruct]", expectInvalid)
+		test(t, mapping, "&[T]", expectInvalid)
+		test(t, mapping, "&[&T]", expectInvalid)
 		// Optional reference to array
-		test(t, mapping, "(&[Int])?", false)
-		test(t, mapping, "(&[&Int])?", false)
-		test(t, mapping, "(&[AnyStruct])?", false)
-		test(t, mapping, "(&[&AnyStruct])?", false)
-		test(t, mapping, "(&[T])?", false)
-		test(t, mapping, "(&[&T])?", false)
+		test(t, mapping, "(&[Int])?", expectInvalid)
+		test(t, mapping, "(&[&Int])?", expectInvalid)
+		test(t, mapping, "(&[AnyStruct])?", expectInvalid)
+		test(t, mapping, "(&[&AnyStruct])?", expectInvalid)
+		test(t, mapping, "(&[T])?", expectInvalid)
+		test(t, mapping, "(&[&T])?", expectInvalid)
 		// Reference to optional array
-		test(t, mapping, "&([Int]?)", false)
-		test(t, mapping, "&([&Int]?)", false)
-		test(t, mapping, "&([AnyStruct]?)", false)
-		test(t, mapping, "&([&AnyStruct]?)", false)
-		test(t, mapping, "&([T]?)", false)
-		test(t, mapping, "&([&T]?)", false)
+		test(t, mapping, "&([Int]?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&([&Int]?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&([AnyStruct]?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&([&AnyStruct]?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&([T]?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&([&T]?)", expectInvalidAndInvalidReferenceToOptional)
 
 		// Dictionary
-		test(t, mapping, "{Int: Int}", true)
-		test(t, mapping, "{Int: &Int}", true)
-		test(t, mapping, "{Int: AnyStruct}", true)
-		test(t, mapping, "{Int: &AnyStruct}", true)
-		test(t, mapping, "{Int: T}", true)
-		test(t, mapping, "{Int: &T}", true)
+		test(t, mapping, "{Int: Int}", expectSuccess)
+		test(t, mapping, "{Int: &Int}", expectSuccess)
+		test(t, mapping, "{Int: AnyStruct}", expectSuccess)
+		test(t, mapping, "{Int: &AnyStruct}", expectSuccess)
+		test(t, mapping, "{Int: T}", expectSuccess)
+		test(t, mapping, "{Int: &T}", expectSuccess)
 		// Optional dictionary
-		test(t, mapping, "{Int: Int}?", true)
-		test(t, mapping, "{Int: &Int}?", true)
-		test(t, mapping, "{Int: AnyStruct}?", true)
-		test(t, mapping, "{Int: &AnyStruct}?", true)
-		test(t, mapping, "{Int: T}?", true)
-		test(t, mapping, "{Int: &T}?", true)
+		test(t, mapping, "{Int: Int}?", expectSuccess)
+		test(t, mapping, "{Int: &Int}?", expectSuccess)
+		test(t, mapping, "{Int: AnyStruct}?", expectSuccess)
+		test(t, mapping, "{Int: &AnyStruct}?", expectSuccess)
+		test(t, mapping, "{Int: T}?", expectSuccess)
+		test(t, mapping, "{Int: &T}?", expectSuccess)
 		// Dictionary of optional
-		test(t, mapping, "{Int: Int?}", true)
-		test(t, mapping, "{Int: &Int?}", true)
-		test(t, mapping, "{Int: AnyStruct?}", true)
-		test(t, mapping, "{Int: &AnyStruct?}", true)
-		test(t, mapping, "{Int: T?}", true)
-		test(t, mapping, "{Int: &T?}", true)
+		test(t, mapping, "{Int: Int?}", expectSuccess)
+		test(t, mapping, "{Int: &Int?}", expectSuccess)
+		test(t, mapping, "{Int: AnyStruct?}", expectSuccess)
+		test(t, mapping, "{Int: &AnyStruct?}", expectSuccess)
+		test(t, mapping, "{Int: T?}", expectSuccess)
+		test(t, mapping, "{Int: &T?}", expectSuccess)
 
 		// Reference to dictionary
-		test(t, mapping, "&{Int: Int}", false)
-		test(t, mapping, "&{Int: &Int}", false)
-		test(t, mapping, "&{Int: AnyStruct}", false)
-		test(t, mapping, "&{Int: &AnyStruct}", false)
-		test(t, mapping, "&{Int: T}", false)
-		test(t, mapping, "&{Int: &T}", false)
+		test(t, mapping, "&{Int: Int}", expectInvalid)
+		test(t, mapping, "&{Int: &Int}", expectInvalid)
+		test(t, mapping, "&{Int: AnyStruct}", expectInvalid)
+		test(t, mapping, "&{Int: &AnyStruct}", expectInvalid)
+		test(t, mapping, "&{Int: T}", expectInvalid)
+		test(t, mapping, "&{Int: &T}", expectInvalid)
 		// Optional reference to dictionary
-		test(t, mapping, "(&{Int: Int})?", false)
-		test(t, mapping, "(&{Int: &Int})?", false)
-		test(t, mapping, "(&{Int: AnyStruct})?", false)
-		test(t, mapping, "(&{Int: &AnyStruct})?", false)
-		test(t, mapping, "(&{Int: T})?", false)
-		test(t, mapping, "(&{Int: &T})?", false)
+		test(t, mapping, "(&{Int: Int})?", expectInvalid)
+		test(t, mapping, "(&{Int: &Int})?", expectInvalid)
+		test(t, mapping, "(&{Int: AnyStruct})?", expectInvalid)
+		test(t, mapping, "(&{Int: &AnyStruct})?", expectInvalid)
+		test(t, mapping, "(&{Int: T})?", expectInvalid)
+		test(t, mapping, "(&{Int: &T})?", expectInvalid)
 		// Reference to optional dictionary
-		test(t, mapping, "&({Int: Int}?)", false)
-		test(t, mapping, "&({Int: &Int}?)", false)
-		test(t, mapping, "&({Int: AnyStruct}?)", false)
-		test(t, mapping, "&({Int: &AnyStruct}?)", false)
-		test(t, mapping, "&({Int: T}?)", false)
-		test(t, mapping, "&({Int: &T}?)", false)
+		test(t, mapping, "&({Int: Int}?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&({Int: &Int}?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&({Int: AnyStruct}?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&({Int: &AnyStruct}?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&({Int: T}?)", expectInvalidAndInvalidReferenceToOptional)
+		test(t, mapping, "&({Int: &T}?)", expectInvalidAndInvalidReferenceToOptional)
 
 		// Capability
-		test(t, mapping, "Capability", true)
-		test(t, mapping, "Capability?", true)
+		test(t, mapping, "Capability", expectSuccess)
+		test(t, mapping, "Capability?", expectSuccess)
 		// Reference to capability
-		test(t, mapping, "&Capability", false)
-		test(t, mapping, "(&Capability)?", false)
-		test(t, mapping, "&(Capability?)", false)
+		test(t, mapping, "&Capability", expectInvalid)
+		test(t, mapping, "(&Capability)?", expectInvalid)
+		test(t, mapping, "&(Capability?)", expectInvalidAndInvalidReferenceToOptional)
 
 		// Function
-		test(t, mapping, "fun()", true)
-		test(t, mapping, "fun()?", true)
+		test(t, mapping, "fun()", expectSuccess)
+		test(t, mapping, "fun()?", expectSuccess)
 		// Reference to function
-		test(t, mapping, "&fun()", false)
-		test(t, mapping, "(&fun())?", false)
-		test(t, mapping, "&(fun()?)", false)
+		test(t, mapping, "&fun()", expectInvalid)
+		test(t, mapping, "(&fun())?", expectInvalid)
+		test(t, mapping, "&(fun()?)", expectInvalidAndInvalidReferenceToOptional)
 	}
 }
 
