@@ -1804,7 +1804,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 	const expected = `
       struct interface I {}
 
-      let s: fun({I}): {Int: {I}} = panic("")
+      let f: fun({I}): {Int: {I}} = panic("")
     `
 
 	assert.Equal(t,
