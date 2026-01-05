@@ -3607,6 +3607,78 @@ func TestInterpretOptionalMap(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("optional reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {
+              fun map(f: fun(AnyStruct): String): String {
+                  return "S.map"
+              }
+          }
+
+          fun test(): String?? {
+              let s: S = S()
+              let sRef: &S? = &s as &S
+              return sRef.map(fun(s2: &S?): String? {
+                  return "Optional.map"
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				nil,
+				interpreter.NewSomeValueNonCopying(
+					nil,
+					interpreter.NewUnmeteredStringValue("Optional.map"),
+				),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference to optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {
+              fun map(f: fun(AnyStruct): String): String {
+                  return "S.map"
+              }
+          }
+
+          fun test(): String?? {
+              let s: S = S()
+              let sRef: &(S?) = &s as &S
+              return sRef.map(fun(s2: S): String? {
+                  return "Optional.map"
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				nil,
+				interpreter.NewSomeValueNonCopying(
+					nil,
+					interpreter.NewUnmeteredStringValue("Optional.map"),
+				),
+			),
+			value,
+		)
+	})
 }
 
 func TestInterpretCompositeNilEquality(t *testing.T) {
