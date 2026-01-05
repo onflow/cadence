@@ -2289,7 +2289,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 }
 
 func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
-	rewrittenType, rewritten := ty.RewriteWithIntersectionTypes()
+	rewrittenType, rewritten := RewriteWithIntersectionTypes(ty)
 	if rewritten {
 		checker.report(
 			&InvalidInterfaceTypeError{
