@@ -3998,3 +3998,59 @@ func TestInterpretInterfaceReferenceToSelfVariable(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+// TestCheckInvalidReferenceOfOptionalTypeSuggestion tests that
+// a reference to an optional type cannot be used
+func TestCheckInvalidReferenceOfOptionalTypeS(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+      let f: fun(auth(Mutate) &(Int?)): {String: auth(Mutate) &(Int?)} = panic("")
+    `
+	_, err := ParseAndCheckWithPanic(t, code)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	var invalidReferenceToOptionalTypeErr *sema.InvalidReferenceToOptionalTypeError
+	require.ErrorAs(t, errs[0], &invalidReferenceToOptionalTypeErr)
+
+	assert.Equal(t,
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.OptionalType{
+							Type: &sema.ReferenceType{
+								Type: sema.IntType,
+								Authorization: sema.NewEntitlementSetAccess(
+									[]*sema.EntitlementType{
+										sema.MutateType,
+									},
+									sema.Conjunction,
+								),
+							},
+						},
+					),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				&sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.OptionalType{
+						Type: &sema.ReferenceType{
+							Type: sema.IntType,
+							Authorization: sema.NewEntitlementSetAccess(
+								[]*sema.EntitlementType{
+									sema.MutateType,
+								},
+								sema.Conjunction,
+							),
+						},
+					},
+				},
+			),
+		},
+		invalidReferenceToOptionalTypeErr.ExpectedType,
+	)
+}
