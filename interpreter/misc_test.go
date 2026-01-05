@@ -3681,6 +3681,58 @@ func TestInterpretOptionalMap(t *testing.T) {
 	})
 }
 
+func TestInterpretConvertInnerBoxing(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array of optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+
+          fun test(): Type {
+              let s: [Int?] = [1]
+              return s[0].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+
+		require.Equal(t,
+			interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
+			typeValue.Type,
+		)
+	})
+
+	t.Run("reference of optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+
+          fun test(): Type {
+              let ref: &(Int?) = &1 as &Int
+              return ref.getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+
+		require.Equal(t,
+			interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
+			typeValue.Type,
+		)
+	})
+}
+
 func TestInterpretCompositeNilEquality(t *testing.T) {
 
 	t.Parallel()
