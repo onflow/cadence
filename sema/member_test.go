@@ -843,9 +843,10 @@ func TestCheckMemberAccess(t *testing.T) {
             }
         `)
 
-		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
-		require.ErrorAs(t, errors[0], &typeMismatchError)
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {

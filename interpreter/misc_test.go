@@ -3650,36 +3650,30 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          struct S {
-              fun map(f: fun(AnyStruct): String): String {
-                  return "S.map"
+		_, err := parseCheckAndPrepareWithOptions(t, `
+              struct S {
+                  fun map(f: fun(AnyStruct): String): String {
+                      return "S.map"
+                  }
               }
-          }
 
-          fun test(): String?? {
-              let s: S = S()
-              let sRef: &(S?) = &s as &S
-              return sRef.map(fun(s2: S): String? {
-                  return "Optional.map"
-              })
-          }
-        `)
+              fun test(): String?? {
+                  let s: S = S()
+                  let sRef: &(S?) = &s as &S
+                  return sRef.map(fun(s2: S): String? {
+                      return "Optional.map"
+                  })
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t,
-			inter,
-			interpreter.NewSomeValueNonCopying(
-				nil,
-				interpreter.NewSomeValueNonCopying(
-					nil,
-					interpreter.NewUnmeteredStringValue("Optional.map"),
-				),
-			),
-			value,
+					require.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+				},
+			},
 		)
+		require.NoError(t, err)
 	})
 }
 
@@ -3714,24 +3708,22 @@ func TestInterpretConvertInnerBoxing(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
+		_, err := parseCheckAndPrepareWithOptions(t,
+			`
+              fun test(): Type {
+                  let ref: &(Int?) = &1 as &Int
+                  return ref.getType()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
 
-          fun test(): Type {
-              let ref: &(Int?) = &1 as &Int
-              return ref.getType()
-          }
-        `)
-
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		require.IsType(t, interpreter.TypeValue{}, result)
-		typeValue := result.(interpreter.TypeValue)
-
-		require.Equal(t,
-			interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
-			typeValue.Type,
+					require.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+				},
+			},
 		)
+		require.NoError(t, err)
 	})
 }
 

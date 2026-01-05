@@ -3937,8 +3937,11 @@ func TestCheckOptionalReference(t *testing.T) {
             struct Foo {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[1])
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[2])
 	})
 
 	t.Run("reference to nested optional", func(t *testing.T) {
@@ -3953,8 +3956,11 @@ func TestCheckOptionalReference(t *testing.T) {
             struct Foo {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[1])
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[2])
 	})
 }
 
