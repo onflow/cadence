@@ -9137,7 +9137,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
           return addresses
       }
     `
-	// `authAccount`
+
+	// `account: auth(...) &Account`
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -13900,4 +13901,91 @@ func TestInterpretInvocationEvaluationAndTransferOrder(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	require.NoError(t, err)
+}
+
+func TestInterpretPlaceholderConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      resource R {
+          init(_ ignored: Void) {}
+      }
+
+      resource R2 {}
+
+      fun test() {
+          let rs: @[R?] <- [
+              <- create R(())
+          ]
+          let rs2 = &rs as auth(Mutate) &[R?]
+
+          fun steal() {
+              let r <- rs2.remove(at: 0)!
+              rs2.insert(at: 0, nil)
+
+              // type confusion
+              let r2: @R2 <- r as! @R2
+              account.storage.save(<-r2, to: /storage/r2)
+          }
+
+          let r <- rs[0] <- create R(steal())
+          destroy r
+
+          destroy rs
+      }
+    `
+
+	// `account: auth(...) &Account`
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name: "account",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: stdlib.NewAccountReferenceValue(
+			NoOpFunctionCreationContext{},
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.FullyEntitledAccountAccess,
+		),
+		Kind: common.DeclarationKindConstant,
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	_, err = storage.Encode()
+	require.Error(t, err)
 }
