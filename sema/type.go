@@ -411,6 +411,31 @@ func rewriteInterfaceTypeWithIntersectionTypes(ty Type) (Type, bool) {
 	}, true
 }
 
+// RewriteWithOptionalReferenceTypes rewrites references to optionals (&(T?))
+// to optional references ((&T)?)
+func RewriteWithOptionalReferenceTypes(ty Type) (Type, bool) {
+	return ty.Rewrite(rewriteReferenceTypeWithOptionalReferenceTypes)
+}
+
+func rewriteReferenceTypeWithOptionalReferenceTypes(ty Type) (Type, bool) {
+	referenceType, ok := ty.(*ReferenceType)
+	if !ok {
+		return ty, false
+	}
+
+	innerOptionalType, ok := referenceType.Type.(*OptionalType)
+	if !ok {
+		return ty, false
+	}
+
+	return &OptionalType{
+		Type: &ReferenceType{
+			Type:          innerOptionalType.Type,
+			Authorization: referenceType.Authorization,
+		},
+	}, true
+}
+
 // TypeAnnotation
 
 type TypeAnnotation struct {

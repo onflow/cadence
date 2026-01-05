@@ -2286,6 +2286,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	}
 
 	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
+	checker.checkInvalidReferenceToOptionalType(typeAnnotation.Type, pos)
 	typeAnnotation.Type.CheckInstantiated(pos, checker.memoryGauge, checker.report)
 }
 
@@ -2294,6 +2295,23 @@ func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition
 	if rewritten {
 		checker.report(
 			&InvalidInterfaceTypeError{
+				ActualType:   ty,
+				ExpectedType: rewrittenType,
+				Range: ast.NewRange(
+					checker.memoryGauge,
+					pos.StartPosition(),
+					pos.EndPosition(checker.memoryGauge),
+				),
+			},
+		)
+	}
+}
+
+func (checker *Checker) checkInvalidReferenceToOptionalType(ty Type, pos ast.HasPosition) {
+	rewrittenType, rewritten := RewriteWithOptionalReferenceTypes(ty)
+	if rewritten {
+		checker.report(
+			&InvalidReferenceToOptionalTypeError{
 				ActualType:   ty,
 				ExpectedType: rewrittenType,
 				Range: ast.NewRange(
