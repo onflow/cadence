@@ -18,68 +18,68 @@
 
 package ast
 
-//go:generate stringer -type=precedence
+//go:generate stringer -type=expressionPrecedence
 
-// precedence is the order of importance of expressions / operators.
+// expressionPrecedence is the order of importance of expressions / operators.
 // NOTE: this enumeration does *NOT* influence parsing,
 // and should be kept in sync with the binding powers in the parser
-type precedence uint
+type expressionPrecedence uint
 
 const (
-	precedenceUnknown precedence = iota
-	// precedenceTernary is the precedence of
+	expressionPrecedenceUnknown expressionPrecedence = iota
+	// expressionPrecedenceTernary is the expressionPrecedence of
 	// - ConditionalExpression. right associative!
-	precedenceTernary
-	// precedenceLogicalOr is the precedence of
+	expressionPrecedenceTernary
+	// expressionPrecedenceLogicalOr is the expressionPrecedence of
 	// - BinaryExpression, with OperationOr
-	precedenceLogicalOr
-	// precedenceLogicalAnd is the precedence of
+	expressionPrecedenceLogicalOr
+	// expressionPrecedenceLogicalAnd is the expressionPrecedence of
 	// - BinaryExpression, with OperationAnd
-	precedenceLogicalAnd
-	// precedenceComparison is the precedence of
+	expressionPrecedenceLogicalAnd
+	// expressionPrecedenceComparison is the expressionPrecedence of
 	// - BinaryExpression, with OperationEqual, OperationNotEqual,
 	//   OperationLessEqual, OperationLess,
 	//   OperationGreater, or OperationGreaterEqual
-	precedenceComparison
-	// precedenceNilCoalescing is the precedence of
+	expressionPrecedenceComparison
+	// expressionPrecedenceNilCoalescing is the expressionPrecedence of
 	// - BinaryExpression, with OperationNilCoalesce. right associative!
-	precedenceNilCoalescing
-	// precedenceBitwiseOr is the precedence of
+	expressionPrecedenceNilCoalescing
+	// expressionPrecedenceBitwiseOr is the expressionPrecedence of
 	// - BinaryExpression, with OperationBitwiseOr
-	precedenceBitwiseOr
-	// precedenceBitwiseXor is the precedence of
+	expressionPrecedenceBitwiseOr
+	// expressionPrecedenceBitwiseXor is the expressionPrecedence of
 	// - BinaryExpression, with OperationBitwiseXor
-	precedenceBitwiseXor
-	// precedenceBitwiseAnd is the precedence of
+	expressionPrecedenceBitwiseXor
+	// expressionPrecedenceBitwiseAnd is the expressionPrecedence of
 	// - BinaryExpression, with OperationBitwiseAnd
-	precedenceBitwiseAnd
-	// precedenceBitwiseShift is the precedence of
+	expressionPrecedenceBitwiseAnd
+	// expressionPrecedenceBitwiseShift is the expressionPrecedence of
 	// - BinaryExpression, with OperationBitwiseLeftShift or OperationBitwiseRightShift
-	precedenceBitwiseShift
-	// precedenceAddition is the precedence of
+	expressionPrecedenceBitwiseShift
+	// expressionPrecedenceAddition is the expressionPrecedence of
 	// - BinaryExpression, with OperationPlus or OperationMinus
-	precedenceAddition
-	// precedenceMultiplication is the precedence of
+	expressionPrecedenceAddition
+	// expressionPrecedenceMultiplication is the expressionPrecedence of
 	// - BinaryExpression, with OperationMul, OperationMod, or OperationDiv
-	precedenceMultiplication
-	// precedenceCasting is the precedence of
+	expressionPrecedenceMultiplication
+	// expressionPrecedenceCasting is the expressionPrecedence of
 	// - CastingExpression
-	precedenceCasting
-	// precedenceUnaryPrefix is the precedence of
+	expressionPrecedenceCasting
+	// expressionPrecedenceUnaryPrefix is the expressionPrecedence of
 	// - UnaryExpression
 	// - CreateExpression
 	// - DestroyExpression
 	// - ReferenceExpression
-	precedenceUnaryPrefix
-	// precedenceUnaryPostfix is the precedence of
+	expressionPrecedenceUnaryPrefix
+	// expressionPrecedenceUnaryPostfix is the expressionPrecedence of
 	// - ForceExpression
-	precedenceUnaryPostfix
-	// precedenceAccess is the precedence of
+	expressionPrecedenceUnaryPostfix
+	// expressionPrecedenceAccess is the expressionPrecedence of
 	// - InvocationExpression
 	// - IndexExpression
 	// - MemberExpression
-	precedenceAccess
-	// precedenceLiteral is the precedence of
+	expressionPrecedenceAccess
+	// expressionPrecedenceLiteral is the expressionPrecedence of
 	// - BoolExpression
 	// - NilExpression
 	// - StringExpression
@@ -92,5 +92,5 @@ const (
 	// - FunctionExpression
 	// - PathExpression
 	// - AttachExpression
-	precedenceLiteral
+	expressionPrecedenceLiteral
 )
