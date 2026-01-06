@@ -3937,8 +3937,11 @@ func TestCheckOptionalReference(t *testing.T) {
             struct Foo {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[1])
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[2])
 	})
 
 	t.Run("reference to nested optional", func(t *testing.T) {
@@ -3953,8 +3956,11 @@ func TestCheckOptionalReference(t *testing.T) {
             struct Foo {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[1])
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[2])
 	})
 }
 
@@ -3997,4 +4003,60 @@ func TestInterpretInterfaceReferenceToSelfVariable(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+}
+
+// TestCheckInvalidReferenceOfOptionalTypeSuggestion tests that
+// a reference to an optional type cannot be used
+func TestCheckInvalidReferenceOfOptionalTypeS(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+      let f: fun(auth(Mutate) &(Int?)): {String: auth(Mutate) &(Int?)} = panic("")
+    `
+	_, err := ParseAndCheckWithPanic(t, code)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	var invalidReferenceToOptionalTypeErr *sema.InvalidReferenceToOptionalTypeError
+	require.ErrorAs(t, errs[0], &invalidReferenceToOptionalTypeErr)
+
+	assert.Equal(t,
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.OptionalType{
+							Type: &sema.ReferenceType{
+								Type: sema.IntType,
+								Authorization: sema.NewEntitlementSetAccess(
+									[]*sema.EntitlementType{
+										sema.MutateType,
+									},
+									sema.Conjunction,
+								),
+							},
+						},
+					),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				&sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.OptionalType{
+						Type: &sema.ReferenceType{
+							Type: sema.IntType,
+							Authorization: sema.NewEntitlementSetAccess(
+								[]*sema.EntitlementType{
+									sema.MutateType,
+								},
+								sema.Conjunction,
+							),
+						},
+					},
+				},
+			),
+		},
+		invalidReferenceToOptionalTypeErr.ExpectedType,
+	)
 }
