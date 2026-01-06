@@ -700,8 +700,27 @@ func (v *ArrayValue) AppendAll(context ValueTransferContext, other *ArrayValue) 
 }
 
 func (v *ArrayValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
+	v.InsertKeyWithMutationCheck(
+		context,
+		key,
+		value,
+		true,
+	)
+}
+
+func (v *ArrayValue) InsertKeyWithMutationCheck(
+	context ContainerMutationContext,
+	key Value,
+	value Value,
+	checkMutation bool,
+) {
 	index := key.(NumberValue).ToInt()
-	v.Insert(context, index, value)
+	v.InsertWithMutationCheck(
+		context,
+		index,
+		value,
+		checkMutation,
+	)
 }
 
 func (v *ArrayValue) InsertWithoutTransfer(
@@ -750,6 +769,20 @@ func (v *ArrayValue) InsertWithoutTransfer(
 }
 
 func (v *ArrayValue) Insert(context ContainerMutationContext, index int, element Value) {
+	v.InsertWithMutationCheck(
+		context,
+		index,
+		element,
+		true,
+	)
+}
+
+func (v *ArrayValue) InsertWithMutationCheck(
+	context ContainerMutationContext,
+	index int,
+	element Value,
+	checkMutation bool,
+) {
 
 	address := v.array.Address()
 
@@ -766,7 +799,9 @@ func (v *ArrayValue) Insert(context ContainerMutationContext, index int, element
 		true, // standalone element doesn't have a parent container yet.
 	)
 
-	checkContainerMutation(context, v.Type.ElementType(), element)
+	if checkMutation {
+		checkContainerMutation(context, v.Type.ElementType(), element)
+	}
 
 	v.InsertWithoutTransfer(
 		context,

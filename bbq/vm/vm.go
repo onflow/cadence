@@ -789,8 +789,14 @@ func opRemoveIndex(vm *VM) {
 	containerValue := container.(interpreter.ValueIndexableValue)
 	element := containerValue.RemoveKey(context, index)
 
-	// Note: Must use `InsertKey` here, not `SetKey`.
-	containerValue.InsertKey(context, index, interpreter.PlaceholderValue{})
+	// Note: Must use `InsertKey` here, not `SetKey`,
+	// and disable mutation check, because the placeholder is not a real value.
+	containerValue.InsertKeyWithMutationCheck(
+		context,
+		index,
+		interpreter.Placeholder,
+		false,
+	)
 	vm.push(element)
 }
 

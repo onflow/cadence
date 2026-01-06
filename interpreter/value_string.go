@@ -401,6 +401,10 @@ func (*StringValue) InsertKey(_ ContainerMutationContext, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
+func (*StringValue) InsertKeyWithMutationCheck(_ ContainerMutationContext, _ Value, _ Value, _ bool) {
+	panic(errors.NewUnreachableError())
+}
+
 func (*StringValue) RemoveKey(_ ContainerMutationContext, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }

@@ -195,7 +195,14 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 		get = func(_ bool) Value {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
 			value := target.RemoveKey(interpreter, transferredIndexingValue)
-			target.InsertKey(interpreter, transferredIndexingValue, placeholder)
+			// Note: Must use `InsertKey` here, not `SetKey`,
+			// and disable mutation check, because the placeholder is not a real value.
+			target.InsertKeyWithMutationCheck(
+				interpreter,
+				transferredIndexingValue,
+				Placeholder,
+				false,
+			)
 			return value
 		}
 	} else {

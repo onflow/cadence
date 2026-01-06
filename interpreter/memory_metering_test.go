@@ -9734,6 +9734,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				interpreter.PrimitiveStaticTypeCapability, //nolint:staticcheck
 				interpreter.PrimitiveStaticTypeStorable,
 				interpreter.PrimitiveStaticTypeUnknown,
+				interpreter.PrimitiveStaticTypeInvalid,
 				interpreter.PrimitiveStaticType_Count:
 				continue
 			}

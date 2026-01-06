@@ -25,7 +25,7 @@ import (
 // PlaceholderValue
 type PlaceholderValue struct{}
 
-var placeholder Value = PlaceholderValue{}
+var Placeholder Value = PlaceholderValue{}
 
 var _ Value = PlaceholderValue{}
 
@@ -55,7 +55,7 @@ func (PlaceholderValue) Walk(_ ValueWalkContext, _ func(Value)) {
 }
 
 func (PlaceholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
-	return PrimitiveStaticTypeNever
+	return PrimitiveStaticTypeInvalid
 }
 
 func (PlaceholderValue) IsImportable(_ ValueImportableContext) bool {

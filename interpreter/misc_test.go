@@ -13984,8 +13984,8 @@ func TestInterpretPlaceholderConfusion(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
-	require.NoError(t, err)
+	RequireError(t, err)
 
-	_, err = storage.Encode()
-	require.Error(t, err)
+	var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
 }
