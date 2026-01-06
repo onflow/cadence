@@ -1255,6 +1255,13 @@ func generateErrors() []namedError {
 				Range:   placeholderRange,
 			},
 		},
+		{"sema.InvalidReferenceToOptionalTypeError",
+			&sema.InvalidReferenceToOptionalTypeError{
+				ActualType:   placeholderSemaType,
+				ExpectedType: placeholderSemaType,
+				Range:        placeholderRange,
+			},
+		},
 		{"sema.InvalidResourceAnnotationError",
 			&sema.InvalidResourceAnnotationError{
 				Type:  placeholderSemaType,
