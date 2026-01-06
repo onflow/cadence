@@ -3687,7 +3687,7 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseCheckAndPrepareWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
               struct S {
                   fun map(f: fun(AnyStruct): String): String {
                       return "S.map"
@@ -3711,6 +3711,10 @@ func TestInterpretOptionalMap(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		RequireError(t, err)
+		require.ErrorContains(t, err, "unexpected: unsupported reference to optional target type")
 	})
 }
 
@@ -3745,7 +3749,7 @@ func TestInterpretConvertInnerBoxing(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseCheckAndPrepareWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test(): Type {
                   let ref: &(Int?) = &1 as &Int
@@ -3761,6 +3765,11 @@ func TestInterpretConvertInnerBoxing(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorContains(t, err, "unexpected: unsupported reference to optional target type")
 	})
 }
 
