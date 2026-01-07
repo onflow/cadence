@@ -80,13 +80,8 @@ func TestInterpretReturnType(t *testing.T) {
 	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	if *compile {
-		var unexpectedErr errors.UnexpectedError
-		require.ErrorAs(t, err, &unexpectedErr)
-	} else {
-		var transferTypeError *interpreter.ValueTransferTypeError
-		require.ErrorAs(t, err, &transferTypeError)
-	}
+	var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
 }
 
 func TestInterpretSelfDeclaration(t *testing.T) {

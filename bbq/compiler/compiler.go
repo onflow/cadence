@@ -1341,7 +1341,10 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 				// correct converted value.
 				returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
 				if !returnTypes.PassWithoutTransferOrConvert {
-					c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+					c.emitTransferIfNotResourceAndConvert(
+						returnTypes.ValueType,
+						returnTypes.ReturnType,
+					)
 				}
 
 				c.emitSetLocal(tempResultVar.index)
@@ -1359,9 +1362,11 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 			// (1.b)
 			// If there are no post conditions, return then-and-there.
 			returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
-			returnType := returnTypes.ReturnType
 			if !returnTypes.PassWithoutTransferOrConvert {
-				c.emitTransferIfNotResourceAndConvert(returnType)
+				c.emitTransferIfNotResourceAndConvert(
+					returnTypes.ValueType,
+					returnTypes.ReturnType,
+				)
 			}
 			c.emit(opcode.InstructionReturnValue{})
 		}
@@ -1629,7 +1634,8 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 		// If a reference is taken to the value, then do not transfer.
 	} else {
-		c.mustEmitTransferAndConvert(loopVarType)
+		// TODO: Can the valueType be different?
+		c.mustEmitTransferAndConvert(loopVarType, loopVarType)
 	}
 
 	// Store it (next entry) in a local var.
@@ -1674,9 +1680,9 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 
 			for index, argument := range arguments {
 				c.compileExpression(argument.Expression)
-
+				argumentType := invocationTypes.ArgumentTypes[index]
 				parameterType := invocationTypes.ParameterTypes[index]
-				c.emitConvert(parameterType)
+				c.emitConvert(argumentType, parameterType)
 			}
 
 			argCount := len(arguments)
@@ -1796,11 +1802,14 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 	firstValue := declaration.Value
 	secondValue := declaration.SecondValue
 
-	firstValueTransferType := varDeclTypes.TargetType
+	firstValueType := varDeclTypes.ValueType
+	firstValueTargetType := varDeclTypes.TargetType
+	secondValueType := varDeclTypes.SecondValueType
+
 	if isOptionalBinding {
 		// In optional binding, the first-value is optional-typed.
-		firstValueTransferType = &sema.OptionalType{
-			Type: firstValueTransferType,
+		firstValueTargetType = &sema.OptionalType{
+			Type: firstValueTargetType,
 		}
 	}
 
@@ -1815,7 +1824,7 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 				transfer.Operation == ast.TransferOperationInternalNoTransfer)
 
 		if needTransferAndConvert {
-			c.mustEmitTransferAndConvert(firstValueTransferType)
+			c.mustEmitTransferAndConvert(firstValueType, firstValueTargetType)
 		}
 
 		return
@@ -1828,18 +1837,17 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 	// The middle expression (i.e: the first value), and its sub expressions,
 	// must only be evaluated only once.
 
-	firstValueType := varDeclTypes.ValueType
 	switch firstValue := firstValue.(type) {
 	case *ast.IdentifierExpression:
 		c.compileExpression(firstValue)
 
 		// Need to transfer the value "out",
 		// before the second value is being assigned
-		c.mustEmitTransferAndConvert(firstValueTransferType)
+		c.mustEmitTransferAndConvert(firstValueType, firstValueTargetType)
 
 		// Evaluate and transfer second value.
 		c.compileExpression(secondValue)
-		c.mustEmitTransferAndConvert(firstValueType)
+		c.mustEmitTransferAndConvert(secondValueType, firstValueType)
 
 		// Store second value in first value's variable.
 		c.emitVariableStore(firstValue.Identifier.Identifier)
@@ -1856,13 +1864,13 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		c.compileMemberAccess(firstValue)
 		// Need to transfer the value "out",
 		// before the second value is being assigned
-		c.mustEmitTransferAndConvert(firstValueTransferType)
+		c.mustEmitTransferAndConvert(firstValueType, firstValueTargetType)
 
 		// Evaluate and transfer second value.
 		// The first value becomes the target.
 		c.emitGetLocal(memberExprParentLocal)
 		c.compileExpression(secondValue)
-		c.mustEmitTransferAndConvert(firstValueType)
+		c.mustEmitTransferAndConvert(secondValueType, firstValueType)
 
 		// Assign the second value to the first value's field.
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(firstValue)
@@ -1894,14 +1902,14 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		c.compileIndexAccess(firstValue)
 		// Need to transfer the value "out",
 		// before the second value is being assigned
-		c.mustEmitTransferAndConvert(firstValueTransferType)
+		c.mustEmitTransferAndConvert(firstValueType, firstValueTargetType)
 
 		// Evaluate and transfer second value.
 		// The first value becomes the target.
 		c.emitGetLocal(indexExprTargetLocal)
 		c.emitGetLocal(indexExprIndexLocal)
 		c.compileExpression(secondValue)
-		c.mustEmitTransferAndConvert(firstValueType)
+		c.mustEmitTransferAndConvert(secondValueType, firstValueType)
 		c.emit(opcode.InstructionSetIndex{})
 
 	default:
@@ -1940,7 +1948,7 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 
 		// The return here is the assignment to the global variable.
 		// Therefore, always transfer the value.
-		c.mustEmitTransferAndConvert(varDeclTypes.TargetType)
+		c.mustEmitTransferAndConvert(varDeclTypes.ValueType, varDeclTypes.TargetType)
 
 		c.emit(opcode.InstructionReturnValue{})
 	}()
@@ -1957,6 +1965,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 	c.compileAssignment(
 		statement.Target,
 		statement.Value,
+		assignmentTypes.ValueType,
 		assignmentTypes.TargetType,
 	)
 	return
@@ -1965,18 +1974,18 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 func (c *Compiler[_, _]) compileAssignment(
 	target ast.Expression,
 	value ast.Expression,
-	targetType sema.Type,
+	valueType, targetType sema.Type,
 ) {
 	switch target := target.(type) {
 	case *ast.IdentifierExpression:
 		c.compileExpression(value)
-		c.mustEmitTransferAndConvert(targetType)
+		c.mustEmitTransferAndConvert(valueType, targetType)
 		c.emitVariableStore(target.Identifier.Identifier)
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
 		c.compileExpression(value)
-		c.mustEmitTransferAndConvert(targetType)
+		c.mustEmitTransferAndConvert(valueType, targetType)
 		constant := c.addRawStringConst(target.Identifier.Identifier)
 
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(target)
@@ -1997,7 +2006,7 @@ func (c *Compiler[_, _]) compileAssignment(
 		c.emitIndexKeyTransferAndConvert(target)
 
 		c.compileExpression(value)
-		c.mustEmitTransferAndConvert(targetType)
+		c.mustEmitTransferAndConvert(valueType, targetType)
 
 		c.emit(opcode.InstructionSetIndex{})
 
@@ -2030,12 +2039,14 @@ func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ str
 		statement.Left,
 		leftTargetIndex,
 		leftKeyIndex,
+		leftType,
 		rightType,
 	)
 	rightValueIndex := c.compileSwapGet(
 		statement.Right,
 		rightTargetIndex,
 		rightKeyIndex,
+		rightType,
 		leftType,
 	)
 
@@ -2102,7 +2113,7 @@ func (c *Compiler[_, _]) compileSwapGet(
 	sideExpression ast.Expression,
 	targetIndex uint16,
 	keyIndex uint16,
-	targetType sema.Type,
+	valueType, targetType sema.Type,
 ) (valueIndex uint16) {
 
 	switch sideExpression := sideExpression.(type) {
@@ -2131,7 +2142,7 @@ func (c *Compiler[_, _]) compileSwapGet(
 		panic(errors.NewUnreachableError())
 	}
 
-	c.mustEmitTransferAndConvert(targetType)
+	c.mustEmitTransferAndConvert(valueType, targetType)
 
 	valueIndex = c.currentFunction.generateLocalIndex()
 	c.emitSetLocal(valueIndex)
@@ -2189,7 +2200,10 @@ func (c *Compiler[_, _]) emitIndexKeyTransferAndConvert(indexExpression *ast.Ind
 	}
 
 	indexedType := indexExpressionTypes.IndexedType
-	c.emitTransferIfNotResourceAndConvert(indexedType.IndexingType())
+	c.emitTransferIfNotResourceAndConvert(
+		indexExpressionTypes.IndexingType,
+		indexedType.IndexingType(),
+	)
 }
 
 func (c *Compiler[_, _]) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
@@ -2513,9 +2527,10 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 
 	elementExpectedType := arrayTypes.ArrayType.ElementType(false)
 
-	for _, expression := range array.Values {
+	for index, expression := range array.Values {
 		c.compileExpression(expression)
-		c.emitTransferIfNotResourceAndConvert(elementExpectedType)
+		elementActualType := arrayTypes.ArgumentTypes[index]
+		c.emitTransferIfNotResourceAndConvert(elementActualType, elementExpectedType)
 	}
 
 	c.emit(opcode.InstructionNewArray{
@@ -2539,11 +2554,12 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 		panic(errors.NewDefaultUserError("invalid dictionary expression"))
 	}
 
-	for _, entry := range dictionary.Entries {
+	for index, entry := range dictionary.Entries {
+		entryType := dictionaryTypes.EntryTypes[index]
 		c.compileExpression(entry.Key)
-		c.emitTransferIfNotResourceAndConvert(dictionaryType.KeyType)
+		c.emitTransferIfNotResourceAndConvert(entryType.KeyType, dictionaryType.KeyType)
 		c.compileExpression(entry.Value)
-		c.emitTransferIfNotResourceAndConvert(dictionaryType.ValueType)
+		c.emitTransferIfNotResourceAndConvert(entryType.ValueType, dictionaryType.ValueType)
 	}
 
 	c.emit(opcode.InstructionNewDictionary{
@@ -2959,7 +2975,8 @@ func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTyp
 		if parameterType == nil {
 			c.emitTransfer()
 		} else {
-			c.emitTransferIfNotResourceAndConvert(parameterType)
+			valueType := invocationTypes.ArgumentTypes[index]
+			c.emitTransferIfNotResourceAndConvert(valueType, parameterType)
 		}
 	}
 }
@@ -3110,7 +3127,10 @@ func (c *Compiler[_, _]) compileIndexAccess(expression *ast.IndexExpression) {
 
 	indexedType := indexExpressionTypes.IndexedType
 	// TODO: optimize: once interpreter is removed, avoid redundant transfer and only convert
-	c.emitTransferIfNotResourceAndConvert(indexedType.IndexingType())
+	c.emitTransferIfNotResourceAndConvert(
+		indexExpressionTypes.IndexingType,
+		indexedType.IndexingType(),
+	)
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
@@ -4169,7 +4189,7 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	return
 }
 
-func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
+func (c *Compiler[_, _]) mustEmitTransferAndConvert(valueType, targetType sema.Type) {
 
 	//lastInstruction := c.codeGen.LastInstruction()
 
@@ -4222,9 +4242,12 @@ func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
 	//	return
 	//}
 
-	typeIndex := c.getOrAddType(targetType)
+	valueTypeIndex := c.getOrAddType(valueType)
+	targetTypeIndex := c.getOrAddType(targetType)
+
 	c.emit(opcode.InstructionTransferAndConvert{
-		Type: typeIndex,
+		ValueType:  valueTypeIndex,
+		TargetType: targetTypeIndex,
 	})
 }
 
@@ -4233,8 +4256,9 @@ func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
 // i.e: If
 //   - Resource: Convert only.
 //   - Non-Resource: Transfer and convert.
-func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(targetType sema.Type) {
-	typeIndex := c.getOrAddType(targetType)
+func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(valueType, targetType sema.Type) {
+	valueTypeIndex := c.getOrAddType(valueType)
+	targetTypeIndex := c.getOrAddType(targetType)
 
 	// Resource-typed values are always used along with the move (<-) unary-operator.
 	// And the unary move operator already does the transfer.
@@ -4242,13 +4266,15 @@ func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(targetType sema.Typ
 	// Only perform the conversion (e.g: boxing, etc.).
 	if targetType.IsResourceType() {
 		c.emit(opcode.InstructionConvert{
-			Type: typeIndex,
+			ValueType:  valueTypeIndex,
+			TargetType: targetTypeIndex,
 		})
 		return
 	}
 
 	c.emit(opcode.InstructionTransferAndConvert{
-		Type: typeIndex,
+		ValueType:  valueTypeIndex,
+		TargetType: targetTypeIndex,
 	})
 }
 
@@ -4256,10 +4282,13 @@ func (c *Compiler[_, _]) emitTransfer() {
 	c.emit(opcode.InstructionTransfer{})
 }
 
-func (c *Compiler[_, _]) emitConvert(targetType sema.Type) {
-	typeIndex := c.getOrAddType(targetType)
+func (c *Compiler[_, _]) emitConvert(valueType, targetType sema.Type) {
+	valueTypeIndex := c.getOrAddType(valueType)
+	targetTypeIndex := c.getOrAddType(targetType)
+
 	c.emit(opcode.InstructionConvert{
-		Type: typeIndex,
+		ValueType:  valueTypeIndex,
+		TargetType: targetTypeIndex,
 	})
 }
 

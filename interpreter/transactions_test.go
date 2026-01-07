@@ -531,13 +531,8 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
 
 	err := inter.InvokeTransaction(nil, signer1)
 
-	if *compile {
-		var invalidatedResourceError *interpreter.InvalidatedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceError)
-	} else {
-		var transferTypeError *interpreter.ValueTransferTypeError
-		require.ErrorAs(t, err, &transferTypeError)
-	}
+	var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
 }
 
 func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
