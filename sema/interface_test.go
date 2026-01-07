@@ -1743,7 +1743,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 	const code = `
       struct interface I {}
 
-      let s: fun(I): {Int: I} = panic("")
+      let f: fun(I): {Int: I} = panic("")
     `
 	checker, err := ParseAndCheckWithPanic(t, code)
 
@@ -1778,7 +1778,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 				},
 			),
 		},
-		errs[0].(*sema.InvalidInterfaceTypeError).ExpectedType,
+		invalidInterfaceTypeErr.ExpectedType,
 	)
 
 	fixes := invalidInterfaceTypeErr.SuggestFixes(code)
@@ -1804,7 +1804,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 	const expected = `
       struct interface I {}
 
-      let s: fun({I}): {Int: {I}} = panic("")
+      let f: fun({I}): {Int: {I}} = panic("")
     `
 
 	assert.Equal(t,
