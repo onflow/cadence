@@ -13901,3 +13901,51 @@ func TestInterpretInvocationEvaluationAndTransferOrder(t *testing.T) {
 	_, err = inter.Invoke("main")
 	require.NoError(t, err)
 }
+
+func TestInterpreterValueTransferRuntimeCheck(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("mismatching value type", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+            fun test(v1: String) {
+                let v2: AnyStruct = v1
+            }
+            `,
+		)
+
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
+
+	t.Run("mismatching target type", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+            fun test(v1: Int) {
+                let v2: String = v1
+            }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
+}
