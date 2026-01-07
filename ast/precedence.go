@@ -19,7 +19,7 @@
 package ast
 
 //go:generate stringer -type=expressionPrecedence
-//go:generate stringer -type=typePrecedence
+//go:generate stringer -type=TypePrecedence
 
 // expressionPrecedence is the order of importance of expressions / operators.
 // NOTE: this enumeration does *NOT* influence parsing,
@@ -96,19 +96,19 @@ const (
 	expressionPrecedenceLiteral
 )
 
-// typePrecedence is the order of importance of types / operators.
+// TypePrecedence is the order of importance of types / operators.
 // NOTE: this enumeration does *NOT* influence parsing,
 // and should be kept in sync with the binding powers in the parser
-type typePrecedence uint
+type TypePrecedence uint
 
 const (
-	typePrecedenceUnknown typePrecedence = iota
-	// typePrecedenceOptional is the typePrecedence of OptionalType
-	typePrecedenceOptional
-	// typePrecedenceReference is the typePrecedence of ReferenceType
-	typePrecedenceReference
-	// typePrecedenceInstantiation is the typePrecedence of InstantiationType
-	typePrecedenceInstantiation
-	// typePrecedencePrimary is the typePrecedence of all other types
-	typePrecedencePrimary
+	TypePrecedenceUnknown TypePrecedence = iota
+	// TypePrecedenceOptional is the TypePrecedence of OptionalType
+	TypePrecedenceOptional
+	// TypePrecedenceReference is the TypePrecedence of ReferenceType
+	TypePrecedenceReference
+	// TypePrecedenceInstantiation is the TypePrecedence of InstantiationType
+	TypePrecedenceInstantiation
+	// TypePrecedencePrimary is the TypePrecedence of all other types
+	TypePrecedencePrimary
 )
