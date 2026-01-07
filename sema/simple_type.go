@@ -129,8 +129,8 @@ func (*SimpleType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *SimpleType) RewriteWithIntersectionTypes() (Type, bool) {
-	return t, false
+func (t *SimpleType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (*SimpleType) Unify(
