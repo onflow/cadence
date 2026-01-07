@@ -129,6 +129,241 @@ func TestVariableSizedType_String_OfFunctionType(t *testing.T) {
 	)
 }
 
+func TestTypeStringParentheses(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reference to optional", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: UnauthorizedAccess,
+			Type: &OptionalType{
+				Type: IntType,
+			},
+		}
+
+		assert.Equal(t,
+			"&(Int?)",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional reference", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &ReferenceType{
+				Authorization: UnauthorizedAccess,
+				Type:          IntType,
+			},
+		}
+
+		assert.Equal(t,
+			"&Int?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional function type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &FunctionType{
+				ReturnTypeAnnotation: IntTypeAnnotation,
+			},
+		}
+
+		assert.Equal(t,
+			"(fun(): Int)?",
+			ty.String(),
+		)
+	})
+
+	t.Run("function type with optional return type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &FunctionType{
+			ReturnTypeAnnotation: TypeAnnotation{
+				Type: &OptionalType{
+					Type: IntType,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"fun(): Int?",
+			ty.String(),
+		)
+	})
+
+	t.Run("reference to function type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: UnauthorizedAccess,
+			Type: &FunctionType{
+				ReturnTypeAnnotation: IntTypeAnnotation,
+			},
+		}
+
+		assert.Equal(t,
+			"&fun(): Int",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional instantiation", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: NewCapabilityType(nil, IntType),
+		}
+
+		assert.Equal(t,
+			"Capability<Int>?",
+			ty.String(),
+		)
+	})
+
+	t.Run("reference to instantiation", func(t *testing.T) {
+		t.Parallel()
+
+		ty := NewReferenceType(nil, UnauthorizedAccess, NewCapabilityType(nil, IntType))
+
+		assert.Equal(t,
+			"&Capability<Int>",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional intersection type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &IntersectionType{
+				Types: []*InterfaceType{
+					{
+						Identifier: "A",
+					},
+					{
+						Identifier: "B",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{A, B}?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional dictionary type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &DictionaryType{
+				KeyType:   IntType,
+				ValueType: StringType,
+			},
+		}
+
+		assert.Equal(t,
+			"{Int: String}?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional variable sized type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &VariableSizedType{
+				Type: IntType,
+			},
+		}
+
+		assert.Equal(t,
+			"[Int]?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional constant sized type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &ConstantSizedType{
+				Type: IntType,
+				Size: 2,
+			},
+		}
+
+		assert.Equal(t,
+			"[Int; 2]?",
+			ty.String(),
+		)
+	})
+
+	t.Run("double optional", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &OptionalType{
+				Type: IntType,
+			},
+		}
+
+		assert.Equal(t,
+			"Int??",
+			ty.String(),
+		)
+	})
+
+	t.Run("authorized reference to optional", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				NewEntitlementType(nil, common.StringLocation("test"), "E"),
+			},
+			Conjunction,
+		)
+
+		ty := &ReferenceType{
+			Authorization: access,
+			Type: &OptionalType{
+				Type: IntType,
+			},
+		}
+
+		assert.Equal(t,
+			"auth(E) &(Int?)",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional authorized reference", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				NewEntitlementType(nil, common.StringLocation("test"), "E"),
+			},
+			Conjunction,
+		)
+
+		ty := &OptionalType{
+			Type: NewReferenceType(nil, access, IntType),
+		}
+
+		assert.Equal(t,
+			"(auth(E) &Int)?",
+			ty.String(),
+		)
+	})
+}
+
 func TestIsResourceType_AnyStructNestedInArray(t *testing.T) {
 
 	t.Parallel()

@@ -105,6 +105,7 @@ type Type interface {
 	Tag() TypeTag
 	String() string
 	QualifiedString() string
+	Precedence() ast.TypePrecedence
 	Equal(other Type) bool
 
 	// IsPrimitiveType returns true if the type is itself a primitive,
@@ -212,6 +213,50 @@ type Type interface {
 	GetMembers() map[string]MemberResolver
 
 	CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error))
+}
+
+func parenthesizedTypeString(
+	ty Type,
+	parentPrecedence ast.TypePrecedence,
+	formatter func(Type) string,
+) string {
+	if ty == nil {
+		return ""
+	}
+
+	typeString := formatter(ty)
+	subPrecedence := ty.Precedence()
+	if parentPrecedence <= subPrecedence &&
+		!typeNeedsParentheses(ty, parentPrecedence) {
+
+		return typeString
+	}
+
+	return fmt.Sprintf("(%s)", typeString)
+}
+
+// typeNeedsParentheses determines whether the given type needs parentheses.
+// NOTE: This should match ast.typeNeedsParentheses.
+func typeNeedsParentheses(ty Type, parentPrecedence ast.TypePrecedence) bool {
+	// Optional type wrapping function type or authorized reference type needs parentheses,
+	// e.g. (fun(): Int)? or (auth(E) &T)?
+
+	if parentPrecedence != ast.TypePrecedenceOptional {
+		return false
+	}
+
+	switch typedType := ty.(type) {
+	case *FunctionType:
+		return true
+	case *ReferenceType:
+		if typedType.Authorization == nil ||
+			typedType.Authorization == UnauthorizedAccess {
+			return false
+		}
+		return true
+	default:
+		return false
+	}
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
@@ -754,18 +799,36 @@ func (t *OptionalType) Tag() TypeTag {
 	return t.Type.Tag().Or(NilTypeTag)
 }
 
+func (*OptionalType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceOptional
+}
+
 func (t *OptionalType) String() string {
 	if t.Type == nil {
 		return "optional"
 	}
-	return fmt.Sprintf("%s?", t.Type)
+	typeString := parenthesizedTypeString(
+		t.Type,
+		t.Precedence(),
+		func(ty Type) string {
+			return ty.String()
+		},
+	)
+	return fmt.Sprintf("%s?", typeString)
 }
 
 func (t *OptionalType) QualifiedString() string {
 	if t.Type == nil {
 		return "optional"
 	}
-	return fmt.Sprintf("%s?", t.Type.QualifiedString())
+	typeString := parenthesizedTypeString(
+		t.Type,
+		t.Precedence(),
+		func(ty Type) string {
+			return ty.QualifiedString()
+		},
+	)
+	return fmt.Sprintf("%s?", typeString)
 }
 
 func FormatOptionalTypeID[T ~string](elementTypeID T) T {
@@ -995,6 +1058,10 @@ func (*GenericType) IsType() {}
 
 func (t *GenericType) Tag() TypeTag {
 	return GenericTypeTag
+}
+
+func (*GenericType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (t *GenericType) String() string {
@@ -1308,6 +1375,10 @@ func (t *NumericType) SupportsSaturatingDivide() bool {
 
 func (*NumericType) IsType() {}
 
+func (*NumericType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t *NumericType) String() string {
 	return t.name
 }
@@ -1540,6 +1611,10 @@ func (t *FixedPointNumericType) SupportsSaturatingDivide() bool {
 }
 
 func (*FixedPointNumericType) IsType() {}
+
+func (*FixedPointNumericType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
 
 func (t *FixedPointNumericType) String() string {
 	return t.name
@@ -3088,6 +3163,10 @@ func NewVariableSizedType(memoryGauge common.MemoryGauge, typ Type) *VariableSiz
 
 func (*VariableSizedType) IsType() {}
 
+func (*VariableSizedType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (*VariableSizedType) isArrayType() {}
 
 func (t *VariableSizedType) Tag() TypeTag {
@@ -3273,6 +3352,10 @@ func NewConstantSizedType(memoryGauge common.MemoryGauge, typ Type, size int64) 
 }
 
 func (*ConstantSizedType) IsType() {}
+
+func (*ConstantSizedType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
 
 func (*ConstantSizedType) isArrayType() {}
 
@@ -3721,6 +3804,10 @@ func NewSimpleFunctionType(
 var _ Type = &FunctionType{}
 
 func (*FunctionType) IsType() {}
+
+func (*FunctionType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
 
 func (t *FunctionType) Tag() TypeTag {
 	return FunctionTypeTag
@@ -4922,6 +5009,10 @@ func (t *CompositeType) EffectiveInterfaceConformances() []Conformance {
 
 func (*CompositeType) IsType() {}
 
+func (*CompositeType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t *CompositeType) String() string {
 	return t.Identifier
 }
@@ -5842,6 +5933,10 @@ func (t *InterfaceType) Tag() TypeTag {
 	return InterfaceTypeTag
 }
 
+func (*InterfaceType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t *InterfaceType) String() string {
 	return t.Identifier
 }
@@ -6224,6 +6319,10 @@ func (*DictionaryType) IsType() {}
 
 func (t *DictionaryType) Tag() TypeTag {
 	return DictionaryTypeTag
+}
+
+func (*DictionaryType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (t *DictionaryType) String() string {
@@ -6742,6 +6841,10 @@ func (*InclusiveRangeType) Tag() TypeTag {
 	return InclusiveRangeTypeTag
 }
 
+func (*InclusiveRangeType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceInstantiation
+}
+
 func (t *InclusiveRangeType) String() string {
 	memberString := ""
 	if t.MemberType != nil {
@@ -7124,6 +7227,10 @@ func (t *ReferenceType) Tag() TypeTag {
 	return ReferenceTypeTag
 }
 
+func (*ReferenceType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceReference
+}
+
 func formatReferenceType[T ~string](
 	separator string,
 	authorization T,
@@ -7156,7 +7263,14 @@ func (t *ReferenceType) String() string {
 	if _, isMapping := t.Authorization.(*EntitlementMapAccess); isMapping {
 		authorization = "mapping " + authorization
 	}
-	return formatReferenceType(" ", authorization, t.Type.String())
+	typeString := parenthesizedTypeString(
+		t.Type,
+		t.Precedence(),
+		func(ty Type) string {
+			return ty.String()
+		},
+	)
+	return formatReferenceType(" ", authorization, typeString)
 }
 
 func (t *ReferenceType) QualifiedString() string {
@@ -7170,7 +7284,14 @@ func (t *ReferenceType) QualifiedString() string {
 	if _, isMapping := t.Authorization.(*EntitlementMapAccess); isMapping {
 		authorization = "mapping " + authorization
 	}
-	return formatReferenceType(" ", authorization, t.Type.QualifiedString())
+	typeString := parenthesizedTypeString(
+		t.Type,
+		t.Precedence(),
+		func(ty Type) string {
+			return ty.QualifiedString()
+		},
+	)
+	return formatReferenceType(" ", authorization, typeString)
 }
 
 func (t *ReferenceType) ID() TypeID {
@@ -7399,6 +7520,10 @@ func (*AddressType) IsType() {}
 
 func (t *AddressType) Tag() TypeTag {
 	return AddressTypeTag
+}
+
+func (*AddressType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (*AddressType) String() string {
@@ -8231,6 +8356,10 @@ func (t *TransactionType) Tag() TypeTag {
 	return TransactionTypeTag
 }
 
+func (*TransactionType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (*TransactionType) String() string {
 	return TransactionTypeName
 }
@@ -8396,6 +8525,10 @@ func (*IntersectionType) IsType() {}
 
 func (t *IntersectionType) Tag() TypeTag {
 	return IntersectionTypeTag
+}
+
+func (*IntersectionType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func formatIntersectionType[T ~string](separator string, interfaceStrings []T) string {
@@ -8695,6 +8828,10 @@ func (*CapabilityType) IsType() {}
 
 func (t *CapabilityType) Tag() TypeTag {
 	return CapabilityTypeTag
+}
+
+func (*CapabilityType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceInstantiation
 }
 
 func formatCapabilityType[T ~string](borrowTypeString T) string {
@@ -9294,6 +9431,10 @@ func (t *EntitlementType) Tag() TypeTag {
 	return InvalidTypeTag // entitlement types may never appear as types, and thus cannot have a computed supertype
 }
 
+func (*EntitlementType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t *EntitlementType) String() string {
 	return t.Identifier
 }
@@ -9453,6 +9594,10 @@ func (*EntitlementMapType) IsType() {}
 
 func (t *EntitlementMapType) Tag() TypeTag {
 	return InvalidTypeTag // entitlement map types may never appear as types, and thus cannot have a computed supertype
+}
+
+func (*EntitlementMapType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (t *EntitlementMapType) String() string {
