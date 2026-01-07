@@ -127,7 +127,8 @@ func parenthesizedTypeDoc(t Type, parentPrecedence TypePrecedence) prettier.Doc 
 }
 
 // typeNeedsParentheses determines whether the given type needs parentheses.
-// NOTE: sema.typeNeedsParentheses should match this function.
+// NOTE: sema.typeNeedsParentheses and interpreter.staticTypeNeedsParentheses
+// should match this function.
 func typeNeedsParentheses(t Type, parentPrecedence TypePrecedence) bool {
 	// Optional type wrapping function type or authorized reference type needs parentheses,
 	// e.g. (fun(): Int)? or (auth(E) &T)?
