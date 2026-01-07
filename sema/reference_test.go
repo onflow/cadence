@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -4058,5 +4059,39 @@ func TestCheckInvalidReferenceOfOptionalTypeS(t *testing.T) {
 			),
 		},
 		invalidReferenceToOptionalTypeErr.ExpectedType,
+	)
+
+	assert.Contains(t,
+		"got `fun(auth(Mutate) &(Int?)): {String: auth(Mutate) &(Int?)}`, consider using `fun(auth(Mutate) &Int?): {String: auth(Mutate) &Int?}`",
+		invalidReferenceToOptionalTypeErr.SecondaryError(),
+	)
+
+	fixes := invalidReferenceToOptionalTypeErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Replace with `fun(auth(Mutate) &Int?): {String: auth(Mutate) &Int?}`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "fun(auth(Mutate) &Int?): {String: auth(Mutate) &Int?}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
+							EndPos:   ast.Position{Offset: 70, Line: 2, Column: 69},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      let f: fun(auth(Mutate) &Int?): {String: auth(Mutate) &Int?} = panic("")
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }

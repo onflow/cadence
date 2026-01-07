@@ -2997,6 +2997,7 @@ var _ SemanticError = &InvalidReferenceToOptionalTypeError{}
 var _ errors.UserError = &InvalidReferenceToOptionalTypeError{}
 var _ errors.SecondaryError = &InvalidReferenceToOptionalTypeError{}
 var _ errors.HasDocumentationLink = &InvalidReferenceToOptionalTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidReferenceToOptionalTypeError{}
 
 func (*InvalidReferenceToOptionalTypeError) isSemanticError() {}
 
@@ -3020,9 +3021,20 @@ func (*InvalidReferenceToOptionalTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/references"
 }
 
-// TODO: add suggested fix for InvalidReferenceToOptionalTypeError
-//   once pretty printing of types correctly handles precedence
-//   (currently (&T)? and &(T?) both print as &T?)
+func (e *InvalidReferenceToOptionalTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	replacement := e.ExpectedType.QualifiedString()
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: fmt.Sprintf("Replace with `%s`", replacement),
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: replacement,
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
 
 // InvalidInterfaceDeclarationError
 
