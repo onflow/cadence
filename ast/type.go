@@ -98,12 +98,50 @@ type Type interface {
 	fmt.Stringer
 	isType()
 	Doc() prettier.Doc
+	precedence() typePrecedence
 	CheckEqual(other Type, checker TypeEqualityChecker) error
 }
 
 func IsEmptyType(t Type) bool {
 	nominalType, ok := t.(*NominalType)
 	return ok && nominalType.Identifier.Identifier == ""
+}
+
+func parenthesizedTypeDoc(t Type, parentPrecedence typePrecedence) prettier.Doc {
+	if t == nil {
+		return prettier.Text("")
+	}
+
+	doc := t.Doc()
+	subPrecedence := t.precedence()
+	if parentPrecedence <= subPrecedence &&
+		!typeNeedsParentheses(t, parentPrecedence) {
+
+		return doc
+	}
+
+	return prettier.WrapParentheses(
+		doc,
+		prettier.SoftLine{},
+	)
+}
+
+func typeNeedsParentheses(t Type, parentPrecedence typePrecedence) bool {
+	// Optional type wrapping function type or authorized reference type needs parentheses,
+	// e.g. (fun(): Int)? or (auth(E) &T)?
+
+	if parentPrecedence != typePrecedenceOptional {
+		return false
+	}
+
+	switch t := t.(type) {
+	case *FunctionType:
+		return true
+	case *ReferenceType:
+		return t.Authorization != nil
+	default:
+		return false
+	}
 }
 
 // NominalType represents a named type
@@ -128,6 +166,10 @@ func NewNominalType(
 }
 
 func (*NominalType) isType() {}
+
+func (*NominalType) precedence() typePrecedence {
+	return typePrecedencePrimary
+}
 
 func (t *NominalType) String() string {
 	return Prettier(t)
@@ -210,6 +252,10 @@ func NewOptionalType(
 
 func (*OptionalType) isType() {}
 
+func (*OptionalType) precedence() typePrecedence {
+	return typePrecedenceOptional
+}
+
 func (t *OptionalType) String() string {
 	return Prettier(t)
 }
@@ -225,7 +271,7 @@ func (t *OptionalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 const optionalTypeSymbolDoc = prettier.Text("?")
 
 func (t *OptionalType) Doc() prettier.Doc {
-	typeDoc := docOrEmpty(t.Type)
+	typeDoc := parenthesizedTypeDoc(t.Type, t.precedence())
 	return prettier.Concat{
 		typeDoc,
 		optionalTypeSymbolDoc,
@@ -271,6 +317,10 @@ func NewVariableSizedType(
 }
 
 func (*VariableSizedType) isType() {}
+
+func (*VariableSizedType) precedence() typePrecedence {
+	return typePrecedencePrimary
+}
 
 func (t *VariableSizedType) String() string {
 	return Prettier(t)
@@ -336,6 +386,10 @@ func NewConstantSizedType(
 
 func (*ConstantSizedType) isType() {}
 
+func (*ConstantSizedType) precedence() typePrecedence {
+	return typePrecedencePrimary
+}
+
 func (t *ConstantSizedType) String() string {
 	return Prettier(t)
 }
@@ -400,6 +454,10 @@ func NewDictionaryType(
 }
 
 func (*DictionaryType) isType() {}
+
+func (*DictionaryType) precedence() typePrecedence {
+	return typePrecedencePrimary
+}
 
 func (t *DictionaryType) String() string {
 	return Prettier(t)
@@ -469,6 +527,10 @@ func NewFunctionType(
 }
 
 func (*FunctionType) isType() {}
+
+func (*FunctionType) precedence() typePrecedence {
+	return typePrecedencePrimary
+}
 
 func (t *FunctionType) String() string {
 	return Prettier(t)
@@ -575,6 +637,10 @@ func NewReferenceType(
 
 func (*ReferenceType) isType() {}
 
+func (*ReferenceType) precedence() typePrecedence {
+	return typePrecedenceReference
+}
+
 func (t *ReferenceType) String() string {
 	return Prettier(t)
 }
@@ -641,7 +707,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 	return append(
 		doc,
 		referenceTypeSymbolDoc,
-		docOrEmpty(t.Type),
+		parenthesizedTypeDoc(t.Type, t.precedence()),
 	)
 }
 
@@ -685,6 +751,10 @@ func NewIntersectionType(
 }
 
 func (*IntersectionType) isType() {}
+
+func (*IntersectionType) precedence() typePrecedence {
+	return typePrecedencePrimary
+}
 
 func (t *IntersectionType) String() string {
 	return Prettier(t)
@@ -771,6 +841,10 @@ func NewInstantiationType(
 
 func (*InstantiationType) isType() {}
 
+func (*InstantiationType) precedence() typePrecedence {
+	return typePrecedenceInstantiation
+}
+
 func (t *InstantiationType) String() string {
 	return Prettier(t)
 }
@@ -809,7 +883,7 @@ func (t *InstantiationType) Doc() prettier.Doc {
 	}
 
 	return prettier.Concat{
-		docOrEmpty(t.Type),
+		parenthesizedTypeDoc(t.Type, t.precedence()),
 		prettier.Group{
 			Doc: prettier.Concat{
 				instantiationTypeStartDoc,
