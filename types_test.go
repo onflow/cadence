@@ -141,6 +141,21 @@ func TestType_ID(t *testing.T) {
 			"{S.test.FooI}",
 		},
 		{
+			&IntersectionType{
+				Types: []Type{
+					&ResourceInterfaceType{
+						Location:            TestLocation,
+						QualifiedIdentifier: "FooB",
+					},
+					&ResourceInterfaceType{
+						Location:            TestLocation,
+						QualifiedIdentifier: "FooA",
+					},
+				},
+			},
+			"{S.test.FooA,S.test.FooB}",
+		},
+		{
 			&FunctionType{
 				Parameters: []Parameter{
 					{Type: IntType},
@@ -227,6 +242,41 @@ func TestType_ID(t *testing.T) {
 				QualifiedIdentifier: "ContractI",
 			},
 			"S.test.ContractI",
+		},
+		{
+			&ReferenceType{
+				Authorization: UnauthorizedAccess,
+				Type:          IntType,
+			},
+			"&Int",
+		},
+		{
+			&ReferenceType{
+				Authorization: NewEntitlementSetAuthorization(
+					nil,
+					[]sema.TypeID{
+						sema.InsertType.ID(),
+						sema.RemoveType.ID(),
+					},
+					Conjunction,
+				),
+				Type: IntType,
+			},
+			"auth(Insert,Remove)&Int",
+		},
+		{
+			&ReferenceType{
+				Authorization: NewEntitlementSetAuthorization(
+					nil,
+					[]sema.TypeID{
+						sema.InsertType.ID(),
+						sema.RemoveType.ID(),
+					},
+					Disjunction,
+				),
+				Type: IntType,
+			},
+			"auth(Insert|Remove)&Int",
 		},
 	}
 
