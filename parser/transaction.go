@@ -40,9 +40,9 @@ import (
 //	    | /* no execute or postConditions */
 //	    )
 //	    '}'
-func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionDeclaration, error) {
+func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
 
 	// Skip the `transaction` keyword
 	p.nextSemanticToken()
@@ -59,7 +59,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	parseDeclarationOpeningBrace(p, common.DeclarationKindTransaction)
 
@@ -75,7 +75,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var prepare *ast.SpecialFunctionDeclaration
 	var execute *ast.SpecialFunctionDeclaration
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if p.current.Is(lexer.TokenIdentifier) {
 
@@ -83,7 +83,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 		switch string(keyword) {
 		case KeywordPrepare:
-			identifier := p.tokenToIdentifier(p.current)
+			identifierToken := p.current
 			// Skip the `prepare` keyword
 			p.next()
 			prepare, err = parseSpecialFunctionDeclaration(
@@ -95,8 +95,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				nil,
 				nil,
 				nil,
-				identifier,
-				"",
+				identifierToken,
 			)
 			if err != nil {
 				return nil, err
@@ -121,7 +120,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var preConditions *ast.Conditions
 
 	if execute == nil {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 			preStartPos := p.current.StartPos
@@ -149,7 +148,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	for !atEnd && p.checkProgress(&progress) {
 
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -211,12 +210,14 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		preConditions,
 		postConditions,
 		execute,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
-			startPos,
+			startToken.StartPos,
 			endPos,
 		),
+		ast.Comments{
+			Leading: startToken.Comments.Leading,
+		},
 	), nil
 }
 
@@ -225,9 +226,8 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 
 	for p.checkProgress(&progress) {
 
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: true,
 		})
 
 		switch p.current.Type {
@@ -248,7 +248,6 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 					nil,
 					nil,
 					nil,
-					docString,
 				)
 				if err != nil {
 					return nil, err
@@ -270,7 +269,8 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 }
 
 func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error) {
-	identifier := p.tokenToIdentifier(p.current)
+	identifierToken := p.current
+	identifier := p.tokenToIdentifier(identifierToken)
 
 	// Skip the `execute` keyword
 	p.nextSemanticToken()
@@ -300,7 +300,9 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 				nil,
 			),
 			identifier.Pos,
-			"",
+			ast.Comments{
+				Leading: identifierToken.Comments.Leading,
+			},
 		),
 	), nil
 }

@@ -68,6 +68,7 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "ImportDeclaration",
+            "Comments": {},
             "Imports": [
                 {
                     "Identifier": {

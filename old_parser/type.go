@@ -219,6 +219,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 		p.memoryGauge,
 		p.tokenToIdentifier(token),
 		nestedIdentifiers,
+		ast.EmptyComments,
 	), nil
 }
 
@@ -883,6 +884,7 @@ func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, 
 	var invokedExpression ast.Expression = ast.NewIdentifierExpression(
 		p.memoryGauge,
 		ty.Identifier,
+		ast.EmptyComments,
 	)
 
 	for _, nestedIdentifier := range ty.NestedIdentifiers {

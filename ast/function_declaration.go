@@ -69,11 +69,11 @@ type FunctionDeclaration struct {
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
-	DocString            string
 	Identifier           Identifier
 	StartPos             Position `json:"-"`
 	Access               Access
 	Flags                FunctionDeclarationFlags
+	Comments             Comments
 }
 
 var _ Element = &FunctionDeclaration{}
@@ -92,7 +92,7 @@ func NewFunctionDeclaration(
 	returnTypeAnnotation *TypeAnnotation,
 	functionBlock *FunctionBlock,
 	startPos Position,
-	docString string,
+	comments Comments,
 ) *FunctionDeclaration {
 	common.UseMemory(gauge, common.FunctionDeclarationMemoryUsage)
 
@@ -114,7 +114,7 @@ func NewFunctionDeclaration(
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,
 		StartPos:             startPos,
-		DocString:            docString,
+		Comments:             comments,
 	}
 }
 
@@ -176,7 +176,7 @@ func (d *FunctionDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *FunctionDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (d *FunctionDeclaration) Doc() prettier.Doc {
@@ -200,16 +200,18 @@ func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 		Type string
 		Range
-		IsStatic bool
-		IsNative bool
-		Flags    FunctionDeclarationFlags `json:",omitempty"`
+		IsStatic  bool
+		IsNative  bool
+		Flags     FunctionDeclarationFlags `json:",omitempty"`
+		DocString string
 	}{
-		Type:     "FunctionDeclaration",
-		Range:    NewUnmeteredRangeFromPositioned(d),
-		IsStatic: d.IsStatic(),
-		IsNative: d.IsNative(),
-		Alias:    (*Alias)(d),
-		Flags:    0,
+		Type:      "FunctionDeclaration",
+		Range:     NewUnmeteredRangeFromPositioned(d),
+		IsStatic:  d.IsStatic(),
+		IsNative:  d.IsNative(),
+		Alias:     (*Alias)(d),
+		Flags:     0,
+		DocString: d.DeclarationDocString(),
 	})
 }
 
