@@ -638,3 +638,90 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
 		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
+
+func TestInterpretTransactionVariableMove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+                    var arr: @[AnyResource]
+
+                    prepare() {
+                        self.r <- create R()
+                        self.arr <- []
+                    }
+
+                    execute {
+                        self.arr.append(<- self.r)
+                        self.arr.append(<- self.r)
+                        destroy self.arr
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		err = inter.InvokeTransaction(nil)
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
+
+	t.Run("without transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+                    var arr: @[AnyResource]
+
+                    prepare() {
+                        self.r <- create R()
+                        self.arr <- []
+                    }
+
+                    execute {
+                        self.arr.append(self.r)
+                        self.arr.append(<- self.r)
+                        destroy self.arr
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		err = inter.InvokeTransaction(nil)
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
+	})
+}
