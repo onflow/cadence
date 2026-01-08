@@ -1301,3 +1301,107 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 	)
 
 }
+
+func TestRuntimeArgumentTypes(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+	}
+
+	functionType := sema.NewSimpleFunctionType(
+		sema.FunctionPurityView,
+		[]sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: sema.AnyStructTypeAnnotation,
+			},
+		},
+		sema.VoidTypeAnnotation,
+	)
+
+	var called bool
+	checkArgumentTypes := func(argumentTypes interpreter.ArgumentTypesIterator) {
+		called = true
+		argType := argumentTypes.NextSema()
+		assert.Equal(t, sema.IntType, argType)
+		assert.Nil(t, argumentTypes.NextSema())
+	}
+
+	const functionName = "foo"
+
+	var function interpreter.FunctionValue
+	if *compile {
+		function = vm.NewNativeFunctionValue(
+			functionName,
+			functionType,
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				argumentTypes interpreter.ArgumentTypesIterator,
+				_ interpreter.Value,
+				_ []interpreter.Value,
+			) interpreter.Value {
+				checkArgumentTypes(argumentTypes)
+				return interpreter.Void
+			},
+		)
+	} else {
+		function = interpreter.NewStaticHostFunctionValue(
+			nil,
+			functionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				argumentTypes := interpreter.NewArgumentTypesIterator(
+					invocation.InvocationContext,
+					invocation.ArgumentTypes,
+				)
+				checkArgumentTypes(argumentTypes)
+				return interpreter.Void
+			},
+		)
+	}
+
+	env := newTransactionEnvironment()
+
+	env.DeclareValue(
+		stdlib.StandardLibraryValue{
+			Name:  functionName,
+			Type:  functionType,
+			Kind:  common.DeclarationKindFunction,
+			Value: function,
+		},
+		nil,
+	)
+
+	tx := `
+      transaction {
+          prepare(signer: &Account) {
+              foo(42)
+          }
+      }
+    `
+
+	runtime := NewTestRuntime()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(tx),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    common.TransactionLocation{},
+			Environment: env,
+			UseVM:       *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.True(t, called)
+}
