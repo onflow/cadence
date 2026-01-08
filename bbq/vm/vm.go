@@ -805,7 +805,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
+	arguments := vm.popN(len(ins.ArgTypes))
 
 	// Load the invoked value
 	functionValue := vm.pop()

@@ -2636,6 +2636,7 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	expression *ast.InvocationExpression,
 	implicitArgIndex *uint16,
+	implicitArgType sema.Type,
 ) (_ struct{}) {
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
@@ -2643,8 +2644,6 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	if len(expression.Arguments) >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of arguments"))
 	}
-	argumentCount := uint16(len(expression.Arguments))
-
 	invokedExpr := expression.InvokedExpression
 
 	if memberExpression, isMemberExpr := expression.InvokedExpression.(*ast.MemberExpression); isMemberExpr {
@@ -2661,8 +2660,8 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				memberInfo,
 				memberExpression,
 				invocationTypes,
-				argumentCount,
 				implicitArgIndex,
+				implicitArgType,
 			)
 			return
 		}
@@ -2678,20 +2677,26 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 
 	// Compile arguments
 	c.compileArguments(expression.Arguments, invocationTypes)
-	argumentCount = c.addImplicitArgument(implicitArgIndex, argumentCount)
+	argTypes := c.loadArgumentTypes(invocationTypes)
+
+	argTypes = c.addImplicitArgument(implicitArgIndex, implicitArgType, argTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
 
 	c.emit(opcode.InstructionInvoke{
 		TypeArgs: typeArgs,
-		ArgCount: argumentCount,
+		ArgTypes: argTypes,
 	})
 	return
 }
 
-func (c *Compiler[_, _]) addImplicitArgument(implicitArgIndex *uint16, argumentCount uint16) (newArgCount uint16) {
+func (c *Compiler[_, _]) addImplicitArgument(
+	implicitArgIndex *uint16,
+	implicitArgType sema.Type,
+	argTypes []uint16,
+) []uint16 {
 	if implicitArgIndex == nil {
-		return argumentCount
+		return argTypes
 	}
 
 	// Add the implicit argument to the end of the argument list, if it exists.
@@ -2703,11 +2708,13 @@ func (c *Compiler[_, _]) addImplicitArgument(implicitArgIndex *uint16, argumentC
 	// Base is at the back of the argument list, only for attachment initialization.
 	c.emitGetLocal(*implicitArgIndex)
 
-	return argumentCount + 1
+	argTypes = append(argTypes, c.getOrAddType(implicitArgType))
+
+	return argTypes
 }
 
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	c.visitInvocationExpressionWithImplicitArgument(expression, nil)
+	c.visitInvocationExpressionWithImplicitArgument(expression, nil, nil)
 
 	return
 }
@@ -2738,8 +2745,8 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	memberInfo sema.MemberAccessInfo,
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
-	argumentCount uint16,
 	implicitArgIndex *uint16,
+	implicitArgType sema.Type,
 ) {
 	var funcName string
 
@@ -2761,13 +2768,14 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 		// Compile arguments
 		c.compileArguments(expression.Arguments, invocationTypes)
-		argumentCount = c.addImplicitArgument(implicitArgIndex, argumentCount)
+		argTypes := c.loadArgumentTypes(invocationTypes)
+		argTypes = c.addImplicitArgument(implicitArgIndex, implicitArgType, argTypes)
 
 		typeArgs := c.loadTypeArguments(invocationTypes)
 
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
-			ArgCount: argumentCount,
+			ArgTypes: argTypes,
 		})
 		return
 	}
@@ -2779,6 +2787,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	isOptional := memberInfo.IsOptional
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
+	argTypes := c.loadArgumentTypes(invocationTypes)
 
 	// Invocations into the interface code, such as default functions and inherited conditions,
 	// that were synthetically added at the desugar phase, must be static calls.
@@ -2808,7 +2817,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				c.emit(
 					opcode.InstructionInvoke{
 						TypeArgs: typeArgs,
-						ArgCount: argumentCount,
+						ArgTypes: argTypes,
 					},
 				)
 			},
@@ -2847,7 +2856,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.compileArguments(expression.Arguments, invocationTypes)
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
-			ArgCount: argumentCount,
+			ArgTypes: argTypes,
 		})
 	} else {
 		c.withOptionalChaining(
@@ -2867,10 +2876,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 				c.emit(opcode.InstructionInvoke{
 					TypeArgs: typeArgs,
-
-					// Argument count does not include the receiver,
-					// since receiver is already captured by the bound-function.
-					ArgCount: argumentCount,
+					ArgTypes: argTypes,
 				})
 			},
 			true,
@@ -2997,6 +3003,26 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 	}
 
 	return typeArgs
+}
+
+func (c *Compiler[_, _]) loadArgumentTypes(invocationTypes sema.InvocationExpressionTypes) []uint16 {
+	argumentTypes := invocationTypes.ArgumentTypes
+	count := len(argumentTypes)
+	if count >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid number of type arguments: %d", count))
+	}
+
+	var argTypes []uint16
+	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
+		argTypes = make([]uint16, 0, count)
+
+		for _, argumentType := range argumentTypes {
+			argTypes = append(argTypes, c.getOrAddType(argumentType))
+		}
+	}
+
+	return argTypes
 }
 
 func typeFunctionType(ty sema.Type) sema.Type {
@@ -4085,13 +4111,12 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 		c.emitGlobalLoad(constructorName)
 
 		indexBigInt := big.NewInt(int64(index))
-		c.emitIntegerConstant(
-			indexBigInt,
-			compositeType.EnumRawType,
-		)
+		enumRawType := compositeType.EnumRawType
+		c.emitIntegerConstant(indexBigInt, enumRawType)
+		argumentType := c.getOrAddType(enumRawType)
 
 		c.emit(opcode.InstructionInvoke{
-			ArgCount: 1,
+			ArgTypes: []uint16{argumentType},
 		})
 		// NOTE: Do not transfer, as that creates a copy of the enum case value,
 		// which does not match the interpreter's behavior.
@@ -4176,7 +4201,11 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.emitSetTempLocal(refLocalIndex)
 
 	// create the attachment
-	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, &refLocalIndex)
+	c.visitInvocationExpressionWithImplicitArgument(
+		expression.Attachment,
+		&refLocalIndex,
+		refType,
+	)
 	// attachment on stack
 
 	// base back on stack

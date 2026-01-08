@@ -1182,7 +1182,7 @@ func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
 // Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack.
 type InstructionInvoke struct {
 	TypeArgs []uint16
-	ArgCount uint16
+	ArgTypes []uint16
 }
 
 var _ Instruction = InstructionInvoke{}
@@ -1202,7 +1202,7 @@ func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
 	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
+	printfUInt16ArrayArgument(sb, "argTypes", i.ArgTypes, colorize)
 }
 
 func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
@@ -1213,18 +1213,18 @@ func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
 	sb.WriteByte(' ')
 	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
 	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
+	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, types)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16Array(code, i.TypeArgs)
-	emitUint16(code, i.ArgCount)
+	emitUint16Array(code, i.ArgTypes)
 }
 
 func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 	i.TypeArgs = decodeUint16Array(ip, code)
-	i.ArgCount = decodeUint16(ip, code)
+	i.ArgTypes = decodeUint16Array(ip, code)
 	return i
 }
 
