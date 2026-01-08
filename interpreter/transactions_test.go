@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -643,9 +644,77 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 
 	t.Parallel()
 
+	type checkFunction struct {
+		called              bool
+		baseTypeActivation  *sema.VariableActivation
+		baseValueActivation *sema.VariableActivation
+		baseActivation      *activations.Activation[interpreter.Variable]
+	}
+
+	// newCheckFunction creates a "check" function that accepts a reference to a transaction
+	// and verifies that the transaction's resource field `r` is nil when called.
+	newCheckFunction := func(t *testing.T) *checkFunction {
+
+		result := &checkFunction{}
+
+		checkFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"check",
+			&sema.FunctionType{
+				Parameters: []sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyType),
+					},
+				},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			},
+			"",
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.Value,
+				arguments []interpreter.Value,
+			) interpreter.Value {
+				result.called = true
+
+				require.Len(t, arguments, 1)
+				argument := arguments[0]
+
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
+				reference := argument.(*interpreter.EphemeralReferenceValue)
+
+				require.IsType(t, &interpreter.SimpleCompositeValue{}, reference.Value)
+				transaction := reference.Value.(*interpreter.SimpleCompositeValue)
+
+				require.Nil(t, transaction.Fields["r"])
+
+				return interpreter.Void
+			},
+		)
+
+		anyType := stdlib.StandardLibraryType{
+			Name: sema.AnyType.Name,
+			Type: sema.AnyType,
+			Kind: common.DeclarationKindType,
+		}
+
+		result.baseTypeActivation = sema.NewVariableActivation(sema.BaseTypeActivation)
+		result.baseTypeActivation.DeclareType(anyType)
+
+		result.baseValueActivation = sema.NewVariableActivation(sema.BaseValueActivation)
+		result.baseValueActivation.DeclareValue(checkFunction)
+
+		result.baseActivation = activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(result.baseActivation, checkFunction)
+
+		return result
+	}
+
 	t.Run("with transfer", func(t *testing.T) {
 
 		t.Parallel()
+
+		checkFunction := newCheckFunction(t)
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
@@ -662,6 +731,7 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 
                     execute {
                         self.arr.append(<- self.r)
+                        check(&self as &Any)
                         self.arr.append(<- self.r)
                         destroy self.arr
                     }
@@ -670,16 +740,33 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 			ParseCheckAndInterpretOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: common.TransactionLocation{},
+					CheckerConfig: &sema.Config{
+						BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return checkFunction.baseTypeActivation
+						},
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return checkFunction.baseValueActivation
+						},
+					},
 				},
 				HandleCheckerError: func(err error) {
-					errs := RequireCheckerErrors(t, err, 1)
-					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+					errs := RequireCheckerErrors(t, err, 2)
+					require.IsType(t, &sema.InvalidMoveError{}, errs[0])
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return checkFunction.baseActivation
+					},
 				},
 			},
 		)
 		require.NoError(t, err)
 
 		err = inter.InvokeTransaction(nil)
+
+		assert.True(t, checkFunction.called)
+
 		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
 		require.ErrorAs(t, err, &useBeforeInitializationError)
 	})
