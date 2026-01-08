@@ -98,7 +98,7 @@ type Type interface {
 	fmt.Stringer
 	isType()
 	Doc() prettier.Doc
-	precedence() typePrecedence
+	Precedence() TypePrecedence
 	CheckEqual(other Type, checker TypeEqualityChecker) error
 }
 
@@ -107,13 +107,13 @@ func IsEmptyType(t Type) bool {
 	return ok && nominalType.Identifier.Identifier == ""
 }
 
-func parenthesizedTypeDoc(t Type, parentPrecedence typePrecedence) prettier.Doc {
+func parenthesizedTypeDoc(t Type, parentPrecedence TypePrecedence) prettier.Doc {
 	if t == nil {
 		return prettier.Text("")
 	}
 
 	doc := t.Doc()
-	subPrecedence := t.precedence()
+	subPrecedence := t.Precedence()
 	if parentPrecedence <= subPrecedence &&
 		!typeNeedsParentheses(t, parentPrecedence) {
 
@@ -126,11 +126,14 @@ func parenthesizedTypeDoc(t Type, parentPrecedence typePrecedence) prettier.Doc 
 	)
 }
 
-func typeNeedsParentheses(t Type, parentPrecedence typePrecedence) bool {
+// typeNeedsParentheses determines whether the given type needs parentheses.
+// NOTE: sema.typeNeedsParentheses and interpreter.staticTypeNeedsParentheses
+// should match this function.
+func typeNeedsParentheses(t Type, parentPrecedence TypePrecedence) bool {
 	// Optional type wrapping function type or authorized reference type needs parentheses,
 	// e.g. (fun(): Int)? or (auth(E) &T)?
 
-	if parentPrecedence != typePrecedenceOptional {
+	if parentPrecedence != TypePrecedenceOptional {
 		return false
 	}
 
@@ -167,8 +170,8 @@ func NewNominalType(
 
 func (*NominalType) isType() {}
 
-func (*NominalType) precedence() typePrecedence {
-	return typePrecedencePrimary
+func (*NominalType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
 }
 
 func (t *NominalType) String() string {
@@ -252,8 +255,8 @@ func NewOptionalType(
 
 func (*OptionalType) isType() {}
 
-func (*OptionalType) precedence() typePrecedence {
-	return typePrecedenceOptional
+func (*OptionalType) Precedence() TypePrecedence {
+	return TypePrecedenceOptional
 }
 
 func (t *OptionalType) String() string {
@@ -271,7 +274,7 @@ func (t *OptionalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 const optionalTypeSymbolDoc = prettier.Text("?")
 
 func (t *OptionalType) Doc() prettier.Doc {
-	typeDoc := parenthesizedTypeDoc(t.Type, t.precedence())
+	typeDoc := parenthesizedTypeDoc(t.Type, t.Precedence())
 	return prettier.Concat{
 		typeDoc,
 		optionalTypeSymbolDoc,
@@ -318,8 +321,8 @@ func NewVariableSizedType(
 
 func (*VariableSizedType) isType() {}
 
-func (*VariableSizedType) precedence() typePrecedence {
-	return typePrecedencePrimary
+func (*VariableSizedType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
 }
 
 func (t *VariableSizedType) String() string {
@@ -386,8 +389,8 @@ func NewConstantSizedType(
 
 func (*ConstantSizedType) isType() {}
 
-func (*ConstantSizedType) precedence() typePrecedence {
-	return typePrecedencePrimary
+func (*ConstantSizedType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
 }
 
 func (t *ConstantSizedType) String() string {
@@ -455,8 +458,8 @@ func NewDictionaryType(
 
 func (*DictionaryType) isType() {}
 
-func (*DictionaryType) precedence() typePrecedence {
-	return typePrecedencePrimary
+func (*DictionaryType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
 }
 
 func (t *DictionaryType) String() string {
@@ -528,8 +531,8 @@ func NewFunctionType(
 
 func (*FunctionType) isType() {}
 
-func (*FunctionType) precedence() typePrecedence {
-	return typePrecedencePrimary
+func (*FunctionType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
 }
 
 func (t *FunctionType) String() string {
@@ -637,8 +640,8 @@ func NewReferenceType(
 
 func (*ReferenceType) isType() {}
 
-func (*ReferenceType) precedence() typePrecedence {
-	return typePrecedenceReference
+func (*ReferenceType) Precedence() TypePrecedence {
+	return TypePrecedenceReference
 }
 
 func (t *ReferenceType) String() string {
@@ -707,7 +710,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 	return append(
 		doc,
 		referenceTypeSymbolDoc,
-		parenthesizedTypeDoc(t.Type, t.precedence()),
+		parenthesizedTypeDoc(t.Type, t.Precedence()),
 	)
 }
 
@@ -752,8 +755,8 @@ func NewIntersectionType(
 
 func (*IntersectionType) isType() {}
 
-func (*IntersectionType) precedence() typePrecedence {
-	return typePrecedencePrimary
+func (*IntersectionType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
 }
 
 func (t *IntersectionType) String() string {
@@ -841,8 +844,8 @@ func NewInstantiationType(
 
 func (*InstantiationType) isType() {}
 
-func (*InstantiationType) precedence() typePrecedence {
-	return typePrecedenceInstantiation
+func (*InstantiationType) Precedence() TypePrecedence {
+	return TypePrecedenceInstantiation
 }
 
 func (t *InstantiationType) String() string {
@@ -883,7 +886,7 @@ func (t *InstantiationType) Doc() prettier.Doc {
 	}
 
 	return prettier.Concat{
-		parenthesizedTypeDoc(t.Type, t.precedence()),
+		parenthesizedTypeDoc(t.Type, t.Precedence()),
 		prettier.Group{
 			Doc: prettier.Concat{
 				instantiationTypeStartDoc,

@@ -2377,6 +2377,265 @@ func TestReferenceStaticType_String(t *testing.T) {
 	})
 }
 
+func TestStaticTypeStringParentheses(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reference to optional", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ReferenceStaticType{
+			Authorization: UnauthorizedAccess,
+			ReferencedType: &OptionalStaticType{
+				Type: PrimitiveStaticTypeInt,
+			},
+		}
+
+		assert.Equal(t,
+			"&(Int?)",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional reference", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: &ReferenceStaticType{
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeInt,
+			},
+		}
+
+		assert.Equal(t,
+			"&Int?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional function type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: NewFunctionStaticType(
+				nil,
+				&sema.FunctionType{
+					ReturnTypeAnnotation: sema.IntTypeAnnotation,
+				},
+			),
+		}
+
+		assert.Equal(t,
+			"(fun(): Int)?",
+			ty.String(),
+		)
+	})
+
+	t.Run("function type with optional return type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := NewFunctionStaticType(
+			nil,
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.TypeAnnotation{
+					Type: &sema.OptionalType{
+						Type: sema.IntType,
+					},
+				},
+			},
+		)
+
+		assert.Equal(t,
+			"fun(): Int?",
+			ty.String(),
+		)
+	})
+
+	t.Run("reference to function type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ReferenceStaticType{
+			Authorization: UnauthorizedAccess,
+			ReferencedType: NewFunctionStaticType(
+				nil,
+				&sema.FunctionType{
+					ReturnTypeAnnotation: sema.IntTypeAnnotation,
+				},
+			),
+		}
+
+		assert.Equal(t,
+			"&fun(): Int",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional instantiation", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: NewCapabilityStaticType(nil, PrimitiveStaticTypeInt),
+		}
+
+		assert.Equal(t,
+			"Capability<Int>?",
+			ty.String(),
+		)
+	})
+
+	t.Run("reference to instantiation", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ReferenceStaticType{
+			Authorization:  UnauthorizedAccess,
+			ReferencedType: NewCapabilityStaticType(nil, PrimitiveStaticTypeInt),
+		}
+
+		assert.Equal(t,
+			"&Capability<Int>",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional intersection type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: NewIntersectionStaticType(
+				nil,
+				[]*InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, nil, "A"),
+					NewInterfaceStaticTypeComputeTypeID(nil, nil, "B"),
+				},
+			),
+		}
+
+		assert.Equal(t,
+			"{A, B}?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional dictionary type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: &DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeInt,
+				ValueType: PrimitiveStaticTypeString,
+			},
+		}
+
+		assert.Equal(t,
+			"{Int: String}?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional variable sized type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: &VariableSizedStaticType{
+				Type: PrimitiveStaticTypeInt,
+			},
+		}
+
+		assert.Equal(t,
+			"[Int]?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional constant sized type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: &ConstantSizedStaticType{
+				Type: PrimitiveStaticTypeInt,
+				Size: 2,
+			},
+		}
+
+		assert.Equal(t,
+			"[Int; 2]?",
+			ty.String(),
+		)
+	})
+
+	t.Run("double optional", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: &OptionalStaticType{
+				Type: PrimitiveStaticTypeInt,
+			},
+		}
+
+		assert.Equal(t,
+			"Int??",
+			ty.String(),
+		)
+	})
+
+	t.Run("authorized reference to optional", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					testLocation.TypeID(nil, "E"),
+				}
+			},
+			1,
+			sema.Conjunction,
+		)
+
+		ty := &ReferenceStaticType{
+			Authorization: access,
+			ReferencedType: &OptionalStaticType{
+				Type: PrimitiveStaticTypeInt,
+			},
+		}
+
+		assert.Equal(t,
+			"auth(S.test.E) &(Int?)",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional authorized reference", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					testLocation.TypeID(nil, "E"),
+				}
+			},
+			1,
+			sema.Conjunction,
+		)
+
+		ty := &OptionalStaticType{
+			Type: &ReferenceStaticType{
+				Authorization:  access,
+				ReferencedType: PrimitiveStaticTypeInt,
+			},
+		}
+
+		assert.Equal(t,
+			"(auth(S.test.E) &Int)?",
+			ty.String(),
+		)
+	})
+}
+
 func TestStaticType_IsDeprecated(t *testing.T) {
 
 	t.Parallel()

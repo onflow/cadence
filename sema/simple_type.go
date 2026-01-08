@@ -69,6 +69,10 @@ func (t *SimpleType) Tag() TypeTag {
 	return t.TypeTag
 }
 
+func (*SimpleType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t *SimpleType) String() string {
 	return t.Name
 }
