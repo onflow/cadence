@@ -4062,7 +4062,8 @@ func TestCheckInvalidReferenceOfOptionalTypeS(t *testing.T) {
 	)
 
 	assert.Contains(t,
-		"got `fun(auth(Mutate) &(Int?)): {String: auth(Mutate) &(Int?)}`, consider using `fun(auth(Mutate) &Int?): {String: auth(Mutate) &Int?}`",
+		"got `fun(auth(Mutate) &(Int?)): {String: auth(Mutate) &(Int?)}`, "+
+			"consider using `fun((auth(Mutate) &Int)?): {String: (auth(Mutate) &Int)?}`",
 		invalidReferenceToOptionalTypeErr.SecondaryError(),
 	)
 
@@ -4071,10 +4072,10 @@ func TestCheckInvalidReferenceOfOptionalTypeS(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "Replace with `fun(auth(Mutate) &Int?): {String: auth(Mutate) &Int?}`",
+				Message: "Replace with `fun((auth(Mutate) &Int)?): {String: (auth(Mutate) &Int)?}`",
 				TextEdits: []ast.TextEdit{
 					{
-						Replacement: "fun(auth(Mutate) &Int?): {String: auth(Mutate) &Int?}",
+						Replacement: "fun((auth(Mutate) &Int)?): {String: (auth(Mutate) &Int)?}",
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 							EndPos:   ast.Position{Offset: 70, Line: 2, Column: 69},
@@ -4087,7 +4088,7 @@ func TestCheckInvalidReferenceOfOptionalTypeS(t *testing.T) {
 	)
 
 	const expected = `
-      let f: fun(auth(Mutate) &Int?): {String: auth(Mutate) &Int?} = panic("")
+      let f: fun((auth(Mutate) &Int)?): {String: (auth(Mutate) &Int)?} = panic("")
     `
 
 	assert.Equal(t,
