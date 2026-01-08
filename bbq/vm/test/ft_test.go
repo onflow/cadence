@@ -61,6 +61,8 @@ func compiledFTTransfer(tb testing.TB) {
 	nonFungibleTokenLocation := common.NewAddressLocation(nil, contractsAddress, "NonFungibleToken")
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
 
+	semaTypeCache := make(map[sema.TypeID]sema.Type)
+
 	codes := map[common.Location][]byte{
 		burnerLocation:                     []byte(contracts.RealBurnerContract),
 		viewResolverLocation:               []byte(contracts.RealViewResolverContract),
@@ -91,7 +93,10 @@ func compiledFTTransfer(tb testing.TB) {
 
 	compilerConfig := &compiler.Config{
 		LocationHandler: locationHandler,
-		ImportHandler:   importHandler,
+		GetSemaTypeCache: func() map[sema.TypeID]sema.Type {
+			return semaTypeCache
+		},
+		ImportHandler: importHandler,
 		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			imported, ok := compiledPrograms[location]
 			if !ok {
@@ -163,6 +168,10 @@ func compiledFTTransfer(tb testing.TB) {
 	storage := NewUnmeteredInMemoryStorage()
 
 	vmConfig := vm.NewConfig(storage)
+
+	// vmConfig.GetSemaTypeCache = func() map[sema.TypeID]sema.Type {
+	// 	return semaTypeCache
+	// }
 
 	vmConfig.CapabilityBorrowHandler = func(
 		context interpreter.BorrowCapabilityControllerContext,
@@ -483,6 +492,8 @@ func compiledFTTransfer(tb testing.TB) {
 			)
 		}
 	}
+
+	tokenTransferTxVM.Context().GetCacheStatistics()
 }
 
 func TestFTTransfer(t *testing.T) {

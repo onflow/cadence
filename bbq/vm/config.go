@@ -74,6 +74,8 @@ type Config struct {
 	StackDepthLimit uint64
 
 	debugEnabled bool
+
+	GetSemaTypeCache GetSemaTypeCache
 }
 
 func NewConfig(storage interpreter.Storage) *Config {
@@ -85,6 +87,9 @@ func NewConfig(storage interpreter.Storage) *Config {
 		storage:         storage,
 		StackDepthLimit: math.MaxInt,
 		Tracer:          tracer,
+		GetSemaTypeCache: func() map[sema.TypeID]sema.Type {
+			return nil
+		},
 	}
 }
 
@@ -300,6 +305,8 @@ type ContractValueHandler func(
 ) *interpreter.CompositeValue
 
 type ElaborationResolver func(location common.Location) (*sema.Elaboration, error)
+
+type GetSemaTypeCache func() map[sema.TypeID]sema.Type
 
 type EntitlementTypeHandlerFunc func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType
 
