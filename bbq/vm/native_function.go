@@ -65,6 +65,46 @@ func NewTypeArgumentsIterator(context *Context, arguments []bbq.StaticType) inte
 	return NewVMTypeArgumentsIterator(context, arguments)
 }
 
+type VMArgumentTypesIterator struct {
+	index         int
+	context       *Context
+	argumentTypes []bbq.StaticType
+}
+
+func NewVMArgumentTypesIterator(context *Context, argumentTypes []bbq.StaticType) *VMArgumentTypesIterator {
+	return &VMArgumentTypesIterator{
+		index:         0,
+		context:       context,
+		argumentTypes: argumentTypes,
+	}
+}
+
+var _ interpreter.ArgumentTypesIterator = &VMArgumentTypesIterator{}
+
+func (g *VMArgumentTypesIterator) NextStatic() interpreter.StaticType {
+	current := g.index
+	if current >= len(g.argumentTypes) {
+		return nil
+	}
+	g.index++
+	return g.argumentTypes[current]
+}
+
+func (g *VMArgumentTypesIterator) NextSema() sema.Type {
+	staticType := g.NextStatic()
+	if staticType == nil {
+		return nil
+	}
+	return g.context.SemaTypeFromStaticType(staticType)
+}
+
+func NewArgumentTypesIterator(context *Context, arguments []bbq.StaticType) interpreter.ArgumentTypesIterator {
+	if len(arguments) == 0 {
+		return interpreter.TheEmptyArgumentTypesIterator
+	}
+	return NewVMArgumentTypesIterator(context, arguments)
+}
+
 func NewNativeFunctionValue(
 	name string,
 	funcType *sema.FunctionType,

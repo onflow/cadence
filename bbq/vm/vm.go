@@ -357,10 +357,12 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 }
 
 func (vm *VM) invokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
+	// NOTE: can't fill argument types, as they are unknown
 	invokeFunction(
 		vm,
 		functionValue,
 		arguments,
+		nil,
 		nil,
 	)
 
@@ -803,6 +805,7 @@ func opRemoveIndex(vm *VM) {
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
+	argumentTypes := loadArgumentTypes(vm, ins.ArgTypes)
 
 	// Load arguments
 	arguments := vm.popN(len(ins.ArgTypes))
@@ -815,6 +818,11 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		base := boundFunction.Base
 		if base != nil {
 			arguments = append([]Value{base}, arguments...)
+			// TODO: verify
+			argumentTypes = append(
+				[]bbq.StaticType{base.StaticType(vm.context)},
+				argumentTypes...,
+			)
 		}
 	}
 
@@ -823,6 +831,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		functionValue,
 		arguments,
 		typeArguments,
+		argumentTypes,
 	)
 }
 
@@ -857,6 +866,7 @@ func invokeFunction(
 	functionValue Value,
 	arguments []Value,
 	typeArguments []bbq.StaticType,
+	argumentTypes []bbq.StaticType,
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
@@ -904,10 +914,12 @@ func invokeFunction(
 		}
 
 		typeArgumentsIterator := NewTypeArgumentsIterator(context, typeArguments)
+		argumentTypesIterator := NewArgumentTypesIterator(context, argumentTypes)
 
 		result := functionValue.Function(
 			context,
 			typeArgumentsIterator,
+			argumentTypesIterator,
 			receiver,
 			arguments,
 		)
@@ -928,6 +940,18 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 		}
 	}
 	return typeArguments
+}
+
+func loadArgumentTypes(vm *VM, argTypes []uint16) []bbq.StaticType {
+	var argumentTypes []bbq.StaticType
+	if len(argTypes) > 0 {
+		argumentTypes = make([]bbq.StaticType, 0, len(argTypes))
+		for _, typeIndex := range argTypes {
+			typeArg := vm.loadType(typeIndex)
+			argumentTypes = append(argumentTypes, typeArg)
+		}
+	}
+	return argumentTypes
 }
 
 func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value, isNative bool) Value {

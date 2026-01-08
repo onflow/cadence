@@ -59,6 +59,7 @@ var NativeAssertFunction = interpreter.NativeFunction(
 	func(
 		_ interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {

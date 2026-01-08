@@ -359,6 +359,7 @@ func NewNativeDeletionCheckedStorageCapabilityControllerFunction(
 	return func(
 		context NativeFunctionContext,
 		typeArguments TypeArgumentsIterator,
+		argumentTypes ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -368,6 +369,7 @@ func NewNativeDeletionCheckedStorageCapabilityControllerFunction(
 		return f(
 			context,
 			typeArguments,
+			argumentTypes,
 			receiver,
 			args,
 		)
@@ -393,6 +395,7 @@ var NativeStorageCapabilityControllerDeleteFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -418,6 +421,7 @@ var NativeStorageCapabilityControllerTargetFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -440,6 +444,7 @@ var NativeStorageCapabilityControllerRetargetFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -471,6 +476,7 @@ var NativeStorageCapabilityControllerSetTagFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {

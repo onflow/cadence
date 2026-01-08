@@ -144,6 +144,7 @@ func ParseCheckAndPrepareWithLogs(
 		func(
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
@@ -341,6 +342,7 @@ func ParseCheckAndPrepareWithOptions(
 							func(
 								context interpreter.NativeFunctionContext,
 								_ interpreter.TypeArgumentsIterator,
+								_ interpreter.ArgumentTypesIterator,
 								_ interpreter.Value,
 								arguments []interpreter.Value,
 							) interpreter.Value {
@@ -598,6 +600,7 @@ func prepareWithInterpreter(tb testing.TB,
 				func(
 					_ interpreter.NativeFunctionContext,
 					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
 					_ interpreter.Value,
 					args []interpreter.Value,
 				) interpreter.Value {
@@ -621,6 +624,7 @@ func prepareWithInterpreter(tb testing.TB,
 				func(
 					_ interpreter.NativeFunctionContext,
 					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
 					_ interpreter.Value,
 					args []interpreter.Value,
 				) interpreter.Value {
@@ -648,6 +652,7 @@ func prepareWithInterpreter(tb testing.TB,
 				func(
 					_ interpreter.NativeFunctionContext,
 					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
 					_ interpreter.Value,
 					args []interpreter.Value,
 				) interpreter.Value {

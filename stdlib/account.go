@@ -113,6 +113,7 @@ func NativeAccountConstructor(creator AccountCreator) interpreter.NativeFunction
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -238,6 +239,7 @@ func NativeGetAuthAccountFunction(handler AccountHandler) interpreter.NativeFunc
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -600,6 +602,7 @@ func nativeAccountKeysAddFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -719,6 +722,7 @@ func nativeAccountKeysGetFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -809,6 +813,7 @@ func nativeAccountKeysForEachFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -961,6 +966,7 @@ func nativeAccountKeysRevokeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1050,6 +1056,7 @@ func nativeAccountInboxPublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1145,6 +1152,7 @@ func nativeAccountInboxUnpublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1255,6 +1263,7 @@ func nativeAccountInboxClaimFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1445,6 +1454,7 @@ func nativeAccountContractsGetFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1531,6 +1541,7 @@ func nativeAccountContractsBorrowFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1716,6 +1727,7 @@ func nativeAccountContractsChangeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		argumentTypes interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2120,6 +2132,7 @@ func nativeAccountContractsTryUpdateFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) (deploymentResult interpreter.Value) {
@@ -2485,6 +2498,7 @@ func nativeAccountContractsRemoveFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2645,6 +2659,7 @@ func NativeGetAccountFunction(handler AccountHandler) interpreter.NativeFunction
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2804,6 +2819,7 @@ func nativeAccountStorageCapabilitiesGetControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2884,6 +2900,7 @@ func nativeAccountStorageCapabilitiesGetControllersFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2994,6 +3011,7 @@ func nativeAccountStorageCapabilitiesForEachControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3139,6 +3157,7 @@ func nativeAccountStorageCapabilitiesIssueFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3218,6 +3237,7 @@ func nativeAccountStorageCapabilitiesIssueWithTypeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3390,6 +3410,7 @@ func nativeAccountAccountCapabilitiesIssueFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3442,6 +3463,7 @@ func nativeAccountAccountCapabilitiesIssueWithTypeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4077,6 +4099,7 @@ func nativeAccountCapabilitiesPublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4241,6 +4264,7 @@ func nativeAccountCapabilitiesUnpublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4521,6 +4545,7 @@ func nativeAccountCapabilitiesGetFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4767,6 +4792,7 @@ func nativeAccountCapabilitiesExistsFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4864,6 +4890,7 @@ func nativeAccountAccountCapabilitiesGetControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4930,6 +4957,7 @@ func nativeAccountAccountCapabilitiesGetControllersFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -5044,6 +5072,7 @@ func nativeAccountAccountCapabilitiesForEachControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {

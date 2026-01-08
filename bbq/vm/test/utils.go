@@ -426,6 +426,7 @@ func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activation
 			func(
 				context interpreter.NativeFunctionContext,
 				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
 				_ interpreter.Value,
 				arguments []interpreter.Value,
 			) vm.Value {
@@ -548,6 +549,7 @@ func newConditionLogFunction(logs *[]string) stdlib.StandardLibraryValue {
 		func(
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			arguments []interpreter.Value,
 		) interpreter.Value {

@@ -485,6 +485,7 @@ func TestRuntimeContractDeploymentInitializerArgument(t *testing.T) {
 			func(
 				_ interpreter.NativeFunctionContext,
 				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
 				_ interpreter.Value,
 				args []interpreter.Value,
 			) interpreter.Value {

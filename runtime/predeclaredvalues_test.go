@@ -203,6 +203,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		nativeFunction := func(
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			_ []interpreter.Value,
 		) interpreter.Value {
@@ -377,6 +378,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				func(
 					_ interpreter.NativeFunctionContext,
 					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
 					_ interpreter.Value,
 					_ []interpreter.Value,
 				) interpreter.Value {
@@ -452,6 +454,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				func(
 					_ interpreter.NativeFunctionContext,
 					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
 					_ interpreter.Value,
 					_ []interpreter.Value,
 				) interpreter.Value {
@@ -572,6 +575,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				func(
 					context interpreter.NativeFunctionContext,
 					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
 					receiver interpreter.Value,
 					args []interpreter.Value,
 				) interpreter.Value {
@@ -700,6 +704,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				func(
 					_ interpreter.NativeFunctionContext,
 					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
 					_ interpreter.Value,
 					_ []interpreter.Value,
 				) interpreter.Value {
