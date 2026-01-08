@@ -1781,6 +1781,12 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 		invalidInterfaceTypeErr.ExpectedType,
 	)
 
+	assert.Contains(t,
+		invalidInterfaceTypeErr.SecondaryError(),
+		"got `fun(I): {Int: I}`, "+
+			"consider using `fun({I}): {Int: {I}}`",
+	)
+
 	fixes := invalidInterfaceTypeErr.SuggestFixes(code)
 
 	AssertEqualWithDiff(t,

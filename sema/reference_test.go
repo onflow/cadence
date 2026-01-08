@@ -4062,9 +4062,9 @@ func TestCheckInvalidReferenceOfOptionalTypeS(t *testing.T) {
 	)
 
 	assert.Contains(t,
+		invalidReferenceToOptionalTypeErr.SecondaryError(),
 		"got `fun(auth(Mutate) &(Int?)): {String: auth(Mutate) &(Int?)}`, "+
 			"consider using `fun((auth(Mutate) &Int)?): {String: (auth(Mutate) &Int)?}`",
-		invalidReferenceToOptionalTypeErr.SecondaryError(),
 	)
 
 	fixes := invalidReferenceToOptionalTypeErr.SuggestFixes(code)
