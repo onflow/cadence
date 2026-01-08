@@ -2967,11 +2967,11 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		require.ErrorAs(t, errs[0], &typeMismatchError)
 		assert.Equal(t,
-			"auth(F, Y) &[Int]?",
+			"(auth(F, Y) &[Int])?",
 			typeMismatchError.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(Y) &[Int]?",
+			"(auth(Y) &[Int])?",
 			typeMismatchError.ActualType.QualifiedString(),
 		)
 	})
@@ -3009,7 +3009,7 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[2], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(X, Y) &Int?",
+			"(auth(X, Y) &Int)?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
@@ -4169,21 +4169,21 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[0], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(E) &A?",
+			"(auth(E) &A)?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(X) &A?",
+			"(auth(X) &A)?",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 
 		require.ErrorAs(t, errs[1], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(X) &A?",
+			"(auth(X) &A)?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(E) &A?",
+			"(auth(E) &A)?",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 	})
@@ -4212,7 +4212,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[0], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(Y) &A?",
+			"(auth(Y) &A)?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
@@ -4247,7 +4247,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[0], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(Y) &A?",
+			"(auth(Y) &A)?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
@@ -4319,11 +4319,11 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[2], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(Y) &A?",
+			"(auth(Y) &A)?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(mapping M) &A?",
+			"(auth(mapping M) &A)?",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 	})
