@@ -75,6 +75,7 @@ var vmSignatureAlgorithmConstructorValue = vm.NewNativeFunctionValue(
 	func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {

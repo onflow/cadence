@@ -1140,6 +1140,7 @@ var NativeStringEncodeHexFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1152,6 +1153,7 @@ var NativeStringFromUtf8Function = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1164,6 +1166,7 @@ var NativeStringFromCharactersFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1176,6 +1179,7 @@ var NativeStringJoinFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1383,6 +1387,7 @@ var NativeStringConcatFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1400,6 +1405,7 @@ var NativeStringSliceFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1418,6 +1424,7 @@ var NativeStringContainsFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1431,6 +1438,7 @@ var NativeStringIndexFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1444,6 +1452,7 @@ var NativeStringCountFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1457,6 +1466,7 @@ var NativeStringDecodeHexFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1469,6 +1479,7 @@ var NativeStringToLowerFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1481,6 +1492,7 @@ var NativeStringSplitFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1494,6 +1506,7 @@ var NativeStringReplaceAllFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {

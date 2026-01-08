@@ -404,6 +404,7 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 		func(
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			arguments []interpreter.Value,
 		) interpreter.Value {

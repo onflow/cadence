@@ -356,8 +356,8 @@
   operands:
     - name: "typeArgs"
       type: "typeIndices"
-    - name: "argCount"
-      type: "size"
+    - name: "argTypes"
+      type: "typeIndices"
   valueEffects:
     pop:
       - name: "arguments"
@@ -974,7 +974,7 @@
   description:
     Pops a value off the stack, the target.
     Remove the value of the given type key from the target.
-    Additionally destroy if removed type is resource. 
+    Additionally destroy if removed type is resource.
   operands:
     - name: "type"
       type: "typeIndex"

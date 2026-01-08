@@ -74,6 +74,7 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 	return func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {

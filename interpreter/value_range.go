@@ -122,6 +122,7 @@ var NativeInclusiveRangeContainsFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {

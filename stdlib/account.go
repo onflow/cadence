@@ -113,6 +113,7 @@ func NativeAccountConstructor(creator AccountCreator) interpreter.NativeFunction
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -238,6 +239,7 @@ func NativeGetAuthAccountFunction(handler AccountHandler) interpreter.NativeFunc
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -600,6 +602,7 @@ func nativeAccountKeysAddFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -719,6 +722,7 @@ func nativeAccountKeysGetFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -809,6 +813,7 @@ func nativeAccountKeysForEachFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -961,6 +966,7 @@ func nativeAccountKeysRevokeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1050,6 +1056,7 @@ func nativeAccountInboxPublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1145,6 +1152,7 @@ func nativeAccountInboxUnpublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1255,6 +1263,7 @@ func nativeAccountInboxClaimFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1445,6 +1454,7 @@ func nativeAccountContractsGetFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1531,6 +1541,7 @@ func nativeAccountContractsBorrowFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1716,6 +1727,7 @@ func nativeAccountContractsChangeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		argumentTypes interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1729,12 +1741,20 @@ func nativeAccountContractsChangeFunction(
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
+		var argumentStaticTypes []sema.Type
+		for {
+			argumentType := argumentTypes.NextSema()
+			if argumentType == nil {
+				break
+			}
+			argumentStaticTypes = append(argumentStaticTypes, argumentType)
+		}
+
 		return changeAccountContracts(
 			context,
 			args,
 			argumentValueTypes,
-			// TODO: get static types from invocation
-			nil,
+			argumentStaticTypes,
 			addressValue,
 			handler,
 			isUpdate,
@@ -1758,43 +1778,11 @@ func newInterpreterAccountContractsChangeFunction(
 	}
 
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		// TODO: use nativeAccountContractsChangeFunction,
-		//   but needs support for passing static argument types
-
-		hostFunc := interpreter.NewStaticHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
+			accountContracts,
 			functionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				invocationContext := invocation.InvocationContext
-
-				args := invocation.Arguments
-
-				argumentValueTypes := make([]sema.Type, len(args))
-				for i := 0; i < len(args); i++ {
-					// TODO: optimize, avoid gathering the types
-					staticType := args[i].StaticType(context)
-					argumentValueTypes[i] = context.SemaTypeFromStaticType(staticType)
-				}
-
-				return changeAccountContracts(
-					invocationContext,
-					args,
-					argumentValueTypes,
-					invocation.ArgumentTypes,
-					addressValue,
-					handler,
-					isUpdate,
-				)
-			},
-		)
-
-		var self interpreter.Value = accountContracts
-
-		return interpreter.NewBoundFunctionValue(
-			context,
-			hostFunc,
-			&self,
-			nil,
+			nativeAccountContractsChangeFunction(handler, &addressValue, isUpdate),
 		)
 	}
 }
@@ -1870,14 +1858,8 @@ func changeAccountContracts(
 	}
 
 	constructorArguments := arguments[requiredArgumentCount:]
-
 	constructorArgumentValueTypes := argumentValueTypes[requiredArgumentCount:]
-
-	var constructorArgumentStaticTypes []sema.Type
-	// TODO: add support for invocation argument types to compiler/VM
-	if len(argumentStaticTypes) > 0 {
-		constructorArgumentStaticTypes = argumentStaticTypes[requiredArgumentCount:]
-	}
+	constructorArgumentStaticTypes := argumentStaticTypes[requiredArgumentCount:]
 
 	newCode, err := interpreter.ByteArrayValueToByteSlice(context, newCodeValue)
 	if err != nil {
@@ -2120,6 +2102,7 @@ func nativeAccountContractsTryUpdateFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		argumentTypes interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) (deploymentResult interpreter.Value) {
@@ -2154,20 +2137,29 @@ func nativeAccountContractsTryUpdateFunction(
 			deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
 		}()
 
-		argumentTypes := make([]sema.Type, len(args))
+		// TODO: optimize, avoid gathering the types
+		argumentValueTypes := make([]sema.Type, len(args))
 		for i := 0; i < len(args); i++ {
-			// TODO: optimize, avoid gathering the types
 			staticType := args[i].StaticType(context)
-			argumentTypes[i] = context.SemaTypeFromStaticType(staticType)
+			argumentValueTypes[i] = context.SemaTypeFromStaticType(staticType)
 		}
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
+		var argumentStaticTypes []sema.Type
+		for {
+			argumentType := argumentTypes.NextSema()
+			if argumentType == nil {
+				break
+			}
+			argumentStaticTypes = append(argumentStaticTypes, argumentType)
+		}
+
 		deployedContract = changeAccountContracts(
 			context,
 			args,
-			argumentTypes,
-			nil,
+			argumentValueTypes,
+			argumentStaticTypes,
 			addressValue,
 			handler,
 			true, // isUpdate = true for TryUpdate
@@ -2422,10 +2414,11 @@ func instantiateContract(
 	// Check arguments match parameter
 
 	for argumentIndex := 0; argumentIndex < argumentCount; argumentIndex++ {
-		argumentValueType := constructorArgumentValueTypes[argumentIndex]
+
 		parameter := constructorParameters[argumentIndex]
 		parameterType := parameter.TypeAnnotation.Type
 
+		argumentValueType := constructorArgumentValueTypes[argumentIndex]
 		if !sema.IsSubType(argumentValueType, parameterType) {
 
 			return nil, &InvalidContractArgumentError{
@@ -2435,18 +2428,12 @@ func instantiateContract(
 			}
 		}
 
-		// If static type is provided, check it as well
-		// TODO: requires support in compiler/VM to pass static argument types
-
-		if argumentIndex < len(constructorArgumentStaticTypes) {
-			argumentStaticType := constructorArgumentStaticTypes[argumentIndex]
-
-			if !sema.IsSubType(argumentStaticType, parameterType) {
-				return nil, &InvalidContractArgumentError{
-					Index:        argumentIndex,
-					ExpectedType: parameterType,
-					ActualType:   argumentStaticType,
-				}
+		argumentStaticType := constructorArgumentStaticTypes[argumentIndex]
+		if !sema.IsSubType(argumentStaticType, parameterType) {
+			return nil, &InvalidContractArgumentError{
+				Index:        argumentIndex,
+				ExpectedType: parameterType,
+				ActualType:   argumentStaticType,
 			}
 		}
 	}
@@ -2485,6 +2472,7 @@ func nativeAccountContractsRemoveFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2645,6 +2633,7 @@ func NativeGetAccountFunction(handler AccountHandler) interpreter.NativeFunction
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2804,6 +2793,7 @@ func nativeAccountStorageCapabilitiesGetControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2884,6 +2874,7 @@ func nativeAccountStorageCapabilitiesGetControllersFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2994,6 +2985,7 @@ func nativeAccountStorageCapabilitiesForEachControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3139,6 +3131,7 @@ func nativeAccountStorageCapabilitiesIssueFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3218,6 +3211,7 @@ func nativeAccountStorageCapabilitiesIssueWithTypeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3390,6 +3384,7 @@ func nativeAccountAccountCapabilitiesIssueFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3442,6 +3437,7 @@ func nativeAccountAccountCapabilitiesIssueWithTypeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4077,6 +4073,7 @@ func nativeAccountCapabilitiesPublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4241,6 +4238,7 @@ func nativeAccountCapabilitiesUnpublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4521,6 +4519,7 @@ func nativeAccountCapabilitiesGetFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4767,6 +4766,7 @@ func nativeAccountCapabilitiesExistsFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4864,6 +4864,7 @@ func nativeAccountAccountCapabilitiesGetControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4930,6 +4931,7 @@ func nativeAccountAccountCapabilitiesGetControllersFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -5044,6 +5046,7 @@ func nativeAccountAccountCapabilitiesForEachControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {

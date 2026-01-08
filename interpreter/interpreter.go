@@ -4045,6 +4045,7 @@ var NativeMetaTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		typeArguments TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		_ []Value,
 	) Value {
@@ -4058,6 +4059,7 @@ var NativeOptionalTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4071,6 +4073,7 @@ var NativeVariableSizedArrayTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4084,6 +4087,7 @@ var NativeConstantSizedArrayTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4102,6 +4106,7 @@ var NativeDictionaryTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4120,6 +4125,7 @@ var NativeCompositeTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4133,6 +4139,7 @@ var NativeFunctionTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4151,6 +4158,7 @@ var NativeReferenceTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4169,6 +4177,7 @@ var NativeIntersectionTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4185,6 +4194,7 @@ var NativeCapabilityTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4198,6 +4208,7 @@ var NativeInclusiveRangeTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4211,6 +4222,7 @@ var NativeAddressFromBytesFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4224,6 +4236,7 @@ var NativeAddressFromStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4237,6 +4250,7 @@ func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value 
 	return func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4248,6 +4262,7 @@ func NativeFromStringFunction(parser StringValueParser) NativeFunction {
 	return func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4260,6 +4275,7 @@ func NativeFromBigEndianBytesFunction(byteLength uint, converter func(memoryGaug
 	return func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4283,6 +4299,7 @@ var NativeStringFunction = NativeFunction(
 	func(
 		_ NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		_ []Value,
 	) Value {
@@ -4510,6 +4527,7 @@ func NativeAccountStorageIterateFunction(
 	return func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -4726,6 +4744,7 @@ func NativeAccountStorageSaveFunction(
 	return func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -4810,6 +4829,7 @@ func NativeAccountStorageTypeFunction(
 	return func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -4904,6 +4924,7 @@ func NativeAccountStorageReadFunction(
 	return func(
 		context NativeFunctionContext,
 		typeArguments TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -5005,6 +5026,7 @@ func NativeAccountStorageBorrowFunction(
 	return func(
 		context NativeFunctionContext,
 		typeArguments TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -5079,6 +5101,7 @@ func NativeAccountStorageCheckFunction(
 	return func(
 		context NativeFunctionContext,
 		typeArguments TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -5510,6 +5533,7 @@ var NativeIsInstanceFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -5549,6 +5573,7 @@ var NativeGetTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -6001,6 +6026,7 @@ func NativeCapabilityBorrowFunction(
 	return func(
 		context NativeFunctionContext,
 		typeArguments TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -6108,6 +6134,7 @@ func NativeCapabilityCheckFunction(
 	return func(
 		context NativeFunctionContext,
 		typeArguments TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {

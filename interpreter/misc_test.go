@@ -1773,6 +1773,7 @@ func TestInterpretHostFunction(t *testing.T) {
 		func(
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
@@ -1823,6 +1824,7 @@ func newAssertArgumentsFunction(t *testing.T, called *bool) interpreter.NativeFu
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -5111,6 +5113,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			func(
 				context interpreter.NativeFunctionContext,
 				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
 				_ interpreter.Value,
 				args []interpreter.Value,
 			) interpreter.Value {
@@ -13571,6 +13574,7 @@ func newCountAndGetKeyFunction(key int64, getKeyInvocationsCount *int) interpret
 	return func(
 		_ interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		_ []interpreter.Value,
 	) interpreter.Value {
@@ -13603,6 +13607,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 			func(
 				_ interpreter.NativeFunctionContext,
 				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
 				_ interpreter.Value,
 				_ []interpreter.Value,
 			) interpreter.Value {
@@ -14036,6 +14041,7 @@ func TestInterpretInvocationEvaluationAndTransferOrder(t *testing.T) {
 		func(
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {

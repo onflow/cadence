@@ -143,6 +143,7 @@ var NativeNumberToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -154,6 +155,7 @@ var NativeNumberToBigEndianBytesFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -165,6 +167,7 @@ var NativeNumberSaturatingAddFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -177,6 +180,7 @@ var NativeNumberSaturatingSubtractFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -189,6 +193,7 @@ var NativeNumberSaturatingMultiplyFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -201,6 +206,7 @@ var NativeNumberSaturatingDivideFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {

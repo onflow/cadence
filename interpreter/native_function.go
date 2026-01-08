@@ -38,6 +38,11 @@ type TypeArgumentsIterator interface {
 	NextSema() sema.Type
 }
 
+type ArgumentTypesIterator interface {
+	NextStatic() StaticType
+	NextSema() sema.Type
+}
+
 type EmptyTypeArgumentsIterator struct{}
 
 var _ TypeArgumentsIterator = EmptyTypeArgumentsIterator{}
@@ -51,6 +56,20 @@ func (EmptyTypeArgumentsIterator) NextSema() sema.Type {
 }
 
 var TheEmptyTypeArgumentsIterator TypeArgumentsIterator = EmptyTypeArgumentsIterator{}
+
+type EmptyArgumentTypesIterator struct{}
+
+var _ ArgumentTypesIterator = EmptyArgumentTypesIterator{}
+
+func (EmptyArgumentTypesIterator) NextStatic() StaticType {
+	return nil
+}
+
+func (EmptyArgumentTypesIterator) NextSema() sema.Type {
+	return nil
+}
+
+var TheEmptyArgumentTypesIterator ArgumentTypesIterator = EmptyArgumentTypesIterator{}
 
 type InterpreterTypeArgumentsIterator struct {
 	memoryGauge common.MemoryGauge
@@ -94,6 +113,41 @@ func (i *InterpreterTypeArgumentsIterator) NextSema() sema.Type {
 	return current.Value
 }
 
+type InterpreterArgumentTypesIterator struct {
+	index         int
+	memoryGauge   common.MemoryGauge
+	argumentTypes []sema.Type
+}
+
+var _ ArgumentTypesIterator = &InterpreterArgumentTypesIterator{}
+
+func NewInterpreterArgumentTypesIterator(
+	memoryGauge common.MemoryGauge,
+	argumentTypes []sema.Type,
+) *InterpreterArgumentTypesIterator {
+	return &InterpreterArgumentTypesIterator{
+		memoryGauge:   memoryGauge,
+		argumentTypes: argumentTypes,
+	}
+}
+
+func (i *InterpreterArgumentTypesIterator) NextStatic() StaticType {
+	semaType := i.NextSema()
+	if semaType == nil {
+		return nil
+	}
+	return ConvertSemaToStaticType(i.memoryGauge, semaType)
+}
+
+func (i *InterpreterArgumentTypesIterator) NextSema() sema.Type {
+	current := i.index
+	if current >= len(i.argumentTypes) {
+		return nil
+	}
+	i.index++
+	return i.argumentTypes[current]
+}
+
 func NewTypeArgumentsIterator(
 	context InvocationContext,
 	arguments *sema.TypeParameterTypeOrderedMap,
@@ -104,9 +158,20 @@ func NewTypeArgumentsIterator(
 	return NewInterpreterTypeArgumentsIterator(context, arguments)
 }
 
+func NewArgumentTypesIterator(
+	context InvocationContext,
+	argumentTypes []sema.Type,
+) ArgumentTypesIterator {
+	if len(argumentTypes) == 0 {
+		return TheEmptyArgumentTypesIterator
+	}
+	return NewInterpreterArgumentTypesIterator(context, argumentTypes)
+}
+
 type NativeFunction func(
 	context NativeFunctionContext,
 	typeArguments TypeArgumentsIterator,
+	argumentTypes ArgumentTypesIterator,
 	receiver Value,
 	args []Value,
 ) Value
@@ -123,10 +188,12 @@ func AdaptNativeFunctionForInterpreter(fn NativeFunction) HostFunction {
 		}
 
 		typeArgumentsIterator := NewTypeArgumentsIterator(context, invocation.TypeArguments)
+		argumentTypesIterator := NewArgumentTypesIterator(context, invocation.ArgumentTypes)
 
 		return fn(
 			context,
 			typeArgumentsIterator,
+			argumentTypesIterator,
 			receiver,
 			invocation.Arguments,
 		)

@@ -1111,6 +1111,7 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 	nativeFunction := func(
 		_ interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		_ []interpreter.Value,
 	) interpreter.Value {
