@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
@@ -265,6 +266,10 @@ const (
 func (PrimitiveStaticType) isStaticType() {}
 
 func (PrimitiveStaticType) isConformingStaticType() {}
+
+func (PrimitiveStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
 
 func (t PrimitiveStaticType) elementSize() uint {
 	switch t {

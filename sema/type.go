@@ -236,7 +236,8 @@ func parenthesizedTypeString(
 }
 
 // typeNeedsParentheses determines whether the given type needs parentheses.
-// NOTE: This should match ast.typeNeedsParentheses.
+// NOTE: This should match ast.typeNeedsParentheses,
+// just like interpreter.staticTypeNeedsParentheses should.
 func typeNeedsParentheses(ty Type, parentPrecedence ast.TypePrecedence) bool {
 	// Optional type wrapping function type or authorized reference type needs parentheses,
 	// e.g. (fun(): Int)? or (auth(E) &T)?

@@ -25,6 +25,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
@@ -48,11 +49,57 @@ type StaticType interface {
 	Equal(other StaticType) bool
 	Encode(e *cbor.StreamEncoder) error
 	MeteredString(memoryGauge common.MemoryGauge) string
+	Precedence() ast.TypePrecedence
 	ID() TypeID
 	IsDeprecated() bool
 }
 
 type TypeID = common.TypeID
+
+func parenthesizedStaticTypeString(
+	ty StaticType,
+	parentPrecedence ast.TypePrecedence,
+	formatter func(StaticType) string,
+) string {
+	if ty == nil {
+		return ""
+	}
+
+	typeString := formatter(ty)
+	subPrecedence := ty.Precedence()
+	if parentPrecedence <= subPrecedence &&
+		!staticTypeNeedsParentheses(ty, parentPrecedence) {
+
+		return typeString
+	}
+
+	return fmt.Sprintf("(%s)", typeString)
+}
+
+// staticTypeNeedsParentheses determines whether the given static type needs parentheses.
+// NOTE: This should match sema.typeNeedsParentheses, which in turn should match ast.typeNeedsParentheses.
+func staticTypeNeedsParentheses(ty StaticType, parentPrecedence ast.TypePrecedence) bool {
+	// Optional type wrapping function type or authorized reference type needs parentheses,
+	// e.g. (fun(): Int)? or (auth(E) &T)?
+
+	if parentPrecedence != ast.TypePrecedenceOptional {
+		return false
+	}
+
+	switch typedType := ty.(type) {
+	case FunctionStaticType:
+		return true
+	case *ReferenceStaticType:
+		if typedType.Authorization == nil ||
+			typedType.Authorization.Equal(UnauthorizedAccess) ||
+			typedType.Authorization.Equal(InaccessibleAccess) {
+			return false
+		}
+		return true
+	default:
+		return false
+	}
+}
 
 // CompositeStaticType
 
@@ -109,6 +156,10 @@ func (*CompositeStaticType) isConformingStaticType() {}
 
 func (*CompositeStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (*CompositeStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (t *CompositeStaticType) String() string {
@@ -194,6 +245,10 @@ func (*InterfaceStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*InterfaceStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t *InterfaceStaticType) String() string {
 	return t.MeteredString(nil)
 }
@@ -264,6 +319,10 @@ func (*VariableSizedStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*VariableSizedStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (*VariableSizedStaticType) isArrayStaticType() {}
 
 func (t *VariableSizedStaticType) ElementType() StaticType {
@@ -322,6 +381,10 @@ func (InclusiveRangeStaticType) isStaticType() {}
 
 func (InclusiveRangeStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (InclusiveRangeStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceInstantiation
 }
 
 func (t InclusiveRangeStaticType) String() string {
@@ -404,6 +467,10 @@ func (*ConstantSizedStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*ConstantSizedStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (*ConstantSizedStaticType) isArrayStaticType() {}
 
 func (t *ConstantSizedStaticType) ElementType() StaticType {
@@ -482,6 +549,10 @@ func (*DictionaryStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*DictionaryStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t *DictionaryStaticType) String() string {
 	return t.MeteredString(nil)
 }
@@ -539,12 +610,22 @@ func (*OptionalStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*OptionalStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceOptional
+}
+
 func (t *OptionalStaticType) String() string {
 	return t.MeteredString(nil)
 }
 
 func (t *OptionalStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	typeStr := t.Type.MeteredString(memoryGauge)
+	typeStr := parenthesizedStaticTypeString(
+		t.Type,
+		t.Precedence(),
+		func(ty StaticType) string {
+			return ty.MeteredString(memoryGauge)
+		},
+	)
 
 	common.UseMemory(memoryGauge, common.OptionalStaticTypeStringMemoryUsage)
 	return fmt.Sprintf("%s?", typeStr)
@@ -599,6 +680,10 @@ func (*IntersectionStaticType) isStaticType() {}
 
 func (*IntersectionStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (*IntersectionStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (t *IntersectionStaticType) String() string {
@@ -899,12 +984,22 @@ func (*ReferenceStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*ReferenceStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceReference
+}
+
 func (t *ReferenceStaticType) String() string {
 	return t.MeteredString(nil)
 }
 
 func (t *ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	typeStr := t.ReferencedType.MeteredString(memoryGauge)
+	typeStr := parenthesizedStaticTypeString(
+		t.ReferencedType,
+		t.Precedence(),
+		func(ty StaticType) string {
+			return ty.MeteredString(memoryGauge)
+		},
+	)
 	authString := ""
 	if !t.Authorization.Equal(InaccessibleAccess) && !t.Authorization.Equal(UnauthorizedAccess) {
 		authString = t.Authorization.MeteredString(memoryGauge)
@@ -963,6 +1058,10 @@ func (*CapabilityStaticType) isStaticType() {}
 
 func (*CapabilityStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (*CapabilityStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceInstantiation
 }
 
 func (t *CapabilityStaticType) String() string {
@@ -1492,6 +1591,10 @@ func (FunctionStaticType) isStaticType() {}
 
 func (FunctionStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (FunctionStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (t FunctionStaticType) String() string {
