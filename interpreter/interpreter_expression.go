@@ -1291,9 +1291,11 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// otherwise dynamic cast now always unboxes optionals
 			value = Unbox(value)
 		}
-		valueSemaType := MustSemaTypeOfValue(value, interpreter)
-		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
-		isSubType := IsSubTypeOfSemaType(interpreter, valueStaticType, expectedType)
+
+		valueStaticType := value.StaticType(interpreter)
+		valueSemaType := interpreter.SemaTypeFromStaticType(valueStaticType)
+
+		isSubType := sema.IsSubType(valueSemaType, expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
