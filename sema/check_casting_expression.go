@@ -99,6 +99,8 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 				ResourceInvalidationKindMoveDefinite,
 			)
 
+			// Record as a resource move (when applicable),
+			// because in destructors, nested resource moves are allowed.
 			if leftHandType.IsResourceType() {
 				checker.elaborateNestedResourceMoveExpression(leftHandExpression)
 			}
