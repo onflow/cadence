@@ -88,7 +88,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		require.Equal(t, expectedCodeHash[:], actualCodeHash)
 	}
 
-	expectFailure := func(expectedErrorMessage string, programsCount int) expectation {
+	expectFailure := func(expectedErrorMessage string, codesCount, programsCount int) expectation {
 		return func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
 			RequireError(t, err)
 
@@ -97,7 +97,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 			assert.ErrorContains(t, runtimeErr, expectedErrorMessage)
 
-			assert.Len(t, runtimeErr.Codes, 2)
+			assert.Len(t, runtimeErr.Codes, codesCount)
 			assert.Len(t, runtimeErr.Programs, programsCount)
 
 			assert.Nil(t, accountCode)
@@ -234,6 +234,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				expectedErrorMessage,
 				2,
+				2,
 			),
 		})
 	})
@@ -256,6 +257,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				2,
 			),
 		})
@@ -295,6 +297,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				expectedErrorMessage,
 				2,
+				2,
 			),
 		})
 	})
@@ -321,6 +324,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			arguments: []string{},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				1,
 			),
 		})
@@ -349,6 +353,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			arguments: []string{},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				2,
 			),
 		})
@@ -388,8 +393,9 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					Value: interpreter.TrueValue,
 				},
 				check: expectFailure(
-					"Execution failed:\nerror: invalid argument at index 0: expected type `Bool`, got `Int`",
-					2,
+					"invalid transfer of value: expected `Int`, got `Bool`",
+					1,
+					1,
 				),
 			})
 		})
