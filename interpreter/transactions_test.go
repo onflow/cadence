@@ -647,6 +647,8 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 
 		t.Parallel()
 
+		var hadCheckerError bool
+
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {}
@@ -672,12 +674,15 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 					Location: common.TransactionLocation{},
 				},
 				HandleCheckerError: func(err error) {
+					hadCheckerError = true
 					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
 		)
 		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
 
 		err = inter.InvokeTransaction(nil)
 
@@ -688,6 +693,8 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 	t.Run("function argument, without unary move", func(t *testing.T) {
 
 		t.Parallel()
+
+		var hadCheckerError bool
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
@@ -714,12 +721,15 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 					Location: common.TransactionLocation{},
 				},
 				HandleCheckerError: func(err error) {
+					hadCheckerError = true
 					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
 				},
 			},
 		)
 		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
 
 		err = inter.InvokeTransaction(nil)
 		var invalidatedResourceError *interpreter.InvalidatedResourceError
@@ -729,6 +739,8 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 	t.Run("assignment", func(t *testing.T) {
 
 		t.Parallel()
+
+		var hadCheckerError bool
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
@@ -755,12 +767,15 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 					Location: common.TransactionLocation{},
 				},
 				HandleCheckerError: func(err error) {
+					hadCheckerError = true
 					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
 		)
 		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
 
 		err = inter.InvokeTransaction(nil)
 
@@ -771,6 +786,8 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 	t.Run("non-failable cast", func(t *testing.T) {
 
 		t.Parallel()
+
+		var hadCheckerError bool
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
@@ -796,12 +813,15 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 					Location: common.TransactionLocation{},
 				},
 				HandleCheckerError: func(err error) {
+					hadCheckerError = true
 					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
 		)
 		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
 
 		err = inter.InvokeTransaction(nil)
 
@@ -812,6 +832,8 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 	t.Run("destroy", func(t *testing.T) {
 
 		t.Parallel()
+
+		var hadCheckerError bool
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
@@ -835,12 +857,15 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 					Location: common.TransactionLocation{},
 				},
 				HandleCheckerError: func(err error) {
+					hadCheckerError = true
 					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
 		)
 		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
 
 		err = inter.InvokeTransaction(nil)
 
@@ -851,6 +876,8 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 	t.Run("force unwrap", func(t *testing.T) {
 
 		t.Parallel()
+
+		var hadCheckerError bool
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
@@ -876,12 +903,15 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 					Location: common.TransactionLocation{},
 				},
 				HandleCheckerError: func(err error) {
+					hadCheckerError = true
 					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
 		)
 		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
 
 		err = inter.InvokeTransaction(nil)
 
@@ -893,12 +923,14 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 
 		t.Parallel()
 
+		var hadCheckerError bool
+
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {}
 
                 transaction {
-                    var r: @R?
+                    var r: @R
 
                     prepare() {
                         self.r <- create R()
@@ -917,12 +949,15 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 					Location: common.TransactionLocation{},
 				},
 				HandleCheckerError: func(err error) {
+					hadCheckerError = true
 					errs := RequireCheckerErrors(t, err, 1)
 					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 				},
 			},
 		)
 		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
 
 		err = inter.InvokeTransaction(nil)
 
