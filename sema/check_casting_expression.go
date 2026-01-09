@@ -98,6 +98,10 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 				leftHandType,
 				ResourceInvalidationKindMoveDefinite,
 			)
+
+			if leftHandType.IsResourceType() {
+				checker.elaborateNestedResourceMoveExpression(leftHandExpression)
+			}
 		}
 	}
 

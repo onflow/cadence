@@ -768,4 +768,45 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 		require.ErrorAs(t, err, &useBeforeInitializationError)
 	})
 
+	t.Run("non-failable cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        let r <- self.r as @R
+                        let r2 <- self.r as @R
+                        destroy r
+                        destroy r2
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
+
 }
