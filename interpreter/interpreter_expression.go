@@ -195,12 +195,15 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 		get = func(_ bool) Value {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
 			value := target.RemoveKey(interpreter, transferredIndexingValue)
+
+			// Insert a placeholder value at the removed index to mark it as deleted.
 			// Note: Must use `InsertKey` here, not `SetKey`,
 			// and disable mutation check, because the placeholder is not a real value.
+			placeholder := &PlaceholderValue{}
 			target.InsertKeyWithMutationCheck(
 				interpreter,
 				transferredIndexingValue,
-				Placeholder,
+				placeholder,
 				false,
 			)
 			return value

@@ -713,7 +713,7 @@ func (v *DictionaryValue) SetKeyWithMutationCheck(
 	case NilValue:
 		existingValue = v.Remove(context, keyValue)
 
-	case PlaceholderValue:
+	case *PlaceholderValue:
 		// NO-OP
 
 	default:

@@ -789,12 +789,14 @@ func opRemoveIndex(vm *VM) {
 	containerValue := container.(interpreter.ValueIndexableValue)
 	element := containerValue.RemoveKey(context, index)
 
+	// Insert a placeholder value at the removed index to mark it as deleted.
+	placeholder := &interpreter.PlaceholderValue{}
 	// Note: Must use `InsertKey` here, not `SetKey`,
 	// and disable mutation check, because the placeholder is not a real value.
 	containerValue.InsertKeyWithMutationCheck(
 		context,
 		index,
-		interpreter.Placeholder,
+		placeholder,
 		false,
 	)
 	vm.push(element)
