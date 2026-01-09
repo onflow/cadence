@@ -809,4 +809,42 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 		require.ErrorAs(t, err, &useBeforeInitializationError)
 	})
 
+	t.Run("destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        destroy self.r
+                        destroy self.r
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
 }

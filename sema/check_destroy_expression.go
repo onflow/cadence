@@ -34,6 +34,10 @@ func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression
 		ResourceInvalidationKindDestroyDefinite,
 	)
 
+	if valueType.IsResourceType() {
+		checker.elaborateNestedResourceMoveExpression(expression.Expression)
+	}
+
 	// The destruction of any resource type (even compound resource types)
 
 	if valueType.IsInvalidType() {
