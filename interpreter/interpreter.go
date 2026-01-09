@@ -1923,6 +1923,17 @@ func ConvertAndBoxWithValidation(
 	valueType sema.Type,
 	targetType sema.Type,
 ) Value {
+	// Defensively check the actual value's type matches the expected value type.
+	valueStaticType := transferredValue.StaticType(context)
+	if !IsSubTypeOfSemaType(context, valueStaticType, valueType) {
+		resultSemaType := context.SemaTypeFromStaticType(valueStaticType)
+
+		panic(&ValueTransferTypeError{
+			ExpectedType: valueType,
+			ActualType:   resultSemaType,
+		})
+	}
+
 	result := ConvertAndBox(
 		context,
 		transferredValue,

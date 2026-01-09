@@ -68,7 +68,7 @@ var ConstantTransferAndConvertPattern = PeepholePattern{
 		// If the constant already has the same type as the target type of the conversion,
 		// just keep the constant.
 		constantKind := compiler.constants[getConstant.Constant].kind
-		targetType := compiler.types[transferAndConvert.Type]
+		targetType := compiler.types[transferAndConvert.TargetType]
 		if constantKind == constant.FromSemaType(targetType) {
 			return []opcode.Instruction{getConstant}
 		}
@@ -85,7 +85,7 @@ var PathTransferAndConvertPattern = PeepholePattern{
 		getPath := instructions[0].(opcode.InstructionNewPath)
 		transferAndConvert := instructions[1].(opcode.InstructionTransferAndConvert)
 
-		semaType := compiler.types[transferAndConvert.Type]
+		semaType := compiler.types[transferAndConvert.TargetType]
 
 		// check if optimization is applicable
 		switch getPath.Domain {
