@@ -460,7 +460,9 @@
   description:
     Pops a value off the stack, transfer and converts it to the given type, and then pushes it back on to the stack.
   operands:
-    - name: "type"
+    - name: "valueType"
+      type: "typeIndex"
+    - name: "targetType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -474,7 +476,9 @@
   description:
     Pops a value off the stack, converts it to the given type, and then pushes it back on to the stack.
   operands:
-    - name: "type"
+    - name: "valueType"
+      type: "typeIndex"
+    - name: "targetType"
       type: "typeIndex"
   valueEffects:
     pop:

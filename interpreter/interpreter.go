@@ -1923,6 +1923,17 @@ func ConvertAndBoxWithValidation(
 	valueType sema.Type,
 	targetType sema.Type,
 ) Value {
+	// Defensively check the actual value's type matches the expected value type.
+	valueStaticType := transferredValue.StaticType(context)
+	if !IsSubTypeOfSemaType(context, valueStaticType, valueType) {
+		resultSemaType := context.SemaTypeFromStaticType(valueStaticType)
+
+		panic(&ValueTransferTypeError{
+			ExpectedType: valueType,
+			ActualType:   resultSemaType,
+		})
+	}
+
 	result := ConvertAndBox(
 		context,
 		transferredValue,
@@ -2339,7 +2350,17 @@ func convert(
 		}
 
 	case *sema.ReferenceType:
+
+		// Defensively check that we never create a reference to an optional type
+		if _, ok := unwrappedTargetType.Type.(*sema.OptionalType); ok {
+			panic(errors.NewUnexpectedError(
+				"unsupported reference to optional target type: %s",
+				unwrappedTargetType,
+			))
+		}
+
 		targetAuthorization := ConvertSemaAccessToStaticAuthorization(context, unwrappedTargetType.Authorization)
+
 		switch ref := value.(type) {
 		case *EphemeralReferenceValue:
 			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {

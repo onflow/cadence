@@ -3609,6 +3609,168 @@ func TestInterpretOptionalMap(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("optional reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {
+              fun map(f: fun(AnyStruct): String): String {
+                  return "S.map"
+              }
+          }
+
+          fun test(): String?? {
+              let s: S = S()
+              let sRef: &S? = &s as &S
+              return sRef.map(fun(s2: &S?): String? {
+                  return "Optional.map"
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				nil,
+				interpreter.NewSomeValueNonCopying(
+					nil,
+					interpreter.NewUnmeteredStringValue("Optional.map"),
+				),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference to optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+              struct S {
+                  fun map(f: fun(AnyStruct): String): String {
+                      return "S.map"
+                  }
+              }
+
+              fun test(): String?? {
+                  let s: S? = S()
+                  let sRef: AnyStruct? = &s as &AnyStruct?
+                  return sRef.map(fun(s2: AnyStruct): String? {
+                      return "Optional.map"
+                  })
+              }
+            `,
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				nil,
+				interpreter.NewSomeValueNonCopying(
+					nil,
+					interpreter.NewUnmeteredStringValue("Optional.map"),
+				),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference to optional, invalid type", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t, `
+              struct S {
+                  fun map(f: fun(AnyStruct): String): String {
+                      return "S.map"
+                  }
+              }
+
+              fun test(): String?? {
+                  let s: S = S()
+                  let sRef: &(S?) = &s as &S
+                  return sRef.map(fun(s2: S): String? {
+                      return "Optional.map"
+                  })
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		RequireError(t, err)
+		require.ErrorContains(t, err, "unexpected: unsupported reference to optional target type")
+	})
+}
+
+func TestInterpretConvertInnerBoxing(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array of optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+
+          fun test(): Type {
+              let s: [Int?] = [1]
+              return s[0].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+
+		require.Equal(t,
+			interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
+			typeValue.Type,
+		)
+	})
+
+	t.Run("reference of optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              fun test(): Type {
+                  let ref: &(Int?) = &1 as &Int
+                  return ref.getType()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorContains(t, err, "unexpected: unsupported reference to optional target type")
+	})
 }
 
 func TestInterpretCompositeNilEquality(t *testing.T) {
@@ -13901,6 +14063,54 @@ func TestInterpretInvocationEvaluationAndTransferOrder(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	require.NoError(t, err)
+}
+
+func TestInterpreterValueTransferRuntimeCheck(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("mismatching value type", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+            fun test(v1: String) {
+                let v2: AnyStruct = v1
+            }
+            `,
+		)
+
+		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
+
+	t.Run("mismatching target type", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+            fun test(v1: Int) {
+                let v2: String = v1
+            }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
 }
 
 func TestInterpretPlaceholderConfusion(t *testing.T) {

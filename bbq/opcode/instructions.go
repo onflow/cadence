@@ -1443,7 +1443,8 @@ func (i InstructionTransfer) Encode(code *[]byte) {
 //
 // Pops a value off the stack, transfer and converts it to the given type, and then pushes it back on to the stack.
 type InstructionTransferAndConvert struct {
-	Type uint16
+	ValueType  uint16
+	TargetType uint16
 }
 
 var _ Instruction = InstructionTransferAndConvert{}
@@ -1461,7 +1462,9 @@ func (i InstructionTransferAndConvert) String() string {
 
 func (i InstructionTransferAndConvert) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "valueType", i.ValueType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "targetType", i.TargetType, colorize)
 }
 
 func (i InstructionTransferAndConvert) ResolvedOperandsString(sb *strings.Builder,
@@ -1470,16 +1473,20 @@ func (i InstructionTransferAndConvert) ResolvedOperandsString(sb *strings.Builde
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
 }
 
 func (i InstructionTransferAndConvert) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.ValueType)
+	emitUint16(code, i.TargetType)
 }
 
 func DecodeTransferAndConvert(ip *uint16, code []byte) (i InstructionTransferAndConvert) {
-	i.Type = decodeUint16(ip, code)
+	i.ValueType = decodeUint16(ip, code)
+	i.TargetType = decodeUint16(ip, code)
 	return i
 }
 
@@ -1487,7 +1494,8 @@ func DecodeTransferAndConvert(ip *uint16, code []byte) (i InstructionTransferAnd
 //
 // Pops a value off the stack, converts it to the given type, and then pushes it back on to the stack.
 type InstructionConvert struct {
-	Type uint16
+	ValueType  uint16
+	TargetType uint16
 }
 
 var _ Instruction = InstructionConvert{}
@@ -1505,7 +1513,9 @@ func (i InstructionConvert) String() string {
 
 func (i InstructionConvert) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "valueType", i.ValueType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "targetType", i.TargetType, colorize)
 }
 
 func (i InstructionConvert) ResolvedOperandsString(sb *strings.Builder,
@@ -1514,16 +1524,20 @@ func (i InstructionConvert) ResolvedOperandsString(sb *strings.Builder,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
 }
 
 func (i InstructionConvert) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.ValueType)
+	emitUint16(code, i.TargetType)
 }
 
 func DecodeConvert(ip *uint16, code []byte) (i InstructionConvert) {
-	i.Type = decodeUint16(ip, code)
+	i.ValueType = decodeUint16(ip, code)
+	i.TargetType = decodeUint16(ip, code)
 	return i
 }
 

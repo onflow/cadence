@@ -1119,13 +1119,12 @@ func getRawStringConstant(vm *VM, index uint16) string {
 }
 
 func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	valueType := vm.loadType(ins.ValueType)
+	targetType := vm.loadType(ins.TargetType)
 
 	context := vm.context
 
 	value := vm.peek()
-	valueType := value.StaticType(context)
 
 	transferredValue := interpreter.TransferAndConvert(
 		context,
@@ -1155,13 +1154,12 @@ func opTransfer(vm *VM) {
 }
 
 func opConvert(vm *VM, ins opcode.InstructionConvert) {
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	valueType := vm.loadType(ins.ValueType)
+	targetType := vm.loadType(ins.TargetType)
 
 	context := vm.context
 
 	value := vm.peek()
-	valueType := value.StaticType(context)
 
 	transferredValue := interpreter.ConvertAndBoxWithValidation(
 		context,
