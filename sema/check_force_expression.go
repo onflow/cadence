@@ -40,6 +40,10 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) Ty
 		ResourceInvalidationKindMoveDefinite,
 	)
 
+	if valueType.IsResourceType() {
+		checker.elaborateNestedResourceMoveExpression(expression.Expression)
+	}
+
 	if checker.Config.ExtendedElaborationEnabled {
 		checker.Elaboration.SetForceExpressionType(expression, valueType)
 	}
