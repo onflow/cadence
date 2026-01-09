@@ -1008,4 +1008,51 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 		assert.True(t, hadCheckerError)
 	})
 
+	t.Run("nil coalescing", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R?
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        let r <- self.r ?? nil
+                        let r2 <- self.r ?? nil
+                        destroy r
+                        destroy r2
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
 }
