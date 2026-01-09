@@ -2364,6 +2364,7 @@ func TestDecodeFields(t *testing.T) {
 				},
 				nil,
 			)),
+			Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
 		},
 	).WithType(NewEventType(
 		TestLocation,
@@ -2492,6 +2493,10 @@ func TestDecodeFields(t *testing.T) {
 				Identifier: "goUint8Struct",
 				Type:       AnyStructType,
 			},
+			{
+				Identifier: "cadenceAddress",
+				Type:       AddressType,
+			},
 		},
 		nil,
 	))
@@ -2522,6 +2527,7 @@ func TestDecodeFields(t *testing.T) {
 		GoUint8Slice                   []uint8                 `cadence:"goUint8Slice"`
 		GoUint8Map                     map[uint8]uint8         `cadence:"goUint8Map"`
 		GoUint8Struct                  nestedStruct            `cadence:"goUint8Struct"`
+		CadenceAddress                 Address                 `cadence:"cadenceAddress"`
 		NonCadenceField                Int
 	}
 
@@ -2581,6 +2587,7 @@ func TestDecodeFields(t *testing.T) {
 	assert.Equal(t, []uint8{4, 2}, evt.GoUint8Slice)
 	assert.Equal(t, map[uint8]uint8{42: 24}, evt.GoUint8Map)
 	assert.Equal(t, NewInt(42), evt.GoUint8Struct.Int)
+	assert.Equal(t, Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8}, evt.CadenceAddress)
 
 	type ErrCases struct {
 		Value       interface{}
