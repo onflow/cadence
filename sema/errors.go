@@ -2985,6 +2985,45 @@ func (e *InvalidInterfaceTypeError) SuggestFixes(_ string) []errors.SuggestedFix
 	}
 }
 
+// InvalidReferenceToOptionalTypeError
+
+type InvalidReferenceToOptionalTypeError struct {
+	ActualType   Type
+	ExpectedType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidReferenceToOptionalTypeError{}
+var _ errors.UserError = &InvalidReferenceToOptionalTypeError{}
+var _ errors.SecondaryError = &InvalidReferenceToOptionalTypeError{}
+var _ errors.HasDocumentationLink = &InvalidReferenceToOptionalTypeError{}
+
+func (*InvalidReferenceToOptionalTypeError) isSemanticError() {}
+
+func (*InvalidReferenceToOptionalTypeError) IsUserError() {}
+
+func (*InvalidReferenceToOptionalTypeError) Error() string {
+	return "invalid reference to optional type"
+}
+
+func (e *InvalidReferenceToOptionalTypeError) SecondaryError() string {
+	return fmt.Sprintf(
+		"references to optionals are not allowed; "+
+			"use optional references instead; "+
+			"got %#q, consider using %#q",
+		e.ActualType.QualifiedString(),
+		e.ExpectedType.QualifiedString(),
+	)
+}
+
+func (*InvalidReferenceToOptionalTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references"
+}
+
+// TODO: add suggested fix for InvalidReferenceToOptionalTypeError
+//   once pretty printing of types correctly handles precedence
+//   (currently (&T)? and &(T?) both print as &T?)
+
 // InvalidInterfaceDeclarationError
 
 type InvalidInterfaceDeclarationError struct {

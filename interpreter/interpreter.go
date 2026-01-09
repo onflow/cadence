@@ -2350,7 +2350,17 @@ func convert(
 		}
 
 	case *sema.ReferenceType:
+
+		// Defensively check that we never create a reference to an optional type
+		if _, ok := unwrappedTargetType.Type.(*sema.OptionalType); ok {
+			panic(errors.NewUnexpectedError(
+				"unsupported reference to optional target type: %s",
+				unwrappedTargetType,
+			))
+		}
+
 		targetAuthorization := ConvertSemaAccessToStaticAuthorization(context, unwrappedTargetType.Authorization)
+
 		switch ref := value.(type) {
 		case *EphemeralReferenceValue:
 			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {

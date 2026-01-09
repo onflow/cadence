@@ -97,6 +97,8 @@ func containerTypeNames(typ Type, level int) (typeNames []string, bufSize int) {
 
 type TypeID = common.TypeID
 
+type TypeRewriter func(Type) (Type, bool)
+
 type Type interface {
 	IsType()
 	ID() TypeID
@@ -170,7 +172,7 @@ type Type interface {
 	ContainFieldsOrElements() bool
 
 	TypeAnnotationState() TypeAnnotationState
-	RewriteWithIntersectionTypes() (result Type, rewritten bool)
+	Rewrite(rewrite TypeRewriter) (result Type, rewritten bool)
 
 	// Unify attempts to unify the given type with this type, i.e., resolve type parameters
 	// in generic types (see `GenericType`) using the given type parameters.
@@ -382,6 +384,56 @@ func CheckParameterizedTypeInstantiated(
 			)
 		}
 	}
+}
+
+func applyTypeRewriter(rewrite TypeRewriter, typ Type, rewritten bool) (Type, bool) {
+	rewrittenType, ok := rewrite(typ)
+	if ok {
+		return rewrittenType, true
+	}
+
+	return typ, rewritten
+}
+
+// RewriteWithIntersectionTypes rewrites interface types (I) to intersection types ({I})
+func RewriteWithIntersectionTypes(ty Type) (Type, bool) {
+	return ty.Rewrite(rewriteInterfaceTypeWithIntersectionTypes)
+}
+
+func rewriteInterfaceTypeWithIntersectionTypes(ty Type) (Type, bool) {
+	interfaceType, ok := ty.(*InterfaceType)
+	if !ok {
+		return ty, false
+	}
+
+	return &IntersectionType{
+		Types: []*InterfaceType{interfaceType},
+	}, true
+}
+
+// RewriteWithOptionalReferenceTypes rewrites references to optionals (&(T?))
+// to optional references ((&T)?)
+func RewriteWithOptionalReferenceTypes(ty Type) (Type, bool) {
+	return ty.Rewrite(rewriteReferenceTypeWithOptionalReferenceTypes)
+}
+
+func rewriteReferenceTypeWithOptionalReferenceTypes(ty Type) (Type, bool) {
+	referenceType, ok := ty.(*ReferenceType)
+	if !ok {
+		return ty, false
+	}
+
+	innerOptionalType, ok := referenceType.Type.(*OptionalType)
+	if !ok {
+		return ty, false
+	}
+
+	return &OptionalType{
+		Type: &ReferenceType{
+			Type:          innerOptionalType.Type,
+			Authorization: referenceType.Authorization,
+		},
+	}, true
 }
 
 // TypeAnnotation
@@ -776,15 +828,15 @@ func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
 
-func (t *OptionalType) RewriteWithIntersectionTypes() (Type, bool) {
-	rewrittenType, rewritten := t.Type.RewriteWithIntersectionTypes()
+func (t *OptionalType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	rewrittenType, rewritten := t.Type.Rewrite(rewrite)
+	var result Type = t
 	if rewritten {
-		return &OptionalType{
+		result = &OptionalType{
 			Type: rewrittenType,
-		}, true
-	} else {
-		return t, false
+		}
 	}
+	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
 func (t *OptionalType) Unify(
@@ -1009,8 +1061,8 @@ func (*GenericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *GenericType) RewriteWithIntersectionTypes() (result Type, rewritten bool) {
-	return t, false
+func (t *GenericType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (t *GenericType) Unify(
@@ -1323,8 +1375,8 @@ func (*NumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *NumericType) RewriteWithIntersectionTypes() (result Type, rewritten bool) {
-	return t, false
+func (t *NumericType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (t *NumericType) MinInt() *big.Int {
@@ -1556,8 +1608,8 @@ func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *FixedPointNumericType) RewriteWithIntersectionTypes() (result Type, rewritten bool) {
-	return t, false
+func (t *FixedPointNumericType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (t *FixedPointNumericType) MinInt() *big.Int {
@@ -3123,15 +3175,15 @@ func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
 
-func (t *VariableSizedType) RewriteWithIntersectionTypes() (Type, bool) {
-	rewrittenType, rewritten := t.Type.RewriteWithIntersectionTypes()
+func (t *VariableSizedType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	rewrittenType, rewritten := t.Type.Rewrite(rewrite)
+	var result Type = t
 	if rewritten {
-		return &VariableSizedType{
+		result = &VariableSizedType{
 			Type: rewrittenType,
-		}, true
-	} else {
-		return t, false
+		}
 	}
+	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
 func (*VariableSizedType) isValueIndexableType() bool {
@@ -3310,16 +3362,16 @@ func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
 
-func (t *ConstantSizedType) RewriteWithIntersectionTypes() (Type, bool) {
-	rewrittenType, rewritten := t.Type.RewriteWithIntersectionTypes()
+func (t *ConstantSizedType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	rewrittenType, rewritten := t.Type.Rewrite(rewrite)
+	var result Type = t
 	if rewritten {
-		return &ConstantSizedType{
+		result = &ConstantSizedType{
 			Type: rewrittenType,
 			Size: t.Size,
-		}, true
-	} else {
-		return t, false
+		}
 	}
+	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
 func (*ConstantSizedType) isValueIndexableType() bool {
@@ -3964,7 +4016,7 @@ func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
+func (t *FunctionType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	anyRewritten := false
 
 	rewrittenTypeParameterTypeBounds := map[*TypeParameter]Type{}
@@ -3974,7 +4026,7 @@ func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
 			continue
 		}
 
-		rewrittenType, rewritten := typeParameter.TypeBound.RewriteWithIntersectionTypes()
+		rewrittenType, rewritten := typeParameter.TypeBound.Rewrite(rewrite)
 		if rewritten {
 			anyRewritten = true
 			rewrittenTypeParameterTypeBounds[typeParameter] = rewrittenType
@@ -3985,18 +4037,20 @@ func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
 
 	for i := range t.Parameters {
 		parameter := &t.Parameters[i]
-		rewrittenType, rewritten := parameter.TypeAnnotation.Type.RewriteWithIntersectionTypes()
+		rewrittenType, rewritten := parameter.TypeAnnotation.Type.Rewrite(rewrite)
 		if rewritten {
 			anyRewritten = true
 			rewrittenParameterTypes[parameter] = rewrittenType
 		}
 	}
 
-	rewrittenReturnType, rewritten := t.ReturnTypeAnnotation.Type.RewriteWithIntersectionTypes()
-	if rewritten {
+	rewrittenReturnType := t.ReturnTypeAnnotation.Type
+	if updatedReturnType, rewritten := t.ReturnTypeAnnotation.Type.Rewrite(rewrite); rewritten {
 		anyRewritten = true
+		rewrittenReturnType = updatedReturnType
 	}
 
+	var result Type = t
 	if anyRewritten {
 		var rewrittenTypeParameters []*TypeParameter
 		if len(t.TypeParameters) > 0 {
@@ -4033,16 +4087,16 @@ func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
 			}
 		}
 
-		return &FunctionType{
+		result = &FunctionType{
 			Purity:               t.Purity,
 			TypeParameters:       rewrittenTypeParameters,
 			Parameters:           rewrittenParameters,
 			ReturnTypeAnnotation: NewTypeAnnotation(rewrittenReturnType),
 			Arity:                t.Arity,
-		}, true
-	} else {
-		return t, false
+		}
 	}
+
+	return applyTypeRewriter(rewrite, result, anyRewritten)
 }
 
 func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
@@ -5235,8 +5289,8 @@ func (t *CompositeType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *CompositeType) RewriteWithIntersectionTypes() (result Type, rewritten bool) {
-	return t, false
+func (t *CompositeType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (*CompositeType) Unify(
@@ -6022,10 +6076,8 @@ func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *InterfaceType) RewriteWithIntersectionTypes() (Type, bool) {
-	return &IntersectionType{
-		Types: []*InterfaceType{t},
-	}, true
+func (t *InterfaceType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (*InterfaceType) Unify(
@@ -6276,18 +6328,18 @@ func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *DictionaryType) RewriteWithIntersectionTypes() (Type, bool) {
-	rewrittenKeyType, keyTypeRewritten := t.KeyType.RewriteWithIntersectionTypes()
-	rewrittenValueType, valueTypeRewritten := t.ValueType.RewriteWithIntersectionTypes()
+func (t *DictionaryType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	rewrittenKeyType, keyTypeRewritten := t.KeyType.Rewrite(rewrite)
+	rewrittenValueType, valueTypeRewritten := t.ValueType.Rewrite(rewrite)
 	rewritten := keyTypeRewritten || valueTypeRewritten
+	var result Type = t
 	if rewritten {
-		return &DictionaryType{
+		result = &DictionaryType{
 			KeyType:   rewrittenKeyType,
 			ValueType: rewrittenValueType,
-		}, true
-	} else {
-		return t, false
+		}
 	}
+	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
 func (t *DictionaryType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
@@ -6781,17 +6833,18 @@ func (t *InclusiveRangeType) TypeAnnotationState() TypeAnnotationState {
 	return t.MemberType.TypeAnnotationState()
 }
 
-func (t *InclusiveRangeType) RewriteWithIntersectionTypes() (Type, bool) {
+func (t *InclusiveRangeType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	if t.MemberType == nil {
-		return t, false
+		return applyTypeRewriter(rewrite, t, false)
 	}
-	rewrittenMemberType, rewritten := t.MemberType.RewriteWithIntersectionTypes()
+	rewrittenMemberType, rewritten := t.MemberType.Rewrite(rewrite)
+	var result Type = t
 	if rewritten {
-		return &InclusiveRangeType{
+		result = &InclusiveRangeType{
 			MemberType: rewrittenMemberType,
-		}, true
+		}
 	}
-	return t, false
+	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
 func (t *InclusiveRangeType) BaseType() Type {
@@ -7204,16 +7257,16 @@ func (t *ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *ReferenceType) RewriteWithIntersectionTypes() (Type, bool) {
-	rewrittenType, rewritten := t.Type.RewriteWithIntersectionTypes()
+func (t *ReferenceType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	rewrittenType, rewritten := t.Type.Rewrite(rewrite)
+	var result Type = t
 	if rewritten {
-		return &ReferenceType{
+		result = &ReferenceType{
 			Authorization: t.Authorization,
 			Type:          rewrittenType,
-		}, true
-	} else {
-		return t, false
+		}
 	}
+	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
@@ -7409,8 +7462,8 @@ func (*AddressType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *AddressType) RewriteWithIntersectionTypes() (Type, bool) {
-	return t, false
+func (t *AddressType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 var AddressTypeMinIntBig = new(big.Int)
@@ -8239,8 +8292,8 @@ func (*TransactionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *TransactionType) RewriteWithIntersectionTypes() (Type, bool) {
-	return t, false
+func (t *TransactionType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
@@ -8515,10 +8568,10 @@ func (*IntersectionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *IntersectionType) RewriteWithIntersectionTypes() (Type, bool) {
+func (t *IntersectionType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	// Even though the types should be resource interfaces,
 	// they are not on the "first level", i.e. not the intersection type
-	return t, false
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (t *IntersectionType) GetMembers() map[string]MemberResolver {
@@ -8752,18 +8805,18 @@ func (*CapabilityType) ContainFieldsOrElements() bool {
 	return false
 }
 
-func (t *CapabilityType) RewriteWithIntersectionTypes() (Type, bool) {
+func (t *CapabilityType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	if t.BorrowType == nil {
-		return t, false
+		return applyTypeRewriter(rewrite, t, false)
 	}
-	rewrittenType, rewritten := t.BorrowType.RewriteWithIntersectionTypes()
+	rewrittenType, rewritten := t.BorrowType.Rewrite(rewrite)
+	var result Type = t
 	if rewritten {
-		return &CapabilityType{
+		result = &CapabilityType{
 			BorrowType: rewrittenType,
-		}, true
-	} else {
-		return t, false
+		}
 	}
+	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
 func (t *CapabilityType) Unify(
@@ -9326,8 +9379,8 @@ func (*EntitlementType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateDirectEntitlementTypeAnnotation
 }
 
-func (t *EntitlementType) RewriteWithIntersectionTypes() (Type, bool) {
-	return t, false
+func (t *EntitlementType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (*EntitlementType) Unify(
@@ -9487,8 +9540,8 @@ func (*EntitlementMapType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateDirectEntitlementTypeAnnotation
 }
 
-func (t *EntitlementMapType) RewriteWithIntersectionTypes() (Type, bool) {
-	return t, false
+func (t *EntitlementMapType) Rewrite(rewrite TypeRewriter) (Type, bool) {
+	return applyTypeRewriter(rewrite, t, false)
 }
 
 func (*EntitlementMapType) Unify(
