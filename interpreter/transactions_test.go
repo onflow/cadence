@@ -638,3 +638,421 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
 		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
+
+func TestInterpretTransactionVariableMove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function argument, with unary move", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+                    var arr: @[AnyResource]
+
+                    prepare() {
+                        self.r <- create R()
+                        self.arr <- []
+                    }
+
+                    execute {
+                        self.arr.append(<- self.r)
+                        self.arr.append(<- self.r)
+                        destroy self.arr
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
+
+	t.Run("function argument, without unary move", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+                    var arr: @[AnyResource]
+
+                    prepare() {
+                        self.r <- create R()
+                        self.arr <- []
+                    }
+
+                    execute {
+                        self.arr.append(self.r)
+                        self.arr.append(<- self.r)
+                        destroy self.arr
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
+
+		err = inter.InvokeTransaction(nil)
+		var invalidatedResourceError *interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceError)
+	})
+
+	t.Run("assignment", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+                    var r2: @R?
+
+                    prepare() {
+                        self.r <- create R()
+                        self.r2 <- nil
+                    }
+
+                    execute {
+                        self.r2 <-! self.r
+                        self.r2 <-! self.r
+                        destroy self.r2
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
+
+	t.Run("non-failable cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        let r <- self.r as @R
+                        let r2 <- self.r as @R
+                        destroy r
+                        destroy r2
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
+
+	t.Run("destroy", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        destroy self.r
+                        destroy self.r
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
+
+	t.Run("force unwrap", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R?
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        let r <- self.r!
+                        let r2 <- self.r!
+                        destroy r
+                        destroy r2
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
+
+	t.Run("variable declaration, one value", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        let r <- self.r
+                        let r2 <- self.r
+                        destroy r
+                        destroy r2
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
+
+	t.Run("failable cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		_, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @AnyResource
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        if let r <- self.r as? @R {
+                            destroy r
+                        } else {
+                            destroy self.r
+                        }
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+		assert.True(t, hadCheckerError)
+	})
+
+	t.Run("nil coalescing", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @R?
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        let r <- self.r ?? nil
+                        let r2 <- self.r ?? nil
+                        destroy r
+                        destroy r2
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.True(t, hadCheckerError)
+
+		err = inter.InvokeTransaction(nil)
+
+		var useBeforeInitializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &useBeforeInitializationError)
+	})
+}
