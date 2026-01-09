@@ -965,4 +965,47 @@ func TestInterpretTransactionVariableMove(t *testing.T) {
 		require.ErrorAs(t, err, &useBeforeInitializationError)
 	})
 
+	t.Run("failable cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		var hadCheckerError bool
+
+		_, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {}
+
+                transaction {
+                    var r: @AnyResource
+
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        if let r <- self.r as? @R {
+                            destroy r
+                        } else {
+                            destroy self.r
+                        }
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+				HandleCheckerError: func(err error) {
+					hadCheckerError = true
+
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+		assert.True(t, hadCheckerError)
+	})
+
 }
