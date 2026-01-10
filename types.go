@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"strings"
 	"sync"
@@ -520,16 +521,26 @@ func DecodeFields(composite Composite, s interface{}) error {
 func decodeFieldValue(targetType reflect.Type, value Value) (reflect.Value, error) {
 	var decodeSpecialFieldFunc func(p reflect.Type, value Value) (reflect.Value, error)
 
-	switch targetType.Kind() {
-	case reflect.Ptr:
-		decodeSpecialFieldFunc = decodeOptional
-	case reflect.Map:
-		decodeSpecialFieldFunc = decodeDict
-	case reflect.Array, reflect.Slice:
-		decodeSpecialFieldFunc = decodeSlice
-	case reflect.Struct:
-		if !targetType.Implements(reflect.TypeOf((*Value)(nil)).Elem()) {
-			decodeSpecialFieldFunc = decodeStruct
+	// cadence.Address
+	switch targetType {
+	case reflect.TypeOf(Address{}):
+		decodeSpecialFieldFunc = decodeAddress
+
+	case reflect.TypeOf(&big.Int{}):
+		decodeSpecialFieldFunc = decodeBigInt
+
+	default:
+		switch targetType.Kind() {
+		case reflect.Ptr:
+			decodeSpecialFieldFunc = decodeOptional
+		case reflect.Map:
+			decodeSpecialFieldFunc = decodeDict
+		case reflect.Array, reflect.Slice:
+			decodeSpecialFieldFunc = decodeSlice
+		case reflect.Struct:
+			if !targetType.Implements(reflect.TypeOf((*Value)(nil)).Elem()) {
+				decodeSpecialFieldFunc = decodeStruct
+			}
 		}
 	}
 
@@ -740,6 +751,22 @@ func decodeStructInto(
 	}
 
 	return structValue, nil
+}
+
+func decodeAddress(_ reflect.Type, value Value) (reflect.Value, error) {
+	cadenceAddress, ok := value.(Address)
+	if !ok {
+		return reflect.Value{}, fmt.Errorf("cannot convert non-Cadence address %T to Go address", value)
+	}
+	return reflect.ValueOf(cadenceAddress), nil
+}
+
+func decodeBigInt(_ reflect.Type, value Value) (reflect.Value, error) {
+	bigIntValue, ok := value.(bigIntValue)
+	if !ok {
+		return reflect.Value{}, fmt.Errorf("cannot convert %T to Go *big.Int", value)
+	}
+	return reflect.ValueOf(bigIntValue.Big()), nil
 }
 
 // Parameter

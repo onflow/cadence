@@ -52,6 +52,11 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
+type bigIntValue interface {
+	Value
+	Big() *big.Int
+}
+
 // Void
 
 type Void struct{}
@@ -323,6 +328,8 @@ type Int struct {
 }
 
 var _ Value = Int{}
+var _ NumberValue = Int{}
+var _ bigIntValue = Int{}
 
 func NewInt(i int) Int {
 	return Int{
@@ -377,6 +384,7 @@ func (v Int) String() string {
 type Int8 int8
 
 var _ Value = Int8(0)
+var _ NumberValue = Int8(0)
 
 var Int8MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Int8(0))))
 
@@ -412,6 +420,7 @@ func (v Int8) String() string {
 type Int16 int16
 
 var _ Value = Int16(0)
+var _ NumberValue = Int16(0)
 
 var Int16MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Int16(0))))
 
@@ -449,6 +458,7 @@ func (v Int16) String() string {
 type Int32 int32
 
 var _ Value = Int32(0)
+var _ NumberValue = Int32(0)
 
 var Int32MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Int32(0))))
 
@@ -486,6 +496,7 @@ func (v Int32) String() string {
 type Int64 int64
 
 var _ Value = Int64(0)
+var _ NumberValue = Int64(0)
 
 var Int64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Int64(0))))
 
@@ -525,6 +536,8 @@ type Int128 struct {
 }
 
 var _ Value = Int128{}
+var _ NumberValue = Int128{}
+var _ bigIntValue = Int128{}
 
 var Int128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
@@ -589,6 +602,8 @@ type Int256 struct {
 }
 
 var _ Value = Int256{}
+var _ NumberValue = Int256{}
+var _ bigIntValue = Int256{}
 
 var Int256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
@@ -653,6 +668,8 @@ type UInt struct {
 }
 
 var _ Value = UInt{}
+var _ NumberValue = UInt{}
+var _ bigIntValue = UInt{}
 
 func NewUInt(i uint) UInt {
 	return UInt{
@@ -710,6 +727,7 @@ func (v UInt) String() string {
 type UInt8 uint8
 
 var _ Value = UInt8(0)
+var _ NumberValue = UInt8(0)
 
 var UInt8MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UInt8(0))))
 
@@ -745,6 +763,7 @@ func (v UInt8) String() string {
 type UInt16 uint16
 
 var _ Value = UInt16(0)
+var _ NumberValue = UInt16(0)
 
 var UInt16MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UInt16(0))))
 
@@ -782,6 +801,7 @@ func (v UInt16) String() string {
 type UInt32 uint32
 
 var _ Value = UInt32(0)
+var _ NumberValue = UInt32(0)
 
 var UInt32MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UInt32(0))))
 
@@ -819,6 +839,7 @@ func (v UInt32) String() string {
 type UInt64 uint64
 
 var _ Value = UInt64(0)
+var _ NumberValue = UInt64(0)
 
 var UInt64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UInt64(0))))
 
@@ -858,6 +879,8 @@ type UInt128 struct {
 }
 
 var _ Value = UInt128{}
+var _ NumberValue = UInt128{}
+var _ bigIntValue = UInt128{}
 
 var UInt128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
@@ -922,6 +945,8 @@ type UInt256 struct {
 }
 
 var _ Value = UInt256{}
+var _ NumberValue = UInt256{}
+var _ bigIntValue = UInt256{}
 
 var UInt256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
@@ -984,6 +1009,7 @@ func (v UInt256) String() string {
 type Word8 uint8
 
 var _ Value = Word8(0)
+var _ NumberValue = Word8(0)
 
 var word8MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Word8(0))))
 
@@ -1019,6 +1045,7 @@ func (v Word8) String() string {
 type Word16 uint16
 
 var _ Value = Word16(0)
+var _ NumberValue = Word16(0)
 
 var word16MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Word16(0))))
 
@@ -1056,6 +1083,7 @@ func (v Word16) String() string {
 type Word32 uint32
 
 var _ Value = Word32(0)
+var _ NumberValue = Word32(0)
 
 var word32MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Word32(0))))
 
@@ -1093,6 +1121,7 @@ func (v Word32) String() string {
 type Word64 uint64
 
 var _ Value = Word64(0)
+var _ NumberValue = Word64(0)
 
 var word64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Word64(0))))
 
@@ -1132,6 +1161,8 @@ type Word128 struct {
 }
 
 var _ Value = Word128{}
+var _ NumberValue = Word128{}
+var _ bigIntValue = Word128{}
 
 var Word128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
@@ -1196,6 +1227,8 @@ type Word256 struct {
 }
 
 var _ Value = Word256{}
+var _ NumberValue = Word256{}
+var _ bigIntValue = Word256{}
 
 var Word256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
@@ -1258,6 +1291,7 @@ func (v Word256) String() string {
 type Fix64 int64
 
 var _ Value = Fix64(0)
+var _ NumberValue = Fix64(0)
 
 var fix64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Fix64(0))))
 
@@ -1321,6 +1355,7 @@ func (v Fix64) String() string {
 type Fix128 fix.Fix128
 
 var _ Value = Fix128{}
+var _ NumberValue = Fix128{}
 
 var Fix128MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Fix128{})))
 var fix128MinExceededError = errors.NewDefaultUserError("value exceeds min of Fix128")
@@ -1397,6 +1432,7 @@ func (v Fix128) String() string {
 type UFix64 uint64
 
 var _ Value = UFix64(0)
+var _ NumberValue = UFix64(0)
 
 var ufix64MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UFix64(0))))
 
@@ -1467,6 +1503,7 @@ func (v UFix64) String() string {
 type UFix128 fix.UFix128
 
 var _ Value = UFix128{}
+var _ NumberValue = UFix128{}
 
 var UFix128MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UFix128{})))
 var ufix128MinExceededError = errors.NewDefaultUserError("value exceeds min of UFix128")
