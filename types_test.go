@@ -19,6 +19,7 @@
 package cadence
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2365,6 +2366,7 @@ func TestDecodeFields(t *testing.T) {
 				nil,
 			)),
 			Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
+			NewUInt256(1234567890),
 		},
 	).WithType(NewEventType(
 		TestLocation,
@@ -2497,6 +2499,10 @@ func TestDecodeFields(t *testing.T) {
 				Identifier: "cadenceAddress",
 				Type:       AddressType,
 			},
+			{
+				Identifier: "bigInt",
+				Type:       UInt256Type,
+			},
 		},
 		nil,
 	))
@@ -2528,6 +2534,7 @@ func TestDecodeFields(t *testing.T) {
 		GoUint8Map                     map[uint8]uint8         `cadence:"goUint8Map"`
 		GoUint8Struct                  nestedStruct            `cadence:"goUint8Struct"`
 		CadenceAddress                 Address                 `cadence:"cadenceAddress"`
+		BigInt                         *big.Int                `cadence:"bigInt"`
 		NonCadenceField                Int
 	}
 
@@ -2588,6 +2595,7 @@ func TestDecodeFields(t *testing.T) {
 	assert.Equal(t, map[uint8]uint8{42: 24}, evt.GoUint8Map)
 	assert.Equal(t, NewInt(42), evt.GoUint8Struct.Int)
 	assert.Equal(t, Address{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8}, evt.CadenceAddress)
+	assert.Equal(t, big.NewInt(1234567890), evt.BigInt)
 
 	type ErrCases struct {
 		Value       interface{}

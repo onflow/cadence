@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"strings"
 	"sync"
@@ -525,6 +526,9 @@ func decodeFieldValue(targetType reflect.Type, value Value) (reflect.Value, erro
 	case reflect.TypeOf(Address{}):
 		decodeSpecialFieldFunc = decodeAddress
 
+	case reflect.TypeOf(&big.Int{}):
+		decodeSpecialFieldFunc = decodeBigInt
+
 	default:
 		switch targetType.Kind() {
 		case reflect.Ptr:
@@ -749,12 +753,20 @@ func decodeStructInto(
 	return structValue, nil
 }
 
-func decodeAddress(p reflect.Type, value Value) (reflect.Value, error) {
+func decodeAddress(_ reflect.Type, value Value) (reflect.Value, error) {
 	cadenceAddress, ok := value.(Address)
 	if !ok {
 		return reflect.Value{}, fmt.Errorf("cannot convert non-Cadence address %T to Go address", value)
 	}
 	return reflect.ValueOf(cadenceAddress), nil
+}
+
+func decodeBigInt(_ reflect.Type, value Value) (reflect.Value, error) {
+	bigIntValue, ok := value.(bigIntValue)
+	if !ok {
+		return reflect.Value{}, fmt.Errorf("cannot convert %T to Go *big.Int", value)
+	}
+	return reflect.ValueOf(bigIntValue.Big()), nil
 }
 
 // Parameter
