@@ -184,3 +184,46 @@ func TestInterpretIndexingExpressionTransferWrite(t *testing.T) {
 		slabID,
 	)
 }
+
+func TestInterpretIndexingExpressionTransferSwapStatement(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+      enum E: UInt8 {
+          case A
+          case B
+      }
+
+      fun test(): String {
+          let strings: {E: String} = {E.A: "A", E.B: "B"}
+          strings[E.A] <-> strings[E.B]
+          return "\(strings[E.A] ?? "")-\(strings[E.B] ?? "")"
+      }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	require.Equal(
+		t,
+		interpreter.NewUnmeteredStringValue("B-A"),
+		result,
+	)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 17)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
+}
