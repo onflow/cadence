@@ -99,6 +99,8 @@ type TypeID = common.TypeID
 
 type TypeRewriter func(Type) (Type, bool)
 
+type SeenTypes map[Type]struct{}
+
 type Type interface {
 	IsType()
 	ID() TypeID
@@ -211,7 +213,33 @@ type Type interface {
 
 	GetMembers() map[string]MemberResolver
 
-	CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error))
+	CheckInstantiated(
+		pos ast.HasPosition,
+		memoryGauge common.MemoryGauge,
+		report func(err error),
+		seenTypes SeenTypes,
+	)
+}
+
+func checkInstantiated(
+	typ Type,
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
+	if typ == nil {
+		return
+	}
+
+	if _, ok := seenTypes[typ]; ok {
+		return
+	}
+
+	seenTypes[typ] = struct{}{}
+	defer delete(seenTypes, typ)
+
+	typ.CheckInstantiated(pos, memoryGauge, report, seenTypes)
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
@@ -880,8 +908,19 @@ func (t *OptionalType) SupportedEntitlements() *EntitlementSet {
 	return nil
 }
 
-func (t *OptionalType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
-	t.Type.CheckInstantiated(pos, memoryGauge, report)
+func (t *OptionalType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
+	checkInstantiated(
+		t.Type,
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
 }
 
 const optionalTypeMapFunctionDocString = `
@@ -1119,10 +1158,19 @@ func (t *GenericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-func (t *GenericType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
-	if t.TypeParameter.TypeBound != nil {
-		t.TypeParameter.TypeBound.CheckInstantiated(pos, memoryGauge, report)
-	}
+func (t *GenericType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
+	checkInstantiated(
+		t.TypeParameter.TypeBound,
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
 }
 
 // IntegerRangedType
@@ -1428,7 +1476,12 @@ func (t *NumericType) IsSuperType() bool {
 	return t.isSuperType
 }
 
-func (*NumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+func (*NumericType) CheckInstantiated(
+	_ ast.HasPosition,
+	_ common.MemoryGauge,
+	_ func(err error),
+	_ SeenTypes,
+) {
 	// NO-OP
 }
 
@@ -1669,7 +1722,12 @@ func (t *FixedPointNumericType) IsSuperType() bool {
 	return t.isSuperType
 }
 
-func (*FixedPointNumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+func (*FixedPointNumericType) CheckInstantiated(
+	_ ast.HasPosition,
+	_ common.MemoryGauge,
+	_ func(err error),
+	_ SeenTypes,
+) {
 	// NO-OP
 }
 
@@ -3248,8 +3306,19 @@ var arrayDictionaryEntitlements = func() *EntitlementSet {
 	return set
 }()
 
-func (t *VariableSizedType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
-	t.ElementType(false).CheckInstantiated(pos, memoryGauge, report)
+func (t *VariableSizedType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
+	checkInstantiated(
+		t.ElementType(false),
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
 }
 
 // ConstantSizedType is a constant sized array type
@@ -3432,8 +3501,19 @@ func (t *ConstantSizedType) SupportedEntitlements() *EntitlementSet {
 	return arrayDictionaryEntitlements
 }
 
-func (t *ConstantSizedType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
-	t.ElementType(false).CheckInstantiated(pos, memoryGauge, report)
+func (t *ConstantSizedType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
+	checkInstantiated(
+		t.ElementType(false),
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
 }
 
 // Parameter
@@ -4232,16 +4312,39 @@ func (t *FunctionType) GetMembers() map[string]MemberResolver {
 	return computedMembers
 }
 
-func (t *FunctionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+func (t *FunctionType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
 	for _, tyParam := range t.TypeParameters {
-		tyParam.TypeBound.CheckInstantiated(pos, memoryGauge, report)
+		checkInstantiated(
+			tyParam.TypeBound,
+			pos,
+			memoryGauge,
+			report,
+			seenTypes,
+		)
 	}
 
 	for _, param := range t.Parameters {
-		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+		checkInstantiated(
+			param.TypeAnnotation.Type,
+			pos,
+			memoryGauge,
+			report,
+			seenTypes,
+		)
 	}
 
-	t.ReturnTypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+	checkInstantiated(
+		t.ReturnTypeAnnotation.Type,
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
 }
 
 func (t *FunctionType) ParameterTypes() []Type {
@@ -5494,20 +5597,37 @@ func (t *CompositeType) InitializerEffectiveArgumentLabels() []string {
 	return argumentLabels
 }
 
-func (t *CompositeType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
-	if t.EnumRawType != nil {
-		t.EnumRawType.CheckInstantiated(pos, memoryGauge, report)
-	}
+func (t *CompositeType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
+	checkInstantiated(
+		t.EnumRawType,
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
 
-	// Check if base type is instantiated.
-	// Prevent infinite recursion in case of self-referencing attachment
-	if t.baseType != nil && t.baseType != t {
-		t.baseType.CheckInstantiated(pos, memoryGauge, report)
-	}
+	checkInstantiated(
+		t.baseType,
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
 
 	// Check if conformances are instantiated
 	for _, typ := range t.ExplicitInterfaceConformances {
-		typ.CheckInstantiated(pos, memoryGauge, report)
+		checkInstantiated(
+			typ,
+			pos,
+			memoryGauge,
+			report,
+			seenTypes,
+		)
 	}
 }
 
@@ -6191,9 +6311,20 @@ func distinctConformances(
 	return collectedConformances
 }
 
-func (t *InterfaceType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+func (t *InterfaceType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
 	for _, param := range t.InitializerParameters {
-		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+		checkInstantiated(
+			param.TypeAnnotation.Type,
+			pos,
+			memoryGauge,
+			report,
+			seenTypes,
+		)
 	}
 }
 
@@ -6342,9 +6473,26 @@ func (t *DictionaryType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
-func (t *DictionaryType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
-	t.KeyType.CheckInstantiated(pos, memoryGauge, report)
-	t.ValueType.CheckInstantiated(pos, memoryGauge, report)
+func (t *DictionaryType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
+	checkInstantiated(
+		t.KeyType,
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
+	checkInstantiated(
+		t.ValueType,
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
 }
 
 const DictionaryTypeContainsKeyFunctionName = "containsKey"
@@ -6904,7 +7052,12 @@ func (t *InclusiveRangeType) TypeArguments() []Type {
 	}
 }
 
-func (t *InclusiveRangeType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+func (t *InclusiveRangeType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	_ SeenTypes,
+) {
 	CheckParameterizedTypeInstantiated(t, pos, memoryGauge, report)
 }
 
@@ -7378,8 +7531,19 @@ func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
 	}
 }
 
-func (t *ReferenceType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
-	t.Type.CheckInstantiated(pos, memoryGauge, report)
+func (t *ReferenceType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
+	checkInstantiated(
+		t.Type,
+		pos,
+		memoryGauge,
+		report,
+		seenTypes,
+	)
 }
 
 const AddressTypeName = "Address"
@@ -7495,7 +7659,12 @@ func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (*AddressType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+func (*AddressType) CheckInstantiated(
+	_ ast.HasPosition,
+	_ common.MemoryGauge,
+	_ func(err error),
+	_ SeenTypes,
+) {
 	// NO-OP
 }
 
@@ -8326,13 +8495,30 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *TransactionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+func (t *TransactionType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	seenTypes SeenTypes,
+) {
 	for _, param := range t.PrepareParameters {
-		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+		checkInstantiated(
+			param.TypeAnnotation.Type,
+			pos,
+			memoryGauge,
+			report,
+			seenTypes,
+		)
 	}
 
 	for _, param := range t.Parameters {
-		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+		checkInstantiated(
+			param.TypeAnnotation.Type,
+			pos,
+			memoryGauge,
+			report,
+			seenTypes,
+		)
 	}
 }
 
@@ -8670,7 +8856,12 @@ func (t *IntersectionType) IsValidIndexingType(ty Type) bool {
 		attachmentType.IsResourceType() == t.IsResourceType()
 }
 
-func (t *IntersectionType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+func (t *IntersectionType) CheckInstantiated(
+	_ ast.HasPosition,
+	_ common.MemoryGauge,
+	_ func(err error),
+	_ SeenTypes,
+) {
 	// No-OP
 }
 
@@ -8901,7 +9092,12 @@ func (t *CapabilityType) TypeArguments() []Type {
 	}
 }
 
-func (t *CapabilityType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+func (t *CapabilityType) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+	_ SeenTypes,
+) {
 	CheckParameterizedTypeInstantiated(t, pos, memoryGauge, report)
 }
 
@@ -9397,7 +9593,12 @@ func (t *EntitlementType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *EntitlementType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+func (t *EntitlementType) CheckInstantiated(
+	_ ast.HasPosition,
+	_ common.MemoryGauge,
+	_ func(err error),
+	_ SeenTypes,
+) {
 	// No-OP
 }
 
@@ -9627,7 +9828,12 @@ func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
 	})
 }
 
-func (t *EntitlementMapType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+func (t *EntitlementMapType) CheckInstantiated(
+	_ ast.HasPosition,
+	_ common.MemoryGauge,
+	_ func(err error),
+	_ SeenTypes,
+) {
 	// NO-OP
 }
 
