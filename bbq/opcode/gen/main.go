@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"io"
 	"os"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 
@@ -348,7 +349,7 @@ func instructionTypeDecl(ins instruction) dst.Decl {
 	comment := fmt.Sprintf(
 		typeCommentFormat,
 		instructionIdent(ins).String(),
-		ins.Description,
+		strings.ReplaceAll(ins.Description, "\n", "\n// "),
 	)
 
 	return &dst.GenDecl{

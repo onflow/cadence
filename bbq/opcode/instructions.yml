@@ -6,7 +6,7 @@
 # Local instructions
 
 - name: "getLocal"
-  description:
+  description: |
     Pushes the value of the local at the given index onto the stack.
   operands:
     - name: "local"
@@ -17,7 +17,7 @@
         type: "value"
 
 - name: "setLocal"
-  description:
+  description: |
     Pops a value off the stack and then sets the local at the given index to that value.
   operands:
     - name: "local"
@@ -32,7 +32,7 @@
 # Upvalue instructions
 
 - name: "getUpvalue"
-  description:
+  description: |
     Pushes the value of the upvalue at the given index onto the stack.
   operands:
     - name: "upvalue"
@@ -43,7 +43,7 @@
         type: "value"
 
 - name: "setUpvalue"
-  description:
+  description: |
     Pops a value off the stack and then sets the upvalue at the given index to that value.
   operands:
     - name: "upvalue"
@@ -54,7 +54,7 @@
         type: "value"
 
 - name: "closeUpvalue"
-  description:
+  description: |
     Closes the upvalue for the local at the given index.
   operands:
     - name: "local"
@@ -63,7 +63,7 @@
 # Global instructions
 
 - name: "getGlobal"
-  description:
+  description: |
     Pushes the value of the global at the given index onto the stack.
   operands:
     - name: "global"
@@ -74,7 +74,7 @@
         type: "value"
 
 - name: "setGlobal"
-  description:
+  description: |
     Pops a value off the stack and then sets the global at the given index to that value.
   operands:
     - name: "global"
@@ -87,7 +87,7 @@
 # Field instructions
 
 - name: "getField"
-  description:
+  description: |
     Pops a value off the stack, the target,
     and then pushes the value of the field at the given index onto the stack.
   operands:
@@ -104,7 +104,7 @@
         type: "value"
 
 - name: "removeField"
-  description:
+  description: |
     Pops a value off the stack, the target.
     Remove the value of the given field from the target, and pushes it onto the stack.
   operands:
@@ -119,7 +119,7 @@
         type: "value"
 
 - name: "setField"
-  description:
+  description: |
     Pops two values off the stack, the target and the value,
     and then sets the field at the given index of the target to the value.
   operands:
@@ -137,7 +137,7 @@
 # Index instructions
 
 - name: "getIndex"
-  description:
+  description: |
     Pops two values off the stack, the array and the index,
     and then pushes the value at the given index of the array onto the stack.
   valueEffects:
@@ -152,7 +152,7 @@
 
 
 - name: "removeIndex"
-  description:
+  description: |
     Pops two values off the stack, the array and the index.
     Removes the value at the given index from the array and pushes it onto the stack.
   valueEffects:
@@ -166,7 +166,7 @@
         type: "value"
 
 - name: "setIndex"
-  description:
+  description: |
     Pops three values off the stack, the array, the index, and the value,
     and then sets the value at the given index of the array to the value.
   valueEffects:
@@ -209,7 +209,7 @@
         type: "value"
 
 - name: "newSimpleComposite"
-  description:
+  description: |
     Creates a new instance of a simple composite value of given kind and type, at address 0x0,
     and then pushes it onto the stack.
   operands:
@@ -223,7 +223,7 @@
         type: "value"
 
 - name: "newComposite"
-  description:
+  description: |
     Creates a new instance of the given composite kind and type, at address 0x0,
     and then pushes it onto the stack.
   operands:
@@ -237,7 +237,7 @@
         type: "value"
 
 - name: "newCompositeAt"
-  description:
+  description: |
     Creates a new instance of the given composite kind and type, at the given address,
     and then pushes it onto the stack.
   operands:
@@ -265,7 +265,7 @@
         type: "path"
 
 - name: "newArray"
-  description:
+  description: |
     Pops the given number of elements off the stack, creates a new array with the given type, size, and elements,
     and then pushes it onto the stack.
   operands:
@@ -286,7 +286,7 @@
         type: "array"
 
 - name: "newDictionary"
-  description:
+  description: |
     Pops the given number of entries off the stack (twice the number of the given size),
     creates a new dictionary with the given type, size, and entries,
     and then pushes it onto the stack.
@@ -309,7 +309,7 @@
 
 
 - name: "newRef"
-  description:
+  description: |
     Pops a value off the stack, creates a new reference with the given type,
     and then pushes it onto the stack.
   operands:
@@ -350,7 +350,7 @@
 # Invocation instructions
 
 - name: "invoke"
-  description:
+  description: |
     Pops the function and arguments off the stack, invokes the function with the arguments,
     and then pushes the result back on to the stack.
   operands:
@@ -371,7 +371,7 @@
     - call:
 
 - name: "getMethod"
-  description:
+  description: |
     Pops a value off the stack, the receiver,
     and then pushes the value of the function at the given index onto the stack.
   operands:
@@ -388,7 +388,7 @@
 # Value stack instructions
 
 - name: "dup"
-  description:
+  description: |
     Pops a value off the stack, duplicates it, and then pushes the original and the copy back on to the stack.
   valueEffects:
     pop:
@@ -401,7 +401,7 @@
         type: "value"
 
 - name: "drop"
-  description:
+  description: |
     Pops a value off the stack and discards it.
   valueEffects:
     pop:
@@ -411,7 +411,7 @@
 # Resource stack instructions
 
 - name: "destroy"
-  description:
+  description: |
     Pops a resource off the stack and then destroys it.
   valueEffects:
     pop:
@@ -421,7 +421,7 @@
 # Optional instructions
 
 - name: "unwrap"
-  description:
+  description: |
     Pops a value off the stack.
     If the value is an optional, pushes the optional's inner value back on to the stack.
     Panics if the value is `nil`.
@@ -435,7 +435,7 @@
         type: "value"
 
 - name: "wrap"
-  description:
+  description: |
     Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
   valueEffects:
     pop:
@@ -448,7 +448,7 @@
 # Conversion instructions
 
 - name: "transfer"
-  description:
+  description: |
     Pops a value off the stack, calls transfer, and then pushes it back on to the stack.
   valueEffects:
     pop:
@@ -459,8 +459,9 @@
         type: "value"
 
 - name: "transferAndConvert"
-  description:
-    Pops a value off the stack, transfer and converts it to the given type, and then pushes it back on to the stack.
+  description: |
+    Pops a value off the stack, transfer and converts it to the given type,
+    and then pushes it back on to the stack.
   operands:
     - name: "type"
       type: "typeIndex"
@@ -473,8 +474,9 @@
         type: "value"
 
 - name: "convert"
-  description:
-    Pops a value off the stack, converts it to the given type, and then pushes it back on to the stack.
+  description: |
+    Pops a value off the stack, converts it to the given type,
+    and then pushes it back on to the stack.
   operands:
     - name: "type"
       type: "typeIndex"
@@ -487,7 +489,7 @@
         type: "value"
 
 - name: "simpleCast"
-  description:
+  description: |
     Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
   operands:
     - name: "type"
@@ -501,7 +503,7 @@
         type: "value"
 
 - name: "failableCast"
-  description:
+  description: |
     Pops a value off the stack and casts it to the given type.
     If the value is a subtype of the given type, then casted value is pushed back on to the stack.
     If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
@@ -517,8 +519,9 @@
         type: "optional"
 
 - name: "forceCast"
-  description:
-    Pops a value off the stack, force-casts it to the given type, and then pushes it back on to the stack.
+  description: |
+    Pops a value off the stack, force-casts it to the given type,
+    and then pushes it back on to the stack.
     Panics if the value is not a subtype of the given type.
   operands:
     - name: "type"
@@ -532,7 +535,7 @@
         type: "value"
 
 - name: deref
-  description:
+  description: |
     Pops an (optional) reference off the stack, dereferences it,
     and then pushes the value back on to the stack.
   valueEffects:
@@ -546,7 +549,7 @@
 # Control flow instructions
 
 - name: "jump"
-  description:
+  description: |
     Unconditionally jumps to the given instruction.
   operands:
     - name: "target"
@@ -555,7 +558,7 @@
     - jump: "target"
 
 - name: "jumpIfFalse"
-  description:
+  description: |
     Pops a value off the stack. If it is `false`, jumps to the target instruction.
   operands:
     - name: "target"
@@ -568,7 +571,7 @@
         type: "value"
 
 - name: "jumpIfTrue"
-  description:
+  description: |
     Pops a value off the stack. If it is `true`, jumps to the target instruction.
   operands:
     - name: "target"
@@ -581,7 +584,7 @@
         type: "value"
 
 - name: "jumpIfNil"
-  description:
+  description: |
     Pops a value off the stack. If it is `nil`, jumps to the target instruction.
   operands:
     - name: "target"
@@ -599,7 +602,7 @@
     - return:
 
 - name: "returnValue"
-  description:
+  description: |
     Pops a value off the stack and then returns from the current function with that value.
   valueEffects:
     pop:
@@ -611,7 +614,7 @@
 # Comparison instructions
 
 - name: "equal"
-  description:
+  description: |
     Pops two values off the stack, checks if the first value is equal to the second,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -625,7 +628,7 @@
         type: "bool"
 
 - name: "notEqual"
-  description:
+  description: |
     Pops two values off the stack, checks if the first value is not equal to the second,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -641,7 +644,7 @@
 # Logical instructions
 
 - name: "not"
-  description:
+  description: |
     Pops a boolean value off the stack, negates it,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -655,7 +658,7 @@
 # Arithmetic instructions
 
 - name: "add"
-  description:
+  description: |
     Pops two number values off the stack, adds them together,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -669,7 +672,7 @@
         type: "number"
 
 - name: "subtract"
-  description:
+  description: |
     Pops two number values off the stack, subtracts the second from the first,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -683,7 +686,7 @@
         type: "number"
 
 - name: "multiply"
-  description:
+  description: |
     Pops two number values off the stack, multiplies them together,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -697,7 +700,7 @@
         type: "number"
 
 - name: "divide"
-  description:
+  description: |
     Pops two number values off the stack, divides the first by the second,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -711,7 +714,7 @@
         type: "number"
 
 - name: "mod"
-  description:
+  description: |
     Pops two number values off the stack, calculates the modulus of the first by the second,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -725,7 +728,7 @@
         type: "number"
 
 - name: negate
-  description:
+  description: |
     Pops a number value off the stack, negates it,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -739,7 +742,7 @@
 # Integer comparison instructions
 
 - name: "less"
-  description:
+  description: |
     Pops two values off the stack, checks if the first value is less than the second,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -753,7 +756,7 @@
         type: "bool"
 
 - name: "lessOrEqual"
-  description:
+  description: |
     Pops two values off the stack, checks if the first value is less than or equal to the second,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -767,7 +770,7 @@
         type: "bool"
 
 - name: "greater"
-  description:
+  description: |
     Pops two values off the stack, checks if the first value is greater than the second,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -781,7 +784,7 @@
         type: "bool"
 
 - name: "greaterOrEqual"
-  description:
+  description: |
     Pops two values off the stack, checks if the first value is greater than or equal to the second,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -797,7 +800,7 @@
 # Bitwise instructions
 
 - name: "bitwiseOr"
-  description:
+  description: |
     Pops two integer values off the stack, performs a bitwise OR operation on them,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -812,7 +815,7 @@
 
 
 - name: "bitwiseXor"
-  description:
+  description: |
     Pops two integer values off the stack, performs a bitwise XOR operation on them,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -826,7 +829,7 @@
         type: "integer"
 
 - name: "bitwiseAnd"
-  description:
+  description: |
     Pops two integer values off the stack, performs a bitwise AND operation on them,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -840,7 +843,7 @@
         type: "integer"
 
 - name: "bitwiseLeftShift"
-  description:
+  description: |
     Pops two integer values off the stack, performs a bitwise left shift operation on them,
     and then pushes the result back on to the stack.
   valueEffects:
@@ -854,7 +857,7 @@
         type: "integer"
 
 - name: "bitwiseRightShift"
-  description:
+  description: |
       Pops two integer values off the stack, performs a bitwise right shift operation on them,
       and then pushes the result back on to the stack.
   valueEffects:
@@ -870,7 +873,7 @@
   # Iterator
 
 - name: "iterator"
-  description:
+  description: |
     Pops an iterable value from the stack, get an iterator to it, and push the iterator back onto the stack.
   valueEffects:
     pop:
@@ -881,7 +884,7 @@
         type: "iterator"
 
 - name: "iteratorHasNext"
-  description:
+  description: |
     Pops a value-iterator from the stack, calls `hasNext()` method on it, and push the result back onto the stack.
   valueEffects:
     pop:
@@ -893,7 +896,7 @@
 
 
 - name: "iteratorNext"
-  description:
+  description: |
     Pops a value-iterator from the stack, calls `next()` method on it, and push the result back onto the stack.
   valueEffects:
     pop:
@@ -904,7 +907,7 @@
         type: "value"
 
 - name: "iteratorEnd"
-  description:
+  description: |
     Pops a value-iterator from the stack end invalidates it.
     The iterator may no longer be used after this instruction.
   valueEffects:
@@ -915,7 +918,7 @@
 # Other
 
 - name: "emitEvent"
-  description:
+  description: |
     Pops arguments of the stack and then emits an event with the given type with them.
   operands:
     - name: "type"
@@ -928,15 +931,15 @@
         # TODO: count
 
 - name: "loop"
-  description:
+  description: |
     Indicates the start of a loop.
 
 - name: "statement"
-  description:
+  description: |
     Indicates the start of a statement.
 
 - name: "templateString"
-  description:
+  description: |
     Represents a string template with an array of values (strings) and an array of expressions, pops both off the stack.
   operands:
     - name: "exprSize"
@@ -956,7 +959,7 @@
 # Attachment instructions
 
 - name: "getTypeIndex"
-  description:
+  description: |
     Pops a value off the stack, the target,
     and then pushes the value of the type key at the given index onto the stack.
   operands:
@@ -971,10 +974,10 @@
         type: "value"
 
 - name: "removeTypeIndex"
-  description:
+  description: |
     Pops a value off the stack, the target.
     Remove the value of the given type key from the target.
-    Additionally destroy if removed type is resource. 
+    Additionally destroy if removed type is resource.
   operands:
     - name: "type"
       type: "typeIndex"
@@ -984,7 +987,7 @@
         type: "value"
 
 - name: "setTypeIndex"
-  description:
+  description: |
     Pops two values off the stack, the target and the value,
     and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
   operands:
@@ -1001,7 +1004,7 @@
         type: "value"
 
 - name: "setAttachmentBase"
-  description:
+  description: |
     Pops two values off the stack, the attachment and the base, sets the attachment's base value to base.
   valueEffects:
     pop:
@@ -1012,7 +1015,7 @@
 
 # Combined "peephole" instructions
 - name: "getFieldLocal"
-  description:
+  description: |
     Pops a value off the stack, the target,
     and then pushes the value of the field at the given index onto the stack.
   operands:
