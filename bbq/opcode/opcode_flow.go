@@ -4,7 +4,7 @@ package opcode
 
 func (i Opcode) IsControlFlow() bool {
 	switch i {
-	case Invoke, Jump, JumpIfFalse, JumpIfTrue, JumpIfNil, Return, ReturnValue:
+	case Invoke, InvokeTyped, Jump, JumpIfFalse, JumpIfTrue, JumpIfNil, Return, ReturnValue:
 		return true
 	default:
 		return false

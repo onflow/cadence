@@ -79,6 +79,9 @@ type InvocationExpressionTypes struct {
 	// PassArgumentsWithoutTransferOrConvert indicates whether to transfer/convert the arguments or not.
 	// IMPORTANT: FOR INTERNAL USE ONLY. User-defined functions must never have this flag on!
 	PassArgumentsWithoutTransferOrConvert bool
+
+	// PassArgumentTypes indicates whether to pass the argument types or not.
+	PassArgumentTypes bool
 }
 
 type ArrayExpressionTypes struct {

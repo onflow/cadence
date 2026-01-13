@@ -805,6 +805,33 @@ func opRemoveIndex(vm *VM) {
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
+
+	// Load arguments
+	arguments := vm.popN(int(ins.ArgCount))
+
+	// Load the invoked value
+	functionValue := vm.pop()
+
+	// Add base to front of arguments if the function is bound and base is defined.
+	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
+		base := boundFunction.Base
+		if base != nil {
+			arguments = append([]Value{base}, arguments...)
+		}
+	}
+
+	invokeFunction(
+		vm,
+		functionValue,
+		arguments,
+		typeArguments,
+		nil,
+	)
+}
+
+func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
+	// Load type arguments
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 	argumentTypes := loadArgumentTypes(vm, ins.ArgTypes)
 
 	// Load arguments
@@ -818,7 +845,6 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		base := boundFunction.Base
 		if base != nil {
 			arguments = append([]Value{base}, arguments...)
-			// TODO: verify
 			argumentTypes = append(
 				[]bbq.StaticType{base.StaticType(vm.context)},
 				argumentTypes...,
@@ -1692,6 +1718,8 @@ func (vm *VM) run() {
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
+		case opcode.InstructionInvokeTyped:
+			opInvokeTyped(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:

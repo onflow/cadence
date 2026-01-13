@@ -1859,7 +1859,10 @@ func changeAccountContracts(
 
 	constructorArguments := arguments[requiredArgumentCount:]
 	constructorArgumentValueTypes := argumentValueTypes[requiredArgumentCount:]
-	constructorArgumentStaticTypes := argumentStaticTypes[requiredArgumentCount:]
+	var constructorArgumentStaticTypes []sema.Type
+	if !isUpdate {
+		constructorArgumentStaticTypes = argumentStaticTypes[requiredArgumentCount:]
+	}
 
 	newCode, err := interpreter.ByteArrayValueToByteSlice(context, newCodeValue)
 	if err != nil {

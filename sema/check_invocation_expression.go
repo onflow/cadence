@@ -540,10 +540,11 @@ func (checker *Checker) checkInvocation(
 	checker.Elaboration.SetInvocationExpressionTypes(
 		invocationExpression,
 		InvocationExpressionTypes{
-			TypeArguments:  typeArguments,
-			ParameterTypes: parameterTypes,
-			ReturnType:     returnType,
-			ArgumentTypes:  argumentTypes,
+			TypeArguments:     typeArguments,
+			ParameterTypes:    parameterTypes,
+			ReturnType:        returnType,
+			ArgumentTypes:     argumentTypes,
+			PassArgumentTypes: functionType.Arity.IsVariadic(),
 		},
 	)
 

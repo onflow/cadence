@@ -1326,12 +1326,18 @@ func TestRuntimeArgumentTypes(t *testing.T) {
 		},
 		sema.VoidTypeAnnotation,
 	)
+	functionType.Arity = &sema.Arity{Min: 1}
 
 	var called bool
 	checkArgumentTypes := func(argumentTypes interpreter.ArgumentTypesIterator) {
 		called = true
+
 		argType := argumentTypes.NextSema()
 		assert.Equal(t, sema.IntType, argType)
+
+		argType = argumentTypes.NextSema()
+		assert.Equal(t, sema.StringType, argType)
+
 		assert.Nil(t, argumentTypes.NextSema())
 	}
 
@@ -1383,7 +1389,7 @@ func TestRuntimeArgumentTypes(t *testing.T) {
 	tx := `
       transaction {
           prepare(signer: &Account) {
-              foo(42)
+              foo(42, "forty two")
           }
       }
     `

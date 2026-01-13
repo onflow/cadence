@@ -271,7 +271,7 @@ func TestCompilerMemoryMetering(t *testing.T) {
 			common.MemoryKindNumberValue: 0,
 			common.MemoryKindBigInt:      0,
 
-			common.MemoryKindGoSliceLength: 19,
+			common.MemoryKindGoSliceLength: 17,
 		}
 
 		assertMemoryIntensitiesContains(t, meter.meter, expected)

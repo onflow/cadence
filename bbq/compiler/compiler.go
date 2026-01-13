@@ -2644,6 +2644,8 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	if len(expression.Arguments) >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of arguments"))
 	}
+	argumentCount := uint16(len(expression.Arguments))
+
 	invokedExpr := expression.InvokedExpression
 
 	if memberExpression, isMemberExpr := expression.InvokedExpression.(*ast.MemberExpression); isMemberExpr {
@@ -2660,6 +2662,7 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				memberInfo,
 				memberExpression,
 				invocationTypes,
+				argumentCount,
 				implicitArgIndex,
 				implicitArgType,
 			)
@@ -2675,22 +2678,66 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	// Load function value
 	c.compileExpression(invokedExpr)
 
-	// Compile arguments
-	c.compileArguments(expression.Arguments, invocationTypes)
-	argTypes := c.loadArgumentTypes(invocationTypes)
+	c.emitInvocation(
+		expression,
+		implicitArgIndex,
+		implicitArgType,
+		invocationTypes,
+		argumentCount,
+	)
 
-	argTypes = c.addImplicitArgument(implicitArgIndex, implicitArgType, argTypes)
-
-	typeArgs := c.loadTypeArguments(invocationTypes)
-
-	c.emit(opcode.InstructionInvoke{
-		TypeArgs: typeArgs,
-		ArgTypes: argTypes,
-	})
 	return
 }
 
+func (c *Compiler[_, _]) emitInvocation(
+	expression *ast.InvocationExpression,
+	implicitArgIndex *uint16,
+	implicitArgType sema.Type,
+	invocationTypes sema.InvocationExpressionTypes,
+	argumentCount uint16,
+) {
+	// Compile arguments
+	c.compileArguments(expression.Arguments, invocationTypes)
+
+	typeArgs := c.loadTypeArguments(invocationTypes)
+
+	if invocationTypes.PassArgumentTypes {
+		argTypes := c.loadArgumentTypes(invocationTypes)
+		argTypes = c.addImplicitArgumentTyped(implicitArgIndex, implicitArgType, argTypes)
+		c.emit(opcode.InstructionInvokeTyped{
+			TypeArgs: typeArgs,
+			ArgTypes: argTypes,
+		})
+	} else {
+		argumentCount = c.addImplicitArgument(implicitArgIndex, argumentCount)
+		c.emit(opcode.InstructionInvoke{
+			TypeArgs: typeArgs,
+			ArgCount: argumentCount,
+		})
+	}
+}
+
 func (c *Compiler[_, _]) addImplicitArgument(
+	implicitArgIndex *uint16,
+	argCount uint16,
+) uint16 {
+	if implicitArgIndex == nil {
+		return argCount
+	}
+
+	// Add the implicit argument to the end of the argument list, if it exists.
+	// Used in attachments, the attachment constructor/init expects an implicit argument:
+	// a reference to the base value used to set base.
+	// This hides the base argument away from the user.
+
+	// Load implicit argument from locals
+	// Base is at the back of the argument list, only for attachment initialization.
+	c.emitGetLocal(*implicitArgIndex)
+
+	return argCount + 1
+}
+
+func (c *Compiler[_, _]) addImplicitArgumentTyped(
 	implicitArgIndex *uint16,
 	implicitArgType sema.Type,
 	argTypes []uint16,
@@ -2745,6 +2792,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	memberInfo sema.MemberAccessInfo,
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
+	argumentCount uint16,
 	implicitArgIndex *uint16,
 	implicitArgType sema.Type,
 ) {
@@ -2766,17 +2814,14 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		// Load function value
 		c.emitGlobalLoad(funcName)
 
-		// Compile arguments
-		c.compileArguments(expression.Arguments, invocationTypes)
-		argTypes := c.loadArgumentTypes(invocationTypes)
-		argTypes = c.addImplicitArgument(implicitArgIndex, implicitArgType, argTypes)
+		c.emitInvocation(
+			expression,
+			implicitArgIndex,
+			implicitArgType,
+			invocationTypes,
+			argumentCount,
+		)
 
-		typeArgs := c.loadTypeArguments(invocationTypes)
-
-		c.emit(opcode.InstructionInvoke{
-			TypeArgs: typeArgs,
-			ArgTypes: argTypes,
-		})
 		return
 	}
 
@@ -2785,9 +2830,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	}
 
 	isOptional := memberInfo.IsOptional
-
-	typeArgs := c.loadTypeArguments(invocationTypes)
-	argTypes := c.loadArgumentTypes(invocationTypes)
 
 	// Invocations into the interface code, such as default functions and inherited conditions,
 	// that were synthetically added at the desugar phase, must be static calls.
@@ -2811,14 +2853,12 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// i.e: the receiver is already loaded.
 				c.compileMemberAccess(invokedExpr)
 
-				// Compile arguments
-				c.compileArguments(expression.Arguments, invocationTypes)
-
-				c.emit(
-					opcode.InstructionInvoke{
-						TypeArgs: typeArgs,
-						ArgTypes: argTypes,
-					},
+				c.emitInvocation(
+					expression,
+					implicitArgIndex,
+					implicitArgType,
+					invocationTypes,
+					argumentCount,
 				)
 			},
 			true,
@@ -2853,11 +2893,14 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		// Compile as static-function call.
 		// No receiver is loaded.
 		c.emitGlobalLoad(funcName)
-		c.compileArguments(expression.Arguments, invocationTypes)
-		c.emit(opcode.InstructionInvoke{
-			TypeArgs: typeArgs,
-			ArgTypes: argTypes,
-		})
+
+		c.emitInvocation(
+			expression,
+			implicitArgIndex,
+			implicitArgType,
+			invocationTypes,
+			argumentCount,
+		)
 	} else {
 		c.withOptionalChaining(
 			invokedExpr.Expression,
@@ -2871,13 +2914,13 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// This is needed to capture the implicit reference that's get created by bound functions.
 				c.emitMethodLoad(funcName)
 
-				// Compile arguments
-				c.compileArguments(expression.Arguments, invocationTypes)
-
-				c.emit(opcode.InstructionInvoke{
-					TypeArgs: typeArgs,
-					ArgTypes: argTypes,
-				})
+				c.emitInvocation(
+					expression,
+					implicitArgIndex,
+					implicitArgType,
+					invocationTypes,
+					argumentCount,
+				)
 			},
 			true,
 		)
@@ -4113,11 +4156,7 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 		indexBigInt := big.NewInt(int64(index))
 		enumRawType := compositeType.EnumRawType
 		c.emitIntegerConstant(indexBigInt, enumRawType)
-		argumentType := c.getOrAddType(enumRawType)
-
-		c.emit(opcode.InstructionInvoke{
-			ArgTypes: []uint16{argumentType},
-		})
+		c.emit(opcode.InstructionInvoke{ArgCount: 1})
 		// NOTE: Do not transfer, as that creates a copy of the enum case value,
 		// which does not match the interpreter's behavior.
 		c.emit(opcode.InstructionReturnValue{})
