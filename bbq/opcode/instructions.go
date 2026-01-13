@@ -530,9 +530,10 @@ func (i InstructionGetIndex) Encode(code *[]byte) {
 // InstructionRemoveIndex
 //
 // Pops two values off the stack, the array and the index.
-// Removes the value at the given index from the array and pushes it onto the stack,
-// as well as the placeholder value that was inserted, if any, or nil otherwise.
+// Removes the value at the given index from the array and pushes it onto the stack.
+// If pushPlaceholder is true, also pushes the placeholder value that was inserted, if any, or nil otherwise.
 type InstructionRemoveIndex struct {
+	PushPlaceholder bool
 }
 
 var _ Instruction = InstructionRemoveIndex{}
@@ -542,20 +543,34 @@ func (InstructionRemoveIndex) Opcode() Opcode {
 }
 
 func (i InstructionRemoveIndex) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
 }
 
-func (i InstructionRemoveIndex) OperandsString(sb *strings.Builder, colorize bool) {}
+func (i InstructionRemoveIndex) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "pushPlaceholder", i.PushPlaceholder, colorize)
+}
 
 func (i InstructionRemoveIndex) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "pushPlaceholder", i.PushPlaceholder, colorize)
 }
 
 func (i InstructionRemoveIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitBool(code, i.PushPlaceholder)
+}
+
+func DecodeRemoveIndex(ip *uint16, code []byte) (i InstructionRemoveIndex) {
+	i.PushPlaceholder = decodeBool(ip, code)
+	return i
 }
 
 // InstructionSetIndex
@@ -3051,7 +3066,7 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	case GetIndex:
 		return InstructionGetIndex{}
 	case RemoveIndex:
-		return InstructionRemoveIndex{}
+		return DecodeRemoveIndex(ip, code)
 	case SetIndex:
 		return InstructionSetIndex{}
 	case Void:

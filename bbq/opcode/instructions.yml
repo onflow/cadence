@@ -152,8 +152,11 @@
 - name: "removeIndex"
   description: |
     Pops two values off the stack, the array and the index.
-    Removes the value at the given index from the array and pushes it onto the stack,
-    as well as the placeholder value that was inserted, if any, or nil otherwise.
+    Removes the value at the given index from the array and pushes it onto the stack.
+    If pushPlaceholder is true, also pushes the placeholder value that was inserted, if any, or nil otherwise.
+  operands:
+    - name: "pushPlaceholder"
+      type: "bool"
   valueEffects:
     pop:
       - name: "array"

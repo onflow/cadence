@@ -7445,7 +7445,6 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
 				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 				opcode.InstructionRemoveIndex{},
-				opcode.InstructionDrop{},
 				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
 
 				// Second value assignment.
@@ -8429,7 +8428,7 @@ func TestCompileSwapMembers(t *testing.T) {
 	)
 }
 
-func TestCompileSwapIndexInSructs(t *testing.T) {
+func TestCompileSwapIndexInStructs(t *testing.T) {
 
 	t.Parallel()
 
@@ -8641,22 +8640,21 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			// get left value
 			opcode.InstructionGetLocal{Local: leftTargetIndex},
 			opcode.InstructionGetLocal{Local: leftIndexIndex},
-			opcode.InstructionRemoveIndex{},
+			opcode.InstructionRemoveIndex{PushPlaceholder: true},
 			opcode.InstructionSetLocal{Local: leftInsertedPlaceholderIndex},
 			opcode.InstructionSetLocal{Local: leftValueIndex},
 
 			// get right value
 			opcode.InstructionGetLocal{Local: rightTargetIndex},
 			opcode.InstructionGetLocal{Local: rightIndexIndex},
-			opcode.InstructionRemoveIndex{},
-			opcode.InstructionDrop{},
+			opcode.InstructionRemoveIndex{PushPlaceholder: false},
 			opcode.InstructionSetLocal{Local: rightValueIndex},
 
 			// compare right value and left inserted placeholder
 			opcode.InstructionGetLocal{Local: rightValueIndex},
 			opcode.InstructionGetLocal{Local: leftInsertedPlaceholderIndex},
 			opcode.InstructionSame{},
-			opcode.InstructionJumpIfFalse{Target: 38},
+			opcode.InstructionJumpIfFalse{Target: 37},
 
 			// set left index back with left value
 			opcode.InstructionGetLocal{Local: leftTargetIndex},
@@ -8665,7 +8663,7 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.InstructionSetIndex{},
 
 			// jump to the end
-			opcode.InstructionJump{Target: 52},
+			opcode.InstructionJump{Target: 51},
 
 			// convert right value to left type
 			opcode.InstructionGetLocal{Local: rightValueIndex},

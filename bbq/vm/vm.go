@@ -783,7 +783,7 @@ func opGetIndex(vm *VM) {
 	vm.push(element)
 }
 
-func opRemoveIndex(vm *VM) {
+func opRemoveIndex(vm *VM, ins opcode.InstructionRemoveIndex) {
 	context := vm.context
 	container, index := vm.pop2()
 	containerValue := container.(interpreter.ValueIndexableValue)
@@ -800,7 +800,9 @@ func opRemoveIndex(vm *VM) {
 		false,
 	)
 	vm.push(element)
-	vm.push(placeholder)
+	if ins.PushPlaceholder {
+		vm.push(placeholder)
+	}
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
@@ -1670,7 +1672,7 @@ func (vm *VM) run() {
 		case opcode.InstructionGetIndex:
 			opGetIndex(vm)
 		case opcode.InstructionRemoveIndex:
-			opRemoveIndex(vm)
+			opRemoveIndex(vm, ins)
 		case opcode.InstructionGetMethod:
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
