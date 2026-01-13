@@ -8454,37 +8454,35 @@ func TestCompileSwapIndex(t *testing.T) {
 			opcode.InstructionSetLocal{Local: tempIndex1},
 
 			opcode.InstructionGetConstant{Constant: 2},
+			opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 			opcode.InstructionSetLocal{Local: tempIndex2},
 
 			opcode.InstructionGetLocal{Local: charsIndex},
 			opcode.InstructionSetLocal{Local: tempIndex3},
 
 			opcode.InstructionGetConstant{Constant: 3},
+			opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 			opcode.InstructionSetLocal{Local: tempIndex4},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
-			opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 			opcode.InstructionSetLocal{Local: tempIndex5},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
-			opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 			opcode.InstructionSetLocal{Local: tempIndex6},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
-			opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 			opcode.InstructionGetLocal{Local: tempIndex6},
 			opcode.InstructionSetIndex{},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
-			opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 			opcode.InstructionGetLocal{Local: tempIndex5},
 			opcode.InstructionSetIndex{},
 
