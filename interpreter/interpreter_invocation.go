@@ -171,6 +171,17 @@ func invokeFunctionValueWithEval[T any](
 	//
 	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
 
+	// Defensively check the return value's actual type matches the expected return type.
+	valueStaticType := resultValue.StaticType(context)
+	if !IsSubTypeOfSemaType(context, valueStaticType, functionReturnType) {
+		resultSemaType := context.SemaTypeFromStaticType(valueStaticType)
+
+		panic(&ValueTransferTypeError{
+			ExpectedType: functionReturnType,
+			ActualType:   resultSemaType,
+		})
+	}
+
 	return ConvertAndBox(
 		context,
 		resultValue,

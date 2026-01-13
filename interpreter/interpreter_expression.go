@@ -1107,7 +1107,10 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	return interpreter.visitInvocationExpressionWithImplicitArgument(invocationExpression, nil)
 }
 
-func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg Value) Value {
+func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(
+	invocationExpression *ast.InvocationExpression,
+	implicitArg Value,
+) Value {
 
 	var function FunctionValue
 

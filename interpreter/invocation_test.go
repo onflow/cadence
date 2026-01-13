@@ -231,3 +231,65 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		require.ErrorAs(t, err, &memberAccessTypeError)
 	}
 }
+
+func TestInterpretInvocationReturnTypeValidation(t *testing.T) {
+
+	t.Parallel()
+
+	fooFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"foo",
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.TypeAnnotation{
+				Type: sema.IntType,
+			},
+		),
+		"",
+		func(_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.Value,
+			_ []interpreter.Value,
+		) interpreter.Value {
+			return interpreter.NewUnmeteredStringValue("hello")
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(fooFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, fooFunction)
+
+	inter, err := parseCheckAndPrepareWithOptions(
+		t,
+		`
+            fun test() {
+                foo()
+            }
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: NewUnmeteredInMemoryStorage(),
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+					AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	RequireError(t, err)
+
+	var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
+}
