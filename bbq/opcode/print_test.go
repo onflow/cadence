@@ -219,6 +219,7 @@ func TestPrintInstruction(t *testing.T) {
 		"LessOrEqual":    {byte(LessOrEqual)},
 		"GreaterOrEqual": {byte(GreaterOrEqual)},
 
+		"Same":     {byte(Same)},
 		"Equal":    {byte(Equal)},
 		"NotEqual": {byte(NotEqual)},
 

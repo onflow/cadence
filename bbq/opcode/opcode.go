@@ -68,6 +68,7 @@ const (
 
 	// Equality
 
+	Same
 	Equal
 	NotEqual
 
