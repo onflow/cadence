@@ -219,6 +219,7 @@ func TestPrintInstruction(t *testing.T) {
 		"LessOrEqual":    {byte(LessOrEqual)},
 		"GreaterOrEqual": {byte(GreaterOrEqual)},
 
+		"Same":     {byte(Same)},
 		"Equal":    {byte(Equal)},
 		"NotEqual": {byte(NotEqual)},
 
@@ -238,7 +239,7 @@ func TestPrintInstruction(t *testing.T) {
 		"SetAttachmentBase":                       {byte(SetAttachmentBase), 1, 2, 3},
 		"SetIndex":                                {byte(SetIndex)},
 		"GetIndex":                                {byte(GetIndex)},
-		"RemoveIndex":                             {byte(RemoveIndex)},
+		"RemoveIndex pushPlaceholder:true":        {byte(RemoveIndex), 1},
 		"Drop":                                    {byte(Drop)},
 		"Dup":                                     {byte(Dup)},
 		"Not":                                     {byte(Not)},

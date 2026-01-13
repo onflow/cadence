@@ -526,7 +526,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
 
 	const allowMissing = false
-	result := getterSetter.get(allowMissing)
+	result, _ := getterSetter.get(allowMissing)
 	if result == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -601,23 +601,34 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 
 	const allowMissing = false
 
-	leftValue := leftGetterSetter.get(allowMissing)
+	leftValue, leftInsertedPlaceholder := leftGetterSetter.get(allowMissing)
 	interpreter.checkSwapValue(leftValue, swap.Left)
 
-	rightValue := rightGetterSetter.get(allowMissing)
+	rightValue, _ := rightGetterSetter.get(allowMissing)
 	interpreter.checkSwapValue(rightValue, swap.Right)
 
-	// Set right value to left target,
-	// and left value to right target
+	// Handle swapping a value with itself, e.g. `a[i] <-> a[i]`:
+	//
+	// If getting the right value results in the placeholder we just set in the left,
+	// then set the left value back to the left target.
 
-	CheckInvalidatedResourceOrResourceReference(rightValue, interpreter)
-	transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType)
+	if rightValue == leftInsertedPlaceholder {
+		leftGetterSetter.set(leftValue)
+	} else {
+		// Not swapping a value with itself.
+		//
+		// Set right value to left target,
+		// and left value to right target
 
-	CheckInvalidatedResourceOrResourceReference(leftValue, interpreter)
-	transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType)
+		CheckInvalidatedResourceOrResourceReference(rightValue, interpreter)
+		transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType)
 
-	leftGetterSetter.set(transferredRightValue)
-	rightGetterSetter.set(transferredLeftValue)
+		CheckInvalidatedResourceOrResourceReference(leftValue, interpreter)
+		transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType)
+
+		leftGetterSetter.set(transferredRightValue)
+		rightGetterSetter.set(transferredLeftValue)
+	}
 
 	return nil
 }

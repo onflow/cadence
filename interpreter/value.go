@@ -135,6 +135,12 @@ type ValueIndexableValue interface {
 	SetKey(context ContainerMutationContext, key Value, value Value)
 	RemoveKey(context ContainerMutationContext, key Value) Value
 	InsertKey(context ContainerMutationContext, key Value, value Value)
+	InsertKeyWithMutationCheck(
+		context ContainerMutationContext,
+		key Value,
+		value Value,
+		checkMutation bool,
+	)
 }
 
 type TypeIndexableValue interface {

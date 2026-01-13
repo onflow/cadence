@@ -54,8 +54,9 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 
 	default:
 		return getterSetter{
-			get: func(_ bool) Value {
-				return interpreter.evalExpression(expression)
+			get: func(_ bool) (Value, *PlaceholderValue) {
+				value := interpreter.evalExpression(expression)
+				return value, nil
 			},
 			set: func(_ Value) {
 				panic(errors.NewUnreachableError())
@@ -73,10 +74,10 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(
 	variable := interpreter.FindVariable(identifier)
 
 	return getterSetter{
-		get: func(_ bool) Value {
+		get: func(_ bool) (Value, *PlaceholderValue) {
 			value := variable.GetValue(interpreter)
 			interpreter.checkInvalidatedResourceUse(value, variable, identifier)
-			return value
+			return value, nil
 		},
 		set: func(value Value) {
 			interpreter.startResourceTracking(value, variable, identifier)
@@ -96,9 +97,10 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 
 	return getterSetter{
 		target: target,
-		get: func(_ bool) Value {
+		get: func(_ bool) (Value, *PlaceholderValue) {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
-			return target.GetTypeKey(interpreter, attachmentType)
+			value := target.GetTypeKey(interpreter, attachmentType)
+			return value, nil
 		},
 		set: func(_ Value) {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
@@ -132,7 +134,8 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 	targetExpression := indexExpression.TargetExpression
 	targetGetterSetter := interpreter.assignmentGetterSetter(targetExpression)
 	const allowMissing = false
-	target, ok := targetGetterSetter.get(allowMissing).(ValueIndexableValue)
+	value, _ := targetGetterSetter.get(allowMissing)
+	target, ok := value.(ValueIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -189,22 +192,34 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 
 	isNestedResourceMove := elaboration.IsNestedResourceMoveExpression(indexExpression)
 
-	var get func(allowMissing bool) Value
+	var get getterFunc
 
 	if isNestedResourceMove {
-		get = func(_ bool) Value {
+		get = func(_ bool) (Value, *PlaceholderValue) {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
 			value := target.RemoveKey(interpreter, transferredIndexingValue)
-			target.InsertKey(interpreter, transferredIndexingValue, placeholder)
-			return value
+
+			// Insert a placeholder value at the removed index to mark it as deleted.
+			// Note: Must use `InsertKey` here, not `SetKey`,
+			// and disable mutation check, because the placeholder is not a real value.
+			placeholder := &PlaceholderValue{}
+			target.InsertKeyWithMutationCheck(
+				interpreter,
+				transferredIndexingValue,
+				placeholder,
+				false,
+			)
+			return value, placeholder
 		}
 	} else {
-		get = func(_ bool) Value {
+		get = func(_ bool) (Value, *PlaceholderValue) {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
 			value := target.GetKey(interpreter, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
-			return interpreter.maybeGetReference(indexExpression, value)
+			value = interpreter.maybeGetReference(indexExpression, value)
+
+			return value, nil
 		}
 	}
 
@@ -236,7 +251,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 
 	return getterSetter{
 		target: target,
-		get: func(allowMissing bool) Value {
+		get: func(allowMissing bool) (Value, *PlaceholderValue) {
 
 			interpreter.checkMemberAccess(memberExpression, target)
 
@@ -245,7 +260,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 			if isOptional {
 				switch typedTarget := target.(type) {
 				case NilValue:
-					return typedTarget
+					return typedTarget, nil
 
 				case *SomeValue:
 					target = typedTarget.InnerValue()
@@ -288,7 +303,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 				)
 			}
 
-			return resultValue
+			return resultValue, nil
 		},
 		set: func(value Value) {
 			interpreter.checkMemberAccess(memberExpression, target)
@@ -1056,7 +1071,8 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) Value {
 	const allowMissing = false
-	return interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
+	value, _ := interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
+	return value
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
@@ -1065,9 +1081,11 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 	// An `*EphemeralReferenceValue` value is both a `TypeIndexableValue` and a `ValueIndexableValue` statically,
 	// but at runtime can only be used as one or the other.
 	if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
-		return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType).get(allowMissing)
+		value, _ := interpreter.typeIndexExpressionGetterSetter(expression, attachmentType).get(allowMissing)
+		return value
 	} else {
-		return interpreter.valueIndexExpressionGetterSetter(expression).get(allowMissing)
+		value, _ := interpreter.valueIndexExpressionGetterSetter(expression).get(allowMissing)
+		return value
 	}
 }
 

@@ -783,15 +783,26 @@ func opGetIndex(vm *VM) {
 	vm.push(element)
 }
 
-func opRemoveIndex(vm *VM) {
+func opRemoveIndex(vm *VM, ins opcode.InstructionRemoveIndex) {
 	context := vm.context
 	container, index := vm.pop2()
 	containerValue := container.(interpreter.ValueIndexableValue)
 	element := containerValue.RemoveKey(context, index)
 
-	// Note: Must use `InsertKey` here, not `SetKey`.
-	containerValue.InsertKey(context, index, interpreter.PlaceholderValue{})
+	// Insert a placeholder value at the removed index to mark it as deleted.
+	placeholder := &interpreter.PlaceholderValue{}
+	// Note: Must use `InsertKey` here, not `SetKey`,
+	// and disable mutation check, because the placeholder is not a real value.
+	containerValue.InsertKeyWithMutationCheck(
+		context,
+		index,
+		placeholder,
+		false,
+	)
 	vm.push(element)
+	if ins.PushPlaceholder {
+		vm.push(placeholder)
+	}
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
@@ -1280,6 +1291,12 @@ func opVoid(vm *VM) {
 	vm.push(interpreter.Void)
 }
 
+func opSame(vm *VM) {
+	left, right := vm.peekPop()
+	isSame := interpreter.BoolValue(left == right)
+	vm.replaceTop(isSame)
+}
+
 func opEqual(vm *VM) {
 	left, right := vm.peekPop()
 	result := interpreter.TestValueEqual(
@@ -1655,7 +1672,7 @@ func (vm *VM) run() {
 		case opcode.InstructionGetIndex:
 			opGetIndex(vm)
 		case opcode.InstructionRemoveIndex:
-			opRemoveIndex(vm)
+			opRemoveIndex(vm, ins)
 		case opcode.InstructionGetMethod:
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
@@ -1702,6 +1719,8 @@ func (vm *VM) run() {
 			opNil(vm)
 		case opcode.InstructionVoid:
 			opVoid(vm)
+		case opcode.InstructionSame:
+			opSame(vm)
 		case opcode.InstructionEqual:
 			opEqual(vm)
 		case opcode.InstructionNotEqual:
