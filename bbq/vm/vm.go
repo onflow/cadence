@@ -800,6 +800,7 @@ func opRemoveIndex(vm *VM) {
 		false,
 	)
 	vm.push(element)
+	vm.push(placeholder)
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
@@ -1288,6 +1289,12 @@ func opVoid(vm *VM) {
 	vm.push(interpreter.Void)
 }
 
+func opSame(vm *VM) {
+	left, right := vm.peekPop()
+	isSame := interpreter.BoolValue(left == right)
+	vm.replaceTop(isSame)
+}
+
 func opEqual(vm *VM) {
 	left, right := vm.peekPop()
 	result := interpreter.TestValueEqual(
@@ -1710,6 +1717,8 @@ func (vm *VM) run() {
 			opNil(vm)
 		case opcode.InstructionVoid:
 			opVoid(vm)
+		case opcode.InstructionSame:
+			opSame(vm)
 		case opcode.InstructionEqual:
 			opEqual(vm)
 		case opcode.InstructionNotEqual:

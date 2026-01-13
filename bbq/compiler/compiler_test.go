@@ -7445,6 +7445,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
 				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 				opcode.InstructionRemoveIndex{},
+				opcode.InstructionDrop{},
 				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
 
 				// Second value assignment.
@@ -8265,17 +8266,29 @@ func TestCompileSwapIdentifiers(t *testing.T) {
 			opcode.InstructionGetLocal{Local: yIndex},
 			opcode.InstructionSetLocal{Local: tempIndex2},
 
+			// get left (x)
 			opcode.InstructionGetLocal{Local: tempIndex1},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionSetLocal{Local: tempIndex3},
 
+			// get right (y)
 			opcode.InstructionGetLocal{Local: tempIndex2},
+			opcode.InstructionSetLocal{Local: tempIndex4},
+
+			// convert right value to left type
+			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionSetLocal{Local: tempIndex4},
 
+			// convert left value to right type
+			opcode.InstructionGetLocal{Local: tempIndex3},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionSetLocal{Local: tempIndex3},
+
+			// set left (x) with right value
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionSetLocal{Local: xIndex},
 
+			// set right (y) with left value
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionSetLocal{Local: yIndex},
 
@@ -8357,20 +8370,32 @@ func TestCompileSwapMembers(t *testing.T) {
 			opcode.InstructionGetLocal{Local: sIndex},
 			opcode.InstructionSetLocal{Local: tempIndex2},
 
+			// get left (s.x)
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
-			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 			opcode.InstructionSetLocal{Local: tempIndex3},
 
+			// get right (s.y)
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetField{FieldName: 1, AccessedType: 1},
+			opcode.InstructionSetLocal{Local: tempIndex4},
+
+			// convert right value to left type
+			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 			opcode.InstructionSetLocal{Local: tempIndex4},
 
+			// convert left value to right type
+			opcode.InstructionGetLocal{Local: tempIndex3},
+			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
+			opcode.InstructionSetLocal{Local: tempIndex3},
+
+			// set left (s.x) with right value
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionSetField{FieldName: 0, AccessedType: 1},
 
+			// set right (s.y) with left value
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionSetField{FieldName: 1, AccessedType: 1},
@@ -8404,7 +8429,7 @@ func TestCompileSwapMembers(t *testing.T) {
 	)
 }
 
-func TestCompileSwapIndex(t *testing.T) {
+func TestCompileSwapIndexInSructs(t *testing.T) {
 
 	t.Parallel()
 
@@ -8464,23 +8489,35 @@ func TestCompileSwapIndex(t *testing.T) {
 			opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 			opcode.InstructionSetLocal{Local: tempIndex4},
 
+			// get left value
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetIndex{},
-			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 			opcode.InstructionSetLocal{Local: tempIndex5},
 
+			// get right value
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionGetIndex{},
+			opcode.InstructionSetLocal{Local: tempIndex6},
+
+			// convert right value to left type
+			opcode.InstructionGetLocal{Local: tempIndex6},
 			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 			opcode.InstructionSetLocal{Local: tempIndex6},
 
+			// convert left value to right type
+			opcode.InstructionGetLocal{Local: tempIndex5},
+			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
+			opcode.InstructionSetLocal{Local: tempIndex5},
+
+			// set right index with left value
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetLocal{Local: tempIndex6},
 			opcode.InstructionSetIndex{},
 
+			// set left index with right value
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionGetLocal{Local: tempIndex5},
@@ -8508,6 +8545,171 @@ func TestCompileSwapIndex(t *testing.T) {
 			},
 			{
 				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileSwapIndexInResources(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        resource R {}
+
+        fun test() {
+           let rs <- [
+               <- create R()
+           ]
+
+           // We swap only '0'
+           rs[0] <-> rs[0]
+
+           destroy rs
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 5)
+
+	const (
+		rsIndex = iota
+		leftTargetIndex
+		leftIndexIndex
+		rightTargetIndex
+		rightIndexIndex
+		leftInsertedPlaceholderIndex
+		leftValueIndex
+		rightValueIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+
+			// let rs <- [<- create R()]
+			opcode.InstructionGetGlobal{Global: 1},
+			opcode.InstructionInvoke{},
+			opcode.InstructionTransfer{},
+			opcode.InstructionConvert{ValueType: 2, TargetType: 2},
+
+			opcode.InstructionNewArray{
+				Type:       1,
+				Size:       1,
+				IsResource: true,
+			},
+			opcode.InstructionTransferAndConvert{
+				ValueType:  1,
+				TargetType: 1,
+			},
+			opcode.InstructionSetLocal{
+				Local: rsIndex,
+			},
+
+			// rs[0] <-> rs[0]
+			opcode.InstructionStatement{},
+
+			opcode.InstructionGetLocal{Local: rsIndex},
+			opcode.InstructionSetLocal{Local: leftTargetIndex},
+
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{
+				ValueType:  3,
+				TargetType: 3,
+			},
+			opcode.InstructionSetLocal{Local: leftIndexIndex},
+
+			opcode.InstructionGetLocal{Local: rsIndex},
+			opcode.InstructionSetLocal{Local: rightTargetIndex},
+
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{
+				ValueType:  3,
+				TargetType: 3,
+			},
+			opcode.InstructionSetLocal{Local: rightIndexIndex},
+
+			// get left value
+			opcode.InstructionGetLocal{Local: leftTargetIndex},
+			opcode.InstructionGetLocal{Local: leftIndexIndex},
+			opcode.InstructionRemoveIndex{},
+			opcode.InstructionSetLocal{Local: leftInsertedPlaceholderIndex},
+			opcode.InstructionSetLocal{Local: leftValueIndex},
+
+			// get right value
+			opcode.InstructionGetLocal{Local: rightTargetIndex},
+			opcode.InstructionGetLocal{Local: rightIndexIndex},
+			opcode.InstructionRemoveIndex{},
+			opcode.InstructionDrop{},
+			opcode.InstructionSetLocal{Local: rightValueIndex},
+
+			// compare right value and left inserted placeholder
+			opcode.InstructionGetLocal{Local: rightValueIndex},
+			opcode.InstructionGetLocal{Local: leftInsertedPlaceholderIndex},
+			opcode.InstructionSame{},
+			opcode.InstructionJumpIfFalse{Target: 38},
+
+			// set left index back with left value
+			opcode.InstructionGetLocal{Local: leftTargetIndex},
+			opcode.InstructionGetLocal{Local: leftIndexIndex},
+			opcode.InstructionGetLocal{Local: leftValueIndex},
+			opcode.InstructionSetIndex{},
+
+			// jump to the end
+			opcode.InstructionJump{Target: 52},
+
+			// convert right value to left type
+			opcode.InstructionGetLocal{Local: rightValueIndex},
+			opcode.InstructionTransferAndConvert{
+				ValueType:  2,
+				TargetType: 2,
+			},
+			opcode.InstructionSetLocal{Local: rightValueIndex},
+
+			// convert left value to right type
+			opcode.InstructionGetLocal{Local: leftValueIndex},
+			opcode.InstructionTransferAndConvert{
+				ValueType:  2,
+				TargetType: 2,
+			},
+			opcode.InstructionSetLocal{Local: leftValueIndex},
+
+			// set left index with right value
+			opcode.InstructionGetLocal{Local: leftTargetIndex},
+			opcode.InstructionGetLocal{Local: leftIndexIndex},
+			opcode.InstructionGetLocal{Local: rightValueIndex},
+			opcode.InstructionSetIndex{},
+
+			// set right index with left value
+			opcode.InstructionGetLocal{Local: rightTargetIndex},
+			opcode.InstructionGetLocal{Local: rightIndexIndex},
+			opcode.InstructionGetLocal{Local: leftValueIndex},
+			opcode.InstructionSetIndex{},
+
+			// destroy rs
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: rsIndex},
+			opcode.InstructionDestroy{},
+
+			// Return
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.DecodedConstant{
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 		},
