@@ -1897,7 +1897,8 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		// Transfer and leave it on the stack.
 		c.emitGetLocal(indexExprTargetLocal)
 		c.emitGetLocal(indexExprIndexLocal)
-		c.compileIndexAccess(firstValue)
+		c.emitIndexKeyTransferAndConvert(firstValue)
+		c.compileIndexAccessWithTransferredIndex(firstValue)
 		// Need to transfer the value "out",
 		// before the second value is being assigned
 		c.mustEmitTransferAndConvert(firstValueTransferType)
@@ -2023,25 +2024,25 @@ func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ str
 	// Evaluate the left side (target and key)
 
 	leftTargetIndex := c.compileSwapTarget(statement.Left)
-	leftKeyIndex := c.compileSwapKey(statement.Left)
+	leftTransferredKeyIndex := c.compileSwapKey(statement.Left)
 
 	// Evaluate the right side (target and key)
 
 	rightTargetIndex := c.compileSwapTarget(statement.Right)
-	rightKeyIndex := c.compileSwapKey(statement.Right)
+	rightTransferredKeyIndex := c.compileSwapKey(statement.Right)
 
 	// Get left and right values
 
 	leftValueIndex := c.compileSwapGet(
 		statement.Left,
 		leftTargetIndex,
-		leftKeyIndex,
+		leftTransferredKeyIndex,
 		rightType,
 	)
 	rightValueIndex := c.compileSwapGet(
 		statement.Right,
 		rightTargetIndex,
-		rightKeyIndex,
+		rightTransferredKeyIndex,
 		leftType,
 	)
 
@@ -2053,13 +2054,13 @@ func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ str
 	c.compileSwapSet(
 		statement.Left,
 		leftTargetIndex,
-		leftKeyIndex,
+		leftTransferredKeyIndex,
 		rightValueIndex,
 	)
 	c.compileSwapSet(
 		statement.Right,
 		rightTargetIndex,
-		rightKeyIndex,
+		rightTransferredKeyIndex,
 		leftValueIndex,
 	)
 
@@ -2093,6 +2094,7 @@ func (c *Compiler[_, _]) compileSwapKey(sideExpression ast.Expression) (keyLocal
 	case *ast.IndexExpression:
 		// If the side is an index expression, compile the indexing expression
 		c.compileExpression(sideExpression.IndexingExpression)
+		c.emitIndexKeyTransferAndConvert(sideExpression)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2107,7 +2109,7 @@ func (c *Compiler[_, _]) compileSwapKey(sideExpression ast.Expression) (keyLocal
 func (c *Compiler[_, _]) compileSwapGet(
 	sideExpression ast.Expression,
 	targetIndex uint16,
-	keyIndex uint16,
+	transferredKeyIndex uint16,
 	targetType sema.Type,
 ) (valueIndex uint16) {
 
@@ -2130,8 +2132,8 @@ func (c *Compiler[_, _]) compileSwapGet(
 
 	case *ast.IndexExpression:
 		c.emitGetLocal(targetIndex)
-		c.emitGetLocal(keyIndex)
-		c.compileIndexAccess(sideExpression)
+		c.emitGetLocal(transferredKeyIndex)
+		c.compileIndexAccessWithTransferredIndex(sideExpression)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2148,7 +2150,7 @@ func (c *Compiler[_, _]) compileSwapGet(
 func (c *Compiler[_, _]) compileSwapSet(
 	sideExpression ast.Expression,
 	targetIndex uint16,
-	keyIndex uint16,
+	transferredKeyIndex uint16,
 	valueIndex uint16,
 ) {
 	switch sideExpression := sideExpression.(type) {
@@ -2178,8 +2180,7 @@ func (c *Compiler[_, _]) compileSwapSet(
 
 	case *ast.IndexExpression:
 		c.emitGetLocal(targetIndex)
-		c.emitGetLocal(keyIndex)
-		c.emitIndexKeyTransferAndConvert(sideExpression)
+		c.emitGetLocal(transferredKeyIndex)
 		c.emitGetLocal(valueIndex)
 		c.emit(opcode.InstructionSetIndex{})
 
@@ -3177,24 +3178,20 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 		})
 	} else {
 		c.compileExpression(expression.IndexingExpression)
-
-		c.compileIndexAccess(expression)
+		c.emitIndexKeyTransferAndConvert(expression)
+		c.compileIndexAccessWithTransferredIndex(expression)
 	}
 
 	return
 }
 
-// compileIndexAccess compiles the index access, i.e. RemoveIndex or GetIndex.
-// It assumes the target and indexing/key expressions are already compiled on the stack.
-func (c *Compiler[_, _]) compileIndexAccess(expression *ast.IndexExpression) {
+// compileIndexAccessWithTransferredIndex compiles the index access, i.e. RemoveIndex or GetIndex.
+// It assumes the target and transferred indexing/key expressions are already compiled on the stack.
+func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(expression *ast.IndexExpression) {
 	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-
-	indexedType := indexExpressionTypes.IndexedType
-	// TODO: optimize: once interpreter is removed, avoid redundant transfer and only convert
-	c.emitTransferIfNotResourceAndConvert(indexedType.IndexingType())
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
