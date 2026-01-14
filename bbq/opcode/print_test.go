@@ -47,14 +47,14 @@ func TestPrintRecursionFib(t *testing.T) {
 		byte(Subtract),
 		byte(TransferAndConvert), 0, 1, 0, 2,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0, 0, 0,
+		byte(Invoke), 0, 0, 0, 0, 0, 3,
 		// fib(n - 2)
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 0,
 		byte(Subtract),
 		byte(TransferAndConvert), 0, 1, 0, 2,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0, 0, 0,
+		byte(Invoke), 0, 0, 0, 0, 0, 3,
 		// return sum
 		byte(Add),
 		byte(ReturnValue),
@@ -71,13 +71,13 @@ func TestPrintRecursionFib(t *testing.T) {
   8 |           Subtract |
   9 | TransferAndConvert | valueType:1 targetType:2
  10 |          GetGlobal | global:0
- 11 |             Invoke | typeArgs:[] argCount:0
+ 11 |             Invoke | typeArgs:[] argCount:0 returnType:3
  12 |           GetLocal | local:0
  13 |        GetConstant | constant:0
  14 |           Subtract |
  15 | TransferAndConvert | valueType:1 targetType:2
  16 |          GetGlobal | global:0
- 17 |             Invoke | typeArgs:[] argCount:0
+ 17 |             Invoke | typeArgs:[] argCount:0 returnType:3
  18 |                Add |
  19 |        ReturnValue |
 
@@ -189,8 +189,8 @@ func TestPrintInstruction(t *testing.T) {
 
 		`NewPath domain:PathDomainStorage identifier:5`: {byte(NewPath), 1, 0, 5},
 
-		"Invoke typeArgs:[772, 1286] argCount:1": {
-			byte(Invoke), 0, 2, 3, 4, 5, 6, 0, 1,
+		"Invoke typeArgs:[772, 1286] argCount:1 returnType:258": {
+			byte(Invoke), 0, 2, 3, 4, 5, 6, 0, 1, 1, 2, 3,
 		},
 
 		"NewRef type:258 isImplicit:true": {byte(NewRef), 1, 2, 1},
@@ -306,14 +306,14 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 		byte(Subtract),
 		byte(TransferAndConvert), 0, 1, 0, 2,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0, 0, 0,
+		byte(Invoke), 0, 0, 0, 0, 0, 3,
 		// fib(n - 2)
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 0,
 		byte(Subtract),
 		byte(TransferAndConvert), 0, 1, 0, 2,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0, 0, 0,
+		byte(Invoke), 0, 0, 0, 0, 0, 3,
 		// return sum
 		byte(Add),
 		byte(ReturnValue),
@@ -340,7 +340,7 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 │    8 | Subtract           | 
 │    9 | TransferAndConvert |  valueType:1 targetType:2
 │   10 | GetGlobal          |  global:0
-│   11 | Invoke             |  typeArgs:[] argCount:0
+│   11 | Invoke             |  typeArgs:[] argCount:0 returnType:3
 └─────────────────────────────────────────────────────────────────────┘
     ──→ Unknown target (function_call)
 
@@ -354,7 +354,7 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 │   14 | Subtract           | 
 │   15 | TransferAndConvert |  valueType:1 targetType:2
 │   16 | GetGlobal          |  global:0
-│   17 | Invoke             |  typeArgs:[] argCount:0
+│   17 | Invoke             |  typeArgs:[] argCount:0 returnType:3
 └─────────────────────────────────────────────────────────────────────┘
     ──→ Unknown target (function_call)
 
