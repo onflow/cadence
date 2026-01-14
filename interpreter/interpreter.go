@@ -470,6 +470,7 @@ func InvokeExternally(
 		preparedArguments,
 		nil,
 		nil,
+		functionType.ReturnTypeAnnotation.Type,
 		LocationRange{},
 	)
 
@@ -4637,6 +4638,7 @@ func AccountStorageIterate(
 func (interpreter *Interpreter) InvokeFunction(
 	_ FunctionValue,
 	_ []Value,
+	_ sema.Type,
 ) Value {
 	// Interpreter's function values shouldn't/doesn't use `InvocationContext.InvokeFunction`.
 	// They directly use the methods of `Interpreter`.

@@ -237,20 +237,6 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 
 	var self interpreter.Value = contractValue
 
-	// prepare invocation
-	invocation := interpreter.NewInvocation(
-		inter,
-		&self,
-		nil,
-		arguments,
-		executor.argumentTypes,
-		nil,
-		interpreter.LocationRange{
-			Location:    location,
-			HasPosition: ast.EmptyRange,
-		},
-	)
-
 	contractMember := contractValue.GetMember(inter, executor.functionName)
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)
@@ -260,6 +246,23 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 		}
 		return nil, err
 	}
+
+	returnType := contractFunction.FunctionType(inter).ReturnTypeAnnotation.Type
+
+	// prepare invocation
+	invocation := interpreter.NewInvocation(
+		inter,
+		&self,
+		nil,
+		arguments,
+		executor.argumentTypes,
+		nil,
+		returnType,
+		interpreter.LocationRange{
+			Location:    location,
+			HasPosition: ast.EmptyRange,
+		},
+	)
 
 	value, err := interpreter.InvokeFunction(inter, contractFunction, invocation)
 	if err != nil {

@@ -153,6 +153,7 @@ func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpr
 	return invocation.InvocationContext.InvokeFunction(
 		v,
 		invocation.Arguments,
+		invocation.ReturnType,
 	)
 }
 
@@ -294,6 +295,7 @@ func (v *NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpre
 	return invocation.InvocationContext.InvokeFunction(
 		v,
 		invocation.Arguments,
+		invocation.ReturnType,
 	)
 }
 
@@ -492,6 +494,7 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 	return context.InvokeFunction(
 		v,
 		arguments,
+		invocation.ReturnType,
 	)
 }
 

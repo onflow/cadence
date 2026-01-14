@@ -356,6 +356,8 @@
       type: "typeIndices"
     - name: "argCount"
       type: "size"
+    - name: "returnType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "arguments"

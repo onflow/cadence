@@ -464,6 +464,8 @@ func (v *CompositeValue) DefaultDestroyEvents(
 	events := make([]*CompositeValue, 0, length)
 	for _, constructor := range eventConstructors {
 
+		returnType := constructor.FunctionType(context).ReturnTypeAnnotation.Type
+
 		// pass the container value to the creation of the default event as an implicit argument, so that
 		// its fields are accessible in the body of the event constructor
 		eventConstructorInvocation := NewInvocation(
@@ -473,6 +475,7 @@ func (v *CompositeValue) DefaultDestroyEvents(
 			[]Value{v},
 			[]sema.Type{},
 			nil,
+			returnType,
 			context.LocationRange(),
 		)
 

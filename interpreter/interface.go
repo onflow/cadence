@@ -456,6 +456,7 @@ type InvocationContext interface {
 	InvokeFunction(
 		fn FunctionValue,
 		arguments []Value,
+		returnType sema.Type,
 	) Value
 }
 

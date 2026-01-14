@@ -145,6 +145,7 @@ func invokeFunctionValueWithEval[T any](
 		transferredArguments,
 		argumentTypes,
 		typeArguments,
+		returnType,
 		context.LocationRange(),
 	)
 
@@ -173,11 +174,10 @@ func invokeFunctionValueWithEval[T any](
 
 	// Defensively check the return value's actual type matches the expected return type.
 	valueStaticType := resultValue.StaticType(context)
-	if !IsSubTypeOfSemaType(context, valueStaticType, functionReturnType) {
+	if !IsSubTypeOfSemaType(context, valueStaticType, returnType) {
 		resultSemaType := context.SemaTypeFromStaticType(valueStaticType)
-
 		panic(&ValueTransferTypeError{
-			ExpectedType: functionReturnType,
+			ExpectedType: returnType,
 			ActualType:   resultSemaType,
 		})
 	}
