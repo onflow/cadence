@@ -61,6 +61,7 @@ type BinaryExpressionTypes struct {
 
 type VariableDeclarationTypes struct {
 	ValueType       Type
+	ValueActualType Type
 	SecondValueType Type
 	TargetType      Type
 }

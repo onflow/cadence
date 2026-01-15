@@ -54,7 +54,7 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 		}
 	}
 
-	valueType := checker.VisitExpression(declaration.Value, declaration, expectedValueType)
+	valueType, valueActualType := checker.visitExpression(declaration.Value, declaration, expectedValueType)
 
 	if isOptionalBinding {
 		optionalType, isOptional := valueType.(*OptionalType)
@@ -210,6 +210,7 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 		VariableDeclarationTypes{
 			TargetType:      declarationType,
 			ValueType:       valueType,
+			ValueActualType: valueActualType,
 			SecondValueType: secondValueType,
 		},
 	)
