@@ -552,19 +552,27 @@ func opReturnValue(vm *VM, ins opcode.InstructionReturnValue) {
 	// Defensively check the return value's actual type matches the expected return type.
 	if poppedCallFrame != nil {
 		expectedReturnType := poppedCallFrame.returnType
-		actualReturnType := value.StaticType(context)
-
-		if !context.IsSubType(actualReturnType, expectedReturnType) {
-			expectedSemaType := context.SemaTypeFromStaticType(expectedReturnType)
-			actualSemaType := context.SemaTypeFromStaticType(actualReturnType)
-			panic(&interpreter.ValueTransferTypeError{
-				ExpectedType: expectedSemaType,
-				ActualType:   actualSemaType,
-			})
-		}
+		checkValueTransferTypes(context, value, expectedReturnType)
 	}
 
 	vm.push(value)
+}
+
+func checkValueTransferTypes(
+	context *Context,
+	value interpreter.Value,
+	expectedValueType bbq.StaticType,
+) {
+	actualValueType := value.StaticType(context)
+
+	if !context.IsSubType(actualValueType, expectedValueType) {
+		expectedSemaType := context.SemaTypeFromStaticType(expectedValueType)
+		actualSemaType := context.SemaTypeFromStaticType(actualValueType)
+		panic(&interpreter.ValueTransferTypeError{
+			ExpectedType: expectedSemaType,
+			ActualType:   actualSemaType,
+		})
+	}
 }
 
 func opReturn(vm *VM) {
@@ -970,15 +978,7 @@ func invokeFunction(
 
 		// Defensively check the return value's actual type matches the expected return type.
 		// For compiled functions, this happens when unwinding the call-frame.
-		valueStaticType := result.StaticType(context)
-		if !context.IsSubType(valueStaticType, returnType) {
-			expectedSemaType := context.SemaTypeFromStaticType(returnType)
-			actualSemaType := context.SemaTypeFromStaticType(valueStaticType)
-			panic(&interpreter.ValueTransferTypeError{
-				ExpectedType: expectedSemaType,
-				ActualType:   actualSemaType,
-			})
-		}
+		checkValueTransferTypes(context, result, returnType)
 
 		vm.push(result)
 
