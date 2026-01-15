@@ -80,7 +80,7 @@ type Compiler[E, T any] struct {
 	currentPosition     bbq.Position
 
 	// Cache alike for compiledTypes and constants in the pool.
-	typesInPool     map[sema.TypeID]uint16
+	typesInPool     map[commons.TypeCacheKey]uint16
 	constantsInPool map[constantUniqueKey]*DecodedConstant
 
 	codeGen CodeGen[E]
@@ -194,7 +194,7 @@ func newCompiler[E, T any](
 		location:             location,
 		Globals:              make(map[string]bbq.Global),
 		importedGlobals:      importedGlobals,
-		typesInPool:          make(map[sema.TypeID]uint16),
+		typesInPool:          make(map[commons.TypeCacheKey]uint16),
 		constantsInPool:      make(map[constantUniqueKey]*DecodedConstant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
@@ -4362,29 +4362,20 @@ func (c *Compiler[_, _]) emitConvert(valueType, targetType sema.Type) {
 	})
 }
 
-func (c *Compiler[_, _]) getOrAddType(ty sema.Type) (index uint16) {
-	// Do NOT cache constructor function types, since they should not be matched
-	// with regular functions.
-	// the typeID does not preserve the "isConstructor" info.
-	funcType, isFuncType := ty.(*sema.FunctionType)
-	if !isFuncType || !funcType.IsConstructor {
-		typeID := ty.ID()
-
-		// Optimization: Re-use types in the pool.
-		var ok bool
-		index, ok = c.typesInPool[typeID]
-		if ok {
-			return
-		}
-
-		defer func() {
-			c.typesInPool[typeID] = index
-		}()
+func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
+	// Optimization: Re-use types in the pool.
+	cacheKey := commons.NewTypeCacheKeyFromType(ty)
+	index, ok := c.typesInPool[cacheKey]
+	if ok {
+		return index
 	}
 
 	staticType := interpreter.ConvertSemaToStaticType(c.Config.MemoryGauge, ty)
 	data := c.typeGen.CompileType(staticType)
-	return c.addCompiledType(ty, data)
+	index = c.addCompiledType(ty, data)
+
+	c.typesInPool[cacheKey] = index
+	return index
 }
 
 func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {

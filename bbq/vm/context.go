@@ -55,7 +55,7 @@ type Context struct {
 	// This cache-alike is maintained per execution.
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
-	semaTypeCache   map[sema.TypeID]sema.Type
+	semaTypeCache   map[commons.TypeCacheKey]sema.Type
 	semaAccessCache map[interpreter.Authorization]sema.Access
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
@@ -425,28 +425,22 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 	return eventValues
 }
 
-func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) (semaType sema.Type) {
-	// Do NOT cache constructor function types, since they should not be matched
-	// with regular functions.
-	// the typeID does not preserve the "isConstructor" info.
-	funcType, isFuncType := staticType.(interpreter.FunctionStaticType)
-	if !isFuncType || !funcType.IsConstructor {
-		typeID := staticType.ID()
-		cachedSemaType, ok := c.semaTypeCache[typeID]
-		if ok {
-			return cachedSemaType
-		}
-
-		defer func() {
-			if c.semaTypeCache == nil {
-				c.semaTypeCache = make(map[sema.TypeID]sema.Type)
-			}
-			c.semaTypeCache[typeID] = semaType
-		}()
+func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
+	typeCacheKey := commons.NewTypeCacheKeyFromStaticType(staticType)
+	semaType, ok := c.semaTypeCache[typeCacheKey]
+	if ok {
+		return semaType
 	}
 
 	// TODO: avoid the sema-type conversion
-	return interpreter.MustConvertStaticToSemaType(staticType, c)
+	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
+
+	if c.semaTypeCache == nil {
+		c.semaTypeCache = make(map[commons.TypeCacheKey]sema.Type)
+	}
+	c.semaTypeCache[typeCacheKey] = semaType
+
+	return semaType
 }
 
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {

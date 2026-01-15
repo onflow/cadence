@@ -5149,8 +5149,8 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPreConditionGlobalIndex},
 			opcode.InstructionGetConstant{Constant: preErrorMessageConstIndex},
-			opcode.InstructionTransferAndConvert{ValueType: 9, TargetType: 9},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 8},
+			opcode.InstructionTransferAndConvert{ValueType: 8, TargetType: 8},
+			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 7},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
@@ -5188,8 +5188,8 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPostConditionGlobalIndex},
 			opcode.InstructionGetConstant{Constant: postErrorMessageConstIndex},
-			opcode.InstructionTransferAndConvert{ValueType: 9, TargetType: 9},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 8},
+			opcode.InstructionTransferAndConvert{ValueType: 8, TargetType: 8},
+			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 7},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
