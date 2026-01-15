@@ -425,22 +425,28 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 	return eventValues
 }
 
-func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
-	typeID := staticType.ID()
-	semaType, ok := c.semaTypeCache[typeID]
-	if ok {
-		return semaType
+func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) (semaType sema.Type) {
+	// Do NOT cache constructor function types, since they should not be matched
+	// with regular functions.
+	// the typeID does not preserve the "isConstructor" info.
+	funcType, isFuncType := staticType.(interpreter.FunctionStaticType)
+	if !isFuncType || !funcType.IsConstructor {
+		typeID := staticType.ID()
+		cachedSemaType, ok := c.semaTypeCache[typeID]
+		if ok {
+			return cachedSemaType
+		}
+
+		defer func() {
+			if c.semaTypeCache == nil {
+				c.semaTypeCache = make(map[sema.TypeID]sema.Type)
+			}
+			c.semaTypeCache[typeID] = semaType
+		}()
 	}
 
 	// TODO: avoid the sema-type conversion
-	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
-
-	if c.semaTypeCache == nil {
-		c.semaTypeCache = make(map[sema.TypeID]sema.Type)
-	}
-	c.semaTypeCache[typeID] = semaType
-
-	return semaType
+	return interpreter.MustConvertStaticToSemaType(staticType, c)
 }
 
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {

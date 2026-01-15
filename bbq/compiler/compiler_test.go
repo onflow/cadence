@@ -5088,7 +5088,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionGetConstant{Constant: oneConstIndex},
 			opcode.InstructionGetGlobal{Global: nGlobalIndex},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransferAndConvert{ValueType: 5, TargetType: 5},
+			opcode.InstructionTransferAndConvert{ValueType: 6, TargetType: 6},
 			opcode.InstructionSetField{
 				FieldName:    fieldNameConstIndex,
 				AccessedType: 1,
@@ -5149,8 +5149,8 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPreConditionGlobalIndex},
 			opcode.InstructionGetConstant{Constant: preErrorMessageConstIndex},
-			opcode.InstructionTransferAndConvert{ValueType: 7, TargetType: 7},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 6},
+			opcode.InstructionTransferAndConvert{ValueType: 9, TargetType: 9},
+			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 8},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
@@ -5161,7 +5161,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionGetConstant{Constant: threeConstIndex},
 			opcode.InstructionGetGlobal{Global: nGlobalIndex},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransferAndConvert{ValueType: 5, TargetType: 5},
+			opcode.InstructionTransferAndConvert{ValueType: 6, TargetType: 6},
 			opcode.InstructionSetField{
 				FieldName:    fieldNameConstIndex,
 				AccessedType: 1,
@@ -5188,8 +5188,8 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPostConditionGlobalIndex},
 			opcode.InstructionGetConstant{Constant: postErrorMessageConstIndex},
-			opcode.InstructionTransferAndConvert{ValueType: 7, TargetType: 7},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 6},
+			opcode.InstructionTransferAndConvert{ValueType: 9, TargetType: 9},
+			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 8},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
@@ -8066,9 +8066,9 @@ func TestCompileOptionalArgument(t *testing.T) {
 				},
 				opcode.InstructionGetField{
 					FieldName:    contractsFieldNameIndex,
-					AccessedType: 5,
+					AccessedType: 6,
 				},
-				opcode.InstructionNewRef{Type: 6, IsImplicit: true},
+				opcode.InstructionNewRef{Type: 7, IsImplicit: true},
 
 				// Load function value `add()`
 				opcode.InstructionGetMethod{Method: 5},
@@ -8077,21 +8077,21 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 				// Name: "Foo",
 				opcode.InstructionGetConstant{Constant: contractNameIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 7, TargetType: 7},
+				opcode.InstructionTransferAndConvert{ValueType: 8, TargetType: 8},
 
 				// Contract code
 				opcode.InstructionGetConstant{Constant: contractCodeIndex},
 				opcode.InstructionGetField{
 					FieldName:    utf8FieldNameIndex,
-					AccessedType: 7,
+					AccessedType: 8,
 				},
-				opcode.InstructionTransferAndConvert{ValueType: 8, TargetType: 8},
+				opcode.InstructionTransferAndConvert{ValueType: 9, TargetType: 9},
 
 				// Message: "Optional arg"
 				opcode.InstructionGetConstant{Constant: optionalArgIndex},
 				opcode.InstructionTransfer{},
 
-				opcode.InstructionInvoke{ArgCount: 3, ReturnType: 4},
+				opcode.InstructionInvoke{ArgCount: 3, ReturnType: 5},
 				opcode.InstructionDrop{},
 
 				opcode.InstructionReturn{}},
@@ -9926,20 +9926,20 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: inheritedEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionGetField{FieldName: 2, AccessedType: 5},
-			opcode.InstructionTransferAndConvert{ValueType: 6, TargetType: 6},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 10},
+			opcode.InstructionTransferAndConvert{ValueType: 7, TargetType: 7},
+			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 11},
 
 			// Construct the self defined event
 			// Foo.ABC.ResourceDestroyed(self.x)
 			opcode.InstructionGetGlobal{Global: selfDefinedABCEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionGetField{FieldName: 2, AccessedType: 12},
-			opcode.InstructionTransferAndConvert{ValueType: 6, TargetType: 6},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 11},
+			opcode.InstructionGetField{FieldName: 2, AccessedType: 13},
+			opcode.InstructionTransferAndConvert{ValueType: 7, TargetType: 7},
+			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 12},
 
 			// Invoke `collectEvents` with the above event.
 			// `collectEvents(...)`
-			opcode.InstructionInvoke{ArgCount: 2, ReturnType: 9},
+			opcode.InstructionInvoke{ArgCount: 2, ReturnType: 10},
 			opcode.InstructionDrop{},
 
 			// Return

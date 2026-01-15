@@ -954,7 +954,7 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 
 	if !hasInit {
 		membersDesugared = true
-		d.addEmptyInitializer(&desugaredMembers)
+		d.addEmptyInitializer(compositeType, &desugaredMembers)
 	}
 
 	// Optimization: If none of the existing members got updated or,
@@ -1075,7 +1075,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
 			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
 		} else {
-			d.addEmptyInitializer(&desugaredMembers)
+			d.addEmptyInitializer(compositeType, &desugaredMembers)
 		}
 	}
 
@@ -1657,9 +1657,11 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		members = append(members, desugaredExecuteFunc)
 	}
 
+	compositeType := d.transactionCompositeType()
+
 	// Always add empty initializer for transactions.
 	// To be updated later by compilation.
-	d.addEmptyInitializer(&members)
+	d.addEmptyInitializer(compositeType, &members)
 
 	compositeDecl := ast.NewCompositeDeclaration(
 		d.memoryGauge,
@@ -1676,7 +1678,6 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		ast.EmptyRange,
 	)
 
-	compositeType := d.transactionCompositeType()
 	d.elaboration.SetCompositeDeclarationType(compositeDecl, compositeType)
 	d.elaboration.SetCompositeType(compositeType.ID(), compositeType)
 
@@ -1801,16 +1802,13 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 	)
 }()
 
-var emptyInitializerFuncType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityImpure,
-	nil,
-	sema.VoidTypeAnnotation,
-)
-
-func (d *Desugar) addEmptyInitializer(members *[]ast.Declaration) {
+func (d *Desugar) addEmptyInitializer(compositeType *sema.CompositeType, members *[]ast.Declaration) {
 	// Add an empty initializer
 	*members = append(*members, emptyInitializer)
-	d.elaboration.SetFunctionDeclarationFunctionType(emptyInitializer.FunctionDeclaration, emptyInitializerFuncType)
+
+	initializerFuncType := sema.CompositeConstructorFunctionType(compositeType)
+
+	d.elaboration.SetFunctionDeclarationFunctionType(emptyInitializer.FunctionDeclaration, initializerFuncType)
 }
 
 func newEnumInitializer(

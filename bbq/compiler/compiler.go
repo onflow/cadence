@@ -4299,20 +4299,29 @@ func (c *Compiler[_, _]) emitConvert(valueType, targetType sema.Type) {
 	})
 }
 
-func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
-	typeID := ty.ID()
+func (c *Compiler[_, _]) getOrAddType(ty sema.Type) (index uint16) {
+	// Do NOT cache constructor function types, since they should not be matched
+	// with regular functions.
+	// the typeID does not preserve the "isConstructor" info.
+	funcType, isFuncType := ty.(*sema.FunctionType)
+	if !isFuncType || !funcType.IsConstructor {
+		typeID := ty.ID()
 
-	// Optimization: Re-use types in the pool.
-	index, ok := c.typesInPool[typeID]
+		// Optimization: Re-use types in the pool.
+		var ok bool
+		index, ok = c.typesInPool[typeID]
+		if ok {
+			return
+		}
 
-	if !ok {
-		staticType := interpreter.ConvertSemaToStaticType(c.Config.MemoryGauge, ty)
-		data := c.typeGen.CompileType(staticType)
-		index = c.addCompiledType(ty, data)
-		c.typesInPool[typeID] = index
+		defer func() {
+			c.typesInPool[typeID] = index
+		}()
 	}
 
-	return index
+	staticType := interpreter.ConvertSemaToStaticType(c.Config.MemoryGauge, ty)
+	data := c.typeGen.CompileType(staticType)
+	return c.addCompiledType(ty, data)
 }
 
 func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {

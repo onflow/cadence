@@ -3581,25 +3581,56 @@ func TestInterpretDynamicCastingResourceConstructor(t *testing.T) {
 	t.Parallel()
 
 	for operation, returnsOptional := range dynamicCastingOperations {
-		inter := parseCheckAndPrepare(t,
-			fmt.Sprintf(`
+		returnsOptional := returnsOptional
+
+		t.Run(operation.Symbol(), func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepare(t,
+				fmt.Sprintf(`
                   resource R {}
 
                   fun test(): AnyStruct {
                       return R %s fun(): @R
                   }
                 `,
-				operation.Symbol(),
-			),
-		)
+					operation.Symbol(),
+				),
+			)
 
-		result, err := inter.Invoke("test")
-		if returnsOptional {
-			require.NoError(t, err)
-			require.Equal(t, interpreter.Nil, result)
-		} else {
-			RequireError(t, err)
-		}
+			result, err := inter.Invoke("test")
+			if returnsOptional {
+				require.NoError(t, err)
+				require.Equal(t, interpreter.Nil, result)
+			} else {
+				RequireError(t, err)
+				typeMismatchError := &interpreter.ForceCastTypeMismatchError{}
+				require.ErrorAs(t, err, &typeMismatchError)
+
+				expectedType := typeMismatchError.ExpectedType
+				require.IsType(t, &sema.FunctionType{}, expectedType)
+				expectedFunctionType := expectedType.(*sema.FunctionType)
+
+				constructorType := typeMismatchError.ActualType
+				require.IsType(t, &sema.FunctionType{}, constructorType)
+				constructorFunctionType := constructorType.(*sema.FunctionType)
+
+				// In the two function types, everything else must be equal,
+				// except for the purity and the constructor-ness.
+				assert.Equal(t, expectedFunctionType.TypeParameters, constructorFunctionType.TypeParameters)
+				assert.Equal(t, expectedFunctionType.Arity, constructorFunctionType.Arity)
+				assert.Equal(t, expectedFunctionType.Parameters, constructorFunctionType.Parameters)
+				assert.Equal(t, expectedFunctionType.ReturnTypeAnnotation, constructorFunctionType.ReturnTypeAnnotation)
+
+				// Purity must be different.
+				// Constructor type must be pure.
+				assert.NotEqual(t, expectedFunctionType.Purity, constructorFunctionType.Purity)
+				assert.Equal(t, sema.FunctionPurityView, constructorFunctionType.Purity)
+
+				// "IsConstructor" must be different.
+				assert.NotEqual(t, expectedFunctionType.IsConstructor, constructorFunctionType.IsConstructor)
+			}
+		})
 	}
 }
 
