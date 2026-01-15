@@ -1730,7 +1730,7 @@ func TestStaticTypeConversion(t *testing.T) {
 	}
 
 	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
+		if !ty.IsDefined() || ty.IsDeprecated() || ty == PrimitiveStaticTypeInvalid { //nolint:staticcheck
 			continue
 		}
 		if _, ok := testedStaticTypes[ty]; !ok {

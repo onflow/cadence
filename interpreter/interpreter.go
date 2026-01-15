@@ -43,12 +43,14 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+type getterFunc func(allowMissing bool) (value Value, insertedPlaceholder *PlaceholderValue)
+
 type getterSetter struct {
 	target Value
 	// allowMissing may be true when the got value is nil.
 	// For example, this is the case when a field is initialized
 	// with the force-assignment operator (which checks the existing value)
-	get func(allowMissing bool) Value
+	get getterFunc
 	set func(Value)
 }
 

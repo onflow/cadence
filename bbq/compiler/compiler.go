@@ -1900,7 +1900,9 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		c.emitGetLocal(indexExprTargetLocal)
 		c.emitGetLocal(indexExprIndexLocal)
 		c.emitIndexKeyTransferAndConvert(firstValue)
-		c.compileIndexAccessWithTransferredIndex(firstValue)
+		const pushPlaceholderValue = false
+		c.compileIndexAccessWithTransferredIndex(firstValue, pushPlaceholderValue)
+
 		// Need to transfer the value "out",
 		// before the second value is being assigned
 		c.mustEmitTransferAndConvert(firstValueType, firstValueTargetType)
@@ -2036,20 +2038,59 @@ func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ str
 
 	// Get left and right values
 
-	leftValueIndex := c.compileSwapGet(
+	var (
+		leftValueIndex                            uint16
+		leftPlaceholderValueIndex                 uint16
+		leftEmittedRemoveIndexWithPushPlaceholder bool
+	)
+	leftValueIndex, leftEmittedRemoveIndexWithPushPlaceholder = c.compileSwapGet(
 		statement.Left,
 		leftTargetIndex,
 		leftTransferredKeyIndex,
-		leftType,
-		rightType,
+		&leftPlaceholderValueIndex,
 	)
-	rightValueIndex := c.compileSwapGet(
+	rightValueIndex, _ := c.compileSwapGet(
 		statement.Right,
 		rightTargetIndex,
 		rightTransferredKeyIndex,
-		rightType,
-		leftType,
+		nil,
 	)
+
+	// Handle swapping a value with itself, e.g. `a[i] <-> a[i]`:
+	//
+	// If getting the right value results in the placeholder we just set in the left,
+	// then set the left value back to the left target.
+
+	var sameResourceJump int
+	if leftEmittedRemoveIndexWithPushPlaceholder {
+		c.emitGetLocal(rightValueIndex)
+		c.emitGetLocal(leftPlaceholderValueIndex)
+		c.emit(opcode.InstructionSame{})
+		elseJump := c.emitUndefinedJumpIfFalse()
+
+		c.compileSwapSet(
+			statement.Left,
+			leftTargetIndex,
+			leftTransferredKeyIndex,
+			leftValueIndex,
+		)
+
+		sameResourceJump = c.emitUndefinedJump()
+		c.patchJumpHere(elseJump)
+	}
+
+	// Not swapping a value with itself.
+	//
+	// Set right value to left target,
+	// and left value to right target
+
+	c.emitGetLocal(rightValueIndex)
+	c.mustEmitTransferAndConvert(rightType, leftType)
+	c.emitSetLocal(rightValueIndex)
+
+	c.emitGetLocal(leftValueIndex)
+	c.mustEmitTransferAndConvert(leftType, rightType)
+	c.emitSetLocal(leftValueIndex)
 
 	// Set right value to left target,
 	// and left value to right target
@@ -2068,6 +2109,10 @@ func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ str
 		rightTransferredKeyIndex,
 		leftValueIndex,
 	)
+
+	if leftEmittedRemoveIndexWithPushPlaceholder {
+		c.patchJumpHere(sameResourceJump)
+	}
 
 	return
 }
@@ -2115,8 +2160,11 @@ func (c *Compiler[_, _]) compileSwapGet(
 	sideExpression ast.Expression,
 	targetIndex uint16,
 	transferredKeyIndex uint16,
-	valueType, targetType sema.Type,
-) (valueIndex uint16) {
+	placeHolderValueIndex *uint16,
+) (
+	valueIndex uint16,
+	emittedRemoveIndexWithPushPlaceholder bool,
+) {
 
 	switch sideExpression := sideExpression.(type) {
 	case *ast.IdentifierExpression:
@@ -2138,13 +2186,17 @@ func (c *Compiler[_, _]) compileSwapGet(
 	case *ast.IndexExpression:
 		c.emitGetLocal(targetIndex)
 		c.emitGetLocal(transferredKeyIndex)
-		c.compileIndexAccessWithTransferredIndex(sideExpression)
+		pushPlaceholderValue := placeHolderValueIndex != nil
+		emittedRemoveIndexWithPushPlaceholder = c.compileIndexAccessWithTransferredIndex(sideExpression, pushPlaceholderValue)
+		if emittedRemoveIndexWithPushPlaceholder {
+			// We need to keep the inserted placeholder value, if any
+			*placeHolderValueIndex = c.currentFunction.generateLocalIndex()
+			c.emitSetLocal(*placeHolderValueIndex)
+		}
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
-
-	c.mustEmitTransferAndConvert(valueType, targetType)
 
 	valueIndex = c.currentFunction.generateLocalIndex()
 	c.emitSetLocal(valueIndex)
@@ -3122,7 +3174,8 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 	} else {
 		c.compileExpression(expression.IndexingExpression)
 		c.emitIndexKeyTransferAndConvert(expression)
-		c.compileIndexAccessWithTransferredIndex(expression)
+		const pushPlaceholderValue = false
+		c.compileIndexAccessWithTransferredIndex(expression, pushPlaceholderValue)
 	}
 
 	return
@@ -3130,7 +3183,12 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 
 // compileIndexAccessWithTransferredIndex compiles the index access, i.e. RemoveIndex or GetIndex.
 // It assumes the target and transferred indexing/key expressions are already compiled on the stack.
-func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(expression *ast.IndexExpression) {
+func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(
+	expression *ast.IndexExpression,
+	pushPlaceholderValue bool,
+) (
+	emittedRemoveIndexWithPushPlaceholder bool,
+) {
 	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -3138,7 +3196,10 @@ func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(expression *ast.
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
-		c.emit(opcode.InstructionRemoveIndex{})
+		c.emit(opcode.InstructionRemoveIndex{
+			PushPlaceholder: pushPlaceholderValue,
+		})
+		emittedRemoveIndexWithPushPlaceholder = pushPlaceholderValue
 	} else {
 		c.emit(opcode.InstructionGetIndex{})
 	}
@@ -3152,6 +3213,8 @@ func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(expression *ast.
 			IsImplicit: true,
 		})
 	}
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitConditionalExpression(expression *ast.ConditionalExpression) (_ struct{}) {
