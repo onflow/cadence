@@ -8604,7 +8604,7 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 
 			// let rs <- [<- create R()]
 			opcode.InstructionGetGlobal{Global: 1},
-			opcode.InstructionInvoke{},
+			opcode.InstructionInvoke{ReturnType: 2},
 			opcode.InstructionTransfer{},
 			opcode.InstructionConvert{ValueType: 2, TargetType: 2},
 

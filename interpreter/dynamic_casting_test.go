@@ -3629,6 +3629,8 @@ func TestInterpretDynamicCastingResourceConstructor(t *testing.T) {
 
 				// "IsConstructor" must be different.
 				assert.NotEqual(t, expectedFunctionType.IsConstructor, constructorFunctionType.IsConstructor)
+				assert.True(t, constructorFunctionType.IsConstructor)
+				assert.False(t, expectedFunctionType.IsConstructor)
 			}
 		})
 	}
