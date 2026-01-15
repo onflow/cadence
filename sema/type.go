@@ -3754,6 +3754,10 @@ func (arity *Arity) Equal(other *Arity) bool {
 		arity.Max == other.Max
 }
 
+func (arity *Arity) IsVariadic() bool {
+	return arity != nil && arity.Max != arity.Min
+}
+
 type FunctionPurity int
 
 const (

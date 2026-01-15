@@ -353,11 +353,34 @@
   description: |
     Pops the function and arguments off the stack, invokes the function with the arguments,
     and then pushes the result back on to the stack.
+    This instruction is only passes the argument count. If the argument types are needed, use `invokeTyped`.
   operands:
     - name: "typeArgs"
       type: "typeIndices"
     - name: "argCount"
       type: "size"
+  valueEffects:
+    pop:
+      - name: "arguments"
+        # TODO: count
+      - name: "function"
+        type: "function"
+    push:
+      - name: "result"
+        type: "value"
+  controlEffects:
+    - call:
+
+- name: "invokeTyped"
+  description:
+    Pops the function and arguments off the stack, invokes the function with the arguments,
+    and then pushes the result back on to the stack.
+    This instruction is a variant of `invoke` that includes the argument types.
+  operands:
+    - name: "typeArgs"
+      type: "typeIndices"
+    - name: "argTypes"
+      type: "typeIndices"
   valueEffects:
     pop:
       - name: "arguments"

@@ -357,10 +357,12 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 }
 
 func (vm *VM) invokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
+	// NOTE: can't fill argument types, as they are unknown
 	invokeFunction(
 		vm,
 		functionValue,
 		arguments,
+		nil,
 		nil,
 	)
 
@@ -823,6 +825,39 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		functionValue,
 		arguments,
 		typeArguments,
+		nil,
+	)
+}
+
+func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
+	// Load type arguments
+	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
+	argumentTypes := loadArgumentTypes(vm, ins.ArgTypes)
+
+	// Load arguments
+	arguments := vm.popN(len(ins.ArgTypes))
+
+	// Load the invoked value
+	functionValue := vm.pop()
+
+	// Add base to front of arguments if the function is bound and base is defined.
+	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
+		base := boundFunction.Base
+		if base != nil {
+			arguments = append([]Value{base}, arguments...)
+			argumentTypes = append(
+				[]bbq.StaticType{base.StaticType(vm.context)},
+				argumentTypes...,
+			)
+		}
+	}
+
+	invokeFunction(
+		vm,
+		functionValue,
+		arguments,
+		typeArguments,
+		argumentTypes,
 	)
 }
 
@@ -857,6 +892,7 @@ func invokeFunction(
 	functionValue Value,
 	arguments []Value,
 	typeArguments []bbq.StaticType,
+	argumentTypes []bbq.StaticType,
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
@@ -904,10 +940,12 @@ func invokeFunction(
 		}
 
 		typeArgumentsIterator := NewTypeArgumentsIterator(context, typeArguments)
+		argumentTypesIterator := NewArgumentTypesIterator(context, argumentTypes)
 
 		result := functionValue.Function(
 			context,
 			typeArgumentsIterator,
+			argumentTypesIterator,
 			receiver,
 			arguments,
 		)
@@ -928,6 +966,18 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 		}
 	}
 	return typeArguments
+}
+
+func loadArgumentTypes(vm *VM, argTypes []uint16) []bbq.StaticType {
+	var argumentTypes []bbq.StaticType
+	if len(argTypes) > 0 {
+		argumentTypes = make([]bbq.StaticType, 0, len(argTypes))
+		for _, typeIndex := range argTypes {
+			typeArg := vm.loadType(typeIndex)
+			argumentTypes = append(argumentTypes, typeArg)
+		}
+	}
+	return argumentTypes
 }
 
 func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value, isNative bool) Value {
@@ -1668,6 +1718,8 @@ func (vm *VM) run() {
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
+		case opcode.InstructionInvokeTyped:
+			opInvokeTyped(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:

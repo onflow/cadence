@@ -99,6 +99,7 @@ var nilValueMapFunction = NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 	func(
 		_ NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		_ Value,
 		_ []Value,
 	) Value {

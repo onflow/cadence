@@ -1025,6 +1025,7 @@ func TestStringer(t *testing.T) {
 					func(
 						_ NativeFunctionContext,
 						_ TypeArgumentsIterator,
+						_ ArgumentTypesIterator,
 						_ Value,
 						_ []Value,
 					) Value {

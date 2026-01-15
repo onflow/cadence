@@ -104,6 +104,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 			func(
 				context interpreter.NativeFunctionContext,
 				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
 				_ interpreter.Value,
 				args []interpreter.Value,
 			) interpreter.Value {

@@ -368,32 +368,29 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		})
 	})
 
-	// TODO: add support for static argument type checking in Account.Contracts.add to compiler/VM
-	if !*compile {
-		t.Run("Type confusion", func(t *testing.T) {
-			const declaredValueName = `injectedValue`
-			test(t, testCase{
-				contract: `
-                  access(all) contract Test {
-                      init(_ bool: Bool) {}
-                  }
-                `,
-				arguments: []string{
-					declaredValueName,
-				},
-				declaredValue: stdlib.StandardLibraryValue{
-					Name:  declaredValueName,
-					Type:  sema.IntType,
-					Kind:  common.DeclarationKindValue,
-					Value: interpreter.TrueValue,
-				},
-				check: expectFailure(
-					"Execution failed:\nerror: invalid argument at index 0: expected type `Bool`, got `Int`",
-					2,
-				),
-			})
+	t.Run("Type confusion", func(t *testing.T) {
+		const declaredValueName = `injectedValue`
+		test(t, testCase{
+			contract: `
+              access(all) contract Test {
+                  init(_ bool: Bool) {}
+              }
+            `,
+			arguments: []string{
+				declaredValueName,
+			},
+			declaredValue: stdlib.StandardLibraryValue{
+				Name:  declaredValueName,
+				Type:  sema.IntType,
+				Kind:  common.DeclarationKindValue,
+				Value: interpreter.TrueValue,
+			},
+			check: expectFailure(
+				"Execution failed:\nerror: invalid argument at index 0: expected type `Bool`, got `Int`",
+				2,
+			),
 		})
-	}
+	})
 }
 
 func TestRuntimeContractDeploymentInitializerArgument(t *testing.T) {
@@ -485,6 +482,7 @@ func TestRuntimeContractDeploymentInitializerArgument(t *testing.T) {
 			func(
 				_ interpreter.NativeFunctionContext,
 				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
 				_ interpreter.Value,
 				args []interpreter.Value,
 			) interpreter.Value {
