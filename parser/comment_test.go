@@ -19,14 +19,16 @@
 package parser
 
 import (
+	"encoding/json"
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser/lexer"
+
+	"github.com/onflow/cadence/ast"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -83,6 +85,7 @@ func TestParseBlockComment(t *testing.T) {
 
 		t.Parallel()
 
+		// Extracting comments attached to the infix operator is more difficult and also an edge case, so ignore that for now.
 		result, errs := testParseExpression(" 1/*test  foo*/+/* bar  */ 2  ")
 		require.Empty(t, errs)
 
@@ -96,6 +99,11 @@ func TestParseBlockComment(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/*test  foo*/")),
+						},
 					},
 				},
 				Right: &ast.IntegerExpression{
@@ -193,55 +201,47 @@ func TestParseBlockComment(t *testing.T) {
 			errs,
 		)
 	})
+}
 
-	t.Run("invalid content", func(t *testing.T) {
+func TestCommentsJSONSerialization(t *testing.T) {
+	t.Parallel()
 
+	t.Run("comments with leading and trailing", func(t *testing.T) {
 		t.Parallel()
 
-		// The lexer should never produce such an invalid token stream in the first place
-
-		tokens := &testTokenStream{
-			tokens: []lexer.Token{
-				{
-					Type: lexer.TokenBlockCommentStart,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Offset: 0, Column: 0},
-						EndPos:   ast.Position{Line: 1, Offset: 1, Column: 1},
-					},
-				},
-				{
-					Type: lexer.TokenIdentifier,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Offset: 2, Column: 2},
-						EndPos:   ast.Position{Line: 1, Offset: 4, Column: 4},
-					},
-				},
-				{Type: lexer.TokenEOF},
+		comments := ast.Comments{
+			Leading: []*ast.Comment{
+				ast.NewComment(nil, []byte("// leading comment 1")),
+				ast.NewComment(nil, []byte("/* leading comment 2 */")),
 			},
-			input: []byte(`/*foo`),
+			Trailing: []*ast.Comment{
+				ast.NewComment(nil, []byte("// trailing comment")),
+			},
 		}
 
-		_, errs := ParseTokenStream(
-			nil,
-			tokens,
-			func(p *parser) (ast.Expression, error) {
-				return parseExpression(p, lowestBindingPower)
-			},
-			Config{},
+		jsonBytes, err := json.Marshal(comments)
+		require.NoError(t, err)
+
+		assert.JSONEq(t,
+			`{
+				"Leading": ["// leading comment 1", "/* leading comment 2 */"],
+				"Trailing": ["// trailing comment"]
+			}`,
+			string(jsonBytes),
 		)
-		AssertEqualWithDiff(t,
-			[]error{
-				&UnexpectedTokenInBlockCommentError{
-					GotToken: lexer.Token{
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
-							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
-						},
-						Type: lexer.TokenIdentifier,
-					},
-				},
-			},
-			errs,
+	})
+
+	t.Run("empty comments", func(t *testing.T) {
+		t.Parallel()
+
+		comments := ast.Comments{}
+
+		jsonBytes, err := json.Marshal(comments)
+		require.NoError(t, err)
+
+		assert.JSONEq(t,
+			`{}`,
+			string(jsonBytes),
 		)
 	})
 }

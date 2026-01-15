@@ -46,6 +46,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
 			[]Identifier{},
+			EmptyComments,
 		),
 		Conformances: []*NominalType{
 			{
@@ -56,8 +57,12 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 				),
 			},
 		},
-		Members:   NewMembers(nil, []Declaration{}),
-		DocString: "test",
+		Members: NewMembers(nil, []Declaration{}),
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 		Range: Range{
 			StartPos: Position{Offset: 1, Line: 2, Column: 3},
 			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
@@ -72,6 +77,9 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 		`
         {
             "Type": "AttachmentDeclaration",
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll",
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -82,6 +90,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
             },
             "BaseType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "Bar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -94,6 +103,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
             "Conformances": [
                 {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "Baz",
                         "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -138,6 +148,11 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 				},
 			},
 			Members: NewMembers(nil, []Declaration{}),
+			Comments: Comments{
+				Leading: []*Comment{
+					NewComment(nil, []byte("///test")),
+				},
+			},
 		}
 
 		require.Equal(
@@ -260,6 +275,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
 				"foo",
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
+			Comments{},
 		),
 		Attachment: NewInvocationExpression(
 			nil,
@@ -270,6 +286,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
 					"bar",
 					Position{Offset: 1, Line: 2, Column: 3},
 				),
+				Comments{},
 			),
 			[]*TypeAnnotation{},
 			Arguments{},
@@ -291,6 +308,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
             "EndPos": {"Offset": 3, "Line": 2, "Column": 5},
             "Base":  {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": { 
                     "Identifier": "foo",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -303,6 +321,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
                 "Type": "InvocationExpression",
                 "InvokedExpression": {
                     "Type": "IdentifierExpression",
+                    "Comments": {},
                     "Identifier": { 
                         "Identifier": "bar",
                         "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -437,6 +456,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
 			[]Identifier{},
+			EmptyComments,
 		),
 		Value: NewIdentifierExpression(
 			nil,
@@ -445,6 +465,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 				"baz",
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
+			Comments{},
 		),
 		StartPos: Position{Offset: 1, Line: 2, Column: 3},
 	}
@@ -457,10 +478,12 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 		`
         {
             "Type": "RemoveStatement",
+            "Comments": {},
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 3, "Line": 2, "Column": 5},
             "Value":  {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": { 
                     "Identifier": "baz",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -471,6 +494,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
             },
             "Attachment": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": { 
                     "Identifier": "E",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -503,6 +527,7 @@ func TestRemoveStatement_Doc(t *testing.T) {
 				Identifier{
 					Identifier: "baz",
 				},
+				Comments{},
 			),
 		}
 
@@ -563,6 +588,7 @@ func TestRemoveStatement_String(t *testing.T) {
 				Identifier{
 					Identifier: "baz",
 				},
+				Comments{},
 			),
 		}
 

@@ -71,7 +71,11 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
 				EndPos:   Position{Offset: 28, Line: 29, Column: 30},
 			},
 		},
-		DocString: "test",
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 	}
 
 	actual, err := json.Marshal(decl)
@@ -83,6 +87,9 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
         {
             "Type": "VariableDeclaration",
             "Access": "AccessAll",
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "IsConstant": true,
             "Identifier": {
                 "Identifier": "foo",
@@ -95,6 +102,7 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
                 "IsResource": true,
                 "AnnotatedType": {
                     "Type": "NominalType",
+                    "Comments": {},
                     "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
                     "EndPos": {"Offset": 5, "Line": 5, "Column": 7},
                     "Identifier": {

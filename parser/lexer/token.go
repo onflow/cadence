@@ -24,8 +24,12 @@ import (
 
 type Token struct {
 	SpaceOrError any
+	Type         TokenType
 	ast.Range
-	Type TokenType
+	// Leading comments span from the end of the trailing comments of the last (non-space) token to the start of the next (non-space) token.
+	// Trailing comments span up to, but not including, the next newline character after the current (non-space) token.
+	// Important: comments are not tracked for space token, since those are usually ignored in the parser.
+	Comments ast.Comments
 }
 
 func (t Token) Is(ty TokenType) bool {
@@ -33,7 +37,20 @@ func (t Token) Is(ty TokenType) bool {
 }
 
 func (t Token) Source(input []byte) []byte {
-	startOffset := t.StartPos.Offset
-	endOffset := t.EndPos.Offset + 1
-	return input[startOffset:endOffset]
+	return t.Range.Source(input)
+}
+
+func (t Token) Equal(other Token) bool {
+	// ignore comments, since they should not be treated as source code
+	return t.Type == other.Type && t.Range == other.Range && t.SpaceOrError == other.SpaceOrError
+}
+
+func EarliestToken(t Token, ts ...*Token) (earliest Token) {
+	earliest = t
+	for _, tok := range ts {
+		if tok != nil && tok.StartPos.Compare(earliest.StartPos) < 0 {
+			earliest = *tok
+		}
+	}
+	return
 }
