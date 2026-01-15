@@ -3761,6 +3761,31 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo.bar"), result)
 	})
+
+	t.Run("impure function as pure function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun foo( ) {}
+
+            fun test() {
+                // Ensure impure type gets added first.
+                let x: AnyStruct = foo as! (fun())
+
+                // Then use the view function type for casting.
+                let y = x as! (view fun())
+
+                y()
+            }
+
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
 }
 
 func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
