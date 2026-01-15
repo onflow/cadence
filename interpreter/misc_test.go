@@ -14111,6 +14111,163 @@ func TestInterpreterValueTransferRuntimeCheck(t *testing.T) {
 		var transferTypeError *interpreter.ValueTransferTypeError
 		require.ErrorAs(t, err, &transferTypeError)
 	})
+
+	t.Run("mismatching member type, inferred target type", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+            struct S {
+                let x: String
+                init() {
+                    self.x = "x"
+                }
+            }
+
+            fun test(v1: S) {
+                let v2 = v1.x
+            }
+            `,
+		)
+
+		sValue := interpreter.NewCompositeValue(
+			inter,
+			TestLocation,
+			"S",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{
+				{
+					Name:  "x",
+					Value: interpreter.NewUnmeteredIntValueFromInt64(1),
+				},
+			},
+			common.ZeroAddress,
+		)
+
+		_, err := inter.Invoke("test", sValue)
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
+
+	t.Run("mismatching member type, common-super target type", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+            struct S {
+                let x: String
+                init() {
+                    self.x = "x"
+                }
+            }
+
+            fun test(v1: S) {
+                let v2: AnyStruct = v1.x
+            }
+            `,
+		)
+
+		sValue := interpreter.NewCompositeValue(
+			inter,
+			TestLocation,
+			"S",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{
+				{
+					Name:  "x",
+					Value: interpreter.NewUnmeteredIntValueFromInt64(1),
+				},
+			},
+			common.ZeroAddress,
+		)
+
+		_, err := inter.Invoke("test", sValue)
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
+
+	t.Run("mismatching member type on a reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+            struct S1 {
+                let s2: S2
+                init() {
+                    self.s2 = S2()
+                }
+            }
+
+            struct S2 {
+                let s3: S3
+                init() {
+                    self.s3 = S3()
+                }
+            }
+
+            struct S3 {}
+
+            struct FakeS2 {
+                let s3: &Int
+                init() {
+                    self.s3 = &1 as &Int
+                }
+            }
+
+
+            fun test(s1: &S1) {
+                let s2: AnyStruct = s1.s2
+                let fakeS2 = s2 as! &FakeS2
+                let s3 = fakeS2.s3
+            }
+            `,
+		)
+
+		sValue := interpreter.NewCompositeValue(
+			inter,
+			TestLocation,
+			"S1",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{
+				{
+					Name: "s2",
+					Value: interpreter.NewCompositeValue(
+						inter,
+						TestLocation,
+						"FakeS2",
+						common.CompositeKindStructure,
+						[]interpreter.CompositeField{
+							{
+								Name:  "s3",
+								Value: interpreter.NewUnmeteredIntValueFromInt64(1),
+							},
+						},
+						common.ZeroAddress,
+					),
+				},
+			},
+			common.ZeroAddress,
+		)
+
+		s1Type := interpreter.MustSemaTypeOfValue(sValue, inter)
+
+		s1Ref := interpreter.NewEphemeralReferenceValue(
+			inter,
+			interpreter.UnauthorizedAccess,
+			sValue,
+			s1Type,
+		)
+
+		_, err := inter.Invoke("test", s1Ref)
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
 }
 
 func TestInterpretPlaceholderConfusion(t *testing.T) {
