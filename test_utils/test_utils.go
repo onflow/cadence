@@ -380,6 +380,7 @@ func ParseCheckAndPrepareWithOptions(
 									argumentTypes,
 									// TODO: provide these if they are needed for tests.
 									nil,
+									functionValue.Type.ReturnTypeAnnotation.Type,
 									interpreter.LocationRange{},
 								)
 								return functionValue.Function(invocation)

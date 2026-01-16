@@ -197,7 +197,12 @@ func fill(slice []Value, n int) []Value {
 	return slice
 }
 
-func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value, arguments []Value) {
+func (vm *VM) pushCallFrame(
+	functionValue CompiledFunctionValue,
+	receiver Value,
+	arguments []Value,
+	returnType bbq.StaticType,
+) {
 	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
 		panic(&interpreter.CallStackLimitExceededError{
 			Limit: vm.context.StackDepthLimit,
@@ -235,6 +240,7 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 		localsOffset: offset,
 		function:     functionValue,
 		startTime:    startTime,
+		returnType:   returnType,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -244,7 +250,7 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 	vm.callFrame = &vm.callstack[len(vm.callstack)-1]
 }
 
-func (vm *VM) popCallFrame() {
+func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 
 	if interpreter.TracingEnabled {
 		startTime := vm.callFrame.startTime
@@ -276,8 +282,11 @@ func (vm *VM) popCallFrame() {
 		vm.ip = 0
 	} else {
 		vm.ip = vm.ipStack[newIpStackDepth-1]
+		poppedCallFrame = vm.callFrame
 		vm.callFrame = &vm.callstack[newStackDepth-1]
 	}
+
+	return poppedCallFrame
 }
 
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
@@ -353,15 +362,29 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 		return nil, err
 	}
 
-	return vm.invokeExternally(functionValue, preparedArguments)
+	returnType := functionValue.FunctionType(vm.context).ReturnTypeAnnotation.Type
+
+	return vm.invokeExternally(
+		functionValue,
+		preparedArguments,
+		returnType,
+	)
 }
 
-func (vm *VM) invokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
+func (vm *VM) invokeExternally(
+	functionValue FunctionValue,
+	arguments []Value,
+	returnType sema.Type,
+) (Value, error) {
+
+	staticReturnType := interpreter.ConvertSemaToStaticType(vm.context, returnType)
+
 	invokeFunction(
 		vm,
 		functionValue,
 		arguments,
 		nil,
+		staticReturnType,
 	)
 
 	// Runs the VM for compiled functions.
@@ -520,10 +543,36 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 	return nil
 }
 
-func opReturnValue(vm *VM) {
+func opReturnValue(vm *VM, ins opcode.InstructionReturnValue) {
 	value := vm.pop()
-	vm.popCallFrame()
+	poppedCallFrame := vm.popCallFrame()
+
+	context := vm.context
+
+	// Defensively check the return value's actual type matches the expected return type.
+	if poppedCallFrame != nil {
+		expectedReturnType := poppedCallFrame.returnType
+		checkValueTransferTypes(context, value, expectedReturnType)
+	}
+
 	vm.push(value)
+}
+
+func checkValueTransferTypes(
+	context *Context,
+	value interpreter.Value,
+	expectedValueType bbq.StaticType,
+) {
+	actualValueType := value.StaticType(context)
+
+	if !context.IsSubType(actualValueType, expectedValueType) {
+		expectedSemaType := context.SemaTypeFromStaticType(expectedValueType)
+		actualSemaType := context.SemaTypeFromStaticType(actualValueType)
+		panic(&interpreter.ValueTransferTypeError{
+			ExpectedType: expectedSemaType,
+			ActualType:   actualSemaType,
+		})
+	}
 }
 
 func opReturn(vm *VM) {
@@ -815,6 +864,9 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load the invoked value
 	functionValue := vm.pop()
 
+	// Return value type
+	returnType := vm.loadType(ins.ReturnType)
+
 	// Add base to front of arguments if the function is bound and base is defined.
 	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
 		base := boundFunction.Base
@@ -828,6 +880,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		functionValue,
 		arguments,
 		typeArguments,
+		returnType,
 	)
 }
 
@@ -862,6 +915,7 @@ func invokeFunction(
 	functionValue Value,
 	arguments []Value,
 	typeArguments []bbq.StaticType,
+	returnType bbq.StaticType,
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
@@ -887,7 +941,12 @@ func invokeFunction(
 
 		// Trace is reported in `popCallFrame`, to also include the execution time.
 
-		vm.pushCallFrame(functionValue, receiver, arguments)
+		vm.pushCallFrame(
+			functionValue,
+			receiver,
+			arguments,
+			returnType,
+		)
 
 	case *NativeFunctionValue:
 		if isBoundFunction {
@@ -916,6 +975,11 @@ func invokeFunction(
 			receiver,
 			arguments,
 		)
+
+		// Defensively check the return value's actual type matches the expected return type.
+		// For compiled functions, this happens when unwinding the call-frame.
+		checkValueTransferTypes(context, result, returnType)
+
 		vm.push(result)
 
 	default:
@@ -1606,7 +1670,7 @@ func (vm *VM) run() {
 
 		switch ins := ins.(type) {
 		case opcode.InstructionReturnValue:
-			opReturnValue(vm)
+			opReturnValue(vm, ins)
 		case opcode.InstructionReturn:
 			opReturn(vm)
 		case opcode.InstructionJump:
@@ -1863,9 +1927,13 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
-func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
+func (vm *VM) invokeFunction(
+	function Value,
+	arguments []Value,
+	returnType sema.Type,
+) (Value, error) {
 	functionValue := function.(FunctionValue)
-	return vm.invokeExternally(functionValue, arguments)
+	return vm.invokeExternally(functionValue, arguments, returnType)
 }
 
 func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {

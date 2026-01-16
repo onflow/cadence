@@ -18,13 +18,18 @@
 
 package vm
 
-import "time"
+import (
+	"time"
+
+	"github.com/onflow/cadence/bbq"
+)
 
 type callFrame struct {
 	localsOffset uint16
 	localsCount  uint16
 	function     CompiledFunctionValue
 	openUpvalues map[int]*Upvalue
+	returnType   bbq.StaticType
 
 	// For tracing.
 	// TODO: Move this out of callFrame if possible.

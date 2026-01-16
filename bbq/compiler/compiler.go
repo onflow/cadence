@@ -80,7 +80,7 @@ type Compiler[E, T any] struct {
 	currentPosition     bbq.Position
 
 	// Cache alike for compiledTypes and constants in the pool.
-	typesInPool     map[sema.TypeID]uint16
+	typesInPool     map[commons.TypeCacheKey]uint16
 	constantsInPool map[constantUniqueKey]*DecodedConstant
 
 	codeGen CodeGen[E]
@@ -194,7 +194,7 @@ func newCompiler[E, T any](
 		location:             location,
 		Globals:              make(map[string]bbq.Global),
 		importedGlobals:      importedGlobals,
-		typesInPool:          make(map[sema.TypeID]uint16),
+		typesInPool:          make(map[commons.TypeCacheKey]uint16),
 		constantsInPool:      make(map[constantUniqueKey]*DecodedConstant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
@@ -2704,6 +2704,8 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 
+	returnTypeIndex := c.getOrAddType(invocationTypes.ReturnType)
+
 	argumentCount := len(expression.Arguments)
 	if argumentCount >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of arguments"))
@@ -2726,6 +2728,7 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				memberExpression,
 				invocationTypes,
 				uint16(argumentCount),
+				returnTypeIndex,
 			)
 			return
 		}
@@ -2759,8 +2762,9 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	}
 
 	c.emit(opcode.InstructionInvoke{
-		TypeArgs: typeArgs,
-		ArgCount: uint16(argumentCount),
+		TypeArgs:   typeArgs,
+		ArgCount:   uint16(argumentCount),
+		ReturnType: returnTypeIndex,
 	})
 	return
 }
@@ -2798,6 +2802,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
 	argumentCount uint16,
+	returnTypeIndex uint16,
 ) {
 	var funcName string
 
@@ -2824,8 +2829,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		typeArgs := c.loadTypeArguments(invocationTypes)
 
 		c.emit(opcode.InstructionInvoke{
-			TypeArgs: typeArgs,
-			ArgCount: argumentCount,
+			TypeArgs:   typeArgs,
+			ArgCount:   argumentCount,
+			ReturnType: returnTypeIndex,
 		})
 		return
 	}
@@ -2861,8 +2867,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 				c.emit(
 					opcode.InstructionInvoke{
-						TypeArgs: typeArgs,
-						ArgCount: argumentCount,
+						TypeArgs:   typeArgs,
+						ArgCount:   argumentCount,
+						ReturnType: returnTypeIndex,
 					},
 				)
 			},
@@ -2900,8 +2907,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.emitGlobalLoad(funcName)
 		c.compileArguments(expression.Arguments, invocationTypes)
 		c.emit(opcode.InstructionInvoke{
-			TypeArgs: typeArgs,
-			ArgCount: argumentCount,
+			TypeArgs:   typeArgs,
+			ArgCount:   argumentCount,
+			ReturnType: returnTypeIndex,
 		})
 	} else {
 		c.withOptionalChaining(
@@ -2925,6 +2933,8 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					// Argument count does not include the receiver,
 					// since receiver is already captured by the bound-function.
 					ArgCount: argumentCount,
+
+					ReturnType: returnTypeIndex,
 				})
 			},
 			true,
@@ -4146,9 +4156,12 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 			compositeType.EnumRawType,
 		)
 
+		returnTypeIndex := c.getOrAddType(compositeType)
 		c.emit(opcode.InstructionInvoke{
-			ArgCount: 1,
+			ArgCount:   1,
+			ReturnType: returnTypeIndex,
 		})
+
 		// NOTE: Do not transfer, as that creates a copy of the enum case value,
 		// which does not match the interpreter's behavior.
 		c.emit(opcode.InstructionReturnValue{})
@@ -4350,18 +4363,18 @@ func (c *Compiler[_, _]) emitConvert(valueType, targetType sema.Type) {
 }
 
 func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
-	typeID := ty.ID()
-
 	// Optimization: Re-use types in the pool.
-	index, ok := c.typesInPool[typeID]
-
-	if !ok {
-		staticType := interpreter.ConvertSemaToStaticType(c.Config.MemoryGauge, ty)
-		data := c.typeGen.CompileType(staticType)
-		index = c.addCompiledType(ty, data)
-		c.typesInPool[typeID] = index
+	cacheKey := commons.NewTypeCacheKeyFromType(ty)
+	index, ok := c.typesInPool[cacheKey]
+	if ok {
+		return index
 	}
 
+	staticType := interpreter.ConvertSemaToStaticType(c.Config.MemoryGauge, ty)
+	data := c.typeGen.CompileType(staticType)
+	index = c.addCompiledType(ty, data)
+
+	c.typesInPool[cacheKey] = index
 	return index
 }
 

@@ -5326,7 +5326,7 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		nil,
+		sema.AnyStructType,
 	)
 	require.NoError(t, err)
 
