@@ -1294,6 +1294,18 @@ func (v *CompositeValue) Transfer(
 		})
 	}
 
+	if needsStoreTo {
+		if v.Kind == common.CompositeKindContract {
+			panic(NonTransferableValueError{
+				Value: v,
+			})
+		}
+
+		if isResourceKinded && !remove {
+			panic(InvalidResourceTransfer{})
+		}
+	}
+
 	if needsStoreTo || !isResourceKinded {
 		// Use non-readonly iterator here because iterated
 		// value can be removed if remove parameter is true.
