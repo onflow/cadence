@@ -1567,7 +1567,7 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 		typ,
 		fieldValue,
 	)
-	attachment.SetBaseValue(base)
+	attachment.SetBaseValue(context, base)
 	vm.push(base)
 }
 
@@ -1589,19 +1589,20 @@ func opSetAttachmentBase(vm *VM) {
 		panic(errors.NewUnreachableError())
 	}
 
-	attachmentComposite.SetBaseValue(baseComposite)
+	attachmentComposite.SetBaseValue(vm.context, baseComposite)
 }
 
 func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	target := vm.pop()
+	context := vm.context
 
 	// Get attachment type
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
-	typ := vm.context.SemaTypeFromStaticType(staticType)
+	typ := context.SemaTypeFromStaticType(staticType)
 
 	base, ok := target.(*interpreter.CompositeValue)
-	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
+	if inIteration := context.inAttachmentIteration(base); inIteration {
 		panic(&interpreter.AttachmentIterationMutationError{
 			Value: base,
 		})
@@ -1613,7 +1614,7 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 		})
 	}
 
-	removed := base.RemoveTypeKey(vm.context, typ)
+	removed := base.RemoveTypeKey(context, typ)
 	// Attachment not present on this base
 	if removed == nil {
 		return
@@ -1624,11 +1625,11 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 		panic(errors.NewUnreachableError())
 	}
 
-	if attachment.IsResourceKinded(vm.context) {
+	if attachment.IsResourceKinded(context) {
 		// This attachment is no longer attached to its base,
 		// but the `base` variable is still available in the destructor
-		attachment.SetBaseValue(base)
-		attachment.Destroy(vm.context)
+		attachment.SetBaseValue(context, base)
+		attachment.Destroy(context)
 	}
 }
 
