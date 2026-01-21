@@ -14087,6 +14087,39 @@ func TestInterpreterValueTransferRuntimeCheck(t *testing.T) {
 		require.ErrorAs(t, err, &transferTypeError)
 	})
 
+	t.Run("mismatching value in casting", func(t *testing.T) {
+		t.Parallel()
+
+		for _, operation := range []ast.Operation{
+			ast.OperationCast,
+			ast.OperationForceCast,
+			ast.OperationFailableCast,
+		} {
+			operation := operation.Symbol()
+
+			t.Run(operation, func(t *testing.T) {
+				t.Parallel()
+
+				inter := parseCheckAndPrepare(t,
+					fmt.Sprintf(`
+                        fun test(v1: String) {
+                            // Note: Cast to 'AnyStruct' to type-erase the value
+                            let v2 = v1 %s AnyStruct
+                        }
+                        `,
+						operation,
+					),
+				)
+
+				_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
+				RequireError(t, err)
+
+				var transferTypeError *interpreter.ValueTransferTypeError
+				require.ErrorAs(t, err, &transferTypeError)
+			})
+		}
+	})
+
 	t.Run("mismatching target type", func(t *testing.T) {
 		t.Parallel()
 

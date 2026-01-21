@@ -500,7 +500,9 @@
   description: |
     Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
   operands:
-    - name: "type"
+    - name: "targetType"
+      type: "typeIndex"
+    - name: "valueType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -516,7 +518,9 @@
     If the value is a subtype of the given type, then casted value is pushed back on to the stack.
     If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
   operands:
-    - name: "type"
+    - name: "targetType"
+      type: "typeIndex"
+    - name: "valueType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -532,7 +536,9 @@
     and then pushes it back on to the stack.
     Panics if the value is not a subtype of the given type.
   operands:
-    - name: "type"
+    - name: "targetType"
+      type: "typeIndex"
+    - name: "valueType"
       type: "typeIndex"
   valueEffects:
     pop:

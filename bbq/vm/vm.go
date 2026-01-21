@@ -1259,33 +1259,39 @@ func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
 func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 	value := vm.pop()
 
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
-	valueType := value.StaticType(vm.context)
+	targetTypeIndex := ins.TargetType
+	targetType := vm.loadType(targetTypeIndex)
+
+	valueTypeIndex := ins.ValueType
+	staticValueType := vm.loadType(valueTypeIndex)
 
 	// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-	result := ConvertAndBox(vm.context, value, valueType, targetType)
+	result := ConvertAndBoxWithValidation(vm.context, value, staticValueType, targetType)
 
 	vm.push(result)
 }
 
 func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
+	context := vm.context
 	value := vm.pop()
 
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	targetTypeIndex := ins.TargetType
+	targetType := vm.loadType(targetTypeIndex)
 
-	value, valueType := castValueAndValueType(vm.context, targetType, value)
+	value, valueType := castValueAndValueType(context, targetType, value)
 
-	isSubType := vm.context.IsSubType(valueType, targetType)
+	isSubType := context.IsSubType(valueType, targetType)
 
 	var result Value
 	if isSubType {
+		valueTypeIndex := ins.ValueType
+		staticValueType := vm.loadType(valueTypeIndex)
+
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		result = ConvertAndBox(vm.context, value, valueType, targetType)
+		result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
 
 		result = interpreter.NewSomeValueNonCopying(
-			vm.context.MemoryGauge,
+			context.MemoryGauge,
 			result,
 		)
 	} else {
@@ -1298,8 +1304,8 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	value := vm.pop()
 
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	targetTypeIndex := ins.TargetType
+	targetType := vm.loadType(targetTypeIndex)
 
 	context := vm.context
 
@@ -1318,8 +1324,11 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 		})
 	}
 
+	valueTypeIndex := ins.ValueType
+	staticValueType := vm.loadType(valueTypeIndex)
+
 	// The force cast may upcast to an optional type, e.g. `1 as! Int?`, so box
-	result = ConvertAndBox(vm.context, value, valueType, targetType)
+	result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
 	vm.push(result)
 }
 
