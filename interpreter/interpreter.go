@@ -1927,14 +1927,16 @@ func ConvertAndBoxWithValidation(
 	targetType sema.Type,
 ) Value {
 	// Defensively check the actual value's type matches the expected value type.
-	valueStaticType := transferredValue.StaticType(context)
-	if !IsSubTypeOfSemaType(context, valueStaticType, valueType) {
-		resultSemaType := context.SemaTypeFromStaticType(valueStaticType)
+	if valueType != nil {
+		valueStaticType := transferredValue.StaticType(context)
+		if !IsSubTypeOfSemaType(context, valueStaticType, valueType) {
+			resultSemaType := context.SemaTypeFromStaticType(valueStaticType)
 
-		panic(&ValueTransferTypeError{
-			ExpectedType: valueType,
-			ActualType:   resultSemaType,
-		})
+			panic(&ValueTransferTypeError{
+				ExpectedType: valueType,
+				ActualType:   resultSemaType,
+			})
+		}
 	}
 
 	result := ConvertAndBox(
@@ -1945,17 +1947,17 @@ func ConvertAndBoxWithValidation(
 	)
 
 	// Defensively check the value's type matches the target type
-	resultStaticType := result.StaticType(context)
+	if targetType != nil {
+		resultStaticType := result.StaticType(context)
+		if !IsSubTypeOfSemaType(context, resultStaticType, targetType) {
 
-	if targetType != nil &&
-		!IsSubTypeOfSemaType(context, resultStaticType, targetType) {
+			resultSemaType := context.SemaTypeFromStaticType(resultStaticType)
 
-		resultSemaType := context.SemaTypeFromStaticType(resultStaticType)
-
-		panic(&ValueTransferTypeError{
-			ExpectedType: targetType,
-			ActualType:   resultSemaType,
-		})
+			panic(&ValueTransferTypeError{
+				ExpectedType: targetType,
+				ActualType:   resultSemaType,
+			})
+		}
 	}
 
 	return result

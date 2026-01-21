@@ -151,7 +151,7 @@ func invokeFunctionValueWithEval[T any](
 
 	resultValue := function.Invoke(invocation)
 
-	functionReturnType := function.FunctionType(context).ReturnTypeAnnotation.Type
+	functionReturnType := function.FunctionType(context).ReturnTypeAnnotation.Type.Resolve(typeArguments)
 
 	// Only convert and box.
 	// No need to transfer, since transfer would happen later, when the return value gets assigned.
@@ -172,17 +172,7 @@ func invokeFunctionValueWithEval[T any](
 	//
 	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
 
-	// Defensively check the return value's actual type matches the expected return type.
-	valueStaticType := resultValue.StaticType(context)
-	if !IsSubTypeOfSemaType(context, valueStaticType, returnType) {
-		resultSemaType := context.SemaTypeFromStaticType(valueStaticType)
-		panic(&ValueTransferTypeError{
-			ExpectedType: returnType,
-			ActualType:   resultSemaType,
-		})
-	}
-
-	return ConvertAndBox(
+	return ConvertAndBoxWithValidation(
 		context,
 		resultValue,
 		functionReturnType,
