@@ -511,7 +511,7 @@ func PrepareExternalInvocationArguments(context InvocationContext, functionType 
 			parameterType := parameters[i].TypeAnnotation.Type
 
 			// converts the argument into the parameter type declared by the function
-			preparedArguments[i] = ConvertAndBox(context, argument, nil, parameterType)
+			preparedArguments[i] = convertAndBox(context, argument, nil, parameterType)
 		}
 	}
 
@@ -1939,7 +1939,7 @@ func ConvertAndBoxWithValidation(
 		}
 	}
 
-	result := ConvertAndBox(
+	result := convertAndBox(
 		context,
 		transferredValue,
 		valueType,
@@ -1988,8 +1988,8 @@ func TransferIfNotResourceAndConvert(
 	)
 }
 
-// ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func ConvertAndBox(
+// convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
+func convertAndBox(
 	context ValueCreationContext,
 	value Value,
 	valueType, targetType sema.Type,
