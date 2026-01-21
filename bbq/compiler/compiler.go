@@ -3455,21 +3455,25 @@ func (c *Compiler[_, _]) VisitCastingExpression(expression *ast.CastingExpressio
 	c.compileExpression(expression.Expression)
 
 	castingTypes := c.DesugaredElaboration.CastingExpressionTypes(expression)
-	index := c.getOrAddType(castingTypes.TargetType)
+	targetTypeIndex := c.getOrAddType(castingTypes.TargetType)
+	valueTypeIndex := c.getOrAddType(castingTypes.StaticValueType)
 
 	var castInstruction opcode.Instruction
 	switch expression.Operation {
 	case ast.OperationCast:
 		castInstruction = opcode.InstructionSimpleCast{
-			Type: index,
+			TargetType: targetTypeIndex,
+			ValueType:  valueTypeIndex,
 		}
 	case ast.OperationFailableCast:
 		castInstruction = opcode.InstructionFailableCast{
-			Type: index,
+			TargetType: targetTypeIndex,
+			ValueType:  valueTypeIndex,
 		}
 	case ast.OperationForceCast:
 		castInstruction = opcode.InstructionForceCast{
-			Type: index,
+			TargetType: targetTypeIndex,
+			ValueType:  valueTypeIndex,
 		}
 	default:
 		panic(errors.NewUnreachableError())

@@ -1314,6 +1314,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 		valueSemaType := MustSemaTypeOfValue(value, interpreter)
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
+
 		isSubType := IsSubTypeOfSemaType(interpreter, valueStaticType, expectedType)
 
 		switch expression.Operation {
@@ -1335,7 +1336,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		value = ConvertAndBox(interpreter, value, valueSemaType, expectedType)
+		staticValueType := castingExpressionTypes.StaticValueType
+		value = ConvertAndBoxWithValidation(interpreter, value, staticValueType, expectedType)
 
 		if expression.Operation == ast.OperationFailableCast {
 			// Failable casting is a resource invalidation
@@ -1349,7 +1351,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	case ast.OperationCast:
 		staticValueType := castingExpressionTypes.StaticValueType
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-		return ConvertAndBox(interpreter, value, staticValueType, expectedType)
+		return ConvertAndBoxWithValidation(interpreter, value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())

@@ -1375,10 +1375,10 @@ func TestCompileSimpleCast(t *testing.T) {
 
 			// x as Int?
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSimpleCast{Type: 1},
+			opcode.InstructionSimpleCast{TargetType: 1, ValueType: 2},
 
 			// return
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 2},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 3},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1414,7 +1414,7 @@ func TestCompileForceCast(t *testing.T) {
 
 			// x as! Int
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionForceCast{Type: 1},
+			opcode.InstructionForceCast{TargetType: 1, ValueType: 2},
 
 			// return
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
@@ -1453,10 +1453,10 @@ func TestCompileFailableCast(t *testing.T) {
 
 			// x as? Int
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionFailableCast{Type: 1},
+			opcode.InstructionFailableCast{TargetType: 1, ValueType: 2},
 
 			// return
-			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
+			opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
