@@ -1230,11 +1230,11 @@ func opConvert(vm *VM, ins opcode.InstructionConvert) {
 
 	value := vm.peek()
 
-	transferredValue := interpreter.ConvertAndBoxWithValidation(
+	transferredValue := ConvertAndBoxWithValidation(
 		context,
 		value,
-		context.SemaTypeFromStaticType(valueType),
-		context.SemaTypeFromStaticType(targetType),
+		valueType,
+		targetType,
 	)
 
 	vm.replaceTop(transferredValue)

@@ -172,7 +172,12 @@ func invokeFunctionValueWithEval[T any](
 	//
 	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
 
-	// Defensively check the return value's actual type matches the expected return type.
+	// Defensively check the return value's actual type matches the expected return type of invocation.
+	// Important: Do the check manually here rather than using `ConvertAndBoxWithValidation`.
+	// This is beacuse, the expected value's type (i.e: `functionReturnType`) can be generic.
+	// So it's not possible to check whether the value's actaul type matches **function's** return type.
+	// Can only check whether alue's actaul type matches the **invocation's** return type
+
 	valueStaticType := resultValue.StaticType(context)
 	if !IsSubTypeOfSemaType(context, valueStaticType, returnType) {
 		resultSemaType := context.SemaTypeFromStaticType(valueStaticType)
@@ -182,7 +187,7 @@ func invokeFunctionValueWithEval[T any](
 		})
 	}
 
-	return ConvertAndBox(
+	return convertAndBox(
 		context,
 		resultValue,
 		functionReturnType,
