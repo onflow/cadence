@@ -635,6 +635,9 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		if some, ok := leftValue.(*SomeValue); ok {
 			result = some.InnerValue()
 			actualResultType = binaryExpressionTypes.LeftType
+			if optionalType, ok := actualResultType.(*sema.OptionalType); ok {
+				actualResultType = optionalType.Type
+			}
 		} else {
 			result = rightValue()
 			actualResultType = binaryExpressionTypes.RightType
