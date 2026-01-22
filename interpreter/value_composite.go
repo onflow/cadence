@@ -435,7 +435,7 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext) {
 					if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok &&
 						compositeFieldValue.Kind == common.CompositeKindAttachment {
 
-						compositeFieldValue.SetBaseValue(v)
+						compositeFieldValue.SetBaseValue(context, v)
 					}
 
 					maybeDestroy(contextForLocation, fieldValue)
@@ -1379,7 +1379,7 @@ func (v *CompositeValue) Transfer(
 					if compositeValue, ok := value.(*CompositeValue); ok &&
 						compositeValue.Kind == common.CompositeKindAttachment {
 
-						compositeValue.SetBaseValue(v)
+						compositeValue.SetBaseValue(context, v)
 					}
 
 					value = value.Transfer(
@@ -1799,7 +1799,22 @@ func (v *CompositeValue) getBaseValue(
 	return NewEphemeralReferenceValue(context, functionAuthorization, v.base, baseType)
 }
 
-func (v *CompositeValue) SetBaseValue(base *CompositeValue) {
+func (v *CompositeValue) SetBaseValue(context ValueStaticTypeContext, base *CompositeValue) {
+	attachmentType, ok := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	expectedBaseType := attachmentType.GetBaseType()
+	actualBaseType := MustSemaTypeOfValue(base, context)
+
+	if !sema.IsSubType(actualBaseType, expectedBaseType) {
+		panic(&InvalidBaseTypeError{
+			ExpectedType: expectedBaseType,
+			ActualType:   actualBaseType,
+		})
+	}
+
 	v.base = base
 }
 
@@ -1970,7 +1985,7 @@ func forEachAttachment(
 			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
 			// should convert the provided attachment value into a reference before passing it to the user
 			// callback
-			attachment.SetBaseValue(composite)
+			attachment.SetBaseValue(context, composite)
 			f(attachment)
 		}
 	}
@@ -1987,7 +2002,7 @@ func (v *CompositeValue) getTypeKey(
 	}
 	attachmentType := keyType.(*sema.CompositeType)
 	// dynamically set the attachment's base to this composite
-	attachment.SetBaseValue(v)
+	attachment.SetBaseValue(context, v)
 
 	// The attachment reference has the same entitlements as the base access
 	attachmentRef := NewEphemeralReferenceValue(

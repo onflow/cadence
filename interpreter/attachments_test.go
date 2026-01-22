@@ -2655,3 +2655,37 @@ func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
 		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
+
+func TestInterpretAttachmentToTypeConfusedValue(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+        struct X {}
+
+        struct Y {}
+
+        attachment A for X {
+            fun foo(): Int { return 3 }
+        }
+
+        fun test(x1: X) {
+            // Note: Casting is needed to ensure value's type to be treated as 'AnyStruct'
+            let x2 = (attach A() to x1) as AnyStruct
+        }
+    `)
+
+	yValue := interpreter.NewCompositeValue(
+		inter,
+		TestLocation,
+		"Y",
+		common.CompositeKindStructure,
+		nil,
+		common.ZeroAddress,
+	)
+
+	_, err := inter.Invoke("test", yValue)
+	RequireError(t, err)
+
+	var invalidBaseTypeError *interpreter.InvalidBaseTypeError
+	require.ErrorAs(t, err, &invalidBaseTypeError)
+}
