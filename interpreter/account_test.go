@@ -964,8 +964,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			var typeMismatchError *interpreter.StoredValueTypeMismatchError
 			require.ErrorAs(t, err, &typeMismatchError)
 
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, getAccountValues(), 1)
+			// Check loaded value was removed from storage
+			require.Len(t, getAccountValues(), 0)
 		})
 	})
 
@@ -1015,7 +1015,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 			// NOTE: check loaded value was removed from storage
-			require.Len(t, getAccountValues(), 0)
+			require.Empty(t, getAccountValues())
 
 			// second load
 
@@ -1042,8 +1042,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			var typeMismatchError *interpreter.StoredValueTypeMismatchError
 			require.ErrorAs(t, err, &typeMismatchError)
 
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, getAccountValues(), 1)
+			// Check loaded value was removed from storage
+			require.Empty(t, getAccountValues())
 		})
 	})
 }

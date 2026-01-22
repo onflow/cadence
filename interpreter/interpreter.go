@@ -2869,6 +2869,7 @@ func (interpreter *Interpreter) ReadStored(
 	if accountStorage == nil {
 		return nil
 	}
+
 	return accountStorage.ReadValue(interpreter, identifier)
 }
 
@@ -2879,7 +2880,21 @@ func (interpreter *Interpreter) WriteStored(
 	value Value,
 ) (existed bool) {
 	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, true)
+
 	return accountStorage.WriteValue(interpreter, key, value)
+}
+
+func (interpreter *Interpreter) RemoveStored(
+	storageAddress common.Address,
+	domain common.StorageDomain,
+	key StorageMapKey,
+) atree.Storable {
+	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, false)
+	if accountStorage == nil {
+		return nil
+	}
+
+	return accountStorage.RemoveValueWithoutDeletion(interpreter, key)
 }
 
 type TypedStringValueParser struct {
@@ -4857,12 +4872,10 @@ func AccountStorageSave(
 	address := addressValue.ToAddress()
 
 	if StoredValueExists(context, address, domain, storageMapKey) {
-		panic(
-			&OverwriteError{
-				Address: addressValue,
-				Path:    path,
-			},
-		)
+		panic(&OverwriteError{
+			Address: addressValue,
+			Path:    path,
+		})
 	}
 
 	value = value.Transfer(
@@ -5111,16 +5124,26 @@ func AccountStorageLoad(
 
 	storageMapKey := StringStorageMapKey(identifier)
 
-	value := invocationContext.ReadStored(address, domain, storageMapKey)
+	storable := invocationContext.RemoveStored(address, domain, storageMapKey)
 
-	if value == nil {
+	if storable == nil {
 		return Nil
 	}
+
+	transferedValue := StoredValue(invocationContext, storable, invocationContext.Storage()).
+		Transfer(
+			invocationContext,
+			atree.Address{},
+			true,
+			storable,
+			nil,
+			true, // value is standalone because it was removed from parent container.
+		)
 
 	// If there is value stored for the given path,
 	// check that it satisfies the type given as the type argument.
 
-	valueStaticType := value.StaticType(invocationContext)
+	valueStaticType := transferedValue.StaticType(invocationContext)
 
 	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
 		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
@@ -5131,28 +5154,7 @@ func AccountStorageLoad(
 		})
 	}
 
-	// We could also pass remove=true and the storable stored in storage,
-	// but passing remove=false here and writing nil below has the same effect
-	// TODO: potentially refactor and get storable in storage, pass it and remove=true
-	transferredValue := value.Transfer(
-		invocationContext,
-		atree.Address{},
-		false,
-		nil,
-		nil,
-		false, // value is an element in storage map because it is from "ReadStored".
-	)
-
-	// Remove the value from storage,
-	// but only if the type check succeeded.
-	invocationContext.WriteStored(
-		address,
-		domain,
-		storageMapKey,
-		nil,
-	)
-
-	return NewSomeValueNonCopying(invocationContext, transferredValue)
+	return NewSomeValueNonCopying(invocationContext, transferedValue)
 }
 
 func NativeAccountStorageBorrowFunction(
