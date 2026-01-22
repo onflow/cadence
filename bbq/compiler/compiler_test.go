@@ -2716,21 +2716,48 @@ func TestCompileNilCoalesce(t *testing.T) {
 			// value ??
 			opcode.InstructionGetLocal{Local: valueIndex},
 			opcode.InstructionDup{},
-			opcode.InstructionJumpIfNil{Target: 6},
+			opcode.InstructionJumpIfNil{Target: 7},
 
 			// value
 			opcode.InstructionUnwrap{},
-			opcode.InstructionJump{Target: 8},
+			// The Value type should be the unwrapped `Int`.
+			opcode.InstructionConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionJump{Target: 10},
 
 			// 0
 			opcode.InstructionDrop{},
 			opcode.InstructionGetConstant{Constant: 0},
+			// The Value type should be the unwrapped `Int`.
+			opcode.InstructionConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 
 			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
+	)
+
+	assertTypesEqual(
+		t,
+		[]bbq.StaticType{
+			interpreter.FunctionStaticType{
+				FunctionType: sema.NewSimpleFunctionType(
+					sema.FunctionPurityImpure,
+					[]sema.Parameter{
+						{
+							TypeAnnotation: sema.NewTypeAnnotation(
+								sema.NewOptionalType(nil, sema.IntType),
+							),
+							Label:      sema.ArgumentLabelNotRequired,
+							Identifier: "value",
+						},
+					},
+					sema.NewTypeAnnotation(sema.IntType),
+				),
+			},
+			interpreter.PrimitiveStaticTypeInt,
+		},
+		program.Types,
 	)
 
 	assert.Equal(t,

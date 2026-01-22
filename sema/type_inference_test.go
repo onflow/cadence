@@ -1488,4 +1488,42 @@ func TestCheckNilCoalesceExpressionTypeInference(t *testing.T) {
 		typeAnnotRequiredError := &sema.TypeAnnotationRequiredError{}
 		require.ErrorAs(t, errs[0], &typeAnnotRequiredError)
 	})
+
+	t.Run("optional from RHS", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let a: String? = "1"
+            let b: Int? = 2
+            let c = a ?? b
+        `
+
+		checker, err := ParseAndCheckWithPanic(t, code)
+		require.NoError(t, err)
+
+		cType := RequireGlobalValue(t, checker.Elaboration, "c")
+		require.IsType(t, &sema.OptionalType{}, cType)
+		optionalType := cType.(*sema.OptionalType)
+
+		assert.Equal(t, sema.HashableStructType, optionalType.Type)
+	})
+
+	t.Run("optional from LHS", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let a: String?? = nil
+            let b: Int = 2
+            let c = a ?? b
+        `
+
+		checker, err := ParseAndCheckWithPanic(t, code)
+		require.NoError(t, err)
+
+		cType := RequireGlobalValue(t, checker.Elaboration, "c")
+		require.IsType(t, &sema.OptionalType{}, cType)
+		optionalType := cType.(*sema.OptionalType)
+
+		assert.Equal(t, sema.HashableStructType, optionalType.Type)
+	})
 }
