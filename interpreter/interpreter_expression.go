@@ -626,19 +626,24 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return right
 
 	case ast.OperationNilCoalesce:
+		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes(expression)
+
+		var result Value
+		var actualResultType sema.Type
+
 		// only evaluate right-hand side if left-hand side is nil
 		if some, ok := leftValue.(*SomeValue); ok {
-			return some.InnerValue()
+			result = some.InnerValue()
+			actualResultType = binaryExpressionTypes.LeftType
+		} else {
+			result = rightValue()
+			actualResultType = binaryExpressionTypes.RightType
 		}
 
-		value := rightValue()
-
-		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes(expression)
-		rightType := binaryExpressionTypes.RightType
-		resultType := binaryExpressionTypes.ResultType
+		expectedResultType := binaryExpressionTypes.ResultType
 
 		// NOTE: important to convert both any and optional
-		return ConvertAndBox(interpreter, value, rightType, resultType)
+		return ConvertAndBox(interpreter, result, actualResultType, expectedResultType)
 	}
 
 	panic(&unsupportedOperation{

@@ -2716,16 +2716,18 @@ func TestCompileNilCoalesce(t *testing.T) {
 			// value ??
 			opcode.InstructionGetLocal{Local: valueIndex},
 			opcode.InstructionDup{},
-			opcode.InstructionJumpIfNil{Target: 6},
+			opcode.InstructionJumpIfNil{Target: 7},
 
 			// value
 			opcode.InstructionUnwrap{},
-			opcode.InstructionJump{Target: 8},
+			opcode.InstructionConvert{ValueType: 1, TargetType: 2},
+			opcode.InstructionJump{Target: 10},
 
 			// 0
 			opcode.InstructionDrop{},
 			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionConvert{ValueType: 2, TargetType: 2},
+			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 
 			// return
 			opcode.InstructionReturnValue{},

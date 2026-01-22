@@ -3098,6 +3098,51 @@ func TestInterpretNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 	)
 }
 
+func TestInterpretNilCoalescingImplicitConversion(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("left value conversion", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          let one: String? = "1"
+          let two: Int? = 2
+          let x = (one ?? two).getType()
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			// Should be `Type<String?>()`
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeString),
+			),
+			inter.GetGlobal("x"),
+		)
+	})
+
+	t.Run("right value conversion", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          let one: String?? = nil
+          let two: Int = 2
+          let x = (one ?? two).getType()
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			// Should be `Type<Int?>()`
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
+			),
+			inter.GetGlobal("x"),
+		)
+	})
+}
+
 func TestInterpretNilCoalescingRightSubtype(t *testing.T) {
 
 	t.Parallel()
