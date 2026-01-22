@@ -3273,7 +3273,14 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 
 		// Then branch
 		c.emit(opcode.InstructionUnwrap{})
-		c.emitConvert(binaryExpressionTypes.LeftType, binaryExpressionTypes.ResultType)
+		leftResultType := binaryExpressionTypes.LeftType
+		optionalType, ok := leftResultType.(*sema.OptionalType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		leftResultType = optionalType.Type
+
+		c.emitConvert(leftResultType, binaryExpressionTypes.ResultType)
 		thenJump := c.emitUndefinedJump()
 
 		// Else branch
