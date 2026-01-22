@@ -4954,13 +4954,11 @@ func authAccountStorageLoadFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	const clear = true
-	return authAccountReadFunction(
+	return authAccountLoadFunction(
 		context,
 		storageValue,
 		addressValue,
 		sema.Account_StorageTypeLoadFunctionType,
-		clear,
 	)
 }
 
@@ -4969,19 +4967,16 @@ func authAccountStorageCopyFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	const clear = false
-	return authAccountReadFunction(
+	return authAccountCopyFunction(
 		context,
 		storageValue,
 		addressValue,
 		sema.Account_StorageTypeCopyFunctionType,
-		clear,
 	)
 }
 
-func NativeAccountStorageReadFunction(
+func NativeAccountStorageCopyFunction(
 	addressPointer *AddressValue,
-	clear bool,
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -4992,38 +4987,119 @@ func NativeAccountStorageReadFunction(
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
 		semaBorrowType := typeArguments.NextSema()
 
-		return AccountStorageRead(
+		return AccountStorageCopy(
 			context,
 			args,
 			semaBorrowType,
 			address,
-			clear,
 		)
 	}
 }
 
-func authAccountReadFunction(
+func NativeAccountStorageLoadFunction(
+	addressPointer *AddressValue,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		typeArguments TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		address := GetAddressValue(receiver, addressPointer).ToAddress()
+		semaBorrowType := typeArguments.NextSema()
+
+		return AccountStorageLoad(
+			context,
+			args,
+			semaBorrowType,
+			address,
+		)
+	}
+}
+
+func authAccountCopyFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 	functionType *sema.FunctionType,
-	clear bool,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
-		NativeAccountStorageReadFunction(&addressValue, clear),
+		NativeAccountStorageCopyFunction(&addressValue),
 	)
 }
 
-func AccountStorageRead(
+func authAccountLoadFunction(
+	context FunctionCreationContext,
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+	functionType *sema.FunctionType,
+) BoundFunctionValue {
+
+	return NewBoundHostFunctionValue(
+		context,
+		storageValue,
+		functionType,
+		NativeAccountStorageLoadFunction(&addressValue),
+	)
+}
+
+func AccountStorageCopy(
 	invocationContext InvocationContext,
 	arguments []Value,
 	typeParameter sema.Type,
 	address common.Address,
-	clear bool,
+) Value {
+	path, ok := arguments[0].(PathValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	domain := path.Domain.StorageDomain()
+	identifier := path.Identifier
+
+	storageMapKey := StringStorageMapKey(identifier)
+
+	value := invocationContext.ReadStored(address, domain, storageMapKey)
+
+	if value == nil {
+		return Nil
+	}
+
+	// If there is value stored for the given path,
+	// check that it satisfies the type given as the type argument.
+
+	valueStaticType := value.StaticType(invocationContext)
+
+	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
+		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
+
+		panic(&StoredValueTypeMismatchError{
+			ExpectedType: typeParameter,
+			ActualType:   valueSemaType,
+		})
+	}
+
+	transferredValue := value.Transfer(
+		invocationContext,
+		atree.Address{},
+		false,
+		nil,
+		nil,
+		false, // value is an element in storage map because it is from "ReadStored".
+	)
+
+	return NewSomeValueNonCopying(invocationContext, transferredValue)
+}
+
+func AccountStorageLoad(
+	invocationContext InvocationContext,
+	arguments []Value,
+	typeParameter sema.Type,
+	address common.Address,
 ) Value {
 	path, ok := arguments[0].(PathValue)
 	if !ok {
@@ -5069,14 +5145,12 @@ func AccountStorageRead(
 
 	// Remove the value from storage,
 	// but only if the type check succeeded.
-	if clear {
-		invocationContext.WriteStored(
-			address,
-			domain,
-			storageMapKey,
-			nil,
-		)
-	}
+	invocationContext.WriteStored(
+		address,
+		domain,
+		storageMapKey,
+		nil,
+	)
 
 	return NewSomeValueNonCopying(invocationContext, transferredValue)
 }
