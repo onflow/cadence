@@ -42,7 +42,12 @@ type Invokable interface {
 	interpreter.ValueComparisonContext
 	interpreter.InvocationContext
 	interpreter.ResourceDestructionContext
+	// Invoke invokes a global function with the given arguments
 	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
+	// Deprecated: InvokeUncheckedForTestingOnly invokes a global function with the given arguments,
+	// without validating them.
+	// NOTE: FOR TESTING PURPOSES ONLY! Use Invoke instead
+	InvokeUncheckedForTestingOnly(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
 	InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) error
 	GetGlobal(name string) interpreter.Value
 
