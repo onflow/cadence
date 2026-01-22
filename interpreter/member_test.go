@@ -111,13 +111,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke("get", value)
+				_, err = inter.InvokeUncheckedForTestingOnly("get", value)
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 
-				_, err = inter.Invoke("set", value)
+				_, err = inter.InvokeUncheckedForTestingOnly("set", value)
 				RequireError(t, err)
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
@@ -145,7 +145,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("Foo")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke("get", value)
+				_, err = inter.InvokeUncheckedForTestingOnly("get", value)
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
@@ -218,7 +218,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke(
+				_, err = inter.InvokeUncheckedForTestingOnly(
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
@@ -313,13 +313,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke("get", value)
+				_, err = inter.InvokeUncheckedForTestingOnly("get", value)
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 
-				_, err = inter.Invoke("set", value)
+				_, err = inter.InvokeUncheckedForTestingOnly("set", value)
 				RequireError(t, err)
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
@@ -398,7 +398,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke(
+				_, err = inter.InvokeUncheckedForTestingOnly(
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
@@ -503,13 +503,13 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					sType,
 				)
 
-				_, err = inter.Invoke("get", ref)
+				_, err = inter.InvokeUncheckedForTestingOnly("get", ref)
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 
-				_, err = inter.Invoke("set", ref)
+				_, err = inter.InvokeUncheckedForTestingOnly("set", ref)
 				RequireError(t, err)
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
@@ -600,7 +600,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					sType,
 				)
 
-				_, err = inter.Invoke(
+				_, err = inter.InvokeUncheckedForTestingOnly(
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(
 						ref,
@@ -710,12 +710,12 @@ func TestInterpretMemberAccessType(t *testing.T) {
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.StorageReferenceValue{}, storageRef)
 
-			_, err = inter.Invoke("get", storageRef)
+			_, err = inter.InvokeUncheckedForTestingOnly("get", storageRef)
 			RequireError(t, err)
 			var memberAccessTypeError *interpreter.MemberAccessTypeError
 			require.ErrorAs(t, err, &memberAccessTypeError)
 
-			_, err = inter.Invoke("set", storageRef)
+			_, err = inter.InvokeUncheckedForTestingOnly("set", storageRef)
 			RequireError(t, err)
 			require.ErrorAs(t, err, &memberAccessTypeError)
 		})

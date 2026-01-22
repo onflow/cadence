@@ -422,7 +422,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 
 	rConstructor := subInterpreter.Globals.Get("R").GetValue(inter)
 
-	_, err = inter.Invoke("test", rConstructor)
+	_, err = inter.InvokeUncheckedForTestingOnly("test", rConstructor)
 	RequireError(t, err)
 
 	var resourceConstructionError *interpreter.ResourceConstructionError

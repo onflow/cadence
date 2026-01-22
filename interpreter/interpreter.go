@@ -406,7 +406,17 @@ func (interpreter *Interpreter) invokeVariable(
 	value Value,
 	err error,
 ) {
+	return interpreter.invokeVariableWithValidation(functionName, arguments, true)
+}
 
+func (interpreter *Interpreter) invokeVariableWithValidation(
+	functionName string,
+	arguments []Value,
+	validateConvertAndBox bool,
+) (
+	value Value,
+	err error,
+) {
 	// function must be defined as a global variable
 	variable := interpreter.Globals.Get(functionName)
 	if variable == nil {
@@ -440,7 +450,13 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return InvokeExternally(interpreter, functionValue, functionType, arguments)
+	return InvokeExternallyWithValidation(
+		interpreter,
+		functionValue,
+		functionType,
+		arguments,
+		validateConvertAndBox,
+	)
 }
 
 func InvokeExternally(
@@ -452,7 +468,31 @@ func InvokeExternally(
 	result Value,
 	err error,
 ) {
-	preparedArguments, err := PrepareExternalInvocationArguments(context, functionType, arguments)
+	return InvokeExternallyWithValidation(
+		context,
+		functionValue,
+		functionType,
+		arguments,
+		true,
+	)
+}
+
+func InvokeExternallyWithValidation(
+	context InvocationContext,
+	functionValue FunctionValue,
+	functionType *sema.FunctionType,
+	arguments []Value,
+	validateConvertAndBox bool,
+) (
+	result Value,
+	err error,
+) {
+	preparedArguments, err := PrepareExternalInvocationArgumentsWithValidation(
+		context,
+		functionType,
+		arguments,
+		validateConvertAndBox,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +519,13 @@ func InvokeExternally(
 	return functionValue.Invoke(invocation), nil
 }
 
-func PrepareExternalInvocationArguments(context InvocationContext, functionType *sema.FunctionType, arguments []Value) ([]Value, error) {
+func PrepareExternalInvocationArgumentsWithValidation(
+	context InvocationContext,
+	functionType *sema.FunctionType,
+	arguments []Value,
+	validateConvertAndBox bool,
+) ([]Value, error) {
+
 	// ensures the invocation's argument count matches the function's parameter count
 
 	parameters := functionType.Parameters
@@ -502,6 +548,11 @@ func PrepareExternalInvocationArguments(context InvocationContext, functionType 
 				ArgumentCount:  argumentCount,
 			}
 		}
+	}
+
+	var convertAndBox = convertAndBox
+	if validateConvertAndBox {
+		convertAndBox = ConvertAndBoxWithValidation
 	}
 
 	var preparedArguments []Value
@@ -527,6 +578,19 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) 
 	})
 
 	return interpreter.invokeVariable(functionName, arguments)
+}
+
+// Deprecated: InvokeUncheckedForTestingOnly invokes a global function with the given arguments,
+// without validating them.
+// NOTE: FOR TESTING PURPOSES ONLY! Use Invoke instead
+func (interpreter *Interpreter) InvokeUncheckedForTestingOnly(functionName string, arguments ...Value) (value Value, err error) {
+
+	// recover internal panics and return them as an error
+	defer interpreter.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	return interpreter.invokeVariableWithValidation(functionName, arguments, false)
 }
 
 // InvokeFunction invokes a function value with the given invocation
@@ -1990,9 +2054,10 @@ func TransferIfNotResourceAndConvert(
 
 // convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
 func convertAndBox(
-	context ValueCreationContext,
+	context ValueConversionContext,
 	value Value,
-	valueType, targetType sema.Type,
+	valueType sema.Type,
+	targetType sema.Type,
 ) Value {
 	value = convert(context, value, valueType, targetType)
 	return BoxOptional(context, value, targetType)
