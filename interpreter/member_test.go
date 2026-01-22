@@ -111,13 +111,15 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.InvokeUncheckedForTestingOnly("get", value)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("get", value) //nolint:staticcheck
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 
-				_, err = inter.InvokeUncheckedForTestingOnly("set", value)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("set", value) //nolint:staticcheck
 				RequireError(t, err)
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
@@ -145,7 +147,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("Foo")
 				require.NoError(t, err)
 
-				_, err = inter.InvokeUncheckedForTestingOnly("get", value)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("get", value) //nolint:staticcheck
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
@@ -218,7 +221,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.InvokeUncheckedForTestingOnly(
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly( //nolint:staticcheck
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
@@ -313,13 +317,15 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.InvokeUncheckedForTestingOnly("get", value)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("get", value) //nolint:staticcheck
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 
-				_, err = inter.InvokeUncheckedForTestingOnly("set", value)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("set", value) //nolint:staticcheck
 				RequireError(t, err)
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
@@ -398,7 +404,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.InvokeUncheckedForTestingOnly(
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly( //nolint:staticcheck
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
@@ -503,13 +510,15 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					sType,
 				)
 
-				_, err = inter.InvokeUncheckedForTestingOnly("get", ref)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("get", ref) //nolint:staticcheck
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 
-				_, err = inter.InvokeUncheckedForTestingOnly("set", ref)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("set", ref) //nolint:staticcheck
 				RequireError(t, err)
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
@@ -600,7 +609,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					sType,
 				)
 
-				_, err = inter.InvokeUncheckedForTestingOnly(
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly( //nolint:staticcheck
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(
 						ref,
@@ -710,12 +720,14 @@ func TestInterpretMemberAccessType(t *testing.T) {
 			require.NoError(t, err)
 			require.IsType(t, &interpreter.StorageReferenceValue{}, storageRef)
 
-			_, err = inter.InvokeUncheckedForTestingOnly("get", storageRef)
+			// Intentionally passing wrong type of value
+			_, err = inter.InvokeUncheckedForTestingOnly("get", storageRef) //nolint:staticcheck
 			RequireError(t, err)
 			var memberAccessTypeError *interpreter.MemberAccessTypeError
 			require.ErrorAs(t, err, &memberAccessTypeError)
 
-			_, err = inter.InvokeUncheckedForTestingOnly("set", storageRef)
+			// Intentionally passing wrong type of value
+			_, err = inter.InvokeUncheckedForTestingOnly("set", storageRef) //nolint:staticcheck
 			RequireError(t, err)
 			require.ErrorAs(t, err, &memberAccessTypeError)
 		})
