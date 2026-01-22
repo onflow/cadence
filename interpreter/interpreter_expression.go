@@ -1583,7 +1583,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		true, // base is standalone.
 	).(*CompositeValue)
 
-	attachment.SetBaseValue(base)
+	attachment.SetBaseValue(interpreter, base)
 
 	// we enforce this in the checker
 	if !ok {
