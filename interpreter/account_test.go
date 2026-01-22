@@ -608,6 +608,9 @@ func testAccountWithErrorHandlerWithCompiler(
 
 	if compilerEnabled && *compile {
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.AtreeStorageValidationEnabled = true
+		vmConfig.AtreeValueValidationEnabled = true
+
 		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
@@ -680,6 +683,8 @@ func testAccountWithErrorHandlerWithCompiler(
 					CheckerConfig: &checkerConfig,
 				},
 				InterpreterConfig: &interpreter.Config{
+					AtreeStorageValidationEnabled: true,
+					AtreeValueValidationEnabled:   true,
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
