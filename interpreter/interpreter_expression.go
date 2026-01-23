@@ -626,19 +626,34 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return right
 
 	case ast.OperationNilCoalesce:
+		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes(expression)
+
+		var result Value
+		var actualResultType sema.Type
+
 		// only evaluate right-hand side if left-hand side is nil
 		if some, ok := leftValue.(*SomeValue); ok {
-			return some.InnerValue()
+			result = some.InnerValue()
+			actualResultType = binaryExpressionTypes.LeftType
+			optionalType, ok := actualResultType.(*sema.OptionalType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			actualResultType = optionalType.Type
+		} else {
+			result = rightValue()
+			actualResultType = binaryExpressionTypes.RightType
 		}
 
-		value := rightValue()
-
-		binaryExpressionTypes := interpreter.Program.Elaboration.BinaryExpressionTypes(expression)
-		rightType := binaryExpressionTypes.RightType
-		resultType := binaryExpressionTypes.ResultType
+		expectedResultType := binaryExpressionTypes.ResultType
 
 		// NOTE: important to convert both any and optional
-		return ConvertAndBox(interpreter, value, rightType, resultType)
+		return ConvertAndBoxWithValidation(
+			interpreter,
+			result,
+			actualResultType,
+			expectedResultType,
+		)
 	}
 
 	panic(&unsupportedOperation{
@@ -1314,6 +1329,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 		valueSemaType := MustSemaTypeOfValue(value, interpreter)
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
+
 		isSubType := IsSubTypeOfSemaType(interpreter, valueStaticType, expectedType)
 
 		switch expression.Operation {
@@ -1335,7 +1351,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		}
 
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		value = ConvertAndBox(interpreter, value, valueSemaType, expectedType)
+		staticValueType := castingExpressionTypes.StaticValueType
+		value = ConvertAndBoxWithValidation(interpreter, value, staticValueType, expectedType)
 
 		if expression.Operation == ast.OperationFailableCast {
 			// Failable casting is a resource invalidation
@@ -1349,7 +1366,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	case ast.OperationCast:
 		staticValueType := castingExpressionTypes.StaticValueType
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-		return ConvertAndBox(interpreter, value, staticValueType, expectedType)
+		return ConvertAndBoxWithValidation(interpreter, value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -1581,7 +1598,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		true, // base is standalone.
 	).(*CompositeValue)
 
-	attachment.SetBaseValue(base)
+	attachment.SetBaseValue(interpreter, base)
 
 	// we enforce this in the checker
 	if !ok {

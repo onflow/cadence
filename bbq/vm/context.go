@@ -166,11 +166,20 @@ func (c *Context) WriteStored(
 ) (existed bool) {
 	accountStorage := c.storage.GetDomainStorageMap(c, storageAddress, domain, true)
 
-	return accountStorage.WriteValue(
-		c,
-		key,
-		value,
-	)
+	return accountStorage.WriteValue(c, key, value)
+}
+
+func (c *Context) RemoveStored(
+	storageAddress common.Address,
+	domain common.StorageDomain,
+	key interpreter.StorageMapKey,
+) atree.Storable {
+	accountStorage := c.storage.GetDomainStorageMap(c, storageAddress, domain, false)
+	if accountStorage == nil {
+		return nil
+	}
+
+	return accountStorage.RemoveValueWithoutDeletion(c, key)
 }
 
 func (c *Context) IsSubType(subType interpreter.StaticType, superType interpreter.StaticType) bool {

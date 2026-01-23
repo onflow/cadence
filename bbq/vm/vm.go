@@ -289,17 +289,13 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 	return poppedCallFrame
 }
 
-func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
+func (vm *VM) getGlobalFunction(name string) (FunctionValue, error) {
 	functionVariable := vm.globals.Find(name)
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
 			name: name,
 		}
 	}
-
-	defer vm.RecoverErrors(func(internalErr error) {
-		err = internalErr
-	})
 
 	function := functionVariable.GetValue(vm.context)
 
@@ -309,8 +305,39 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 			Value: function,
 		}
 	}
+	return functionValue, nil
+}
 
-	return vm.validateAndInvokeExternally(functionValue, arguments)
+// InvokeExternally invokes a global function with the given arguments
+func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
+
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	functionValue, err := vm.getGlobalFunction(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return vm.prepareAndInvokeExternally(functionValue, arguments)
+}
+
+// InvokeExternallyUncheckedForTestingOnly invokes a global function with the given arguments,
+// without validating them.
+// NOTE: FOR TESTING PURPOSES ONLY! Use InvokeExternally instead
+func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...Value) (v Value, err error) {
+
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	functionValue, err := vm.getGlobalFunction(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return vm.prepareAndInvokeExternallyWithValidation(functionValue, arguments, false)
 }
 
 func (vm *VM) InvokeMethodExternally(
@@ -345,18 +372,34 @@ func (vm *VM) InvokeMethodExternally(
 
 	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
 
-	return vm.validateAndInvokeExternally(boundFunction, arguments)
+	return vm.prepareAndInvokeExternally(boundFunction, arguments)
 }
 
-func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
+func (vm *VM) prepareAndInvokeExternally(
+	functionValue FunctionValue,
+	arguments []Value,
+) (Value, error) {
+	return vm.prepareAndInvokeExternallyWithValidation(
+		functionValue,
+		arguments,
+		true,
+	)
+}
+
+func (vm *VM) prepareAndInvokeExternallyWithValidation(
+	functionValue FunctionValue,
+	arguments []Value,
+	validateConvertAndBox bool,
+) (Value, error) {
 	context := vm.context
 
 	functionType := functionValue.FunctionType(context)
 
-	preparedArguments, err := interpreter.PrepareExternalInvocationArguments(
+	preparedArguments, err := interpreter.PrepareExternalInvocationArgumentsWithValidation(
 		context,
 		functionType,
 		arguments,
+		validateConvertAndBox,
 	)
 	if err != nil {
 		return nil, err
@@ -478,7 +521,7 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 
 	initializer := initializerVariable.GetValue(context).(FunctionValue)
 
-	_, err := vm.validateAndInvokeExternally(initializer, transactionArgs)
+	_, err := vm.prepareAndInvokeExternallyWithValidation(initializer, transactionArgs, true)
 	if err != nil {
 		return err
 	}
@@ -510,7 +553,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 		nil,
 	)
 
-	_, err := vm.validateAndInvokeExternally(boundPrepareFunction, signers)
+	_, err := vm.prepareAndInvokeExternally(boundPrepareFunction, signers)
 	if err != nil {
 		return err
 	}
@@ -535,7 +578,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 		nil,
 	)
 
-	_, err := vm.validateAndInvokeExternally(boundExecuteFunction, nil)
+	_, err := vm.prepareAndInvokeExternally(boundExecuteFunction, nil)
 	if err != nil {
 		return err
 	}
@@ -1230,11 +1273,11 @@ func opConvert(vm *VM, ins opcode.InstructionConvert) {
 
 	value := vm.peek()
 
-	transferredValue := interpreter.ConvertAndBoxWithValidation(
+	transferredValue := ConvertAndBoxWithValidation(
 		context,
 		value,
-		context.SemaTypeFromStaticType(valueType),
-		context.SemaTypeFromStaticType(targetType),
+		valueType,
+		targetType,
 	)
 
 	vm.replaceTop(transferredValue)
@@ -1259,33 +1302,39 @@ func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
 func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 	value := vm.pop()
 
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
-	valueType := value.StaticType(vm.context)
+	targetTypeIndex := ins.TargetType
+	targetType := vm.loadType(targetTypeIndex)
+
+	valueTypeIndex := ins.ValueType
+	staticValueType := vm.loadType(valueTypeIndex)
 
 	// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-	result := ConvertAndBox(vm.context, value, valueType, targetType)
+	result := ConvertAndBoxWithValidation(vm.context, value, staticValueType, targetType)
 
 	vm.push(result)
 }
 
 func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
+	context := vm.context
 	value := vm.pop()
 
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	targetTypeIndex := ins.TargetType
+	targetType := vm.loadType(targetTypeIndex)
 
-	value, valueType := castValueAndValueType(vm.context, targetType, value)
+	value, valueType := castValueAndValueType(context, targetType, value)
 
-	isSubType := vm.context.IsSubType(valueType, targetType)
+	isSubType := context.IsSubType(valueType, targetType)
 
 	var result Value
 	if isSubType {
+		valueTypeIndex := ins.ValueType
+		staticValueType := vm.loadType(valueTypeIndex)
+
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		result = ConvertAndBox(vm.context, value, valueType, targetType)
+		result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
 
 		result = interpreter.NewSomeValueNonCopying(
-			vm.context.MemoryGauge,
+			context.MemoryGauge,
 			result,
 		)
 	} else {
@@ -1298,8 +1347,8 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	value := vm.pop()
 
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	targetTypeIndex := ins.TargetType
+	targetType := vm.loadType(targetTypeIndex)
 
 	context := vm.context
 
@@ -1318,8 +1367,11 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 		})
 	}
 
+	valueTypeIndex := ins.ValueType
+	staticValueType := vm.loadType(valueTypeIndex)
+
 	// The force cast may upcast to an optional type, e.g. `1 as! Int?`, so box
-	result = ConvertAndBox(vm.context, value, valueType, targetType)
+	result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
 	vm.push(result)
 }
 
@@ -1567,7 +1619,7 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 		typ,
 		fieldValue,
 	)
-	attachment.SetBaseValue(base)
+	attachment.SetBaseValue(context, base)
 	vm.push(base)
 }
 
@@ -1589,19 +1641,20 @@ func opSetAttachmentBase(vm *VM) {
 		panic(errors.NewUnreachableError())
 	}
 
-	attachmentComposite.SetBaseValue(baseComposite)
+	attachmentComposite.SetBaseValue(vm.context, baseComposite)
 }
 
 func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	target := vm.pop()
+	context := vm.context
 
 	// Get attachment type
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
-	typ := vm.context.SemaTypeFromStaticType(staticType)
+	typ := context.SemaTypeFromStaticType(staticType)
 
 	base, ok := target.(*interpreter.CompositeValue)
-	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
+	if inIteration := context.inAttachmentIteration(base); inIteration {
 		panic(&interpreter.AttachmentIterationMutationError{
 			Value: base,
 		})
@@ -1613,7 +1666,7 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 		})
 	}
 
-	removed := base.RemoveTypeKey(vm.context, typ)
+	removed := base.RemoveTypeKey(context, typ)
 	// Attachment not present on this base
 	if removed == nil {
 		return
@@ -1624,11 +1677,11 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 		panic(errors.NewUnreachableError())
 	}
 
-	if attachment.IsResourceKinded(vm.context) {
+	if attachment.IsResourceKinded(context) {
 		// This attachment is no longer attached to its base,
 		// but the `base` variable is still available in the destructor
-		attachment.SetBaseValue(base)
-		attachment.Destroy(vm.context)
+		attachment.SetBaseValue(context, base)
+		attachment.Destroy(context)
 	}
 }
 
@@ -2084,11 +2137,13 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 			case errors.UserError, errors.ExternalError:
 				// do nothing
 			default:
-				printInstructionError(
-					vm.callFrame.function.Function,
-					int(vm.ip),
-					r,
-				)
+				if vm.callFrame != nil {
+					printInstructionError(
+						vm.callFrame.function.Function,
+						int(vm.ip),
+						r,
+					)
+				}
 			}
 		}
 

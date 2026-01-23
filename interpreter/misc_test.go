@@ -3098,6 +3098,90 @@ func TestInterpretNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 	)
 }
 
+func TestInterpretNilCoalescingImplicitConversion(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no conversion", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          let one: Int? = 1
+          let two: Int = 2
+
+          // IMPORTANT: Do not assign the expr '(one ?? two)' to a variable, as the
+          // assignment-statement also does a conversion to the target variable type.
+          let x = (one ?? two).getType()
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			// The inferred type of the expression '(one ?? two)' is 'Int'.
+			// At runtime, the actual type is the dynamic type of unwrapped LHS, which is 'Int'.
+			// Should be `Type<Int>()`.
+			interpreter.NewUnmeteredTypeValue(interpreter.PrimitiveStaticTypeInt),
+			inter.GetGlobal("x"),
+		)
+	})
+
+	t.Run("left value conversion", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          let one: String? = "1"
+          let two: Int? = 2
+
+          // IMPORTANT: Do not assign the expr '(one ?? two)' to a variable, as the
+          // assignment-statement also does a conversion to the target variable type.
+          let x = (one ?? two).getType()
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			// The inferred type of the expression '(one ?? two)' is 'HashableStruct?'.
+			// On RHS, an optional 'Int?' is used so that the above inferred type includes an optional.
+			// On LHS 'String?' first gets unwrapped to 'String', and then get boxed again
+			// to 'String?' to match the target 'HashableStruct?' type.
+			// At runtime, the actual type is the dynamic type of LHS, which is 'String?'.
+			// Should be `Type<String?>()`.
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeString),
+			),
+			inter.GetGlobal("x"),
+		)
+	})
+
+	t.Run("right value conversion", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          let one: String?? = nil
+          let two: Int = 2
+
+          // IMPORTANT: Do not assign the expr '(one ?? two)' to a variable, as the
+          // assignment-statement also does a conversion to the target variable type.
+          let x = (one ?? two).getType()
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			// The inferred type of the expression '(one ?? two)' is 'HashableStruct?'.
+			// On LHS, an double-optional 'String??' is used so that the above inferred type includes an optional.
+			// On LHS 'String??' first gets unwrapped to 'String?', and already matched the target type 'HashableStruct?'.
+			// On RHS 'Int' is boxed to become 'Int?' to match the target 'HashableStruct?' type.
+			// At runtime, the actual type is the dynamic type of RHS, which is 'Int?'.
+			// Should be `Type<Int?>()`
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
+			),
+			inter.GetGlobal("x"),
+		)
+	})
+}
+
 func TestInterpretNilCoalescingRightSubtype(t *testing.T) {
 
 	t.Parallel()
@@ -14085,6 +14169,39 @@ func TestInterpreterValueTransferRuntimeCheck(t *testing.T) {
 
 		var transferTypeError *interpreter.ValueTransferTypeError
 		require.ErrorAs(t, err, &transferTypeError)
+	})
+
+	t.Run("mismatching value in casting", func(t *testing.T) {
+		t.Parallel()
+
+		for _, operation := range []ast.Operation{
+			ast.OperationCast,
+			ast.OperationForceCast,
+			ast.OperationFailableCast,
+		} {
+			operation := operation.Symbol()
+
+			t.Run(operation, func(t *testing.T) {
+				t.Parallel()
+
+				inter := parseCheckAndPrepare(t,
+					fmt.Sprintf(`
+                        fun test(v1: String) {
+                            // Note: Cast to 'AnyStruct' to type-erase the value
+                            let v2 = v1 %s AnyStruct
+                        }
+                        `,
+						operation,
+					),
+				)
+
+				_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
+				RequireError(t, err)
+
+				var transferTypeError *interpreter.ValueTransferTypeError
+				require.ErrorAs(t, err, &transferTypeError)
+			})
+		}
 	})
 
 	t.Run("mismatching target type", func(t *testing.T) {

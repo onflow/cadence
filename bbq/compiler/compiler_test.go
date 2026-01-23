@@ -1375,10 +1375,10 @@ func TestCompileSimpleCast(t *testing.T) {
 
 			// x as Int?
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionSimpleCast{Type: 1},
+			opcode.InstructionSimpleCast{TargetType: 1, ValueType: 2},
 
 			// return
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 2},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 3},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1414,7 +1414,7 @@ func TestCompileForceCast(t *testing.T) {
 
 			// x as! Int
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionForceCast{Type: 1},
+			opcode.InstructionForceCast{TargetType: 1, ValueType: 2},
 
 			// return
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
@@ -1453,10 +1453,10 @@ func TestCompileFailableCast(t *testing.T) {
 
 			// x as? Int
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionFailableCast{Type: 1},
+			opcode.InstructionFailableCast{TargetType: 1, ValueType: 2},
 
 			// return
-			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
+			opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -2716,21 +2716,48 @@ func TestCompileNilCoalesce(t *testing.T) {
 			// value ??
 			opcode.InstructionGetLocal{Local: valueIndex},
 			opcode.InstructionDup{},
-			opcode.InstructionJumpIfNil{Target: 6},
+			opcode.InstructionJumpIfNil{Target: 7},
 
 			// value
 			opcode.InstructionUnwrap{},
-			opcode.InstructionJump{Target: 8},
+			// The Value type should be the unwrapped `Int`.
+			opcode.InstructionConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionJump{Target: 10},
 
 			// 0
 			opcode.InstructionDrop{},
 			opcode.InstructionGetConstant{Constant: 0},
+			// The Value type should be the unwrapped `Int`.
+			opcode.InstructionConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 
 			// return
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
+	)
+
+	assertTypesEqual(
+		t,
+		[]bbq.StaticType{
+			interpreter.FunctionStaticType{
+				FunctionType: sema.NewSimpleFunctionType(
+					sema.FunctionPurityImpure,
+					[]sema.Parameter{
+						{
+							TypeAnnotation: sema.NewTypeAnnotation(
+								sema.NewOptionalType(nil, sema.IntType),
+							),
+							Label:      sema.ArgumentLabelNotRequired,
+							Identifier: "value",
+						},
+					},
+					sema.NewTypeAnnotation(sema.IntType),
+				),
+			},
+			interpreter.PrimitiveStaticTypeInt,
+		},
+		program.Types,
 	)
 
 	assert.Equal(t,

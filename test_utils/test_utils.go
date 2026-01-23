@@ -66,8 +66,28 @@ func NewVMInvokable(
 	}
 }
 
+// Invoke invokes a global function with the given arguments
 func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
 	value, err = v.vmInstance.InvokeExternally(functionName, arguments...)
+
+	// Reset the VM after a function invocation,
+	// so the same vm can be re-used for subsequent invocation.
+	v.vmInstance.Reset()
+
+	return
+}
+
+// Deprecated: InvokeUncheckedForTestingOnly invokes a global function with the given arguments,
+// without validating them.
+// NOTE: FOR TESTING PURPOSES ONLY! Use Invoke instead
+func (v *VMInvokable) InvokeUncheckedForTestingOnly(
+	functionName string,
+	arguments ...interpreter.Value,
+) (
+	value interpreter.Value,
+	err error,
+) {
+	value, err = v.vmInstance.InvokeExternallyUncheckedForTestingOnly(functionName, arguments...)
 
 	// Reset the VM after a function invocation,
 	// so the same vm can be re-used for subsequent invocation.

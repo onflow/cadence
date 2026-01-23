@@ -204,7 +204,7 @@ func (s *DomainStorageMap) WriteValue(context ValueTransferContext, key StorageM
 
 // SetValue sets a value in the storage map.
 // If the given key already stores a value, it is overwritten.
-// Returns true if given key already exists and existing value is overwritten.
+// Returns true if given key already exists and existing value is overwritten / deleted.
 func (s *DomainStorageMap) SetValue(context ValueTransferContext, key StorageMapKey, value atree.Value) (existed bool) {
 	context.RecordStorageMutation()
 
@@ -239,8 +239,8 @@ func (s *DomainStorageMap) SetValue(context ValueTransferContext, key StorageMap
 	return
 }
 
-// RemoveValue removes a value in the storage map, if it exists.
-func (s *DomainStorageMap) RemoveValue(context ValueRemoveContext, key StorageMapKey) (existed bool) {
+// RemoveValueWithoutDeletion removes a value in the storage map and returns it, if it exists
+func (s *DomainStorageMap) RemoveValueWithoutDeletion(context ValueRemoveContext, key StorageMapKey) atree.Storable {
 	context.RecordStorageMutation()
 
 	common.UseComputation(
@@ -259,7 +259,7 @@ func (s *DomainStorageMap) RemoveValue(context ValueRemoveContext, key StorageMa
 	if err != nil {
 		var keyNotFoundError *atree.KeyNotFoundError
 		if goerrors.As(err, &keyNotFoundError) {
-			return
+			return nil
 		}
 		panic(errors.NewExternalError(err))
 	}
@@ -270,7 +270,13 @@ func (s *DomainStorageMap) RemoveValue(context ValueRemoveContext, key StorageMa
 	// so do not need (can) convert and not need to deep remove
 	RemoveReferencedSlab(context, existingKeyStorable)
 
-	// Value
+	return existingValueStorable
+}
+
+// RemoveValue removes a value in the storage map and deletes it, if it exists.
+func (s *DomainStorageMap) RemoveValue(context ValueRemoveContext, key StorageMapKey) (existed bool) {
+
+	existingValueStorable := s.RemoveValueWithoutDeletion(context, key)
 
 	existed = existingValueStorable != nil
 	if existed {

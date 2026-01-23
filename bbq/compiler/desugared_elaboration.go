@@ -449,3 +449,7 @@ func (e *DesugaredElaboration) AttachmentAccessTypes(expression *ast.IndexExpres
 func (e *DesugaredElaboration) AttachmentRemoveTypes(statement *ast.RemoveStatement) (ty sema.Type) {
 	return e.elaboration.AttachmentRemoveTypes(statement)
 }
+
+func (e *DesugaredElaboration) BinaryExpressionTypes(expression *ast.BinaryExpression) sema.BinaryExpressionTypes {
+	return e.elaboration.BinaryExpressionTypes(expression)
+}

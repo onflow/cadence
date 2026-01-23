@@ -3265,12 +3265,22 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
+		binaryExpressionTypes := c.DesugaredElaboration.BinaryExpressionTypes(expression)
+
 		// Duplicate the value for the nil equality check.
 		c.emit(opcode.InstructionDup{})
 		elseJump := c.emitUndefinedJumpIfNil()
 
 		// Then branch
 		c.emit(opcode.InstructionUnwrap{})
+		leftResultType := binaryExpressionTypes.LeftType
+		optionalType, ok := leftResultType.(*sema.OptionalType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		leftResultType = optionalType.Type
+
+		c.emitConvert(leftResultType, binaryExpressionTypes.ResultType)
 		thenJump := c.emitUndefinedJump()
 
 		// Else branch
@@ -3279,6 +3289,7 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 		// as it is not needed for the 'else' path.
 		c.emit(opcode.InstructionDrop{})
 		c.compileExpression(expression.Right)
+		c.emitConvert(binaryExpressionTypes.RightType, binaryExpressionTypes.ResultType)
 
 		// End
 		c.patchJumpHere(thenJump)
@@ -3455,21 +3466,25 @@ func (c *Compiler[_, _]) VisitCastingExpression(expression *ast.CastingExpressio
 	c.compileExpression(expression.Expression)
 
 	castingTypes := c.DesugaredElaboration.CastingExpressionTypes(expression)
-	index := c.getOrAddType(castingTypes.TargetType)
+	targetTypeIndex := c.getOrAddType(castingTypes.TargetType)
+	valueTypeIndex := c.getOrAddType(castingTypes.StaticValueType)
 
 	var castInstruction opcode.Instruction
 	switch expression.Operation {
 	case ast.OperationCast:
 		castInstruction = opcode.InstructionSimpleCast{
-			Type: index,
+			TargetType: targetTypeIndex,
+			ValueType:  valueTypeIndex,
 		}
 	case ast.OperationFailableCast:
 		castInstruction = opcode.InstructionFailableCast{
-			Type: index,
+			TargetType: targetTypeIndex,
+			ValueType:  valueTypeIndex,
 		}
 	case ast.OperationForceCast:
 		castInstruction = opcode.InstructionForceCast{
-			Type: index,
+			TargetType: targetTypeIndex,
+			ValueType:  valueTypeIndex,
 		}
 	default:
 		panic(errors.NewUnreachableError())

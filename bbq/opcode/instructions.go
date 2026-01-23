@@ -1586,7 +1586,8 @@ func DecodeConvert(ip *uint16, code []byte) (i InstructionConvert) {
 //
 // Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
 type InstructionSimpleCast struct {
-	Type uint16
+	TargetType uint16
+	ValueType  uint16
 }
 
 var _ Instruction = InstructionSimpleCast{}
@@ -1604,7 +1605,9 @@ func (i InstructionSimpleCast) String() string {
 
 func (i InstructionSimpleCast) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "targetType", i.TargetType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "valueType", i.ValueType, colorize)
 }
 
 func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder,
@@ -1613,16 +1616,20 @@ func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
 }
 
 func (i InstructionSimpleCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.TargetType)
+	emitUint16(code, i.ValueType)
 }
 
 func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
-	i.Type = decodeUint16(ip, code)
+	i.TargetType = decodeUint16(ip, code)
+	i.ValueType = decodeUint16(ip, code)
 	return i
 }
 
@@ -1632,7 +1639,8 @@ func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
 // If the value is a subtype of the given type, then casted value is pushed back on to the stack.
 // If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
 type InstructionFailableCast struct {
-	Type uint16
+	TargetType uint16
+	ValueType  uint16
 }
 
 var _ Instruction = InstructionFailableCast{}
@@ -1650,7 +1658,9 @@ func (i InstructionFailableCast) String() string {
 
 func (i InstructionFailableCast) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "targetType", i.TargetType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "valueType", i.ValueType, colorize)
 }
 
 func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder,
@@ -1659,16 +1669,20 @@ func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
 }
 
 func (i InstructionFailableCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.TargetType)
+	emitUint16(code, i.ValueType)
 }
 
 func DecodeFailableCast(ip *uint16, code []byte) (i InstructionFailableCast) {
-	i.Type = decodeUint16(ip, code)
+	i.TargetType = decodeUint16(ip, code)
+	i.ValueType = decodeUint16(ip, code)
 	return i
 }
 
@@ -1678,7 +1692,8 @@ func DecodeFailableCast(ip *uint16, code []byte) (i InstructionFailableCast) {
 // and then pushes it back on to the stack.
 // Panics if the value is not a subtype of the given type.
 type InstructionForceCast struct {
-	Type uint16
+	TargetType uint16
+	ValueType  uint16
 }
 
 var _ Instruction = InstructionForceCast{}
@@ -1696,7 +1711,9 @@ func (i InstructionForceCast) String() string {
 
 func (i InstructionForceCast) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "targetType", i.TargetType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "valueType", i.ValueType, colorize)
 }
 
 func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder,
@@ -1705,16 +1722,20 @@ func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
 }
 
 func (i InstructionForceCast) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.TargetType)
+	emitUint16(code, i.ValueType)
 }
 
 func DecodeForceCast(ip *uint16, code []byte) (i InstructionForceCast) {
-	i.Type = decodeUint16(ip, code)
+	i.TargetType = decodeUint16(ip, code)
+	i.ValueType = decodeUint16(ip, code)
 	return i
 }
 

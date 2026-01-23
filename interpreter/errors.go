@@ -1523,6 +1523,36 @@ func (e *StoredValueTypeMismatchError) SetLocationRange(locationRange LocationRa
 	e.LocationRange = locationRange
 }
 
+// InvalidBaseTypeError
+type InvalidBaseTypeError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidBaseTypeError{}
+var _ HasLocationRange = &InvalidBaseTypeError{}
+
+func (*InvalidBaseTypeError) IsInternalError() {}
+
+func (e *InvalidBaseTypeError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"%s invalid base type: expected `%s`, got `%s`",
+		errors.InternalErrorMessagePrefix,
+		expected,
+		actual,
+	)
+}
+
+func (e *InvalidBaseTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // InvalidResourceTransferError
 type InvalidResourceTransferError struct {
 	LocationRange

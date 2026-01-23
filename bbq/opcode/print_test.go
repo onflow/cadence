@@ -183,9 +183,9 @@ func TestPrintInstruction(t *testing.T) {
 		"NewComposite kind:CompositeKind(258) type:772":                {byte(NewComposite), 1, 2, 3, 4},
 		"NewCompositeAt kind:CompositeKind(258) type:772 address:1286": {byte(NewCompositeAt), 1, 2, 3, 4, 5, 6},
 
-		"SimpleCast type:258":   {byte(SimpleCast), 1, 2, 3},
-		"FailableCast type:258": {byte(FailableCast), 1, 2, 3},
-		"ForceCast type:258":    {byte(ForceCast), 1, 2, 3},
+		"SimpleCast targetType:258 valueType:772":   {byte(SimpleCast), 1, 2, 3, 4},
+		"FailableCast targetType:258 valueType:772": {byte(FailableCast), 1, 2, 3, 4},
+		"ForceCast targetType:258 valueType:772":    {byte(ForceCast), 1, 2, 3, 4},
 
 		`NewPath domain:PathDomainStorage identifier:5`: {byte(NewPath), 1, 0, 5},
 
