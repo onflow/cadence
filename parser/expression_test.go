@@ -7377,6 +7377,37 @@ func TestParseStringTemplate(t *testing.T) {
 
 		AssertEqualWithDiff(t, expected, actual)
 	})
+
+	t.Run("expression at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`"a\(x)"`)
+
+		require.Empty(t, errs)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"a",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+				EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
 }
 
 func TestParseNilCoalescing(t *testing.T) {
