@@ -1302,7 +1302,7 @@ func (v *CompositeValue) Transfer(
 		}
 
 		if isResourceKinded && !remove {
-			panic(InvalidResourceTransfer{})
+			panic(&InvalidResourceTransferError{})
 		}
 	}
 

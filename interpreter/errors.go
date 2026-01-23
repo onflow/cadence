@@ -1524,14 +1524,19 @@ func (e *StoredValueTypeMismatchError) SetLocationRange(locationRange LocationRa
 }
 
 // InvalidResourceTransferError
-type InvalidResourceTransfer struct {
+type InvalidResourceTransferError struct {
 	LocationRange
 }
 
-var _ errors.InternalError = InvalidResourceTransfer{}
+var _ errors.InternalError = &InvalidResourceTransferError{}
+var _ HasLocationRange = &InvalidResourceTransferError{}
 
-func (InvalidResourceTransfer) IsInternalError() {}
+func (*InvalidResourceTransferError) IsInternalError() {}
 
-func (InvalidResourceTransfer) Error() string {
+func (*InvalidResourceTransferError) Error() string {
 	return "invalid transfer of a resource value"
+}
+
+func (e *InvalidResourceTransferError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
 }

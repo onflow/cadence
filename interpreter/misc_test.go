@@ -12924,10 +12924,10 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 		foo = foo.Transfer(
 			inter,
 			atree.Address(address),
-			false,
-			nil,
-			nil,
 			true,
+			nil,
+			nil,
+			false,
 		)
 
 		// Write the value to the storage map.
