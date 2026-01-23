@@ -194,8 +194,7 @@ func (e *InterpreterEnvironment) Configure(
 
 	computationProfile := e.config.ComputationProfile
 	if computationProfile != nil {
-		computationProfile.DelegatedComputationGauge = computationGauge
-		computationGauge = computationProfile
+		computationGauge = newComputationProfileInstance(computationProfile, computationGauge)
 	}
 	e.InterpreterConfig.ComputationGauge = computationGauge
 
