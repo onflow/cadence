@@ -4391,6 +4391,10 @@ func (c *Compiler[_, _]) emitConvert(valueType, targetType sema.Type) {
 }
 
 func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
+	// When compiling an inherited code, if we come across a concrete contract type,
+	// then use a reference-type to it.
+	// An inherited code can never refer to the currently compiling contract (i.e: circular imports),
+	// so it's always safe to treat an inherited contract-variable type as a reference type.
 	if c.isInheritedCode {
 		ty = sema.ImportedType(c.Config.MemoryGauge, ty)
 	}
