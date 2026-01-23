@@ -1084,6 +1084,73 @@ func TestLexString(t *testing.T) {
 		)
 	})
 
+	t.Run("valid, string template with quotes", func(t *testing.T) {
+		testLex(t,
+			`"\"\(abc)\""`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `"\"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					Source: `\(`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Source: `abc`,
+				},
+				{
+					Token: Token{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+					Source: `)`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					Source: `\""`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+						},
+					},
+				},
+			},
+		)
+	})
+
 	t.Run("valid, not a string template", func(t *testing.T) {
 		testLex(t,
 			`"(1.00)"`,
