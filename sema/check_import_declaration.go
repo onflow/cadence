@@ -439,10 +439,7 @@ func (checker *Checker) importElements(
 
 			if importValues {
 				// Imported contract values must be imported as a reference.
-				compositeType, ok := elementType.(*CompositeType)
-				if ok && compositeType.Kind == common.CompositeKindContract {
-					elementType = NewReferenceType(checker.memoryGauge, UnauthorizedAccess, compositeType)
-				}
+				elementType = ImportedType(checker.memoryGauge, elementType)
 			}
 
 			alias, ok := aliases[name]
@@ -466,4 +463,13 @@ func (checker *Checker) importElements(
 	}
 
 	return
+}
+
+func ImportedType(memoryGauge common.MemoryGauge, typ Type) Type {
+	compositeType, ok := typ.(*CompositeType)
+	if !ok || compositeType.Kind != common.CompositeKindContract {
+		return typ
+	}
+
+	return NewReferenceType(memoryGauge, UnauthorizedAccess, compositeType)
 }

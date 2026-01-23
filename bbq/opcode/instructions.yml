@@ -383,6 +383,8 @@
   operands:
     - name: "method"
       type: globalIndex
+    - name: "receiverType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "receiver"

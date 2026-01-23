@@ -1263,7 +1263,8 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 // Pops a value off the stack, the receiver,
 // and then pushes the value of the function at the given index onto the stack.
 type InstructionGetMethod struct {
-	Method uint16
+	Method       uint16
+	ReceiverType uint16
 }
 
 var _ Instruction = InstructionGetMethod{}
@@ -1282,6 +1283,8 @@ func (i InstructionGetMethod) String() string {
 func (i InstructionGetMethod) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "method", i.Method, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "receiverType", i.ReceiverType, colorize)
 }
 
 func (i InstructionGetMethod) ResolvedOperandsString(sb *strings.Builder,
@@ -1291,15 +1294,19 @@ func (i InstructionGetMethod) ResolvedOperandsString(sb *strings.Builder,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "method", i.Method, colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "receiverType", types[i.ReceiverType], colorize)
 }
 
 func (i InstructionGetMethod) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.Method)
+	emitUint16(code, i.ReceiverType)
 }
 
 func DecodeGetMethod(ip *uint16, code []byte) (i InstructionGetMethod) {
 	i.Method = decodeUint16(ip, code)
+	i.ReceiverType = decodeUint16(ip, code)
 	return i
 }
 
