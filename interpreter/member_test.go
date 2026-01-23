@@ -632,7 +632,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-			inter, _ := testAccount(t,
+			inter, _, _ := testAccount(t,
 				address,
 				true,
 				nil,
@@ -678,7 +678,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-			inter, _ := testAccount(
+			inter, _, _ := testAccount(
 				t,
 				address,
 				true,

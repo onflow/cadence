@@ -12240,7 +12240,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
+			inter, _, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
 				`
                       #allowAccountLinking
 
@@ -12273,20 +12273,20 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
+			inter, _, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
 				`
-                      #allowAccountLinking
+                  #allowAccountLinking
 
-                      struct S {}
+                  struct S {}
 
-					  entitlement E
+				  entitlement E
 
-                      fun test(): &%[1]s {
-                          %[2]s
-                          let ref2: &AnyStruct = ref
-                          return (ref2 as AnyStruct) as! &%[1]s
-                      }
-                    `,
+                  fun test(): &%[1]s {
+                      %[2]s
+                      let ref2: &AnyStruct = ref
+                      return (ref2 as AnyStruct) as! &%[1]s
+                  }
+                `,
 				tc.typeName,
 				tc.code,
 			), sema.Config{})

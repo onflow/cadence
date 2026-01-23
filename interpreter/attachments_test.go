@@ -1583,7 +1583,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 access(all) var id: UInt8
@@ -1630,7 +1630,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 fun foo(): Int { return 3 }
@@ -1660,7 +1660,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
             resource R2 {
                 let r: @R
@@ -1711,7 +1711,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             access(all) resource R {
                 access(all) var id: UInt8
 
@@ -1757,7 +1757,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
 
             resource R2 {
@@ -1796,7 +1796,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             access(all) resource R {}
 
             var ref: &A? = nil
