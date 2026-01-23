@@ -60,19 +60,39 @@ type ComputationProfile struct {
 	stackTraceUsages   map[string]stackTraceUsage
 	locationMappings   map[string]string
 	computationWeights map[common.ComputationKind]uint64
-	// DelegatedComputationGauge is the computation gauge to which
-	// delegated computation metering is reported.
-	// It may be nil, in which case no delegation occurs.
-	DelegatedComputationGauge common.ComputationGauge
 }
 
-var _ common.ComputationGauge = &ComputationProfile{}
-
 // NewComputationProfile creates and returns a *ComputationProfile.
+// The Compuation Profile and compuation profiling is not thread safe!
+// This means its ok to use in a testing/debuging scenarios,
+// but it is not suitable for production use.
 func NewComputationProfile() *ComputationProfile {
 	return &ComputationProfile{
 		locationFunctions: make(map[common.Location]*intervalst.IntervalST[profiledFunction]),
 		stackTraceUsages:  make(map[string]stackTraceUsage),
+	}
+}
+
+// computationProfileInstance is a ComputationProfile that delegates metering to a ComputationGauge.
+// the ComputationGauge is not transferable between individual environments, so we create a computationProfileInstance
+// that has the same lifetime as an environment.
+type computationProfileInstance struct {
+	*ComputationProfile
+	// delegatedComputationGauge is the computation gauge to which
+	// delegated computation metering is reported.
+	delegatedComputationGauge common.ComputationGauge
+}
+
+var _ common.ComputationGauge = computationProfileInstance{}
+
+// newComputationProfileInstance
+func newComputationProfileInstance(
+	profile *ComputationProfile,
+	delegatedComputationGauge common.ComputationGauge,
+) computationProfileInstance {
+	return computationProfileInstance{
+		ComputationProfile:        profile,
+		delegatedComputationGauge: delegatedComputationGauge,
 	}
 }
 
@@ -156,9 +176,9 @@ func (p *ComputationProfile) newOnStatementHandler() interpreter.OnStatementFunc
 	}
 }
 
-func (p *ComputationProfile) MeterComputation(computationUsage common.ComputationUsage) error {
+func (p computationProfileInstance) MeterComputation(computationUsage common.ComputationUsage) error {
 
-	gauge := p.DelegatedComputationGauge
+	gauge := p.delegatedComputationGauge
 	if gauge != nil {
 		err := gauge.MeterComputation(computationUsage)
 		if err != nil {
