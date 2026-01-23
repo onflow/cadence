@@ -9187,7 +9187,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 
 		assert.Equal(
 			t,
-			ifCompile[uint64](2, 3),
+			uint64(3),
 			meter.getMemory(common.MemoryKindFunctionStaticType),
 		)
 	})

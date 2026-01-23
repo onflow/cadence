@@ -107,6 +107,8 @@ type Compiler[E, T any] struct {
 	globalRemoveAddressTable map[string]string
 
 	addedImports map[common.Location]struct{}
+
+	isInheritedCode bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
@@ -612,8 +614,12 @@ func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = inheritedElaboration
 
+		prevIsInheritedCode := c.isInheritedCode
+		c.isInheritedCode = true
+
 		defer func() {
 			c.DesugaredElaboration = prevElaboration
+			c.isInheritedCode = prevIsInheritedCode
 		}()
 	}
 
@@ -2666,12 +2672,19 @@ func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 	})
 }
 
-func (c *Compiler[_, _]) emitMethodLoad(name string) {
+func (c *Compiler[_, _]) emitMethodLoad(
+	name string,
+	receiverType sema.Type,
+) {
 	// we might need to antialias part of this name
 	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
+
+	receiverTypeIndex := c.getOrAddType(receiverType)
+
 	c.emit(opcode.InstructionGetMethod{
-		Method: global.GetGlobalInfo().Index,
+		Method:       global.GetGlobalInfo().Index,
+		ReceiverType: receiverTypeIndex,
 	})
 }
 
@@ -2922,7 +2935,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 				// Get the method as a bound function.
 				// This is needed to capture the implicit reference that's get created by bound functions.
-				c.emitMethodLoad(funcName)
+				c.emitMethodLoad(funcName, accessedType)
 
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
@@ -4378,6 +4391,10 @@ func (c *Compiler[_, _]) emitConvert(valueType, targetType sema.Type) {
 }
 
 func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
+	if c.isInheritedCode {
+		ty = sema.ImportedType(c.Config.MemoryGauge, ty)
+	}
+
 	// Optimization: Re-use types in the pool.
 	cacheKey := commons.NewTypeCacheKeyFromType(ty)
 	index, ok := c.typesInPool[cacheKey]
@@ -4433,12 +4450,16 @@ func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = stmtElaboration
 
-		preIsInheritedCode := c.currentInheritedConditionParamBinding
+		prevIsInheritedCode := c.isInheritedCode
+		c.isInheritedCode = true
+
+		prevInheritedConditionParamBinding := c.currentInheritedConditionParamBinding
 		c.currentInheritedConditionParamBinding = c.inheritedConditionParamBindings[statement]
 
 		defer func() {
 			c.DesugaredElaboration = prevElaboration
-			c.currentInheritedConditionParamBinding = preIsInheritedCode
+			c.currentInheritedConditionParamBinding = prevInheritedConditionParamBinding
+			c.isInheritedCode = prevIsInheritedCode
 		}()
 	}
 	f()

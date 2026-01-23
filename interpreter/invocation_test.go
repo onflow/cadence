@@ -334,3 +334,36 @@ func TestInterpretInvocationReturnTypeValidation(t *testing.T) {
 		require.ErrorAs(t, err, &transferTypeError)
 	})
 }
+
+func TestInterpretInvocationOnTypeConfusedValue(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+        struct X {
+            fun foo(): Int { return 3 }
+        }
+
+        struct Y {
+            fun foo(): Int { return 4 }
+        }
+
+        fun test(x: X): Int {
+            return x.foo()
+        }
+    `)
+
+	yValue := interpreter.NewCompositeValue(
+		inter,
+		TestLocation,
+		"Y",
+		common.CompositeKindStructure,
+		nil,
+		common.ZeroAddress,
+	)
+
+	_, err := inter.Invoke("test", yValue)
+	RequireError(t, err)
+
+	var memberAccessTypeError *interpreter.MemberAccessTypeError
+	require.ErrorAs(t, err, &memberAccessTypeError)
+}
