@@ -1210,9 +1210,6 @@ func defineStringExpression() {
 				literals = append(literals, parsedString)
 				endToken = curToken
 
-				// parser already points to next token
-				curToken = p.current
-
 				if hasInterpolation {
 					// If the next token is a string template,
 					// then we need to parse the expression inside the template
@@ -1258,17 +1255,17 @@ func defineStringExpression() {
 					literals[0], // must exist
 					startToken.Range,
 				), nil
-			} else {
-				return ast.NewStringTemplateExpression(
-					p.memoryGauge,
-					literals,
-					values,
-					ast.NewRange(p.memoryGauge,
-						startToken.StartPos,
-						endToken.EndPos),
-				), nil
 			}
-
+			return ast.NewStringTemplateExpression(
+				p.memoryGauge,
+				literals,
+				values,
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
+			), nil
 		},
 	)
 }
