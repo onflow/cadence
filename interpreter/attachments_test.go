@@ -2683,7 +2683,8 @@ func TestInterpretAttachmentToTypeConfusedValue(t *testing.T) {
 		common.ZeroAddress,
 	)
 
-	_, err := inter.Invoke("test", yValue)
+	// Intentionally passing wrong type of value
+	_, err := inter.InvokeUncheckedForTestingOnly("test", yValue) //nolint:staticcheck
 	RequireError(t, err)
 
 	var invalidBaseTypeError *interpreter.InvalidBaseTypeError

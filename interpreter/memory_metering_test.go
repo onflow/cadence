@@ -245,7 +245,7 @@ func TestInterpretMemoryMeteringArray(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](4, 5), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("append with packing", func(t *testing.T) {
@@ -375,7 +375,7 @@ func TestInterpretMemoryMeteringArray(t *testing.T) {
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
 
-		assert.Equal(t, uint64(13), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](13, 15), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -494,7 +494,7 @@ func TestInterpretMemoryMeteringArray(t *testing.T) {
 		// 1 Int8 for `w` element
 		// 2 Int8 for `r` elements
 		// 2 Int8 for `q` elements
-		assert.Equal(t, uint64(37), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](37, 43), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -588,7 +588,7 @@ func TestInterpretMemoryMeteringDictionary(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifCompile[uint64](4, 5), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](4, 6), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("insert", func(t *testing.T) {
@@ -615,7 +615,7 @@ func TestInterpretMemoryMeteringDictionary(t *testing.T) {
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 
-		assert.Equal(t, ifCompile[uint64](15, 16), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](15, 18), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -9057,7 +9057,7 @@ func TestInterpretMemoryMeteringIdentifier(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
-		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](7, 9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
 

@@ -289,17 +289,13 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 	return poppedCallFrame
 }
 
-func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
+func (vm *VM) getGlobalFunction(name string) (FunctionValue, error) {
 	functionVariable := vm.globals.Find(name)
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
 			name: name,
 		}
 	}
-
-	defer vm.RecoverErrors(func(internalErr error) {
-		err = internalErr
-	})
 
 	function := functionVariable.GetValue(vm.context)
 
@@ -309,8 +305,39 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 			Value: function,
 		}
 	}
+	return functionValue, nil
+}
 
-	return vm.validateAndInvokeExternally(functionValue, arguments)
+// InvokeExternally invokes a global function with the given arguments
+func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
+
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	functionValue, err := vm.getGlobalFunction(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return vm.prepareAndInvokeExternally(functionValue, arguments)
+}
+
+// InvokeExternallyUncheckedForTestingOnly invokes a global function with the given arguments,
+// without validating them.
+// NOTE: FOR TESTING PURPOSES ONLY! Use InvokeExternally instead
+func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...Value) (v Value, err error) {
+
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	functionValue, err := vm.getGlobalFunction(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return vm.prepareAndInvokeExternallyWithValidation(functionValue, arguments, false)
 }
 
 func (vm *VM) InvokeMethodExternally(
@@ -345,18 +372,34 @@ func (vm *VM) InvokeMethodExternally(
 
 	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
 
-	return vm.validateAndInvokeExternally(boundFunction, arguments)
+	return vm.prepareAndInvokeExternally(boundFunction, arguments)
 }
 
-func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
+func (vm *VM) prepareAndInvokeExternally(
+	functionValue FunctionValue,
+	arguments []Value,
+) (Value, error) {
+	return vm.prepareAndInvokeExternallyWithValidation(
+		functionValue,
+		arguments,
+		true,
+	)
+}
+
+func (vm *VM) prepareAndInvokeExternallyWithValidation(
+	functionValue FunctionValue,
+	arguments []Value,
+	validateConvertAndBox bool,
+) (Value, error) {
 	context := vm.context
 
 	functionType := functionValue.FunctionType(context)
 
-	preparedArguments, err := interpreter.PrepareExternalInvocationArguments(
+	preparedArguments, err := interpreter.PrepareExternalInvocationArgumentsWithValidation(
 		context,
 		functionType,
 		arguments,
+		validateConvertAndBox,
 	)
 	if err != nil {
 		return nil, err
@@ -478,7 +521,7 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 
 	initializer := initializerVariable.GetValue(context).(FunctionValue)
 
-	_, err := vm.validateAndInvokeExternally(initializer, transactionArgs)
+	_, err := vm.prepareAndInvokeExternallyWithValidation(initializer, transactionArgs, true)
 	if err != nil {
 		return err
 	}
@@ -510,7 +553,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 		nil,
 	)
 
-	_, err := vm.validateAndInvokeExternally(boundPrepareFunction, signers)
+	_, err := vm.prepareAndInvokeExternally(boundPrepareFunction, signers)
 	if err != nil {
 		return err
 	}
@@ -535,7 +578,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 		nil,
 	)
 
-	_, err := vm.validateAndInvokeExternally(boundExecuteFunction, nil)
+	_, err := vm.prepareAndInvokeExternally(boundExecuteFunction, nil)
 	if err != nil {
 		return err
 	}
@@ -1236,11 +1279,11 @@ func opConvert(vm *VM, ins opcode.InstructionConvert) {
 
 	value := vm.peek()
 
-	transferredValue := interpreter.ConvertAndBoxWithValidation(
+	transferredValue := ConvertAndBoxWithValidation(
 		context,
 		value,
-		context.SemaTypeFromStaticType(valueType),
-		context.SemaTypeFromStaticType(targetType),
+		valueType,
+		targetType,
 	)
 
 	vm.replaceTop(transferredValue)
@@ -2100,11 +2143,13 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 			case errors.UserError, errors.ExternalError:
 				// do nothing
 			default:
-				printInstructionError(
-					vm.callFrame.function.Function,
-					int(vm.ip),
-					r,
-				)
+				if vm.callFrame != nil {
+					printInstructionError(
+						vm.callFrame.function.Function,
+						int(vm.ip),
+						r,
+					)
+				}
 			}
 		}
 

@@ -648,7 +648,12 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		expectedResultType := binaryExpressionTypes.ResultType
 
 		// NOTE: important to convert both any and optional
-		return ConvertAndBox(interpreter, result, actualResultType, expectedResultType)
+		return ConvertAndBoxWithValidation(
+			interpreter,
+			result,
+			actualResultType,
+			expectedResultType,
+		)
 	}
 
 	panic(&unsupportedOperation{
