@@ -83,14 +83,14 @@ type computationProfileInstance struct {
 	delegatedComputationGauge common.ComputationGauge
 }
 
-var _ common.ComputationGauge = &computationProfileInstance{}
+var _ common.ComputationGauge = computationProfileInstance{}
 
 // newComputationProfileInstance
 func newComputationProfileInstance(
 	profile *ComputationProfile,
 	delegatedComputationGauge common.ComputationGauge,
-) *computationProfileInstance {
-	return &computationProfileInstance{
+) computationProfileInstance {
+	return computationProfileInstance{
 		ComputationProfile:        profile,
 		delegatedComputationGauge: delegatedComputationGauge,
 	}
@@ -176,7 +176,7 @@ func (p *ComputationProfile) newOnStatementHandler() interpreter.OnStatementFunc
 	}
 }
 
-func (p *computationProfileInstance) MeterComputation(computationUsage common.ComputationUsage) error {
+func (p computationProfileInstance) MeterComputation(computationUsage common.ComputationUsage) error {
 
 	gauge := p.delegatedComputationGauge
 	if gauge != nil {
