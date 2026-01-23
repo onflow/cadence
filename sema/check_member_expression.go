@@ -163,13 +163,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 
 	checker.checkUnusedExpressionResourceLoss(accessedType, accessedExpression)
 
-	// The access expression might have no name,
-	// as the parser accepts invalid programs
-
-	if expression.Identifier.Identifier == "" {
-		return accessedType, resultingType, member, isOptional
-	}
-
 	// If the access is to a member of `self` and a resource,
 	// its use must be recorded/checked, so that it isn't used after it was invalidated
 
