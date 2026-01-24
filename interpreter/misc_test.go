@@ -12174,8 +12174,13 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
-				`
+			inter, _ := testAccountWithCompilerEnabled(
+				t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				nil,
+				fmt.Sprintf(
+					`
                       #allowAccountLinking
 
                       struct S {}
@@ -12192,9 +12197,11 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-				tc.typeName,
-				tc.code,
-			), sema.Config{})
+					tc.typeName,
+					tc.code,
+				),
+				sema.Config{},
+			)
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -12207,8 +12214,13 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
-				`
+			inter, _ := testAccountWithCompilerEnabled(
+				t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				nil,
+				fmt.Sprintf(
+					`
                       #allowAccountLinking
 
                       struct S {}
@@ -12221,9 +12233,11 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-				tc.typeName,
-				tc.code,
-			), sema.Config{})
+					tc.typeName,
+					tc.code,
+				),
+				sema.Config{},
+			)
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)

@@ -950,7 +950,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             fun test() {
                 let array = ["Hello", "World", "Foo", "Bar"]
                 account.storage.save(array, to: /storage/array)
@@ -971,7 +971,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             struct Foo {}
 
             fun test() {
@@ -994,7 +994,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource Foo {}
 
             fun test() {
@@ -1017,7 +1017,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource Foo {}
 
             fun test() {

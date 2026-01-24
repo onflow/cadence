@@ -633,6 +633,7 @@ func testAccountWithErrorHandlerWithCompiler(
 			code,
 			compilerUtils.CompilerAndVMOptions{
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					CheckerErrorHandler:  checkerErrorHandler,
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
 						BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
@@ -1615,7 +1616,7 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccount(t, address, true, nil, `
+	inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
           fun getLoadType(): Type {
               return account.storage.load.getType()
           }

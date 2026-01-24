@@ -539,7 +539,12 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
+		inter, _ := testAccountWithErrorHandlerWithCompiler(
+			t,
+			address,
+			true,
+			nil,
+			`
             resource R {
                 access(all) var id: Int
 
@@ -561,7 +566,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
                 // Update the reference
                 ref.setID(2)
-            }`, sema.Config{}, errorHandler(t))
+            }`,
+			sema.Config{},
+			errorHandler(t),
+			true,
+		)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -575,7 +584,12 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
+		inter, _ := testAccountWithErrorHandlerWithCompiler(
+			t,
+			address,
+			true,
+			nil,
+			`
             resource R {
                 access(all) var id: Int
 
@@ -593,7 +607,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
                 // 'Read' a field from the reference
                 let id = ref.id
-            }`, sema.Config{}, errorHandler(t))
+            }`,
+			sema.Config{},
+			errorHandler(t),
+			true,
+		)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -875,6 +893,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
+		// TODO: enable compiler
 		inter, _ := testAccount(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
@@ -1546,7 +1565,12 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
+		inter, _ := testAccountWithErrorHandlerWithCompiler(
+			t,
+			address,
+			true,
+			nil,
+			`
             resource R {
                 access(all) var id: Int
 
@@ -1567,7 +1591,11 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
                 // Update the reference
                 ref.setID(2)
-            }`, sema.Config{}, errorHandler(t))
+            }`,
+			sema.Config{},
+			errorHandler(t),
+			true,
+		)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -1857,7 +1885,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
 
             fun test(): Void {
@@ -3336,7 +3364,7 @@ func TestInterpretStorageReferenceBoundFunction(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
           resource R {
               access(all) let id: Int
               init() {
@@ -3377,7 +3405,7 @@ func TestInterpretStorageReferenceBoundFunction(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
           fun test(): String {
               account.storage.save("abc", to: /storage/x)
 
@@ -3410,7 +3438,7 @@ func TestInterpretStorageReferenceBoundFunction(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
           resource R {
               access(all) let collection: @[T]
               init() {
@@ -3469,7 +3497,7 @@ func TestInterpretStorageReferenceBoundFunction(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
           fun test(): AnyStruct {
               account.storage.save(["abc"] as [String], to: /storage/x)
 
