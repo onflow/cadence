@@ -102,7 +102,7 @@ func (v *StorageReferenceValue) MeteredString(
 }
 
 func (v *StorageReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return NewReferenceStaticType(
 		context,
@@ -171,7 +171,7 @@ func (v *StorageReferenceValue) ReferencedValue(context ValueStaticTypeContext, 
 	panic(err)
 }
 
-func (v *StorageReferenceValue) mustReferencedValue(
+func (v *StorageReferenceValue) MustReferencedValue(
 	context ValueStaticTypeContext,
 ) Value {
 	referencedValue := v.ReferencedValue(context, true)
@@ -185,7 +185,7 @@ func (v *StorageReferenceValue) mustReferencedValue(
 }
 
 func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
-	referencedValue := v.mustReferencedValue(context)
+	referencedValue := v.MustReferencedValue(context)
 
 	var member Value
 
@@ -227,18 +227,18 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name 
 }
 
 func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	referencedValue := v.mustReferencedValue(context)
+	referencedValue := v.MustReferencedValue(context)
 	return getBuiltinFunctionMember(context, referencedValue, name)
 }
 
 func (v *StorageReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return self.(MemberAccessibleValue).RemoveMember(context, name)
 }
 
 func (v *StorageReferenceValue) SetMember(context ValueTransferContext, name string, value Value) bool {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return setMember(
 		context,
@@ -249,28 +249,28 @@ func (v *StorageReferenceValue) SetMember(context ValueTransferContext, name str
 }
 
 func (v *StorageReferenceValue) GetKey(context ContainerReadContext, key Value) Value {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return self.(ValueIndexableValue).
 		GetKey(context, key)
 }
 
 func (v *StorageReferenceValue) SetKey(context ContainerMutationContext, key Value, value Value) {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	self.(ValueIndexableValue).
 		SetKey(context, key, value)
 }
 
 func (v *StorageReferenceValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	self.(ValueIndexableValue).
 		InsertKey(context, key, value)
 }
 
 func (v *StorageReferenceValue) RemoveKey(context ContainerMutationContext, key Value) Value {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(context, key)
@@ -280,7 +280,7 @@ func (v *StorageReferenceValue) GetTypeKey(
 	context MemberAccessibleContext,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
 		access, err := context.SemaAccessFromStaticAuthorization(v.Authorization)
@@ -303,14 +303,14 @@ func (v *StorageReferenceValue) SetTypeKey(
 	key sema.Type,
 	value Value,
 ) {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	self.(TypeIndexableValue).
 		SetTypeKey(context, key, value)
 }
 
 func (v *StorageReferenceValue) RemoveTypeKey(context ValueTransferContext, key sema.Type) Value {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return self.(TypeIndexableValue).
 		RemoveTypeKey(context, key)
@@ -404,7 +404,7 @@ func (v *StorageReferenceValue) ForEach(
 	function func(value Value) (resume bool),
 	_ bool,
 ) {
-	referencedValue := v.mustReferencedValue(context)
+	referencedValue := v.MustReferencedValue(context)
 	forEachReference(
 		context,
 		v,
@@ -467,7 +467,7 @@ func (v *StorageReferenceValue) BorrowType() sema.Type {
 }
 
 func (v *StorageReferenceValue) Iterator(context ValueStaticTypeContext) ValueIterator {
-	referencedValue := v.mustReferencedValue(context)
+	referencedValue := v.MustReferencedValue(context)
 	referencedIterable, ok := referencedValue.(IterableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
