@@ -198,8 +198,7 @@ func TestInterpretContractTransfer(t *testing.T) {
 		    `,
 			value,
 		)
-		// TODO: enable compiler
-		inter, _ := testAccountWithErrorHandler(
+		inter, _ := testAccountWithErrorHandlerWithCompiler(
 			t,
 			address,
 			true,
@@ -210,6 +209,7 @@ func TestInterpretContractTransfer(t *testing.T) {
 				var invalidMoveError *sema.InvalidMoveError
 				require.ErrorAs(t, err, &invalidMoveError)
 			},
+			true,
 		)
 
 		_, err := inter.Invoke("test")
