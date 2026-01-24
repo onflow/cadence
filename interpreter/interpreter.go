@@ -2869,6 +2869,7 @@ func (interpreter *Interpreter) ReadStored(
 	if accountStorage == nil {
 		return nil
 	}
+
 	return accountStorage.ReadValue(interpreter, identifier)
 }
 
@@ -2879,7 +2880,21 @@ func (interpreter *Interpreter) WriteStored(
 	value Value,
 ) (existed bool) {
 	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, true)
+
 	return accountStorage.WriteValue(interpreter, key, value)
+}
+
+func (interpreter *Interpreter) RemoveStored(
+	storageAddress common.Address,
+	domain common.StorageDomain,
+	key StorageMapKey,
+) atree.Storable {
+	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, false)
+	if accountStorage == nil {
+		return nil
+	}
+
+	return accountStorage.RemoveValueWithoutDeletion(interpreter, key)
 }
 
 type TypedStringValueParser struct {
@@ -4857,12 +4872,10 @@ func AccountStorageSave(
 	address := addressValue.ToAddress()
 
 	if StoredValueExists(context, address, domain, storageMapKey) {
-		panic(
-			&OverwriteError{
-				Address: addressValue,
-				Path:    path,
-			},
-		)
+		panic(&OverwriteError{
+			Address: addressValue,
+			Path:    path,
+		})
 	}
 
 	value = value.Transfer(
@@ -4954,13 +4967,11 @@ func authAccountStorageLoadFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	const clear = true
-	return authAccountReadFunction(
+	return authAccountLoadFunction(
 		context,
 		storageValue,
 		addressValue,
 		sema.Account_StorageTypeLoadFunctionType,
-		clear,
 	)
 }
 
@@ -4969,19 +4980,16 @@ func authAccountStorageCopyFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	const clear = false
-	return authAccountReadFunction(
+	return authAccountCopyFunction(
 		context,
 		storageValue,
 		addressValue,
 		sema.Account_StorageTypeCopyFunctionType,
-		clear,
 	)
 }
 
-func NativeAccountStorageReadFunction(
+func NativeAccountStorageCopyFunction(
 	addressPointer *AddressValue,
-	clear bool,
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -4992,38 +5000,71 @@ func NativeAccountStorageReadFunction(
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
 		semaBorrowType := typeArguments.NextSema()
 
-		return AccountStorageRead(
+		return AccountStorageCopy(
 			context,
 			args,
 			semaBorrowType,
 			address,
-			clear,
 		)
 	}
 }
 
-func authAccountReadFunction(
+func NativeAccountStorageLoadFunction(
+	addressPointer *AddressValue,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		typeArguments TypeArgumentsIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		address := GetAddressValue(receiver, addressPointer).ToAddress()
+		semaBorrowType := typeArguments.NextSema()
+
+		return AccountStorageLoad(
+			context,
+			args,
+			semaBorrowType,
+			address,
+		)
+	}
+}
+
+func authAccountCopyFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 	functionType *sema.FunctionType,
-	clear bool,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
-		NativeAccountStorageReadFunction(&addressValue, clear),
+		NativeAccountStorageCopyFunction(&addressValue),
 	)
 }
 
-func AccountStorageRead(
+func authAccountLoadFunction(
+	context FunctionCreationContext,
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+	functionType *sema.FunctionType,
+) BoundFunctionValue {
+
+	return NewBoundHostFunctionValue(
+		context,
+		storageValue,
+		functionType,
+		NativeAccountStorageLoadFunction(&addressValue),
+	)
+}
+
+func AccountStorageCopy(
 	invocationContext InvocationContext,
 	arguments []Value,
 	typeParameter sema.Type,
 	address common.Address,
-	clear bool,
 ) Value {
 	path, ok := arguments[0].(PathValue)
 	if !ok {
@@ -5055,9 +5096,6 @@ func AccountStorageRead(
 		})
 	}
 
-	// We could also pass remove=true and the storable stored in storage,
-	// but passing remove=false here and writing nil below has the same effect
-	// TODO: potentially refactor and get storable in storage, pass it and remove=true
 	transferredValue := value.Transfer(
 		invocationContext,
 		atree.Address{},
@@ -5067,18 +5105,56 @@ func AccountStorageRead(
 		false, // value is an element in storage map because it is from "ReadStored".
 	)
 
-	// Remove the value from storage,
-	// but only if the type check succeeded.
-	if clear {
-		invocationContext.WriteStored(
-			address,
-			domain,
-			storageMapKey,
-			nil,
-		)
+	return NewSomeValueNonCopying(invocationContext, transferredValue)
+}
+
+func AccountStorageLoad(
+	invocationContext InvocationContext,
+	arguments []Value,
+	typeParameter sema.Type,
+	address common.Address,
+) Value {
+	path, ok := arguments[0].(PathValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
 	}
 
-	return NewSomeValueNonCopying(invocationContext, transferredValue)
+	domain := path.Domain.StorageDomain()
+	identifier := path.Identifier
+
+	storageMapKey := StringStorageMapKey(identifier)
+
+	storable := invocationContext.RemoveStored(address, domain, storageMapKey)
+
+	if storable == nil {
+		return Nil
+	}
+
+	transferedValue := StoredValue(invocationContext, storable, invocationContext.Storage()).
+		Transfer(
+			invocationContext,
+			atree.Address{},
+			true,
+			storable,
+			nil,
+			true, // value is standalone because it was removed from parent container.
+		)
+
+	// If there is value stored for the given path,
+	// check that it satisfies the type given as the type argument.
+
+	valueStaticType := transferedValue.StaticType(invocationContext)
+
+	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
+		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
+
+		panic(&StoredValueTypeMismatchError{
+			ExpectedType: typeParameter,
+			ActualType:   valueSemaType,
+		})
+	}
+
+	return NewSomeValueNonCopying(invocationContext, transferedValue)
 }
 
 func NativeAccountStorageBorrowFunction(

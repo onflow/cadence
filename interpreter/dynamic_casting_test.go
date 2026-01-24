@@ -3884,7 +3884,7 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 					memberAccessOperation = "?."
 				}
 
-				inter, _ := testAccount(
+				inter, _, _ := testAccount(
 					t,
 					address,
 					true,
