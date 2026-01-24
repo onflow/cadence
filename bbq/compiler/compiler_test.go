@@ -2824,7 +2824,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 				// foo.f(true)
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: fooIndex},
-				opcode.InstructionGetMethod{Method: fFuncIndex},
+				opcode.InstructionGetMethod{Method: fFuncIndex, ReceiverType: 1},
 				opcode.InstructionTrue{},
 				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 				opcode.InstructionInvoke{
@@ -3284,8 +3284,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 			// self.test()
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetMethod{Method: interfaceFunctionIndex}, // must be interface method's index
-			opcode.InstructionGetLocal{Local: 1},                        // argument x
+			opcode.InstructionGetMethod{Method: interfaceFunctionIndex, ReceiverType: 7}, // must be interface method's index
+			opcode.InstructionGetLocal{Local: 1},                                         // argument x
 			// NOTE: no transfer or convert of argument
 			opcode.InstructionInvoke{
 				TypeArgs:   nil,
@@ -4107,7 +4107,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionInvoke{ArgCount: 0, ReturnType: 11},
 
 				// Get function value `A.TestStruct.test()`
-				opcode.InstructionGetMethod{Method: 11},
+				opcode.InstructionGetMethod{Method: 11, ReceiverType: 11},
 				opcode.InstructionInvoke{
 					ArgCount:   0,
 					ReturnType: 10,
@@ -7304,7 +7304,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 				opcode.InstructionUnwrap{},
 
 				// Load `Foo.bar` function
-				opcode.InstructionGetMethod{Method: 5},
+				opcode.InstructionGetMethod{Method: 5, ReceiverType: 4},
 				opcode.InstructionInvoke{ArgCount: 0, ReturnType: 3},
 				opcode.InstructionWrap{},
 				opcode.InstructionJump{Target: 16},
@@ -7313,7 +7313,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 				opcode.InstructionNil{},
 
 				// Return value
-				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
+				opcode.InstructionTransferAndConvert{ValueType: 5, TargetType: 5},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
@@ -8098,7 +8098,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 				opcode.InstructionNewRef{Type: 7, IsImplicit: true},
 
 				// Load function value `add()`
-				opcode.InstructionGetMethod{Method: 5},
+				opcode.InstructionGetMethod{Method: 5, ReceiverType: 7},
 
 				// Load arguments.
 
@@ -9613,7 +9613,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionUnwrap{},
 				// call foo if not nil
-				opcode.InstructionGetMethod{Method: 8},
+				opcode.InstructionGetMethod{Method: 8, ReceiverType: 5},
 				opcode.InstructionInvoke{ArgCount: 0, ReturnType: 4},
 				opcode.InstructionWrap{},
 				opcode.InstructionJump{Target: 33},
@@ -9647,7 +9647,7 @@ func TestCompileAttachments(t *testing.T) {
 				// get a reference to attachment
 				opcode.InstructionGetLocal{Local: returnLocalIndex},
 				// set self to be the reference
-				opcode.InstructionNewRef{Type: 10, IsImplicit: false},
+				opcode.InstructionNewRef{Type: 5, IsImplicit: false},
 				opcode.InstructionSetLocal{Local: selfLocalIndex},
 
 				// self.x = x
@@ -9658,7 +9658,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionGetLocal{Local: xLocalIndex},
 				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
 				// set self.x = x
-				opcode.InstructionSetField{FieldName: 1, AccessedType: 10},
+				opcode.InstructionSetField{FieldName: 1, AccessedType: 5},
 				// return created attachment (returnLocalIndex)
 				opcode.InstructionGetLocal{Local: returnLocalIndex},
 				opcode.InstructionReturnValue{},
@@ -9914,7 +9914,7 @@ func TestCompileInjectedContract(t *testing.T) {
 			opcode.InstructionStatement{},
 			// B.c(...)
 			opcode.InstructionGetGlobal{Global: 5},
-			opcode.InstructionGetMethod{Method: 6},
+			opcode.InstructionGetMethod{Method: 6, ReceiverType: 6},
 			// B.d
 			opcode.InstructionGetGlobal{Global: 5},
 			opcode.InstructionGetField{
