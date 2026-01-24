@@ -2094,7 +2094,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+	inter, _ := testAccount(t, address, true, nil, `
           resource R {
               access(all) let id: Int
 
@@ -2127,7 +2127,7 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+	inter, _ := testAccount(t, address, true, nil, `
           resource R {
               access(all) let id: Int
 

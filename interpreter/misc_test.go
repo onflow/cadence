@@ -12174,7 +12174,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccountWithCompilerEnabled(
+			inter, _ := testAccount(
 				t,
 				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				true,
@@ -12214,7 +12214,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccountWithCompilerEnabled(
+			inter, _ := testAccount(
 				t,
 				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				true,
