@@ -105,7 +105,7 @@ func testParseStatements(s string) ([]ast.Statement, []error) {
 }
 
 func testParseStatementsWithConfig(s string, config Config) ([]ast.Statement, []error) {
-	statements, errs := ParseStatements(nil, []byte(s), config)
+	statements, errs := ParseStatements(nil, []byte(s), configWithCommentTracking(config))
 	checkErrorsPrintable(errs, s)
 	return statements, errs
 }
@@ -115,7 +115,7 @@ func testParseDeclarations(s string) ([]ast.Declaration, []error) {
 }
 
 func testParseDeclarationsWithConfig(s string, config Config) ([]ast.Declaration, []error) {
-	declarations, errs := ParseDeclarations(nil, []byte(s), config)
+	declarations, errs := ParseDeclarations(nil, []byte(s), configWithCommentTracking(config))
 	checkErrorsPrintable(errs, s)
 	return declarations, errs
 }
@@ -125,7 +125,7 @@ func testParseProgram(s string) (*ast.Program, error) {
 }
 
 func testParseProgramWithConfig(s string, config Config) (*ast.Program, error) {
-	program, err := ParseProgram(nil, []byte(s), config)
+	program, err := ParseProgram(nil, []byte(s), configWithCommentTracking(config))
 	if err != nil {
 		_ = err.Error()
 	}
@@ -137,7 +137,7 @@ func testParseExpression(s string) (ast.Expression, []error) {
 }
 
 func testParseExpressionWithConfig(s string, config Config) (ast.Expression, []error) {
-	expression, errs := ParseExpression(nil, []byte(s), config)
+	expression, errs := ParseExpression(nil, []byte(s), configWithCommentTracking(config))
 	checkErrorsPrintable(errs, s)
 	return expression, errs
 }
@@ -147,7 +147,7 @@ func testParseArgumentList(s string) (ast.Arguments, []error) {
 }
 
 func testParseArgumentListWithConfig(s string, config Config) (ast.Arguments, []error) {
-	arguments, errs := ParseArgumentList(nil, []byte(s), config)
+	arguments, errs := ParseArgumentList(nil, []byte(s), configWithCommentTracking(config))
 	checkErrorsPrintable(errs, s)
 	return arguments, errs
 }
@@ -157,9 +157,14 @@ func testParseType(s string) (ast.Type, []error) {
 }
 
 func testParseTypeWithConfig(s string, config Config) (ast.Type, []error) {
-	ty, errs := ParseType(nil, []byte(s), config)
+	ty, errs := ParseType(nil, []byte(s), configWithCommentTracking(config))
 	checkErrorsPrintable(errs, s)
 	return ty, errs
+}
+
+func configWithCommentTracking(config Config) Config {
+	config.CommentTrackingEnabled = true
+	return config
 }
 
 func TestParseInvalid(t *testing.T) {
@@ -600,8 +605,8 @@ func TestParseBuffering(t *testing.T) {
 			[]error{
 				&RestrictedTypeError{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 138, Line: 4, Column: 55},
-						EndPos:   ast.Position{Offset: 139, Line: 4, Column: 56},
+						StartPos: ast.Position{Offset: 145, Line: 4, Column: 62},
+						EndPos:   ast.Position{Offset: 145, Line: 4, Column: 62},
 					},
 				},
 			},
@@ -687,7 +692,7 @@ func TestParseEOF(t *testing.T) {
 			if err != nil {
 				return struct{}{}, err
 			}
-			p.skipSpaceAndComments()
+			p.skipSpace()
 			_, err = p.mustToken(lexer.TokenIdentifier, "b")
 			if err != nil {
 				return struct{}{}, err

@@ -187,6 +187,7 @@ func TestTypeAnnotation_MarshalJSON(t *testing.T) {
             "IsResource": true,
             "AnnotatedType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -686,6 +687,7 @@ func TestNominalType_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "NominalType",
+            "Comments": {},
             "Identifier": {
                 "Identifier": "foobar",
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -802,6 +804,7 @@ func TestOptionalType_MarshalJSON(t *testing.T) {
             "Type": "OptionalType",
             "ElementType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -935,6 +938,7 @@ func TestVariableSizedType_MarshalJSON(t *testing.T) {
             "Type": "VariableSizedType",
             "ElementType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -1187,6 +1191,7 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
             "Type": "ConstantSizedType",
             "ElementType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -1197,6 +1202,7 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
             },
             "Size": {
                 "Type": "IntegerExpression",
+                "Comments": {},
                 "PositiveLiteral": "42",
                 "Value": "42",
                 "Base": 10,
@@ -1446,6 +1452,7 @@ func TestDictionaryType_MarshalJSON(t *testing.T) {
             "Type": "DictionaryType",
             "KeyType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "AB",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -1456,6 +1463,7 @@ func TestDictionaryType_MarshalJSON(t *testing.T) {
             },
             "ValueType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "CD",
                     "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -1687,6 +1695,7 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
                     "IsResource": true,
                     "AnnotatedType": {
                         "Type": "NominalType",
+                        "Comments": {},
                         "Identifier": {
                             "Identifier": "AB",
                             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -1704,6 +1713,7 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
                "IsResource": true,
                "AnnotatedType": {
                    "Type": "NominalType",
+                   "Comments": {},
                    "Identifier": {
                        "Identifier": "CD",
                        "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
@@ -2214,8 +2224,9 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 			"LegacyAuthorized": false,
             "Authorization": {
 				 "ConjunctiveElements": [
-					{ 
+					{
 						"Type": "NominalType",
+						"Comments": {},
 						"Identifier": {
 							"Identifier": "X",
 							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
@@ -2224,8 +2235,9 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
 						"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
 					}, 
-					{ 
+					{
 						"Type": "NominalType",
+						"Comments": {},
 						"Identifier": {
 							"Identifier": "Y",
 							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
@@ -2238,6 +2250,7 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 			},
             "ReferencedType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "AB",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -2444,6 +2457,7 @@ func TestIntersectionType_MarshalJSON(t *testing.T) {
             "Types": [
                 {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "CD",
                         "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -2454,6 +2468,7 @@ func TestIntersectionType_MarshalJSON(t *testing.T) {
                 },
                 {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "EF",
                         "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
@@ -2758,6 +2773,7 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
             "Type": "InstantiationType",
             "InstantiatedType": {
                 "Type": "NominalType",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "AB",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -2771,6 +2787,7 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
                     "IsResource": false,
                     "AnnotatedType": {
                         "Type": "NominalType",
+                        "Comments": {},
                         "Identifier": {
                             "Identifier": "CD",
                             "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -2786,6 +2803,7 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
                     "IsResource": false,
                     "AnnotatedType": {
                         "Type": "NominalType",
+                        "Comments": {},
                         "Identifier": {
                             "Identifier": "EF",
                             "StartPos": {"Offset": 10, "Line": 11, "Column": 12},

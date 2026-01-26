@@ -37,7 +37,11 @@ func TestEntitlementDeclaration_MarshalJSON(t *testing.T) {
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
 		},
-		DocString: "test",
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -52,6 +56,9 @@ func TestEntitlementDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "EntitlementDeclaration",
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll", 
             "Identifier": {
                 "Identifier": "AB",
@@ -131,7 +138,11 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
 		},
-		DocString: "test",
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -168,6 +179,9 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "EntitlementMappingDeclaration",
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll", 
             "Identifier": {
                 "Identifier": "AB",
@@ -177,6 +191,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 			"Elements": [
 				{
 					"Type": "NominalType",
+					"Comments": {},
 						"Identifier": { 
 							"Identifier": "X",
 							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -188,6 +203,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 				{
 					"Input": {
 						"Type": "NominalType",
+						"Comments": {},
 						"Identifier": {
 							"Identifier": "X",
 							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -198,6 +214,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 					},
 					"Output":  {
 						"Type": "NominalType",
+						"Comments": {},
 						"Identifier": {
 							"Identifier": "Y",
 							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -230,7 +247,11 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 				Identifier: "AB",
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
-			DocString: "test",
+			Comments: Comments{
+				Leading: []*Comment{
+					NewComment(nil, []byte("///test")),
+				},
+			},
 			Range: Range{
 				StartPos: Position{Offset: 7, Line: 8, Column: 9},
 				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -277,7 +298,6 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 				Identifier: "AB",
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
-			DocString: "test",
 			Range: Range{
 				StartPos: Position{Offset: 7, Line: 8, Column: 9},
 				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -351,7 +371,6 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 				Identifier: "AB",
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
-			DocString: "test",
 			Range: Range{
 				StartPos: Position{Offset: 7, Line: 8, Column: 9},
 				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -383,7 +402,11 @@ entitlement mapping AB {
 				Identifier: "AB",
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
-			DocString: "test",
+			Comments: Comments{
+				Leading: []*Comment{
+					NewComment(nil, []byte("///test")),
+				},
+			},
 			Range: Range{
 				StartPos: Position{Offset: 7, Line: 8, Column: 9},
 				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
