@@ -992,8 +992,7 @@ func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value 
 		}
 		return typedValue.Value
 	case *interpreter.StorageReferenceValue:
-		referencedValue := typedValue.ReferencedValue(context, true)
-		return *referencedValue
+		return typedValue.MustReferencedValue(context)
 	default:
 		return value
 	}

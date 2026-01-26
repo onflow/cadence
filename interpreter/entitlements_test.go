@@ -394,7 +394,7 @@ func TestInterpretEntitledReferences(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement Y
@@ -1356,7 +1356,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement Y
@@ -1799,7 +1799,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement E
@@ -1841,7 +1841,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement E
@@ -1887,7 +1887,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement E

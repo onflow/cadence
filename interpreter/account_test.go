@@ -72,29 +72,6 @@ func testAccount(
 	)
 }
 
-func testAccountWithCompilerEnabled(
-	t *testing.T,
-	address interpreter.AddressValue,
-	auth bool,
-	handler stdlib.AccountHandler,
-	code string,
-	checkerConfig sema.Config,
-) (
-	Invokable,
-	func() map[storageKey]interpreter.Value,
-) {
-	return testAccountWithErrorHandlerWithCompiler(
-		t,
-		address,
-		auth,
-		handler,
-		code,
-		checkerConfig,
-		nil,
-		true,
-	)
-}
-
 type testAccountHandler struct {
 	accountIDs                 map[common.Address]uint64
 	generateAccountID          func(address common.Address) (uint64, error)
@@ -521,28 +498,6 @@ func testAccountWithErrorHandler(
 	checkerConfig sema.Config,
 	checkerErrorHandler func(error),
 ) (Invokable, func() map[storageKey]interpreter.Value) {
-	return testAccountWithErrorHandlerWithCompiler(
-		t,
-		address,
-		auth,
-		handler,
-		code,
-		checkerConfig,
-		checkerErrorHandler,
-		false,
-	)
-}
-
-func testAccountWithErrorHandlerWithCompiler(
-	t *testing.T,
-	address interpreter.AddressValue,
-	auth bool,
-	handler stdlib.AccountHandler,
-	code string,
-	checkerConfig sema.Config,
-	checkerErrorHandler func(error),
-	compilerEnabled bool,
-) (Invokable, func() map[storageKey]interpreter.Value) {
 
 	account := stdlib.NewAccountValue(nil, handler, address)
 
@@ -606,14 +561,18 @@ func testAccountWithErrorHandlerWithCompiler(
 	var invokable Invokable
 	var storage interpreter.Storage
 
-	if compilerEnabled && *compile {
+	if *compile {
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
-			variable := &interpreter.SimpleVariable{}
-			variable.InitializeWithValue(accountValueDeclaration.Value)
-			activation.Set(accountValueDeclaration.Name, variable)
+			accountVariable := &interpreter.SimpleVariable{}
+			accountVariable.InitializeWithValue(accountValueDeclaration.Value)
+			activation.Set(accountValueDeclaration.Name, accountVariable)
+
+			authAccountVariable := &interpreter.SimpleVariable{}
+			authAccountVariable.InitializeWithValue(authAccountValueDeclaration.Value)
+			activation.Set(authAccountValueDeclaration.Name, authAccountVariable)
 
 			return activation
 		}
@@ -633,6 +592,7 @@ func testAccountWithErrorHandlerWithCompiler(
 			code,
 			compilerUtils.CompilerAndVMOptions{
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					CheckerErrorHandler:  checkerErrorHandler,
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
 						BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
@@ -731,7 +691,7 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               resource R {}
 
               fun test() {
@@ -772,7 +732,7 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               struct S {}
 
               fun test() {
@@ -819,7 +779,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountStorables := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountStorables := testAccount(t, address, true, nil, `
               struct S {}
 
               resource R {}
@@ -897,7 +857,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               resource R {}
 
               resource R2 {}
@@ -975,7 +935,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               struct S {}
 
               struct S2 {}
@@ -1077,7 +1037,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, code, sema.Config{})
+		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -1112,7 +1072,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, code, sema.Config{})
+		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -1144,7 +1104,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               resource R {
                   let foo: Int
 
@@ -1321,7 +1281,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               struct S {
                   let foo: Int
 
@@ -1530,7 +1490,7 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
                     `,
 					fieldName,
 				)
-				inter, _ := testAccountWithCompilerEnabled(
+				inter, _ := testAccount(
 					t,
 					address,
 					auth,
@@ -1593,7 +1553,7 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 
 				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
-				inter, _ := testAccountWithCompilerEnabled(t, address, auth, handler, code, sema.Config{})
+				inter, _ := testAccount(t, address, auth, handler, code, sema.Config{})
 
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
