@@ -1288,10 +1288,16 @@ func (v *CompositeValue) Transfer(
 	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(context)
 
-	if needsStoreTo && v.Kind == common.CompositeKindContract {
-		panic(&NonTransferableValueError{
-			Value: v,
-		})
+	if needsStoreTo {
+		if v.Kind == common.CompositeKindContract {
+			panic(&NonTransferableValueError{
+				Value: v,
+			})
+		}
+
+		if isResourceKinded && !remove {
+			panic(&InvalidResourceTransferError{})
+		}
 	}
 
 	if needsStoreTo || !isResourceKinded {

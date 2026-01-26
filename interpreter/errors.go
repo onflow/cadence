@@ -1552,3 +1552,21 @@ func (e *InvalidBaseTypeError) Error() string {
 func (e *InvalidBaseTypeError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
+
+// InvalidResourceTransferError
+type InvalidResourceTransferError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidResourceTransferError{}
+var _ HasLocationRange = &InvalidResourceTransferError{}
+
+func (*InvalidResourceTransferError) IsInternalError() {}
+
+func (*InvalidResourceTransferError) Error() string {
+	return "invalid transfer of a resource value"
+}
+
+func (e *InvalidResourceTransferError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
