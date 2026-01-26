@@ -22,11 +22,14 @@ import (
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/sema"
 )
 
 type BuiltinGlobalsProvider func(location common.Location) *activations.Activation[GlobalImport]
 
 type ElaborationResolver func(location common.Location) (*DesugaredElaboration, error)
+
+type GetSemaTypeCache func() map[sema.TypeID]sema.Type
 
 type Config struct {
 	MemoryGauge         common.MemoryGauge
@@ -38,4 +41,6 @@ type Config struct {
 	BuiltinGlobalsProvider BuiltinGlobalsProvider
 
 	PeepholeOptimizationsEnabled bool
+
+	GetSemaTypeCache GetSemaTypeCache
 }

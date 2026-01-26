@@ -19,6 +19,8 @@
 package vm
 
 import (
+	"fmt"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq"
@@ -28,6 +30,9 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
+
+var cacheHitCount int = 0
+var cacheMissCount int = 0
 
 // Context holds the information about the current execution at any given point of time.
 // It consists of:
@@ -76,7 +81,8 @@ var _ interpreter.InvocationContext = &Context{}
 
 func NewContext(config *Config) *Context {
 	return &Context{
-		Config: config,
+		Config:        config,
+		semaTypeCache: config.GetSemaTypeCache(),
 	}
 }
 
@@ -428,6 +434,7 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	typeID := staticType.ID()
 	semaType, ok := c.semaTypeCache[typeID]
 	if ok {
+		cacheHitCount++
 		return semaType
 	}
 
@@ -438,6 +445,8 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 		c.semaTypeCache = make(map[sema.TypeID]sema.Type)
 	}
 	c.semaTypeCache[typeID] = semaType
+
+	cacheMissCount++
 
 	return semaType
 }
@@ -551,4 +560,14 @@ func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorizati
 	c.semaAccessCache[auth] = semaAccess
 
 	return semaAccess, nil
+}
+
+func (c *Context) GetCacheStatistics() {
+	fmt.Printf("Cache hit count: %d\n", cacheHitCount)
+	fmt.Printf("Cache miss count: %d\n", cacheMissCount)
+}
+
+func (c *Context) ResetCacheStatistics() {
+	cacheHitCount = 0
+	cacheMissCount = 0
 }

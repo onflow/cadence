@@ -4360,6 +4360,11 @@ func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
 		data := c.typeGen.CompileType(staticType)
 		index = c.addCompiledType(ty, data)
 		c.typesInPool[typeID] = index
+
+		semaTypeCache := c.Config.GetSemaTypeCache()
+		if semaTypeCache != nil {
+			semaTypeCache[typeID] = ty
+		}
 	}
 
 	return index
