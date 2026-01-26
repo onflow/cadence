@@ -198,7 +198,7 @@ func TestInterpretContractTransfer(t *testing.T) {
 		    `,
 			value,
 		)
-		inter, _ := testAccountWithErrorHandler(
+		inter, _, _ := testAccountWithErrorHandler(
 			t,
 			address,
 			true,
