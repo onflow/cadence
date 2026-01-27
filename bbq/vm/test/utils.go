@@ -688,9 +688,16 @@ func ContractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 	return func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
 		contractInitializerName := commons.QualifiedName(contractName, commons.InitFunctionName)
 		contractInitializer := context.GetFunction(location, contractInitializerName)
+
+		compositeType, err := context.GetCompositeType(location, contractName, location.TypeID(context, contractName))
+		if err != nil {
+			panic(err)
+		}
+
 		result := context.InvokeFunction(
 			contractInitializer,
 			arguments,
+			compositeType,
 		)
 
 		return result.(*interpreter.CompositeValue)

@@ -2287,7 +2287,12 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 
 	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
 	checker.checkInvalidReferenceToOptionalType(typeAnnotation.Type, pos)
-	typeAnnotation.Type.CheckInstantiated(pos, checker.memoryGauge, checker.report)
+	typeAnnotation.Type.CheckInstantiated(
+		pos,
+		checker.memoryGauge,
+		checker.report,
+		SeenTypes{},
+	)
 }
 
 func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {

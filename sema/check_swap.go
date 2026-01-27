@@ -45,6 +45,9 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 		},
 	)
 
+	// Record as a resource move (when applicable),
+	// because in destructors, nested resource moves are allowed.
+
 	if leftValueType.IsResourceType() {
 		checker.elaborateNestedResourceMoveExpression(swap.Left)
 	}

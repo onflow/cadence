@@ -40,6 +40,12 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) Ty
 		ResourceInvalidationKindMoveDefinite,
 	)
 
+	// Record as a resource move (when applicable),
+	// because in destructors, nested resource moves are allowed.
+	if valueType.IsResourceType() {
+		checker.elaborateNestedResourceMoveExpression(expression.Expression)
+	}
+
 	if checker.Config.ExtendedElaborationEnabled {
 		checker.Elaboration.SetForceExpressionType(expression, valueType)
 	}

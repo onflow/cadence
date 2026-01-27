@@ -43,12 +43,14 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+type getterFunc func(allowMissing bool) (value Value, insertedPlaceholder *PlaceholderValue)
+
 type getterSetter struct {
 	target Value
 	// allowMissing may be true when the got value is nil.
 	// For example, this is the case when a field is initialized
 	// with the force-assignment operator (which checks the existing value)
-	get func(allowMissing bool) Value
+	get getterFunc
 	set func(Value)
 }
 
@@ -404,7 +406,17 @@ func (interpreter *Interpreter) invokeVariable(
 	value Value,
 	err error,
 ) {
+	return interpreter.invokeVariableWithValidation(functionName, arguments, true)
+}
 
+func (interpreter *Interpreter) invokeVariableWithValidation(
+	functionName string,
+	arguments []Value,
+	validateConvertAndBox bool,
+) (
+	value Value,
+	err error,
+) {
 	// function must be defined as a global variable
 	variable := interpreter.Globals.Get(functionName)
 	if variable == nil {
@@ -438,7 +450,13 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	return InvokeExternally(interpreter, functionValue, functionType, arguments)
+	return InvokeExternallyWithValidation(
+		interpreter,
+		functionValue,
+		functionType,
+		arguments,
+		validateConvertAndBox,
+	)
 }
 
 func InvokeExternally(
@@ -450,7 +468,31 @@ func InvokeExternally(
 	result Value,
 	err error,
 ) {
-	preparedArguments, err := PrepareExternalInvocationArguments(context, functionType, arguments)
+	return InvokeExternallyWithValidation(
+		context,
+		functionValue,
+		functionType,
+		arguments,
+		true,
+	)
+}
+
+func InvokeExternallyWithValidation(
+	context InvocationContext,
+	functionValue FunctionValue,
+	functionType *sema.FunctionType,
+	arguments []Value,
+	validateConvertAndBox bool,
+) (
+	result Value,
+	err error,
+) {
+	preparedArguments, err := PrepareExternalInvocationArgumentsWithValidation(
+		context,
+		functionType,
+		arguments,
+		validateConvertAndBox,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -470,13 +512,20 @@ func InvokeExternally(
 		preparedArguments,
 		nil,
 		nil,
+		functionType.ReturnTypeAnnotation.Type,
 		LocationRange{},
 	)
 
 	return functionValue.Invoke(invocation), nil
 }
 
-func PrepareExternalInvocationArguments(context InvocationContext, functionType *sema.FunctionType, arguments []Value) ([]Value, error) {
+func PrepareExternalInvocationArgumentsWithValidation(
+	context InvocationContext,
+	functionType *sema.FunctionType,
+	arguments []Value,
+	validateConvertAndBox bool,
+) ([]Value, error) {
+
 	// ensures the invocation's argument count matches the function's parameter count
 
 	parameters := functionType.Parameters
@@ -501,6 +550,11 @@ func PrepareExternalInvocationArguments(context InvocationContext, functionType 
 		}
 	}
 
+	var convertAndBox = convertAndBox
+	if validateConvertAndBox {
+		convertAndBox = ConvertAndBoxWithValidation
+	}
+
 	var preparedArguments []Value
 	if argumentCount > 0 {
 		preparedArguments = make([]Value, argumentCount)
@@ -508,7 +562,7 @@ func PrepareExternalInvocationArguments(context InvocationContext, functionType 
 			parameterType := parameters[i].TypeAnnotation.Type
 
 			// converts the argument into the parameter type declared by the function
-			preparedArguments[i] = ConvertAndBox(context, argument, nil, parameterType)
+			preparedArguments[i] = convertAndBox(context, argument, nil, parameterType)
 		}
 	}
 
@@ -524,6 +578,19 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) 
 	})
 
 	return interpreter.invokeVariable(functionName, arguments)
+}
+
+// Deprecated: InvokeUncheckedForTestingOnly invokes a global function with the given arguments,
+// without validating them.
+// NOTE: FOR TESTING PURPOSES ONLY! Use Invoke instead
+func (interpreter *Interpreter) InvokeUncheckedForTestingOnly(functionName string, arguments ...Value) (value Value, err error) {
+
+	// recover internal panics and return them as an error
+	defer interpreter.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	return interpreter.invokeVariableWithValidation(functionName, arguments, false)
 }
 
 // InvokeFunction invokes a function value with the given invocation
@@ -1923,7 +1990,20 @@ func ConvertAndBoxWithValidation(
 	valueType sema.Type,
 	targetType sema.Type,
 ) Value {
-	result := ConvertAndBox(
+	// Defensively check the actual value's type matches the expected value type.
+	if valueType != nil {
+		valueStaticType := transferredValue.StaticType(context)
+		if !IsSubTypeOfSemaType(context, valueStaticType, valueType) {
+			resultSemaType := context.SemaTypeFromStaticType(valueStaticType)
+
+			panic(&ValueTransferTypeError{
+				ExpectedType: valueType,
+				ActualType:   resultSemaType,
+			})
+		}
+	}
+
+	result := convertAndBox(
 		context,
 		transferredValue,
 		valueType,
@@ -1931,17 +2011,17 @@ func ConvertAndBoxWithValidation(
 	)
 
 	// Defensively check the value's type matches the target type
-	resultStaticType := result.StaticType(context)
+	if targetType != nil {
+		resultStaticType := result.StaticType(context)
+		if !IsSubTypeOfSemaType(context, resultStaticType, targetType) {
 
-	if targetType != nil &&
-		!IsSubTypeOfSemaType(context, resultStaticType, targetType) {
+			resultSemaType := context.SemaTypeFromStaticType(resultStaticType)
 
-		resultSemaType := context.SemaTypeFromStaticType(resultStaticType)
-
-		panic(&ValueTransferTypeError{
-			ExpectedType: targetType,
-			ActualType:   resultSemaType,
-		})
+			panic(&ValueTransferTypeError{
+				ExpectedType: targetType,
+				ActualType:   resultSemaType,
+			})
+		}
 	}
 
 	return result
@@ -1972,11 +2052,12 @@ func TransferIfNotResourceAndConvert(
 	)
 }
 
-// ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func ConvertAndBox(
-	context ValueCreationContext,
+// convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
+func convertAndBox(
+	context ValueConversionContext,
 	value Value,
-	valueType, targetType sema.Type,
+	valueType sema.Type,
+	targetType sema.Type,
 ) Value {
 	value = convert(context, value, valueType, targetType)
 	return BoxOptional(context, value, targetType)
@@ -2788,6 +2869,7 @@ func (interpreter *Interpreter) ReadStored(
 	if accountStorage == nil {
 		return nil
 	}
+
 	return accountStorage.ReadValue(interpreter, identifier)
 }
 
@@ -2798,7 +2880,21 @@ func (interpreter *Interpreter) WriteStored(
 	value Value,
 ) (existed bool) {
 	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, true)
+
 	return accountStorage.WriteValue(interpreter, key, value)
+}
+
+func (interpreter *Interpreter) RemoveStored(
+	storageAddress common.Address,
+	domain common.StorageDomain,
+	key StorageMapKey,
+) atree.Storable {
+	accountStorage := interpreter.Storage().GetDomainStorageMap(interpreter, storageAddress, domain, false)
+	if accountStorage == nil {
+		return nil
+	}
+
+	return accountStorage.RemoveValueWithoutDeletion(interpreter, key)
 }
 
 type TypedStringValueParser struct {
@@ -4644,6 +4740,7 @@ func AccountStorageIterate(
 func (interpreter *Interpreter) InvokeFunction(
 	_ FunctionValue,
 	_ []Value,
+	_ sema.Type,
 ) Value {
 	// Interpreter's function values shouldn't/doesn't use `InvocationContext.InvokeFunction`.
 	// They directly use the methods of `Interpreter`.
@@ -4794,12 +4891,10 @@ func AccountStorageSave(
 	address := addressValue.ToAddress()
 
 	if StoredValueExists(context, address, domain, storageMapKey) {
-		panic(
-			&OverwriteError{
-				Address: addressValue,
-				Path:    path,
-			},
-		)
+		panic(&OverwriteError{
+			Address: addressValue,
+			Path:    path,
+		})
 	}
 
 	value = value.Transfer(
@@ -4892,13 +4987,11 @@ func authAccountStorageLoadFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	const clear = true
-	return authAccountReadFunction(
+	return authAccountLoadFunction(
 		context,
 		storageValue,
 		addressValue,
 		sema.Account_StorageTypeLoadFunctionType,
-		clear,
 	)
 }
 
@@ -4907,19 +5000,16 @@ func authAccountStorageCopyFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
-	const clear = false
-	return authAccountReadFunction(
+	return authAccountCopyFunction(
 		context,
 		storageValue,
 		addressValue,
 		sema.Account_StorageTypeCopyFunctionType,
-		clear,
 	)
 }
 
-func NativeAccountStorageReadFunction(
+func NativeAccountStorageCopyFunction(
 	addressPointer *AddressValue,
-	clear bool,
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -4931,38 +5021,72 @@ func NativeAccountStorageReadFunction(
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
 		semaBorrowType := typeArguments.NextSema()
 
-		return AccountStorageRead(
+		return AccountStorageCopy(
 			context,
 			args,
 			semaBorrowType,
 			address,
-			clear,
 		)
 	}
 }
 
-func authAccountReadFunction(
+func NativeAccountStorageLoadFunction(
+	addressPointer *AddressValue,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		typeArguments TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		address := GetAddressValue(receiver, addressPointer).ToAddress()
+		semaBorrowType := typeArguments.NextSema()
+
+		return AccountStorageLoad(
+			context,
+			args,
+			semaBorrowType,
+			address,
+		)
+	}
+}
+
+func authAccountCopyFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 	functionType *sema.FunctionType,
-	clear bool,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
-		NativeAccountStorageReadFunction(&addressValue, clear),
+		NativeAccountStorageCopyFunction(&addressValue),
 	)
 }
 
-func AccountStorageRead(
+func authAccountLoadFunction(
+	context FunctionCreationContext,
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+	functionType *sema.FunctionType,
+) BoundFunctionValue {
+
+	return NewBoundHostFunctionValue(
+		context,
+		storageValue,
+		functionType,
+		NativeAccountStorageLoadFunction(&addressValue),
+	)
+}
+
+func AccountStorageCopy(
 	invocationContext InvocationContext,
 	arguments []Value,
 	typeParameter sema.Type,
 	address common.Address,
-	clear bool,
 ) Value {
 	path, ok := arguments[0].(PathValue)
 	if !ok {
@@ -4994,9 +5118,6 @@ func AccountStorageRead(
 		})
 	}
 
-	// We could also pass remove=true and the storable stored in storage,
-	// but passing remove=false here and writing nil below has the same effect
-	// TODO: potentially refactor and get storable in storage, pass it and remove=true
 	transferredValue := value.Transfer(
 		invocationContext,
 		atree.Address{},
@@ -5006,18 +5127,56 @@ func AccountStorageRead(
 		false, // value is an element in storage map because it is from "ReadStored".
 	)
 
-	// Remove the value from storage,
-	// but only if the type check succeeded.
-	if clear {
-		invocationContext.WriteStored(
-			address,
-			domain,
-			storageMapKey,
-			nil,
-		)
+	return NewSomeValueNonCopying(invocationContext, transferredValue)
+}
+
+func AccountStorageLoad(
+	invocationContext InvocationContext,
+	arguments []Value,
+	typeParameter sema.Type,
+	address common.Address,
+) Value {
+	path, ok := arguments[0].(PathValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
 	}
 
-	return NewSomeValueNonCopying(invocationContext, transferredValue)
+	domain := path.Domain.StorageDomain()
+	identifier := path.Identifier
+
+	storageMapKey := StringStorageMapKey(identifier)
+
+	storable := invocationContext.RemoveStored(address, domain, storageMapKey)
+
+	if storable == nil {
+		return Nil
+	}
+
+	transferedValue := StoredValue(invocationContext, storable, invocationContext.Storage()).
+		Transfer(
+			invocationContext,
+			atree.Address{},
+			true,
+			storable,
+			nil,
+			true, // value is standalone because it was removed from parent container.
+		)
+
+	// If there is value stored for the given path,
+	// check that it satisfies the type given as the type argument.
+
+	valueStaticType := transferedValue.StaticType(invocationContext)
+
+	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
+		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
+
+		panic(&StoredValueTypeMismatchError{
+			ExpectedType: typeParameter,
+			ActualType:   valueSemaType,
+		})
+	}
+
+	return NewSomeValueNonCopying(invocationContext, transferedValue)
 }
 
 func NativeAccountStorageBorrowFunction(

@@ -32,6 +32,7 @@ type Invocation struct {
 	InvocationContext InvocationContext
 	Arguments         []Value
 	ArgumentTypes     []sema.Type
+	ReturnType        sema.Type
 }
 
 func NewInvocation(
@@ -41,6 +42,7 @@ func NewInvocation(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	typeArguments *sema.TypeParameterTypeOrderedMap,
+	returnType sema.Type,
 	locationRange LocationRange,
 ) Invocation {
 	common.UseMemory(invocationContext, common.InvocationMemoryUsage)
@@ -51,6 +53,7 @@ func NewInvocation(
 		Arguments:         arguments,
 		ArgumentTypes:     argumentTypes,
 		TypeArguments:     typeArguments,
+		ReturnType:        returnType,
 		LocationRange:     locationRange,
 		InvocationContext: invocationContext,
 	}

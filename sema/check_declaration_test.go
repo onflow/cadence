@@ -137,4 +137,56 @@ func TestCheckSelfReferencingDeclaration(t *testing.T) {
 		assert.IsType(t, &sema.CyclicConformanceError{}, errs[2])
 		assert.IsType(t, &sema.InterfaceMemberConflictError{}, errs[3])
 	})
+
+	t.Run("contract interface", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           contract interface CI {
+               // Note: use the interface type directly, rather than as a intersection type "{CI}"
+               init(v: CI) {}
+           }
+	    `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
+	})
+
+	t.Run("contract interface with cyclic conformance", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           contract interface CI1: CI2 {
+               // Note1: Use the interface type directly, rather than as a intersection type "{CI2}"
+               // Note2: Use the cyclic conforming interface type "CI2", rather than the enclosing type "CI1" itself.
+               init(v: CI2) {}
+           }
+
+           contract interface CI2: CI1 {
+               // Note1: Use the interface type directly, rather than as a intersection type "{CI1}"
+               // Note2: Use the cyclic conforming interface type "CI1", rather than the enclosing type "CI2" itself.
+               init(v: CI1) {}
+           }
+	    `)
+
+		errs := RequireCheckerErrors(t, err, 4)
+		assert.IsType(t, &sema.CyclicConformanceError{}, errs[0])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[1])
+		assert.IsType(t, &sema.CyclicConformanceError{}, errs[2])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[3])
+	})
+
+	t.Run("contract interface in reference type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           contract interface CI {
+               // Note: use the interface type directly, rather than as a intersection type "{CI}"
+               init(v: &CI) {}
+           }
+	    `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
+	})
 }

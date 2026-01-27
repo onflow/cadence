@@ -1582,7 +1582,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 access(all) var id: UInt8
@@ -1629,7 +1629,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 fun foo(): Int { return 3 }
@@ -1659,7 +1659,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             resource R {}
             resource R2 {
                 let r: @R
@@ -1710,7 +1710,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             access(all) resource R {
                 access(all) var id: UInt8
 
@@ -1756,7 +1756,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             resource R {}
 
             resource R2 {
@@ -1795,7 +1795,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             access(all) resource R {}
 
             var ref: &A? = nil
@@ -2653,4 +2653,39 @@ func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
 		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
+}
+
+func TestInterpretAttachmentToTypeConfusedValue(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+        struct X {}
+
+        struct Y {}
+
+        attachment A for X {
+            fun foo(): Int { return 3 }
+        }
+
+        fun test(x1: X) {
+            // Note: Casting is needed to ensure value's type to be treated as 'AnyStruct'
+            let x2 = (attach A() to x1) as AnyStruct
+        }
+    `)
+
+	yValue := interpreter.NewCompositeValue(
+		inter,
+		TestLocation,
+		"Y",
+		common.CompositeKindStructure,
+		nil,
+		common.ZeroAddress,
+	)
+
+	// Intentionally passing wrong type of value
+	_, err := inter.InvokeUncheckedForTestingOnly("test", yValue) //nolint:staticcheck
+	RequireError(t, err)
+
+	var invalidBaseTypeError *interpreter.InvalidBaseTypeError
+	require.ErrorAs(t, err, &invalidBaseTypeError)
 }

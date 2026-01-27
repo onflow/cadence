@@ -1660,11 +1660,7 @@ func CompositeLikeConstructorType(
 	argumentLabels []string,
 ) {
 
-	constructorFunctionType = &FunctionType{
-		Purity:               compositeType.ConstructorPurity,
-		IsConstructor:        true,
-		ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
-	}
+	constructorFunctionType = CompositeConstructorFunctionType(compositeType)
 
 	// TODO: support multiple overloaded initializers
 
@@ -1693,6 +1689,14 @@ func CompositeLikeConstructorType(
 	}
 
 	return constructorFunctionType, argumentLabels
+}
+
+func CompositeConstructorFunctionType(compositeType *CompositeType) *FunctionType {
+	return &FunctionType{
+		Purity:               compositeType.ConstructorPurity,
+		IsConstructor:        true,
+		ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
+	}
 }
 
 func (checker *Checker) defaultMembersAndOrigins(

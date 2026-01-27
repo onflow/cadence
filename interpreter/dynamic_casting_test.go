@@ -3581,25 +3581,58 @@ func TestInterpretDynamicCastingResourceConstructor(t *testing.T) {
 	t.Parallel()
 
 	for operation, returnsOptional := range dynamicCastingOperations {
-		inter := parseCheckAndPrepare(t,
-			fmt.Sprintf(`
+		returnsOptional := returnsOptional
+
+		t.Run(operation.Symbol(), func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepare(t,
+				fmt.Sprintf(`
                   resource R {}
 
                   fun test(): AnyStruct {
                       return R %s fun(): @R
                   }
                 `,
-				operation.Symbol(),
-			),
-		)
+					operation.Symbol(),
+				),
+			)
 
-		result, err := inter.Invoke("test")
-		if returnsOptional {
-			require.NoError(t, err)
-			require.Equal(t, interpreter.Nil, result)
-		} else {
-			RequireError(t, err)
-		}
+			result, err := inter.Invoke("test")
+			if returnsOptional {
+				require.NoError(t, err)
+				require.Equal(t, interpreter.Nil, result)
+			} else {
+				RequireError(t, err)
+				typeMismatchError := &interpreter.ForceCastTypeMismatchError{}
+				require.ErrorAs(t, err, &typeMismatchError)
+
+				expectedType := typeMismatchError.ExpectedType
+				require.IsType(t, &sema.FunctionType{}, expectedType)
+				expectedFunctionType := expectedType.(*sema.FunctionType)
+
+				constructorType := typeMismatchError.ActualType
+				require.IsType(t, &sema.FunctionType{}, constructorType)
+				constructorFunctionType := constructorType.(*sema.FunctionType)
+
+				// In the two function types, everything else must be equal,
+				// except for the purity and the constructor-ness.
+				assert.Equal(t, expectedFunctionType.TypeParameters, constructorFunctionType.TypeParameters)
+				assert.Equal(t, expectedFunctionType.Arity, constructorFunctionType.Arity)
+				assert.Equal(t, expectedFunctionType.Parameters, constructorFunctionType.Parameters)
+				assert.Equal(t, expectedFunctionType.ReturnTypeAnnotation, constructorFunctionType.ReturnTypeAnnotation)
+
+				// Purity must be different.
+				// Constructor type must be pure.
+				assert.NotEqual(t, expectedFunctionType.Purity, constructorFunctionType.Purity)
+				assert.Equal(t, sema.FunctionPurityView, constructorFunctionType.Purity)
+
+				// "IsConstructor" must be different.
+				assert.NotEqual(t, expectedFunctionType.IsConstructor, constructorFunctionType.IsConstructor)
+				assert.True(t, constructorFunctionType.IsConstructor)
+				assert.False(t, expectedFunctionType.IsConstructor)
+			}
+		})
 	}
 }
 
@@ -3730,6 +3763,31 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, interpreter.NewUnmeteredStringValue("hello from foo.bar"), result)
 	})
+
+	t.Run("impure function as pure function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun foo( ) {}
+
+            fun test() {
+                // Ensure impure type gets added first.
+                let x: AnyStruct = foo as! (fun())
+
+                // Then use the view function type for casting.
+                let y = x as! (view fun())
+
+                y()
+            }
+
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
 }
 
 func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
@@ -3826,7 +3884,7 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 					memberAccessOperation = "?."
 				}
 
-				inter, _ := testAccount(
+				inter, _, _ := testAccount(
 					t,
 					address,
 					true,

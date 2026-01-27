@@ -25,63 +25,61 @@ import (
 // PlaceholderValue
 type PlaceholderValue struct{}
 
-var placeholder Value = PlaceholderValue{}
+var _ Value = &PlaceholderValue{}
 
-var _ Value = PlaceholderValue{}
+func (*PlaceholderValue) IsValue() {}
 
-func (PlaceholderValue) IsValue() {}
-
-func (v PlaceholderValue) String() string {
+func (v *PlaceholderValue) String() string {
 	return v.RecursiveString(SeenReferences{})
 }
 
-func (PlaceholderValue) RecursiveString(_ SeenReferences) string {
+func (*PlaceholderValue) RecursiveString(_ SeenReferences) string {
 	return ""
 }
 
-func (PlaceholderValue) MeteredString(
+func (*PlaceholderValue) MeteredString(
 	_ ValueStringContext,
 	_ SeenReferences,
 ) string {
 	return ""
 }
 
-func (PlaceholderValue) Accept(_ ValueVisitContext, _ Visitor) {
+func (*PlaceholderValue) Accept(_ ValueVisitContext, _ Visitor) {
 	// NO-OP
 }
 
-func (PlaceholderValue) Walk(_ ValueWalkContext, _ func(Value)) {
+func (*PlaceholderValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
-func (PlaceholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
-	return PrimitiveStaticTypeNever
+func (*PlaceholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
+	return PrimitiveStaticTypeInvalid
 }
 
-func (PlaceholderValue) IsImportable(_ ValueImportableContext) bool {
+func (*PlaceholderValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
-func (PlaceholderValue) ConformsToStaticType(
+func (*PlaceholderValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v PlaceholderValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
+func (v *PlaceholderValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return NonStorable{Value: v}, nil
 }
 
-func (PlaceholderValue) NeedsStoreTo(_ atree.Address) bool {
+func (*PlaceholderValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (PlaceholderValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
+func (*PlaceholderValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
-func (v PlaceholderValue) Transfer(
+func (v *PlaceholderValue) Transfer(
 	context ValueTransferContext,
 	_ atree.Address,
 	remove bool,
@@ -96,10 +94,10 @@ func (v PlaceholderValue) Transfer(
 	return v
 }
 
-func (v PlaceholderValue) Clone(_ ValueCloneContext) Value {
+func (v *PlaceholderValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (PlaceholderValue) DeepRemove(_ ValueRemoveContext, _ bool) {
+func (*PlaceholderValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }

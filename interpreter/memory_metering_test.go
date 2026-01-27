@@ -237,7 +237,7 @@ func TestInterpretMemoryMeteringArray(t *testing.T) {
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](4, 5), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("append with packing", func(t *testing.T) {
@@ -367,7 +367,7 @@ func TestInterpretMemoryMeteringArray(t *testing.T) {
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
 
-		assert.Equal(t, ifCompile[uint64](10, 7), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](13, 15), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -486,7 +486,7 @@ func TestInterpretMemoryMeteringArray(t *testing.T) {
 		// 1 Int8 for `w` element
 		// 2 Int8 for `r` elements
 		// 2 Int8 for `q` elements
-		assert.Equal(t, ifCompile[uint64](30, 19), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](37, 43), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -520,7 +520,7 @@ func TestInterpretMemoryMeteringDictionary(t *testing.T) {
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(159), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
-		assert.Equal(t, ifCompile[uint64](3, 9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](4, 10), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -580,7 +580,7 @@ func TestInterpretMemoryMeteringDictionary(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifCompile[uint64](2, 3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](4, 6), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("insert", func(t *testing.T) {
@@ -607,7 +607,7 @@ func TestInterpretMemoryMeteringDictionary(t *testing.T) {
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
 		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 
-		assert.Equal(t, ifCompile[uint64](12, 10), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](15, 18), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -1486,7 +1486,7 @@ func TestInterpretMemoryMeteringOptionalValue(t *testing.T) {
 		// 2 for `z`
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalValue))
 
-		assert.Equal(t, ifCompile[uint64](20, 14), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](21, 22), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -9049,7 +9049,7 @@ func TestInterpretMemoryMeteringIdentifier(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
-		assert.Equal(t, ifCompile[uint64](4, 3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, ifCompile[uint64](7, 9), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
 
@@ -9128,7 +9128,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
-			assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFunctionStaticType))
+			assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionStaticType))
 		}
 	})
 
@@ -9153,7 +9153,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifCompile[uint64](2, 1), meter.getMemory(common.MemoryKindFunctionStaticType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFunctionStaticType))
 	})
 
 	t.Run("isInstance", func(t *testing.T) {
@@ -9179,7 +9179,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 
 		assert.Equal(
 			t,
-			ifCompile[uint64](2, 3),
+			uint64(3),
 			meter.getMemory(common.MemoryKindFunctionStaticType),
 		)
 	})
@@ -9288,13 +9288,13 @@ func TestInterpretMemoryMeteringStaticTypeConversion(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindDictionarySemaType))
-		assert.Equal(t, ifCompile[uint64](2, 4), meter.getMemory(common.MemoryKindVariableSizedSemaType))
-		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindConstantSizedSemaType))
-		assert.Equal(t, ifCompile[uint64](2, 3), meter.getMemory(common.MemoryKindIntersectionSemaType))
-		assert.Equal(t, ifCompile[uint64](2, 4), meter.getMemory(common.MemoryKindReferenceSemaType))
-		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindCapabilitySemaType))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalSemaType))
+		assert.Equal(t, ifCompile[uint64](1, 3), meter.getMemory(common.MemoryKindDictionarySemaType))
+		assert.Equal(t, ifCompile[uint64](2, 6), meter.getMemory(common.MemoryKindVariableSizedSemaType))
+		assert.Equal(t, ifCompile[uint64](1, 3), meter.getMemory(common.MemoryKindConstantSizedSemaType))
+		assert.Equal(t, ifCompile[uint64](2, 4), meter.getMemory(common.MemoryKindIntersectionSemaType))
+		assert.Equal(t, ifCompile[uint64](2, 6), meter.getMemory(common.MemoryKindReferenceSemaType))
+		assert.Equal(t, ifCompile[uint64](1, 3), meter.getMemory(common.MemoryKindCapabilitySemaType))
+		assert.Equal(t, ifCompile[uint64](2, 3), meter.getMemory(common.MemoryKindOptionalSemaType))
 	})
 }
 
@@ -9647,7 +9647,11 @@ func TestInterpretValueStringConversion(t *testing.T) {
 			interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.AddressValue{1},
-				interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "Bar"),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "Bar"),
+				),
 			))
 	})
 
@@ -9726,6 +9730,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				interpreter.PrimitiveStaticTypeCapability, //nolint:staticcheck
 				interpreter.PrimitiveStaticTypeStorable,
 				interpreter.PrimitiveStaticTypeUnknown,
+				interpreter.PrimitiveStaticTypeInvalid,
 				interpreter.PrimitiveStaticType_Count:
 				continue
 			}

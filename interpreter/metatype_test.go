@@ -843,7 +843,7 @@ func TestInterpretGetType(t *testing.T) {
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		t.Run(testCase.name, func(t *testing.T) {
-			inter, _ := testAccount(t, address, true, nil, testCase.code, sema.Config{})
+			inter, _, _ := testAccount(t, address, true, nil, testCase.code, sema.Config{})
 
 			result, err := inter.Invoke("test")
 			require.NoError(t, err)
