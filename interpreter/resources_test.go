@@ -4268,6 +4268,29 @@ func TestInterpretVariableReuseResourceLossCheck(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("swap, same index", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          resource R {}
+
+          fun test() {
+              let array: @[R?] <- [<-create R(), <-create R()]
+
+              var i = 0
+              while i < 2 {
+                  array[i] <-> array[i]
+                  i = i + 1
+              }
+
+              destroy array
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 	t.Run("swap, member", func(t *testing.T) {
 		t.Parallel()
 
