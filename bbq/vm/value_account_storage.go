@@ -87,7 +87,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeLoadFunctionName,
 			sema.Account_StorageTypeLoadFunctionType,
-			interpreter.NativeAccountStorageReadFunction(nil, true),
+			interpreter.NativeAccountStorageLoadFunction(nil),
 		),
 	)
 
@@ -97,7 +97,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeCopyFunctionName,
 			sema.Account_StorageTypeCopyFunctionType,
-			interpreter.NativeAccountStorageReadFunction(nil, false),
+			interpreter.NativeAccountStorageCopyFunction(nil),
 		),
 	)
 

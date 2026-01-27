@@ -56,41 +56,21 @@ func NewVMInvokable(
 	}
 }
 
-func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, vmError error) {
-	vmResult, vmError := v.invoke(functionName, arguments...)
-
-	// If the test was set up without the need for comparing slabs,
-	// then return only the VM result.
-	if v.interpreter == nil {
-		return vmResult, vmError
-	}
-
-	// Invoke the interpreter, even if there are errors from VM.
-	// This is because even an erroneous program could have side effects
-	// on slab creation.
-	_, interpreterError := v.interpreter.Invoke(functionName, arguments...)
-
-	if vmError != nil {
-		return nil, vmError
-	}
-
-	if interpreterError != nil {
-		return nil, interpreterError
-	}
+func (v *VMInvokable) compareStorage() error {
 
 	vmStorage := v.Storage()
 	interpreterStorage := v.interpreter.Storage()
 
 	// Collect VM slabs
-	vmSlabs, vmError := sortedSlabIDsFromStorage(vmStorage)
-	if vmError != nil {
-		return nil, vmError
+	vmSlabs, err := sortedSlabIDsFromStorage(vmStorage)
+	if err != nil {
+		return err
 	}
 
 	// Collect Interpreter slabs
-	interpreterSlabs, vmError := sortedSlabIDsFromStorage(interpreterStorage)
-	if vmError != nil {
-		return nil, vmError
+	interpreterSlabs, err := sortedSlabIDsFromStorage(interpreterStorage)
+	if err != nil {
+		return err
 	}
 
 	var slabComparisonError error
@@ -117,7 +97,7 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 	}
 
 	if !slices.EqualFunc(vmSlabs, interpreterSlabs, equalSlab) {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"slabs do not match!\ninterpreter: %v\nvm: %v.\n%w",
 			interpreterSlabs,
 			vmSlabs,
@@ -125,17 +105,91 @@ func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value
 		)
 	}
 
-	return vmResult, nil
+	return nil
 }
 
-func (v *VMInvokable) invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-	value, err = v.vmInstance.InvokeExternally(functionName, arguments...)
+// Invoke invokes a global function with the given arguments
+func (v *VMInvokable) Invoke(
+	functionName string,
+	arguments ...interpreter.Value,
+) (
+	interpreter.Value,
+	error,
+) {
+	value, vmErr := v.vmInstance.InvokeExternally(functionName, arguments...)
 
 	// Reset the VM after a function invocation,
 	// so the same vm can be re-used for subsequent invocation.
 	v.vmInstance.Reset()
 
-	return
+	// If the test was set up without the need for comparing slabs,
+	// then return only the VM result.
+	if v.interpreter == nil {
+		return value, vmErr
+	}
+
+	// Invoke the interpreter, even if there are errors from VM.
+	// This is because even an erroneous program could have side effects
+	// on slab creation.
+	_, interpreterErr := v.interpreter.Invoke(functionName, arguments...)
+
+	if vmErr != nil {
+		return nil, vmErr
+	}
+
+	if interpreterErr != nil {
+		return nil, interpreterErr
+	}
+
+	vmErr = v.compareStorage()
+	if vmErr != nil {
+		return nil, vmErr
+	}
+
+	return value, nil
+}
+
+// Deprecated: InvokeUncheckedForTestingOnly invokes a global function with the given arguments,
+// without validating them.
+// NOTE: FOR TESTING PURPOSES ONLY! Use Invoke instead
+func (v *VMInvokable) InvokeUncheckedForTestingOnly(
+	functionName string,
+	arguments ...interpreter.Value,
+) (
+	interpreter.Value,
+	error,
+) {
+	value, vmErr := v.vmInstance.InvokeExternallyUncheckedForTestingOnly(functionName, arguments...) // nolint:staticcheck
+
+	// Reset the VM after a function invocation,
+	// so the same vm can be re-used for subsequent invocation.
+	v.vmInstance.Reset()
+
+	// If the test was set up without the need for comparing slabs,
+	// then return only the VM result.
+	if v.interpreter == nil {
+		return value, vmErr
+	}
+
+	// Invoke the interpreter, even if there are errors from VM.
+	// This is because even an erroneous program could have side effects
+	// on slab creation.
+	_, interpreterErr := v.interpreter.InvokeUncheckedForTestingOnly(functionName, arguments...) // nolint:staticcheck
+
+	if vmErr != nil {
+		return nil, vmErr
+	}
+
+	if interpreterErr != nil {
+		return nil, interpreterErr
+	}
+
+	vmErr = v.compareStorage()
+	if vmErr != nil {
+		return nil, vmErr
+	}
+
+	return value, nil
 }
 
 func (v *VMInvokable) InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) (err error) {

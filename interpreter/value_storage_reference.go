@@ -263,10 +263,29 @@ func (v *StorageReferenceValue) SetKey(context ContainerMutationContext, key Val
 }
 
 func (v *StorageReferenceValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
+	v.InsertKeyWithMutationCheck(
+		context,
+		key,
+		value,
+		true,
+	)
+}
+
+func (v *StorageReferenceValue) InsertKeyWithMutationCheck(
+	context ContainerMutationContext,
+	key Value,
+	value Value,
+	checkMutation bool,
+) {
 	self := v.MustReferencedValue(context)
 
 	self.(ValueIndexableValue).
-		InsertKey(context, key, value)
+		InsertKeyWithMutationCheck(
+			context,
+			key,
+			value,
+			checkMutation,
+		)
 }
 
 func (v *StorageReferenceValue) RemoveKey(context ContainerMutationContext, key Value) Value {

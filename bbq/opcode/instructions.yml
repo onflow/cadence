@@ -155,6 +155,10 @@
   description: |
     Pops two values off the stack, the array and the index.
     Removes the value at the given index from the array and pushes it onto the stack.
+    If pushPlaceholder is true, also pushes the placeholder value that was inserted, if any, or nil otherwise.
+  operands:
+    - name: "pushPlaceholder"
+      type: "bool"
   valueEffects:
     pop:
       - name: "array"
@@ -163,6 +167,8 @@
         type: "integer"
     push:
       - name: "value"
+        type: "value"
+      - name: "placeholder"
         type: "value"
 
 - name: "setIndex"
@@ -359,6 +365,8 @@
       type: "typeIndices"
     - name: "argCount"
       type: "size"
+    - name: "returnType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "arguments"
@@ -381,6 +389,8 @@
       type: "typeIndices"
     - name: "argTypes"
       type: "typeIndices"
+    - name: "returnType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "arguments"
@@ -400,6 +410,8 @@
   operands:
     - name: "method"
       type: globalIndex
+    - name: "receiverType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "receiver"
@@ -486,7 +498,9 @@
     Pops a value off the stack, transfer and converts it to the given type,
     and then pushes it back on to the stack.
   operands:
-    - name: "type"
+    - name: "valueType"
+      type: "typeIndex"
+    - name: "targetType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -501,7 +515,9 @@
     Pops a value off the stack, converts it to the given type,
     and then pushes it back on to the stack.
   operands:
-    - name: "type"
+    - name: "valueType"
+      type: "typeIndex"
+    - name: "targetType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -515,7 +531,9 @@
   description: |
     Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
   operands:
-    - name: "type"
+    - name: "targetType"
+      type: "typeIndex"
+    - name: "valueType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -531,7 +549,9 @@
     If the value is a subtype of the given type, then casted value is pushed back on to the stack.
     If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
   operands:
-    - name: "type"
+    - name: "targetType"
+      type: "typeIndex"
+    - name: "valueType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -547,7 +567,9 @@
     and then pushes it back on to the stack.
     Panics if the value is not a subtype of the given type.
   operands:
-    - name: "type"
+    - name: "targetType"
+      type: "typeIndex"
+    - name: "valueType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -635,6 +657,20 @@
     - return: "value"
 
 # Comparison instructions
+
+- name: "same"
+  description: |
+    Pops two values off the stack, checks if the first value is the same as the second,
+    and then pushes the result back on to the stack.
+  valueEffects:
+    pop:
+      - name: "left"
+        type: "value"
+      - name: "right"
+        type: "value"
+    push:
+      - name: "result"
+        type: "bool"
 
 - name: "equal"
   description: |

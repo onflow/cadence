@@ -42,7 +42,7 @@ type Context struct {
 	mutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues
 
-	invokeFunction                func(function Value, arguments []Value) (Value, error)
+	invokeFunction                func(function Value, arguments []Value, returnType sema.Type) (Value, error)
 	lookupFunction                func(location common.Location, name string) FunctionValue
 	recoverErrors                 func(onError func(error))
 	inStorageIteration            bool
@@ -55,7 +55,7 @@ type Context struct {
 	// This cache-alike is maintained per execution.
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
-	semaTypeCache   map[sema.TypeID]sema.Type
+	semaTypeCache   map[commons.TypeCacheKey]sema.Type
 	semaAccessCache map[interpreter.Authorization]sema.Access
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
@@ -166,11 +166,20 @@ func (c *Context) WriteStored(
 ) (existed bool) {
 	accountStorage := c.storage.GetDomainStorageMap(c, storageAddress, domain, true)
 
-	return accountStorage.WriteValue(
-		c,
-		key,
-		value,
-	)
+	return accountStorage.WriteValue(c, key, value)
+}
+
+func (c *Context) RemoveStored(
+	storageAddress common.Address,
+	domain common.StorageDomain,
+	key interpreter.StorageMapKey,
+) atree.Storable {
+	accountStorage := c.storage.GetDomainStorageMap(c, storageAddress, domain, false)
+	if accountStorage == nil {
+		return nil
+	}
+
+	return accountStorage.RemoveValueWithoutDeletion(c, key)
 }
 
 func (c *Context) IsSubType(subType interpreter.StaticType, superType interpreter.StaticType) bool {
@@ -276,8 +285,9 @@ func (c *Context) GetLocation() common.Location {
 func (c *Context) InvokeFunction(
 	fn interpreter.FunctionValue,
 	arguments []interpreter.Value,
+	returnType sema.Type,
 ) interpreter.Value {
-	result, err := c.invokeFunction(fn, arguments)
+	result, err := c.invokeFunction(fn, arguments, returnType)
 	if err != nil {
 		panic(err)
 	}
@@ -418,15 +428,16 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 
 	arguments = append(arguments, collectFunction)
 
-	// The generated function takes no arguments unless its an attachment, and returns nothing.
-	c.InvokeFunction(method, arguments)
+	// The generated function takes no arguments unless it's an attachment, and returns nothing.
+	returnType := sema.VoidType
+	c.InvokeFunction(method, arguments, returnType)
 
 	return eventValues
 }
 
 func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
-	typeID := staticType.ID()
-	semaType, ok := c.semaTypeCache[typeID]
+	typeCacheKey := commons.NewTypeCacheKeyFromStaticType(staticType)
+	semaType, ok := c.semaTypeCache[typeCacheKey]
 	if ok {
 		return semaType
 	}
@@ -435,9 +446,9 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
 
 	if c.semaTypeCache == nil {
-		c.semaTypeCache = make(map[sema.TypeID]sema.Type)
+		c.semaTypeCache = make(map[commons.TypeCacheKey]sema.Type)
 	}
-	c.semaTypeCache[typeID] = semaType
+	c.semaTypeCache[typeCacheKey] = semaType
 
 	return semaType
 }
