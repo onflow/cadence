@@ -500,8 +500,14 @@ func ConvertFix128(memoryGauge common.MemoryGauge, value Value) Fix128Value {
 	return NewFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-func (v Fix128Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Fix128Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Fix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

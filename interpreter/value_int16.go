@@ -571,7 +571,7 @@ func (v Int16Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) GetMember(context MemberAccessibleContext, name string) Value {
+func (v Int16Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 	return context.GetMethod(v, name)
 
 }

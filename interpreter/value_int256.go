@@ -667,7 +667,7 @@ func (v Int256Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewInt256ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int256Value) GetMember(context MemberAccessibleContext, name string) Value {
+func (v Int256Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 	return context.GetMethod(v, name)
 
 }

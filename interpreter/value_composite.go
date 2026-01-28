@@ -502,7 +502,7 @@ func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, name 
 	return nil
 }
 
-func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string) Value {
+func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 
 	if TracingEnabled {
 		startTime := time.Now()
@@ -533,34 +533,42 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string)
 		}
 	}
 
-	if field := v.GetField(context, name); field != nil {
-		return compositeMember(context, v, field)
-	}
-
-	if v.NestedVariables != nil {
-		variable, ok := v.NestedVariables[name]
-		if ok {
-			return variable.GetValue(context)
-		}
-	}
-
 	context = context.GetMemberAccessContextForLocation(v.Location)
 
-	// Dynamically link in the computed fields, injected fields, and functions
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
 
-	if computedField := v.GetComputedField(context, name); computedField != nil {
-		return computedField
-	}
+			switch memberKind {
+			case common.DeclarationKindField:
+				if field := v.GetField(context, name); field != nil {
+					return compositeMember(context, v, field)
+				}
 
-	if injectedField := v.GetInjectedField(context, name); injectedField != nil {
-		return injectedField
-	}
+				// Dynamically link in the computed fields, injected fields, and functions
 
-	if function := context.GetMethod(v, name); function != nil {
-		return function
-	}
+				if computedField := v.GetComputedField(context, name); computedField != nil {
+					return computedField
+				}
 
-	return nil
+				if injectedField := v.GetInjectedField(context, name); injectedField != nil {
+					return injectedField
+				}
+			default:
+				if v.NestedVariables != nil {
+					variable, ok := v.NestedVariables[name]
+					if ok {
+						return variable.GetValue(context)
+					}
+				}
+			}
+
+			return nil
+		},
+	)
 }
 
 func compositeMember(context FunctionCreationContext, compositeValue Value, memberValue Value) Value {
@@ -1832,7 +1840,8 @@ func (v *CompositeValue) getAttachmentValue(
 	context MemberAccessibleContext,
 	ty sema.Type,
 ) *CompositeValue {
-	attachment := v.GetMember(context, AttachmentMemberName(string(ty.ID())))
+	// TODO:
+	attachment := v.GetMember(context, AttachmentMemberName(string(ty.ID())), common.DeclarationKindField)
 	if attachment != nil {
 		return attachment.(*CompositeValue)
 	}

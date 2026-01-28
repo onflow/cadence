@@ -262,7 +262,8 @@ func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string) Value {
+func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	// TODO:
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue(context)

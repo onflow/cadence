@@ -158,7 +158,7 @@ func NewAccount(
 		sema.AccountReferenceType,
 	)
 
-	payerValue := payer.GetMember(context, sema.AccountTypeAddressFieldName)
+	payerValue := payer.GetMember(context, sema.AccountTypeAddressFieldName, common.DeclarationKindField)
 	if payerValue == nil {
 		panic(errors.NewUnexpectedError("payer address is not set"))
 	}
@@ -2705,7 +2705,7 @@ func NewHashAlgorithmFromValue(
 ) sema.HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
 
-	rawValue := hashAlgoValue.GetMember(context, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetMember(context, sema.EnumRawValueFieldName, 0)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
