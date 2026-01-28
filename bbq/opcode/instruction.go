@@ -34,18 +34,28 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
+// ProgramForInstructions represents a program that can resolve instruction operands.
+// This is defined as an interface to avoid circular dependency with the bbq package.
+type ProgramForInstructions interface {
+	GetConstants() []constant.DecodedConstant
+	GetTypes() []interpreter.StaticType
+	GetFunctionName(index uint16) string
+}
+
 type Instruction interface {
 	Encode(code *[]byte)
 	String() string
 	OperandsString(sb *strings.Builder, colorize bool)
 	ResolvedOperandsString(
 		sb *strings.Builder,
-		constants []constant.DecodedConstant,
-		types []interpreter.StaticType,
-		functionNames []string,
+		program ProgramForInstructions,
 		colorize bool,
 	)
 	Opcode() Opcode
+	// Pretty converts this instruction to its pretty form with resolved operands.
+	// Pretty instructions are for debugging and display purposes only, not for runtime execution.
+	// They are useful for human-readable instruction dumps, analysis tools, debugging, and testing.
+	Pretty(program ProgramForInstructions) PrettyInstruction
 }
 
 func emitOpcode(code *[]byte, opcode Opcode) {
