@@ -21,11 +21,13 @@ package runtime_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -819,5 +821,148 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 			"\n"+
 			"  See documentation at: https://cadence-lang.org/docs/language/access-control\n"+
 			"\n",
+	)
+}
+
+func TestRuntimeContractUpdateReplaceFieldWithFunction(t *testing.T) {
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	const contractName = "UpdateableContract"
+
+	const contractV1 = `
+        access(all) contract UpdateableContract {
+
+            access(all) resource TargetResource {
+                access(all) var balance: Int
+                access(all) fun withdraw(amount: Int) {
+                    log("Withdrawing 1 unit, remaining balance \(self.balance)")
+                }
+
+                init() {
+                    self.balance = 10
+                }
+            }
+
+            access(self) var ambiguousName: @TargetResource
+
+            init() {
+                self.ambiguousName <- create TargetResource()
+            }
+        }
+    `
+
+	const contractV2 = `
+        access(all) contract UpdateableContract {
+
+            access(all) enum ambiguousName: UInt8 {
+                access(all) case foobar
+            }
+
+            access(all) resource TargetResource {
+                access(all) var balance: Int
+                access(all) fun withdraw() {
+                    self.balance = self.balance - 1
+                    log("Withdrawing 1 unit, remaining balance \(self.balance)")
+                }
+                init() {
+                    self.balance = 10
+                }
+            }
+
+            init() {}
+        }
+    `
+
+	accountCodes := map[common.Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(contractName, []byte(contractV1)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Update contract
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: UpdateTransaction(contractName, []byte(contractV2)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Run script
+
+	const script = `
+        import UpdateableContract from 0x1
+
+        access(all) fun main() {
+            // As far as sema is concerned, UpdateableContract.ambiguousName is an enum contructor (a function)
+            // In reality, it is a TargetResource
+            var rRef = ((&UpdateableContract.ambiguousName as &AnyStruct) as AnyStruct) as! &UpdateableContract.TargetResource
+            rRef.withdraw()
+        }
+    `
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: []byte(script),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
+		},
+	)
+	RequireError(t, err)
+
+	var valueTransferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &valueTransferTypeError)
+
+	assert.ErrorContains(t,
+		err,
+		"invalid transfer of value: expected `&AnyStruct`, got `&UpdateableContract.TargetResource`",
 	)
 }
