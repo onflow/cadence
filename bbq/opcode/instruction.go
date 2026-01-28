@@ -48,9 +48,7 @@ type Instruction interface {
 	OperandsString(sb *strings.Builder, colorize bool)
 	ResolvedOperandsString(
 		sb *strings.Builder,
-		constants []constant.DecodedConstant,
-		types []interpreter.StaticType,
-		functionNames []string,
+		program ProgramForInstructions,
 		colorize bool,
 	)
 	Opcode() Opcode

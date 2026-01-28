@@ -766,7 +766,12 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeTypeIndices:
 			funcName = "printfTypeArrayArgument"
 			extraArgs = []dst.Expr{
-				dst.NewIdent("types"),
+				&dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("program"),
+						Sel: dst.NewIdent("GetTypes"),
+					},
+				},
 			}
 
 		case operandTypeUpvalues:
@@ -775,7 +780,12 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeConstantIndex:
 			funcName = "printfConstantArgument"
 			arg = &dst.IndexExpr{
-				X: dst.NewIdent("constants"),
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("program"),
+						Sel: dst.NewIdent("GetConstants"),
+					},
+				},
 				Index: &dst.SelectorExpr{
 					X:   dst.NewIdent("i"),
 					Sel: operandIdent(operand),
@@ -785,7 +795,12 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeTypeIndex:
 			funcName = "printfTypeArgument"
 			arg = &dst.IndexExpr{
-				X: dst.NewIdent("types"),
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("program"),
+						Sel: dst.NewIdent("GetTypes"),
+					},
+				},
 				Index: &dst.SelectorExpr{
 					X:   dst.NewIdent("i"),
 					Sel: operandIdent(operand),
@@ -794,11 +809,16 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 
 		case operandTypeFunctionIndex:
 			funcName = "printfFunctionNameArgument"
-			arg = &dst.IndexExpr{
-				X: dst.NewIdent("functionNames"),
-				Index: &dst.SelectorExpr{
-					X:   dst.NewIdent("i"),
-					Sel: operandIdent(operand),
+			arg = &dst.CallExpr{
+				Fun: &dst.SelectorExpr{
+					X:   dst.NewIdent("program"),
+					Sel: dst.NewIdent("GetFunctionName"),
+				},
+				Args: []dst.Expr{
+					&dst.SelectorExpr{
+						X:   dst.NewIdent("i"),
+						Sel: operandIdent(operand),
+					},
 				},
 			}
 
@@ -865,32 +885,11 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 		},
 		{
 			Names: []*dst.Ident{
-				dst.NewIdent("constants"),
+				dst.NewIdent("program"),
 			},
-			Type: &dst.ArrayType{
-				Elt: &dst.Ident{
-					Path: constantPackagePath,
-					Name: "DecodedConstant",
-				},
-			},
-		},
-		{
-			Names: []*dst.Ident{
-				dst.NewIdent("types"),
-			},
-			Type: &dst.ArrayType{
-				Elt: &dst.Ident{
-					Path: interpreterPackagePath,
-					Name: "StaticType",
-				},
-			},
-		},
-		{
-			Names: []*dst.Ident{
-				dst.NewIdent("functionNames"),
-			},
-			Type: &dst.ArrayType{
-				Elt: dst.NewIdent("string"),
+			Type: &dst.Ident{
+				Name: "ProgramForInstructions",
+				Path: opcodePackagePath,
 			},
 		},
 		{
