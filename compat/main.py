@@ -28,21 +28,20 @@ def cwd(path):
     finally:
         os.chdir(oldpwd)
 
-def cadence_replacement(cadence_version: Optional[str]) -> str:
-    if cadence_version:
-        return f'github.com/onflow/cadence@{cadence_version}'
-    # default: point to local cadence repo
-    return shlex.quote(Path(__file__).parent.parent.absolute().resolve().as_posix())
+def version_replacement(name: str, version: Optional[str]) -> str:
+    if version:
+        return f'{name}@{version}'
+    else:
+        commit_hash = Git.ls_remote('https://' + name, "HEAD")
+        return f'{name}@{commit_hash}'
 
-def flowgo_replacement(flowgo_version: Optional[str]) -> str:
-    if flowgo_version:
-        return f'github.com/onflow/flow-go@{flowgo_version}'
-    # default: use the newest version of flow-go available
-    return 'github.com/onflow/flow-go@latest'
+def path_replacement() -> str:
+    return shlex.quote(Path(__file__).parent.parent.absolute().resolve().as_posix())
 
 def build_cli(
     cadence_version: Optional[str],
-    flowgo_version: Optional[str]
+    flowgo_version: Optional[str],
+    flowemulator_version: Optional[str]
 ):
     logger.info("Building CLI ...")
 
@@ -52,7 +51,8 @@ def build_cli(
         with cwd(working_dir):
             Go.replace_dependencies(
                 cadence_version=cadence_version,
-                flowgo_version=flowgo_version
+                flowgo_version=flowgo_version,
+                flowemulator_version=flowemulator_version
             )
             logger.info("Compiling CLI binary")
             subprocess.run(
@@ -72,12 +72,13 @@ class GoTest:
         working_dir: Path,
         prepare: bool,
         cadence_version: Optional[str],
-        flowgo_version: Optional[str]
+        flowgo_version: Optional[str],
+        flowemulator_version: Optional[str]
     ) -> bool:
 
         with cwd(working_dir / self.path):
             if prepare:
-                Go.replace_dependencies(cadence_version, flowgo_version)
+                Go.replace_dependencies(cadence_version, flowgo_version, flowemulator_version)
 
             result = subprocess.run(self.command, shell=True)
             return result.returncode == 0
@@ -92,7 +93,8 @@ class CadenceTest:
         working_dir: Path,
         prepare: bool,
         cadence_version: Optional[str],
-        flowgo_version: Optional[str]
+        flowgo_version: Optional[str],
+        flowemulator_version: Optional[str]
     ) -> bool:
 
         env = os.environ.copy()
@@ -129,6 +131,7 @@ class Description:
         cadence_test: bool,
         cadence_version: Optional[str],
         flowgo_version: Optional[str],
+        flowemulator_version: Optional[str]
     ) -> (bool):
 
         logger.info(f"Running tests for {name} ...")
@@ -145,7 +148,8 @@ class Description:
                     working_dir,
                     prepare=prepare,
                     cadence_version=cadence_version,
-                    flowgo_version=flowgo_version
+                    flowgo_version=flowgo_version,
+                    flowemulator_version=flowemulator_version
                 ):
                     go_tests_succeeded = False
 
@@ -156,7 +160,8 @@ class Description:
                     working_dir,
                     prepare=prepare,
                     cadence_version=cadence_version,
-                    flowgo_version=flowgo_version
+                    flowgo_version=flowgo_version,
+                    flowemulator_version=flowemulator_version
                 ):
                     cadence_tests_succeeded = False
 
@@ -166,10 +171,12 @@ class Go:
 
     @staticmethod
     def mod_replace(original: str, replacement: str):
+        logger.info(f"Replacing {original} with {replacement} in go.mod")
         subprocess.run(
             ["go", "mod", "edit", "-replace", f'{original}={replacement}'],
             check=True
         )
+        Go.mod_tidy()
 
     @staticmethod
     def mod_tidy():
@@ -181,12 +188,22 @@ class Go:
     @staticmethod
     def replace_dependencies(
         cadence_version: Optional[str],
-        flowgo_version: Optional[str]
+        flowgo_version: Optional[str],
+        flowemulator_version: Optional[str]
     ):
         logger.info("Editing dependencies")
-        Go.mod_replace("github.com/onflow/cadence", cadence_replacement(cadence_version))
-        Go.mod_replace("github.com/onflow/flow-go", flowgo_replacement(flowgo_version))
-        Go.mod_tidy()
+        Go.mod_replace(
+            "github.com/onflow/cadence",
+            version_replacement("github.com/onflow/cadence", cadence_version) if cadence_version else path_replacement(),
+        )
+        Go.mod_replace(
+            "github.com/onflow/flow-go",
+            version_replacement("github.com/onflow/flow-go", flowgo_version)
+        )
+        Go.mod_replace(
+            "github.com/onflow/flow-emulator",
+            version_replacement("github.com/onflow/flow-emulator", flowemulator_version)
+        )
 
 class Git:
 
@@ -220,6 +237,16 @@ class Git:
         )
         return completed_process.stdout.decode("utf-8").strip()
 
+    @staticmethod
+    def ls_remote(url: str, branch: str) -> str:
+        completed_process = subprocess.run(
+            ["git", "ls-remote", url, branch],
+            capture_output=True,
+            check=True
+        )
+        output = completed_process.stdout.decode("utf-8").strip()
+        return output.split("\t")[0] if output else ""
+
 @click.command()
 @click.option(
     "--rerun",
@@ -249,6 +276,11 @@ class Git:
     default=None,
     help="version of flow-go for Go tests"
 )
+@click.option(
+    "--flowemulator-version",
+    default=None,
+    help="version of flow-emulator for Go tests"
+)
 @click.argument(
     "names",
     nargs=-1,
@@ -259,13 +291,15 @@ def main(
     cadence_test: bool,
     cadence_version: str,
     flowgo_version: str,
+    flowemulator_version: str,
     names: Collection[str]
 ):
 
     logger.info(
         f'Chosen versions: '
-        + f'cadence@{ cadence_version if cadence_version else "local version" }, '
-        + f'flow-go@{flowgo_version if flowgo_version else "latest"}'
+        + f'cadence@{cadence_version if cadence_version else "local version"}, '
+        + f'flow-go@{flowgo_version if flowgo_version else "HEAD"}, '
+        + f'flow-emulator@{flowemulator_version if flowemulator_version else "HEAD"}'
     )
 
     prepare = not rerun
@@ -274,6 +308,7 @@ def main(
         build_cli(
             cadence_version=cadence_version,
             flowgo_version=flowgo_version,
+            flowemulator_version=flowemulator_version
         )
 
     # Run for the current checkout
@@ -284,6 +319,7 @@ def main(
         cadence_test=cadence_test,
         cadence_version=cadence_version,
         flowgo_version=flowgo_version,
+        flowemulator_version=flowemulator_version,
         names=names
     )
 
@@ -297,6 +333,7 @@ def run(
     cadence_test: bool,
     cadence_version: str,
     flowgo_version: str,
+    flowemulator_version: str,
     names: Collection[str]
 ) -> (bool):
 
@@ -316,6 +353,7 @@ def run(
             cadence_test=cadence_test,
             cadence_version=cadence_version,
             flowgo_version=flowgo_version,
+            flowemulator_version=flowemulator_version
         )
 
         if not run_succeeded:
