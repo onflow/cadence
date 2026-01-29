@@ -526,13 +526,6 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string,
 		return compositeMember(context, v, builtin)
 	}
 
-	// Give computed fields precedence over stored fields for built-in types
-	if v.Location == nil {
-		if computedField := v.GetComputedField(context, name); computedField != nil {
-			return computedField
-		}
-	}
-
 	context = context.GetMemberAccessContextForLocation(v.Location)
 
 	return GetMember(
@@ -544,14 +537,23 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string,
 
 			switch memberKind {
 			case common.DeclarationKindField:
+				// Give computed fields precedence over stored fields for built-in types.
+				if v.Location == nil {
+					if computedField := v.GetComputedField(context, name); computedField != nil {
+						return computedField
+					}
+				}
+
 				if field := v.GetField(context, name); field != nil {
 					return compositeMember(context, v, field)
 				}
 
-				// Dynamically link in the computed fields, injected fields, and functions
-
-				if computedField := v.GetComputedField(context, name); computedField != nil {
-					return computedField
+				// Dynamically link in the computed fields and injected fields.
+				// Computed fields were already checked above, for builtin-types.
+				if v.Location != nil {
+					if computedField := v.GetComputedField(context, name); computedField != nil {
+						return computedField
+					}
 				}
 
 				if injectedField := v.GetInjectedField(context, name); injectedField != nil {

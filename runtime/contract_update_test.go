@@ -21,13 +21,11 @@ package runtime_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -831,10 +829,10 @@ func TestRuntimeContractUpdateReplaceFieldWithFunction(t *testing.T) {
 
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 
-	const contractName = "UpdateableContract"
+	const contractName = "UpdatableContract"
 
 	const contractV1 = `
-        access(all) contract UpdateableContract {
+        access(all) contract UpdatableContract {
 
             access(all) resource TargetResource {
                 access(all) var balance: Int
@@ -856,7 +854,7 @@ func TestRuntimeContractUpdateReplaceFieldWithFunction(t *testing.T) {
     `
 
 	const contractV2 = `
-        access(all) contract UpdateableContract {
+        access(all) contract UpdatableContract {
 
             access(all) enum ambiguousName: UInt8 {
                 access(all) case foobar
@@ -936,17 +934,17 @@ func TestRuntimeContractUpdateReplaceFieldWithFunction(t *testing.T) {
 	// Run script
 
 	const script = `
-        import UpdateableContract from 0x1
+        import UpdatableContract from 0x1
 
-        access(all) fun main() {
-            // As far as sema is concerned, UpdateableContract.ambiguousName is an enum contructor (a function)
-            // In reality, it is a TargetResource
-            var rRef = ((&UpdateableContract.ambiguousName as &AnyStruct) as AnyStruct) as! &UpdateableContract.TargetResource
-            rRef.withdraw()
+        access(all) fun main(): UpdatableContract.ambiguousName {
+            // Should return the newly added enum constructor function,
+            // not the old value of the removed field.
+            var ambiguousNameMember = UpdatableContract.ambiguousName
+            return ambiguousNameMember(0)!
         }
     `
 
-	_, err = runtime.ExecuteScript(
+	result, err := runtime.ExecuteScript(
 		Script{
 			Source: []byte(script),
 		},
@@ -956,13 +954,28 @@ func TestRuntimeContractUpdateReplaceFieldWithFunction(t *testing.T) {
 			UseVM:     *compile,
 		},
 	)
-	RequireError(t, err)
+	require.NoError(t, err)
 
-	var valueTransferTypeError *interpreter.ValueTransferTypeError
-	require.ErrorAs(t, err, &valueTransferTypeError)
-
-	assert.ErrorContains(t,
-		err,
-		"invalid transfer of value: expected `&AnyStruct`, got `&UpdateableContract.TargetResource`",
+	require.Equal(
+		t,
+		cadence.NewEnum([]cadence.Value{
+			cadence.NewUInt8(0),
+		}).WithType(cadence.NewEnumType(
+			common.NewAddressLocation(
+				nil,
+				signerAccount,
+				"UpdatableContract",
+			),
+			"UpdatableContract.ambiguousName",
+			cadence.UInt8Type,
+			[]cadence.Field{
+				{
+					Identifier: "rawValue",
+					Type:       cadence.UInt8Type,
+				},
+			},
+			nil,
+		)),
+		result,
 	)
 }
