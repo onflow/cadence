@@ -134,7 +134,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 						interpreter.NewStaticHostFunctionValue(
 							inter,
 							&sema.FunctionType{
-								ReturnTypeAnnotation: sema.UIntTypeAnnotation,
+								ReturnTypeAnnotation: sema.UInt64TypeAnnotation,
 							},
 							func(invocation interpreter.Invocation) interpreter.Value {
 								return interpreter.NewUnmeteredUInt64Value(42)
@@ -423,7 +423,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 
 	rConstructor := subInterpreter.Globals.Get("R").GetValue(inter)
 
-	_, err = inter.Invoke("test", rConstructor)
+	_, err = inter.InvokeUncheckedForTestingOnly("test", rConstructor)
 	RequireError(t, err)
 
 	var resourceConstructionError *interpreter.ResourceConstructionError

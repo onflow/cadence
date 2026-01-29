@@ -88,6 +88,7 @@ func LinkGlobals(
 					return context.InvokeFunction(
 						valueGetter,
 						nil,
+						valueGetter.Type.ReturnTypeAnnotation.Type,
 					)
 				})
 			}
@@ -221,7 +222,7 @@ func linkImportedGlobal(
 func functionValueFromBBQFunction(
 	executable *ExecutableProgram,
 	function *bbq.Function[opcode.Instruction],
-) FunctionValue {
+) *CompiledFunctionValue {
 	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
 	return &CompiledFunctionValue{

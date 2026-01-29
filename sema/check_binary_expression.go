@@ -438,6 +438,12 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 			ResourceInvalidationKindMoveDefinite,
 		)
 
+		// Record as a resource move (when applicable),
+		// because in destructors, nested resource moves are allowed.
+		if leftType.IsResourceType() {
+			checker.elaborateNestedResourceMoveExpression(expression.Left)
+		}
+
 		if !leftIsOptional {
 
 			checker.report(

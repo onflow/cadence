@@ -173,8 +173,27 @@ func (v *EphemeralReferenceValue) SetKey(context ContainerMutationContext, key V
 }
 
 func (v *EphemeralReferenceValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
+	v.InsertKeyWithMutationCheck(
+		context,
+		key,
+		value,
+		true,
+	)
+}
+
+func (v *EphemeralReferenceValue) InsertKeyWithMutationCheck(
+	context ContainerMutationContext,
+	key Value,
+	value Value,
+	checkMutation bool,
+) {
 	v.Value.(ValueIndexableValue).
-		InsertKey(context, key, value)
+		InsertKeyWithMutationCheck(
+			context,
+			key,
+			value,
+			checkMutation,
+		)
 }
 
 func (v *EphemeralReferenceValue) RemoveKey(context ContainerMutationContext, key Value) Value {

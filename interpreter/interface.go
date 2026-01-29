@@ -65,6 +65,11 @@ type StorageWriter interface {
 		key StorageMapKey,
 		value Value,
 	) (existed bool)
+	RemoveStored(
+		storageAddress common.Address,
+		domain common.StorageDomain,
+		identifier StorageMapKey,
+	) atree.Storable
 }
 
 var _ StorageWriter = &Interpreter{}
@@ -456,6 +461,7 @@ type InvocationContext interface {
 	InvokeFunction(
 		fn FunctionValue,
 		arguments []Value,
+		returnType sema.Type,
 	) Value
 }
 
@@ -564,6 +570,10 @@ func (NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ 
 }
 
 func (NoOpStringContext) WriteStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey, _ Value) (existed bool) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpStringContext) RemoveStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) atree.Storable {
 	panic(errors.NewUnreachableError())
 }
 

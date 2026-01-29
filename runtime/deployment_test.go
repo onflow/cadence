@@ -88,7 +88,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		require.Equal(t, expectedCodeHash[:], actualCodeHash)
 	}
 
-	expectFailure := func(expectedErrorMessage string, programsCount int) expectation {
+	expectFailure := func(expectedErrorMessage string, codesCount, programsCount int) expectation {
 		return func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
 			RequireError(t, err)
 
@@ -97,7 +97,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 			assert.ErrorContains(t, runtimeErr, expectedErrorMessage)
 
-			assert.Len(t, runtimeErr.Codes, 2)
+			assert.Len(t, runtimeErr.Codes, codesCount)
 			assert.Len(t, runtimeErr.Programs, programsCount)
 
 			assert.Nil(t, accountCode)
@@ -105,8 +105,16 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		}
 	}
 
+	type checkFunc = func(
+		t *testing.T,
+		err error,
+		accountCode []byte,
+		events []cadence.Event,
+		expectedEventType cadence.Type,
+	)
+
 	type testCase struct {
-		check         func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type)
+		check         checkFunc
 		contract      string
 		arguments     []string
 		declaredValue stdlib.StandardLibraryValue
@@ -234,6 +242,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				expectedErrorMessage,
 				2,
+				2,
 			),
 		})
 	})
@@ -256,6 +265,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				2,
 			),
 		})
@@ -295,6 +305,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				expectedErrorMessage,
 				2,
+				2,
 			),
 		})
 	})
@@ -321,6 +332,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			arguments: []string{},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				1,
 			),
 		})
@@ -350,6 +362,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			check: expectFailure(
 				expectedErrorMessage,
 				2,
+				2,
 			),
 		})
 	})
@@ -369,6 +382,21 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	})
 
 	t.Run("Type confusion", func(t *testing.T) {
+
+		var check checkFunc
+		if *compile {
+			check = expectFailure("invalid argument at index 0: expected type `Bool`, got `Int`",
+				2,
+				2,
+			)
+		} else {
+			check = expectFailure(
+				"invalid transfer of value: expected `Int`, got `Bool`",
+				1,
+				1,
+			)
+		}
+
 		const declaredValueName = `injectedValue`
 		test(t, testCase{
 			contract: `
@@ -385,10 +413,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				Kind:  common.DeclarationKindValue,
 				Value: interpreter.TrueValue,
 			},
-			check: expectFailure(
-				"Execution failed:\nerror: invalid argument at index 0: expected type `Bool`, got `Int`",
-				2,
-			),
+			check: check,
 		})
 	})
 }

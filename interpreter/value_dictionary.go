@@ -677,16 +677,32 @@ func (v *DictionaryValue) GetKey(context ContainerReadContext, keyValue Value) V
 }
 
 func (v *DictionaryValue) SetKey(context ContainerMutationContext, keyValue Value, value Value) {
+	v.SetKeyWithMutationCheck(
+		context,
+		keyValue,
+		value,
+		true,
+	)
+}
+
+func (v *DictionaryValue) SetKeyWithMutationCheck(
+	context ContainerMutationContext,
+	keyValue Value,
+	value Value,
+	checkMutation bool,
+) {
 	context.ValidateContainerMutation(v.ValueID())
 
-	checkContainerMutation(context, v.Type.KeyType, keyValue)
-	checkContainerMutation(
-		context,
-		&OptionalStaticType{ // intentionally unmetered
-			Type: v.Type.ValueType,
-		},
-		value,
-	)
+	if checkMutation {
+		checkContainerMutation(context, v.Type.KeyType, keyValue)
+		checkContainerMutation(
+			context,
+			&OptionalStaticType{ // intentionally unmetered
+				Type: v.Type.ValueType,
+			},
+			value,
+		)
+	}
 
 	var existingValue Value
 	switch value := value.(type) {
@@ -697,7 +713,7 @@ func (v *DictionaryValue) SetKey(context ContainerMutationContext, keyValue Valu
 	case NilValue:
 		existingValue = v.Remove(context, keyValue)
 
-	case PlaceholderValue:
+	case *PlaceholderValue:
 		// NO-OP
 
 	default:
@@ -1003,7 +1019,26 @@ func (v *DictionaryValue) Remove(
 }
 
 func (v *DictionaryValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
-	v.SetKey(context, key, value)
+	v.InsertKeyWithMutationCheck(
+		context,
+		key,
+		value,
+		true,
+	)
+}
+
+func (v *DictionaryValue) InsertKeyWithMutationCheck(
+	context ContainerMutationContext,
+	key Value,
+	value Value,
+	checkMutation bool,
+) {
+	v.SetKeyWithMutationCheck(
+		context,
+		key,
+		value,
+		checkMutation,
+	)
 }
 
 func (v *DictionaryValue) InsertWithoutTransfer(

@@ -88,7 +88,7 @@ const (
 	PrimitiveStaticTypeAnyStructAttachment
 	PrimitiveStaticTypeHashableStruct
 	PrimitiveStaticTypeStorable
-	_
+	PrimitiveStaticTypeInvalid
 	_
 
 	// Number
@@ -280,7 +280,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeAnyStructAttachment,
 		PrimitiveStaticTypeAnyResourceAttachment,
 		PrimitiveStaticTypeHashableStruct,
-		PrimitiveStaticTypeStorable:
+		PrimitiveStaticTypeStorable,
+		PrimitiveStaticTypeInvalid:
 		return UnknownElementSize
 
 	case PrimitiveStaticTypeVoid:
@@ -476,6 +477,9 @@ func (t PrimitiveStaticType) ID() TypeID {
 
 func (t PrimitiveStaticType) SemaType() sema.Type {
 	switch t {
+	case PrimitiveStaticTypeInvalid:
+		return sema.InvalidType
+
 	case PrimitiveStaticTypeVoid:
 		return sema.VoidType
 
@@ -768,6 +772,9 @@ func ConvertSemaToPrimitiveStaticType(
 	t sema.Type,
 ) (typ PrimitiveStaticType) {
 	switch t {
+
+	case sema.InvalidType:
+		typ = PrimitiveStaticTypeInvalid
 
 	case sema.StringType:
 		typ = PrimitiveStaticTypeString

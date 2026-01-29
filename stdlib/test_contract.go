@@ -882,7 +882,7 @@ func newTestTypeExpectFailureFunction(
 			context,
 			testContractValue,
 			testExpectFailureFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(invocation interpreter.Invocation) (result interpreter.Value) {
 				invocationContext := invocation.InvocationContext
 				functionValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
 				if !ok {
@@ -894,6 +894,8 @@ func newTestTypeExpectFailureFunction(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
+
+				result = interpreter.Void
 
 				failedAsExpected := true
 
@@ -919,7 +921,7 @@ func newTestTypeExpectFailureFunction(
 					panic(errors.NewDefaultUserError("Expected a failure, but found none."))
 				}
 
-				return interpreter.Void
+				return
 			},
 		)
 	}

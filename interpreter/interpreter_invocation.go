@@ -145,12 +145,13 @@ func invokeFunctionValueWithEval[T any](
 		transferredArguments,
 		argumentTypes,
 		typeArguments,
+		returnType,
 		context.LocationRange(),
 	)
 
 	resultValue := function.Invoke(invocation)
 
-	functionReturnType := function.FunctionType(context).ReturnTypeAnnotation.Type
+	functionReturnType := function.FunctionType(context).ReturnTypeAnnotation.Type.Resolve(typeArguments)
 
 	// Only convert and box.
 	// No need to transfer, since transfer would happen later, when the return value gets assigned.
@@ -171,7 +172,7 @@ func invokeFunctionValueWithEval[T any](
 	//
 	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
 
-	return ConvertAndBox(
+	return ConvertAndBoxWithValidation(
 		context,
 		resultValue,
 		functionReturnType,

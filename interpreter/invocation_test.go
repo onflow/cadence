@@ -80,13 +80,8 @@ func TestInterpretReturnType(t *testing.T) {
 	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	if *compile {
-		var unexpectedErr errors.UnexpectedError
-		require.ErrorAs(t, err, &unexpectedErr)
-	} else {
-		var transferTypeError *interpreter.ValueTransferTypeError
-		require.ErrorAs(t, err, &transferTypeError)
-	}
+	var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
 }
 
 func TestInterpretSelfDeclaration(t *testing.T) {
@@ -219,6 +214,7 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		[]interpreter.Value{value},
 		[]sema.Type{sema.IntType},
 		nil,
+		sema.IntType,
 		interpreter.LocationRange{},
 	)
 
@@ -236,4 +232,142 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		var memberAccessTypeError *interpreter.MemberAccessTypeError
 		require.ErrorAs(t, err, &memberAccessTypeError)
 	}
+}
+
+func TestInterpretInvocationReturnTypeValidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("native function", func(t *testing.T) {
+
+		fooFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"foo",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityImpure,
+				nil,
+				sema.TypeAnnotation{
+					Type: sema.IntType,
+				},
+			),
+			"",
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
+				_ interpreter.Value,
+				_ []interpreter.Value,
+			) interpreter.Value {
+				return interpreter.NewUnmeteredStringValue("hello")
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(fooFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, fooFunction)
+
+		inter, err := parseCheckAndPrepareWithOptions(
+			t,
+			`
+            fun test() {
+                foo()
+            }
+        `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					Storage: NewUnmeteredInMemoryStorage(),
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
+
+	t.Run("user function", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(
+			t,
+			`
+            struct interface I {
+                fun foo(): String
+            }
+
+            struct S: I {
+                fun foo(): Int {
+                    return 2
+                }
+            }
+
+            fun test() {
+                let s: {I} = S()
+                s.foo()
+            }
+        `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.ConformanceError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
+}
+
+func TestInterpretInvocationOnTypeConfusedValue(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+        struct X {
+            fun foo(): Int { return 3 }
+        }
+
+        struct Y {
+            fun foo(): Int { return 4 }
+        }
+
+        fun test(x: X): Int {
+            return x.foo()
+        }
+    `)
+
+	yValue := interpreter.NewCompositeValue(
+		inter,
+		TestLocation,
+		"Y",
+		common.CompositeKindStructure,
+		nil,
+		common.ZeroAddress,
+	)
+
+	// Intentionally passing wrong type of value
+	_, err := inter.InvokeUncheckedForTestingOnly("test", yValue) //nolint:staticcheck
+	RequireError(t, err)
+
+	var memberAccessTypeError *interpreter.MemberAccessTypeError
+	require.ErrorAs(t, err, &memberAccessTypeError)
 }
