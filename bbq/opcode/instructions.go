@@ -3,8 +3,6 @@
 package opcode
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/bbq/constant"
@@ -12,32 +10,6 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
-
-func resolveTypeIndices(indices []uint16, types []interpreter.StaticType) []interpreter.StaticType {
-	result := make([]interpreter.StaticType, len(indices))
-	for i, index := range indices {
-		result[i] = types[index]
-	}
-	return result
-}
-
-func printfPrettyTypeArrayArgument(sb *strings.Builder, argumentName string, types []interpreter.StaticType, colorize bool) {
-	if colorize {
-		argumentName = colorizeArgumentName(argumentName)
-	}
-	fmt.Fprintf(sb, "%s:[", argumentName)
-	for i, typ := range types {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		formattedType := strconv.Quote(typ.String())
-		if colorize {
-			formattedType = colorizeArgumentValue(formattedType)
-		}
-		sb.WriteString(formattedType)
-	}
-	sb.WriteByte(']')
-}
 
 // InstructionUnknown
 //
