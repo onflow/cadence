@@ -61,6 +61,17 @@ func assertTypesEqual(t *testing.T, expectedTypes, actualTypes []interpreter.Sta
 	}
 }
 
+func prettyInstructions(
+	instructions []opcode.Instruction,
+	program *bbq.InstructionProgram,
+) []opcode.PrettyInstruction {
+	pretty := make([]opcode.PrettyInstruction, len(instructions))
+	for i, instr := range instructions {
+		pretty[i] = instr.Pretty(program)
+	}
+	return pretty
+}
+
 func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
@@ -84,49 +95,75 @@ func TestCompileRecursionFib(t *testing.T) {
 	functions := program.Functions
 	require.Len(t, functions, 1)
 
-	const (
-		// functionTypeIndex is the index of the function type, which is the first type
-		functionTypeIndex = iota //nolint:unused
-		// intTypeIndex is the index of the Int type, which is the second type
-		intTypeIndex
-	)
-
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// if n < 2
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionLess{},
-			opcode.InstructionJumpIfFalse{Target: 9},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: 0},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionLess{},
+			opcode.PrettyInstructionJumpIfFalse{Target: 9},
 			// then return n
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionTransferAndConvert{ValueType: intTypeIndex, TargetType: intTypeIndex},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: 0},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
 
 			// return ...
-			opcode.InstructionStatement{},
+			opcode.PrettyInstructionStatement{},
 			// fib(n - 1)
-			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionGetConstant{Constant: 1},
-			opcode.InstructionSubtract{},
-			opcode.InstructionTransferAndConvert{ValueType: intTypeIndex, TargetType: intTypeIndex},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 1},
+			opcode.PrettyInstructionGetGlobal{Global: 0},
+			opcode.PrettyInstructionGetLocal{Local: 0},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionSubtract{},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionInvoke{
+				ArgCount:   1,
+				ReturnType: interpreter.PrimitiveStaticTypeInt,
+			},
 			// fib(n - 2)
-			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionSubtract{},
-			opcode.InstructionTransferAndConvert{ValueType: intTypeIndex, TargetType: intTypeIndex},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 1},
-			opcode.InstructionAdd{},
+			opcode.PrettyInstructionGetGlobal{Global: 0},
+			opcode.PrettyInstructionGetLocal{Local: 0},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionSubtract{},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionInvoke{
+				ArgCount:   1,
+				ReturnType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionAdd{},
 			// return
-			opcode.InstructionTransferAndConvert{ValueType: intTypeIndex, TargetType: intTypeIndex},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		functions[0].Code,
+		prettyInstructions(functions[0].Code, program),
 	)
 
 	assert.Equal(t,
