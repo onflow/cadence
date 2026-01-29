@@ -1245,6 +1245,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 							checker.memoryGauge,
 							t.Identifier,
 							resolvedIdentifiers,
+							ast.EmptyComments,
 						),
 					},
 				)
@@ -1260,6 +1261,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 				checker.memoryGauge,
 				t.Identifier,
 				resolvedIdentifiers,
+				ast.EmptyComments,
 			)
 			checker.report(
 				&NotDeclaredError{

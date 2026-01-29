@@ -38,17 +38,24 @@ type Statement interface {
 
 type ReturnStatement struct {
 	Expression Expression
+	Comments   Comments
 	Range
 }
 
 var _ Element = &ReturnStatement{}
 var _ Statement = &ReturnStatement{}
 
-func NewReturnStatement(gauge common.MemoryGauge, expression Expression, stmtRange Range) *ReturnStatement {
+func NewReturnStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	stmtRange Range,
+	comments Comments,
+) *ReturnStatement {
 	common.UseMemory(gauge, common.ReturnStatementMemoryUsage)
 	return &ReturnStatement{
 		Expression: expression,
 		Range:      stmtRange,
+		Comments:   comments,
 	}
 }
 
@@ -96,16 +103,18 @@ func (s *ReturnStatement) MarshalJSON() ([]byte, error) {
 // BreakStatement
 
 type BreakStatement struct {
+	Comments Comments
 	Range
 }
 
 var _ Element = &BreakStatement{}
 var _ Statement = &BreakStatement{}
 
-func NewBreakStatement(gauge common.MemoryGauge, tokenRange Range) *BreakStatement {
+func NewBreakStatement(gauge common.MemoryGauge, tokenRange Range, comments Comments) *BreakStatement {
 	common.UseMemory(gauge, common.BreakStatementMemoryUsage)
 	return &BreakStatement{
-		Range: tokenRange,
+		Range:    tokenRange,
+		Comments: comments,
 	}
 }
 
@@ -143,16 +152,18 @@ func (s *BreakStatement) MarshalJSON() ([]byte, error) {
 // ContinueStatement
 
 type ContinueStatement struct {
+	Comments Comments
 	Range
 }
 
 var _ Element = &ContinueStatement{}
 var _ Statement = &ContinueStatement{}
 
-func NewContinueStatement(gauge common.MemoryGauge, tokenRange Range) *ContinueStatement {
+func NewContinueStatement(gauge common.MemoryGauge, tokenRange Range, comments Comments) *ContinueStatement {
 	common.UseMemory(gauge, common.ContinueStatementMemoryUsage)
 	return &ContinueStatement{
-		Range: tokenRange,
+		Range:    tokenRange,
+		Comments: comments,
 	}
 }
 
@@ -202,6 +213,8 @@ type IfStatement struct {
 	Then     *Block
 	Else     *Block
 	StartPos Position `json:"-"`
+	// Comments.Leading comments that appear before `if` keyword
+	Comments Comments `json:"-"`
 }
 
 var _ Element = &IfStatement{}
@@ -213,6 +226,7 @@ func NewIfStatement(
 	thenBlock *Block,
 	elseBlock *Block,
 	startPos Position,
+	comments Comments,
 ) *IfStatement {
 	common.UseMemory(gauge, common.IfStatementMemoryUsage)
 	return &IfStatement{
@@ -220,6 +234,7 @@ func NewIfStatement(
 		Then:     thenBlock,
 		Else:     elseBlock,
 		StartPos: startPos,
+		Comments: comments,
 	}
 }
 
@@ -308,6 +323,7 @@ type WhileStatement struct {
 	Test     Expression
 	Block    *Block
 	StartPos Position `json:"-"`
+	Comments Comments
 }
 
 var _ Element = &WhileStatement{}
@@ -318,12 +334,14 @@ func NewWhileStatement(
 	expression Expression,
 	block *Block,
 	startPos Position,
+	comments Comments,
 ) *WhileStatement {
 	common.UseMemory(gauge, common.WhileStatementMemoryUsage)
 	return &WhileStatement{
 		Test:     expression,
 		Block:    block,
 		StartPos: startPos,
+		Comments: comments,
 	}
 }
 
@@ -384,6 +402,7 @@ type ForStatement struct {
 	Block      *Block
 	Identifier Identifier
 	StartPos   Position `json:"-"`
+	Comments   Comments
 }
 
 var _ Element = &ForStatement{}
@@ -396,6 +415,7 @@ func NewForStatement(
 	block *Block,
 	expression Expression,
 	startPos Position,
+	comments Comments,
 ) *ForStatement {
 	common.UseMemory(gauge, common.ForStatementMemoryUsage)
 
@@ -405,6 +425,7 @@ func NewForStatement(
 		Block:      block,
 		Value:      expression,
 		StartPos:   startPos,
+		Comments:   comments,
 	}
 }
 
@@ -479,6 +500,7 @@ func (s *ForStatement) MarshalJSON() ([]byte, error) {
 type EmitStatement struct {
 	InvocationExpression *InvocationExpression
 	StartPos             Position `json:"-"`
+	Comments             Comments
 }
 
 var _ Element = &EmitStatement{}
@@ -488,11 +510,13 @@ func NewEmitStatement(
 	gauge common.MemoryGauge,
 	invocation *InvocationExpression,
 	startPos Position,
+	comments Comments,
 ) *EmitStatement {
 	common.UseMemory(gauge, common.EmitStatementMemoryUsage)
 	return &EmitStatement{
 		InvocationExpression: invocation,
 		StartPos:             startPos,
+		Comments:             comments,
 	}
 }
 
@@ -744,6 +768,7 @@ func (s *ExpressionStatement) String() string {
 type SwitchStatement struct {
 	Expression Expression
 	Cases      []*SwitchCase
+	Comments   Comments
 	Range
 }
 
@@ -755,12 +780,14 @@ func NewSwitchStatement(
 	expression Expression,
 	cases []*SwitchCase,
 	stmtRange Range,
+	comments Comments,
 ) *SwitchStatement {
 	common.UseMemory(gauge, common.SwitchStatementMemoryUsage)
 	return &SwitchStatement{
 		Expression: expression,
 		Cases:      cases,
 		Range:      stmtRange,
+		Comments:   comments,
 	}
 }
 
@@ -840,6 +867,7 @@ func (s *SwitchStatement) MarshalJSON() ([]byte, error) {
 type SwitchCase struct {
 	Expression Expression
 	Statements []Statement
+	Comments   Comments
 	Range
 }
 
@@ -848,12 +876,14 @@ func NewSwitchCase(
 	expression Expression,
 	statements []Statement,
 	astRange Range,
+	comments Comments,
 ) *SwitchCase {
 	common.UseMemory(gauge, common.SwitchCaseMemoryUsage)
 	return &SwitchCase{
 		Expression: expression,
 		Statements: statements,
 		Range:      astRange,
+		Comments:   comments,
 	}
 }
 

@@ -56,6 +56,9 @@ const (
 	lexerModeStringInterpolation
 )
 
+// trailingCommentsEndMarker is a sentinel value for determining the end of trailing comments (before the first newline).
+var trailingCommentsEndMarker *ast.Comment = nil
+
 type lexer struct {
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
@@ -85,6 +88,13 @@ type lexer struct {
 	mode lexerMode
 	// counts the number of unclosed brackets for string templates \((()))
 	openBrackets int
+	// indicates if tracking comments is enabled
+	trackComments bool
+	// currentComments stores the leading and/or trailing comments,
+	// waiting to be consumed and attached to respective tokens
+	// nil is used as sentinel value to track newlines
+	// Note: currentComments is only initialized when trackComments=true
+	currentComments []*ast.Comment
 }
 
 var _ TokenStream = &lexer{}
@@ -103,6 +113,13 @@ func (l *lexer) Next() Token {
 			endPos.column,
 		)
 
+		var comments ast.Comments
+		if len(l.currentComments) > 0 {
+			comments = ast.Comments{
+				Leading: l.currentComments,
+			}
+		}
+
 		return Token{
 			Type: TokenEOF,
 			Range: ast.NewRange(
@@ -110,6 +127,7 @@ func (l *lexer) Next() Token {
 				pos,
 				pos,
 			),
+			Comments: comments,
 		}
 
 	}
@@ -143,6 +161,8 @@ func (l *lexer) clear() {
 	l.tokenCount = 0
 	l.mode = lexerModeNormal
 	l.openBrackets = 0
+	l.currentComments = l.currentComments[:0]
+	l.trackComments = false
 }
 
 func (l *lexer) Reclaim() {
@@ -162,6 +182,17 @@ func Lex(input []byte, memoryGauge common.MemoryGauge) (TokenStream, error) {
 	l.clear()
 	l.memoryGauge = memoryGauge
 	l.input = input
+	err := l.run(rootState)
+	return l, err
+}
+
+// LexWithComments is equivalent to Lex, but it enables comments tracking.
+func LexWithComments(input []byte, memoryGauge common.MemoryGauge) (TokenStream, error) {
+	l := pool.Get().(*lexer)
+	l.clear()
+	l.memoryGauge = memoryGauge
+	l.input = input
+	l.trackComments = true
 	err := l.run(rootState)
 	return l, err
 }
@@ -196,6 +227,8 @@ func (l *lexer) run(state stateFn) (err error) {
 	for state != nil {
 		state = state(l)
 	}
+
+	l.setPrevTokenTrailingComments()
 
 	return
 }
@@ -277,23 +310,131 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 				endPos.column,
 			),
 		),
+		Comments: l.tokenComments(ty),
 	}
 
 	l.tokens = append(l.tokens, token)
 	l.tokenCount = len(l.tokens)
 
 	if consume {
-		l.startOffset = l.endOffset
+		l.consume(endPos)
+	}
+}
 
-		l.startPos = endPos
-		r, _ := utf8.DecodeRune(l.input[l.endOffset-1:])
+// tokenComments creates initial ast.Comments with leading comments, but empty trailing comments.
+// Trailing comments for the current token are determined when the next non-space token is consumed (in setPrevTokenTrailingComments).
+func (l *lexer) tokenComments(ty TokenType) ast.Comments {
+	// Do not attach comments to space tokens, since those are usually ignored during parsing,
+	// so mapping token comments to AST nodes would require extra effort.
+	if ty == TokenSpace || !l.trackComments {
+		return ast.EmptyComments
+	}
 
-		if r == '\n' {
-			l.startPos.line++
-			l.startPos.column = 0
-		} else {
-			l.startPos.column++
+	l.setPrevTokenTrailingComments()
+
+	leadingComments := l.currentComments
+	defer (func() {
+		// Mark as fully consumed (clear by reallocating).
+		l.currentComments = []*ast.Comment{}
+	})()
+
+	return ast.Comments{
+		Leading: leadingComments,
+		// Trailing comments can't be determined yet, since we haven't consumed them.
+		Trailing: nil,
+	}
+}
+
+// setPrevTokenTrailingComments sets the trailing comments of the latest non-space token,
+// since they were not known yet at the time of calling tokenComments.
+func (l *lexer) setPrevTokenTrailingComments() {
+	if l.tokenCount == 0 || !l.trackComments {
+		return
+	}
+
+	latestNonSpaceTokenIndex := -1
+	for i := l.tokenCount - 1; i >= 0; i-- {
+		if l.tokens[i].Type != TokenSpace {
+			latestNonSpaceTokenIndex = i
+			break
 		}
+	}
+
+	// Split the current comments into two sets:
+	// - trailing comments of the previous token
+	// - leading comments of the next token
+	var trailing, leading []*ast.Comment
+	// If all previously seen tokens are spaces,
+	// treat all comments as the leading set for the current token,
+	// since comments shouldn't be attached to space tokens.
+	isLeadingSet := latestNonSpaceTokenIndex == -1
+	for _, comment := range l.currentComments {
+		if comment == trailingCommentsEndMarker {
+			isLeadingSet = true
+			continue
+		}
+		if isLeadingSet {
+			leading = append(leading, comment)
+		} else {
+			trailing = append(trailing, comment)
+		}
+	}
+
+	l.currentComments = leading
+
+	// If there is a trailing set, attach it to the latest non-space token (if any),
+	// since comments shouldn't be attached to space tokens.
+	if latestNonSpaceTokenIndex != -1 && len(trailing) > 0 {
+		lastNonSpaceToken := &l.tokens[latestNonSpaceTokenIndex]
+		if lastNonSpaceToken.Comments.Trailing == nil {
+			lastNonSpaceToken.Comments.Trailing = []*ast.Comment{}
+		}
+
+		lastNonSpaceToken.Comments.Trailing = append(lastNonSpaceToken.Comments.Trailing, trailing...)
+	}
+}
+
+func (l *lexer) markTrailingCommentsEnd() {
+	l.currentComments = append(l.currentComments, trailingCommentsEndMarker)
+}
+
+func (l *lexer) emitComment() {
+	endPos := l.endPos()
+
+	if l.trackComments {
+		if l.currentComments == nil {
+			l.currentComments = []*ast.Comment{}
+		}
+
+		commentRange := ast.NewRange(
+			l.memoryGauge,
+			l.startPosition(),
+			ast.NewPosition(
+				l.memoryGauge,
+				l.endOffset-1,
+				endPos.line,
+				endPos.column,
+			),
+		)
+
+		l.currentComments = append(l.currentComments, ast.NewComment(l.memoryGauge, commentRange.Source(l.input)))
+	}
+
+	l.consume(endPos)
+}
+
+// endPos pre-computed end-position by calling l.endPos()
+func (l *lexer) consume(endPos position) {
+	l.startOffset = l.endOffset
+
+	l.startPos = endPos
+	r, _ := utf8.DecodeRune(l.input[l.endOffset-1:])
+
+	if r == '\n' {
+		l.startPos.line++
+		l.startPos.column = 0
+	} else {
+		l.startPos.column++
 	}
 }
 
@@ -382,16 +523,6 @@ func IsIdentifierRune(r rune) bool {
 		r >= 'A' && r <= 'Z' ||
 		r >= '0' && r <= '9' ||
 		r == '_'
-}
-
-func IsValidIdentifier(s string) bool {
-	for _, r := range s {
-		if !IsIdentifierRune(r) {
-			return false
-		}
-	}
-
-	return true
 }
 
 func (l *lexer) scanLineComment() {
@@ -498,4 +629,16 @@ func (l *lexer) scanFixedPointRemainder() {
 
 func isDecimalDigitOrUnderscore(r rune) bool {
 	return (r >= '0' && r <= '9') || r == '_'
+}
+
+func IsValidIdentifier(s string) bool {
+	// Note: func is used by downstream dependants, do not remove.
+
+	for _, r := range s {
+		if !IsIdentifierRune(r) {
+			return false
+		}
+	}
+
+	return true
 }

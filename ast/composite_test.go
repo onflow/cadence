@@ -51,7 +51,11 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 			},
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 		},
-		DocString: "test",
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 		Range: Range{
 			StartPos: Position{Offset: 10, Line: 11, Column: 12},
 			EndPos:   Position{Offset: 13, Line: 14, Column: 15},
@@ -66,6 +70,9 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "FieldDeclaration",
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll",
             "IsStatic": true,
             "IsNative": true,
@@ -79,6 +86,7 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
                 "IsResource": true,
                 "AnnotatedType": {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "CD",
                         "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -445,8 +453,12 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 				},
 			},
 		},
-		Members:   NewUnmeteredMembers([]Declaration{}),
-		DocString: "test",
+		Members: NewUnmeteredMembers([]Declaration{}),
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -461,6 +473,9 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "CompositeDeclaration",
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "Access": "AccessAll", 
             "CompositeKind": "CompositeKindResource",
             "Identifier": {
@@ -471,6 +486,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
             "Conformances": [
                 {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "CD",
                         "StartPos": {"Offset": 4, "Line": 5, "Column": 6},

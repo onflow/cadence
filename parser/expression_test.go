@@ -31,10 +31,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/parser/lexer"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -3549,6 +3550,12 @@ func TestParseLineComment(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 2, Column: 1, Offset: 28},
 					EndPos:   ast.Position{Line: 2, Column: 1, Offset: 28},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("//// // this is a comment")),
+					},
+					Trailing: nil,
 				},
 			},
 			Right: &ast.IntegerExpression{

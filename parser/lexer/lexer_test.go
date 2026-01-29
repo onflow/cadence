@@ -63,7 +63,7 @@ func testLex(t *testing.T, input string, expected []token) {
 
 	bytes := []byte(input)
 
-	tokenStream, err := Lex(bytes, nil)
+	tokenStream, err := LexWithComments(bytes, nil)
 	require.NoError(t, err)
 
 	withTokens(tokenStream, func(actualTokens []Token) {
@@ -875,6 +875,1019 @@ func TestLexBasic(t *testing.T) {
 				},
 			},
 		)
+	})
+
+	t.Run("trivia", func(t *testing.T) {
+		testLex(t,
+			"// test is in next line \n/* test is here */ test // test is in the same line\n// test is in previous line",
+			[]token{
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: true},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
+							EndPos:   ast.Position{Line: 1, Column: 24, Offset: 24},
+						},
+					},
+					Source: "\n",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 18, Offset: 43},
+							EndPos:   ast.Position{Line: 2, Column: 18, Offset: 43},
+						},
+					},
+					Source: " ",
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 19, Offset: 44},
+							EndPos:   ast.Position{Line: 2, Column: 22, Offset: 47},
+						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("// test is in next line ")),
+								ast.NewComment(nil, []byte("/* test is here */")),
+							},
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// test is in the same line")),
+							},
+						},
+					},
+					Source: "test",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 23, Offset: 48},
+							EndPos:   ast.Position{Line: 2, Column: 23, Offset: 48},
+						},
+					},
+					Source: " ",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: true},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 51, Offset: 76},
+							EndPos:   ast.Position{Line: 2, Column: 51, Offset: 76},
+						},
+					},
+					Source: "\n",
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 27, Offset: 104},
+							EndPos:   ast.Position{Line: 3, Column: 27, Offset: 104},
+						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("// test is in previous line")),
+							},
+						},
+					},
+				},
+			},
+		)
+	})
+}
+
+func TestLexComments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		testLex(t,
+			`/* before brace open */ { /* after brace open */ // after brace open 2
+// before brace close 1
+// before brace close 2
+}`,
+			[]token{
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: false},
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 23,
+								Line:   1,
+								Column: 23,
+							},
+							EndPos: ast.Position{
+								Offset: 23,
+								Line:   1,
+								Column: 23,
+							},
+						},
+					},
+					Source: " ",
+				},
+				{
+					Token: Token{
+						Type: TokenBraceOpen,
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("/* before brace open */")),
+							},
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("/* after brace open */")),
+								ast.NewComment(nil, []byte("// after brace open 2")),
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 24,
+								Line:   1,
+								Column: 24,
+							},
+							EndPos: ast.Position{
+								Offset: 24,
+								Line:   1,
+								Column: 24,
+							},
+						},
+					},
+					Source: "{",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: false},
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 25,
+								Line:   1,
+								Column: 25,
+							},
+							EndPos: ast.Position{
+								Offset: 25,
+								Line:   1,
+								Column: 25,
+							},
+						},
+					},
+					Source: " ",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: false},
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 48,
+								Line:   1,
+								Column: 48,
+							},
+							EndPos: ast.Position{
+								Offset: 48,
+								Line:   1,
+								Column: 48,
+							},
+						},
+					},
+					Source: " ",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: true},
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 70,
+								Line:   1,
+								Column: 70,
+							},
+							EndPos: ast.Position{
+								Offset: 70,
+								Line:   1,
+								Column: 70,
+							},
+						},
+					},
+					Source: "\n",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: true},
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 94,
+								Line:   2,
+								Column: 23,
+							},
+							EndPos: ast.Position{
+								Offset: 94,
+								Line:   2,
+								Column: 23,
+							},
+						},
+					},
+					Source: "\n",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: true},
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 118,
+								Line:   3,
+								Column: 23,
+							},
+							EndPos: ast.Position{
+								Offset: 118,
+								Line:   3,
+								Column: 23,
+							},
+						},
+					},
+					Source: "\n",
+				},
+				{
+					Token: Token{
+						Type: TokenBraceClose,
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("// before brace close 1")),
+								ast.NewComment(nil, []byte("// before brace close 2")),
+							},
+							Trailing: []*ast.Comment{},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 119,
+								Line:   4,
+								Column: 0,
+							},
+							EndPos: ast.Position{
+								Offset: 119,
+								Line:   4,
+								Column: 0,
+							},
+						},
+					},
+					Source: "}",
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 120,
+								Line:   4,
+								Column: 1,
+							},
+							EndPos: ast.Position{
+								Offset: 120,
+								Line:   4,
+								Column: 1,
+							},
+						},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("complex", func(t *testing.T) {
+		testLex(t, `
+// Before transaction identifier
+transaction /* After transaction identifier */ (
+	// Before first arg
+	a: Int, // After first arg 
+	/*
+	Before second arg
+	*/
+	b: Int /* After second arg
+
+	*/ // After second arg 2
+	// Before paren close
+) /* After paren close */ { /* After brace open */ } // After brace close
+
+// Before EOF
+`, []token{
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 0,
+							Line:   1,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 0,
+							Line:   1,
+							Column: 0,
+						},
+					},
+				},
+				Source: "\n",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 33,
+							Line:   2,
+							Column: 32,
+						},
+						EndPos: ast.Position{
+							Offset: 33,
+							Line:   2,
+							Column: 32,
+						},
+					},
+				},
+				Source: "\n",
+			},
+			{
+				Token: Token{
+					Type: TokenIdentifier,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before transaction identifier")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* After transaction identifier */")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 34,
+							Line:   3,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 44,
+							Line:   3,
+							Column: 10,
+						},
+					},
+				},
+				Source: "transaction",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 45,
+							Line:   3,
+							Column: 11,
+						},
+						EndPos: ast.Position{
+							Offset: 45,
+							Line:   3,
+							Column: 11,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 80,
+							Line:   3,
+							Column: 46,
+						},
+						EndPos: ast.Position{
+							Offset: 80,
+							Line:   3,
+							Column: 46,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type: TokenParenOpen,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 81,
+							Line:   3,
+							Column: 47,
+						},
+						EndPos: ast.Position{
+							Offset: 81,
+							Line:   3,
+							Column: 47,
+						},
+					},
+				},
+				Source: "(",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 82,
+							Line:   3,
+							Column: 48,
+						},
+						EndPos: ast.Position{
+							Offset: 83,
+							Line:   4,
+							Column: 0,
+						},
+					},
+				},
+				Source: "\n\t",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 103,
+							Line:   4,
+							Column: 20,
+						},
+						EndPos: ast.Position{
+							Offset: 104,
+							Line:   5,
+							Column: 0,
+						},
+					},
+				},
+				Source: "\n\t",
+			},
+			{
+				Token: Token{
+					Type: TokenIdentifier,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before first arg")),
+						},
+						Trailing: []*ast.Comment{},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 105,
+							Line:   5,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 105,
+							Line:   5,
+							Column: 1,
+						},
+					},
+				},
+				Source: "a",
+			},
+			{
+				Token: Token{
+					Type: TokenColon,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 106,
+							Line:   5,
+							Column: 2,
+						},
+						EndPos: ast.Position{
+							Offset: 106,
+							Line:   5,
+							Column: 2,
+						},
+					},
+				},
+				Source: ":",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 107,
+							Line:   5,
+							Column: 3,
+						},
+						EndPos: ast.Position{
+							Offset: 107,
+							Line:   5,
+							Column: 3,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type: TokenIdentifier,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 108,
+							Line:   5,
+							Column: 4,
+						},
+						EndPos: ast.Position{
+							Offset: 110,
+							Line:   5,
+							Column: 6,
+						},
+					},
+				},
+				Source: "Int",
+			},
+			{
+				Token: Token{
+					Type: TokenComma,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After first arg ")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 111,
+							Line:   5,
+							Column: 7,
+						},
+						EndPos: ast.Position{
+							Offset: 111,
+							Line:   5,
+							Column: 7,
+						},
+					},
+				},
+				Source: ",",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 112,
+							Line:   5,
+							Column: 8,
+						},
+						EndPos: ast.Position{
+							Offset: 112,
+							Line:   5,
+							Column: 8,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 132,
+							Line:   5,
+							Column: 28,
+						},
+						EndPos: ast.Position{
+							Offset: 133,
+							Line:   6,
+							Column: 0,
+						},
+					},
+				},
+				Source: "\n\t",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 159,
+							Line:   8,
+							Column: 3,
+						},
+						EndPos: ast.Position{
+							Offset: 160,
+							Line:   9,
+							Column: 0,
+						},
+					},
+				},
+				Source: "\n\t",
+			},
+			{
+				Token: Token{
+					Type: TokenIdentifier,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("/*\n\tBefore second arg\n\t*/")),
+						},
+						Trailing: []*ast.Comment{},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 161,
+							Line:   9,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 161,
+							Line:   9,
+							Column: 1,
+						},
+					},
+				},
+				Source: "b",
+			},
+			{
+				Token: Token{
+					Type: TokenColon,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 162,
+							Line:   9,
+							Column: 2,
+						},
+						EndPos: ast.Position{
+							Offset: 162,
+							Line:   9,
+							Column: 2,
+						},
+					},
+				},
+				Source: ":",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 163,
+							Line:   9,
+							Column: 3,
+						},
+						EndPos: ast.Position{
+							Offset: 163,
+							Line:   9,
+							Column: 3,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type: TokenIdentifier,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* After second arg\n\n\t*/")),
+							ast.NewComment(nil, []byte("// After second arg 2")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 164,
+							Line:   9,
+							Column: 4,
+						},
+						EndPos: ast.Position{
+							Offset: 166,
+							Line:   9,
+							Column: 6,
+						},
+					},
+				},
+				Source: "Int",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 167,
+							Line:   9,
+							Column: 7,
+						},
+						EndPos: ast.Position{
+							Offset: 167,
+							Line:   9,
+							Column: 7,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 192,
+							Line:   11,
+							Column: 3,
+						},
+						EndPos: ast.Position{
+							Offset: 192,
+							Line:   11,
+							Column: 3,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 214,
+							Line:   11,
+							Column: 25,
+						},
+						EndPos: ast.Position{
+							Offset: 215,
+							Line:   12,
+							Column: 0,
+						},
+					},
+				},
+				Source: "\n\t",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 237,
+							Line:   12,
+							Column: 22,
+						},
+						EndPos: ast.Position{
+							Offset: 237,
+							Line:   12,
+							Column: 22,
+						},
+					},
+				},
+				Source: "\n",
+			},
+			{
+				Token: Token{
+					Type: TokenParenClose,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before paren close")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* After paren close */")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 238,
+							Line:   13,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 238,
+							Line:   13,
+							Column: 0,
+						},
+					},
+				},
+				Source: ")",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 239,
+							Line:   13,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 239,
+							Line:   13,
+							Column: 1,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 263,
+							Line:   13,
+							Column: 25,
+						},
+						EndPos: ast.Position{
+							Offset: 263,
+							Line:   13,
+							Column: 25,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type: TokenBraceOpen,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* After brace open */")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 264,
+							Line:   13,
+							Column: 26,
+						},
+						EndPos: ast.Position{
+							Offset: 264,
+							Line:   13,
+							Column: 26,
+						},
+					},
+				},
+				Source: "{",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 265,
+							Line:   13,
+							Column: 27,
+						},
+						EndPos: ast.Position{
+							Offset: 265,
+							Line:   13,
+							Column: 27,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 288,
+							Line:   13,
+							Column: 50,
+						},
+						EndPos: ast.Position{
+							Offset: 288,
+							Line:   13,
+							Column: 50,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type: TokenBraceClose,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After brace close")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 289,
+							Line:   13,
+							Column: 51,
+						},
+						EndPos: ast.Position{
+							Offset: 289,
+							Line:   13,
+							Column: 51,
+						},
+					},
+				},
+				Source: "}",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 290,
+							Line:   13,
+							Column: 52,
+						},
+						EndPos: ast.Position{
+							Offset: 290,
+							Line:   13,
+							Column: 52,
+						},
+					},
+				},
+				Source: " ",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 311,
+							Line:   13,
+							Column: 73,
+						},
+						EndPos: ast.Position{
+							Offset: 312,
+							Line:   14,
+							Column: 0,
+						},
+					},
+				},
+				Source: "\n\n",
+			},
+			{
+				Token: Token{
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 326,
+							Line:   15,
+							Column: 13,
+						},
+						EndPos: ast.Position{
+							Offset: 326,
+							Line:   15,
+							Column: 13,
+						},
+					},
+				},
+				Source: "\n",
+			},
+			{
+				Token: Token{
+					Type: TokenEOF,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before EOF")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 327,
+							Line:   16,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 327,
+							Line:   16,
+							Column: 0,
+						},
+					},
+				},
+			},
+		})
 	})
 }
 
@@ -1711,53 +2724,15 @@ func TestLexBlockComment(t *testing.T) {
 			[]token{
 				{
 					Token: Token{
-						Type: TokenBlockCommentStart,
+						Type:         TokenError,
+						SpaceOrError: MissingCommentEndError{},
 						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							StartPos: ast.Position{Line: 1, Column: 20, Offset: 20},
+							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
 						},
 					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
-						},
-					},
-					Source: `  // *X `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentStart,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
-						},
-					},
-					Source: ` \\*  `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentEnd,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
-							EndPos:   ast.Position{Line: 1, Column: 19, Offset: 19},
-						},
-					},
-					Source: "*/",
+					// Error occurs at the EOF, which doesn't have a position within the source.
+					Source: "\000",
 				},
 				{
 					Token: Token{
@@ -1777,76 +2752,7 @@ func TestLexBlockComment(t *testing.T) {
 			`/* test foo /* bar */ asd */  `,
 			[]token{
 				{
-					Token: Token{
-						Type: TokenBlockCommentStart,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: ` test foo `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentStart,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
-						},
-					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
-							EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
-						},
-					},
-					Source: ` bar `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentEnd,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
-							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
-						},
-					},
-					Source: "*/",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
-							EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
-						},
-					},
-					Source: ` asd `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentEnd,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 26, Offset: 26},
-							EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
-						},
-					},
-					Source: "*/",
-				},
-				{
+					Source: "  ",
 					Token: Token{
 						Type: TokenSpace,
 						SpaceOrError: Space{
@@ -1857,7 +2763,6 @@ func TestLexBlockComment(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
 						},
 					},
-					Source: "  ",
 				},
 				{
 					Token: Token{
@@ -1865,6 +2770,11 @@ func TestLexBlockComment(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 30, Offset: 30},
 							EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
+						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("/* test foo /* bar */ asd */")),
+							},
 						},
 					},
 				},
@@ -1878,30 +2788,15 @@ func TestLexBlockComment(t *testing.T) {
 			[]token{
 				{
 					Token: Token{
-						Type: TokenBlockCommentStart,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentEnd,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
-						},
-					},
-					Source: "*/",
-				},
-				{
-					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("/**/")),
+							},
 						},
 					},
 				},
@@ -2759,6 +3654,11 @@ func TestLexLineComment(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
+						Comments: ast.Comments{
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// bar ")),
+							},
+						},
 					},
 					Source: "foo",
 				},
@@ -2774,16 +3674,6 @@ func TestLexLineComment(t *testing.T) {
 						},
 					},
 					Source: " ",
-				},
-				{
-					Token: Token{
-						Type: TokenLineComment,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: "// bar ",
 				},
 				{
 					Token: Token{
@@ -2824,6 +3714,11 @@ func TestLexLineComment(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
+						Comments: ast.Comments{
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// bar ")),
+							},
+						},
 					},
 					Source: "foo",
 				},
@@ -2839,16 +3734,6 @@ func TestLexLineComment(t *testing.T) {
 						},
 					},
 					Source: " ",
-				},
-				{
-					Token: Token{
-						Type: TokenLineComment,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: "// bar ",
 				},
 				{
 					Token: Token{

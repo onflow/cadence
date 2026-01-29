@@ -217,7 +217,7 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 		declaration.ReturnTypeAnnotation,
 		modifiedFuncBlock,
 		declaration.StartPos,
-		declaration.DocString,
+		declaration.Comments,
 	)
 
 	d.elaboration.SetFunctionDeclarationFunctionType(modifiedDecl, functionType)
@@ -297,6 +297,7 @@ func (d *Desugar) desugarFunctionBlock(
 			d.memoryGauge,
 			modifiedStatements,
 			ast.NewRangeFromPositioned(d.memoryGauge, hasPosition),
+			ast.EmptyComments,
 		),
 		nil,
 		nil,
@@ -329,7 +330,7 @@ func (d *Desugar) tempResultVariable(
 		pos,
 		nil,
 		nil,
-		"",
+		ast.EmptyComments,
 	)
 
 	d.elaboration.SetVariableDeclarationTypes(
@@ -392,7 +393,7 @@ func (d *Desugar) declareResultVariable(
 		pos,
 		nil,
 		nil,
-		"",
+		ast.EmptyComments,
 	)
 
 	d.elaboration.SetVariableDeclarationTypes(
@@ -416,6 +417,7 @@ func (d *Desugar) tempResultIdentifierExpr(pos ast.Position) *ast.IdentifierExpr
 			tempResultVariableName,
 			pos,
 		),
+		ast.EmptyComments,
 	)
 }
 
@@ -717,6 +719,7 @@ func (d *Desugar) desugarCondition(
 					functionName,
 					startPos,
 				),
+				ast.EmptyComments,
 			),
 			nil,
 			[]*ast.Argument{
@@ -748,9 +751,11 @@ func (d *Desugar) desugarCondition(
 					d.memoryGauge,
 					condition.Test,
 				),
+				ast.EmptyComments,
 			),
 			nil,
 			startPos,
+			ast.EmptyComments,
 		)
 
 		return ifStmt
@@ -798,6 +803,7 @@ func (d *Desugar) desugarCondition(
 					declaredContract.GetIdentifier(),
 					pos,
 				),
+				ast.EmptyComments,
 			),
 			false,
 			pos,
@@ -821,6 +827,7 @@ func (d *Desugar) desugarCondition(
 			d.memoryGauge,
 			newEventConstructorInvocation,
 			emitStmt.StartPos,
+			ast.EmptyComments,
 		)
 
 		//Inject a static import so the compiler can link the functions.
@@ -982,8 +989,8 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 		declaration.BaseType,
 		declaration.Conformances,
 		ast.NewMembers(d.memoryGauge, desugaredMembers),
-		declaration.DocString,
 		declaration.Range,
+		declaration.Comments,
 	)
 
 	// Update elaboration. Type info is needed for later steps.
@@ -1104,8 +1111,8 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		declaration.Identifier,
 		declaration.Conformances,
 		ast.NewMembers(d.memoryGauge, desugaredMembers),
-		declaration.DocString,
 		declaration.Range,
+		declaration.Comments,
 	)
 
 	// Update elaboration. Type info is needed for later steps.
@@ -1270,7 +1277,7 @@ func (d *Desugar) inheritedDefaultFunctions(
 			)
 
 			funcReturnType := inheritedFuncType.ReturnTypeAnnotation.Type
-			returnStmt := ast.NewReturnStatement(d.memoryGauge, invocation, declRange)
+			returnStmt := ast.NewReturnStatement(d.memoryGauge, invocation, declRange, ast.EmptyComments)
 			d.elaboration.SetReturnStatementTypes(
 				returnStmt,
 				sema.ReturnStatementTypes{
@@ -1305,12 +1312,13 @@ func (d *Desugar) inheritedDefaultFunctions(
 							returnStmt,
 						},
 						declRange,
+						ast.EmptyComments,
 					),
 					nil,
 					nil,
 				),
 				inheritedFunc.StartPos,
-				inheritedFunc.DocString,
+				inheritedFunc.Comments,
 			)
 
 			d.elaboration.SetFunctionDeclarationFunctionType(defaultFuncDelegator, inheritedFuncType)
@@ -1380,6 +1388,7 @@ func (d *Desugar) interfaceDelegationMethodCall(
 						param.Identifier,
 						pos,
 					),
+					ast.EmptyComments,
 				),
 			)
 		} else {
@@ -1402,6 +1411,7 @@ func (d *Desugar) interfaceDelegationMethodCall(
 						param.Identifier,
 						pos,
 					),
+					ast.EmptyComments,
 				),
 			)
 		}
@@ -1427,12 +1437,12 @@ func (d *Desugar) interfaceDelegationMethodCall(
 		d.memoryGauge,
 		ast.NewIdentifierExpression(
 			d.memoryGauge,
-
 			ast.NewIdentifier(
 				d.memoryGauge,
 				"self",
 				pos,
 			),
+			ast.EmptyComments,
 		),
 		false,
 		pos,
@@ -1526,6 +1536,7 @@ func (d *Desugar) addImport(location common.Location) {
 			location,
 			ast.EmptyRange,
 			ast.EmptyPosition,
+			ast.EmptyComments,
 		)
 
 		d.newImports = append(
@@ -1564,8 +1575,8 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 		declaration.Identifier,
 		declaration.Conformances,
 		ast.NewMembers(d.memoryGauge, desugaredMembers),
-		declaration.DocString,
 		declaration.Range,
+		declaration.Comments,
 	)
 
 	// Update elaboration. Type info is needed for later steps.
@@ -1606,7 +1617,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 				parameter.StartPos,
 				nil,
 				nil,
-				"",
+				ast.EmptyComments,
 			)
 
 			varDeclarations = append(varDeclarations, variableDecl)
@@ -1674,8 +1685,8 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		),
 		nil,
 		ast.NewMembers(d.memoryGauge, members),
-		"",
 		ast.EmptyRange,
+		ast.EmptyComments,
 	)
 
 	d.elaboration.SetCompositeDeclarationType(compositeDecl, compositeType)
@@ -1787,12 +1798,12 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 		nil,
 		ast.NewFunctionBlock(
 			nil,
-			ast.NewBlock(nil, nil, ast.EmptyRange),
+			ast.NewBlock(nil, nil, ast.EmptyRange, ast.EmptyComments),
 			nil,
 			nil,
 		),
 		ast.EmptyPosition,
-		"",
+		ast.EmptyComments,
 	)
 
 	return ast.NewSpecialFunctionDeclaration(
@@ -1842,11 +1853,13 @@ func newEnumInitializer(
 						ast.EmptyPosition,
 					),
 					nil,
+					ast.EmptyComments,
 				),
 				ast.EmptyPosition,
 			),
 			nil,
 			ast.EmptyPosition,
+			ast.EmptyComments,
 		),
 	}
 
@@ -1859,6 +1872,7 @@ func newEnumInitializer(
 				sema.SelfIdentifier,
 				ast.EmptyPosition,
 			),
+			ast.EmptyComments,
 		),
 		false,
 		ast.EmptyPosition,
@@ -1893,6 +1907,7 @@ func newEnumInitializer(
 		ast.NewIdentifierExpression(
 			gauge,
 			rawValueIdentifier,
+			ast.EmptyComments,
 		),
 	)
 
@@ -1916,7 +1931,7 @@ func newEnumInitializer(
 			ast.EmptyPosition,
 		),
 		nil,
-		ast.NewParameterList(gauge, parameters, ast.EmptyRange),
+		ast.NewParameterList(gauge, parameters, ast.EmptyRange, ast.EmptyComments),
 		nil,
 		ast.NewFunctionBlock(
 			gauge,
@@ -1926,12 +1941,13 @@ func newEnumInitializer(
 					assignmentStatement,
 				},
 				ast.EmptyRange,
+				ast.EmptyComments,
 			),
 			nil,
 			nil,
 		),
 		ast.EmptyPosition,
-		"",
+		ast.EmptyComments,
 	)
 
 	return ast.NewSpecialFunctionDeclaration(
@@ -1992,11 +2008,13 @@ func newEnumLookup(
 						ast.EmptyPosition,
 					),
 					nil,
+					ast.EmptyComments,
 				),
 				ast.EmptyPosition,
 			),
 			nil,
 			ast.EmptyPosition,
+			ast.EmptyComments,
 		),
 	}
 
@@ -2015,6 +2033,7 @@ func newEnumLookup(
 			big.NewInt(int64(index)),
 			10,
 			ast.EmptyRange,
+			ast.EmptyComments,
 		)
 		elaboration.SetIntegerExpressionType(
 			integerExpression,
@@ -2026,6 +2045,7 @@ func newEnumLookup(
 			ast.NewIdentifierExpression(
 				gauge,
 				typeIdentifier,
+				ast.EmptyComments,
 			),
 			false,
 			ast.EmptyPosition,
@@ -2047,6 +2067,7 @@ func newEnumLookup(
 			gauge,
 			memberExpression,
 			ast.EmptyRange,
+			ast.EmptyComments,
 		)
 
 		elaboration.SetReturnStatementTypes(
@@ -2074,6 +2095,7 @@ func newEnumLookup(
 		gauge,
 		ast.NewNilExpression(gauge, ast.EmptyPosition),
 		ast.EmptyRange,
+		ast.EmptyComments,
 	)
 
 	elaboration.SetReturnStatementTypes(
@@ -2095,9 +2117,10 @@ func newEnumLookup(
 
 	switchStatement := ast.NewSwitchStatement(
 		gauge,
-		ast.NewIdentifierExpression(gauge, rawValueIdentifier),
+		ast.NewIdentifierExpression(gauge, rawValueIdentifier, ast.EmptyComments),
 		switchCases,
 		ast.EmptyRange,
+		ast.EmptyComments,
 	)
 
 	return ast.NewFunctionDeclaration(
@@ -2108,7 +2131,7 @@ func newEnumLookup(
 		false,
 		typeIdentifier,
 		nil,
-		ast.NewParameterList(gauge, parameters, ast.EmptyRange),
+		ast.NewParameterList(gauge, parameters, ast.EmptyRange, ast.EmptyComments),
 		nil,
 		ast.NewFunctionBlock(
 			gauge,
@@ -2118,12 +2141,13 @@ func newEnumLookup(
 					switchStatement,
 				},
 				ast.EmptyRange,
+				ast.EmptyComments,
 			),
 			nil,
 			nil,
 		),
 		ast.EmptyPosition,
-		"",
+		ast.EmptyComments,
 	)
 }
 
@@ -2160,6 +2184,7 @@ func simpleFunctionDeclaration(
 			memoryGauge,
 			parameters,
 			astRange,
+			ast.EmptyComments,
 		)
 	}
 
@@ -2183,12 +2208,13 @@ func simpleFunctionDeclaration(
 				memoryGauge,
 				statements,
 				astRange,
+				ast.EmptyComments,
 			),
 			nil,
 			nil,
 		),
 		startPos,
-		"",
+		ast.EmptyComments,
 	)
 }
 
@@ -2264,6 +2290,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 					enclosingType.QualifiedString(),
 					startPos,
 				),
+				ast.EmptyComments,
 			),
 			false,
 			startPos,
@@ -2379,6 +2406,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 				commons.CollectEventsParamName,
 				startPos,
 			),
+			ast.EmptyComments,
 		),
 		nil,
 		eventConstructorInvocations,
@@ -2426,6 +2454,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 		),
 		nil,
 		ast.EmptyPosition,
+		ast.EmptyComments,
 	)
 
 	eventEmittingFunction := ast.NewFunctionDeclaration(
@@ -2444,6 +2473,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			d.memoryGauge,
 			[]*ast.Parameter{parameter},
 			astRange,
+			ast.EmptyComments,
 		),
 		nil,
 		ast.NewFunctionBlock(
@@ -2452,12 +2482,13 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 				d.memoryGauge,
 				[]ast.Statement{expressionStmt},
 				astRange,
+				ast.EmptyComments,
 			),
 			nil,
 			nil,
 		),
 		startPos,
-		"",
+		ast.EmptyComments,
 	)
 
 	d.elaboration.SetFunctionDeclarationFunctionType(eventEmittingFunction, eventEmittingFunctionType)
@@ -2493,6 +2524,7 @@ func (d *Desugar) desugarDefaultDestroyEventInitializer(
 					sema.SelfIdentifier,
 					pos,
 				),
+				ast.EmptyComments,
 			),
 			false,
 			pos,
@@ -2540,6 +2572,7 @@ func (d *Desugar) desugarDefaultDestroyEventInitializer(
 					parameterName,
 					pos,
 				),
+				ast.EmptyComments,
 			),
 		)
 
@@ -2558,6 +2591,7 @@ func (d *Desugar) desugarDefaultDestroyEventInitializer(
 			d.memoryGauge,
 			statements,
 			ast.NewRangeFromPositioned(d.memoryGauge, initializer),
+			ast.EmptyComments,
 		),
 		nil,
 		nil,
@@ -2575,7 +2609,7 @@ func (d *Desugar) desugarDefaultDestroyEventInitializer(
 		initializer.ReturnTypeAnnotation,
 		modifiedFuncBlock,
 		initializer.StartPos,
-		initializer.DocString,
+		initializer.Comments,
 	)
 
 	// Desugared function's type is same as the original function's type.

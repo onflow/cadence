@@ -8875,7 +8875,7 @@ func TestInterpretMemoryMeteringToken(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindTypeToken))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindSpaceToken))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 	})

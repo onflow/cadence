@@ -156,6 +156,7 @@ func TestReturnStatement_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "ReturnStatement",
+            "Comments": {},
             "Expression": {
                 "Type": "BoolExpression",
                 "Value": false,
@@ -258,6 +259,7 @@ func TestBreakStatement_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "BreakStatement",
+            "Comments": {},
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
         }
@@ -305,6 +307,7 @@ func TestContinueStatement_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "ContinueStatement",
+            "Comments": {},
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
         }
@@ -378,12 +381,14 @@ func TestIfStatement_MarshalJSON(t *testing.T) {
             },
             "Then": {
                 "Type": "Block",
+                "Comments": {},
                 "Statements": [],
                 "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                 "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
             },
             "Else": {
                 "Type": "Block",
+                "Comments": {},
                 "Statements": [],
                 "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
                 "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
@@ -598,6 +603,7 @@ func TestWhileStatement_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "WhileStatement",
+            "Comments": {},
             "Test": {
                 "Type": "BoolExpression",
                 "Value": false,
@@ -606,6 +612,7 @@ func TestWhileStatement_MarshalJSON(t *testing.T) {
             },
             "Block": {
                 "Type": "Block",
+                "Comments": {},
                 "Statements": [],
                 "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                 "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
@@ -738,6 +745,7 @@ func TestForStatement_MarshalJSON(t *testing.T) {
 			`
             {
                 "Type": "ForStatement",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -752,6 +760,7 @@ func TestForStatement_MarshalJSON(t *testing.T) {
                 },
                 "Block": {
                     "Type": "Block",
+                    "Comments": {},
                     "Statements": [],
                     "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
                     "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
@@ -802,6 +811,7 @@ func TestForStatement_MarshalJSON(t *testing.T) {
 			`
             {
                 "Type": "ForStatement",
+                "Comments": {},
                 "Index": {
                     "Identifier": "i",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -820,6 +830,7 @@ func TestForStatement_MarshalJSON(t *testing.T) {
                 },
                 "Block": {
                     "Type": "Block",
+                    "Comments": {},
                     "Statements": [],
                     "StartPos":{"Offset": 13, "Line": 14, "Column": 15},
                     "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
@@ -1025,6 +1036,7 @@ func TestAssignmentStatement_MarshalJSON(t *testing.T) {
             "Type": "AssignmentStatement",
             "Target": {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -1185,6 +1197,7 @@ func TestSwapStatement_MarshalJSON(t *testing.T) {
             "Type": "SwapStatement",
             "Left": {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -1344,10 +1357,12 @@ func TestEmitStatement_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "EmitStatement",
+            "Comments": {},
             "InvocationExpression": {
                 "Type": "InvocationExpression",
                 "InvokedExpression": {
                    "Type": "IdentifierExpression",
+                   "Comments": {},
                    "Identifier": {
                        "Identifier": "foobar",
                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -1361,6 +1376,7 @@ func TestEmitStatement_MarshalJSON(t *testing.T) {
                        "IsResource": true,
                        "AnnotatedType": {
                            "Type": "NominalType",
+                           "Comments": {},
                            "Identifier": {
                                "Identifier": "AB",
                                "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -1546,8 +1562,10 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "SwitchStatement",
+            "Comments": {},
             "Expression": {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foo",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -1559,6 +1577,7 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
             "Cases": [
                 {
                     "Type": "SwitchCase",
+                    "Comments": {},
                     "Expression": {
                         "Type": "BoolExpression",
                         "Value": false,
@@ -1572,6 +1591,7 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
                             "EndPos": {"Offset": 12, "Line": 11, "Column": 14},
                             "Expression": {
                                 "Type": "IdentifierExpression",
+                                "Comments": {},
                                 "Identifier": {
                                     "Identifier": "bar",
                                     "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
@@ -1587,6 +1607,7 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
                 },
                 {
                     "Type": "SwitchCase",
+                    "Comments": {},
                     "Expression": null,
                     "Statements": [
                         {
@@ -1595,6 +1616,7 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
                             "EndPos": {"Offset": 21, "Line": 20, "Column": 23},
                             "Expression": {
                                 "Type": "IdentifierExpression",
+                                "Comments": {},
                                 "Identifier": {
                                     "Identifier": "baz",
                                     "StartPos": {"Offset": 19, "Line": 20, "Column": 21},

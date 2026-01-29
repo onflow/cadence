@@ -55,8 +55,12 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 				EndPos:   Position{Offset: 22, Line: 23, Column: 24},
 			},
 		},
-		DocString: "test",
-		Execute:   nil,
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
+		Execute: nil,
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -71,7 +75,11 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "TransactionDeclaration",
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "ParameterList":  {
+                "Comments": {},
                 "Parameters": [],
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 4, "Line": 5, "Column": 6}

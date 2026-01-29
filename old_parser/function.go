@@ -108,6 +108,7 @@ func parseParameterList(p *parser) (*ast.ParameterList, error) {
 			startPos,
 			endPos,
 		),
+		ast.EmptyComments,
 	), nil
 }
 
@@ -167,6 +168,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 		typeAnnotation,
 		nil,
 		startPos,
+		ast.EmptyComments,
 	), nil
 }
 
@@ -341,7 +343,7 @@ func parseFunctionDeclaration(
 		returnTypeAnnotation,
 		functionBlock,
 		startPos,
-		docString,
+		ast.EmptyComments,
 	), nil
 }
 

@@ -113,8 +113,10 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 				},
 			},
 		},
-		DocString: "test",
-		StartPos:  Position{Offset: 34, Line: 35, Column: 36},
+		Comments: Comments{
+			Leading: []*Comment{NewComment(nil, []byte("///test"))},
+		},
+		StartPos: Position{Offset: 34, Line: 35, Column: 36},
 	}
 
 	actual, err := json.Marshal(decl)
@@ -126,6 +128,9 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
         {
             "Type": "FunctionDeclaration",
             "Access": "AccessAll",
+            "Comments": {
+                "Leading": ["///test"]
+            },
             "IsStatic": true,
             "IsNative": true,
             "Identifier": {
@@ -179,6 +184,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
                     "IsResource": false,
                     "AnnotatedType": {
                       "Type": "NominalType",
+                      "Comments": {},
                       "StartPos": {
                         "Offset": 46,
                         "Line": 47,
@@ -218,9 +224,11 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
               }
             },
             "ParameterList": {
+                "Comments": {},
                 "Parameters": [
                     {
                         "Label": "ok",
+                        "Comments": {},
                         "Identifier": {
                             "Identifier": "foobar",
                             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -230,6 +238,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
                             "IsResource": false,
                             "AnnotatedType": {
                                 "Type": "NominalType",
+                                "Comments": {},
                                 "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
                                 "EndPos": {"Offset": 5, "Line": 5, "Column": 7},
                                 "Identifier": {
@@ -254,6 +263,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
                 "IsResource": true,
                 "AnnotatedType": {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "CD",
                         "StartPos": {"Offset": 22, "Line": 23, "Column": 24},
@@ -269,6 +279,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
                 "Type": "FunctionBlock",
                 "Block": {
                     "Type": "Block",
+                    "Comments": {},
                     "Statements": [],
                     "StartPos": {"Offset": 28, "Line": 29, "Column": 30},
                     "EndPos": {"Offset": 31, "Line": 32, "Column": 33}
@@ -585,8 +596,10 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 					},
 				},
 			},
-			DocString: "test",
-			StartPos:  Position{Offset: 34, Line: 35, Column: 36},
+			Comments: Comments{
+				Leading: []*Comment{NewComment(nil, []byte("///test"))},
+			},
+			StartPos: Position{Offset: 34, Line: 35, Column: 36},
 		},
 	}
 
@@ -602,6 +615,9 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
             "FunctionDeclaration": {
                 "Type": "FunctionDeclaration",
                 "Access": "AccessNotSpecified",
+                "Comments": {
+                    "Leading": ["///test"]
+                },
                 "IsStatic": false,
                 "IsNative": true,
                 "Identifier": {
@@ -655,6 +671,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                         "IsResource": false,
                         "AnnotatedType": {
                           "Type": "NominalType",
+                          "Comments": {},
                           "StartPos": {
                             "Offset": 46,
                             "Line": 47,
@@ -694,8 +711,10 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                   }
                 },
                 "ParameterList": {
+                    "Comments": {},
                     "Parameters": [
                         {
+                            "Comments": {},
                             "Label": "ok",
                             "Identifier": {
                                 "Identifier": "foobar",
@@ -706,6 +725,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                                 "IsResource": false,
                                 "AnnotatedType": {
                                     "Type": "NominalType",
+                                    "Comments": {},
                                     "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
                                     "EndPos": {"Offset": 5, "Line": 5, "Column": 7},
                                     "Identifier": {
@@ -730,6 +750,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                     "IsResource": true,
                     "AnnotatedType": {
                         "Type": "NominalType",
+                        "Comments": {},
                         "Identifier": {
                             "Identifier": "CD",
                             "StartPos": {"Offset": 22, "Line": 23, "Column": 24},
@@ -745,6 +766,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                     "Type": "FunctionBlock",
                     "Block": {
                         "Type": "Block",
+                        "Comments": {},
                         "Statements": [],
                         "StartPos": {"Offset": 28, "Line": 29, "Column": 30},
                         "EndPos": {"Offset": 31, "Line": 32, "Column": 33}

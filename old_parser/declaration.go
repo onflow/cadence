@@ -415,7 +415,7 @@ func parseVariableDeclaration(
 		startPos,
 		secondTransfer,
 		secondValue,
-		docString,
+		ast.EmptyComments,
 	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
@@ -710,6 +710,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			endPos,
 		),
 		locationPos,
+		ast.EmptyComments,
 	), nil
 }
 
@@ -816,7 +817,7 @@ func parseEventDeclaration(
 			nil,
 			nil,
 			parameterList.StartPos,
-			"",
+			ast.EmptyComments,
 		),
 	)
 
@@ -834,12 +835,12 @@ func parseEventDeclaration(
 		identifier,
 		nil,
 		members,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			parameterList.EndPos,
 		),
+		ast.EmptyComments,
 	), nil
 }
 
@@ -925,12 +926,12 @@ func parseFieldWithVariableKind(
 		variableKind,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.EmptyComments,
 	), nil
 }
 
@@ -1063,8 +1064,8 @@ func parseCompositeOrInterfaceDeclaration(
 			identifier,
 			[]*ast.NominalType{},
 			members,
-			docString,
 			declarationRange,
+			ast.EmptyComments,
 		), nil
 	} else {
 		return ast.NewCompositeDeclaration(
@@ -1074,8 +1075,8 @@ func parseCompositeOrInterfaceDeclaration(
 			identifier,
 			conformances,
 			members,
-			docString,
 			declarationRange,
+			ast.EmptyComments,
 		), nil
 	}
 }
@@ -1166,8 +1167,8 @@ func parseAttachmentDeclaration(
 		baseNominalType,
 		conformances,
 		members,
-		docString,
 		declarationRange,
+		ast.EmptyComments,
 	), nil
 }
 
@@ -1480,12 +1481,12 @@ func parseFieldDeclarationWithoutVariableKind(
 		ast.VariableKindNotSpecified,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.EmptyComments,
 	), nil
 }
 
@@ -1550,7 +1551,7 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			docString,
+			ast.EmptyComments,
 		),
 	), nil
 }
@@ -1587,7 +1588,7 @@ func parseEnumCase(
 		p.memoryGauge,
 		access,
 		identifier,
-		docString,
+		ast.EmptyComments,
 		startPos,
 	), nil
 }

@@ -309,7 +309,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRepresentableComposite(newDecl *ast.CompositeDeclaration) {
-	dummyNominalType := ast.NewNominalType(nil, newDecl.Identifier, nil)
+	dummyNominalType := ast.NewNominalType(nil, newDecl.Identifier, nil, ast.EmptyComments)
 	compositeType := validator.getCompositeType(dummyNominalType)
 	supportedEntitlements := compositeType.SupportedEntitlements()
 
@@ -323,7 +323,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRep
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRepresentableInterface(newDecl *ast.InterfaceDeclaration) {
-	dummyNominalType := ast.NewNominalType(nil, newDecl.Identifier, nil)
+	dummyNominalType := ast.NewNominalType(nil, newDecl.Identifier, nil, ast.EmptyComments)
 	interfaceType := validator.getInterfaceType(dummyNominalType)
 	supportedEntitlements := interfaceType.SupportedEntitlements()
 
@@ -865,7 +865,7 @@ func semaConformanceToASTNominalType(newConformance sema.Conformance) *ast.Nomin
 	}
 
 	if containerType == nil {
-		return ast.NewNominalType(nil, identifier, nil)
+		return ast.NewNominalType(nil, identifier, nil, ast.EmptyComments)
 	}
 
 	return ast.NewNominalType(
@@ -874,6 +874,7 @@ func semaConformanceToASTNominalType(newConformance sema.Conformance) *ast.Nomin
 			Identifier: containerType.String(),
 		},
 		[]ast.Identifier{identifier},
+		ast.EmptyComments,
 	)
 
 }

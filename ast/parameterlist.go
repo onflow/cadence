@@ -29,6 +29,7 @@ import (
 type ParameterList struct {
 	parametersByIdentifier atomic.Pointer[map[string]*Parameter]
 	Parameters             []*Parameter
+	Comments Comments
 	Range
 }
 
@@ -36,11 +37,13 @@ func NewParameterList(
 	gauge common.MemoryGauge,
 	parameters []*Parameter,
 	astRange Range,
+	comments Comments,
 ) *ParameterList {
 	common.UseMemory(gauge, common.ParameterListMemoryUsage)
 	return &ParameterList{
 		Parameters: parameters,
 		Range:      astRange,
+		Comments:   comments,
 	}
 }
 

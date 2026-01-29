@@ -30,8 +30,8 @@ import (
 
 type EntitlementDeclaration struct {
 	Access     Access
-	DocString  string
 	Identifier Identifier
+	Comments   Comments
 	Range
 }
 
@@ -43,16 +43,16 @@ func NewEntitlementDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
 	identifier Identifier,
-	docString string,
 	declRange Range,
+	comments Comments,
 ) *EntitlementDeclaration {
 	common.UseMemory(gauge, common.EntitlementDeclarationMemoryUsage)
 
 	return &EntitlementDeclaration{
 		Access:     access,
 		Identifier: identifier,
-		DocString:  docString,
 		Range:      declRange,
+		Comments:   comments,
 	}
 }
 
@@ -85,17 +85,19 @@ func (d *EntitlementDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *EntitlementDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (d *EntitlementDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias EntitlementDeclaration
 	return json.Marshal(&struct {
 		*Alias
-		Type string
+		Type      string
+		DocString string
 	}{
-		Type:  "EntitlementDeclaration",
-		Alias: (*Alias)(d),
+		Type:      "EntitlementDeclaration",
+		Alias:     (*Alias)(d),
+		DocString: d.DeclarationDocString(),
 	})
 }
 
@@ -165,9 +167,9 @@ func (d *EntitlementMapRelation) Doc() prettier.Doc {
 // EntitlementMappingDeclaration
 type EntitlementMappingDeclaration struct {
 	Access     Access
-	DocString  string
 	Identifier Identifier
 	Elements   []EntitlementMapElement
+	Comments   Comments
 	Range
 }
 
@@ -180,8 +182,8 @@ func NewEntitlementMappingDeclaration(
 	access Access,
 	identifier Identifier,
 	elements []EntitlementMapElement,
-	docString string,
 	declRange Range,
+	comments Comments,
 ) *EntitlementMappingDeclaration {
 	common.UseMemory(gauge, common.EntitlementMappingDeclarationMemoryUsage)
 
@@ -189,8 +191,8 @@ func NewEntitlementMappingDeclaration(
 		Access:     access,
 		Identifier: identifier,
 		Elements:   elements,
-		DocString:  docString,
 		Range:      declRange,
+		Comments:   comments,
 	}
 }
 
@@ -241,17 +243,19 @@ func (d *EntitlementMappingDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *EntitlementMappingDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (d *EntitlementMappingDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias EntitlementMappingDeclaration
 	return json.Marshal(&struct {
 		*Alias
-		Type string
+		Type      string
+		DocString string
 	}{
-		Type:  "EntitlementMappingDeclaration",
-		Alias: (*Alias)(d),
+		Type:      "EntitlementMappingDeclaration",
+		Alias:     (*Alias)(d),
+		DocString: d.DeclarationDocString(),
 	})
 }
 

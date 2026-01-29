@@ -70,9 +70,10 @@ const headerTemplate = `// Code generated from {{ . }}. DO NOT EDIT.
 var parsedHeaderTemplate = template.Must(template.New("header").Parse(headerTemplate))
 
 var parserConfig = parser.Config{
-	StaticModifierEnabled: true,
-	NativeModifierEnabled: true,
-	TypeParametersEnabled: true,
+	StaticModifierEnabled:  true,
+	NativeModifierEnabled:  true,
+	TypeParametersEnabled:  true,
+	CommentTrackingEnabled: true,
 }
 
 func initialUpper(s string) string {

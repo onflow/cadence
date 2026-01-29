@@ -31,7 +31,11 @@ type Identifier struct {
 	Pos        Position
 }
 
-func NewIdentifier(memoryGauge common.MemoryGauge, identifier string, pos Position) Identifier {
+func NewIdentifier(
+	memoryGauge common.MemoryGauge,
+	identifier string,
+	pos Position,
+) Identifier {
 	common.UseMemory(memoryGauge, common.IdentifierMemoryUsage)
 	return Identifier{
 		Identifier: identifier,

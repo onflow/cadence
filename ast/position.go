@@ -207,6 +207,12 @@ func (r Range) EndPosition(common.MemoryGauge) Position {
 	return r.EndPos
 }
 
+func (r Range) Source(input []byte) []byte {
+	startOffset := r.StartPos.Offset
+	endOffset := r.EndPos.Offset + 1
+	return input[startOffset:endOffset]
+}
+
 // NewRangeFromPositioned
 
 func NewRangeFromPositioned(memoryGauge common.MemoryGauge, hasPosition HasPosition) Range {

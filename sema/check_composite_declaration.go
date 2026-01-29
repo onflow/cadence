@@ -1034,7 +1034,7 @@ func (checker *Checker) declareContractValue(
 		_, err := checker.valueActivations.declare(variableDeclaration{
 			identifier: declaration.Identifier.Identifier,
 			ty:         compositeType,
-			docString:  declaration.DocString,
+			docString:  declaration.DeclarationDocString(),
 			// NOTE: contracts are always public
 			access:     PrimitiveAccess(ast.AccessAll),
 			kind:       common.DeclarationKindContract,
@@ -1088,7 +1088,7 @@ func (checker *Checker) declareEnumConstructor(
 				TypeAnnotation:  memberCaseTypeAnnotation,
 				DeclarationKind: common.DeclarationKindField,
 				VariableKind:    ast.VariableKindConstant,
-				DocString:       enumCase.DocString,
+				DocString:       enumCase.DeclarationDocString(),
 			},
 		)
 
@@ -1097,7 +1097,7 @@ func (checker *Checker) declareEnumConstructor(
 				checker.recordFieldDeclarationOrigin(
 					enumCase.Identifier,
 					compositeType,
-					enumCase.DocString,
+					enumCase.DeclarationDocString(),
 				)
 		}
 	}
@@ -1109,7 +1109,7 @@ func (checker *Checker) declareEnumConstructor(
 	_, err := checker.valueActivations.declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
 		ty:         enumLookupFunctionType,
-		docString:  declaration.DocString,
+		docString:  declaration.DeclarationDocString(),
 		// NOTE: enums are always public
 		access:         PrimitiveAccess(ast.AccessAll),
 		kind:           common.DeclarationKindEnum,
@@ -1852,7 +1852,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				DeclarationKind: declarationKind,
 				TypeAnnotation:  fieldTypeAnnotation,
 				VariableKind:    field.VariableKind,
-				DocString:       field.DocString,
+				DocString:       field.DeclarationDocString(),
 			})
 
 		if checker.PositionInfo != nil && origins != nil {
@@ -1860,7 +1860,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				checker.recordFieldDeclarationOrigin(
 					field.Identifier,
 					fieldTypeAnnotation.Type,
-					field.DocString,
+					field.DeclarationDocString(),
 				)
 		}
 
@@ -1935,7 +1935,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				TypeAnnotation:    fieldTypeAnnotation,
 				VariableKind:      ast.VariableKindConstant,
 				ArgumentLabels:    argumentLabels,
-				DocString:         function.DocString,
+				DocString:         function.DeclarationDocString(),
 				HasImplementation: hasImplementation,
 				HasConditions:     hasConditions,
 			})

@@ -202,6 +202,7 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "IntegerExpression",
+            "Comments": {},
             "PositiveLiteral": "4_2",
             "Value": "42",
             "Base": 10,
@@ -929,6 +930,7 @@ func TestIdentifierExpression_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "IdentifierExpression",
+            "Comments": {},
             "Identifier": {
                 "Identifier": "foobar",
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -1965,6 +1967,7 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
             "Operation": "OperationNegate",
             "Expression": {
                 "Type": "IntegerExpression",
+                "Comments": {},
                 "PositiveLiteral": "42",
                 "Value": "42",
                 "Base": 10,
@@ -2229,6 +2232,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
             "Operation": "OperationPlus",
             "Left": {
                 "Type": "IntegerExpression",
+                "Comments": {},
                 "PositiveLiteral": "42",
                 "Value": "42",
                 "Base": 10,
@@ -2237,6 +2241,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
             },
             "Right": {
                 "Type": "IntegerExpression",
+                "Comments": {},
                 "PositiveLiteral": "99",
                 "Value": "99",
                 "Base": 10,
@@ -2761,6 +2766,7 @@ func TestDestroyExpression_MarshalJSON(t *testing.T) {
             "Type": "DestroyExpression",
             "Expression": {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -3005,6 +3011,7 @@ func TestForceExpression_MarshalJSON(t *testing.T) {
             "Type": "ForceExpression",
             "Expression": {
                 "Type": "IdentifierExpression",
+                "Comments": {},
                 "Identifier": {
                     "Identifier": "foobar",
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -3251,6 +3258,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
             },
             "Then": {
                 "Type": "IntegerExpression",
+                "Comments": {},
                 "PositiveLiteral": "42",
                 "Value": "42",
                 "Base": 10,
@@ -3259,6 +3267,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
             },
             "Else": {
                 "Type": "IntegerExpression",
+                "Comments": {},
                 "PositiveLiteral": "99",
                 "Value": "99",
                 "Base": 10,
@@ -3834,6 +3843,7 @@ func TestInvocationExpression_MarshalJSON(t *testing.T) {
             "Type": "InvocationExpression",
             "InvokedExpression": {
                "Type": "IdentifierExpression",
+               "Comments": {},
                "Identifier": {
                    "Identifier": "foobar",
                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -3847,6 +3857,7 @@ func TestInvocationExpression_MarshalJSON(t *testing.T) {
                    "IsResource": true,
                    "AnnotatedType": {
                        "Type": "NominalType",
+                       "Comments": {},
                        "Identifier": {
                            "Identifier": "AB",
                            "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -4311,6 +4322,7 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
             "Type": "CastingExpression",
             "Expression": {
                "Type": "IdentifierExpression",
+               "Comments": {},
                "Identifier": {
                    "Identifier": "foobar",
                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -4324,6 +4336,7 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
                "IsResource": true,
                "AnnotatedType": {
                    "Type": "NominalType",
+                   "Comments": {},
                    "Identifier": {
                        "Identifier": "AB",
                        "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -4709,6 +4722,7 @@ func TestCreateExpression_MarshalJSON(t *testing.T) {
                 "Type": "InvocationExpression",
                 "InvokedExpression": {
                    "Type": "IdentifierExpression",
+                   "Comments": {},
                    "Identifier": {
                        "Identifier": "foobar",
                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -4722,6 +4736,7 @@ func TestCreateExpression_MarshalJSON(t *testing.T) {
                        "IsResource": true,
                        "AnnotatedType": {
                            "Type": "NominalType",
+                           "Comments": {},
                            "Identifier": {
                                "Identifier": "AB",
                                "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
@@ -4865,6 +4880,7 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
             "Type": "ReferenceExpression",
             "Expression": {
                "Type": "IdentifierExpression",
+               "Comments": {},
                "Identifier": {
                    "Identifier": "foobar",
                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -5162,8 +5178,10 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
         {
             "Type": "FunctionExpression",
             "ParameterList": {
+                "Comments": {},
                 "Parameters": [
                     {
+                        "Comments": {},
                         "Label": "ok",
                         "Identifier": {
                             "Identifier": "foobar",
@@ -5174,6 +5192,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
                             "IsResource": false,
                             "AnnotatedType": {
                                 "Type": "NominalType",
+                                "Comments": {},
                                 "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
                                 "EndPos": {"Offset": 5, "Line": 5, "Column": 7},
                                 "Identifier": {
@@ -5198,6 +5217,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
                 "IsResource": true,
                 "AnnotatedType": {
                     "Type": "NominalType",
+                    "Comments": {},
                     "Identifier": {
                         "Identifier": "CD",
                         "StartPos": {"Offset": 22, "Line": 23, "Column": 24},
@@ -5213,6 +5233,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
                 "Type": "FunctionBlock",
                 "Block": {
                     "Type": "Block",
+                    "Comments": {},
                     "Statements": [],
                     "StartPos": {"Offset": 28, "Line": 29, "Column": 30},
                     "EndPos": {"Offset": 31, "Line": 32, "Column": 33}

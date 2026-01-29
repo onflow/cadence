@@ -51,12 +51,12 @@ func IsResourceDestructionDefaultEvent(identifier string) bool {
 
 type CompositeDeclaration struct {
 	Members      *Members
-	DocString    string
 	Conformances []*NominalType
 	Identifier   Identifier
 	Range
 	Access        Access
 	CompositeKind common.CompositeKind
+	Comments      Comments
 }
 
 var _ Element = &CompositeDeclaration{}
@@ -71,8 +71,8 @@ func NewCompositeDeclaration(
 	identifier Identifier,
 	conformances []*NominalType,
 	members *Members,
-	docString string,
 	declarationRange Range,
+	comments Comments,
 ) *CompositeDeclaration {
 	common.UseMemory(memoryGauge, common.CompositeDeclarationMemoryUsage)
 
@@ -82,8 +82,8 @@ func NewCompositeDeclaration(
 		Identifier:    identifier,
 		Conformances:  conformances,
 		Members:       members,
-		DocString:     docString,
 		Range:         declarationRange,
+		Comments:      comments,
 	}
 }
 
@@ -120,17 +120,19 @@ func (d *CompositeDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *CompositeDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (d *CompositeDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias CompositeDeclaration
 	return json.Marshal(&struct {
 		*Alias
-		Type string
+		Type      string
+		DocString string
 	}{
-		Type:  "CompositeDeclaration",
-		Alias: (*Alias)(d),
+		Type:      "CompositeDeclaration",
+		Alias:     (*Alias)(d),
+		DocString: d.DeclarationDocString(),
 	})
 }
 
@@ -306,12 +308,12 @@ const (
 
 type FieldDeclaration struct {
 	TypeAnnotation *TypeAnnotation
-	DocString      string
 	Identifier     Identifier
 	Range
 	Access       Access
 	VariableKind VariableKind
 	Flags        FieldDeclarationFlags
+	Comments     Comments
 }
 
 var _ Element = &FieldDeclaration{}
@@ -325,8 +327,8 @@ func NewFieldDeclaration(
 	variableKind VariableKind,
 	identifier Identifier,
 	typeAnnotation *TypeAnnotation,
-	docString string,
 	declRange Range,
+	comments Comments,
 ) *FieldDeclaration {
 	common.UseMemory(memoryGauge, common.FieldDeclarationMemoryUsage)
 
@@ -344,8 +346,8 @@ func NewFieldDeclaration(
 		VariableKind:   variableKind,
 		Identifier:     identifier,
 		TypeAnnotation: typeAnnotation,
-		DocString:      docString,
 		Range:          declRange,
+		Comments:       comments,
 	}
 }
 
@@ -377,23 +379,25 @@ func (d *FieldDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *FieldDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (d *FieldDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FieldDeclaration
 	return json.Marshal(&struct {
 		*Alias
-		Type     string
-		Flags    FieldDeclarationFlags `json:",omitempty"`
-		IsStatic bool
-		IsNative bool
+		Type      string
+		Flags     FieldDeclarationFlags `json:",omitempty"`
+		IsStatic  bool
+		IsNative  bool
+		DocString string
 	}{
-		Type:     "FieldDeclaration",
-		Alias:    (*Alias)(d),
-		IsStatic: d.IsStatic(),
-		IsNative: d.IsNative(),
-		Flags:    0,
+		Type:      "FieldDeclaration",
+		Alias:     (*Alias)(d),
+		IsStatic:  d.IsStatic(),
+		IsNative:  d.IsNative(),
+		Flags:     0,
+		DocString: d.DeclarationDocString(),
 	})
 }
 
@@ -494,10 +498,10 @@ func (d *FieldDeclaration) IsNative() bool {
 // EnumCaseDeclaration
 
 type EnumCaseDeclaration struct {
-	DocString  string
 	Identifier Identifier
 	StartPos   Position `json:"-"`
 	Access     Access
+	Comments   Comments
 }
 
 var _ Element = &EnumCaseDeclaration{}
@@ -507,7 +511,7 @@ func NewEnumCaseDeclaration(
 	memoryGauge common.MemoryGauge,
 	access Access,
 	identifier Identifier,
-	docString string,
+	comments Comments,
 	startPos Position,
 ) *EnumCaseDeclaration {
 	common.UseMemory(memoryGauge, common.EnumCaseDeclarationMemoryUsage)
@@ -515,7 +519,7 @@ func NewEnumCaseDeclaration(
 	return &EnumCaseDeclaration{
 		Access:     access,
 		Identifier: identifier,
-		DocString:  docString,
+		Comments:   comments,
 		StartPos:   startPos,
 	}
 }
@@ -555,7 +559,7 @@ func (d *EnumCaseDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *EnumCaseDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {
