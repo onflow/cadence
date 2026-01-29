@@ -453,7 +453,7 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	// then pass the reference as-is to the invocation.
 	// Otherwise, always dereference, at the time of the invocation.
 
-	receiver := GetReceiver(
+	receiver := getReceiver(
 		f.SelfReference,
 		f.selfIsReference,
 		inter,
@@ -463,7 +463,7 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function.Invoke(invocation)
 }
 
-func GetReceiver(
+func getReceiver(
 	receiverReference ReferenceValue,
 	receiverIsReference bool,
 	context ValueStaticTypeContext,
