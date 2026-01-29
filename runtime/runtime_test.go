@@ -7029,6 +7029,10 @@ func TestRuntimeOnGetOrLoadProgramHits(t *testing.T) {
 				Address: Address{0x1},
 				Name:    "HelloWorld",
 			},
+			common.AddressLocation{
+				Address: Address{0x1},
+				Name:    "HelloWorld",
+			},
 		}
 	} else {
 		expectedHits = []common.Location{
@@ -13581,4 +13585,307 @@ func TestRuntimePanicInImportedFunction(t *testing.T) {
 		},
 		ast.NewUnmeteredRangeFromPositioned(panicErr.LocationRange),
 	)
+}
+
+func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("method call in default function", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestRuntime()
+
+		addressValue := Address{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		}
+
+		contract := `
+            access(all) contract Foo {
+
+                access(all) struct interface I {
+                    access(all) fun test() {
+                        Foo.someFunction()
+                    }
+                }
+
+                access(all) view fun someFunction(): Bool {
+                    return true
+                }
+            }
+        `
+
+		accountCodes := map[Location][]byte{}
+
+		var events []cadence.Event
+
+		var uuid uint64
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{addressValue}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			OnGetAccountBalance: func(_ Address) (uint64, error) {
+				return 0, nil
+			},
+			OnGenerateUUID: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("Foo", []byte(contract)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
+
+		script := fmt.Sprintf(`
+            import Foo from %s
+
+            access(all) struct S: Foo.I {}
+
+            access(all) fun main() {
+                let s = S()
+                s.test()
+            }`,
+			addressValue.ShortHexWithPrefix(),
+		)
+
+		_, err = runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("method call in condition", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestRuntime()
+
+		addressValue := Address{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		}
+
+		contract := `
+            access(all) contract Foo {
+
+                access(all) struct interface I {
+                    access(all) fun test() {
+                        pre {
+                            Foo.someFunction()
+                        }
+                    }
+                }
+
+                access(all) view fun someFunction(): Bool {
+                    return true
+                }
+            }
+        `
+
+		accountCodes := map[Location][]byte{}
+
+		var events []cadence.Event
+
+		var uuid uint64
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{addressValue}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			OnGetAccountBalance: func(_ Address) (uint64, error) {
+				return 0, nil
+			},
+			OnGenerateUUID: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("Foo", []byte(contract)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
+
+		script := fmt.Sprintf(`
+            import Foo from %s
+
+            access(all) struct S: Foo.I {
+                access(all) fun test() {}
+            }
+
+            access(all) fun main() {
+                let s = S()
+                s.test()
+            }`,
+			addressValue.ShortHexWithPrefix(),
+		)
+
+		_, err = runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("member access in condition", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestRuntime()
+
+		addressValue := Address{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		}
+
+		contract := `
+            access(all) contract Foo {
+
+                access(all) let status: Bool
+
+                init() {
+                    self.status = true
+                }
+
+                access(all) struct interface I {
+                    access(all) fun test() {
+                        pre {
+                            Foo.status
+                        }
+                    }
+                }
+            }
+        `
+
+		accountCodes := map[Location][]byte{}
+
+		var events []cadence.Event
+
+		var uuid uint64
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{addressValue}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			OnGetAccountBalance: func(_ Address) (uint64, error) {
+				return 0, nil
+			},
+			OnGenerateUUID: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("Foo", []byte(contract)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
+
+		script := fmt.Sprintf(`
+            import Foo from %s
+
+            access(all) struct S: Foo.I {
+                access(all) fun test() {}
+            }
+
+            access(all) fun main() {
+                let s = S()
+                s.test()
+            }`,
+			addressValue.ShortHexWithPrefix(),
+		)
+
+		_, err = runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
+	})
 }

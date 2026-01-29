@@ -198,47 +198,44 @@ func TestInterpreterBoxing(t *testing.T) {
 
 	t.Parallel()
 
-	for _, anyType := range []sema.Type{
-		sema.AnyStructType,
-		sema.AnyResourceType,
-	} {
+	anyType := sema.AnyStructType
 
-		t.Run(anyType.String(), func(t *testing.T) {
+	t.Run(fmt.Sprintf("Bool to %s?", anyType), func(t *testing.T) {
+		t.Parallel()
 
-			t.Run(fmt.Sprintf("Bool to %s?", anyType), func(t *testing.T) {
-				inter := newTestInterpreter(t)
+		inter := newTestInterpreter(t)
 
-				assert.Equal(t,
-					NewUnmeteredSomeValueNonCopying(
-						TrueValue,
-					),
-					ConvertAndBox(
-						inter,
-						TrueValue,
-						sema.BoolType,
-						&sema.OptionalType{Type: anyType},
-					),
-				)
+		assert.Equal(t,
+			NewUnmeteredSomeValueNonCopying(
+				TrueValue,
+			),
+			ConvertAndBoxWithValidation(
+				inter,
+				TrueValue,
+				sema.BoolType,
+				&sema.OptionalType{Type: anyType},
+			),
+		)
 
-			})
+	})
 
-			t.Run(fmt.Sprintf("Bool? to %s?", anyType), func(t *testing.T) {
-				inter := newTestInterpreter(t)
+	t.Run(fmt.Sprintf("Bool? to %s?", anyType), func(t *testing.T) {
+		t.Parallel()
 
-				assert.Equal(t,
-					NewUnmeteredSomeValueNonCopying(
-						TrueValue,
-					),
-					ConvertAndBox(
-						inter,
-						NewUnmeteredSomeValueNonCopying(TrueValue),
-						&sema.OptionalType{Type: sema.BoolType},
-						&sema.OptionalType{Type: anyType},
-					),
-				)
-			})
-		})
-	}
+		inter := newTestInterpreter(t)
+
+		assert.Equal(t,
+			NewUnmeteredSomeValueNonCopying(
+				TrueValue,
+			),
+			ConvertAndBoxWithValidation(
+				inter,
+				NewUnmeteredSomeValueNonCopying(TrueValue),
+				&sema.OptionalType{Type: sema.BoolType},
+				&sema.OptionalType{Type: anyType},
+			),
+		)
+	})
 }
 
 func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {

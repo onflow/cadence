@@ -197,7 +197,12 @@ func fill(slice []Value, n int) []Value {
 	return slice
 }
 
-func (vm *VM) pushCallFrame(functionValue *CompiledFunctionValue, receiver Value, arguments []Value) {
+func (vm *VM) pushCallFrame(
+	functionValue *CompiledFunctionValue,
+	receiver Value,
+	arguments []Value,
+	returnType bbq.StaticType,
+) {
 	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
 		panic(&interpreter.CallStackLimitExceededError{
 			Limit: vm.context.StackDepthLimit,
@@ -235,6 +240,7 @@ func (vm *VM) pushCallFrame(functionValue *CompiledFunctionValue, receiver Value
 		localsOffset: offset,
 		function:     functionValue,
 		tracingInfo:  tracingInfo,
+		returnType:   returnType,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -244,7 +250,7 @@ func (vm *VM) pushCallFrame(functionValue *CompiledFunctionValue, receiver Value
 	vm.callFrame = &vm.callstack[len(vm.callstack)-1]
 }
 
-func (vm *VM) popCallFrame() {
+func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 
 	if interpreter.TracingEnabled {
 		startTime := vm.callFrame.tracingInfo.StartTime()
@@ -276,21 +282,20 @@ func (vm *VM) popCallFrame() {
 		vm.ip = 0
 	} else {
 		vm.ip = vm.ipStack[newIpStackDepth-1]
+		poppedCallFrame = vm.callFrame
 		vm.callFrame = &vm.callstack[newStackDepth-1]
 	}
+
+	return poppedCallFrame
 }
 
-func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
+func (vm *VM) getGlobalFunction(name string) (FunctionValue, error) {
 	functionVariable := vm.globals.Find(name)
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
 			name: name,
 		}
 	}
-
-	defer vm.RecoverErrors(func(internalErr error) {
-		err = internalErr
-	})
 
 	function := functionVariable.GetValue(vm.context)
 
@@ -300,8 +305,39 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 			Value: function,
 		}
 	}
+	return functionValue, nil
+}
 
-	return vm.validateAndInvokeExternally(functionValue, arguments)
+// InvokeExternally invokes a global function with the given arguments
+func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
+
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	functionValue, err := vm.getGlobalFunction(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return vm.prepareAndInvokeExternally(functionValue, arguments)
+}
+
+// Deprecated: InvokeExternallyUncheckedForTestingOnly invokes a global function with the given arguments,
+// without validating them.
+// NOTE: FOR TESTING PURPOSES ONLY! Use InvokeExternally instead
+func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...Value) (v Value, err error) {
+
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	functionValue, err := vm.getGlobalFunction(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return vm.prepareAndInvokeExternallyWithValidation(functionValue, arguments, false)
 }
 
 func (vm *VM) InvokeMethodExternally(
@@ -336,34 +372,64 @@ func (vm *VM) InvokeMethodExternally(
 
 	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
 
-	return vm.validateAndInvokeExternally(boundFunction, arguments)
+	return vm.prepareAndInvokeExternally(boundFunction, arguments)
 }
 
-func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
+func (vm *VM) prepareAndInvokeExternally(
+	functionValue FunctionValue,
+	arguments []Value,
+) (Value, error) {
+	return vm.prepareAndInvokeExternallyWithValidation(
+		functionValue,
+		arguments,
+		true,
+	)
+}
+
+func (vm *VM) prepareAndInvokeExternallyWithValidation(
+	functionValue FunctionValue,
+	arguments []Value,
+	validateConvertAndBox bool,
+) (Value, error) {
 	context := vm.context
 
 	functionType := functionValue.FunctionType(context)
 
-	preparedArguments, err := interpreter.PrepareExternalInvocationArguments(
+	preparedArguments, err := interpreter.PrepareExternalInvocationArgumentsWithValidation(
 		context,
 		functionType,
 		arguments,
+		validateConvertAndBox,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return vm.invokeExternally(functionValue, preparedArguments)
+	returnType := functionValue.FunctionType(vm.context).ReturnTypeAnnotation.Type
+
+	return vm.invokeExternally(
+		functionValue,
+		preparedArguments,
+		returnType,
+	)
 }
 
-func (vm *VM) invokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
+func (vm *VM) invokeExternally(
+	functionValue FunctionValue,
+	arguments []Value,
+	returnType sema.Type,
+) (Value, error) {
 	// NOTE: can't fill argument types, as they are unknown
+
+	staticReturnType := interpreter.ConvertSemaToStaticType(vm.context, returnType)
+
 	invokeFunction(
 		vm,
 		functionValue,
 		arguments,
 		nil,
 		nil,
+		staticReturnType,
 	)
 
 	// Runs the VM for compiled functions.
@@ -457,7 +523,7 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 
 	initializer := initializerVariable.GetValue(context).(FunctionValue)
 
-	_, err := vm.validateAndInvokeExternally(initializer, transactionArgs)
+	_, err := vm.prepareAndInvokeExternallyWithValidation(initializer, transactionArgs, true)
 	if err != nil {
 		return err
 	}
@@ -489,7 +555,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 		nil,
 	)
 
-	_, err := vm.validateAndInvokeExternally(boundPrepareFunction, signers)
+	_, err := vm.prepareAndInvokeExternally(boundPrepareFunction, signers)
 	if err != nil {
 		return err
 	}
@@ -514,7 +580,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 		nil,
 	)
 
-	_, err := vm.validateAndInvokeExternally(boundExecuteFunction, nil)
+	_, err := vm.prepareAndInvokeExternally(boundExecuteFunction, nil)
 	if err != nil {
 		return err
 	}
@@ -522,10 +588,36 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 	return nil
 }
 
-func opReturnValue(vm *VM) {
+func opReturnValue(vm *VM, ins opcode.InstructionReturnValue) {
 	value := vm.pop()
-	vm.popCallFrame()
+	poppedCallFrame := vm.popCallFrame()
+
+	context := vm.context
+
+	// Defensively check the return value's actual type matches the expected return type.
+	if poppedCallFrame != nil {
+		expectedReturnType := poppedCallFrame.returnType
+		checkValueTransferTypes(context, value, expectedReturnType)
+	}
+
 	vm.push(value)
+}
+
+func checkValueTransferTypes(
+	context *Context,
+	value interpreter.Value,
+	expectedValueType bbq.StaticType,
+) {
+	actualValueType := value.StaticType(context)
+
+	if !context.IsSubType(actualValueType, expectedValueType) {
+		expectedSemaType := context.SemaTypeFromStaticType(expectedValueType)
+		actualSemaType := context.SemaTypeFromStaticType(actualValueType)
+		panic(&interpreter.ValueTransferTypeError{
+			ExpectedType: expectedSemaType,
+			ActualType:   actualSemaType,
+		})
+	}
 }
 
 func opReturn(vm *VM) {
@@ -791,15 +883,26 @@ func opGetIndex(vm *VM) {
 	vm.push(element)
 }
 
-func opRemoveIndex(vm *VM) {
+func opRemoveIndex(vm *VM, ins opcode.InstructionRemoveIndex) {
 	context := vm.context
 	container, index := vm.pop2()
 	containerValue := container.(interpreter.ValueIndexableValue)
 	element := containerValue.RemoveKey(context, index)
 
-	// Note: Must use `InsertKey` here, not `SetKey`.
-	containerValue.InsertKey(context, index, interpreter.PlaceholderValue{})
+	// Insert a placeholder value at the removed index to mark it as deleted.
+	placeholder := &interpreter.PlaceholderValue{}
+	// Note: Must use `InsertKey` here, not `SetKey`,
+	// and disable mutation check, because the placeholder is not a real value.
+	containerValue.InsertKeyWithMutationCheck(
+		context,
+		index,
+		placeholder,
+		false,
+	)
 	vm.push(element)
+	if ins.PushPlaceholder {
+		vm.push(placeholder)
+	}
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
@@ -811,6 +914,9 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 
 	// Load the invoked value
 	functionValue := vm.pop()
+
+	// Return value type
+	returnType := vm.loadType(ins.ReturnType)
 
 	// Add base to front of arguments if the function is bound and base is defined.
 	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
@@ -826,6 +932,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		arguments,
 		typeArguments,
 		nil,
+		returnType,
 	)
 }
 
@@ -839,6 +946,9 @@ func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
 
 	// Load the invoked value
 	functionValue := vm.pop()
+
+	// Return value type
+	returnType := vm.loadType(ins.ReturnType)
 
 	// Add base to front of arguments if the function is bound and base is defined.
 	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
@@ -858,6 +968,7 @@ func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
 		arguments,
 		typeArguments,
 		argumentTypes,
+		returnType,
 	)
 }
 
@@ -869,6 +980,12 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	method := variable.GetValue(vm.context).(FunctionValue)
 
 	receiver := vm.pop()
+
+	checkMemberAccessTargetType(
+		vm,
+		ins.ReceiverType,
+		receiver,
+	)
 
 	var base *interpreter.EphemeralReferenceValue
 	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
@@ -893,6 +1010,7 @@ func invokeFunction(
 	arguments []Value,
 	typeArguments []bbq.StaticType,
 	argumentTypes []bbq.StaticType,
+	returnType bbq.StaticType,
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
@@ -918,7 +1036,12 @@ func invokeFunction(
 
 		// Trace is reported in `popCallFrame`, to also include the execution time.
 
-		vm.pushCallFrame(functionValue, receiver, arguments)
+		vm.pushCallFrame(
+			functionValue,
+			receiver,
+			arguments,
+			returnType,
+		)
 
 	case *NativeFunctionValue:
 		if isBoundFunction {
@@ -949,6 +1072,11 @@ func invokeFunction(
 			receiver,
 			arguments,
 		)
+
+		// Defensively check the return value's actual type matches the expected return type.
+		// For compiled functions, this happens when unwinding the call-frame.
+		checkValueTransferTypes(context, result, returnType)
+
 		vm.push(result)
 
 	default:
@@ -1168,13 +1296,12 @@ func getRawStringConstant(vm *VM, index uint16) string {
 }
 
 func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	valueType := vm.loadType(ins.ValueType)
+	targetType := vm.loadType(ins.TargetType)
 
 	context := vm.context
 
 	value := vm.peek()
-	valueType := value.StaticType(context)
 
 	transferredValue := interpreter.TransferAndConvert(
 		context,
@@ -1204,19 +1331,18 @@ func opTransfer(vm *VM) {
 }
 
 func opConvert(vm *VM, ins opcode.InstructionConvert) {
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	valueType := vm.loadType(ins.ValueType)
+	targetType := vm.loadType(ins.TargetType)
 
 	context := vm.context
 
 	value := vm.peek()
-	valueType := value.StaticType(context)
 
-	transferredValue := interpreter.ConvertAndBoxWithValidation(
+	transferredValue := ConvertAndBoxWithValidation(
 		context,
 		value,
-		context.SemaTypeFromStaticType(valueType),
-		context.SemaTypeFromStaticType(targetType),
+		valueType,
+		targetType,
 	)
 
 	vm.replaceTop(transferredValue)
@@ -1241,33 +1367,39 @@ func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
 func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 	value := vm.pop()
 
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
-	valueType := value.StaticType(vm.context)
+	targetTypeIndex := ins.TargetType
+	targetType := vm.loadType(targetTypeIndex)
+
+	valueTypeIndex := ins.ValueType
+	staticValueType := vm.loadType(valueTypeIndex)
 
 	// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-	result := ConvertAndBox(vm.context, value, valueType, targetType)
+	result := ConvertAndBoxWithValidation(vm.context, value, staticValueType, targetType)
 
 	vm.push(result)
 }
 
 func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
+	context := vm.context
 	value := vm.pop()
 
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	targetTypeIndex := ins.TargetType
+	targetType := vm.loadType(targetTypeIndex)
 
-	value, valueType := castValueAndValueType(vm.context, targetType, value)
+	value, valueType := castValueAndValueType(context, targetType, value)
 
-	isSubType := vm.context.IsSubType(valueType, targetType)
+	isSubType := context.IsSubType(valueType, targetType)
 
 	var result Value
 	if isSubType {
+		valueTypeIndex := ins.ValueType
+		staticValueType := vm.loadType(valueTypeIndex)
+
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		result = ConvertAndBox(vm.context, value, valueType, targetType)
+		result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
 
 		result = interpreter.NewSomeValueNonCopying(
-			vm.context.MemoryGauge,
+			context.MemoryGauge,
 			result,
 		)
 	} else {
@@ -1280,8 +1412,8 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	value := vm.pop()
 
-	typeIndex := ins.Type
-	targetType := vm.loadType(typeIndex)
+	targetTypeIndex := ins.TargetType
+	targetType := vm.loadType(targetTypeIndex)
 
 	context := vm.context
 
@@ -1300,8 +1432,11 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 		})
 	}
 
+	valueTypeIndex := ins.ValueType
+	staticValueType := vm.loadType(valueTypeIndex)
+
 	// The force cast may upcast to an optional type, e.g. `1 as! Int?`, so box
-	result = ConvertAndBox(vm.context, value, valueType, targetType)
+	result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
 	vm.push(result)
 }
 
@@ -1335,6 +1470,12 @@ func opNil(vm *VM) {
 
 func opVoid(vm *VM) {
 	vm.push(interpreter.Void)
+}
+
+func opSame(vm *VM) {
+	left, right := vm.peekPop()
+	isSame := interpreter.BoolValue(left == right)
+	vm.replaceTop(isSame)
 }
 
 func opEqual(vm *VM) {
@@ -1543,7 +1684,7 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 		typ,
 		fieldValue,
 	)
-	attachment.SetBaseValue(base)
+	attachment.SetBaseValue(context, base)
 	vm.push(base)
 }
 
@@ -1565,19 +1706,20 @@ func opSetAttachmentBase(vm *VM) {
 		panic(errors.NewUnreachableError())
 	}
 
-	attachmentComposite.SetBaseValue(baseComposite)
+	attachmentComposite.SetBaseValue(vm.context, baseComposite)
 }
 
 func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	target := vm.pop()
+	context := vm.context
 
 	// Get attachment type
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
-	typ := vm.context.SemaTypeFromStaticType(staticType)
+	typ := context.SemaTypeFromStaticType(staticType)
 
 	base, ok := target.(*interpreter.CompositeValue)
-	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
+	if inIteration := context.inAttachmentIteration(base); inIteration {
 		panic(&interpreter.AttachmentIterationMutationError{
 			Value: base,
 		})
@@ -1589,7 +1731,7 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 		})
 	}
 
-	removed := base.RemoveTypeKey(vm.context, typ)
+	removed := base.RemoveTypeKey(context, typ)
 	// Attachment not present on this base
 	if removed == nil {
 		return
@@ -1600,11 +1742,11 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 		panic(errors.NewUnreachableError())
 	}
 
-	if attachment.IsResourceKinded(vm.context) {
+	if attachment.IsResourceKinded(context) {
 		// This attachment is no longer attached to its base,
 		// but the `base` variable is still available in the destructor
-		attachment.SetBaseValue(base)
-		attachment.Destroy(vm.context)
+		attachment.SetBaseValue(context, base)
+		attachment.Destroy(context)
 	}
 }
 
@@ -1646,7 +1788,7 @@ func (vm *VM) run() {
 
 		switch ins := ins.(type) {
 		case opcode.InstructionReturnValue:
-			opReturnValue(vm)
+			opReturnValue(vm, ins)
 		case opcode.InstructionReturn:
 			opReturn(vm)
 		case opcode.InstructionJump:
@@ -1712,7 +1854,7 @@ func (vm *VM) run() {
 		case opcode.InstructionGetIndex:
 			opGetIndex(vm)
 		case opcode.InstructionRemoveIndex:
-			opRemoveIndex(vm)
+			opRemoveIndex(vm, ins)
 		case opcode.InstructionGetMethod:
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
@@ -1761,6 +1903,8 @@ func (vm *VM) run() {
 			opNil(vm)
 		case opcode.InstructionVoid:
 			opVoid(vm)
+		case opcode.InstructionSame:
+			opSame(vm)
 		case opcode.InstructionEqual:
 			opEqual(vm)
 		case opcode.InstructionNotEqual:
@@ -1903,9 +2047,13 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
-func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
+func (vm *VM) invokeFunction(
+	function Value,
+	arguments []Value,
+	returnType sema.Type,
+) (Value, error) {
 	functionValue := function.(FunctionValue)
-	return vm.invokeExternally(functionValue, arguments)
+	return vm.invokeExternally(functionValue, arguments, returnType)
 }
 
 func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {
@@ -2056,11 +2204,13 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 			case errors.UserError, errors.ExternalError:
 				// do nothing
 			default:
-				printInstructionError(
-					vm.callFrame.function.Function,
-					int(vm.ip),
-					r,
-				)
+				if vm.callFrame != nil {
+					printInstructionError(
+						vm.callFrame.function.Function,
+						int(vm.ip),
+						r,
+					)
+				}
 			}
 		}
 

@@ -18,6 +18,8 @@
 
 package vm
 
+import "github.com/onflow/cadence/bbq"
+
 type callFrame struct {
 	// Important: keep tracingInfo as the first field, because its size may vary depending on build tags
 	// (zero when tracing is disabled, the default).
@@ -25,6 +27,7 @@ type callFrame struct {
 	tracingInfo tracingInfo
 
 	openUpvalues map[int]*Upvalue
+	returnType   bbq.StaticType
 
 	function *CompiledFunctionValue
 

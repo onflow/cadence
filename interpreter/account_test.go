@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"fmt"
 	"testing"
 
@@ -60,6 +61,7 @@ func testAccount(
 ) (
 	Invokable,
 	func() map[storageKey]interpreter.Value,
+	interpreter.Storage,
 ) {
 	return testAccountWithErrorHandler(
 		t,
@@ -497,8 +499,11 @@ func testAccountWithErrorHandler(
 	code string,
 	checkerConfig sema.Config,
 	checkerErrorHandler func(error),
-) (Invokable, func() map[storageKey]interpreter.Value) {
-
+) (
+	Invokable,
+	func() map[storageKey]interpreter.Value,
+	interpreter.Storage,
+) {
 	account := stdlib.NewAccountValue(nil, handler, address)
 
 	// `authAccount`
@@ -563,6 +568,9 @@ func testAccountWithErrorHandler(
 
 	if *compile {
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.AtreeStorageValidationEnabled = true
+		vmConfig.AtreeValueValidationEnabled = true
+
 		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
@@ -640,6 +648,8 @@ func testAccountWithErrorHandler(
 					CheckerConfig: &checkerConfig,
 				},
 				InterpreterConfig: &interpreter.Config{
+					AtreeStorageValidationEnabled: true,
+					AtreeValueValidationEnabled:   true,
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -678,7 +688,7 @@ func testAccountWithErrorHandler(
 
 		return accountValues
 	}
-	return invokable, getAccountValues
+	return invokable, getAccountValues, storage
 }
 
 func TestInterpretAccountStorageSave(t *testing.T) {
@@ -691,7 +701,7 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               resource R {}
 
               fun test() {
@@ -732,7 +742,7 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               struct S {}
 
               fun test() {
@@ -779,7 +789,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountStorables := testAccount(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               struct S {}
 
               resource R {}
@@ -804,14 +814,14 @@ func TestInterpretAccountStorageType(t *testing.T) {
 
 		value, err := inter.Invoke("typeAt")
 		require.NoError(t, err)
-		require.Len(t, getAccountStorables(), 0)
+		require.Len(t, getAccountValues(), 0)
 		require.Equal(t, interpreter.Nil, value)
 
 		// save R
 
 		_, err = inter.Invoke("saveR")
 		require.NoError(t, err)
-		require.Len(t, getAccountStorables(), 1)
+		require.Len(t, getAccountValues(), 1)
 
 		// type is now type of R
 
@@ -830,7 +840,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
 
 		_, err = inter.Invoke("saveS")
 		require.NoError(t, err)
-		require.Len(t, getAccountStorables(), 1)
+		require.Len(t, getAccountValues(), 1)
 
 		// type is now type of S
 
@@ -847,6 +857,49 @@ func TestInterpretAccountStorageType(t *testing.T) {
 	})
 }
 
+func getNonStackSlabs(t *testing.T, storage interpreter.Storage) []struct {
+	atree.SlabID
+	atree.Slab
+} {
+	iter, err := storage.SlabIterator()
+	require.NoError(t, err)
+
+	var slabs []struct {
+		atree.SlabID
+		atree.Slab
+	}
+
+	for {
+		slabID, slab := iter()
+		if slabID == atree.SlabIDUndefined {
+			break
+		}
+
+		if slabID.Address() == atree.AddressUndefined {
+			continue
+		}
+
+		slabs = append(
+			slabs,
+			struct {
+				atree.SlabID
+				atree.Slab
+			}{
+				SlabID: slabID,
+				Slab:   slab,
+			},
+		)
+	}
+
+	return slabs
+}
+
+func newSlabIndex(i uint64) atree.SlabIndex {
+	var index atree.SlabIndex
+	binary.BigEndian.PutUint64(index[:], i)
+	return index
+}
+
 func TestInterpretAccountStorageLoad(t *testing.T) {
 
 	t.Parallel()
@@ -857,7 +910,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues, storage := testAccount(t, address, true, nil, `
               resource R {}
 
               resource R2 {}
@@ -878,12 +931,30 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		t.Run("save R and load R ", func(t *testing.T) {
 
+			require.Equal(t, 0, storage.Count())
+
 			// save
 
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
 			require.Len(t, getAccountValues(), 1)
+
+			require.Equal(t, 2, storage.Count())
+
+			nonStackSlabs := getNonStackSlabs(t, storage)
+			require.Len(t, nonStackSlabs, 1)
+
+			assert.Equal(t,
+				atree.NewSlabID(
+					atree.Address(address),
+					newSlabIndex(2),
+				),
+				nonStackSlabs[0].SlabID,
+			)
+			require.IsType(t, &atree.MapDataSlab{}, nonStackSlabs[0].Slab)
+			mapDataSlab := nonStackSlabs[0].Slab.(*atree.MapDataSlab)
+			assert.Equal(t, uint32(1), mapDataSlab.Count())
 
 			// first load
 
@@ -898,6 +969,20 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 			// NOTE: check loaded value was removed from storage
 			require.Len(t, getAccountValues(), 0)
+
+			nonStackSlabs = getNonStackSlabs(t, storage)
+			require.Len(t, nonStackSlabs, 1)
+
+			assert.Equal(t,
+				atree.NewSlabID(
+					atree.Address(address),
+					newSlabIndex(2),
+				),
+				nonStackSlabs[0].SlabID,
+			)
+			require.IsType(t, &atree.MapDataSlab{}, nonStackSlabs[0].Slab)
+			mapDataSlab = nonStackSlabs[0].Slab.(*atree.MapDataSlab)
+			assert.Equal(t, uint32(0), mapDataSlab.Count())
 
 			// second load
 
@@ -924,8 +1009,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			var typeMismatchError *interpreter.StoredValueTypeMismatchError
 			require.ErrorAs(t, err, &typeMismatchError)
 
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, getAccountValues(), 1)
+			// Check loaded value was removed from storage
+			require.Len(t, getAccountValues(), 0)
 		})
 	})
 
@@ -935,7 +1020,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               struct S {}
 
               struct S2 {}
@@ -975,7 +1060,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 			// NOTE: check loaded value was removed from storage
-			require.Len(t, getAccountValues(), 0)
+			require.Empty(t, getAccountValues())
 
 			// second load
 
@@ -1002,8 +1087,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			var typeMismatchError *interpreter.StoredValueTypeMismatchError
 			require.ErrorAs(t, err, &typeMismatchError)
 
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, getAccountValues(), 1)
+			// Check loaded value was removed from storage
+			require.Empty(t, getAccountValues())
 		})
 	})
 }
@@ -1037,7 +1122,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -1072,7 +1157,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -1104,7 +1189,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               resource R {
                   let foo: Int
 
@@ -1281,7 +1366,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               struct S {
                   let foo: Int
 
@@ -1490,7 +1575,7 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
                     `,
 					fieldName,
 				)
-				inter, _ := testAccount(
+				inter, _, _ := testAccount(
 					t,
 					address,
 					auth,
@@ -1553,7 +1638,7 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 
 				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
-				inter, _ := testAccount(t, address, auth, handler, code, sema.Config{})
+				inter, _, _ := testAccount(t, address, auth, handler, code, sema.Config{})
 
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
@@ -1575,7 +1660,7 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccount(t, address, true, nil, `
+	inter, _, _ := testAccount(t, address, true, nil, `
           fun getLoadType(): Type {
               return account.storage.load.getType()
           }
