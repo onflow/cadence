@@ -673,14 +673,17 @@ func TestCompileVoid(t *testing.T) {
 	require.Len(t, functions, 1)
 
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// return nil
-			opcode.InstructionStatement{},
-			opcode.InstructionVoid{},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionVoid{},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeVoid,
+				TargetType: interpreter.PrimitiveStaticTypeVoid,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		functions[0].Code,
+		prettyInstructions(functions[0].Code, program),
 	)
 }
 
