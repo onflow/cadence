@@ -379,6 +379,10 @@ func printfFunctionNameArgument(
 }
 
 func resolveTypeIndices(indices []uint16, types []interpreter.StaticType) []interpreter.StaticType {
+	if len(indices) == 0 {
+		return nil
+	}
+
 	result := make([]interpreter.StaticType, len(indices))
 	for i, index := range indices {
 		result[i] = types[index]
