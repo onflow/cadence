@@ -30,21 +30,37 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-type CodePrinter[T, E any] func(
+type CodePrinter[E any] func(
 	builder *strings.Builder,
 	code []E,
 	resolve bool,
-	constants []constant.DecodedConstant,
-	types []T,
-	functionNames []string,
+	program opcode.ProgramForInstructions,
 	colorize bool,
 ) error
 
 type TypeDecoder[T any] func(bytes T) (StaticType, error)
 
+type programForPrinter struct {
+	constants     []constant.DecodedConstant
+	types         []interpreter.StaticType
+	functionNames []string
+}
+
+func (p *programForPrinter) GetConstants() []constant.DecodedConstant {
+	return p.constants
+}
+
+func (p *programForPrinter) GetTypes() []interpreter.StaticType {
+	return p.types
+}
+
+func (p *programForPrinter) GetFunctionName(index uint16) string {
+	return p.functionNames[index]
+}
+
 type ProgramPrinter[E, T any] struct {
 	stringBuilder strings.Builder
-	codePrinter   CodePrinter[T, E]
+	codePrinter   CodePrinter[E]
 	typeDecoder   TypeDecoder[T]
 	resolve       bool
 	colorize      bool
@@ -126,13 +142,28 @@ func (p *ProgramPrinter[E, T]) printFunction(
 ) {
 	p.printHeader(function.QualifiedName)
 
+	// Decode types
+	staticTypes := make([]interpreter.StaticType, len(types))
+	for i, typ := range types {
+		staticType, err := p.typeDecoder(typ)
+		if err != nil {
+			panic(err)
+		}
+		staticTypes[i] = staticType
+	}
+
+	// Create program wrapper
+	program := &programForPrinter{
+		constants:     constants,
+		types:         staticTypes,
+		functionNames: functionNames,
+	}
+
 	err := p.codePrinter(
 		&p.stringBuilder,
 		function.Code,
 		p.resolve,
-		constants,
-		types,
-		functionNames,
+		program,
 		p.colorize,
 	)
 
