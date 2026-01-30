@@ -1381,7 +1381,11 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 			// If the composite member exists, check if it satisfies the mem
 
-			if !checker.memberSatisfied(compositeType, compositeMember, interfaceMember) {
+			if !checker.memberSatisfied(
+				compositeMember,
+				interfaceMember,
+				false, // conflicting member is inherited from interface
+			) {
 				memberMismatches = append(
 					memberMismatches,
 					MemberMismatch{
@@ -1400,11 +1404,13 @@ func (checker *Checker) checkCompositeLikeConformance(
 			if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
 				existingMembers, ok := inheritedMembers[name]
 				if ok {
-					hasConflicts := checker.checkMemberConflicts(
+					var hasConflicts bool
+					hasConflicts, memberMismatches = checker.checkInheritedMemberConflicts(
 						compositeDeclaration,
 						existingMembers,
 						interfaceMember,
 						compositeType,
+						memberMismatches,
 					)
 
 					if hasConflicts {
@@ -1414,7 +1420,6 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 				existingMembers = append(existingMembers, interfaceMember)
 				inheritedMembers[name] = existingMembers
-
 			}
 
 			if _, ok := defaultFunctions[name]; !ok {
@@ -1446,32 +1451,46 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 }
 
-func (checker *Checker) checkMemberConflicts(
+func (checker *Checker) checkInheritedMemberConflicts(
 	compositeDeclaration ast.CompositeLikeDeclaration,
-	existingMembers []*Member,
-	newMember *Member,
+	existingInheritedMembers []*Member,
+	newInheritedMember *Member,
 	compositeType *CompositeType,
-) (hasConflicts bool) {
+	memberMismatches []MemberMismatch,
+) (hasConflicts bool, _ []MemberMismatch) {
 
 	errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.DeclarationIdentifier())
 
-	for _, existingMember := range existingMembers {
+	for _, existingInheritedMember := range existingInheritedMembers {
+		if !checker.memberSatisfied(
+			newInheritedMember,
+			existingInheritedMember,
+			true, // conflicting member is a sibling coming from another interface
+		) {
+			memberMismatches = append(
+				memberMismatches,
+				MemberMismatch{
+					CompositeMember: newInheritedMember,
+					InterfaceMember: existingInheritedMember,
+				},
+			)
+		}
 
 		// Both have default impls. That's an error.
-		if newMember.HasImplementation && existingMember.HasImplementation {
+		if newInheritedMember.HasImplementation && existingInheritedMember.HasImplementation {
 			checker.report(
 				&MultipleInterfaceDefaultImplementationsError{
 					CompositeKindedType: compositeType,
-					Member:              newMember,
+					Member:              newInheritedMember,
 					Range:               errorRange,
 				},
 			)
 
-			return true
+			return true, memberMismatches
 		}
 	}
 
-	return false
+	return false, memberMismatches
 }
 
 // checkConformanceKindMatch ensures the composite kinds match.
@@ -1548,8 +1567,8 @@ func (checker *Checker) checkConformanceKindMatch(
 
 // TODO: return proper error
 func (checker *Checker) memberSatisfied(
-	compositeKindedType CompositeKindedType,
 	compositeMember, interfaceMember *Member,
+	areMembersSiblings bool,
 ) bool {
 
 	// Check declaration kind
@@ -1614,21 +1633,27 @@ func (checker *Checker) memberSatisfied(
 
 			// Functions are covariant in their return type
 
-			if compositeMemberFunctionType.ReturnTypeAnnotation.Type != nil &&
-				interfaceMemberFunctionType.ReturnTypeAnnotation.Type != nil {
+			compositeMemberReturnType := compositeMemberFunctionType.ReturnTypeAnnotation.Type
+			interfaceMemberReturnType := interfaceMemberFunctionType.ReturnTypeAnnotation.Type
 
-				if !IsSubType(
-					compositeMemberFunctionType.ReturnTypeAnnotation.Type,
-					interfaceMemberFunctionType.ReturnTypeAnnotation.Type,
-				) {
-					return false
+			if compositeMemberReturnType != nil &&
+				interfaceMemberReturnType != nil {
+				// Fo siblings, return types must be equal.
+				if areMembersSiblings {
+					if !compositeMemberReturnType.Equal(interfaceMemberReturnType) {
+						return false
+					}
+				} else {
+					if !IsSubType(compositeMemberReturnType, interfaceMemberReturnType) {
+						return false
+					}
 				}
 			}
 
-			if (compositeMemberFunctionType.ReturnTypeAnnotation.Type != nil &&
-				interfaceMemberFunctionType.ReturnTypeAnnotation.Type == nil) ||
-				(compositeMemberFunctionType.ReturnTypeAnnotation.Type == nil &&
-					interfaceMemberFunctionType.ReturnTypeAnnotation.Type != nil) {
+			if (compositeMemberReturnType != nil &&
+				interfaceMemberReturnType == nil) ||
+				(compositeMemberReturnType == nil &&
+					interfaceMemberReturnType != nil) {
 
 				return false
 			}

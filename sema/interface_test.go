@@ -3838,6 +3838,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	t.Parallel()
 
 	t.Run("mixed top level", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -3852,6 +3853,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	})
 
 	t.Run("mixed top level interface", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -3866,6 +3868,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	})
 
 	t.Run("all in one contract", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -3885,6 +3888,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	})
 
 	t.Run("all in one contract reverse order", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -3904,6 +3908,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	})
 
 	t.Run("all in one contract interface", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -3922,6 +3927,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	})
 
 	t.Run("all in one contract interface reverse order", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -3940,6 +3946,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	})
 
 	t.Run("contract interface", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -3961,6 +3968,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	})
 
 	t.Run("inverse order", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -3982,6 +3990,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	})
 
 	t.Run("mixed", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -4005,6 +4014,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 	})
 
 	t.Run("mixed with top levels", func(t *testing.T) {
+		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
@@ -4028,4 +4038,59 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+}
+
+func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("subtype default impl is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: AnyStruct): AnyStruct {
+                    return inbound
+                }
+            }
+
+            struct interface I2 {
+                fun escalate(_ inbound: AnyStruct): Int
+            }
+
+            // Note the order: Sibling with a subtype must appear second.
+            struct S: I1, I2 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("subtype default impl is first sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: AnyStruct): AnyStruct {
+                    return inbound
+                }
+            }
+
+            struct interface I2 {
+                fun escalate(_ inbound: AnyStruct): Int
+            }
+
+            // Note the order: Sibling with a subtype must appear first.
+            struct S: I2, I1 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
 }

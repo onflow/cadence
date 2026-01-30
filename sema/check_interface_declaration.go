@@ -636,7 +636,7 @@ func (checker *Checker) checkInterfaceConformance(
 					conflictingInterface,
 					conflictingMember,
 					interfaceDeclaration.Identifier,
-					false, // conflicting member is a sibling
+					true, // conflicting member is a sibling
 				)
 			}
 		}
@@ -650,7 +650,7 @@ func (checker *Checker) checkInterfaceConformance(
 				conformance,
 				conformanceMember,
 				declarationMember.Identifier,
-				true, // conflicting member is an inherited member
+				false, // conflicting member is an inherited member
 			)
 		}
 
@@ -668,7 +668,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	conflictingInterfaceType *InterfaceType,
 	conflictingMember *Member,
 	hasPosition ast.HasPosition,
-	isConflictingMemberInherited bool,
+	areConflictingMembersSiblings bool,
 ) (isDuplicate bool) {
 
 	reportMemberConflictError := func() {
@@ -686,7 +686,11 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 
 	// Check if the two members have identical signatures.
 	// If not, report an error.
-	if !checker.memberSatisfied(interfaceType, interfaceMember, conflictingMember) {
+	if !checker.memberSatisfied(
+		interfaceMember,
+		conflictingMember,
+		areConflictingMembersSiblings,
+	) {
 		reportMemberConflictError()
 		return
 	}
@@ -719,7 +723,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	// the inherited declaration, by a default implementation.
 	// However, a default implementation cannot be overridden by an empty declaration.
 
-	if isConflictingMemberInherited &&
+	if !areConflictingMembersSiblings &&
 		conflictingMember.HasImplementation && !interfaceMember.HasConditions {
 		reportMemberConflictError()
 		return
