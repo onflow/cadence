@@ -2186,5 +2186,8 @@ func TestInterpretEntitlementEscalationViaDefaultFunction(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("main")
-	assert.NoError(t, err)
+	RequireError(t, err)
+
+	var valueTransferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &valueTransferTypeError)
 }

@@ -2433,7 +2433,7 @@ func convert(
 
 		switch ref := value.(type) {
 		case *EphemeralReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if shouldConvertReference(ref, valueType, unwrappedTargetType) {
 				checkMappedEntitlements(unwrappedTargetType)
 				return NewEphemeralReferenceValue(
 					context,
@@ -2444,7 +2444,7 @@ func convert(
 			}
 
 		case *StorageReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if shouldConvertReference(ref, valueType, unwrappedTargetType) {
 				checkMappedEntitlements(unwrappedTargetType)
 				return NewStorageReferenceValue(
 					context,
@@ -2467,14 +2467,36 @@ func shouldConvertReference(
 	ref ReferenceValue,
 	valueType sema.Type,
 	unwrappedTargetType *sema.ReferenceType,
-	targetAuthorization Authorization,
 ) bool {
-	if !valueType.Equal(unwrappedTargetType) {
-		return true
+
+	if valueType.Equal(unwrappedTargetType) {
+		return false
 	}
 
-	return !ref.BorrowType().Equal(unwrappedTargetType.Type) ||
-		!ref.GetAuthorization().Equal(targetAuthorization)
+	var actualAuthorization sema.Access
+	var actualBorrowedType sema.Type
+
+	switch valueType := valueType.(type) {
+	case *sema.ReferenceType:
+		actualAuthorization = valueType.Authorization
+		actualBorrowedType = valueType.Type
+	default:
+		// TODO: instead unauthorized, maybe get the authorization from the value?
+		actualAuthorization = sema.UnauthorizedAccess
+		actualBorrowedType = ref.BorrowType()
+	}
+
+	// If borrow types are not equal, then do not convert!
+	if !actualBorrowedType.Equal(unwrappedTargetType.Type) {
+		return false
+	}
+
+	targetAuthorization := unwrappedTargetType.Authorization
+
+	// Convert only if the target type is "narrowing" the entitlements.
+	// (only if the target type grants less permissions)
+	// i.e: `targetAuthorization` must be a super-set of `actualAuthorization`.
+	return sema.PermitsAccess(targetAuthorization, actualAuthorization)
 }
 
 func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType) {
