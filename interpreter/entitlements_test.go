@@ -2145,3 +2145,46 @@ func TestInterpretBuiltinEntitlements(t *testing.T) {
 	_, err := inter.Invoke("main")
 	assert.NoError(t, err)
 }
+
+func TestInterpretEntitlementEscalationViaDefaultFunction(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+        resource Vault {
+            access(Mutate) fun withdraw(): String {
+                return "withdrawing"
+            }
+        }
+
+        struct interface I1 {
+            fun escalate(_ inbound: AnyStruct): AnyStruct {
+                return inbound
+            }
+        }
+
+        struct interface I2 {
+            fun escalate(_ inbound: AnyStruct): auth(Mutate) &Vault
+        }
+
+        struct Attacker: I1, I2 {}
+
+        fun main() {
+            let attacker = Attacker()
+            let attackerRef = &attacker as &{I2}
+
+            let vault <- create Vault()
+            let vaultRef = &vault as &Vault
+
+            // Passing a vault reference and getting an entitled reference back!!
+            let entitledVaultRef: auth(Mutate) &Vault = attackerRef.escalate(vaultRef)
+
+            entitledVaultRef.withdraw()
+
+            destroy vault
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	assert.NoError(t, err)
+}
