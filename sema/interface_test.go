@@ -4044,6 +4044,60 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("subtype method is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			fun escalate(_ inbound: AnyStruct): AnyStruct
+		}
+
+		struct interface I2 {
+			fun escalate(_ inbound: AnyStruct): Int
+		}
+
+		// Note the order: Sibling with a subtype must appear second.
+		struct S: I1, I2 {
+			fun escalate(_ inbound: AnyStruct): Int {
+				return 1
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("subtype method is first sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			fun escalate(_ inbound: AnyStruct): AnyStruct
+		}
+
+		struct interface I2 {
+			fun escalate(_ inbound: AnyStruct): Int
+		}
+
+		// Note the order: Sibling with a subtype must appear first.
+		struct S: I2, I1 {
+			fun escalate(_ inbound: AnyStruct): Int {
+				return 1
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
 	t.Run("subtype default impl is second sibling", func(t *testing.T) {
 
 		t.Parallel()

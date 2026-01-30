@@ -1376,9 +1376,8 @@ func (checker *Checker) checkCompositeLikeConformance(
 			return
 		}
 
-		compositeMember, ok := compositeType.Members.Get(name)
-		if ok {
-
+		compositeMember, hasImplementation := compositeType.Members.Get(name)
+		if hasImplementation {
 			// If the composite member exists, check if it satisfies the mem
 
 			if !checker.memberSatisfied(
@@ -1394,10 +1393,13 @@ func (checker *Checker) checkCompositeLikeConformance(
 					},
 				)
 			}
+		}
 
-		} else if options.checkMissingMembers {
-
-			// If the composite member does not exist, the interface may provide a default function.
+		// Check member conflicts for inherited members, even if there is an
+		// implementation in the concrete type.
+		// This is to validate whether the inherited functions (siblings) have matching members.
+		if options.checkMissingMembers {
+			// The interface may provide a default function.
 			// However, only one of the composite's conformances (interfaces)
 			// may provide a default function.
 
@@ -1411,6 +1413,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 						interfaceMember,
 						compositeType,
 						memberMismatches,
+						hasImplementation,
 					)
 
 					if hasConflicts {
@@ -1422,11 +1425,15 @@ func (checker *Checker) checkCompositeLikeConformance(
 				inheritedMembers[name] = existingMembers
 			}
 
-			if _, ok := defaultFunctions[name]; !ok {
-				missingMembers = append(missingMembers, interfaceMember)
+			// If the concrete type doesn't have an implementation,
+			// and also have no default implementation coming from interfaces,
+			// then mark it as a missing member.
+			if !hasImplementation {
+				if _, ok := defaultFunctions[name]; !ok {
+					missingMembers = append(missingMembers, interfaceMember)
+				}
 			}
 		}
-
 	})
 
 	if len(missingMembers) > 0 ||
@@ -1457,6 +1464,7 @@ func (checker *Checker) checkInheritedMemberConflicts(
 	newInheritedMember *Member,
 	compositeType *CompositeType,
 	memberMismatches []MemberMismatch,
+	concreteTypeHasImplementation bool,
 ) (hasConflicts bool, _ []MemberMismatch) {
 
 	errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.DeclarationIdentifier())
@@ -1476,8 +1484,12 @@ func (checker *Checker) checkInheritedMemberConflicts(
 			)
 		}
 
-		// Both have default impls. That's an error.
-		if newInheritedMember.HasImplementation && existingInheritedMember.HasImplementation {
+		// If the concrete type has an implementation, then it doesn't matter
+		// even if there are more than multiple inherited default implementations.
+		// Otherwise, it is ambiguous to have two or more have default impls.
+		// If so, report an error.
+		if !concreteTypeHasImplementation &&
+			newInheritedMember.HasImplementation && existingInheritedMember.HasImplementation {
 			checker.report(
 				&MultipleInterfaceDefaultImplementationsError{
 					CompositeKindedType: compositeType,
