@@ -8868,78 +8868,129 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 			zIndex
 		)
 
+		rType := &interpreter.CompositeStaticType{
+			Location:            checker.Location,
+			QualifiedIdentifier: "R",
+			TypeID:              checker.Location.TypeID(nil, "R"),
+		}
+		stringType := interpreter.PrimitiveStaticTypeString
+		dictionaryType := &interpreter.DictionaryStaticType{
+			KeyType:   stringType,
+			ValueType: rType,
+		}
+		optionalRType := &interpreter.OptionalStaticType{Type: rType}
+
 		assert.Equal(t,
-			[]opcode.Instruction{
+			[]opcode.PrettyInstruction{
 				// let x: @R <- create R()
-				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: xIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetGlobal{Global: 1},
+				opcode.PrettyInstructionInvoke{
+					ReturnType: rType,
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  rType,
+					TargetType: rType,
+				},
+				opcode.PrettyInstructionSetLocal{Local: xIndex},
 
 				// var y <- {"r" : <- create R()}
-				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
-				opcode.InstructionTransfer{},
-				opcode.InstructionConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionNewDictionary{Type: 2, Size: 1, IsResource: true},
-				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-				opcode.InstructionSetLocal{Local: yIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredStringValue("r"),
+						Kind: constant.String,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  stringType,
+					TargetType: stringType,
+				},
+				opcode.PrettyInstructionGetGlobal{Global: 1},
+				opcode.PrettyInstructionInvoke{
+					ReturnType: rType,
+				},
+				opcode.PrettyInstructionTransfer{},
+				opcode.PrettyInstructionConvert{
+					ValueType:  rType,
+					TargetType: rType,
+				},
+				opcode.PrettyInstructionNewDictionary{
+					Type:       dictionaryType,
+					Size:       1,
+					IsResource: true,
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  dictionaryType,
+					TargetType: dictionaryType,
+				},
+				opcode.PrettyInstructionSetLocal{Local: yIndex},
 
-				opcode.InstructionStatement{},
+				opcode.PrettyInstructionStatement{},
 
 				// <- y["r"]
 
 				// Evaluate `y` and store in a temp local.
-				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionSetLocal{
+				opcode.PrettyInstructionGetLocal{Local: yIndex},
+				opcode.PrettyInstructionSetLocal{
 					Local:     tempYIndex,
 					IsTempVar: true,
 				},
 
 				// evaluate "r", and store in a temp local.
-				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionSetLocal{
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredStringValue("r"),
+						Kind: constant.String,
+					},
+				},
+				opcode.PrettyInstructionSetLocal{
 					Local:     tempIndexingValueIndex,
 					IsTempVar: true,
 				},
 
 				// Evaluate the index expression, `y["r"]`, using temp locals.
-				opcode.InstructionGetLocal{Local: tempYIndex},
-				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionRemoveIndex{},
-				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
+				opcode.PrettyInstructionGetLocal{Local: tempYIndex},
+				opcode.PrettyInstructionGetLocal{Local: tempIndexingValueIndex},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  stringType,
+					TargetType: stringType,
+				},
+				opcode.PrettyInstructionRemoveIndex{},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  optionalRType,
+					TargetType: optionalRType,
+				},
 
 				// Second value assignment.
 				// y["r"] <- x
 				// `y` and "r" must be loaded from temp locals.
-				opcode.InstructionGetLocal{Local: tempYIndex},
-				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
-				opcode.InstructionGetLocal{Local: xIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 4},
-				opcode.InstructionSetIndex{},
+				opcode.PrettyInstructionGetLocal{Local: tempYIndex},
+				opcode.PrettyInstructionGetLocal{Local: tempIndexingValueIndex},
+				opcode.PrettyInstructionGetLocal{Local: xIndex},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  rType,
+					TargetType: optionalRType,
+				},
+				opcode.PrettyInstructionSetIndex{},
 
 				// Store the transferred y-value above (already on stack), to z.
 				// z <- y["r"]
-				opcode.InstructionSetLocal{Local: zIndex},
+				opcode.PrettyInstructionSetLocal{Local: zIndex},
 
 				// destroy y
-				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionDestroy{},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetLocal{Local: yIndex},
+				opcode.PrettyInstructionDestroy{},
 
 				// destroy z
-				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: zIndex},
-				opcode.InstructionDestroy{},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetLocal{Local: zIndex},
+				opcode.PrettyInstructionDestroy{},
 
-				opcode.InstructionReturn{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[0].Code,
+			prettyInstructions(functions[0].Code, program),
 		)
 	})
 
@@ -8984,63 +9035,101 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 			zIndex
 		)
 
+		barType := &interpreter.CompositeStaticType{
+			Location:            checker.Location,
+			QualifiedIdentifier: "Bar",
+			TypeID:              checker.Location.TypeID(nil, "Bar"),
+		}
+		fooType := &interpreter.CompositeStaticType{
+			Location:            checker.Location,
+			QualifiedIdentifier: "Foo",
+			TypeID:              checker.Location.TypeID(nil, "Foo"),
+		}
+
 		assert.Equal(t,
-			[]opcode.Instruction{
+			[]opcode.PrettyInstruction{
 				// let x: @R <- create R()
-				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 5},
-				opcode.InstructionInvoke{ReturnType: 1},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: xIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetGlobal{Global: 5},
+				opcode.PrettyInstructionInvoke{
+					ReturnType: barType,
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  barType,
+					TargetType: barType,
+				},
+				opcode.PrettyInstructionSetLocal{Local: xIndex},
 
 				// var y <- {"r" : <- create R()}
-				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 2},
-				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-				opcode.InstructionSetLocal{Local: yIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetGlobal{Global: 1},
+				opcode.PrettyInstructionInvoke{
+					ReturnType: fooType,
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  fooType,
+					TargetType: fooType,
+				},
+				opcode.PrettyInstructionSetLocal{Local: yIndex},
 
-				opcode.InstructionStatement{},
+				opcode.PrettyInstructionStatement{},
 
 				// <- y.bar
 
 				// Evaluate `y` and store in a temp local.
-				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionSetLocal{
+				opcode.PrettyInstructionGetLocal{Local: yIndex},
+				opcode.PrettyInstructionSetLocal{
 					Local:     tempYIndex,
 					IsTempVar: true,
 				},
 
 				// Evaluate the member access, `y.bar`, using temp local.
-				opcode.InstructionGetLocal{Local: tempYIndex},
-				opcode.InstructionRemoveField{FieldName: 0},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+				opcode.PrettyInstructionGetLocal{Local: tempYIndex},
+				opcode.PrettyInstructionRemoveField{
+					FieldName: constant.DecodedConstant{
+						Data: "bar",
+						Kind: constant.RawString,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  barType,
+					TargetType: barType,
+				},
 
 				// Second value assignment.
 				//  `y.bar <- x`
 				// `y` must be loaded from the temp local.
-				opcode.InstructionGetLocal{Local: tempYIndex},
-				opcode.InstructionGetLocal{Local: xIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetField{FieldName: 0, AccessedType: 2},
+				opcode.PrettyInstructionGetLocal{Local: tempYIndex},
+				opcode.PrettyInstructionGetLocal{Local: xIndex},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  barType,
+					TargetType: barType,
+				},
+				opcode.PrettyInstructionSetField{
+					FieldName: constant.DecodedConstant{
+						Data: "bar",
+						Kind: constant.RawString,
+					},
+					AccessedType: fooType,
+				},
 
 				// Store the transferred y-value above (already on stack), to z.
 				// z <- y.bar
-				opcode.InstructionSetLocal{Local: zIndex},
+				opcode.PrettyInstructionSetLocal{Local: zIndex},
 
 				// destroy y
-				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionDestroy{},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetLocal{Local: yIndex},
+				opcode.PrettyInstructionDestroy{},
 
 				// destroy z
-				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: zIndex},
-				opcode.InstructionDestroy{},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetLocal{Local: zIndex},
+				opcode.PrettyInstructionDestroy{},
 
-				opcode.InstructionReturn{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[0].Code,
+			prettyInstructions(functions[0].Code, program),
 		)
 	})
 
@@ -9081,68 +9170,94 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 			resIndex
 		)
 
+		rType := &interpreter.CompositeStaticType{
+			Location:            checker.Location,
+			QualifiedIdentifier: "R",
+			TypeID:              checker.Location.TypeID(nil, "R"),
+		}
+		optionalRType := &interpreter.OptionalStaticType{Type: rType}
+
 		assert.Equal(t,
-			[]opcode.Instruction{
+			[]opcode.PrettyInstruction{
 				// let x: @R <- create R()
-				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: xIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetGlobal{Global: 1},
+				opcode.PrettyInstructionInvoke{
+					ReturnType: rType,
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  rType,
+					TargetType: rType,
+				},
+				opcode.PrettyInstructionSetLocal{Local: xIndex},
 
 				// var y: @R? <- create R()
-				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 2},
-				opcode.InstructionSetLocal{Local: yIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetGlobal{Global: 1},
+				opcode.PrettyInstructionInvoke{
+					ReturnType: rType,
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  rType,
+					TargetType: optionalRType,
+				},
+				opcode.PrettyInstructionSetLocal{Local: yIndex},
 
-				opcode.InstructionStatement{},
+				opcode.PrettyInstructionStatement{},
 
 				// store y in temp index for nil check
-				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
+				opcode.PrettyInstructionGetLocal{Local: yIndex},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  optionalRType,
+					TargetType: optionalRType,
+				},
 
 				// Second value assignment. Store `x` in `y`.
 				// y <- x
-				opcode.InstructionGetLocal{Local: xIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 2},
-				opcode.InstructionSetLocal{Local: yIndex},
+				opcode.PrettyInstructionGetLocal{Local: xIndex},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  rType,
+					TargetType: optionalRType,
+				},
+				opcode.PrettyInstructionSetLocal{Local: yIndex},
 
 				// Store the previously loaded `y`s old value on the temp local.
-				opcode.InstructionSetLocal{
+				opcode.PrettyInstructionSetLocal{
 					Local:     tempIndex,
 					IsTempVar: true,
 				},
 
 				// nil check on temp y.
-				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionJumpIfNil{Target: 29},
+				opcode.PrettyInstructionGetLocal{Local: tempIndex},
+				opcode.PrettyInstructionJumpIfNil{Target: 29},
 
 				// If not-nil, transfer the temp `y` and store in `z` (i.e: y <- y)
-				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionUnwrap{},
-				opcode.InstructionSetLocal{Local: zIndex},
+				opcode.PrettyInstructionGetLocal{Local: tempIndex},
+				opcode.PrettyInstructionUnwrap{},
+				opcode.PrettyInstructionSetLocal{Local: zIndex},
 
 				// let res: @R <- z
-				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: zIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: resIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetLocal{Local: zIndex},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  rType,
+					TargetType: rType,
+				},
+				opcode.PrettyInstructionSetLocal{Local: resIndex},
 
 				// destroy res
-				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: resIndex},
-				opcode.InstructionDestroy{},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetLocal{Local: resIndex},
+				opcode.PrettyInstructionDestroy{},
 
 				// destroy y
-				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionDestroy{},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetLocal{Local: yIndex},
+				opcode.PrettyInstructionDestroy{},
 
-				opcode.InstructionReturn{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[0].Code,
+			prettyInstructions(functions[0].Code, program),
 		)
 	})
 }
@@ -9331,52 +9446,90 @@ func TestCompileEnum(t *testing.T) {
 		functions[testFuncIndex].Code,
 	)
 
+	testType := &interpreter.CompositeStaticType{
+		Location:            checker.Location,
+		QualifiedIdentifier: "Test",
+		TypeID:              checker.Location.TypeID(nil, "Test"),
+	}
+
 	{
 		// rawValueIndex is the index of the parameter `rawValue`, which is the first parameter
 		const rawValueIndex = iota
 
 		assert.Equal(t,
-			[]opcode.Instruction{
-				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: testLookupGlobalIndex},
-				opcode.InstructionGetLocal{Local: rawValueIndex},
-				opcode.InstructionTransferAndConvert{ValueType: rawValueTypeIndex, TargetType: rawValueTypeIndex},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
-				opcode.InstructionDrop{},
-				opcode.InstructionReturn{},
+			[]opcode.PrettyInstruction{
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetGlobal{Global: testLookupGlobalIndex},
+				opcode.PrettyInstructionGetLocal{Local: rawValueIndex},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeUInt8,
+					TargetType: interpreter.PrimitiveStaticTypeUInt8,
+				},
+				opcode.PrettyInstructionInvoke{
+					ArgCount: 1,
+					ReturnType: &interpreter.OptionalStaticType{
+						Type: testType,
+					},
+				},
+				opcode.PrettyInstructionDrop{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[test2FuncIndex].Code,
+			prettyInstructions(functions[test2FuncIndex].Code, program),
 		)
 	}
 
 	assert.Equal(t,
-		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
-			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 1},
-			opcode.InstructionReturnValue{},
+		[]opcode.PrettyInstruction{
+			opcode.PrettyInstructionGetGlobal{Global: testConstructorGlobalIndex},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredUInt8Value(0),
+					Kind: constant.UInt8,
+				},
+			},
+			opcode.PrettyInstructionInvoke{
+				ArgCount:   1,
+				ReturnType: testType,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		variables[testAVarIndex].Getter.Code,
+		prettyInstructions(variables[testAVarIndex].Getter.Code, program),
 	)
 
 	assert.Equal(t,
-		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
-			opcode.InstructionGetConstant{Constant: 1},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 1},
-			opcode.InstructionReturnValue{},
+		[]opcode.PrettyInstruction{
+			opcode.PrettyInstructionGetGlobal{Global: testConstructorGlobalIndex},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredUInt8Value(1),
+					Kind: constant.UInt8,
+				},
+			},
+			opcode.PrettyInstructionInvoke{
+				ArgCount:   1,
+				ReturnType: testType,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		variables[testBVarIndex].Getter.Code,
+		prettyInstructions(variables[testBVarIndex].Getter.Code, program),
 	)
 
 	assert.Equal(t,
-		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
-			opcode.InstructionGetConstant{Constant: 2},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 1},
-			opcode.InstructionReturnValue{},
+		[]opcode.PrettyInstruction{
+			opcode.PrettyInstructionGetGlobal{Global: testConstructorGlobalIndex},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredUInt8Value(2),
+					Kind: constant.UInt8,
+				},
+			},
+			opcode.PrettyInstructionInvoke{
+				ArgCount:   1,
+				ReturnType: testType,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		variables[testCVarIndex].Getter.Code,
+		prettyInstructions(variables[testCVarIndex].Getter.Code, program),
 	)
 
 	assert.Equal(t,
@@ -9450,27 +9603,52 @@ func TestCompileOptionalArgument(t *testing.T) {
 		require.Len(t, functions, 1)
 
 		assert.Equal(t,
-			[]opcode.Instruction{
+			[]opcode.PrettyInstruction{
 				// assert(true, message: "hello")
-				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionTrue{},
-				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvokeTyped{ArgTypes: []uint16{2, 3}, ReturnType: 1},
-				opcode.InstructionDrop{},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetGlobal{Global: 1},
+				opcode.PrettyInstructionTrue{},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeBool,
+					TargetType: interpreter.PrimitiveStaticTypeBool,
+				},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredStringValue("hello"),
+						Kind: constant.String,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeString,
+					TargetType: interpreter.PrimitiveStaticTypeString,
+				},
+				opcode.PrettyInstructionInvokeTyped{
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeBool,
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ReturnType: interpreter.PrimitiveStaticTypeVoid,
+				},
+				opcode.PrettyInstructionDrop{},
 
 				// assert(false)
-				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionFalse{},
-				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-				opcode.InstructionInvokeTyped{ArgTypes: []uint16{2}, ReturnType: 1},
-				opcode.InstructionDrop{},
-				opcode.InstructionReturn{},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetGlobal{Global: 1},
+				opcode.PrettyInstructionFalse{},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeBool,
+					TargetType: interpreter.PrimitiveStaticTypeBool,
+				},
+				opcode.PrettyInstructionInvokeTyped{
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeBool,
+					},
+					ReturnType: interpreter.PrimitiveStaticTypeVoid,
+				},
+				opcode.PrettyInstructionDrop{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[0].Code,
+			prettyInstructions(functions[0].Code, program),
 		)
 
 		assert.Equal(t,
@@ -9515,59 +9693,112 @@ func TestCompileOptionalArgument(t *testing.T) {
 		functions := program.Functions
 		require.Len(t, functions, 4)
 
-		const (
-			_ = iota
-			accountFieldNameIndex
-			contractsFieldNameIndex
-			contractNameIndex
-			contractCodeIndex
-			utf8FieldNameIndex
-			optionalArgIndex
-		)
+		aType := &interpreter.CompositeStaticType{
+			Location:            aLocation,
+			QualifiedIdentifier: "A",
+			TypeID:              aLocation.TypeID(nil, "A"),
+		}
+
+		// Ideally we would assert a concrete type here,
+		// but constructing it manually is non-trivial
+		accountContractsReferenceType := program.Types[7]
+
+		uint8ArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeUInt8,
+		}
 
 		assert.Equal(t,
-			[]opcode.Instruction{
-				opcode.InstructionStatement{},
+			[]opcode.PrettyInstruction{
+				opcode.PrettyInstructionStatement{},
 
 				// Load receiver `self.account.contracts`.
-				opcode.InstructionGetLocal{Local: 0},
-				opcode.InstructionGetField{
-					FieldName:    accountFieldNameIndex,
-					AccessedType: 1,
+				opcode.PrettyInstructionGetLocal{Local: 0},
+				opcode.PrettyInstructionGetField{
+					FieldName: constant.DecodedConstant{
+						Data: "account",
+						Kind: constant.RawString,
+					},
+					AccessedType: aType,
 				},
-				opcode.InstructionGetField{
-					FieldName:    contractsFieldNameIndex,
-					AccessedType: 6,
+				opcode.PrettyInstructionGetField{
+					FieldName: constant.DecodedConstant{
+						Data: "contracts",
+						Kind: constant.RawString,
+					},
+					AccessedType: interpreter.NewReferenceStaticType(
+						nil,
+						interpreter.FullyEntitledAccountAccess,
+						interpreter.PrimitiveStaticTypeAccount,
+					),
 				},
-				opcode.InstructionNewRef{Type: 7, IsImplicit: true},
+				opcode.PrettyInstructionNewRef{
+					Type:       accountContractsReferenceType,
+					IsImplicit: true,
+				},
 
 				// Load function value `add()`
-				opcode.InstructionGetMethod{Method: 5, ReceiverType: 7},
+				opcode.PrettyInstructionGetMethod{
+					Method:       5,
+					ReceiverType: accountContractsReferenceType,
+				},
 
 				// Load arguments.
 
 				// Name: "Foo",
-				opcode.InstructionGetConstant{Constant: contractNameIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 8, TargetType: 8},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredStringValue("Foo"),
+						Kind: constant.String,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeString,
+					TargetType: interpreter.PrimitiveStaticTypeString,
+				},
 
 				// Contract code
-				opcode.InstructionGetConstant{Constant: contractCodeIndex},
-				opcode.InstructionGetField{
-					FieldName:    utf8FieldNameIndex,
-					AccessedType: 8,
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredStringValue(
+							" contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}",
+						),
+						Kind: constant.String,
+					},
 				},
-				opcode.InstructionTransferAndConvert{ValueType: 9, TargetType: 9},
+				opcode.PrettyInstructionGetField{
+					FieldName: constant.DecodedConstant{
+						Data: "utf8",
+						Kind: constant.RawString,
+					},
+					AccessedType: interpreter.PrimitiveStaticTypeString,
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  uint8ArrayType,
+					TargetType: uint8ArrayType,
+				},
 
 				// Message: "Optional arg"
-				opcode.InstructionGetConstant{Constant: optionalArgIndex},
-				opcode.InstructionTransfer{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredStringValue("Optional arg"),
+						Kind: constant.String,
+					},
+				},
+				opcode.PrettyInstructionTransfer{},
 
-				opcode.InstructionInvokeTyped{ArgTypes: []uint16{8, 9, 8}, ReturnType: 5},
-				opcode.InstructionDrop{},
+				opcode.PrettyInstructionInvokeTyped{
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+						uint8ArrayType,
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ReturnType: interpreter.PrimitiveStaticTypeDeployedContract,
+				},
+				opcode.PrettyInstructionDrop{},
 
-				opcode.InstructionReturn{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[3].Code,
+			prettyInstructions(functions[3].Code, program),
 		)
 
 		assert.Equal(t,
@@ -9636,39 +9867,55 @@ func TestCompileContract(t *testing.T) {
 	functions := program.Functions
 	require.Len(t, functions, 3)
 
-	const (
-		addressIndex = iota
-		oneIndex
-		xFieldNameIndex
-	)
-
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// let self = A()
-			opcode.InstructionNewCompositeAt{
-				Kind:    common.CompositeKindContract,
-				Type:    1,
-				Address: addressIndex,
+			opcode.PrettyInstructionNewCompositeAt{
+				Kind: common.CompositeKindContract,
+				Type: &interpreter.CompositeStaticType{
+					Location:            aLocation,
+					QualifiedIdentifier: "A",
+					TypeID:              aLocation.TypeID(nil, "A"),
+				},
+				Address: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredAddressValueFromBytes([]byte{1}),
+					Kind: constant.Address,
+				},
 			},
-			opcode.InstructionDup{},
-			opcode.InstructionSetGlobal{Global: 0},
-			opcode.InstructionSetLocal{Local: 0},
+			opcode.PrettyInstructionDup{},
+			opcode.PrettyInstructionSetGlobal{Global: 0},
+			opcode.PrettyInstructionSetLocal{Local: 0},
 
 			// self.x = 1
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionGetConstant{Constant: oneIndex},
-			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-			opcode.InstructionSetField{
-				FieldName:    xFieldNameIndex,
-				AccessedType: 1,
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: 0},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionSetField{
+				FieldName: constant.DecodedConstant{
+					Data: "x",
+					Kind: constant.RawString,
+				},
+				AccessedType: &interpreter.CompositeStaticType{
+					Location:            aLocation,
+					QualifiedIdentifier: "A",
+					TypeID:              aLocation.TypeID(nil, "A"),
+				},
 			},
 
 			// return self
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionGetLocal{Local: 0},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		functions[0].Code,
+		prettyInstructions(functions[0].Code, program),
 	)
 
 	assert.Equal(t,
