@@ -7202,17 +7202,25 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// let x = 1
-			opcode.InstructionStatement{},
-			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetLocal{Local: xLocalIndex},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionSetLocal{Local: xLocalIndex},
 
 			// fun middle(): Int { ...
-			opcode.InstructionStatement{},
-			opcode.InstructionNewClosure{
-				Function: 1,
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionNewClosure{
+				Function: "middle",
 				Upvalues: []opcode.Upvalue{
 					{
 						TargetIndex: xLocalIndex,
@@ -7220,11 +7228,11 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 					},
 				},
 			},
-			opcode.InstructionSetLocal{Local: middleLocalIndex},
+			opcode.PrettyInstructionSetLocal{Local: middleLocalIndex},
 
-			opcode.InstructionReturn{},
+			opcode.PrettyInstructionReturn{},
 		},
-		functions[0].Code,
+		prettyInstructions(functions[0].Code, program),
 	)
 
 	// innerLocalIndex is the local index of the variable `inner`, which is the first local variable
@@ -7234,11 +7242,11 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 	const xUpvalueIndex = 0
 
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// fun inner(): Int { ...
-			opcode.InstructionStatement{},
-			opcode.InstructionNewClosure{
-				Function: 2,
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionNewClosure{
+				Function: "inner",
 				Upvalues: []opcode.Upvalue{
 					{
 						TargetIndex: xUpvalueIndex,
@@ -7246,33 +7254,44 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 					},
 				},
 			},
-			opcode.InstructionSetLocal{Local: innerLocalIndex},
+			opcode.PrettyInstructionSetLocal{Local: innerLocalIndex},
 
-			opcode.InstructionReturn{},
+			opcode.PrettyInstructionReturn{},
 		},
-		functions[1].Code,
+		prettyInstructions(functions[1].Code, program),
 	)
 
 	// yIndex is the index of the local variable `y`, which is the first local variable
 	const yIndex = 0
 
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// let y = 2
-			opcode.InstructionStatement{},
-			opcode.InstructionGetConstant{Constant: 1},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetLocal{Local: yIndex},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionSetLocal{Local: yIndex},
 
 			// return x + y
-			opcode.InstructionStatement{},
-			opcode.InstructionGetUpvalue{Upvalue: xUpvalueIndex},
-			opcode.InstructionGetLocal{Local: yIndex},
-			opcode.InstructionAdd{},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetUpvalue{Upvalue: xUpvalueIndex},
+			opcode.PrettyInstructionGetLocal{Local: yIndex},
+			opcode.PrettyInstructionAdd{},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		functions[2].Code,
+		prettyInstructions(functions[2].Code, program),
 	)
 
 	assert.Equal(t,
@@ -7316,11 +7335,11 @@ func TestCompileRecursiveInnerFunction(t *testing.T) {
 	const innerLocalIndex = 0
 
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// fun inner() { ...
-			opcode.InstructionStatement{},
-			opcode.InstructionNewClosure{
-				Function: 1,
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionNewClosure{
+				Function: "inner",
 				Upvalues: []opcode.Upvalue{
 					{
 						TargetIndex: innerLocalIndex,
@@ -7328,27 +7347,29 @@ func TestCompileRecursiveInnerFunction(t *testing.T) {
 					},
 				},
 			},
-			opcode.InstructionSetLocal{Local: innerLocalIndex},
+			opcode.PrettyInstructionSetLocal{Local: innerLocalIndex},
 
-			opcode.InstructionReturn{},
+			opcode.PrettyInstructionReturn{},
 		},
-		functions[0].Code,
+		prettyInstructions(functions[0].Code, program),
 	)
 
 	// innerUpvalueIndex is the upvalue index of the variable `inner`, which is the first upvalue
 	const innerUpvalueIndex = 0
 
 	assert.Equal(t,
-		[]opcode.Instruction{
-			opcode.InstructionStatement{},
-			opcode.InstructionGetUpvalue{
+		[]opcode.PrettyInstruction{
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetUpvalue{
 				Upvalue: innerUpvalueIndex,
 			},
-			opcode.InstructionInvoke{ReturnType: 1},
-			opcode.InstructionDrop{},
-			opcode.InstructionReturn{},
+			opcode.PrettyInstructionInvoke{
+				ReturnType: interpreter.PrimitiveStaticTypeVoid,
+			},
+			opcode.PrettyInstructionDrop{},
+			opcode.PrettyInstructionReturn{},
 		},
-		functions[1].Code,
+		prettyInstructions(functions[1].Code, program),
 	)
 }
 
@@ -7393,23 +7414,39 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]opcode.Instruction{
+			[]opcode.PrettyInstruction{
 				// let a = 1
-				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: aLocalIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+						Kind: constant.Int,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeInt,
+					TargetType: interpreter.PrimitiveStaticTypeInt,
+				},
+				opcode.PrettyInstructionSetLocal{Local: aLocalIndex},
 
 				// let b = 2
-				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 1},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: bLocalIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+						Kind: constant.Int,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeInt,
+					TargetType: interpreter.PrimitiveStaticTypeInt,
+				},
+				opcode.PrettyInstructionSetLocal{Local: bLocalIndex},
 
 				// fun middle(): Int { ...
-				opcode.InstructionStatement{},
-				opcode.InstructionNewClosure{
-					Function: 1,
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionNewClosure{
+					Function: "middle",
 					Upvalues: []opcode.Upvalue{
 						{
 
@@ -7422,11 +7459,11 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 						},
 					},
 				},
-				opcode.InstructionSetLocal{Local: middleLocalIndex},
+				opcode.PrettyInstructionSetLocal{Local: middleLocalIndex},
 
-				opcode.InstructionReturn{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[0].Code,
+			prettyInstructions(functions[0].Code, program),
 		)
 	}
 
@@ -7448,23 +7485,39 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]opcode.Instruction{
+			[]opcode.PrettyInstruction{
 				// let c = 3
-				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 2},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: cLocalIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredIntValueFromInt64(3),
+						Kind: constant.Int,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeInt,
+					TargetType: interpreter.PrimitiveStaticTypeInt,
+				},
+				opcode.PrettyInstructionSetLocal{Local: cLocalIndex},
 
 				// let d = 4
-				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 3},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: dLocalIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredIntValueFromInt64(4),
+						Kind: constant.Int,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeInt,
+					TargetType: interpreter.PrimitiveStaticTypeInt,
+				},
+				opcode.PrettyInstructionSetLocal{Local: dLocalIndex},
 
 				// fun inner(): Int { ...
-				opcode.InstructionStatement{},
-				opcode.InstructionNewClosure{
-					Function: 2,
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionNewClosure{
+					Function: "inner",
 					Upvalues: []opcode.Upvalue{
 						// inner uses d, b, c, a
 						{
@@ -7485,11 +7538,11 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 						},
 					},
 				},
-				opcode.InstructionSetLocal{Local: innerLocalIndex},
+				opcode.PrettyInstructionSetLocal{Local: innerLocalIndex},
 
-				opcode.InstructionReturn{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[1].Code,
+			prettyInstructions(functions[1].Code, program),
 		)
 	}
 
@@ -7513,41 +7566,60 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]opcode.Instruction{
+			[]opcode.PrettyInstruction{
 				// let e = 5
-				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 4},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: eLocalIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredIntValueFromInt64(5),
+						Kind: constant.Int,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeInt,
+					TargetType: interpreter.PrimitiveStaticTypeInt,
+				},
+				opcode.PrettyInstructionSetLocal{Local: eLocalIndex},
 
 				// let f = 6
-				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 5},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: fLocalIndex},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredIntValueFromInt64(6),
+						Kind: constant.Int,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeInt,
+					TargetType: interpreter.PrimitiveStaticTypeInt,
+				},
+				opcode.PrettyInstructionSetLocal{Local: fLocalIndex},
 
 				// return f + e + d + b + c + a
-				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: fLocalIndex},
-				opcode.InstructionGetLocal{Local: eLocalIndex},
-				opcode.InstructionAdd{},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetLocal{Local: fLocalIndex},
+				opcode.PrettyInstructionGetLocal{Local: eLocalIndex},
+				opcode.PrettyInstructionAdd{},
 
-				opcode.InstructionGetUpvalue{Upvalue: dUpvalueIndex},
-				opcode.InstructionAdd{},
+				opcode.PrettyInstructionGetUpvalue{Upvalue: dUpvalueIndex},
+				opcode.PrettyInstructionAdd{},
 
-				opcode.InstructionGetUpvalue{Upvalue: bUpvalueIndex},
-				opcode.InstructionAdd{},
+				opcode.PrettyInstructionGetUpvalue{Upvalue: bUpvalueIndex},
+				opcode.PrettyInstructionAdd{},
 
-				opcode.InstructionGetUpvalue{Upvalue: cUpvalueIndex},
-				opcode.InstructionAdd{},
+				opcode.PrettyInstructionGetUpvalue{Upvalue: cUpvalueIndex},
+				opcode.PrettyInstructionAdd{},
 
-				opcode.InstructionGetUpvalue{Upvalue: aUpvalueIndex},
-				opcode.InstructionAdd{},
+				opcode.PrettyInstructionGetUpvalue{Upvalue: aUpvalueIndex},
+				opcode.PrettyInstructionAdd{},
 
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionReturnValue{},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeInt,
+					TargetType: interpreter.PrimitiveStaticTypeInt,
+				},
+				opcode.PrettyInstructionReturnValue{},
 			},
-			functions[2].Code,
+			prettyInstructions(functions[2].Code, program),
 		)
 	}
 
@@ -7606,17 +7678,25 @@ func TestCompileTransferConstant(t *testing.T) {
 		require.Len(t, functions, 1)
 
 		assert.Equal(t,
-			[]opcode.Instruction{
+			[]opcode.PrettyInstruction{
 				// let x = 1
-				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-				opcode.InstructionSetLocal{Local: 0},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+						Kind: constant.Int,
+					},
+				},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeInt,
+					TargetType: interpreter.PrimitiveStaticTypeInt,
+				},
+				opcode.PrettyInstructionSetLocal{Local: 0},
 
 				// return
-				opcode.InstructionReturn{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[0].Code,
+			prettyInstructions(functions[0].Code, program),
 		)
 
 		assert.Equal(t,
@@ -7650,17 +7730,25 @@ func TestCompileTransferConstant(t *testing.T) {
 		require.Len(t, functions, 1)
 
 		assert.Equal(t,
-			[]opcode.Instruction{
+			[]opcode.PrettyInstruction{
 				// let x = 1
-				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0},
+				opcode.PrettyInstructionStatement{},
+				opcode.PrettyInstructionGetConstant{
+					Constant: constant.DecodedConstant{
+						Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+						Kind: constant.Int,
+					},
+				},
 				// NOTE: transfer
-				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 2},
-				opcode.InstructionSetLocal{Local: 0},
+				opcode.PrettyInstructionTransferAndConvert{
+					ValueType:  interpreter.PrimitiveStaticTypeInt,
+					TargetType: interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
+				},
+				opcode.PrettyInstructionSetLocal{Local: 0},
 				// return
-				opcode.InstructionReturn{},
+				opcode.PrettyInstructionReturn{},
 			},
-			functions[0].Code,
+			prettyInstructions(functions[0].Code, program),
 		)
 
 		assert.Equal(t,
