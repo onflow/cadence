@@ -99,8 +99,9 @@ func TestPrettyInstructionWithResolvableOperands(t *testing.T) {
 		t.Parallel()
 
 		instruction := opcode.InstructionInvoke{
-			TypeArgs: []uint16{0, 1},
-			ArgCount: 2,
+			TypeArgs:   []uint16{0, 1},
+			ArgCount:   2,
+			ReturnType: 1,
 		}
 
 		assert.Equal(t,
@@ -109,7 +110,8 @@ func TestPrettyInstructionWithResolvableOperands(t *testing.T) {
 					interpreter.PrimitiveStaticTypeInt,
 					interpreter.PrimitiveStaticTypeString,
 				},
-				ArgCount: 2,
+				ArgCount:   2,
+				ReturnType: interpreter.PrimitiveStaticTypeString,
 			},
 			instruction.Pretty(program),
 		)
@@ -263,6 +265,7 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		{opcode.InstructionReturnValue{}, opcode.PrettyInstructionReturnValue{}},
 		{opcode.InstructionEqual{}, opcode.PrettyInstructionEqual{}},
 		{opcode.InstructionNotEqual{}, opcode.PrettyInstructionNotEqual{}},
+		{opcode.InstructionSame{}, opcode.PrettyInstructionSame{}},
 		{opcode.InstructionNot{}, opcode.PrettyInstructionNot{}},
 		{opcode.InstructionAdd{}, opcode.PrettyInstructionAdd{}},
 		{opcode.InstructionSubtract{}, opcode.PrettyInstructionSubtract{}},
@@ -320,8 +323,14 @@ func TestPrettyInstructionMapping(t *testing.T) {
 			opcode.PrettyInstructionSetGlobal{Global: 11},
 		},
 		{
-			opcode.InstructionGetMethod{Method: 7},
-			opcode.PrettyInstructionGetMethod{Method: 7},
+			opcode.InstructionGetMethod{
+				Method:       7,
+				ReceiverType: 1,
+			},
+			opcode.PrettyInstructionGetMethod{
+				Method:       7,
+				ReceiverType: interpreter.PrimitiveStaticTypeString,
+			},
 		},
 		{
 			opcode.InstructionJump{Target: 100},
@@ -409,33 +418,38 @@ func TestPrettyInstructionMapping(t *testing.T) {
 
 		// Instructions with resolvable operands - types
 		{
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.PrettyInstructionTransferAndConvert{
-				Type: interpreter.PrimitiveStaticTypeString,
+				ValueType:  interpreter.PrimitiveStaticTypeString,
+				TargetType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 		{
-			opcode.InstructionConvert{Type: 1},
+			opcode.InstructionConvert{ValueType: 1, TargetType: 1},
 			opcode.PrettyInstructionConvert{
-				Type: interpreter.PrimitiveStaticTypeString,
+				ValueType:  interpreter.PrimitiveStaticTypeString,
+				TargetType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 		{
-			opcode.InstructionSimpleCast{Type: 1},
+			opcode.InstructionSimpleCast{ValueType: 1, TargetType: 1},
 			opcode.PrettyInstructionSimpleCast{
-				Type: interpreter.PrimitiveStaticTypeString,
+				ValueType:  interpreter.PrimitiveStaticTypeString,
+				TargetType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 		{
-			opcode.InstructionFailableCast{Type: 1},
+			opcode.InstructionFailableCast{ValueType: 1, TargetType: 1},
 			opcode.PrettyInstructionFailableCast{
-				Type: interpreter.PrimitiveStaticTypeString,
+				ValueType:  interpreter.PrimitiveStaticTypeString,
+				TargetType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 		{
-			opcode.InstructionForceCast{Type: 1},
+			opcode.InstructionForceCast{ValueType: 1, TargetType: 1},
 			opcode.PrettyInstructionForceCast{
-				Type: interpreter.PrimitiveStaticTypeString,
+				ValueType:  interpreter.PrimitiveStaticTypeString,
+				TargetType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 		{
@@ -558,21 +572,24 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		// Instructions with type indices
 		{
 			opcode.InstructionInvoke{
-				TypeArgs: []uint16{0, 1},
-				ArgCount: 2,
+				TypeArgs:   []uint16{0, 1},
+				ArgCount:   2,
+				ReturnType: 1,
 			},
 			opcode.PrettyInstructionInvoke{
 				TypeArgs: []interpreter.StaticType{
 					interpreter.PrimitiveStaticTypeInt,
 					interpreter.PrimitiveStaticTypeString,
 				},
-				ArgCount: 2,
+				ArgCount:   2,
+				ReturnType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 		{
 			opcode.InstructionInvokeTyped{
-				TypeArgs: []uint16{1},
-				ArgTypes: []uint16{0, 1},
+				TypeArgs:   []uint16{1},
+				ArgTypes:   []uint16{0, 1},
+				ReturnType: 1,
 			},
 			opcode.PrettyInstructionInvokeTyped{
 				TypeArgs: []interpreter.StaticType{
@@ -582,6 +599,7 @@ func TestPrettyInstructionMapping(t *testing.T) {
 					interpreter.PrimitiveStaticTypeInt,
 					interpreter.PrimitiveStaticTypeString,
 				},
+				ReturnType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 	}
