@@ -13068,18 +13068,33 @@ func TestPeepholeOptimizer(t *testing.T) {
 		functions2 := program2.Functions
 		require.Len(t, functions2, 5)
 
-		assert.Equal(t, []opcode.Instruction{
-			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: 1},
-			opcode.InstructionInvoke{ReturnType: 1},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetLocal{Local: 0},
-			opcode.InstructionStatement{},
+		assert.Equal(t, []opcode.PrettyInstruction{
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetGlobal{Global: 1},
+			opcode.PrettyInstructionInvoke{
+				ReturnType: testType,
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  testType,
+				TargetType: testType,
+			},
+			opcode.PrettyInstructionSetLocal{Local: 0},
+			opcode.PrettyInstructionStatement{},
 			// combined instr
-			opcode.InstructionGetFieldLocal{FieldName: 0, AccessedType: 1, Local: 0},
-			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-			opcode.InstructionReturnValue{},
-		}, functions2[0].Code)
+			opcode.PrettyInstructionGetFieldLocal{
+				FieldName: constant.DecodedConstant{
+					Data: "x",
+					Kind: constant.RawString,
+				},
+				AccessedType: testType,
+				Local:        0,
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
+		}, prettyInstructions(functions2[0].Code, program2))
 	})
 
 	t.Run("peephole avoid jump targets", func(t *testing.T) {
@@ -13102,22 +13117,37 @@ func TestPeepholeOptimizer(t *testing.T) {
 		functions := program.Functions
 		require.Len(t, functions, 1)
 
-		assert.Equal(t, []opcode.Instruction{
-			opcode.InstructionStatement{},
-			opcode.InstructionTrue{},
-			opcode.InstructionJumpIfFalse{Target: 5},
-			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionJump{Target: 6},
-			opcode.InstructionNil{},
+		optionalIntType := &interpreter.OptionalStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
+		assert.Equal(t, []opcode.PrettyInstruction{
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionTrue{},
+			opcode.PrettyInstructionJumpIfFalse{Target: 5},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(123),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionJump{Target: 6},
+			opcode.PrettyInstructionNil{},
 			// this transfer after nil cannot be optimized out because it is a jump target
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetLocal{Local: 0},
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  optionalIntType,
+				TargetType: optionalIntType,
+			},
+			opcode.PrettyInstructionSetLocal{Local: 0},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: 0},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  optionalIntType,
+				TargetType: optionalIntType,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-			functions[0].Code,
+			prettyInstructions(functions[0].Code, program),
 		)
 
 		comp2 := compiler.NewInstructionCompiler(
@@ -13130,21 +13160,32 @@ func TestPeepholeOptimizer(t *testing.T) {
 		functions2 := program2.Functions
 		require.Len(t, functions2, 1)
 
-		assert.Equal(t, []opcode.Instruction{
-			opcode.InstructionStatement{},
-			opcode.InstructionTrue{},
-			opcode.InstructionJumpIfFalse{Target: 5},
-			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionJump{Target: 6},
-			opcode.InstructionNil{},
+		assert.Equal(t, []opcode.PrettyInstruction{
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionTrue{},
+			opcode.PrettyInstructionJumpIfFalse{Target: 5},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(123),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionJump{Target: 6},
+			opcode.PrettyInstructionNil{},
 			// expect this transfer to still be here
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetLocal{Local: 0},
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionReturnValue{},
-		}, functions2[0].Code)
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  optionalIntType,
+				TargetType: optionalIntType,
+			},
+			opcode.PrettyInstructionSetLocal{Local: 0},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: 0},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  optionalIntType,
+				TargetType: optionalIntType,
+			},
+			opcode.PrettyInstructionReturnValue{},
+		}, prettyInstructions(functions2[0].Code, program2))
 	})
 }
 
