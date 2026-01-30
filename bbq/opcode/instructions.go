@@ -1309,7 +1309,7 @@ func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
 
 func (i InstructionNewClosure) Pretty(program ProgramForInstructions) PrettyInstruction {
 	return PrettyInstructionNewClosure{
-		Function: program.GetFunctionName(i.Function),
+		Function: i.Function,
 		Upvalues: i.Upvalues,
 	}
 }
@@ -4000,7 +4000,7 @@ func (i PrettyInstructionGetConstant) String() string {
 // Pretty form of InstructionNewClosure with resolved operands.
 // Creates a new closure with the function at the given index and pushes it onto the stack.
 type PrettyInstructionNewClosure struct {
-	Function string
+	Function uint16
 	Upvalues []Upvalue
 }
 
@@ -4014,7 +4014,7 @@ func (i PrettyInstructionNewClosure) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	sb.WriteByte(' ')
-	printfFunctionNameArgument(&sb, "function", i.Function, false)
+	printfArgument(&sb, "function", i.Function, false)
 	sb.WriteByte(' ')
 	printfUpvalueArrayArgument(&sb, "upvalues", i.Upvalues, false)
 	return sb.String()

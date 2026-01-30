@@ -86,7 +86,7 @@ func TestPrettyInstructionWithResolvableOperands(t *testing.T) {
 
 		assert.Equal(t,
 			opcode.PrettyInstructionNewClosure{
-				Function: "MyContract.myFunction",
+				Function: 0,
 				Upvalues: []opcode.Upvalue{
 					{TargetIndex: 1, IsLocal: true},
 				},
@@ -174,49 +174,6 @@ func TestPrettyInstructionString(t *testing.T) {
 	prettyIns := instruction.Pretty(program)
 
 	require.Equal(t, `GetField fieldName:test accessedType:"Int"`, prettyIns.String())
-}
-
-func TestPrettyInstructionAnonymousFunction(t *testing.T) {
-	t.Parallel()
-
-	program := &bbq.InstructionProgram{
-		Functions: []bbq.Function[opcode.Instruction]{
-			{
-				// NOTE: no Name or QualifiedName
-			},
-		},
-	}
-
-	instruction := opcode.InstructionNewClosure{
-		Function: 0,
-		Upvalues: nil,
-	}
-
-	prettyIns := instruction.Pretty(program).(opcode.PrettyInstructionNewClosure)
-
-	require.Equal(t, "<anonymous>", prettyIns.Function)
-}
-
-func TestPrettyFunctionNameFallback(t *testing.T) {
-	t.Parallel()
-
-	program := &bbq.InstructionProgram{
-		Functions: []bbq.Function[opcode.Instruction]{
-			{
-				Name: "simpleName",
-				// NOTE: no QualifiedName
-			},
-		},
-	}
-
-	instruction := opcode.InstructionNewClosure{
-		Function: 0,
-		Upvalues: nil,
-	}
-
-	prettyIns := instruction.Pretty(program).(opcode.PrettyInstructionNewClosure)
-
-	require.Equal(t, "simpleName", prettyIns.Function)
 }
 
 func TestPrettyInstructionMapping(t *testing.T) {
@@ -562,7 +519,7 @@ func TestPrettyInstructionMapping(t *testing.T) {
 				},
 			},
 			opcode.PrettyInstructionNewClosure{
-				Function: "MyContract.myFunction",
+				Function: 0,
 				Upvalues: []opcode.Upvalue{
 					{TargetIndex: 1, IsLocal: true},
 				},

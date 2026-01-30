@@ -1188,8 +1188,6 @@ func prettyOperandType(operand operand) dst.Expr {
 			Name: "StaticType",
 			Path: interpreterPackagePath,
 		}
-	case operandTypeFunctionIndex:
-		return dst.NewIdent("string")
 	case operandTypeTypeIndices:
 		return &dst.ArrayType{
 			Elt: &dst.Ident{
@@ -1197,42 +1195,39 @@ func prettyOperandType(operand operand) dst.Expr {
 				Path: interpreterPackagePath,
 			},
 		}
-	default:
-		// Return the original type for operands that don't need resolution
-		switch operand.Type {
-		case operandTypeBool:
-			return dst.NewIdent("bool")
-		case operandTypeLocalIndex,
-			operandTypeGlobalIndex,
-			operandTypeUpvalueIndex,
-			operandTypeOffset,
-			operandTypeSize:
-			return dst.NewIdent("uint16")
-		case operandTypeCastKind:
-			return &dst.Ident{
-				Name: "CastKind",
-				Path: opcodePackagePath,
-			}
-		case operandTypePathDomain:
-			return &dst.Ident{
-				Name: "PathDomain",
-				Path: commonPackagePath,
-			}
-		case operandTypeCompositeKind:
-			return &dst.Ident{
-				Name: "CompositeKind",
-				Path: commonPackagePath,
-			}
-		case operandTypeUpvalues:
-			return &dst.ArrayType{
-				Elt: &dst.Ident{
-					Name: "Upvalue",
-					Path: opcodePackagePath,
-				},
-			}
-		default:
-			panic(fmt.Sprintf("unsupported operand type: %s", operand.Type))
+	case operandTypeBool:
+		return dst.NewIdent("bool")
+	case operandTypeLocalIndex,
+		operandTypeGlobalIndex,
+		operandTypeUpvalueIndex,
+		operandTypeFunctionIndex,
+		operandTypeOffset,
+		operandTypeSize:
+		return dst.NewIdent("uint16")
+	case operandTypeCastKind:
+		return &dst.Ident{
+			Name: "CastKind",
+			Path: opcodePackagePath,
 		}
+	case operandTypePathDomain:
+		return &dst.Ident{
+			Name: "PathDomain",
+			Path: commonPackagePath,
+		}
+	case operandTypeCompositeKind:
+		return &dst.Ident{
+			Name: "CompositeKind",
+			Path: commonPackagePath,
+		}
+	case operandTypeUpvalues:
+		return &dst.ArrayType{
+			Elt: &dst.Ident{
+				Name: "Upvalue",
+				Path: opcodePackagePath,
+			},
+		}
+	default:
+		panic(fmt.Sprintf("unsupported operand type: %s", operand.Type))
 	}
 }
 
@@ -1485,23 +1480,6 @@ func prettyInstructionStringFuncDecl(ins instruction) *dst.FuncDecl {
 						dst.NewIdent("false"),
 					},
 				}
-			case operandTypeFunctionIndex:
-				// printfFunctionNameArgument(sb, "name", functionName, false)
-				formatExpr = &dst.CallExpr{
-					Fun: dst.NewIdent("printfFunctionNameArgument"),
-					Args: []dst.Expr{
-						&dst.UnaryExpr{
-							Op: token.AND,
-							X:  dst.NewIdent("sb"),
-						},
-						&dst.BasicLit{
-							Kind:  token.STRING,
-							Value: fmt.Sprintf(`"%s"`, operand.Name),
-						},
-						operandExpr,
-						dst.NewIdent("false"),
-					},
-				}
 			case operandTypeTypeIndices:
 				// For []StaticType, we need a custom formatter
 				formatExpr = &dst.CallExpr{
@@ -1640,15 +1618,6 @@ func instructionPrettyMethodDecl(ins instruction) *dst.FuncDecl {
 					},
 				},
 				Index: operandFieldExpr,
-			}
-		case operandTypeFunctionIndex:
-			// program.GetFunctionName(i.Function)
-			valueExpr = &dst.CallExpr{
-				Fun: &dst.SelectorExpr{
-					X:   dst.NewIdent("program"),
-					Sel: dst.NewIdent("GetFunctionName"),
-				},
-				Args: []dst.Expr{operandFieldExpr},
 			}
 		case operandTypeTypeIndices:
 			// Convert []uint16 to []StaticType

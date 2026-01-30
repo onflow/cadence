@@ -6734,7 +6734,7 @@ func TestCompileFunctionExpression(t *testing.T) {
 		[]opcode.PrettyInstruction{
 			// let addOne = fun ...
 			opcode.PrettyInstructionStatement{},
-			opcode.PrettyInstructionNewClosure{Function: "<anonymous>"},
+			opcode.PrettyInstructionNewClosure{Function: 1},
 			opcode.PrettyInstructionTransferAndConvert{
 				ValueType:  functionType,
 				TargetType: functionType,
@@ -6856,7 +6856,7 @@ func TestCompileInnerFunction(t *testing.T) {
 		[]opcode.PrettyInstruction{
 			// fun addOne(...
 			opcode.PrettyInstructionStatement{},
-			opcode.PrettyInstructionNewClosure{Function: "addOne"},
+			opcode.PrettyInstructionNewClosure{Function: 1},
 			opcode.PrettyInstructionSetLocal{Local: addOneIndex},
 
 			// let x = 2
@@ -6996,7 +6996,7 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
 			// let inner = fun(): Int { ...
 			opcode.PrettyInstructionStatement{},
 			opcode.PrettyInstructionNewClosure{
-				Function: "<anonymous>",
+				Function: 1,
 				Upvalues: []opcode.Upvalue{
 					{
 						TargetIndex: xLocalIndex,
@@ -7102,7 +7102,7 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 			// fun inner(): Int { ...
 			opcode.PrettyInstructionStatement{},
 			opcode.PrettyInstructionNewClosure{
-				Function: "inner",
+				Function: 1,
 				Upvalues: []opcode.Upvalue{
 					{
 						TargetIndex: xLocalIndex,
@@ -7220,7 +7220,7 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 			// fun middle(): Int { ...
 			opcode.PrettyInstructionStatement{},
 			opcode.PrettyInstructionNewClosure{
-				Function: "middle",
+				Function: 1,
 				Upvalues: []opcode.Upvalue{
 					{
 						TargetIndex: xLocalIndex,
@@ -7246,7 +7246,7 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 			// fun inner(): Int { ...
 			opcode.PrettyInstructionStatement{},
 			opcode.PrettyInstructionNewClosure{
-				Function: "inner",
+				Function: 2,
 				Upvalues: []opcode.Upvalue{
 					{
 						TargetIndex: xUpvalueIndex,
@@ -7339,7 +7339,7 @@ func TestCompileRecursiveInnerFunction(t *testing.T) {
 			// fun inner() { ...
 			opcode.PrettyInstructionStatement{},
 			opcode.PrettyInstructionNewClosure{
-				Function: "inner",
+				Function: 1,
 				Upvalues: []opcode.Upvalue{
 					{
 						TargetIndex: innerLocalIndex,
@@ -7446,7 +7446,7 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 				// fun middle(): Int { ...
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionNewClosure{
-					Function: "middle",
+					Function: 1,
 					Upvalues: []opcode.Upvalue{
 						{
 
@@ -7517,7 +7517,7 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 				// fun inner(): Int { ...
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionNewClosure{
-					Function: "inner",
+					Function: 2,
 					Upvalues: []opcode.Upvalue{
 						// inner uses d, b, c, a
 						{
@@ -7907,7 +7907,7 @@ func TestCompileTransferClosure(t *testing.T) {
 			// let x = fun() {}
 			opcode.PrettyInstructionStatement{},
 			opcode.PrettyInstructionNewClosure{
-				Function: "<anonymous>",
+				Function: 1,
 			},
 			opcode.PrettyInstructionTransferAndConvert{
 				ValueType:  functionType,
@@ -10979,7 +10979,7 @@ func TestForStatementCapturing(t *testing.T) {
 			// let f = fun() ...
 			opcode.PrettyInstructionStatement{},
 			opcode.PrettyInstructionNewClosure{
-				Function: program.GetFunctionName(1),
+				Function: 1,
 				Upvalues: []opcode.Upvalue{
 					{
 						TargetIndex: xIndex,
@@ -11096,7 +11096,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 			[]opcode.PrettyInstruction{
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionNewClosure{
-					Function: program.GetFunctionName(anonymousFunctionIndex),
+					Function: anonymousFunctionIndex,
 				},
 				opcode.PrettyInstructionTransferAndConvert{
 					ValueType:  anonymousFunctionType,
@@ -11215,7 +11215,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 			[]opcode.PrettyInstruction{
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionNewClosure{
-					Function: program.GetFunctionName(anonymousFunctionIndex),
+					Function: anonymousFunctionIndex,
 				},
 				opcode.PrettyInstructionTransferAndConvert{
 					ValueType:  anonymousFunctionType,
@@ -11352,7 +11352,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 			[]opcode.PrettyInstruction{
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionNewClosure{
-					Function: program.GetFunctionName(anonymousFunctionIndex),
+					Function: anonymousFunctionIndex,
 				},
 				opcode.PrettyInstructionSetLocal{Local: 0},
 				opcode.PrettyInstructionReturn{},
@@ -11461,7 +11461,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 			[]opcode.PrettyInstruction{
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionNewClosure{
-					Function: program.GetFunctionName(anonymousFunctionIndex),
+					Function: anonymousFunctionIndex,
 				},
 				opcode.PrettyInstructionSetLocal{Local: 0},
 				opcode.PrettyInstructionReturn{},
@@ -11599,7 +11599,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.PrettyInstructionJumpIfFalse{Target: 9},
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionNewClosure{
-					Function: program.GetFunctionName(anonymousFunctionIndex),
+					Function: anonymousFunctionIndex,
 				},
 				opcode.PrettyInstructionSetLocal{Local: 0},
 				opcode.PrettyInstructionReturn{},
