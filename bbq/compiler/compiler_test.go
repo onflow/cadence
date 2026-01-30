@@ -7994,18 +7994,6 @@ func TestCompileArgument(t *testing.T) {
 		prettyInstructions(functions[0].Code, program),
 	)
 
-	const (
-		// fTypeIndex is the index of the type of function `f`, which is the first type
-		fTypeIndex = iota //nolint:unused
-		// testTypeIndex is the index of the type of function `test`, which is the second type
-		testTypeIndex //nolint:unused
-		// intTypeIndex is the index of the type int, which is the third type
-		intTypeIndex
-		voidTypeIndex
-		// xParameterTypeIndex is the index of the type of parameter `x`, which is the fourth type
-		xParameterTypeIndex
-	)
-
 	// xIndex is the index of the local variable `x`, which is the first local variable
 	const xIndex = 0
 
@@ -9316,8 +9304,8 @@ func TestCompileEnum(t *testing.T) {
 		testBGlobalIndex
 		testCGlobalIndex
 		testLookupGlobalIndex
-		testGlobalIndex
-		test2GlobalIndex
+		testGlobalIndex  //nolint:unused
+		test2GlobalIndex //nolint:unused
 		testConstructorGlobalIndex
 	)
 
