@@ -1842,7 +1842,7 @@ func (v *CompositeValue) getAttachmentValue(
 	context MemberAccessibleContext,
 	ty sema.Type,
 ) *CompositeValue {
-	// TODO:
+	// Attachments are always fields.
 	attachment := v.GetMember(context, AttachmentMemberName(string(ty.ID())), common.DeclarationKindField)
 	if attachment != nil {
 		return attachment.(*CompositeValue)

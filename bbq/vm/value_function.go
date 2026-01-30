@@ -299,17 +299,20 @@ func (v *NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpre
 	)
 }
 
-func (v *NativeFunctionValue) GetMember(context interpreter.MemberAccessibleContext, name string, memberKind common.DeclarationKind) interpreter.Value {
-	value, ok := v.fields[name]
-	if ok {
-		return value
-	}
-
-	if function := context.GetMethod(v, name); function != nil {
-		return function
-	}
-
-	return nil
+func (v *NativeFunctionValue) GetMember(
+	context interpreter.MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+) interpreter.Value {
+	return interpreter.GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() interpreter.Value {
+			return v.fields[name]
+		},
+	)
 }
 
 func (*NativeFunctionValue) RemoveMember(_ interpreter.ValueTransferContext, _ string) interpreter.Value {
@@ -490,13 +493,11 @@ func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStati
 
 	interpreter.CheckInvalidatedResourceOrResourceReference(v.ReceiverReference, context)
 
-	dereferencedReceiver := maybeDereferenceReceiver(
+	return maybeDereferenceReceiver(
 		context,
 		v.ReceiverReference,
 		v.IsNative(),
 	)
-
-	return dereferencedReceiver
 }
 
 func (v *BoundFunctionValue) IsNative() bool {

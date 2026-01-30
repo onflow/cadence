@@ -93,10 +93,18 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 			// VM does not provide address
 			deployedContract := AssertValueOfType[*SimpleCompositeValue](receiver)
 
-			addressFieldValue := deployedContract.GetMember(context, sema.DeployedContractTypeAddressFieldName, 0)
+			addressFieldValue := deployedContract.GetMember(
+				context,
+				sema.DeployedContractTypeAddressFieldName,
+				common.DeclarationKindField,
+			)
 			address = common.Address(AssertValueOfType[AddressValue](addressFieldValue))
 
-			nameFieldValue := deployedContract.GetMember(context, sema.DeployedContractTypeNameFieldName, 0)
+			nameFieldValue := deployedContract.GetMember(
+				context,
+				sema.DeployedContractTypeNameFieldName,
+				common.DeclarationKindField,
+			)
 			name = AssertValueOfType[*StringValue](nameFieldValue)
 		} else {
 			// Interpreter provides address and name

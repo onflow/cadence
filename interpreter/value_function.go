@@ -263,7 +263,8 @@ func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 }
 
 func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
-	// TODO:
+	// Host Functions have variables with both fields and functions.
+	// So validating / or returning one or the other isn't possible at the moment.
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue(context)

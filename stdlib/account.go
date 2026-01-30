@@ -2705,7 +2705,7 @@ func NewHashAlgorithmFromValue(
 ) sema.HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
 
-	rawValue := hashAlgoValue.GetMember(context, sema.EnumRawValueFieldName, 0)
+	rawValue := hashAlgoValue.GetMember(context, sema.EnumRawValueFieldName, common.DeclarationKindField)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}

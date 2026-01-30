@@ -211,7 +211,11 @@ type deletionCheckedFunctionValue struct {
 	FunctionValue
 }
 
-func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) (result Value) {
+func (v *AccountCapabilityControllerValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:

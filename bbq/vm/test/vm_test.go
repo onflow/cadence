@@ -2179,7 +2179,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, transaction.GetMember(vmContext, "a", 0))
+		assert.Nil(t, transaction.GetMember(vmContext, "a", common.DeclarationKindField))
 
 		// Invoke 'prepare'
 		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
@@ -2190,7 +2190,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			transaction.GetMember(vmContext, "a", 0),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField),
 		)
 
 		// Invoke 'execute'
@@ -2202,7 +2202,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			transaction.GetMember(vmContext, "a", 0),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField),
 		)
 	})
 
@@ -2256,7 +2256,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, transaction.GetMember(vmContext, "a", 0))
+		assert.Nil(t, transaction.GetMember(vmContext, "a", common.DeclarationKindField))
 
 		// Invoke 'prepare'
 		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
@@ -2267,7 +2267,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			transaction.GetMember(vmContext, "a", 0),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField),
 		)
 
 		// Invoke 'execute'
@@ -2279,7 +2279,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			transaction.GetMember(vmContext, "a", 0),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField),
 		)
 	})
 
