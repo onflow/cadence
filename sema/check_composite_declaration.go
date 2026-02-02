@@ -1662,13 +1662,6 @@ func (checker *Checker) memberSatisfied(
 				return false
 			}
 
-			// Functions are covariant in their purity
-			if currentFunctionType.Purity != inheritedFunctionType.Purity &&
-				currentFunctionType.Purity != FunctionPurityView {
-
-				return false
-			}
-
 			// Functions are invariant in their parameter types
 
 			for i, subParameter := range currentFunctionType.Parameters {
@@ -1680,9 +1673,9 @@ func (checker *Checker) memberSatisfied(
 				}
 			}
 
-			// Functions
-			// - are covariant in their return type when inherited,
-			// - are invariant in their return type when siblings.
+			// Function purity and return types:
+			// - are covariant in their inherited.
+			// - are invariant in their siblings.
 
 			currentFunctionReturnType := currentFunctionType.ReturnTypeAnnotation.Type
 			inheritedFunctionReturnType := inheritedFunctionType.ReturnTypeAnnotation.Type
@@ -1691,12 +1684,25 @@ func (checker *Checker) memberSatisfied(
 				inheritedFunctionReturnType != nil {
 				switch relationship {
 				case memberRelationshipSibling:
-					// For siblings, return types must be equal.
+					// Purity must be equal for siblings.
+					// Otherwise, sibling order may impact the member validity check.
+					if currentFunctionType.Purity != inheritedFunctionType.Purity {
+						return false
+					}
+
+					// Return types must be equal for siblings.
 					// Otherwise, sibling order may impact the member validity check.
 					if !currentFunctionReturnType.Equal(inheritedFunctionReturnType) {
 						return false
 					}
 				case memberRelationshipInherited:
+					// Functions are covariant in their purity, for inherited members
+					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+						currentFunctionType.Purity != FunctionPurityView {
+
+						return false
+					}
+
 					// If the current member is a child of the inherited member,
 					// then subtyping is allowed.
 					if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {

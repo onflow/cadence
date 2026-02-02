@@ -4147,4 +4147,107 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
+
+	t.Run("view function is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			fun escalate(_ inbound: Int): Int
+		}
+
+		struct interface I2 {
+			view fun escalate(_ inbound: Int): Int
+		}
+
+		// Note the order: Type with the view function must appear second.
+		struct S: I1, I2 {
+			view fun escalate(_ inbound: Int): Int {
+				return 1
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("view function is first sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			fun escalate(_ inbound: Int): Int
+		}
+
+		struct interface I2 {
+			view fun escalate(_ inbound: Int): Int
+		}
+
+		// Note the order: Type with the view function must appear first.
+		struct S: I2, I1 {
+			view fun escalate(_ inbound: Int): Int {
+				return 1
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("impure default impl is second sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: Int): Int {
+                    return inbound
+                }
+            }
+
+            struct interface I2 {
+                view fun escalate(_ inbound: Int): Int
+            }
+
+            // Note the order: Type with the impure function must appear second.
+            struct S: I2, I1 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("impure default impl is first sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: Int): Int {
+                    return inbound
+                }
+            }
+
+            struct interface I2 {
+                view fun escalate(_ inbound: Int): Int
+            }
+
+            // Note the order: Type with the impure function must appear first.
+            struct S: I1, I2 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
 }
