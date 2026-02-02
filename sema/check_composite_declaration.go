@@ -1383,7 +1383,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 			if !checker.memberSatisfied(
 				compositeMember,
 				interfaceMember,
-				false, // conflicting member is inherited from interface
+				false, // checking member from composite, not a sibling
 			) {
 				memberMismatches = append(
 					memberMismatches,
@@ -1473,7 +1473,7 @@ func (checker *Checker) checkInheritedMemberConflicts(
 		if !checker.memberSatisfied(
 			newInheritedMember,
 			existingInheritedMember,
-			true, // conflicting member is a sibling coming from another interface
+			true, // checking member from composite, not a sibling
 		) {
 			memberMismatches = append(
 				memberMismatches,
@@ -1578,6 +1578,32 @@ func (checker *Checker) checkConformanceKindMatch(
 }
 
 // TODO: return proper error
+// memberSatisfied checks whether the composite member satisfies the interface member.
+//
+// areMembersSiblings indicates whether the members are inherited from interfaces
+// (i.e. siblings) or one is declared in the composite type.
+// When checking if a composite member satisfies an interface member, this is false.
+// When checking if an interface member satisfies another interface member, this is true,
+// because both interface members are siblings in terms of a flattened interface conformance list.
+//
+// For example, consider the following code:
+//
+//	interface I1 {
+//	  fun foo(): Int
+//	}
+//
+//	interface I2 {
+//	  fun foo(): Int
+//	}
+//
+//	struct S: I1, I2 {
+//	  fun foo(): Int {
+//	    return 42
+//	  }
+//	}
+//
+// Here, when checking if `S.foo` satisfies `I1.foo`, `areMembersSiblings` is false.
+// However, when checking if `I1.foo` satisfies `I2.foo` or `I2.foo` satisfies `I1.foo`, `areMembersSiblings` is true.
 func (checker *Checker) memberSatisfied(
 	compositeMember, interfaceMember *Member,
 	areMembersSiblings bool,
@@ -1608,7 +1634,9 @@ func (checker *Checker) memberSatisfied(
 		case common.DeclarationKindFunction:
 			// If the member is a function, check that the argument labels are equal,
 			// the parameter types are equal (they are invariant),
-			// and that the return types are subtypes (the return type is covariant).
+			// and that the return types
+			// - are subtypes (the return type is covariant) when not siblings,
+			// - are equal (the return type is invariant) when siblings.
 			//
 			// This is different from subtyping for functions,
 			// where argument labels are not considered,
@@ -1643,14 +1671,16 @@ func (checker *Checker) memberSatisfied(
 				}
 			}
 
-			// Functions are covariant in their return type
+			// Functions
+			// - are covariant in their return type when not siblings,
+			// - are invariant in their return type when siblings.
 
 			compositeMemberReturnType := compositeMemberFunctionType.ReturnTypeAnnotation.Type
 			interfaceMemberReturnType := interfaceMemberFunctionType.ReturnTypeAnnotation.Type
 
 			if compositeMemberReturnType != nil &&
 				interfaceMemberReturnType != nil {
-				// Fo siblings, return types must be equal.
+
 				if areMembersSiblings {
 					if !compositeMemberReturnType.Equal(interfaceMemberReturnType) {
 						return false
