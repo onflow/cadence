@@ -1390,7 +1390,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 			if !checker.memberSatisfied(
 				compositeMember,
 				interfaceMember,
-				memberRelationshipInherited, // conflicting member is inherited from interface
+				memberRelationshipInherited, // checking member from composite, not a sibling
 			) {
 				memberMismatches = append(
 					memberMismatches,
@@ -1584,9 +1584,37 @@ func (checker *Checker) checkConformanceKindMatch(
 	)
 }
 
+// memberSatisfied checks whether the composite member satisfies the interface member.
+//
 // `relationship` indicates the relationship between the `currentMember` (coming from type T1)
 // and the `inheritedMember` (coming from type T2).
-// TODO: return proper error
+// When checking if a composite member satisfies an interface member, this is false.
+// When checking if an interface member satisfies another interface member, this is true,
+// because both interface members are siblings in terms of a flattened interface conformance list.
+//
+// For example, consider the following code:
+//
+//	interface I1 {
+//	  fun foo(): Int
+//	}
+//
+//	interface I2 {
+//	  fun foo(): Int
+//	}
+
+//	interface I3: I1 {
+//	  fun foo(): Int
+//	}
+//
+//	struct S: I1, I2 {
+//	  fun foo(): Int {
+//	    return 42
+//	  }
+//	}
+//
+// Here, when checking if `S.foo` satisfies `I1.foo`, relationship is memberRelationshipInherited.
+// When checking if `I3.foo` satisfies `I1.foo`, relationship is memberRelationshipInherited.
+// When checking if `I1.foo` satisfies `I2.foo` or `I2.foo` satisfies `I1.foo`, relationship is memberRelationshipSibling.
 func (checker *Checker) memberSatisfied(
 	currentMember, inheritedMember *Member,
 	relationship memberRelationship,
@@ -1617,7 +1645,9 @@ func (checker *Checker) memberSatisfied(
 		case common.DeclarationKindFunction:
 			// If the member is a function, check that the argument labels are equal,
 			// the parameter types are equal (they are invariant),
-			// and that the return types are subtypes (the return type is covariant).
+			// and that the return types
+			// - are subtypes (the return type is covariant) when not siblings,
+			// - are equal (the return type is invariant) when siblings.
 			//
 			// This is different from subtyping for functions,
 			// where argument labels are not considered,
@@ -1652,7 +1682,9 @@ func (checker *Checker) memberSatisfied(
 				}
 			}
 
-			// Functions are covariant in their return type
+			// Functions
+			// - are covariant in their return type when not siblings,
+			// - are invariant in their return type when siblings.
 
 			currentFunctionReturnType := currentFunctionType.ReturnTypeAnnotation.Type
 			inheritedFunctionReturnType := inheritedFunctionType.ReturnTypeAnnotation.Type
@@ -1661,14 +1693,13 @@ func (checker *Checker) memberSatisfied(
 				inheritedFunctionReturnType != nil {
 				switch relationship {
 				case memberRelationshipSibling:
-					// Fo siblings, return types must be equal.
+					// For siblings, return types must be equal.
 					// Otherwise, sibling order may impact the member validity check.
 					if !currentFunctionReturnType.Equal(inheritedFunctionReturnType) {
 						return false
 					}
 				case memberRelationshipInherited:
-					// If the new member is a child of the existing member,
-					// (i.e: existing member is inherited, and the new member is from the current declaration),
+					// If the current member is a child of the inherited member,
 					// then subtyping is allowed.
 					if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
 						return false
