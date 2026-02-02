@@ -1385,8 +1385,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 		compositeMember, hasImplementation := compositeType.Members.Get(name)
 		if hasImplementation {
-			// If the composite member exists, check if it satisfies the mem
-
+			// If the composite member exists, check if it satisfies the interface's member requirement.
 			if !checker.memberSatisfied(
 				compositeMember,
 				interfaceMember,
@@ -1465,6 +1464,8 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 }
 
+// checkInheritedMemberConflicts checks for the validity among the inherited members.
+// (i.e: compare inherited member vs other inherited members)
 func (checker *Checker) checkInheritedMemberConflicts(
 	compositeDeclaration ast.CompositeLikeDeclaration,
 	existingInheritedMembers []*Member,
@@ -1493,7 +1494,7 @@ func (checker *Checker) checkInheritedMemberConflicts(
 
 		// If the concrete type has an implementation, then it doesn't matter
 		// even if there are more than multiple inherited default implementations.
-		// Otherwise, it is ambiguous to have two or more have default impls.
+		// Otherwise, it is ambiguous to have two or more default impls.
 		// If so, report an error.
 		if !concreteTypeHasImplementation &&
 			newInheritedMember.HasImplementation && existingInheritedMember.HasImplementation {
@@ -1588,9 +1589,6 @@ func (checker *Checker) checkConformanceKindMatch(
 //
 // `relationship` indicates the relationship between the `currentMember` (coming from type T1)
 // and the `inheritedMember` (coming from type T2).
-// When checking if a composite member satisfies an interface member, this is false.
-// When checking if an interface member satisfies another interface member, this is true,
-// because both interface members are siblings in terms of a flattened interface conformance list.
 //
 // For example, consider the following code:
 //
@@ -1601,7 +1599,7 @@ func (checker *Checker) checkConformanceKindMatch(
 //	interface I2 {
 //	  fun foo(): Int
 //	}
-
+//
 //	interface I3: I1 {
 //	  fun foo(): Int
 //	}
@@ -1646,7 +1644,7 @@ func (checker *Checker) memberSatisfied(
 			// If the member is a function, check that the argument labels are equal,
 			// the parameter types are equal (they are invariant),
 			// and that the return types
-			// - are subtypes (the return type is covariant) when not siblings,
+			// - are subtypes (the return type is covariant) when inherited,
 			// - are equal (the return type is invariant) when siblings.
 			//
 			// This is different from subtyping for functions,
@@ -1683,7 +1681,7 @@ func (checker *Checker) memberSatisfied(
 			}
 
 			// Functions
-			// - are covariant in their return type when not siblings,
+			// - are covariant in their return type when inherited,
 			// - are invariant in their return type when siblings.
 
 			currentFunctionReturnType := currentFunctionType.ReturnTypeAnnotation.Type
