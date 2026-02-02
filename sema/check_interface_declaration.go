@@ -60,7 +60,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	)
 
 	inheritedMembers := map[string][]*Member{}
-	inheritedTypes := map[string]Type{}
 
 	for _, conformance := range interfaceType.EffectiveInterfaceConformances() {
 		// If the currently checking type is also in its own conformance list,
@@ -77,7 +76,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 			interfaceType,
 			conformance.InterfaceType,
 			inheritedMembers,
-			inheritedTypes,
 		)
 	}
 
@@ -612,7 +610,6 @@ func (checker *Checker) checkInterfaceConformance(
 	interfaceType *InterfaceType,
 	conformance *InterfaceType,
 	inheritedMembersByName map[string][]*Member,
-	inheritedNestedTypes map[string]Type,
 ) {
 
 	// Ensure the composite kinds match, e.g. a structure shouldn't be able
@@ -621,7 +618,7 @@ func (checker *Checker) checkInterfaceConformance(
 
 	// Check for member (functions and fields) conflicts
 
-	conformance.Members.Foreach(func(name string, conformanceMember *Member) {
+	conformance.Members.Foreach(func(name string, inheritedMember *Member) {
 
 		var isDuplicate bool
 
@@ -632,11 +629,11 @@ func (checker *Checker) checkInterfaceConformance(
 				conflictingInterface := conflictingMember.ContainerType.(*InterfaceType)
 				isDuplicate = checker.checkDuplicateInterfaceMember(
 					conformance,
-					conformanceMember,
+					inheritedMember,
 					conflictingInterface,
 					conflictingMember,
 					interfaceDeclaration.Identifier,
-					true, // conflicting member is a sibling
+					memberRelationshipSibling, // conflicting member is a sibling
 				)
 			}
 		}
@@ -648,15 +645,15 @@ func (checker *Checker) checkInterfaceConformance(
 				interfaceType,
 				declarationMember,
 				conformance,
-				conformanceMember,
+				inheritedMember,
 				declarationMember.Identifier,
-				false, // conflicting member is an inherited member
+				memberRelationshipInherited, // conflicting member is an inherited member
 			)
 		}
 
 		// Add to the inherited members list, only if it's not a duplicated, to avoid redundant errors.
 		if !isDuplicate {
-			inheritedMembers = append(inheritedMembers, conformanceMember)
+			inheritedMembers = append(inheritedMembers, inheritedMember)
 			inheritedMembersByName[name] = inheritedMembers
 		}
 	})
@@ -668,7 +665,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	conflictingInterfaceType *InterfaceType,
 	conflictingMember *Member,
 	hasPosition ast.HasPosition,
-	areConflictingMembersSiblings bool,
+	relationship memberRelationship,
 ) (isDuplicate bool) {
 
 	reportMemberConflictError := func() {
@@ -689,7 +686,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	if !checker.memberSatisfied(
 		interfaceMember,
 		conflictingMember,
-		areConflictingMembersSiblings,
+		relationship,
 	) {
 		reportMemberConflictError()
 		return
@@ -723,7 +720,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	// the inherited declaration, by a default implementation.
 	// However, a default implementation cannot be overridden by an empty declaration.
 
-	if !areConflictingMembersSiblings &&
+	if relationship == memberRelationshipInherited &&
 		conflictingMember.HasImplementation && !interfaceMember.HasConditions {
 		reportMemberConflictError()
 		return

@@ -25,6 +25,13 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
+type memberRelationship uint8
+
+const (
+	memberRelationshipSibling memberRelationship = iota
+	memberRelationshipInherited
+)
+
 func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
 	checker.visitCompositeLikeDeclaration(declaration)
 	return
@@ -1383,7 +1390,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 			if !checker.memberSatisfied(
 				compositeMember,
 				interfaceMember,
-				false, // conflicting member is inherited from interface
+				memberRelationshipInherited, // conflicting member is inherited from interface
 			) {
 				memberMismatches = append(
 					memberMismatches,
@@ -1473,7 +1480,7 @@ func (checker *Checker) checkInheritedMemberConflicts(
 		if !checker.memberSatisfied(
 			newInheritedMember,
 			existingInheritedMember,
-			true, // conflicting member is a sibling coming from another interface
+			memberRelationshipSibling, // conflicting member is a sibling coming from another interface
 		) {
 			memberMismatches = append(
 				memberMismatches,
@@ -1577,31 +1584,33 @@ func (checker *Checker) checkConformanceKindMatch(
 	)
 }
 
+// `relationship` indicates the relationship between the `currentMember` (coming from type T1)
+// and the `inheritedMember` (coming from type T2).
 // TODO: return proper error
 func (checker *Checker) memberSatisfied(
-	compositeMember, interfaceMember *Member,
-	areMembersSiblings bool,
+	currentMember, inheritedMember *Member,
+	relationship memberRelationship,
 ) bool {
 
 	// Check declaration kind
-	if compositeMember.DeclarationKind != interfaceMember.DeclarationKind {
+	if currentMember.DeclarationKind != inheritedMember.DeclarationKind {
 		return false
 	}
 
 	// Check type
 
-	compositeMemberType := compositeMember.TypeAnnotation.Type
-	interfaceMemberType := interfaceMember.TypeAnnotation.Type
+	currentMemberType := currentMember.TypeAnnotation.Type
+	inheritedMemberType := inheritedMember.TypeAnnotation.Type
 
-	if !compositeMemberType.IsInvalidType() &&
-		!interfaceMemberType.IsInvalidType() {
+	if !currentMemberType.IsInvalidType() &&
+		!inheritedMemberType.IsInvalidType() {
 
-		switch interfaceMember.DeclarationKind {
+		switch inheritedMember.DeclarationKind {
 		case common.DeclarationKindField:
 			// If the member is just a field, check the types are equal
 
 			// TODO: subtype?
-			if !compositeMemberType.Equal(interfaceMemberType) {
+			if !currentMemberType.Equal(inheritedMemberType) {
 				return false
 			}
 
@@ -1614,28 +1623,28 @@ func (checker *Checker) memberSatisfied(
 			// where argument labels are not considered,
 			// and parameters are contravariant.
 
-			interfaceMemberFunctionType, isInterfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
-			compositeMemberFunctionType, isCompositeMemberFunctionType := compositeMemberType.(*FunctionType)
+			inheritedFunctionType, inheritedMemberIsFunction := inheritedMemberType.(*FunctionType)
+			currentFunctionType, currentMemberIsFunction := currentMemberType.(*FunctionType)
 
-			if !isInterfaceMemberFunctionType || !isCompositeMemberFunctionType {
+			if !inheritedMemberIsFunction || !currentMemberIsFunction {
 				return false
 			}
 
-			if !interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
+			if !inheritedFunctionType.HasSameArgumentLabels(currentFunctionType) {
 				return false
 			}
 
 			// Functions are covariant in their purity
-			if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity &&
-				compositeMemberFunctionType.Purity != FunctionPurityView {
+			if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+				currentFunctionType.Purity != FunctionPurityView {
 
 				return false
 			}
 
 			// Functions are invariant in their parameter types
 
-			for i, subParameter := range compositeMemberFunctionType.Parameters {
-				superParameter := interfaceMemberFunctionType.Parameters[i]
+			for i, subParameter := range currentFunctionType.Parameters {
+				superParameter := inheritedFunctionType.Parameters[i]
 				if !subParameter.TypeAnnotation.Type.
 					Equal(superParameter.TypeAnnotation.Type) {
 
@@ -1645,27 +1654,34 @@ func (checker *Checker) memberSatisfied(
 
 			// Functions are covariant in their return type
 
-			compositeMemberReturnType := compositeMemberFunctionType.ReturnTypeAnnotation.Type
-			interfaceMemberReturnType := interfaceMemberFunctionType.ReturnTypeAnnotation.Type
+			currentFunctionReturnType := currentFunctionType.ReturnTypeAnnotation.Type
+			inheritedFunctionReturnType := inheritedFunctionType.ReturnTypeAnnotation.Type
 
-			if compositeMemberReturnType != nil &&
-				interfaceMemberReturnType != nil {
-				// Fo siblings, return types must be equal.
-				if areMembersSiblings {
-					if !compositeMemberReturnType.Equal(interfaceMemberReturnType) {
+			if currentFunctionReturnType != nil &&
+				inheritedFunctionReturnType != nil {
+				switch relationship {
+				case memberRelationshipSibling:
+					// Fo siblings, return types must be equal.
+					// Otherwise, sibling order may impact the member validity check.
+					if !currentFunctionReturnType.Equal(inheritedFunctionReturnType) {
 						return false
 					}
-				} else {
-					if !IsSubType(compositeMemberReturnType, interfaceMemberReturnType) {
+				case memberRelationshipInherited:
+					// If the new member is a child of the existing member,
+					// (i.e: existing member is inherited, and the new member is from the current declaration),
+					// then subtyping is allowed.
+					if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
 						return false
 					}
+				default:
+					panic(errors.NewUnreachableError())
 				}
 			}
 
-			if (compositeMemberReturnType != nil &&
-				interfaceMemberReturnType == nil) ||
-				(compositeMemberReturnType == nil &&
-					interfaceMemberReturnType != nil) {
+			if (currentFunctionReturnType != nil &&
+				inheritedFunctionReturnType == nil) ||
+				(currentFunctionReturnType == nil &&
+					inheritedFunctionReturnType != nil) {
 
 				return false
 			}
@@ -1674,16 +1690,16 @@ func (checker *Checker) memberSatisfied(
 
 	// Check variable kind
 
-	if interfaceMember.VariableKind != ast.VariableKindNotSpecified &&
-		compositeMember.VariableKind != interfaceMember.VariableKind {
+	if inheritedMember.VariableKind != ast.VariableKindNotSpecified &&
+		currentMember.VariableKind != inheritedMember.VariableKind {
 
 		return false
 	}
 
 	// Check access
 
-	effectiveInterfaceMemberAccess := checker.effectiveInterfaceMemberAccess(interfaceMember.Access)
-	effectiveCompositeMemberAccess := checker.EffectiveCompositeMemberAccess(compositeMember.Access)
+	effectiveInterfaceMemberAccess := checker.effectiveInterfaceMemberAccess(inheritedMember.Access)
+	effectiveCompositeMemberAccess := checker.EffectiveCompositeMemberAccess(currentMember.Access)
 
 	return effectiveCompositeMemberAccess.Equal(effectiveInterfaceMemberAccess)
 }
