@@ -6234,6 +6234,20 @@ func NativeCapabilityBorrowFunction(
 	}
 }
 
+var capabilityTypeBorrowFunctionType = &sema.FunctionType{
+	Purity: FunctionPurityView,
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		&sema.OptionalType{
+			Type: sema.AnyStructType,
+		},
+	),
+}
+
+var capabilityTypeCheckFunctionType = &sema.FunctionType{
+	Purity:               FunctionPurityView,
+	ReturnTypeAnnotation: sema.BoolTypeAnnotation,
+}
+
 func capabilityBorrowFunction(
 	context FunctionCreationContext,
 	capabilityValue CapabilityValue,
@@ -6245,7 +6259,7 @@ func capabilityBorrowFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
-		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
+		capabilityTypeBorrowFunctionType,
 		NativeCapabilityBorrowFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
@@ -6354,7 +6368,7 @@ func capabilityCheckFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
-		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
+		capabilityTypeCheckFunctionType,
 		NativeCapabilityCheckFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
