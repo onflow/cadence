@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -181,6 +182,232 @@ func TestInterpretIDCapability(t *testing.T) {
 			`
               fun test(): Bool {
                   return cap.check()
+              }
+            `,
+			handlers{
+				check: func(
+					_ interpreter.CheckCapabilityControllerContext,
+					address interpreter.AddressValue,
+					capabilityID interpreter.UInt64Value,
+					_ *sema.ReferenceType,
+					_ *sema.ReferenceType,
+				) interpreter.BoolValue {
+					assert.Equal(t, interpreter.AddressValue{0x42}, address)
+					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
+
+					checked = true
+
+					return interpreter.TrueValue
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.TrueValue, res)
+		require.True(t, checked, "check handler was not called")
+	})
+
+	t.Run("id", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := test(t,
+			`
+              fun test(): UInt64 {
+                  return cap.id
+              }
+            `,
+			handlers{},
+		)
+		require.NoError(t, err)
+
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.UInt64Value(id), res)
+	})
+}
+
+func TestInterpretIDCapabilityUntyped(t *testing.T) {
+
+	t.Parallel()
+
+	const id = 99
+
+	type handlers struct {
+		borrow interpreter.CapabilityBorrowHandlerFunc
+		check  interpreter.CapabilityCheckHandlerFunc
+	}
+
+	test := func(
+		t *testing.T,
+		code string,
+		handlers handlers,
+	) (common_utils.Invokable, error) {
+
+		// Capability value has static type `Capability`,
+		// but can be borrowed as `auth(Mutate) &String`
+
+		entitlements := orderedmap.New[sema.TypeIDOrderedSet](1)
+		entitlements.Set(sema.MutateType.ID(), struct{}{})
+
+		value := stdlib.StandardLibraryValue{
+			// Static type is `Capability` without type argument
+			Type: &sema.CapabilityType{},
+			Value: interpreter.NewUnmeteredCapabilityValue(
+				id,
+				interpreter.AddressValue{0x42},
+				// Referenced type is `auth(Mutate) &String`
+				&interpreter.ReferenceStaticType{
+					Authorization: interpreter.EntitlementSetAuthorization{
+						Entitlements: entitlements,
+						SetKind:      sema.Conjunction,
+					},
+					ReferencedType: interpreter.PrimitiveStaticTypeString,
+				},
+			),
+			Name: "cap",
+			Kind: common.DeclarationKindConstant,
+		}
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(value)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, value)
+
+		return parseCheckAndPrepareWithOptions(
+			t,
+			code,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+					CapabilityBorrowHandler: handlers.borrow,
+					CapabilityCheckHandler:  handlers.check,
+				},
+			},
+		)
+	}
+
+	t.Run("transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := test(t,
+			`
+              fun f(_ cap: Capability): Capability? {
+                  return cap
+              }
+
+	          let capOpt: Capability? = f(cap)
+            `,
+			handlers{},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow, without entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		var mockReference *interpreter.EphemeralReferenceValue
+
+		inter, err := test(t,
+			`
+              fun test(): &String? {
+                  return cap.borrow<&String>()
+              }
+            `,
+			handlers{
+				borrow: func(
+					_ interpreter.BorrowCapabilityControllerContext,
+					address interpreter.AddressValue,
+					capabilityID interpreter.UInt64Value,
+					wantedBorrowType *sema.ReferenceType,
+					_ *sema.ReferenceType,
+				) interpreter.ReferenceValue {
+					assert.Equal(t, interpreter.AddressValue{0x42}, address)
+					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
+
+					mockReference = interpreter.NewUnmeteredEphemeralReferenceValue(
+						noopReferenceTracker{},
+						interpreter.ConvertSemaAccessToStaticAuthorization(nil, wantedBorrowType.Authorization),
+						interpreter.NewUnmeteredStringValue("mock"),
+						sema.StringType,
+					)
+
+					return mockReference
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(mockReference), res)
+	})
+
+	t.Run("borrow, with entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		var mockReference *interpreter.EphemeralReferenceValue
+
+		inter, err := test(t,
+			`
+              fun test(): auth(Mutate) &String? {
+                  return cap.borrow<auth(Mutate) &String>()
+              }
+            `,
+			handlers{
+				borrow: func(
+					_ interpreter.BorrowCapabilityControllerContext,
+					address interpreter.AddressValue,
+					capabilityID interpreter.UInt64Value,
+					wantedBorrowType *sema.ReferenceType,
+					_ *sema.ReferenceType,
+				) interpreter.ReferenceValue {
+					assert.Equal(t, interpreter.AddressValue{0x42}, address)
+					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
+
+					mockReference = interpreter.NewUnmeteredEphemeralReferenceValue(
+						noopReferenceTracker{},
+						interpreter.ConvertSemaAccessToStaticAuthorization(nil, wantedBorrowType.Authorization),
+						interpreter.NewUnmeteredStringValue("mock"),
+						sema.StringType,
+					)
+
+					return mockReference
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(mockReference), res)
+	})
+
+	t.Run("check", func(t *testing.T) {
+
+		t.Parallel()
+
+		var checked bool
+
+		inter, err := test(t,
+			`
+              fun test(): Bool {
+                  return cap.check<&String>()
               }
             `,
 			handlers{
