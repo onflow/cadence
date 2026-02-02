@@ -140,7 +140,7 @@ func TestInterpretIDCapability(t *testing.T) {
 			noopReferenceTracker{},
 			interpreter.UnauthorizedAccess,
 			interpreter.NewUnmeteredStringValue("mock"),
-			sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.StringType),
+			sema.StringType,
 		)
 
 		inter, err := test(t,
