@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -67,7 +67,7 @@ func TestInterpretIDCapability(t *testing.T) {
 		t *testing.T,
 		code string,
 		handlers handlers,
-	) (common_utils.Invokable, error) {
+	) (Invokable, error) {
 		borrowType := &sema.ReferenceType{
 			Type:          sema.StringType,
 			Authorization: sema.UnauthorizedAccess,
@@ -158,6 +158,7 @@ func TestInterpretIDCapability(t *testing.T) {
 					_ *sema.ReferenceType,
 					_ *sema.ReferenceType,
 				) interpreter.ReferenceValue {
+
 					assert.Equal(t, interpreter.AddressValue{0x42}, address)
 					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
 
@@ -192,6 +193,7 @@ func TestInterpretIDCapability(t *testing.T) {
 					_ *sema.ReferenceType,
 					_ *sema.ReferenceType,
 				) interpreter.BoolValue {
+
 					assert.Equal(t, interpreter.AddressValue{0x42}, address)
 					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
 
@@ -243,11 +245,13 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 	test := func(
 		t *testing.T,
 		code string,
+		referencedType interpreter.StaticType,
 		handlers handlers,
-	) (common_utils.Invokable, error) {
+	) (Invokable, error) {
 
 		// Capability value has static type `Capability`,
-		// but can be borrowed as `auth(Mutate) &String`
+		// but can be borrowed as `auth(Mutate) &U`,
+		// where U is the referenced type
 
 		entitlements := orderedmap.New[sema.TypeIDOrderedSet](1)
 		entitlements.Set(sema.MutateType.ID(), struct{}{})
@@ -258,13 +262,13 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 			Value: interpreter.NewUnmeteredCapabilityValue(
 				id,
 				interpreter.AddressValue{0x42},
-				// Referenced type is `auth(Mutate) &String`
+				// Referenced type is `auth(Mutate) &U`, where U is the referenced type
 				&interpreter.ReferenceStaticType{
 					Authorization: interpreter.EntitlementSetAuthorization{
 						Entitlements: entitlements,
 						SetKind:      sema.Conjunction,
 					},
-					ReferencedType: interpreter.PrimitiveStaticTypeString,
+					ReferencedType: referencedType,
 				},
 			),
 			Name: "cap",
@@ -311,12 +315,13 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 
 	          let capOpt: Capability? = f(cap)
             `,
+			interpreter.PrimitiveStaticTypeString,
 			handlers{},
 		)
 		require.NoError(t, err)
 	})
 
-	t.Run("borrow, without entitlements", func(t *testing.T) {
+	t.Run("borrow, without entitlements, struct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -328,6 +333,7 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
                   return cap.borrow<&String>()
               }
             `,
+			interpreter.PrimitiveStaticTypeString,
 			handlers{
 				borrow: func(
 					_ interpreter.BorrowCapabilityControllerContext,
@@ -336,6 +342,7 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 					wantedBorrowType *sema.ReferenceType,
 					_ *sema.ReferenceType,
 				) interpreter.ReferenceValue {
+
 					assert.Equal(t, interpreter.AddressValue{0x42}, address)
 					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
 
@@ -357,7 +364,72 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 		require.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(mockReference), res)
 	})
 
-	t.Run("borrow, with entitlements", func(t *testing.T) {
+	t.Run("borrow, without entitlements, resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		var mockReference *interpreter.EphemeralReferenceValue
+
+		const rTypeQualifiedIdentifier = "R"
+		rTypeID := TestLocation.TypeID(nil, rTypeQualifiedIdentifier)
+		rStaticType := &interpreter.CompositeStaticType{
+			Location:            TestLocation,
+			QualifiedIdentifier: rTypeQualifiedIdentifier,
+			TypeID:              rTypeID,
+		}
+
+		inter, err := test(t,
+			`
+              resource R {}
+
+              fun test(): &R? {
+                  return cap.borrow<&R>()
+              }
+            `,
+			rStaticType,
+			handlers{
+				borrow: func(
+					context interpreter.BorrowCapabilityControllerContext,
+					address interpreter.AddressValue,
+					capabilityID interpreter.UInt64Value,
+					wantedBorrowType *sema.ReferenceType,
+					capabilityBorrowType *sema.ReferenceType,
+				) interpreter.ReferenceValue {
+
+					assert.Equal(t, interpreter.AddressValue{0x42}, address)
+					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
+
+					rSemaType, err := context.GetCompositeType(TestLocation, rTypeQualifiedIdentifier, rTypeID)
+					require.NoError(t, err)
+
+					assert.True(t, capabilityBorrowType.Type.Equal(rSemaType))
+
+					mockReference = interpreter.NewUnmeteredEphemeralReferenceValue(
+						noopReferenceTracker{},
+						interpreter.ConvertSemaAccessToStaticAuthorization(nil, wantedBorrowType.Authorization),
+						interpreter.NewCompositeValue(
+							context,
+							TestLocation,
+							rTypeQualifiedIdentifier,
+							common.CompositeKindResource,
+							nil,
+							common.ZeroAddress,
+						),
+						rSemaType,
+					)
+
+					return mockReference
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(mockReference), res)
+	})
+
+	t.Run("borrow, with entitlements, struct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -369,6 +441,7 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
                   return cap.borrow<auth(Mutate) &String>()
               }
             `,
+			interpreter.PrimitiveStaticTypeString,
 			handlers{
 				borrow: func(
 					_ interpreter.BorrowCapabilityControllerContext,
@@ -377,6 +450,7 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 					wantedBorrowType *sema.ReferenceType,
 					_ *sema.ReferenceType,
 				) interpreter.ReferenceValue {
+
 					assert.Equal(t, interpreter.AddressValue{0x42}, address)
 					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
 
@@ -385,6 +459,71 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 						interpreter.ConvertSemaAccessToStaticAuthorization(nil, wantedBorrowType.Authorization),
 						interpreter.NewUnmeteredStringValue("mock"),
 						sema.StringType,
+					)
+
+					return mockReference
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(mockReference), res)
+	})
+
+	t.Run("borrow, with entitlements, resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		var mockReference *interpreter.EphemeralReferenceValue
+
+		const rTypeQualifiedIdentifier = "R"
+		rTypeID := TestLocation.TypeID(nil, rTypeQualifiedIdentifier)
+		rStaticType := &interpreter.CompositeStaticType{
+			Location:            TestLocation,
+			QualifiedIdentifier: rTypeQualifiedIdentifier,
+			TypeID:              rTypeID,
+		}
+
+		inter, err := test(t,
+			`
+              resource R {}
+
+              fun test(): auth(Mutate) &R? {
+                  return cap.borrow<auth(Mutate) &R>()
+              }
+            `,
+			rStaticType,
+			handlers{
+				borrow: func(
+					context interpreter.BorrowCapabilityControllerContext,
+					address interpreter.AddressValue,
+					capabilityID interpreter.UInt64Value,
+					wantedBorrowType *sema.ReferenceType,
+					capabilityBorrowType *sema.ReferenceType,
+				) interpreter.ReferenceValue {
+
+					assert.Equal(t, interpreter.AddressValue{0x42}, address)
+					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
+
+					rSemaType, err := context.GetCompositeType(TestLocation, rTypeQualifiedIdentifier, rTypeID)
+					require.NoError(t, err)
+
+					assert.True(t, wantedBorrowType.Type.Equal(rSemaType))
+
+					mockReference = interpreter.NewUnmeteredEphemeralReferenceValue(
+						noopReferenceTracker{},
+						interpreter.ConvertSemaAccessToStaticAuthorization(nil, wantedBorrowType.Authorization),
+						interpreter.NewCompositeValue(
+							context,
+							TestLocation,
+							rTypeQualifiedIdentifier,
+							common.CompositeKindResource,
+							nil,
+							common.ZeroAddress,
+						),
+						rSemaType,
 					)
 
 					return mockReference
@@ -410,6 +549,7 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
                   return cap.check<&String>()
               }
             `,
+			interpreter.PrimitiveStaticTypeString,
 			handlers{
 				check: func(
 					_ interpreter.CheckCapabilityControllerContext,
@@ -418,6 +558,7 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 					_ *sema.ReferenceType,
 					_ *sema.ReferenceType,
 				) interpreter.BoolValue {
+
 					assert.Equal(t, interpreter.AddressValue{0x42}, address)
 					assert.Equal(t, interpreter.UInt64Value(id), capabilityID)
 
@@ -445,6 +586,7 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
                   return cap.id
               }
             `,
+			interpreter.PrimitiveStaticTypeString,
 			handlers{},
 		)
 		require.NoError(t, err)
