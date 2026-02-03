@@ -1685,20 +1685,20 @@ func (checker *Checker) memberSatisfied(
 			if currentFunctionReturnType != nil &&
 				inheritedFunctionReturnType != nil {
 
-				if relationship == memberRelationshipSibling && anyImplementation {
-					if !currentFunctionReturnType.Equal(inheritedFunctionReturnType) {
+				switch relationship {
+				case memberRelationshipInherited:
+					// For inherited members, current return type must be a subtype of the
+					// inherited function's return type (but NOT vice-versa).
+					if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
 						return false
 					}
-				} else {
-					switch relationship {
-					case memberRelationshipInherited:
-						// For inherited members, current return type must be a subtype of the
-						// inherited function's return type (but NOT vice-versa).
-						if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
+
+				case memberRelationshipSibling:
+					if anyImplementation {
+						if !currentFunctionReturnType.Equal(inheritedFunctionReturnType) {
 							return false
 						}
-
-					case memberRelationshipSibling:
+					} else {
 						// For siblings, order shouldn't matter.
 						// Only requirement is that one function return type  must be a
 						// subtype of the other.
@@ -1706,10 +1706,10 @@ func (checker *Checker) memberSatisfied(
 							!IsSubType(inheritedFunctionReturnType, currentFunctionReturnType) {
 							return false
 						}
-
-					default:
-						panic(errors.NewUnreachableError())
 					}
+
+				default:
+					panic(errors.NewUnreachableError())
 				}
 			}
 
@@ -1725,21 +1725,21 @@ func (checker *Checker) memberSatisfied(
 			// - is invariant if they're siblings and one of them has an implementation (default function),
 			// - is covariant otherwise
 
-			if relationship == memberRelationshipSibling && anyImplementation {
-				if currentFunctionType.Purity != inheritedFunctionType.Purity {
+			switch relationship {
+			case memberRelationshipInherited:
+				// For inherited members, current function purity must be a sub-set of the
+				// inherited function's purity (but NOT vice-versa).
+				if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+					currentFunctionType.Purity != FunctionPurityView {
+
 					return false
 				}
-			} else {
-				switch relationship {
-				case memberRelationshipInherited:
-					// For inherited members, current function purity must be a sub-set of the
-					// inherited function's purity (but NOT vice-versa).
-					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
-						currentFunctionType.Purity != FunctionPurityView {
-
+			case memberRelationshipSibling:
+				if anyImplementation {
+					if currentFunctionType.Purity != inheritedFunctionType.Purity {
 						return false
 					}
-				case memberRelationshipSibling:
+				} else {
 					// For siblings, order shouldn't matter.
 					// Only requirement is that atleast one function's purity must be a
 					// sub-set of the other.
@@ -1749,9 +1749,9 @@ func (checker *Checker) memberSatisfied(
 
 						return false
 					}
-				default:
-					panic(errors.NewUnreachableError())
 				}
+			default:
+				panic(errors.NewUnreachableError())
 			}
 		}
 	}
