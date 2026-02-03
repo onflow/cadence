@@ -217,7 +217,16 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 			value := target.GetKey(interpreter, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
-			value = interpreter.maybeGetReference(indexExpression, value)
+			if indexExpressionTypes.ReturnReference {
+				expectedType := indexExpressionTypes.ResultType
+
+				// Get a reference to the value
+				value = getReferenceValue(
+					interpreter,
+					value,
+					expectedType,
+				)
+			}
 
 			return value, nil
 		}
@@ -1102,26 +1111,6 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 		value, _ := interpreter.valueIndexExpressionGetterSetter(expression).get(allowMissing)
 		return value
 	}
-}
-
-func (interpreter *Interpreter) maybeGetReference(
-	expression *ast.IndexExpression,
-	memberValue Value,
-) Value {
-	indexExpressionTypes, _ := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
-
-	if indexExpressionTypes.ReturnReference {
-		expectedType := indexExpressionTypes.ResultType
-
-		// Get a reference to the value
-		memberValue = getReferenceValue(
-			interpreter,
-			memberValue,
-			expectedType,
-		)
-	}
-
-	return memberValue
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) Value {

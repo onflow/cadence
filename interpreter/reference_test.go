@@ -3644,10 +3644,10 @@ func TestInterpretInterfaceReferenceToSelfVariable(t *testing.T) {
 	})
 }
 
-func TestInterpretAttachmentOnNestedAuthReferences(t *testing.T) {
+func TestInterpretNestedAuthReferencesAccess(t *testing.T) {
 	t.Parallel()
 
-	t.Run("inside an array, index access", func(t *testing.T) {
+	t.Run("unauth element type, auth element value, index access", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -3671,7 +3671,7 @@ func TestInterpretAttachmentOnNestedAuthReferences(t *testing.T) {
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
-	t.Run("inside an array, in loop", func(t *testing.T) {
+	t.Run("unauth element type, auth element value, in loop", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -3695,5 +3695,49 @@ func TestInterpretAttachmentOnNestedAuthReferences(t *testing.T) {
 
 		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("auth element type, auth element value, index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[auth(Mutate) &S]
+
+                // arrayRef[0] is of type 'auth(Mutate) &S'.
+                // Should return the reference as-is
+                let authRef: auth(Mutate) &S = arrayRef[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("auth element type, auth element value, in loop", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[auth(Mutate) &S]
+
+                for unauthSRef in arrayRef {
+                    // arrayRef[0] is of type 'auth(Mutate) &S'.
+                    // Should return the reference as-is
+                    let authRef: auth(Mutate) &S = unauthSRef
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
 	})
 }
