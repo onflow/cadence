@@ -1680,8 +1680,6 @@ func (checker *Checker) memberSatisfied(
 			currentFunctionReturnType := currentFunctionType.ReturnTypeAnnotation.Type
 			inheritedFunctionReturnType := inheritedFunctionType.ReturnTypeAnnotation.Type
 
-			anyImplementation := currentMember.HasImplementation || inheritedMember.HasImplementation
-
 			if currentFunctionReturnType != nil &&
 				inheritedFunctionReturnType != nil {
 
@@ -1694,11 +1692,23 @@ func (checker *Checker) memberSatisfied(
 					}
 
 				case memberRelationshipSibling:
-					if anyImplementation {
+					switch {
+					case currentMember.HasImplementation && inheritedMember.HasImplementation:
 						if !currentFunctionReturnType.Equal(inheritedFunctionReturnType) {
 							return false
 						}
-					} else {
+
+					case currentMember.HasImplementation:
+						if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
+							return false
+						}
+
+					case inheritedMember.HasImplementation:
+						if !IsSubType(inheritedFunctionReturnType, currentFunctionReturnType) {
+							return false
+						}
+
+					default:
 						// For siblings, order shouldn't matter.
 						// Only requirement is that one function return type  must be a
 						// subtype of the other.
@@ -1735,11 +1745,27 @@ func (checker *Checker) memberSatisfied(
 					return false
 				}
 			case memberRelationshipSibling:
-				if anyImplementation {
+				switch {
+				case currentMember.HasImplementation && inheritedMember.HasImplementation:
 					if currentFunctionType.Purity != inheritedFunctionType.Purity {
 						return false
 					}
-				} else {
+
+				case currentMember.HasImplementation:
+					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+						currentFunctionType.Purity != FunctionPurityView {
+
+						return false
+					}
+
+				case inheritedMember.HasImplementation:
+					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+						inheritedFunctionType.Purity != FunctionPurityView {
+
+						return false
+					}
+
+				default:
 					// For siblings, order shouldn't matter.
 					// Only requirement is that atleast one function's purity must be a
 					// sub-set of the other.
