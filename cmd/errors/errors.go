@@ -1164,6 +1164,13 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
+		{"sema.InvalidMemberReferenceError",
+			&sema.InvalidMemberReferenceError{
+				ExpectedAuthorization: placeholderSemaAccess,
+				ActualAuthorization:   placeholderSemaAccess,
+				Range:                 placeholderRange,
+			},
+		},
 		{"sema.InvalidMoveError",
 			&sema.InvalidMoveError{
 				Name:            placeholderString,

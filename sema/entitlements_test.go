@@ -6371,11 +6371,10 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidMappingAuthorizationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[1])
-		assert.IsType(t, &sema.InvalidMemberReferenceError{}, errs[2])
 	})
 
 	t.Run("field assign", func(t *testing.T) {

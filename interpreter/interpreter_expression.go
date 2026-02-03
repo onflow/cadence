@@ -1472,14 +1472,14 @@ func CreateReferenceValue(
 
 		case ReferenceValue:
 			if isImplicit {
+				CheckInvalidatedResourceOrResourceReference(value, context)
+
 				// During implicit reference creation (e.g: member/index access on a reference),
-				// if the value is already a reference then return the same reference, with entitlements stripped-off.
+				// if the value is already a reference then return the same reference.
 				// However, we need to make sure that this reference is actually a subtype of the resultType,
 				// since the checker may not be aware that we are "short-circuiting" in this case.
-				// Additionally, it is only safe to "compress" reference types like this when the desired
-				// result reference type is unauthorized
 				valueType := MustSemaTypeOfValue(value, context)
-				if targetType.Authorization != sema.UnauthorizedAccess || !sema.IsSubType(valueType, targetType) {
+				if !sema.IsSubType(valueType, targetType) {
 					panic(&InvalidMemberReferenceError{
 						ExpectedType: targetType,
 						ActualType:   valueType,

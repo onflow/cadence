@@ -127,18 +127,13 @@ func (checker *Checker) getReferenceType(
 	}
 }
 
-func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
+func shouldReturnImplicitReference(parentType, memberType Type, isAssignment bool) bool {
 	if isAssignment {
 		return false
 	}
 
 	if _, isReference := MaybeReferenceType(parentType); !isReference {
 		return false
-	}
-
-	// If the member is already a reference, then a reference must be returned.
-	if _, memberTypeIsReference := MaybeReferenceType(memberType); memberTypeIsReference {
-		return true
 	}
 
 	return memberType.ContainFieldsOrElements()
@@ -387,20 +382,26 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	// i.e: `accessedSelfMember == nil`
 
 	if accessedSelfMember == nil &&
-		shouldReturnReference(accessedType, resultingType, isAssignment) &&
 		member.DeclarationKind == common.DeclarationKindField {
 
-		authorization := UnauthorizedAccess
-		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
-			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
+		// Check if an implicit reference must be returned.
+		if shouldReturnImplicitReference(accessedType, resultingType, isAssignment) {
+			authorization := UnauthorizedAccess
+			if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
+				authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
+			}
+
+			resultingType = checker.getReferenceType(
+				resultingType,
+				authorization,
+				expression,
+			)
+			returnReference = true
+		} else if _, memberTypeTypeIsReference := MaybeReferenceType(resultingType); memberTypeTypeIsReference {
+			// If the member is already a reference, then a return the reference as-is.
+			returnReference = true
 		}
 
-		resultingType = checker.getReferenceType(
-			resultingType,
-			authorization,
-			expression,
-		)
-		returnReference = true
 	}
 
 	return accessedType, resultingType, member, isOptional

@@ -798,17 +798,13 @@ func TestCheckMemberAccess(t *testing.T) {
 
                 let arrayRef = &array as &[auth(Mutate) &[Int]]
 
-                // Must be an unauthorized reference.
+                // Must return the inner reference as-is.
                 let x: auth(Mutate) &[Int] = arrayRef[0]
                 let y: &[Int] = arrayRef[0]
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		var typeMismatchError *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchError)
-		assert.Equal(t, 11, typeMismatchError.StartPos.Line)
+		require.NoError(t, err)
 	})
 
 	t.Run("dictionary, value", func(t *testing.T) {
@@ -934,17 +930,13 @@ func TestCheckMemberAccess(t *testing.T) {
 
                 let dictRef = &dict as &{String: auth(Mutate) &{String: Int}}
 
-                // Must be an unauthorized reference.
+                // Must return the reference as-is.
                 let x: (auth(Mutate) &{String: Int})? = dictRef["a"]
                 let y: &{String: Int}? = dictRef["a"]
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		var typeMismatchError *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchError)
-		assert.Equal(t, 11, typeMismatchError.StartPos.Line)
+		require.NoError(t, err)
 	})
 
 	t.Run("resource reference, attachment", func(t *testing.T) {

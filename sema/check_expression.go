@@ -380,12 +380,13 @@ func (checker *Checker) visitIndexExpression(
 
 		checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
+		// Check if an implicit reference must be returned.
 		// If the element,
 		//   1) is accessed via a reference, and
 		//   2) is container-typed,
 		// then the element type should also be a reference.
 		returnReference := false
-		if shouldReturnReference(valueIndexedType, elementType, isAssignment) {
+		if shouldReturnImplicitReference(valueIndexedType, elementType, isAssignment) {
 			// For index expressions, element are un-authorized.
 			elementType = checker.getReferenceType(
 				elementType,
@@ -394,6 +395,9 @@ func (checker *Checker) visitIndexExpression(
 			)
 
 			// Store the result in elaboration, so the interpreter can re-use this.
+			returnReference = true
+		} else if _, elementTypeIsReference := MaybeReferenceType(elementType); elementTypeIsReference {
+			// If the element type is already a reference, then a return the reference as-is.
 			returnReference = true
 		}
 
