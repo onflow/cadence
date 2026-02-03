@@ -1673,43 +1673,34 @@ func (checker *Checker) memberSatisfied(
 				}
 			}
 
-			// Function purity and return types:
-			// - are covariant in their inherited.
-			// - are invariant in their siblings.
+			// Function return types
+			// - are invariant if they're siblings and one of them has an implementation (default function),
+			// - are covariant otherwise
 
 			currentFunctionReturnType := currentFunctionType.ReturnTypeAnnotation.Type
 			inheritedFunctionReturnType := inheritedFunctionType.ReturnTypeAnnotation.Type
 
+			anyImplementation := currentMember.HasImplementation || inheritedMember.HasImplementation
+
 			if currentFunctionReturnType != nil &&
 				inheritedFunctionReturnType != nil {
-				switch relationship {
-				case memberRelationshipSibling:
-					// Purity must be equal for siblings.
-					// Otherwise, sibling order may impact the member validity check.
-					if currentFunctionType.Purity != inheritedFunctionType.Purity {
-						return false
-					}
 
-					// Return types must be equal for siblings.
-					// Otherwise, sibling order may impact the member validity check.
+				if relationship == memberRelationshipSibling && anyImplementation {
 					if !currentFunctionReturnType.Equal(inheritedFunctionReturnType) {
 						return false
 					}
-				case memberRelationshipInherited:
-					// Functions are covariant in their purity, for inherited members
-					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
-						currentFunctionType.Purity != FunctionPurityView {
+				} else {
 
-						return false
-					}
+					switch relationship {
+					case memberRelationshipInherited, memberRelationshipSibling:
 
-					// If the current member is a child of the inherited member,
-					// then subtyping is allowed.
-					if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
-						return false
+						if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
+							return false
+						}
+
+					default:
+						panic(errors.NewUnreachableError())
 					}
-				default:
-					panic(errors.NewUnreachableError())
 				}
 			}
 
@@ -1719,6 +1710,29 @@ func (checker *Checker) memberSatisfied(
 					inheritedFunctionReturnType != nil) {
 
 				return false
+			}
+
+			// Function purity
+			// - is invariant if they're siblings and one of them has an implementation (default function),
+			// - is covariant otherwise
+
+			if relationship == memberRelationshipSibling && anyImplementation {
+				if currentFunctionType.Purity != inheritedFunctionType.Purity {
+					return false
+				}
+			} else {
+				switch relationship {
+				case memberRelationshipInherited, memberRelationshipSibling:
+
+					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+						currentFunctionType.Purity != FunctionPurityView {
+
+						return false
+					}
+
+				default:
+					panic(errors.NewUnreachableError())
+				}
 			}
 		}
 	}

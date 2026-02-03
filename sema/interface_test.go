@@ -4067,8 +4067,7 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 	`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("subtype method is first sibling", func(t *testing.T) {
@@ -4155,24 +4154,23 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 		struct interface I1 {
-			fun escalate(_ inbound: Int): Int
+			fun foo()
 		}
 
 		struct interface I2 {
-			view fun escalate(_ inbound: Int): Int
+			view fun foo()
 		}
 
 		// Note the order: Type with the view function must appear second.
 		struct S: I1, I2 {
-			view fun escalate(_ inbound: Int): Int {
-				return 1
+			view fun foo() {
+				return
 			}
 		}
 	`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("view function is first sibling", func(t *testing.T) {
@@ -4182,17 +4180,17 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 		struct interface I1 {
-			fun escalate(_ inbound: Int): Int
+			fun foo()
 		}
 
 		struct interface I2 {
-			view fun escalate(_ inbound: Int): Int
+			view fun foo()
 		}
 
 		// Note the order: Type with the view function must appear first.
 		struct S: I2, I1 {
-			view fun escalate(_ inbound: Int): Int {
-				return 1
+			view fun foo() {
+				return
 			}
 		}
 	`,
@@ -4208,13 +4206,13 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
             struct interface I1 {
-                fun escalate(_ inbound: Int): Int {
-                    return inbound
+                fun foo() {
+                    return
                 }
             }
 
             struct interface I2 {
-                view fun escalate(_ inbound: Int): Int
+                view fun foo()
             }
 
             // Note the order: Type with the impure function must appear second.
@@ -4232,13 +4230,13 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
             struct interface I1 {
-                fun escalate(_ inbound: Int): Int {
-                    return inbound
+                fun foo() {
+                    return
                 }
             }
 
             struct interface I2 {
-                view fun escalate(_ inbound: Int): Int
+                view fun foo()
             }
 
             // Note the order: Type with the impure function must appear first.
