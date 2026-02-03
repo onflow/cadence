@@ -4146,6 +4146,53 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
+	t.Run("supertype default impl is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: AnyStruct): Int {
+                    return inbound as! Int
+                }
+            }
+
+            struct interface I2 {
+                fun escalate(_ inbound: AnyStruct): AnyStruct
+            }
+
+            // Note the order: Sibling with a supertype must appear second.
+            struct S: I1, I2 {}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("supertype default impl is first sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: AnyStruct): Int {
+                    return inbound as! Int
+                }
+            }
+
+            struct interface I2 {
+                fun escalate(_ inbound: AnyStruct): AnyStruct
+            }
+
+            // Note the order: Sibling with a supertype must appear first.
+            struct S: I2, I1 {}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("view function is second sibling", func(t *testing.T) {
 
 		t.Parallel()
@@ -4244,6 +4291,52 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("view default impl is second sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                view fun foo() {
+                    return
+                }
+            }
+
+            struct interface I2 {
+                fun foo()
+            }
+
+            // Note the order: Type with the view function must appear second.
+            struct S: I2, I1 {}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("view default impl is first sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                view fun foo() {
+                    return
+                }
+            }
+
+            struct interface I2 {
+                fun foo()
+            }
+
+            // Note the order: Type with the view function must appear first.
+            struct S: I1, I2 {}
+        `,
+		)
+
+		require.NoError(t, err)
 	})
 
 }
