@@ -1692,11 +1692,23 @@ func (checker *Checker) memberSatisfied(
 					}
 
 				case memberRelationshipSibling:
-					if currentMember.HasImplementation || inheritedMember.HasImplementation {
+					switch {
+					case currentMember.HasImplementation && inheritedMember.HasImplementation:
 						if !currentFunctionReturnType.Equal(inheritedFunctionReturnType) {
 							return false
 						}
-					} else {
+
+					case currentMember.HasImplementation:
+						if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
+							return false
+						}
+
+					case inheritedMember.HasImplementation:
+						if !IsSubType(inheritedFunctionReturnType, currentFunctionReturnType) {
+							return false
+						}
+
+					default:
 						// For siblings, order shouldn't matter.
 						// Only requirement is that one function return type  must be a
 						// subtype of the other.
