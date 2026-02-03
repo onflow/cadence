@@ -4093,8 +4093,7 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 	`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("subtype default impl is second sibling", func(t *testing.T) {
@@ -4196,8 +4195,7 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 	`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("impure default impl is second sibling", func(t *testing.T) {

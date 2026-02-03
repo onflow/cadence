@@ -1690,11 +1690,20 @@ func (checker *Checker) memberSatisfied(
 						return false
 					}
 				} else {
-
 					switch relationship {
-					case memberRelationshipInherited, memberRelationshipSibling:
-
+					case memberRelationshipInherited:
+						// For inherited members, current return type must be a subtype of the
+						// inherited function's return type (but NOT vice-versa).
 						if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
+							return false
+						}
+
+					case memberRelationshipSibling:
+						// For siblings, order shouldn't matter.
+						// Only requirement is that one function return type  must be a
+						// subtype of the other.
+						if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) &&
+							!IsSubType(inheritedFunctionReturnType, currentFunctionReturnType) {
 							return false
 						}
 
@@ -1722,14 +1731,24 @@ func (checker *Checker) memberSatisfied(
 				}
 			} else {
 				switch relationship {
-				case memberRelationshipInherited, memberRelationshipSibling:
-
+				case memberRelationshipInherited:
+					// For inherited members, current function purity must be a sub-set of the
+					// inherited function's purity (but NOT vice-versa).
 					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
 						currentFunctionType.Purity != FunctionPurityView {
 
 						return false
 					}
+				case memberRelationshipSibling:
+					// For siblings, order shouldn't matter.
+					// Only requirement is that atleast one function's purity must be a
+					// sub-set of the other.
+					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+						currentFunctionType.Purity != FunctionPurityView &&
+						inheritedFunctionType.Purity != FunctionPurityView {
 
+						return false
+					}
 				default:
 					panic(errors.NewUnreachableError())
 				}
