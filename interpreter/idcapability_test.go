@@ -404,7 +404,7 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 
 					assert.True(t, capabilityBorrowType.Type.Equal(rSemaType))
 
-					mockReference = interpreter.NewUnmeteredEphemeralReferenceValue(
+					ref := interpreter.NewUnmeteredEphemeralReferenceValue(
 						noopReferenceTracker{},
 						interpreter.ConvertSemaAccessToStaticAuthorization(nil, wantedBorrowType.Authorization),
 						interpreter.NewCompositeValue(
@@ -418,7 +418,13 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 						rSemaType,
 					)
 
-					return mockReference
+					// This function is called twice when run with the compiler.
+					// Only save the first / actual value that will be returned
+					if mockReference == nil {
+						mockReference = ref
+					}
+
+					return ref
 				},
 			},
 		)
@@ -426,7 +432,11 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 
 		res, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(mockReference), res)
+
+		require.Equal(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(mockReference).StaticType(inter),
+			res.StaticType(inter),
+		)
 	})
 
 	t.Run("borrow, with entitlements, struct", func(t *testing.T) {
@@ -512,7 +522,7 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 
 					assert.True(t, wantedBorrowType.Type.Equal(rSemaType))
 
-					mockReference = interpreter.NewUnmeteredEphemeralReferenceValue(
+					ref := interpreter.NewUnmeteredEphemeralReferenceValue(
 						noopReferenceTracker{},
 						interpreter.ConvertSemaAccessToStaticAuthorization(nil, wantedBorrowType.Authorization),
 						interpreter.NewCompositeValue(
@@ -526,7 +536,13 @@ func TestInterpretIDCapabilityUntyped(t *testing.T) {
 						rSemaType,
 					)
 
-					return mockReference
+					// This function is called twice when run with the compiler.
+					// Only save the first / actual value that will be returned
+					if mockReference == nil {
+						mockReference = ref
+					}
+
+					return ref
 				},
 			},
 		)
