@@ -387,7 +387,11 @@ func (checker *Checker) visitIndexExpression(
 		returnReference := false
 		if shouldReturnReference(valueIndexedType, elementType, isAssignment) {
 			// For index expressions, element are un-authorized.
-			elementType = checker.getReferenceType(elementType, UnauthorizedAccess)
+			elementType = checker.getReferenceType(
+				elementType,
+				UnauthorizedAccess,
+				indexExpression,
+			)
 
 			// Store the result in elaboration, so the interpreter can re-use this.
 			returnReference = true

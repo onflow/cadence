@@ -91,13 +91,40 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getReferenceType(typ Type, authorization Access) Type {
-	if optionalType, ok := typ.(*OptionalType); ok {
-		innerType := checker.getReferenceType(optionalType.Type, authorization)
+func (checker *Checker) getReferenceType(
+	typ Type,
+	authorization Access,
+	authorizationPos ast.HasPosition,
+) Type {
+	switch typ := typ.(type) {
+	case *OptionalType:
+		innerType := checker.getReferenceType(
+			typ.Type,
+			authorization,
+			authorizationPos,
+		)
 		return NewOptionalType(checker.memoryGauge, innerType)
-	}
 
-	return NewReferenceType(checker.memoryGauge, authorization, typ)
+	case *ReferenceType:
+		if authorization != UnauthorizedAccess {
+			checker.report(
+				&InvalidMemberReferenceError{
+					ExpectedAuthorization: UnauthorizedAccess,
+					ActualAuthorization:   authorization,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						authorizationPos,
+					),
+				},
+			)
+		}
+
+		return NewReferenceType(checker.memoryGauge, authorization, typ.Type)
+
+	default:
+		return NewReferenceType(checker.memoryGauge, authorization, typ)
+
+	}
 }
 
 func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
@@ -107,6 +134,11 @@ func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool 
 
 	if _, isReference := MaybeReferenceType(parentType); !isReference {
 		return false
+	}
+
+	// If the member is already a reference, then a reference must be returned.
+	if _, memberTypeIsReference := MaybeReferenceType(memberType); memberTypeIsReference {
+		return true
 	}
 
 	return memberType.ContainFieldsOrElements()
@@ -363,7 +395,11 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
 		}
 
-		resultingType = checker.getReferenceType(resultingType, authorization)
+		resultingType = checker.getReferenceType(
+			resultingType,
+			authorization,
+			expression,
+		)
 		returnReference = true
 	}
 
