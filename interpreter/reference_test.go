@@ -3643,3 +3643,57 @@ func TestInterpretInterfaceReferenceToSelfVariable(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretAttachmentOnNestedAuthReferences(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inside an array, index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[&S]
+
+                // arrayRef[0] is of type '&S'.
+                // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                let authRef = arrayRef[0] as! auth(Mutate) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("inside an array, in loop", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[&S]
+
+                for unauthSRef in arrayRef {
+                    // unauthSRef is of type '&S'.
+                    // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                    let authRef = unauthSRef as! auth(Mutate) &S
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+}
