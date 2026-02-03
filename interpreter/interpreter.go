@@ -6234,19 +6234,12 @@ func NativeCapabilityBorrowFunction(
 	}
 }
 
-var CapabilityTypeBorrowFunctionType = &sema.FunctionType{
-	Purity: FunctionPurityView,
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.OptionalType{
-			Type: sema.AnyStructType,
-		},
-	),
-}
+// Use function types with type-erased borrow types,
+// as we cannot know the borrow types at function creation time.
+// DO NOT use the borrow type of the capability value!
 
-var CapabilityTypeCheckFunctionType = &sema.FunctionType{
-	Purity:               FunctionPurityView,
-	ReturnTypeAnnotation: sema.BoolTypeAnnotation,
-}
+var CapabilityTypeBorrowFunctionType = sema.CapabilityTypeBorrowFunctionType(sema.AnyStructType)
+var CapabilityTypeCheckFunctionType = sema.CapabilityTypeCheckFunctionType(sema.AnyStructType)
 
 func capabilityBorrowFunction(
 	context FunctionCreationContext,
