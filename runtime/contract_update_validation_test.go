@@ -1688,164 +1688,6 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.Contains(t, err.Error(), expectedError)
 	})
 
-	testWithValidators(t, "Test reference types: same borrow type", func(t *testing.T, config Config) {
-
-		const oldCode = `
-            access(all) contract Test {
-
-                access(all) var vault: Capability<&Int>?
-
-                init() {
-                    self.vault = nil
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-
-                access(all) var vault: Capability<&Int>?
-
-                init() {
-                    self.vault = nil
-                }
-            }
-        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		require.NoError(t, err)
-	})
-
-	testWithValidators(t, "Test reference types: different borrow type", func(t *testing.T, config Config) {
-
-		const oldCode = `
-            access(all) contract Test {
-
-                access(all) var vault: Capability<&Int>?
-
-                init() {
-                    self.vault = nil
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-
-                access(all) var vault: Capability<&String>?
-
-                init() {
-                    self.vault = nil
-                }
-            }
-        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		RequireError(t, err)
-	})
-
-	testWithValidators(t, "Test reference types: add authorization", func(t *testing.T, config Config) {
-
-		const oldCode = `
-            access(all) contract Test {
-
-                access(all) var vault: Capability<&[Int]>?
-
-                init() {
-                    self.vault = nil
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-
-                access(all) var vault: Capability<auth(Mutate) &[Int]>?
-
-                init() {
-                    self.vault = nil
-                }
-            }
-        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		RequireError(t, err)
-
-		require.ErrorContains(t, err, "incompatible type annotations. expected `Capability<&[Int]>`, found `Capability<auth(Mutate) &[Int]>`")
-	})
-
-	testWithValidators(t, "Test reference types: remove authorization", func(t *testing.T, config Config) {
-
-		const oldCode = `
-            access(all) contract Test {
-
-                access(all) var vault: Capability<auth(Mutate) &[Int]>?
-
-                init() {
-                    self.vault = nil
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-
-                access(all) var vault: Capability<&[Int]>?
-
-                init() {
-                    self.vault = nil
-                }
-            }
-        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		RequireError(t, err)
-
-		require.ErrorContains(t, err, "incompatible type annotations. expected `Capability<auth(Mutate) &[Int]>`, found `Capability<&[Int]>`")
-	})
-
-	testWithValidators(t, "Test function type", func(t *testing.T, config Config) {
-
-		const oldCode = `
-            access(all) contract Test {
-
-                access(all) struct TestStruct {
-                    access(all) let a: Int
-
-                    init() {
-                        self.a = 123
-                    }
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-
-                access(all) var add: fun(Int, Int): Int
-
-                init() {
-                    self.add = fun (a: Int, b: Int): Int {
-                        return a + b
-                    }
-                }
-
-                access(all) struct TestStruct {
-                    access(all) let a: Int
-
-                    init() {
-                        self.a = 123
-                    }
-                }
-            }
-        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		RequireError(t, err)
-
-		assert.Contains(t, err.Error(), "error: field `add` has non-storable type: `fun(Int, Int): Int`")
-	})
-
 	testWithValidators(t, "Test conformance", func(t *testing.T, config Config) {
 
 		const importCode = `
@@ -1908,368 +1750,6 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		err = executeTransaction(newContractUpdateTransaction("Test", newCode))
 		require.NoError(t, err)
-	})
-
-	t.Run("Test all types", func(t *testing.T) {
-
-		t.Parallel()
-
-		const oldCode = `
-            access(all) contract Test {
-                // simple nominal type
-                access(all) var a: TestStruct
-
-                // qualified nominal type
-                access(all) var b: Test.TestStruct
-
-                // optional type
-                access(all) var c: Int?
-
-                // variable sized type
-                access(all) var d: [Int]
-
-                // constant sized type
-                access(all) var e: [Int; 2]
-
-                // dictionary type
-                access(all) var f: {Int: String}
-
-                // intersection type
-                access(all) var g: {TestInterface}
-
-                // instantiation and reference types
-                access(all) var h:  Capability<&TestStruct>?
-
-                // function type
-                access(all) var i: Capability<&fun(Int, Int): Int>?
-
-                init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = Test.TestStruct()
-                    self.c = 123
-                    self.d = [123]
-                    self.e = [123, 456]
-                    self.f = {1: "Hello"}
-                    self.g = TestStruct()
-                    self.h = nil
-                    self.i = nil
-                }
-
-                access(all) struct TestStruct:TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-
-                // function type
-                access(all) var i: Capability<&fun(Int, Int): Int>?
-
-                // instantiation and reference types
-                access(all) var h:  Capability<&TestStruct>?
-
-                // intersection type
-                access(all) var g: {TestInterface}
-
-                // dictionary type
-                access(all) var f: {Int: String}
-
-                // constant sized type
-                access(all) var e: [Int; 2]
-
-                // variable sized type
-                access(all) var d: [Int]
-
-                // optional type
-                access(all) var c: Int?
-
-                // qualified nominal type
-                access(all) var b: Test.TestStruct
-
-                // simple nominal type
-                access(all) var a: TestStruct
-
-                init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = Test.TestStruct()
-                    self.c = 123
-                    self.d = [123]
-                    self.e = [123, 456]
-                    self.f = {1: "Hello"}
-                    self.g = TestStruct()
-                    self.h = nil
-                    self.i = nil
-                }
-
-                access(all) struct TestStruct:TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
-                }
-            }
-        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, DefaultTestInterpreterConfig)
-		require.NoError(t, err)
-	})
-
-	t.Run("Test all types (with c1 validator)", func(t *testing.T) {
-		// The corresponding test with the "default validator" uses a contract code
-		// that is not compatible with the old parser.
-		// Therefore, run the same test with an adjusted code.
-
-		t.Parallel()
-
-		const oldCode = `
-            access(all) contract Test {
-                // simple nominal type
-                access(all) var a: TestStruct
-
-                // qualified nominal type
-                access(all) var b: Test.TestStruct
-
-                // optional type
-                access(all) var c: Int?
-
-                // variable sized type
-                access(all) var d: [Int]
-
-                // constant sized type
-                access(all) var e: [Int; 2]
-
-                // dictionary type
-                access(all) var f: {Int: String}
-
-                // intersection type
-                access(all) var g: {TestInterface}
-
-                // instantiation and reference types
-                access(all) var h:  Capability<&TestStruct>?
-
-                init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = Test.TestStruct()
-                    self.c = 123
-                    self.d = [123]
-                    self.e = [123, 456]
-                    self.f = {1: "Hello"}
-                    self.g = TestStruct()
-                    self.h = nil
-                }
-
-                access(all) struct TestStruct:TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-
-                // instantiation and reference types
-                access(all) var h:  Capability<&TestStruct>?
-
-                // intersection type
-                access(all) var g: {TestInterface}
-
-                // dictionary type
-                access(all) var f: {Int: String}
-
-                // constant sized type
-                access(all) var e: [Int; 2]
-
-                // variable sized type
-                access(all) var d: [Int]
-
-                // optional type
-                access(all) var c: Int?
-
-                // qualified nominal type
-                access(all) var b: Test.TestStruct
-
-                // simple nominal type
-                access(all) var a: TestStruct
-
-                init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = Test.TestStruct()
-                    self.c = 123
-                    self.d = [123]
-                    self.e = [123, 456]
-                    self.f = {1: "Hello"}
-                    self.g = TestStruct()
-                    self.h = nil
-                }
-
-                access(all) struct TestStruct:TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
-                }
-            }
-        `
-
-		config := DefaultTestInterpreterConfig
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		require.NoError(t, err)
-	})
-
-	testWithValidators(t, "Test intersection types", func(t *testing.T, config Config) {
-
-		const oldCode = `
-            access(all) contract Test {
-
-                // intersection type
-                access(all) var a: {TestInterface}
-                access(all) var b: {TestInterface}
-                access(all) var c: {TestInterface}
-                access(all) var d: {TestInterface}
-
-                init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = TestStruct()
-                    self.c = TestStruct()
-                    self.d = TestStruct()
-                }
-
-                access(all) struct TestStruct:TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-                access(all) var a: {TestInterface}
-                access(all) var b: {TestInterface}
-                access(all) var c: {TestInterface}
-                access(all) var d: {TestInterface}
-
-                init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = TestStruct()
-                    self.c = TestStruct()
-                    self.d = TestStruct()
-                }
-
-                access(all) struct TestStruct:TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
-                }
-            }
-        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		require.NoError(t, err)
-	})
-
-	testWithValidators(t, "Test invalid intersection types change", func(t *testing.T, config Config) {
-
-		const oldCode = `
-            access(all) contract Test {
-
-                // intersection type
-                access(all) var a: TestStruct
-                access(all) var b: {TestInterface}
-
-                init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = TestStruct()
-                }
-
-                access(all) struct TestStruct: TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-                access(all) var a: {TestInterface}
-                access(all) var b: TestStruct
-
-                init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = TestStruct()
-                }
-
-                access(all) struct TestStruct: TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
-                }
-            }
-        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		RequireError(t, err)
-
-		assert.Contains(t, err.Error(), "access(all) var a: {TestInterface}"+
-			"\n  |                                    ^^^^^^^^^^^^^^^ "+
-			"incompatible type annotations. expected `TestStruct`")
-
-		assert.Contains(t, err.Error(), "access(all) var b: TestStruct"+
-			"\n  |                                    ^^^^^^^^^^ "+
-			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct`")
 	})
 
 	testWithValidators(t, "enum valid", func(t *testing.T, config Config) {
@@ -2598,6 +2078,530 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
+
+	t.Run("Test all types", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                // simple nominal type
+                access(all) var a: TestStruct
+
+                // qualified nominal type
+                access(all) var b: Test.TestStruct
+
+                // optional type
+                access(all) var c: Int?
+
+                // variable sized type
+                access(all) var d: [Int]
+
+                // constant sized type
+                access(all) var e: [Int; 2]
+
+                // dictionary type
+                access(all) var f: {Int: String}
+
+                // intersection type
+                access(all) var g: {TestInterface}
+
+                // instantiation and reference types
+                access(all) var h:  Capability<&TestStruct>?
+
+                // function type
+                access(all) var i: Capability<&fun(Int, Int): Int>?
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = Test.TestStruct()
+                    self.c = 123
+                    self.d = [123]
+                    self.e = [123, 456]
+                    self.f = {1: "Hello"}
+                    self.g = TestStruct()
+                    self.h = nil
+                    self.i = nil
+                }
+
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                // function type
+                access(all) var i: Capability<&fun(Int, Int): Int>?
+
+                // instantiation and reference types
+                access(all) var h:  Capability<&TestStruct>?
+
+                // intersection type
+                access(all) var g: {TestInterface}
+
+                // dictionary type
+                access(all) var f: {Int: String}
+
+                // constant sized type
+                access(all) var e: [Int; 2]
+
+                // variable sized type
+                access(all) var d: [Int]
+
+                // optional type
+                access(all) var c: Int?
+
+                // qualified nominal type
+                access(all) var b: Test.TestStruct
+
+                // simple nominal type
+                access(all) var a: TestStruct
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = Test.TestStruct()
+                    self.c = 123
+                    self.d = [123]
+                    self.e = [123, 456]
+                    self.f = {1: "Hello"}
+                    self.g = TestStruct()
+                    self.h = nil
+                    self.i = nil
+                }
+
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, DefaultTestInterpreterConfig)
+		require.NoError(t, err)
+	})
+
+	t.Run("Test all types (with c1 validator)", func(t *testing.T) {
+		// The corresponding test with the "default validator" uses a contract code
+		// that is not compatible with the old parser.
+		// Therefore, run the same test with an adjusted code.
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                // simple nominal type
+                access(all) var a: TestStruct
+
+                // qualified nominal type
+                access(all) var b: Test.TestStruct
+
+                // optional type
+                access(all) var c: Int?
+
+                // variable sized type
+                access(all) var d: [Int]
+
+                // constant sized type
+                access(all) var e: [Int; 2]
+
+                // dictionary type
+                access(all) var f: {Int: String}
+
+                // intersection type
+                access(all) var g: {TestInterface}
+
+                // instantiation and reference types
+                access(all) var h:  Capability<&TestStruct>?
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = Test.TestStruct()
+                    self.c = 123
+                    self.d = [123]
+                    self.e = [123, 456]
+                    self.f = {1: "Hello"}
+                    self.g = TestStruct()
+                    self.h = nil
+                }
+
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                // instantiation and reference types
+                access(all) var h:  Capability<&TestStruct>?
+
+                // intersection type
+                access(all) var g: {TestInterface}
+
+                // dictionary type
+                access(all) var f: {Int: String}
+
+                // constant sized type
+                access(all) var e: [Int; 2]
+
+                // variable sized type
+                access(all) var d: [Int]
+
+                // optional type
+                access(all) var c: Int?
+
+                // qualified nominal type
+                access(all) var b: Test.TestStruct
+
+                // simple nominal type
+                access(all) var a: TestStruct
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = Test.TestStruct()
+                    self.c = 123
+                    self.d = [123]
+                    self.e = [123, 456]
+                    self.f = {1: "Hello"}
+                    self.g = TestStruct()
+                    self.h = nil
+                }
+
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		config := DefaultTestInterpreterConfig
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		require.NoError(t, err)
+	})
+
+	t.Run("reference types", func(t *testing.T) {
+
+		testWithValidators(t, "same borrow type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&Int>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&Int>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		})
+
+		testWithValidators(t, "different borrow type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&Int>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&String>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+		})
+
+		testWithValidators(t, "add authorization", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<auth(Mutate) &[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t, err, "incompatible type annotations. expected `Capability<&[Int]>`, found `Capability<auth(Mutate) &[Int]>`")
+		})
+
+		testWithValidators(t, "remove authorization", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<auth(Mutate) &[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t, err, "incompatible type annotations. expected `Capability<auth(Mutate) &[Int]>`, found `Capability<&[Int]>`")
+		})
+	})
+
+	testWithValidators(t, "Test function type", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+
+                access(all) struct TestStruct {
+                    access(all) let a: Int
+
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) var add: fun(Int, Int): Int
+
+                init() {
+                    self.add = fun (a: Int, b: Int): Int {
+                        return a + b
+                    }
+                }
+
+                access(all) struct TestStruct {
+                    access(all) let a: Int
+
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		RequireError(t, err)
+
+		assert.Contains(t, err.Error(), "error: field `add` has non-storable type: `fun(Int, Int): Int`")
+	})
+
+	testWithValidators(t, "Test intersection types", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+
+                // intersection type
+                access(all) var a: {TestInterface}
+                access(all) var b: {TestInterface}
+                access(all) var c: {TestInterface}
+                access(all) var d: {TestInterface}
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = TestStruct()
+                    self.c = TestStruct()
+                    self.d = TestStruct()
+                }
+
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) var a: {TestInterface}
+                access(all) var b: {TestInterface}
+                access(all) var c: {TestInterface}
+                access(all) var d: {TestInterface}
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = TestStruct()
+                    self.c = TestStruct()
+                    self.d = TestStruct()
+                }
+
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "Test invalid intersection types change", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+
+                // intersection type
+                access(all) var a: TestStruct
+                access(all) var b: {TestInterface}
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = TestStruct()
+                }
+
+                access(all) struct TestStruct: TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) var a: {TestInterface}
+                access(all) var b: TestStruct
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = TestStruct()
+                }
+
+                access(all) struct TestStruct: TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		RequireError(t, err)
+
+		assert.Contains(t, err.Error(), "access(all) var a: {TestInterface}"+
+			"\n  |                                    ^^^^^^^^^^^^^^^ "+
+			"incompatible type annotations. expected `TestStruct`")
+
+		assert.Contains(t, err.Error(), "access(all) var b: TestStruct"+
+			"\n  |                                    ^^^^^^^^^^ "+
+			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct`")
+	})
+
 }
 
 func assertContractRemovalError(t *testing.T, err error, name string) {
