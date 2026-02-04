@@ -25,6 +25,13 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
+type memberRelationship uint8
+
+const (
+	memberRelationshipSibling memberRelationship = iota
+	memberRelationshipInherited
+)
+
 func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
 	checker.visitCompositeLikeDeclaration(declaration)
 	return
@@ -1376,12 +1383,14 @@ func (checker *Checker) checkCompositeLikeConformance(
 			return
 		}
 
-		compositeMember, ok := compositeType.Members.Get(name)
-		if ok {
-
-			// If the composite member exists, check if it satisfies the mem
-
-			if !checker.memberSatisfied(compositeType, compositeMember, interfaceMember) {
+		compositeMember, hasImplementation := compositeType.Members.Get(name)
+		if hasImplementation {
+			// If the composite member exists, check if it satisfies the interface's member requirement.
+			if !checker.memberSatisfied(
+				compositeMember,
+				interfaceMember,
+				memberRelationshipInherited, // checking member from composite, not a sibling
+			) {
 				memberMismatches = append(
 					memberMismatches,
 					MemberMismatch{
@@ -1390,21 +1399,27 @@ func (checker *Checker) checkCompositeLikeConformance(
 					},
 				)
 			}
+		}
 
-		} else if options.checkMissingMembers {
-
-			// If the composite member does not exist, the interface may provide a default function.
+		// Check member conflicts for inherited members, even if there is an
+		// implementation in the concrete type.
+		// This is to validate whether the inherited functions (siblings) have matching members.
+		if options.checkMissingMembers {
+			// The interface may provide a default function.
 			// However, only one of the composite's conformances (interfaces)
 			// may provide a default function.
 
 			if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
 				existingMembers, ok := inheritedMembers[name]
 				if ok {
-					hasConflicts := checker.checkMemberConflicts(
+					var hasConflicts bool
+					hasConflicts, memberMismatches = checker.checkInheritedMemberConflicts(
 						compositeDeclaration,
 						existingMembers,
 						interfaceMember,
 						compositeType,
+						memberMismatches,
+						hasImplementation,
 					)
 
 					if hasConflicts {
@@ -1414,14 +1429,17 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 				existingMembers = append(existingMembers, interfaceMember)
 				inheritedMembers[name] = existingMembers
-
 			}
 
-			if _, ok := defaultFunctions[name]; !ok {
-				missingMembers = append(missingMembers, interfaceMember)
+			// If the concrete type doesn't have an implementation,
+			// and also have no default implementation coming from interfaces,
+			// then mark it as a missing member.
+			if !hasImplementation {
+				if _, ok := defaultFunctions[name]; !ok {
+					missingMembers = append(missingMembers, interfaceMember)
+				}
 			}
 		}
-
 	})
 
 	if len(missingMembers) > 0 ||
@@ -1446,32 +1464,53 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 }
 
-func (checker *Checker) checkMemberConflicts(
+// checkInheritedMemberConflicts checks for the validity among the inherited members.
+// (i.e: compare inherited member vs other inherited members)
+func (checker *Checker) checkInheritedMemberConflicts(
 	compositeDeclaration ast.CompositeLikeDeclaration,
-	existingMembers []*Member,
-	newMember *Member,
+	existingInheritedMembers []*Member,
+	newInheritedMember *Member,
 	compositeType *CompositeType,
-) (hasConflicts bool) {
+	memberMismatches []MemberMismatch,
+	concreteTypeHasImplementation bool,
+) (hasConflicts bool, _ []MemberMismatch) {
 
 	errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.DeclarationIdentifier())
 
-	for _, existingMember := range existingMembers {
+	for _, existingInheritedMember := range existingInheritedMembers {
+		if !checker.memberSatisfied(
+			newInheritedMember,
+			existingInheritedMember,
+			memberRelationshipSibling, // conflicting member is a sibling coming from another interface
+		) {
+			memberMismatches = append(
+				memberMismatches,
+				MemberMismatch{
+					CompositeMember: newInheritedMember,
+					InterfaceMember: existingInheritedMember,
+				},
+			)
+		}
 
-		// Both have default impls. That's an error.
-		if newMember.HasImplementation && existingMember.HasImplementation {
+		// If the concrete type has an implementation, then it doesn't matter
+		// even if there are more than multiple inherited default implementations.
+		// Otherwise, it is ambiguous to have two or more default impls.
+		// If so, report an error.
+		if !concreteTypeHasImplementation &&
+			newInheritedMember.HasImplementation && existingInheritedMember.HasImplementation {
 			checker.report(
 				&MultipleInterfaceDefaultImplementationsError{
 					CompositeKindedType: compositeType,
-					Member:              newMember,
+					Member:              newInheritedMember,
 					Range:               errorRange,
 				},
 			)
 
-			return true
+			return true, memberMismatches
 		}
 	}
 
-	return false
+	return false, memberMismatches
 }
 
 // checkConformanceKindMatch ensures the composite kinds match.
@@ -1546,65 +1585,87 @@ func (checker *Checker) checkConformanceKindMatch(
 	)
 }
 
-// TODO: return proper error
+// memberSatisfied checks whether the composite member satisfies the interface member.
+//
+// `relationship` indicates the relationship between the `currentMember` (coming from type T1)
+// and the `inheritedMember` (coming from type T2).
+//
+// For example, consider the following code:
+//
+//	interface I1 {
+//	  fun foo(): Int
+//	}
+//
+//	interface I2 {
+//	  fun foo(): Int
+//	}
+//
+//	interface I3: I1 {
+//	  fun foo(): Int
+//	}
+//
+//	struct S: I1, I2 {
+//	  fun foo(): Int {
+//	    return 42
+//	  }
+//	}
+//
+// Here, when checking if `S.foo` satisfies `I1.foo`, relationship is memberRelationshipInherited.
+// When checking if `I3.foo` satisfies `I1.foo`, relationship is memberRelationshipInherited.
+// When checking if `I1.foo` satisfies `I2.foo` or `I2.foo` satisfies `I1.foo`, relationship is memberRelationshipSibling.
 func (checker *Checker) memberSatisfied(
-	compositeKindedType CompositeKindedType,
-	compositeMember, interfaceMember *Member,
+	currentMember, inheritedMember *Member,
+	relationship memberRelationship,
 ) bool {
 
 	// Check declaration kind
-	if compositeMember.DeclarationKind != interfaceMember.DeclarationKind {
+	if currentMember.DeclarationKind != inheritedMember.DeclarationKind {
 		return false
 	}
 
 	// Check type
 
-	compositeMemberType := compositeMember.TypeAnnotation.Type
-	interfaceMemberType := interfaceMember.TypeAnnotation.Type
+	currentMemberType := currentMember.TypeAnnotation.Type
+	inheritedMemberType := inheritedMember.TypeAnnotation.Type
 
-	if !compositeMemberType.IsInvalidType() &&
-		!interfaceMemberType.IsInvalidType() {
+	if !currentMemberType.IsInvalidType() &&
+		!inheritedMemberType.IsInvalidType() {
 
-		switch interfaceMember.DeclarationKind {
+		switch inheritedMember.DeclarationKind {
 		case common.DeclarationKindField:
 			// If the member is just a field, check the types are equal
 
 			// TODO: subtype?
-			if !compositeMemberType.Equal(interfaceMemberType) {
+			if !currentMemberType.Equal(inheritedMemberType) {
 				return false
 			}
 
 		case common.DeclarationKindFunction:
 			// If the member is a function, check that the argument labels are equal,
 			// the parameter types are equal (they are invariant),
-			// and that the return types are subtypes (the return type is covariant).
+			// and that the return types
+			// - are subtypes (the return type is covariant) when inherited,
+			// - are equal (the return type is invariant) when siblings.
 			//
 			// This is different from subtyping for functions,
 			// where argument labels are not considered,
 			// and parameters are contravariant.
 
-			interfaceMemberFunctionType, isInterfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
-			compositeMemberFunctionType, isCompositeMemberFunctionType := compositeMemberType.(*FunctionType)
+			inheritedFunctionType, inheritedMemberIsFunction := inheritedMemberType.(*FunctionType)
+			currentFunctionType, currentMemberIsFunction := currentMemberType.(*FunctionType)
 
-			if !isInterfaceMemberFunctionType || !isCompositeMemberFunctionType {
+			if !inheritedMemberIsFunction || !currentMemberIsFunction {
 				return false
 			}
 
-			if !interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
-				return false
-			}
-
-			// Functions are covariant in their purity
-			if compositeMemberFunctionType.Purity != interfaceMemberFunctionType.Purity &&
-				compositeMemberFunctionType.Purity != FunctionPurityView {
-
+			if !inheritedFunctionType.HasSameArgumentLabels(currentFunctionType) {
 				return false
 			}
 
 			// Functions are invariant in their parameter types
 
-			for i, subParameter := range compositeMemberFunctionType.Parameters {
-				superParameter := interfaceMemberFunctionType.Parameters[i]
+			for i, subParameter := range currentFunctionType.Parameters {
+				superParameter := inheritedFunctionType.Parameters[i]
 				if !subParameter.TypeAnnotation.Type.
 					Equal(superParameter.TypeAnnotation.Type) {
 
@@ -1612,41 +1673,127 @@ func (checker *Checker) memberSatisfied(
 				}
 			}
 
-			// Functions are covariant in their return type
+			// Function return types
+			// - are invariant if they're siblings and one of them has an implementation (default function),
+			// - are covariant otherwise
 
-			if compositeMemberFunctionType.ReturnTypeAnnotation.Type != nil &&
-				interfaceMemberFunctionType.ReturnTypeAnnotation.Type != nil {
+			currentFunctionReturnType := currentFunctionType.ReturnTypeAnnotation.Type
+			inheritedFunctionReturnType := inheritedFunctionType.ReturnTypeAnnotation.Type
 
-				if !IsSubType(
-					compositeMemberFunctionType.ReturnTypeAnnotation.Type,
-					interfaceMemberFunctionType.ReturnTypeAnnotation.Type,
-				) {
-					return false
+			if currentFunctionReturnType != nil &&
+				inheritedFunctionReturnType != nil {
+
+				switch relationship {
+				case memberRelationshipInherited:
+					// For inherited members, current return type must be a subtype of the
+					// inherited function's return type (but NOT vice-versa).
+					if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
+						return false
+					}
+
+				case memberRelationshipSibling:
+					switch {
+					case currentMember.HasImplementation && inheritedMember.HasImplementation:
+						if !currentFunctionReturnType.Equal(inheritedFunctionReturnType) {
+							return false
+						}
+
+					case currentMember.HasImplementation:
+						if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) {
+							return false
+						}
+
+					case inheritedMember.HasImplementation:
+						if !IsSubType(inheritedFunctionReturnType, currentFunctionReturnType) {
+							return false
+						}
+
+					default:
+						// For siblings, order shouldn't matter.
+						// Only requirement is that one function return type  must be a
+						// subtype of the other.
+						if !IsSubType(currentFunctionReturnType, inheritedFunctionReturnType) &&
+							!IsSubType(inheritedFunctionReturnType, currentFunctionReturnType) {
+							return false
+						}
+					}
+
+				default:
+					panic(errors.NewUnreachableError())
 				}
 			}
 
-			if (compositeMemberFunctionType.ReturnTypeAnnotation.Type != nil &&
-				interfaceMemberFunctionType.ReturnTypeAnnotation.Type == nil) ||
-				(compositeMemberFunctionType.ReturnTypeAnnotation.Type == nil &&
-					interfaceMemberFunctionType.ReturnTypeAnnotation.Type != nil) {
+			if (currentFunctionReturnType != nil &&
+				inheritedFunctionReturnType == nil) ||
+				(currentFunctionReturnType == nil &&
+					inheritedFunctionReturnType != nil) {
 
 				return false
+			}
+
+			// Function purity
+			// - is invariant if they're siblings and one of them has an implementation (default function),
+			// - is covariant otherwise
+
+			switch relationship {
+			case memberRelationshipInherited:
+				// For inherited members, current function purity must be a sub-set of the
+				// inherited function's purity (but NOT vice-versa).
+				if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+					currentFunctionType.Purity != FunctionPurityView {
+
+					return false
+				}
+			case memberRelationshipSibling:
+				switch {
+				case currentMember.HasImplementation && inheritedMember.HasImplementation:
+					if currentFunctionType.Purity != inheritedFunctionType.Purity {
+						return false
+					}
+
+				case currentMember.HasImplementation:
+					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+						currentFunctionType.Purity != FunctionPurityView {
+
+						return false
+					}
+
+				case inheritedMember.HasImplementation:
+					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+						inheritedFunctionType.Purity != FunctionPurityView {
+
+						return false
+					}
+
+				default:
+					// For siblings, order shouldn't matter.
+					// Only requirement is that atleast one function's purity must be a
+					// sub-set of the other.
+					if currentFunctionType.Purity != inheritedFunctionType.Purity &&
+						currentFunctionType.Purity != FunctionPurityView &&
+						inheritedFunctionType.Purity != FunctionPurityView {
+
+						return false
+					}
+				}
+			default:
+				panic(errors.NewUnreachableError())
 			}
 		}
 	}
 
 	// Check variable kind
 
-	if interfaceMember.VariableKind != ast.VariableKindNotSpecified &&
-		compositeMember.VariableKind != interfaceMember.VariableKind {
+	if inheritedMember.VariableKind != ast.VariableKindNotSpecified &&
+		currentMember.VariableKind != inheritedMember.VariableKind {
 
 		return false
 	}
 
 	// Check access
 
-	effectiveInterfaceMemberAccess := checker.effectiveInterfaceMemberAccess(interfaceMember.Access)
-	effectiveCompositeMemberAccess := checker.EffectiveCompositeMemberAccess(compositeMember.Access)
+	effectiveInterfaceMemberAccess := checker.effectiveInterfaceMemberAccess(inheritedMember.Access)
+	effectiveCompositeMemberAccess := checker.EffectiveCompositeMemberAccess(currentMember.Access)
 
 	return effectiveCompositeMemberAccess.Equal(effectiveInterfaceMemberAccess)
 }
