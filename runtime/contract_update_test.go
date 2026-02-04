@@ -21,11 +21,13 @@ package runtime_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -819,5 +821,133 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 			"\n"+
 			"  See documentation at: https://cadence-lang.org/docs/language/access-control\n"+
 			"\n",
+	)
+}
+
+func TestRuntimeContractUpdateCapabilityReferenceAuthorizationChange(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	const contract1 = `
+      access(all) contract Test {
+
+          access(all) var cap: Capability<&[Int]>
+
+          init() {
+              self.account.storage.save([1], to: /storage/ints)
+              self.cap = self.account.capabilities.storage.issue<&[Int]>(/storage/ints)
+          }
+      }
+    `
+
+	const contract2 = `
+      access(all) contract Test {
+
+          access(all) var cap: Capability<auth(Mutate) &[Int]>
+
+          init() {
+              self.account.storage.save([1], to: /storage/ints)
+              self.cap = self.account.capabilities.storage.issue<auth(Mutate) &[Int]>(/storage/ints)
+          }
+      }
+    `
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy the Test contract
+
+	deployTx1 := DeploymentTransaction("Test", []byte(contract1))
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Update the Test contract
+
+	deployTx2 := UpdateTransaction("Test", []byte(contract2))
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Use the updated contract
+
+	script := []byte(`
+      import Test from 0x42
+
+      access(all) fun main() {
+          Test.cap.borrow()
+      }
+    `)
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
+		},
+	)
+	RequireError(t, err)
+
+	var memberAccessTypeErr *interpreter.MemberAccessTypeError
+	require.ErrorAs(t, err, &memberAccessTypeErr)
+
+	assert.Equal(t,
+		common.TypeID("Capability<auth(Mutate)&[Int]>"),
+		memberAccessTypeErr.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("Capability<&[Int]>"),
+		memberAccessTypeErr.ActualType.ID(),
 	)
 }
