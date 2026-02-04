@@ -116,7 +116,27 @@ func (v *VMInvokable) Invoke(
 	interpreter.Value,
 	error,
 ) {
-	value, vmErr := v.vmInstance.InvokeExternally(functionName, arguments...)
+	vmInvokeFunc := v.vmInstance.InvokeExternally
+	interpreterInvokeFunc := v.interpreter.Invoke
+
+	return v.invoke(
+		functionName,
+		arguments,
+		vmInvokeFunc,
+		interpreterInvokeFunc,
+	)
+}
+
+type invokeFunctionType = func(name string, arguments ...interpreter.Value) (v interpreter.Value, err error)
+
+func (v *VMInvokable) invoke(
+	functionName string,
+	arguments []interpreter.Value,
+	vmInvokeFunc invokeFunctionType,
+	interpreterInvokeFunc invokeFunctionType,
+) (interpreter.Value, error) {
+
+	value, vmErr := vmInvokeFunc(functionName, arguments...)
 
 	// Reset the VM after a function invocation,
 	// so the same vm can be re-used for subsequent invocation.
@@ -131,7 +151,7 @@ func (v *VMInvokable) Invoke(
 	// Invoke the interpreter, even if there are errors from VM.
 	// This is because even an erroneous program could have side effects
 	// on slab creation.
-	_, interpreterErr := v.interpreter.Invoke(functionName, arguments...)
+	_, interpreterErr := interpreterInvokeFunc(functionName, arguments...)
 
 	if vmErr != nil {
 		return nil, vmErr
@@ -160,37 +180,15 @@ func (v *VMInvokable) InvokeUncheckedForTestingOnly(
 	interpreter.Value,
 	error,
 ) {
-	value, vmErr := v.vmInstance.InvokeExternallyUncheckedForTestingOnly(functionName, arguments...) // nolint:staticcheck
+	vmInvokeFunc := v.vmInstance.InvokeExternallyUncheckedForTestingOnly // nolint:staticcheck
+	interpreterInvokeFunc := v.interpreter.InvokeUncheckedForTestingOnly // nolint:staticcheck
 
-	// Reset the VM after a function invocation,
-	// so the same vm can be re-used for subsequent invocation.
-	v.vmInstance.Reset()
-
-	// If the test was set up without the need for comparing slabs,
-	// then return only the VM result.
-	if v.interpreter == nil {
-		return value, vmErr
-	}
-
-	// Invoke the interpreter, even if there are errors from VM.
-	// This is because even an erroneous program could have side effects
-	// on slab creation.
-	_, interpreterErr := v.interpreter.InvokeUncheckedForTestingOnly(functionName, arguments...) // nolint:staticcheck
-
-	if vmErr != nil {
-		return nil, vmErr
-	}
-
-	if interpreterErr != nil {
-		return nil, interpreterErr
-	}
-
-	vmErr = v.compareStorage()
-	if vmErr != nil {
-		return nil, vmErr
-	}
-
-	return value, nil
+	return v.invoke(
+		functionName,
+		arguments,
+		vmInvokeFunc,
+		interpreterInvokeFunc,
+	)
 }
 
 func (v *VMInvokable) InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) (err error) {
