@@ -73,6 +73,7 @@ func (c *TypeComparator) CheckConstantSizedTypeEquality(expected *ast.ConstantSi
 	// Check size
 	if foundConstSizedType.Size.Value.Cmp(expected.Size.Value) != 0 ||
 		foundConstSizedType.Size.Base != expected.Size.Base {
+
 		return newTypeMismatchError(expected, found)
 	}
 
@@ -140,6 +141,10 @@ func (c *TypeComparator) CheckInstantiationTypeEquality(expected *ast.Instantiat
 func (c *TypeComparator) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
 	foundFuncType, ok := found.(*ast.FunctionType)
 	if !ok || len(expected.ParameterTypeAnnotations) != len(foundFuncType.ParameterTypeAnnotations) {
+		return newTypeMismatchError(expected, found)
+	}
+
+	if expected.PurityAnnotation != foundFuncType.PurityAnnotation {
 		return newTypeMismatchError(expected, found)
 	}
 
