@@ -160,6 +160,10 @@ func (c *TypeComparator) CheckReferenceTypeEquality(expected *ast.ReferenceType,
 		return newTypeMismatchError(expected, found)
 	}
 
+	if expected.Authorization != refType.Authorization {
+		return newTypeMismatchError(expected, found)
+	}
+
 	return expected.Type.CheckEqual(refType.Type, c)
 }
 

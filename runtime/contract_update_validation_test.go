@@ -1688,23 +1688,15 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.Contains(t, err.Error(), expectedError)
 	})
 
-	testWithValidators(t, "Test reference types", func(t *testing.T, config Config) {
+	testWithValidators(t, "Test reference types: same borrow type", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
 
-                access(all) var vault: Capability<&TestStruct>?
+                access(all) var vault: Capability<&Int>?
 
                 init() {
                     self.vault = nil
-                }
-
-                access(all) struct TestStruct {
-                    access(all) let a: Int
-
-                    init() {
-                        self.a = 123
-                    }
                 }
             }
         `
@@ -1712,24 +1704,104 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const newCode = `
             access(all) contract Test {
 
-                access(all) var vault: Capability<&TestStruct>?
+                access(all) var vault: Capability<&Int>?
 
                 init() {
                     self.vault = nil
-                }
-
-                access(all) struct TestStruct {
-                    access(all) let a: Int
-
-                    init() {
-                        self.a = 123
-                    }
                 }
             }
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "Test reference types: different borrow type", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&Int>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&String>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		RequireError(t, err)
+	})
+
+	testWithValidators(t, "Test reference types: add authorization", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<auth(Mutate) &[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		RequireError(t, err)
+
+		require.ErrorContains(t, err, "incompatible type annotations. expected `Capability<&[Int]>`, found `Capability<auth(Mutate) &[Int]>`")
+	})
+
+	testWithValidators(t, "Test reference types: remove authorization", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<auth(Mutate) &[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<&[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		RequireError(t, err)
+
+		require.ErrorContains(t, err, "incompatible type annotations. expected `Capability<auth(Mutate) &[Int]>`, found `Capability<&[Int]>`")
 	})
 
 	testWithValidators(t, "Test function type", func(t *testing.T, config Config) {
