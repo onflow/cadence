@@ -1475,6 +1475,11 @@ func CreateReferenceValue(
 					})
 				}
 
+				// Need to convert the value to the target type,
+				// to ensure entitlements are being granted as desired.
+				// For e.g: when getting an element from an array of type `&[&T]`,
+				// and if the actual runtime value of the element contains entitlements (i.e: `auth(Mutate) &T`),
+				// then the entitlements needs to be stripped-off, to avoid entitlement escalations.
 				return ConvertAndBoxWithValidation(
 					context,
 					value,

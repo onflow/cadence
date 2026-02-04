@@ -7071,25 +7071,3 @@ func (*MissingTypeError) SecondaryError() string {
 func (*MissingTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system"
 }
-
-// InvalidMemberReferenceError
-type InvalidMemberReferenceError struct {
-	ExpectedAuthorization Access
-	ActualAuthorization   Access
-	ast.Range
-}
-
-var _ SemanticError = &InvalidMemberReferenceError{}
-var _ errors.UserError = &InvalidMemberReferenceError{}
-
-func (e *InvalidMemberReferenceError) isSemanticError() {}
-
-func (*InvalidMemberReferenceError) IsUserError() {}
-
-func (e *InvalidMemberReferenceError) Error() string {
-	return fmt.Sprintf(
-		"cannot create reference: expected `%s`, got `%s`",
-		e.ExpectedAuthorization,
-		e.ActualAuthorization,
-	)
-}

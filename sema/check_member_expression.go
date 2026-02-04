@@ -86,40 +86,24 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	return memberType
 }
 
-// getReferenceType Returns a reference type to a given type.
+// getDescendantReferenceType Returns a reference type to a given descendant's (member/element) type.
 // Reference to an optional should return an optional reference.
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getReferenceType(
-	typ Type,
+func (checker *Checker) getDescendantReferenceType(
+	descendantType Type,
 	authorization Access,
-	authorizationPos ast.HasPosition,
 ) Type {
-	switch typ := typ.(type) {
+	switch typ := descendantType.(type) {
 	case *OptionalType:
-		innerType := checker.getReferenceType(
-			typ.Type,
-			authorization,
-			authorizationPos,
-		)
+		innerType := checker.getDescendantReferenceType(typ.Type, authorization)
 		return NewOptionalType(checker.memoryGauge, innerType)
 
 	case *ReferenceType:
-		if authorization != UnauthorizedAccess {
-			checker.report(
-				&InvalidMemberReferenceError{
-					ExpectedAuthorization: UnauthorizedAccess,
-					ActualAuthorization:   authorization,
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						authorizationPos,
-					),
-				},
-			)
-		}
-
-		return NewReferenceType(checker.memoryGauge, authorization, typ.Type)
+		// If the descendant is already a reference,
+		// then the resulting type should be the same.
+		return typ
 
 	default:
 		return NewReferenceType(checker.memoryGauge, authorization, typ)
@@ -127,13 +111,18 @@ func (checker *Checker) getReferenceType(
 	}
 }
 
-func shouldReturnImplicitReference(parentType, memberType Type, isAssignment bool) bool {
+func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
 	if isAssignment {
 		return false
 	}
 
 	if _, isReference := MaybeReferenceType(parentType); !isReference {
 		return false
+	}
+
+	// If the member is already a reference, then a reference must be returned.
+	if _, elementTypeIsReference := MaybeReferenceType(memberType); elementTypeIsReference {
+		return true
 	}
 
 	return memberType.ContainFieldsOrElements()
@@ -374,6 +363,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	//   1) is accessed via a reference, and
 	//   2) is container-typed,
 	// then the member type should also be a reference.
+	// Otherwise, if the member is already a reference, then again, a reference must be returned.
 
 	// Note: For attachments, `self` is always a reference.
 	// But we do not want to return a reference for `self.something`.
@@ -382,26 +372,16 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	// i.e: `accessedSelfMember == nil`
 
 	if accessedSelfMember == nil &&
-		member.DeclarationKind == common.DeclarationKindField {
+		member.DeclarationKind == common.DeclarationKindField &&
+		shouldReturnReference(accessedType, resultingType, isAssignment) {
 
-		// Check if an implicit reference must be returned.
-		if shouldReturnImplicitReference(accessedType, resultingType, isAssignment) {
-			authorization := UnauthorizedAccess
-			if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
-				authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
-			}
-
-			resultingType = checker.getReferenceType(
-				resultingType,
-				authorization,
-				expression,
-			)
-			returnReference = true
-		} else if _, memberTypeTypeIsReference := MaybeReferenceType(resultingType); memberTypeTypeIsReference {
-			// If the member is already a reference, then a return the reference as-is.
-			returnReference = true
+		authorization := UnauthorizedAccess
+		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
+			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
 		}
 
+		resultingType = checker.getDescendantReferenceType(resultingType, authorization)
+		returnReference = true
 	}
 
 	return accessedType, resultingType, member, isOptional
