@@ -2398,7 +2398,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 			RequireError(t, err)
 
-			require.ErrorContains(t, err, "incompatible type annotations. expected `Capability<&[Int]>`, found `Capability<auth(Mutate) &[Int]>`")
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `Capability<&[Int]>`, found `Capability<auth(Mutate) &[Int]>`",
+			)
 		})
 
 		testWithValidators(t, "remove authorization", func(t *testing.T, config Config) {
@@ -2428,129 +2431,346 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 			RequireError(t, err)
 
-			require.ErrorContains(t, err, "incompatible type annotations. expected `Capability<auth(Mutate) &[Int]>`, found `Capability<&[Int]>`")
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `Capability<auth(Mutate) &[Int]>`, found `Capability<&[Int]>`",
+			)
 		})
 	})
 
-	testWithValidators(t, "Test function type", func(t *testing.T, config Config) {
+	t.Run("optional types", func(t *testing.T) {
 
-		const oldCode = `
+		testWithValidators(t, "same inner type", func(t *testing.T, config Config) {
+
+			const oldCode = `
             access(all) contract Test {
 
-                access(all) struct TestStruct {
-                    access(all) let a: Int
-
-                    init() {
-                        self.a = 123
-                    }
-                }
-            }
-        `
-
-		const newCode = `
-            access(all) contract Test {
-
-                access(all) var add: fun(Int, Int): Int
+                access(all) var value: Int?
 
                 init() {
-                    self.add = fun (a: Int, b: Int): Int {
-                        return a + b
-                    }
-                }
-
-                access(all) struct TestStruct {
-                    access(all) let a: Int
-
-                    init() {
-                        self.a = 123
-                    }
+                    self.value = nil
                 }
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		RequireError(t, err)
+			const newCode = `
+            access(all) contract Test {
 
-		assert.Contains(t, err.Error(), "error: field `add` has non-storable type: `fun(Int, Int): Int`")
+                access(all) var value: Int?
+
+                init() {
+                    self.value = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		})
+
+		testWithValidators(t, "different inner type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var value: Int?
+
+                init() {
+                    self.value = nil
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var value: String?
+
+                init() {
+                    self.value = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `Int`, found `String`",
+			)
+		})
 	})
 
-	testWithValidators(t, "Test intersection types", func(t *testing.T, config Config) {
+	t.Run("variable sized array types", func(t *testing.T) {
 
-		const oldCode = `
+		testWithValidators(t, "same element type", func(t *testing.T, config Config) {
+
+			const oldCode = `
             access(all) contract Test {
 
-                // intersection type
-                access(all) var a: {TestInterface}
-                access(all) var b: {TestInterface}
-                access(all) var c: {TestInterface}
-                access(all) var d: {TestInterface}
+                access(all) var values: [Int]
 
                 init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = TestStruct()
-                    self.c = TestStruct()
-                    self.d = TestStruct()
-                }
-
-                access(all) struct TestStruct:TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
+                    self.values = []
                 }
             }
         `
 
-		const newCode = `
+			const newCode = `
             access(all) contract Test {
-                access(all) var a: {TestInterface}
-                access(all) var b: {TestInterface}
-                access(all) var c: {TestInterface}
-                access(all) var d: {TestInterface}
+
+                access(all) var values: [Int]
 
                 init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = TestStruct()
-                    self.c = TestStruct()
-                    self.d = TestStruct()
-                }
-
-                access(all) struct TestStruct:TestInterface {
-                    access(all) let a: Int
-                    init() {
-                        self.a = 123
-                    }
-                }
-
-                access(all) struct interface TestInterface {
-                    access(all) let a: Int
+                    self.values = []
                 }
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		require.NoError(t, err)
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		})
+
+		testWithValidators(t, "different element type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var values: [Int]
+
+                init() {
+                    self.values = []
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var values: [String]
+
+                init() {
+                    self.values = []
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `Int`, found `String`",
+			)
+		})
 	})
 
-	testWithValidators(t, "Test invalid intersection types change", func(t *testing.T, config Config) {
+	t.Run("constant sized array types", func(t *testing.T) {
 
-		const oldCode = `
+		testWithValidators(t, "same constant sized type", func(t *testing.T, config Config) {
+
+			const oldCode = `
             access(all) contract Test {
 
-                // intersection type
-                access(all) var a: TestStruct
-                access(all) var b: {TestInterface}
+                access(all) var values: [Int; 5]
 
                 init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = TestStruct()
+                    self.values = [1, 2, 3, 4, 5]
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var values: [Int; 5]
+
+                init() {
+                    self.values = [1, 2, 3, 4, 5]
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		})
+
+		testWithValidators(t, "different size", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var values: [Int; 5]
+
+                init() {
+                    self.values = [1, 2, 3, 4, 5]
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var values: [Int; 10]
+
+                init() {
+                    self.values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `[Int; 5]`, found `[Int; 10]`",
+			)
+		})
+
+		testWithValidators(t, "different element type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var values: [Int; 3]
+
+                init() {
+                    self.values = [1, 2, 3]
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var values: [String; 3]
+
+                init() {
+                    self.values = ["a", "b", "c"]
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `Int`, found `String`",
+			)
+		})
+	})
+
+	t.Run("dictionary types", func(t *testing.T) {
+
+		testWithValidators(t, "same key and value type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var mapping: {String: Int}
+
+                init() {
+                    self.mapping = {}
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var mapping: {String: Int}
+
+                init() {
+                    self.mapping = {}
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		})
+
+		testWithValidators(t, "different key type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var mapping: {String: Int}
+
+                init() {
+                    self.mapping = {}
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var mapping: {Int: Int}
+
+                init() {
+                    self.mapping = {}
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `String`, found `Int`",
+			)
+		})
+
+		testWithValidators(t, "different value type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var mapping: {String: Int}
+
+                init() {
+                    self.mapping = {}
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var mapping: {String: String}
+
+                init() {
+                    self.mapping = {}
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `Int`, found `String`",
+			)
+		})
+	})
+
+	t.Run("intersection types", func(t *testing.T) {
+
+		testWithValidators(t, "same intersection type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var value: {TestInterface}
+
+                init() {
+                    self.value = TestStruct()
                 }
 
                 access(all) struct TestStruct: TestInterface {
@@ -2566,15 +2786,13 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		const newCode = `
+			const newCode = `
             access(all) contract Test {
-                access(all) var a: {TestInterface}
-                access(all) var b: TestStruct
+
+                access(all) var value: {TestInterface}
 
                 init() {
-                    var count: Int = 567
-                    self.a = TestStruct()
-                    self.b = TestStruct()
+                    self.value = TestStruct()
                 }
 
                 access(all) struct TestStruct: TestInterface {
@@ -2590,18 +2808,411 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		RequireError(t, err)
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		})
 
-		assert.Contains(t, err.Error(), "access(all) var a: {TestInterface}"+
-			"\n  |                                    ^^^^^^^^^^^^^^^ "+
-			"incompatible type annotations. expected `TestStruct`")
+		testWithValidators(t, "different intersection type", func(t *testing.T, config Config) {
 
-		assert.Contains(t, err.Error(), "access(all) var b: TestStruct"+
-			"\n  |                                    ^^^^^^^^^^ "+
-			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct`")
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var value: {InterfaceA}
+
+                init() {
+                    self.value = TestStruct()
+                }
+
+                access(all) struct TestStruct: InterfaceA, InterfaceB {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface InterfaceA {
+                    access(all) let a: Int
+                }
+
+                access(all) struct interface InterfaceB {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var value: {InterfaceB}
+
+                init() {
+                    self.value = TestStruct()
+                }
+
+                access(all) struct TestStruct: InterfaceA, InterfaceB {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface InterfaceA {
+                    access(all) let a: Int
+                }
+
+                access(all) struct interface InterfaceB {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `{InterfaceA}`, found `{InterfaceB}`",
+			)
+		})
+
+		testWithValidators(t, "different number of intersected types", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var value: {InterfaceA}
+
+                init() {
+                    self.value = TestStruct()
+                }
+
+                access(all) struct TestStruct: InterfaceA, InterfaceB {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface InterfaceA {
+                    access(all) let a: Int
+                }
+
+                access(all) struct interface InterfaceB {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var value: {InterfaceA, InterfaceB}
+
+                init() {
+                    self.value = TestStruct()
+                }
+
+                access(all) struct TestStruct: InterfaceA, InterfaceB {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface InterfaceA {
+                    access(all) let a: Int
+                }
+
+                access(all) struct interface InterfaceB {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `{InterfaceA}`, found `{InterfaceA, InterfaceB}`",
+			)
+		})
 	})
 
+	t.Run("instantiation types", func(t *testing.T) {
+
+		testWithValidators(t, "same instantiation type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var cap: Capability<&Int>?
+
+                init() {
+                    self.cap = nil
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var cap: Capability<&Int>?
+
+                init() {
+                    self.cap = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		})
+
+		testWithValidators(t, "different type argument", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var cap: Capability<&Int>?
+
+                init() {
+                    self.cap = nil
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var cap: Capability<&String>?
+
+                init() {
+                    self.cap = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `Capability<&Int>`, found `Capability<&String>`",
+			)
+		})
+
+		testWithValidators(t, "different type argument count", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var cap: Capability<&Int>?
+
+                init() {
+                    self.cap = nil
+                }
+            }
+        `
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var cap: Capability<&Int, &String>?
+
+                init() {
+                    self.cap = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t, err, "incorrect number of type arguments")
+		})
+	})
+
+	t.Run("function types", func(t *testing.T) {
+
+		testWithValidators(t, "same type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+                    access(all) let f: (fun(Int): Void)?
+
+                    init() {
+                        self.f = nil
+                    }
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+                     access(all) let f: (fun(Int): Void)?
+
+                     init() {
+                         self.f = nil
+                     }
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		})
+
+		testWithValidators(t, "different parameter type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+                    access(all) let f: (fun(Int): Void)?
+
+                    init() {
+                        self.f = nil
+                    }
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+					access(all) let f: (fun(String): Void)?
+
+                    init() {
+                        self.f = nil
+                    }
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err, "incompatible type annotations. expected `fun (Int): Void`, found `fun (String): Void`",
+			)
+		})
+
+		testWithValidators(t, "different parameter count", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+					access(all) let f: (fun(Int): Void)?
+
+                    init() {
+                        self.f = nil
+                    }
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+                    access(all) let f: (fun(Int, String): Void)?
+
+                    init() {
+                        self.f = nil
+                    }
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `fun (Int): Void`, found `fun (Int, String): Void`",
+			)
+		})
+
+		testWithValidators(t, "different return type", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+					access(all) let f: (fun(Int): Int)?
+
+                    init() {
+                        self.f = nil
+                    }
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+					access(all) let f: (fun(Int): String)?
+
+                    init() {
+                        self.f = nil
+                    }
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `Int`, found `String`",
+			)
+		})
+
+		testWithValidators(t, "different purity", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+					access(all) let f: (fun(Int): Int)?
+
+					init() {
+                        self.f = nil
+                    }
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) struct S {
+					access(all) let f: (view fun(Int): Int)?
+
+					init() {
+                        self.f = nil
+                    }
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			require.ErrorContains(t,
+				err,
+				"incompatible type annotations. expected `fun (Int): Int`, found `view fun (Int): Int`",
+			)
+		})
+	})
 }
 
 func assertContractRemovalError(t *testing.T, err error, name string) {
