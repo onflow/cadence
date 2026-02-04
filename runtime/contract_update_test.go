@@ -21,13 +21,11 @@ package runtime_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -913,41 +911,10 @@ func TestRuntimeContractUpdateCapabilityReferenceAuthorizationChange(t *testing.
 			UseVM:     *compile,
 		},
 	)
-	require.NoError(t, err)
-
-	// Use the updated contract
-
-	script := []byte(`
-      import Test from 0x42
-
-      access(all) fun main() {
-          Test.cap.borrow()
-      }
-    `)
-
-	nextScriptLocation := NewScriptLocationGenerator()
-
-	_, err = runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextScriptLocation(),
-			UseVM:     *compile,
-		},
-	)
 	RequireError(t, err)
 
-	var memberAccessTypeErr *interpreter.MemberAccessTypeError
-	require.ErrorAs(t, err, &memberAccessTypeErr)
-
-	assert.Equal(t,
-		common.TypeID("Capability<auth(Mutate)&[Int]>"),
-		memberAccessTypeErr.ExpectedType.ID(),
-	)
-	assert.Equal(t,
-		common.TypeID("Capability<&[Int]>"),
-		memberAccessTypeErr.ActualType.ID(),
+	require.ErrorContains(t,
+		err,
+		"incompatible type annotations. expected `Capability<&[Int]>`, found `Capability<auth(Mutate) &[Int]>",
 	)
 }
