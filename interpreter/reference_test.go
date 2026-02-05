@@ -3656,9 +3656,33 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
             fun test() {
                 var s = S()
                 let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
-                let arrayRef = &array as &[AnyStruct]
+                let arrayRef = &array as &[&S]
 
                 // arrayRef[0] is of type '&S'.
+                // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                let authRef = arrayRef[0] as! auth(Mutate) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("AnyStruct element type, auth element value, index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[AnyStruct]
+
+                // arrayRef[0] is of type '&AnyStruct'.
                 // Shouldn't be possible to cast to 'auth(Mutate) &S'
                 let authRef = arrayRef[0] as! auth(Mutate) &S
             }
@@ -3858,7 +3882,7 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
             struct Outer {
-                let inner: AnyStruct
+                let inner: &S
                 init() {
                     var s = S()
                     self.inner = &s as auth(Mutate) &S
@@ -3872,6 +3896,37 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
                 let outerRef = &outer as &Outer
 
                 // outerRef.inner is of type '&S'.
+                // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                let authRef = outerRef.inner as! auth(Mutate) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("AnyStruct member type, auth member value, member expression", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct Outer {
+                let inner: AnyStruct
+                init() {
+                    var s = S()
+                    self.inner = &s as auth(Mutate) &S
+                }
+            }
+
+            struct S {}
+
+            fun test() {
+                var outer = Outer()
+                let outerRef = &outer as &Outer
+
+                // outerRef.inner is of type '&AnyStruct'.
                 // Shouldn't be possible to cast to 'auth(Mutate) &S'
                 let authRef = outerRef.inner as! auth(Mutate) &S
             }
