@@ -2433,7 +2433,7 @@ func convert(
 
 		switch ref := value.(type) {
 		case *EphemeralReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if isReferenceConversionNotRedundant(ref, valueType, unwrappedTargetType, targetAuthorization) {
 				checkMappedEntitlements(unwrappedTargetType)
 				checkTargetIsLessPermissive(
 					context,
@@ -2451,7 +2451,7 @@ func convert(
 			}
 
 		case *StorageReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if isReferenceConversionNotRedundant(ref, valueType, unwrappedTargetType, targetAuthorization) {
 				checkMappedEntitlements(unwrappedTargetType)
 				checkTargetIsLessPermissive(
 					context,
@@ -2477,12 +2477,12 @@ func convert(
 	return value
 }
 
-// shouldConvertReference skips redundant conversions: either the value's static matches targetType,
-// or value's dynamic type matches targetType.
-// This methos only skips conversions that can be deemed "redundant", but doesn't skip "invalid" conversions.
+// isReferenceConversionNotRedundant checks whether the conversion is not redundant.
+// i.e: either the value's static matches targetType, or value's dynamic type matches targetType.
+// This method only skips conversions that can be deemed "redundant", but doesn't skip "invalid" conversions.
 // Because not converting where it should've, is bad (is a form of entitlement escalation).
 // IMPORTANT: Callers of this method must ensure any "invalid" conversions are rejected.
-func shouldConvertReference(
+func isReferenceConversionNotRedundant(
 	ref ReferenceValue,
 	valueType sema.Type,
 	unwrappedTargetType *sema.ReferenceType,
