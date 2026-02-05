@@ -1403,33 +1403,29 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 		// Check member conflicts for inherited members, even if there is an
 		// implementation in the concrete type.
-		// This is to validate whether the inherited functions (siblings) have matching members.
+		// This is to validate whether the inherited members (siblings) have matching members.
+
 		if options.checkMissingMembers {
-			// The interface may provide a default function.
-			// However, only one of the composite's conformances (interfaces)
-			// may provide a default function.
 
-			if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
-				existingMembers, ok := inheritedMembers[name]
-				if ok {
-					var hasConflicts bool
-					hasConflicts, memberMismatches = checker.checkInheritedMemberConflicts(
-						compositeDeclaration,
-						existingMembers,
-						interfaceMember,
-						compositeType,
-						memberMismatches,
-						hasImplementation,
-					)
+			existingMembers, ok := inheritedMembers[name]
+			if ok {
+				var hasConflicts bool
+				hasConflicts, memberMismatches = checker.checkInheritedMemberConflicts(
+					compositeDeclaration,
+					existingMembers,
+					interfaceMember,
+					compositeType,
+					memberMismatches,
+					hasImplementation,
+				)
 
-					if hasConflicts {
-						return
-					}
+				if hasConflicts {
+					return
 				}
-
-				existingMembers = append(existingMembers, interfaceMember)
-				inheritedMembers[name] = existingMembers
 			}
+
+			existingMembers = append(existingMembers, interfaceMember)
+			inheritedMembers[name] = existingMembers
 
 			// If the concrete type doesn't have an implementation,
 			// and also have no default implementation coming from interfaces,
