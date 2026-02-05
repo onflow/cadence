@@ -1599,7 +1599,7 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 			},
 		},
 		StartPos:          ast.Position{Offset: 34, Line: 3, Column: 15},
-		ParentIfStatement: ifStatement,
+		ParentControlStatement: ifStatement,
 	}
 
 	ifStatement.Test = ifTestVariableDeclaration

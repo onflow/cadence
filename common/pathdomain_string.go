@@ -19,8 +19,9 @@ const _PathDomain_name = "PathDomainUnknownPathDomainStoragePathDomainPrivatePat
 var _PathDomain_index = [...]uint8{0, 17, 34, 51, 67}
 
 func (i PathDomain) String() string {
-	if i >= PathDomain(len(_PathDomain_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_PathDomain_index)-1 {
 		return "PathDomain(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _PathDomain_name[_PathDomain_index[i]:_PathDomain_index[i+1]]
+	return _PathDomain_name[_PathDomain_index[idx]:_PathDomain_index[idx+1]]
 }

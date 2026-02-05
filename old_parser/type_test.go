@@ -2766,7 +2766,7 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 				StartPos:          ast.Position{Offset: 8, Line: 2, Column: 7},
 				SecondTransfer:    nil,
 				SecondValue:       nil,
-				ParentIfStatement: nil,
+				ParentControlStatement: nil,
 			},
 		},
 		result.Declarations(),

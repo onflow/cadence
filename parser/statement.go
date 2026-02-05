@@ -389,7 +389,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 		)
 
 		if variableDeclaration != nil {
-			variableDeclaration.ParentIfStatement = ifStatement
+			variableDeclaration.ParentControlStatement = ifStatement
 		}
 
 		ifStatements = append(ifStatements, ifStatement)

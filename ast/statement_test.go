@@ -568,6 +568,142 @@ func TestIfStatement_String(t *testing.T) {
 	})
 }
 
+func TestGuardStatement_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &GuardStatement{
+		Test: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		Else: &Block{
+			Statements: []Statement{},
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		},
+		StartPos: Position{Offset: 13, Line: 14, Column: 15},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		// language=json
+		`
+        {
+            "Type": "GuardStatement",
+            "Test": {
+                "Type": "BoolExpression",
+                "Value": false,
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+            },
+            "Else": {
+                "Type": "Block",
+                "Statements": [],
+                "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+            },
+            "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
+            "EndPos":   {"Offset": 10, "Line": 11, "Column": 12}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestGuardStatement_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("guard with boolean test", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &GuardStatement{
+			Test: &BoolExpression{
+				Value: true,
+			},
+			Else: &Block{
+				Statements: []Statement{},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("guard "),
+					prettier.Text("true"),
+					prettier.Text(" else "),
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil test", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &GuardStatement{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("guard "),
+					prettier.Text(""),
+					prettier.Text(" else "),
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+}
+
+func TestGuardStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("guard with boolean test", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &GuardStatement{
+			Test: &BoolExpression{
+				Value: true,
+			},
+			Else: &Block{
+				Statements: []Statement{},
+			},
+		}
+
+		assert.Equal(t,
+			"guard true else {}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil test", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &GuardStatement{}
+
+		assert.Equal(t,
+			"guard  else {}",
+			stmt.String(),
+		)
+	})
+}
+
 func TestWhileStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

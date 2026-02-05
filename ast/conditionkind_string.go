@@ -18,8 +18,9 @@ const _ConditionKind_name = "ConditionKindUnknownConditionKindPreConditionKindPo
 var _ConditionKind_index = [...]uint8{0, 20, 36, 53}
 
 func (i ConditionKind) String() string {
-	if i >= ConditionKind(len(_ConditionKind_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_ConditionKind_index)-1 {
 		return "ConditionKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _ConditionKind_name[_ConditionKind_index[i]:_ConditionKind_index[i+1]]
+	return _ConditionKind_name[_ConditionKind_index[idx]:_ConditionKind_index[idx+1]]
 }
