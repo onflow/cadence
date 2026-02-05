@@ -10684,8 +10684,8 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		var memberAccessTypeError *interpreter.MemberAccessTypeError
-		require.ErrorAs(t, err, &memberAccessTypeError)
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 
 	t.Run("optional cast", func(t *testing.T) {
@@ -10839,8 +10839,8 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		var memberAccessTypeError *interpreter.MemberAccessTypeError
-		require.ErrorAs(t, err, &memberAccessTypeError)
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 }
 

@@ -3924,8 +3924,10 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 				_, err := inter.Invoke("test")
 				RequireError(t, err)
 
-				var memberAccessTypeError *interpreter.MemberAccessTypeError
-				require.ErrorAs(t, err, &memberAccessTypeError)
+				// StorageReferenceValue.ReferencedValue turns the ForceCastTypeMismatchError
+				// of the failed dereference into a DereferenceError
+				var dereferenceError *interpreter.DereferenceError
+				require.ErrorAs(t, err, &dereferenceError)
 
 				// Dereferencing fails when validating member-access types.
 				// `Value.StaticType()` doesn't takes a location-range argument,

@@ -3656,7 +3656,7 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
             fun test() {
                 var s = S()
                 let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
-                let arrayRef = &array as &[&S]
+                let arrayRef = &array as &[AnyStruct]
 
                 // arrayRef[0] is of type '&S'.
                 // Shouldn't be possible to cast to 'auth(Mutate) &S'
@@ -3858,7 +3858,7 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
             struct Outer {
-                let inner: &S
+                let inner: AnyStruct
                 init() {
                     var s = S()
                     self.inner = &s as auth(Mutate) &S
