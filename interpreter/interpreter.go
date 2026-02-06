@@ -6234,6 +6234,13 @@ func NativeCapabilityBorrowFunction(
 	}
 }
 
+// Use function types with type-erased borrow types,
+// as we cannot know the borrow types at function creation time.
+// DO NOT use the borrow type of the capability value!
+
+var CapabilityTypeBorrowFunctionType = sema.CapabilityTypeBorrowFunctionType(sema.AnyStructType)
+var CapabilityTypeCheckFunctionType = sema.CapabilityTypeCheckFunctionType(sema.AnyStructType)
+
 func capabilityBorrowFunction(
 	context FunctionCreationContext,
 	capabilityValue CapabilityValue,
@@ -6245,7 +6252,7 @@ func capabilityBorrowFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
-		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
+		CapabilityTypeBorrowFunctionType,
 		NativeCapabilityBorrowFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
@@ -6354,7 +6361,7 @@ func capabilityCheckFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
-		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
+		CapabilityTypeCheckFunctionType,
 		NativeCapabilityCheckFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
