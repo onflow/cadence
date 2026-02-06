@@ -5693,6 +5693,11 @@ func GetMember(
 	case common.DeclarationKindFunction:
 		return context.GetMethod(value, memberName)
 	default:
+		// The default case is used for nonFunctionMemberGetter because,
+		// constructors have the declaration kind as struct/resource/etc.
+		// And they are captured in the value as "nested variables".
+		// nonFunctionMemberGetter is responsible for handling them appropriately
+		// (Note: it is only needed for composite values)
 		if nonFunctionMemberGetter == nil {
 			return nil
 		}

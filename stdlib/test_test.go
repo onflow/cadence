@@ -988,7 +988,11 @@ func TestAssertEqual(t *testing.T) {
 
 		var assertionErr *AssertionError
 		assert.ErrorAs(t, err, &assertionErr)
-		// Note: cannot assert message, since dictionary order is not guaranteed.
+		assert.ErrorContains(
+			t,
+			err,
+			"not equal: expected: {2: false, 1: true}, actual: {2: true, 1: true}",
+		)
 	})
 
 	t.Run("resource with resource matcher", func(t *testing.T) {
