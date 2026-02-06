@@ -38,6 +38,18 @@ type TypeAnnotation struct {
 	IsResource bool
 }
 
+func (t *TypeAnnotation) ElementType() ElementType {
+	return ElementTypeTypeAnnotation
+}
+
+func (*TypeAnnotation) Walk(_ func(Element)) {
+	// NO-OP
+}
+
+var _ HasPosition = &TypeAnnotation{}
+var _ Pretty = &TypeAnnotation{}
+var _ Element = &TypeAnnotation{}
+
 func NewTypeAnnotation(
 	memoryGauge common.MemoryGauge,
 	isResource bool,

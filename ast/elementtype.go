@@ -86,4 +86,8 @@ const (
 	ElementTypePathExpression
 	ElementTypeAttachExpression
 	ElementTypeStringTemplateExpression
+
+	// Types
+
+	ElementTypeTypeAnnotation
 )

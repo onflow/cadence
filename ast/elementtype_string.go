@@ -61,15 +61,17 @@ func _() {
 	_ = x[ElementTypePathExpression-50]
 	_ = x[ElementTypeAttachExpression-51]
 	_ = x[ElementTypeStringTemplateExpression-52]
+	_ = x[ElementTypeTypeAnnotation-53]
 }
 
-const _ElementType_name = "ElementTypeUnknownElementTypeProgramElementTypeBlockElementTypeFunctionBlockElementTypeFunctionDeclarationElementTypeSpecialFunctionDeclarationElementTypeCompositeDeclarationElementTypeInterfaceDeclarationElementTypeEntitlementDeclarationElementTypeEntitlementMappingDeclarationElementTypeAttachmentDeclarationElementTypeFieldDeclarationElementTypeEnumCaseDeclarationElementTypePragmaDeclarationElementTypeImportDeclarationElementTypeTransactionDeclarationElementTypeReturnStatementElementTypeBreakStatementElementTypeContinueStatementElementTypeIfStatementElementTypeSwitchStatementElementTypeWhileStatementElementTypeForStatementElementTypeEmitStatementElementTypeVariableDeclarationElementTypeAssignmentStatementElementTypeSwapStatementElementTypeExpressionStatementElementTypeRemoveStatementElementTypeVoidExpressionElementTypeBoolExpressionElementTypeNilExpressionElementTypeIntegerExpressionElementTypeFixedPointExpressionElementTypeArrayExpressionElementTypeDictionaryExpressionElementTypeIdentifierExpressionElementTypeInvocationExpressionElementTypeMemberExpressionElementTypeIndexExpressionElementTypeConditionalExpressionElementTypeUnaryExpressionElementTypeBinaryExpressionElementTypeFunctionExpressionElementTypeStringExpressionElementTypeCastingExpressionElementTypeCreateExpressionElementTypeDestroyExpressionElementTypeReferenceExpressionElementTypeForceExpressionElementTypePathExpressionElementTypeAttachExpressionElementTypeStringTemplateExpression"
+const _ElementType_name = "ElementTypeUnknownElementTypeProgramElementTypeBlockElementTypeFunctionBlockElementTypeFunctionDeclarationElementTypeSpecialFunctionDeclarationElementTypeCompositeDeclarationElementTypeInterfaceDeclarationElementTypeEntitlementDeclarationElementTypeEntitlementMappingDeclarationElementTypeAttachmentDeclarationElementTypeFieldDeclarationElementTypeEnumCaseDeclarationElementTypePragmaDeclarationElementTypeImportDeclarationElementTypeTransactionDeclarationElementTypeReturnStatementElementTypeBreakStatementElementTypeContinueStatementElementTypeIfStatementElementTypeSwitchStatementElementTypeWhileStatementElementTypeForStatementElementTypeEmitStatementElementTypeVariableDeclarationElementTypeAssignmentStatementElementTypeSwapStatementElementTypeExpressionStatementElementTypeRemoveStatementElementTypeVoidExpressionElementTypeBoolExpressionElementTypeNilExpressionElementTypeIntegerExpressionElementTypeFixedPointExpressionElementTypeArrayExpressionElementTypeDictionaryExpressionElementTypeIdentifierExpressionElementTypeInvocationExpressionElementTypeMemberExpressionElementTypeIndexExpressionElementTypeConditionalExpressionElementTypeUnaryExpressionElementTypeBinaryExpressionElementTypeFunctionExpressionElementTypeStringExpressionElementTypeCastingExpressionElementTypeCreateExpressionElementTypeDestroyExpressionElementTypeReferenceExpressionElementTypeForceExpressionElementTypePathExpressionElementTypeAttachExpressionElementTypeStringTemplateExpressionElementTypeTypeAnnotation"
 
-var _ElementType_index = [...]uint16{0, 18, 36, 52, 76, 106, 143, 174, 205, 238, 278, 310, 337, 367, 395, 423, 456, 482, 507, 535, 557, 583, 608, 631, 655, 685, 715, 739, 769, 795, 820, 845, 869, 897, 928, 954, 985, 1016, 1047, 1074, 1100, 1132, 1158, 1185, 1214, 1241, 1269, 1296, 1324, 1354, 1380, 1405, 1432, 1467}
+var _ElementType_index = [...]uint16{0, 18, 36, 52, 76, 106, 143, 174, 205, 238, 278, 310, 337, 367, 395, 423, 456, 482, 507, 535, 557, 583, 608, 631, 655, 685, 715, 739, 769, 795, 820, 845, 869, 897, 928, 954, 985, 1016, 1047, 1074, 1100, 1132, 1158, 1185, 1214, 1241, 1269, 1296, 1324, 1354, 1380, 1405, 1432, 1467, 1492}
 
 func (i ElementType) String() string {
-	if i >= ElementType(len(_ElementType_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_ElementType_index)-1 {
 		return "ElementType(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _ElementType_name[_ElementType_index[i]:_ElementType_index[i+1]]
+	return _ElementType_name[_ElementType_index[idx]:_ElementType_index[idx+1]]
 }
