@@ -7071,6 +7071,7 @@ func (*MissingTypeError) SecondaryError() string {
 func (*MissingTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system"
 }
+
 // GuardStatementElseBlockMustExitError is reported when a guard statement's else block
 // does not definitely exit (via return, panic, break, or continue).
 type GuardStatementElseBlockMustExitError struct {

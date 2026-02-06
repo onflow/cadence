@@ -5484,6 +5484,7 @@ func (e *MissingClosingParenInFunctionTypeError) SuggestFixes(code string) []err
 		},
 	}
 }
+
 // MissingElseInGuardStatementError is reported when the 'else' keyword is missing in a guard statement.
 type MissingElseInGuardStatementError struct {
 	GotToken lexer.Token
