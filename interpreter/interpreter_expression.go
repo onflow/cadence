@@ -217,7 +217,16 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 			value := target.GetKey(interpreter, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
-			value = interpreter.maybeGetReference(indexExpression, value)
+			if indexExpressionTypes.ReturnReference {
+				expectedType := indexExpressionTypes.ResultType
+
+				// Get a reference to the value
+				value = getReferenceValue(
+					interpreter,
+					value,
+					expectedType,
+				)
+			}
 
 			return value, nil
 		}
@@ -325,7 +334,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
 func getReferenceValue(
-	context GetReferenceContext,
+	context ValueConversionContext,
 	value Value,
 	resultType sema.Type,
 ) Value {
@@ -1111,26 +1120,6 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 	}
 }
 
-func (interpreter *Interpreter) maybeGetReference(
-	expression *ast.IndexExpression,
-	memberValue Value,
-) Value {
-	indexExpressionTypes, _ := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
-
-	if indexExpressionTypes.ReturnReference {
-		expectedType := indexExpressionTypes.ResultType
-
-		// Get a reference to the value
-		memberValue = getReferenceValue(
-			interpreter,
-			memberValue,
-			expectedType,
-		)
-	}
-
-	return memberValue
-}
-
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) Value {
 	value, ok := interpreter.evalExpression(expression.Test).(BoolValue)
 	if !ok {
@@ -1410,7 +1399,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 }
 
 func CreateReferenceValue(
-	context ReferenceCreationContext,
+	context ValueConversionContext,
 	borrowType sema.Type,
 	value Value,
 	isImplicit bool,
@@ -1426,10 +1415,10 @@ func CreateReferenceValue(
 	//     (3.b) value is nil
 	// (4) Target type is non-optional, actual value is non-optional
 
-	switch typ := borrowType.(type) {
+	switch targetType := borrowType.(type) {
 	case *sema.OptionalType:
 
-		innerType := typ.Type
+		innerType := targetType.Type
 
 		switch value := value.(type) {
 		case *SomeValue:
@@ -1441,7 +1430,7 @@ func CreateReferenceValue(
 
 			innerValue := value.InnerValue()
 
-			referenceValue := CreateReferenceValue(context, innerType, innerValue, false)
+			referenceValue := CreateReferenceValue(context, innerType, innerValue, isImplicit)
 
 			// Wrap the reference with an optional (since an optional is expected).
 			return NewSomeValueNonCopying(context, referenceValue)
@@ -1455,7 +1444,7 @@ func CreateReferenceValue(
 			// Case (2):
 			// If the referenced value is non-optional,
 			// but the target type is optional.
-			referenceValue := CreateReferenceValue(context, innerType, value, false)
+			referenceValue := CreateReferenceValue(context, innerType, value, isImplicit)
 
 			// Wrap the reference with an optional (since an optional is expected).
 			return NewSomeValueNonCopying(context, referenceValue)
@@ -1468,39 +1457,51 @@ func CreateReferenceValue(
 			// Case (3.a): target type is non-optional, actual value is optional.
 			innerValue := value.InnerValue()
 
-			return CreateReferenceValue(context, typ, innerValue, false)
+			return CreateReferenceValue(context, targetType, innerValue, isImplicit)
 
 		case NilValue:
 			// Case (3.b) value is nil.
 			// Since the resulting type can NOT accommodate a nil (non-optional reference), error-out.
 			panic(&NonOptionalReferenceToNilError{
-				ReferenceType: typ,
+				ReferenceType: targetType,
 			})
 
 		case ReferenceValue:
 			if isImplicit {
+				CheckInvalidatedResourceOrResourceReference(value, context)
+
 				// During implicit reference creation (e.g: member/index access on a reference),
 				// if the value is already a reference then return the same reference.
 				// However, we need to make sure that this reference is actually a subtype of the resultType,
 				// since the checker may not be aware that we are "short-circuiting" in this case.
-				// Additionally, it is only safe to "compress" reference types like this when the desired
-				// result reference type is unauthorized
-				staticType := value.StaticType(context)
-				if typ.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(context, staticType, typ) {
+				valueType := MustSemaTypeOfValue(value, context)
+				if !sema.IsSubType(valueType, targetType) {
 					panic(&InvalidMemberReferenceError{
-						ExpectedType: typ,
-						ActualType:   MustConvertStaticToSemaType(staticType, context),
+						ExpectedType: targetType,
+						ActualType:   valueType,
 					})
 				}
 
-				return value
+				// Need to convert the value to the target type,
+				// to ensure entitlements are being granted as desired.
+				// For e.g: when getting an element from an array of type `&[&T]`,
+				// and if the actual runtime value of the element contains entitlements (i.e: `auth(Mutate) &T`),
+				// then the entitlements needs to be stripped-off, to avoid entitlement escalations.
+				return ConvertAndBoxWithValidation(
+					context,
+					value,
+					valueType,
+					targetType,
+				)
+			} else {
+				panic(&NestedReferenceError{
+					Value: value,
+				})
 			}
-
-			// break
 		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional.
-		return newEphemeralReference(context, value, typ)
+		return newEphemeralReference(context, value, targetType)
 
 	default:
 		panic(errors.NewUnreachableError())

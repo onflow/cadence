@@ -822,6 +822,103 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 	)
 }
 
+func TestRuntimeContractUpdateCapabilityReferenceAuthorizationChange(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	const contract1 = `
+      access(all) contract Test {
+
+          access(all) var cap: Capability<&[Int]>
+
+          init() {
+              self.account.storage.save([1], to: /storage/ints)
+              self.cap = self.account.capabilities.storage.issue<&[Int]>(/storage/ints)
+          }
+      }
+    `
+
+	const contract2 = `
+      access(all) contract Test {
+
+          access(all) var cap: Capability<auth(Mutate) &[Int]>
+
+          init() {
+              self.account.storage.save([1], to: /storage/ints)
+              self.cap = self.account.capabilities.storage.issue<auth(Mutate) &[Int]>(/storage/ints)
+          }
+      }
+    `
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy the Test contract
+
+	deployTx1 := DeploymentTransaction("Test", []byte(contract1))
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Update the Test contract
+
+	deployTx2 := UpdateTransaction("Test", []byte(contract2))
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorContains(t,
+		err,
+		"incompatible type annotations. expected `Capability<&[Int]>`, found `Capability<auth(Mutate) &[Int]>",
+	)
+}
+
 func TestRuntimeContractUpdateReplaceFieldWithFunction(t *testing.T) {
 	t.Parallel()
 
