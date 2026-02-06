@@ -562,6 +562,176 @@ func TestInterpretGuardStatementWithResources(t *testing.T) {
 	})
 }
 
+func TestInterpretGuardComplex(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("chain", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			struct User {
+				let name: String
+				let age: Int
+
+				init(name: String, age: Int) {
+					self.name = name
+					self.age = age
+				}
+			}
+
+			fun createUser(name: String?, age: Int?): User? {
+				// Guard early returns for validation
+				guard let validName = name else {
+					return nil
+				}
+
+				guard let validAge = age else {
+					return nil
+				}
+
+				// Additional validation with boolean guards
+				guard validName.length > 0 else {
+					return nil
+				}
+
+				guard validAge >= 0 else {
+					return nil
+				}
+
+				guard validAge <= 150 else {
+					return nil
+				}
+
+				// All guards passed, variables are available
+				return User(name: validName, age: validAge)
+			}
+		`)
+
+		t.Run("valid user", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"createUser",
+				interpreter.NewUnmeteredStringValue("Alice"),
+				interpreter.NewUnmeteredIntValueFromInt64(25),
+			)
+			require.NoError(t, err)
+
+			someValue, ok := value.(*interpreter.SomeValue)
+			require.True(t, ok)
+
+			user := someValue.InnerValue()
+			require.NotNil(t, user)
+		})
+
+		t.Run("nil name", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"createUser",
+				interpreter.Nil,
+				interpreter.NewUnmeteredIntValueFromInt64(25),
+			)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.Nil,
+				value,
+			)
+		})
+
+		t.Run("empty name", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"createUser",
+				interpreter.NewUnmeteredStringValue(""),
+				interpreter.NewUnmeteredIntValueFromInt64(25),
+			)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.Nil,
+				value,
+			)
+		})
+
+		t.Run("negative age", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"createUser",
+				interpreter.NewUnmeteredStringValue("Bob"),
+				interpreter.NewUnmeteredIntValueFromInt64(-5),
+			)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.Nil,
+				value,
+			)
+		})
+
+		t.Run("age too high", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"createUser",
+				interpreter.NewUnmeteredStringValue("Bob"),
+				interpreter.NewUnmeteredIntValueFromInt64(200),
+			)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.Nil,
+				value,
+			)
+		})
+	})
+
+	t.Run("loop", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			fun findFirst(threshold: Int): Int? {
+				let items: [Int?] = [5, nil, 3, 15]
+				var index = 0
+				while index < items.length {
+					let item = items[index]
+
+					guard let value = item else {
+						index = index + 1
+						continue
+					}
+
+					guard value >= threshold else {
+						index = index + 1
+						continue
+					}
+
+					// Found it!
+					return value
+				}
+				return nil
+			}
+		`)
+
+		value, err := inter.Invoke(
+			"findFirst",
+			interpreter.NewUnmeteredIntValueFromInt64(10),
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(15),
+			),
+			value,
+		)
+	})
+}
+
 func TestInterpretGuardStatementNestedOptionals(t *testing.T) {
 
 	t.Parallel()
