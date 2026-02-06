@@ -166,6 +166,58 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	return nil
 }
 
+func (interpreter *Interpreter) VisitGuardStatement(statement *ast.GuardStatement) StatementResult {
+	switch test := statement.Test.(type) {
+	case ast.Expression:
+		return interpreter.visitGuardStatementWithTestExpression(test, statement.Else)
+	case *ast.VariableDeclaration:
+		return interpreter.visitGuardStatementWithVariableDeclaration(test, statement.Else)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (interpreter *Interpreter) visitGuardStatementWithTestExpression(
+	test ast.Expression,
+	elseBlock *ast.Block,
+) StatementResult {
+
+	value, ok := interpreter.evalExpression(test).(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if !value {
+		return interpreter.visitBlock(elseBlock)
+	}
+
+	return nil
+}
+
+func (interpreter *Interpreter) visitGuardStatementWithVariableDeclaration(
+	declaration *ast.VariableDeclaration,
+	elseBlock *ast.Block,
+) StatementResult {
+
+	value := interpreter.visitVariableDeclaration(declaration, true)
+
+	someValue, ok := value.(*SomeValue)
+	if !ok {
+		// Execute else block if value is nil
+		return interpreter.visitBlock(elseBlock)
+	}
+
+	innerValue := someValue.InnerValue()
+
+	// Guard declares variable in current scope (no activation push/pop)
+	interpreter.declareVariable(
+		declaration.Identifier.Identifier,
+		innerValue,
+	)
+
+	return nil
+}
+
 func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) StatementResult {
 
 	testValue, ok := interpreter.evalExpression(switchStatement.Expression).(EquatableValue)
@@ -650,9 +702,4 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) StatementResult {
 	result := interpreter.evalExpression(statement.Expression)
 	return ExpressionResult{Value: result}
-}
-
-func (interpreter *Interpreter) VisitGuardStatement(statement *ast.GuardStatement) StatementResult {
-	// TODO:
-	panic(errors.NewUnreachableError())
 }
