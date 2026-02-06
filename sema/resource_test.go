@@ -4550,7 +4550,10 @@ func TestCheckResourceOptionalBindingResourceInvalidation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+		var resourceErr *sema.ResourceUseAfterInvalidationError
+		require.ErrorAs(t, errs[0], &resourceErr)
+
+		assert.Equal(t, resourceErr.StartPos.Line, 18)
 	})
 
 	t.Run("inline, without else", func(t *testing.T) {

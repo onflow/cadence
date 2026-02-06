@@ -37,39 +37,41 @@ func _() {
 	_ = x[ElementTypeSwapStatement-26]
 	_ = x[ElementTypeExpressionStatement-27]
 	_ = x[ElementTypeRemoveStatement-28]
-	_ = x[ElementTypeVoidExpression-29]
-	_ = x[ElementTypeBoolExpression-30]
-	_ = x[ElementTypeNilExpression-31]
-	_ = x[ElementTypeIntegerExpression-32]
-	_ = x[ElementTypeFixedPointExpression-33]
-	_ = x[ElementTypeArrayExpression-34]
-	_ = x[ElementTypeDictionaryExpression-35]
-	_ = x[ElementTypeIdentifierExpression-36]
-	_ = x[ElementTypeInvocationExpression-37]
-	_ = x[ElementTypeMemberExpression-38]
-	_ = x[ElementTypeIndexExpression-39]
-	_ = x[ElementTypeConditionalExpression-40]
-	_ = x[ElementTypeUnaryExpression-41]
-	_ = x[ElementTypeBinaryExpression-42]
-	_ = x[ElementTypeFunctionExpression-43]
-	_ = x[ElementTypeStringExpression-44]
-	_ = x[ElementTypeCastingExpression-45]
-	_ = x[ElementTypeCreateExpression-46]
-	_ = x[ElementTypeDestroyExpression-47]
-	_ = x[ElementTypeReferenceExpression-48]
-	_ = x[ElementTypeForceExpression-49]
-	_ = x[ElementTypePathExpression-50]
-	_ = x[ElementTypeAttachExpression-51]
-	_ = x[ElementTypeStringTemplateExpression-52]
+	_ = x[ElementTypeGuardStatement-29]
+	_ = x[ElementTypeVoidExpression-30]
+	_ = x[ElementTypeBoolExpression-31]
+	_ = x[ElementTypeNilExpression-32]
+	_ = x[ElementTypeIntegerExpression-33]
+	_ = x[ElementTypeFixedPointExpression-34]
+	_ = x[ElementTypeArrayExpression-35]
+	_ = x[ElementTypeDictionaryExpression-36]
+	_ = x[ElementTypeIdentifierExpression-37]
+	_ = x[ElementTypeInvocationExpression-38]
+	_ = x[ElementTypeMemberExpression-39]
+	_ = x[ElementTypeIndexExpression-40]
+	_ = x[ElementTypeConditionalExpression-41]
+	_ = x[ElementTypeUnaryExpression-42]
+	_ = x[ElementTypeBinaryExpression-43]
+	_ = x[ElementTypeFunctionExpression-44]
+	_ = x[ElementTypeStringExpression-45]
+	_ = x[ElementTypeCastingExpression-46]
+	_ = x[ElementTypeCreateExpression-47]
+	_ = x[ElementTypeDestroyExpression-48]
+	_ = x[ElementTypeReferenceExpression-49]
+	_ = x[ElementTypeForceExpression-50]
+	_ = x[ElementTypePathExpression-51]
+	_ = x[ElementTypeAttachExpression-52]
+	_ = x[ElementTypeStringTemplateExpression-53]
 }
 
-const _ElementType_name = "ElementTypeUnknownElementTypeProgramElementTypeBlockElementTypeFunctionBlockElementTypeFunctionDeclarationElementTypeSpecialFunctionDeclarationElementTypeCompositeDeclarationElementTypeInterfaceDeclarationElementTypeEntitlementDeclarationElementTypeEntitlementMappingDeclarationElementTypeAttachmentDeclarationElementTypeFieldDeclarationElementTypeEnumCaseDeclarationElementTypePragmaDeclarationElementTypeImportDeclarationElementTypeTransactionDeclarationElementTypeReturnStatementElementTypeBreakStatementElementTypeContinueStatementElementTypeIfStatementElementTypeSwitchStatementElementTypeWhileStatementElementTypeForStatementElementTypeEmitStatementElementTypeVariableDeclarationElementTypeAssignmentStatementElementTypeSwapStatementElementTypeExpressionStatementElementTypeRemoveStatementElementTypeVoidExpressionElementTypeBoolExpressionElementTypeNilExpressionElementTypeIntegerExpressionElementTypeFixedPointExpressionElementTypeArrayExpressionElementTypeDictionaryExpressionElementTypeIdentifierExpressionElementTypeInvocationExpressionElementTypeMemberExpressionElementTypeIndexExpressionElementTypeConditionalExpressionElementTypeUnaryExpressionElementTypeBinaryExpressionElementTypeFunctionExpressionElementTypeStringExpressionElementTypeCastingExpressionElementTypeCreateExpressionElementTypeDestroyExpressionElementTypeReferenceExpressionElementTypeForceExpressionElementTypePathExpressionElementTypeAttachExpressionElementTypeStringTemplateExpression"
+const _ElementType_name = "ElementTypeUnknownElementTypeProgramElementTypeBlockElementTypeFunctionBlockElementTypeFunctionDeclarationElementTypeSpecialFunctionDeclarationElementTypeCompositeDeclarationElementTypeInterfaceDeclarationElementTypeEntitlementDeclarationElementTypeEntitlementMappingDeclarationElementTypeAttachmentDeclarationElementTypeFieldDeclarationElementTypeEnumCaseDeclarationElementTypePragmaDeclarationElementTypeImportDeclarationElementTypeTransactionDeclarationElementTypeReturnStatementElementTypeBreakStatementElementTypeContinueStatementElementTypeIfStatementElementTypeSwitchStatementElementTypeWhileStatementElementTypeForStatementElementTypeEmitStatementElementTypeVariableDeclarationElementTypeAssignmentStatementElementTypeSwapStatementElementTypeExpressionStatementElementTypeRemoveStatementElementTypeGuardStatementElementTypeVoidExpressionElementTypeBoolExpressionElementTypeNilExpressionElementTypeIntegerExpressionElementTypeFixedPointExpressionElementTypeArrayExpressionElementTypeDictionaryExpressionElementTypeIdentifierExpressionElementTypeInvocationExpressionElementTypeMemberExpressionElementTypeIndexExpressionElementTypeConditionalExpressionElementTypeUnaryExpressionElementTypeBinaryExpressionElementTypeFunctionExpressionElementTypeStringExpressionElementTypeCastingExpressionElementTypeCreateExpressionElementTypeDestroyExpressionElementTypeReferenceExpressionElementTypeForceExpressionElementTypePathExpressionElementTypeAttachExpressionElementTypeStringTemplateExpression"
 
-var _ElementType_index = [...]uint16{0, 18, 36, 52, 76, 106, 143, 174, 205, 238, 278, 310, 337, 367, 395, 423, 456, 482, 507, 535, 557, 583, 608, 631, 655, 685, 715, 739, 769, 795, 820, 845, 869, 897, 928, 954, 985, 1016, 1047, 1074, 1100, 1132, 1158, 1185, 1214, 1241, 1269, 1296, 1324, 1354, 1380, 1405, 1432, 1467}
+var _ElementType_index = [...]uint16{0, 18, 36, 52, 76, 106, 143, 174, 205, 238, 278, 310, 337, 367, 395, 423, 456, 482, 507, 535, 557, 583, 608, 631, 655, 685, 715, 739, 769, 795, 820, 845, 870, 894, 922, 953, 979, 1010, 1041, 1072, 1099, 1125, 1157, 1183, 1210, 1239, 1266, 1294, 1321, 1349, 1379, 1405, 1430, 1457, 1492}
 
 func (i ElementType) String() string {
-	if i >= ElementType(len(_ElementType_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_ElementType_index)-1 {
 		return "ElementType(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _ElementType_name[_ElementType_index[i]:_ElementType_index[i+1]]
+	return _ElementType_name[_ElementType_index[idx]:_ElementType_index[idx+1]]
 }

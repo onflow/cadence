@@ -2918,6 +2918,35 @@ func DecodeTemplateString(ip *uint16, code []byte) (i InstructionTemplateString)
 	return i
 }
 
+// InstructionUnreachable
+//
+// Indicates an unreachable code location. If executed, the program panics.
+type InstructionUnreachable struct {
+}
+
+var _ Instruction = InstructionUnreachable{}
+
+func (InstructionUnreachable) Opcode() Opcode {
+	return Unreachable
+}
+
+func (i InstructionUnreachable) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionUnreachable) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionUnreachable) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionUnreachable) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 // InstructionGetTypeIndex
 //
 // Pops a value off the stack, the target,
@@ -3294,6 +3323,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionStatement{}
 	case TemplateString:
 		return DecodeTemplateString(ip, code)
+	case Unreachable:
+		return InstructionUnreachable{}
 	case GetTypeIndex:
 		return DecodeGetTypeIndex(ip, code)
 	case RemoveTypeIndex:

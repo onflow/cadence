@@ -59,6 +59,7 @@ const (
 	ElementTypeSwapStatement
 	ElementTypeExpressionStatement
 	ElementTypeRemoveStatement
+	ElementTypeGuardStatement
 
 	// Expressions
 

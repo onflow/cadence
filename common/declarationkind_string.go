@@ -46,8 +46,9 @@ const _DeclarationKind_name = "DeclarationKindUnknownDeclarationKindValueDeclara
 var _DeclarationKind_index = [...]uint16{0, 22, 42, 65, 88, 111, 130, 154, 182, 206, 229, 252, 272, 292, 318, 349, 382, 414, 446, 472, 505, 526, 545, 564, 590, 612, 634, 662, 683, 702, 725, 750}
 
 func (i DeclarationKind) String() string {
-	if i >= DeclarationKind(len(_DeclarationKind_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_DeclarationKind_index)-1 {
 		return "DeclarationKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _DeclarationKind_name[_DeclarationKind_index[i]:_DeclarationKind_index[i+1]]
+	return _DeclarationKind_name[_DeclarationKind_index[idx]:_DeclarationKind_index[idx+1]]
 }

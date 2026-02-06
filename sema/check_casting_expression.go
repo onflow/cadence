@@ -65,7 +65,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 			// as the if-statement test element
 
 			if expression.ParentVariableDeclaration == nil ||
-				expression.ParentVariableDeclaration.ParentIfStatement == nil {
+				expression.ParentVariableDeclaration.ParentControlStatement == nil {
 
 				checker.report(
 					&InvalidFailableResourceDowncastOutsideOptionalBindingError{
