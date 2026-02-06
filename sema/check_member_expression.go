@@ -86,18 +86,29 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	return memberType
 }
 
-// getReferenceType Returns a reference type to a given type.
+// getDescendantReferenceType Returns a reference type to a given descendant's (member/element) type.
 // Reference to an optional should return an optional reference.
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getReferenceType(typ Type, authorization Access) Type {
-	if optionalType, ok := typ.(*OptionalType); ok {
-		innerType := checker.getReferenceType(optionalType.Type, authorization)
+func (checker *Checker) getDescendantReferenceType(
+	descendantType Type,
+	authorization Access,
+) Type {
+	switch typ := descendantType.(type) {
+	case *OptionalType:
+		innerType := checker.getDescendantReferenceType(typ.Type, authorization)
 		return NewOptionalType(checker.memoryGauge, innerType)
-	}
 
-	return NewReferenceType(checker.memoryGauge, authorization, typ)
+	case *ReferenceType:
+		// If the descendant is already a reference,
+		// then the resulting type should be the same.
+		return typ
+
+	default:
+		return NewReferenceType(checker.memoryGauge, authorization, typ)
+
+	}
 }
 
 func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
@@ -107,6 +118,11 @@ func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool 
 
 	if _, isReference := MaybeReferenceType(parentType); !isReference {
 		return false
+	}
+
+	// If the member is already a reference, then a reference must be returned.
+	if _, elementTypeIsReference := MaybeReferenceType(memberType); elementTypeIsReference {
+		return true
 	}
 
 	return memberType.ContainFieldsOrElements()
@@ -347,6 +363,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	//   1) is accessed via a reference, and
 	//   2) is container-typed,
 	// then the member type should also be a reference.
+	// Otherwise, if the member is already a reference, then again, a reference must be returned.
 
 	// Note: For attachments, `self` is always a reference.
 	// But we do not want to return a reference for `self.something`.
@@ -355,15 +372,15 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	// i.e: `accessedSelfMember == nil`
 
 	if accessedSelfMember == nil &&
-		shouldReturnReference(accessedType, resultingType, isAssignment) &&
-		member.DeclarationKind == common.DeclarationKindField {
+		member.DeclarationKind == common.DeclarationKindField &&
+		shouldReturnReference(accessedType, resultingType, isAssignment) {
 
 		authorization := UnauthorizedAccess
 		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
 			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
 		}
 
-		resultingType = checker.getReferenceType(resultingType, authorization)
+		resultingType = checker.getDescendantReferenceType(resultingType, authorization)
 		returnReference = true
 	}
 

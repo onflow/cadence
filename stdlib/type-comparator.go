@@ -73,6 +73,7 @@ func (c *TypeComparator) CheckConstantSizedTypeEquality(expected *ast.ConstantSi
 	// Check size
 	if foundConstSizedType.Size.Value.Cmp(expected.Size.Value) != 0 ||
 		foundConstSizedType.Size.Base != expected.Size.Base {
+
 		return newTypeMismatchError(expected, found)
 	}
 
@@ -143,6 +144,10 @@ func (c *TypeComparator) CheckFunctionTypeEquality(expected *ast.FunctionType, f
 		return newTypeMismatchError(expected, found)
 	}
 
+	if expected.PurityAnnotation != foundFuncType.PurityAnnotation {
+		return newTypeMismatchError(expected, found)
+	}
+
 	for index, expectedParamType := range expected.ParameterTypeAnnotations {
 		foundParamType := foundFuncType.ParameterTypeAnnotations[index]
 		err := expectedParamType.Type.CheckEqual(foundParamType.Type, c)
@@ -157,6 +162,10 @@ func (c *TypeComparator) CheckFunctionTypeEquality(expected *ast.FunctionType, f
 func (c *TypeComparator) CheckReferenceTypeEquality(expected *ast.ReferenceType, found ast.Type) error {
 	refType, ok := found.(*ast.ReferenceType)
 	if !ok {
+		return newTypeMismatchError(expected, found)
+	}
+
+	if expected.Authorization != refType.Authorization {
 		return newTypeMismatchError(expected, found)
 	}
 
