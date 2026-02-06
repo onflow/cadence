@@ -7071,3 +7071,29 @@ func (*MissingTypeError) SecondaryError() string {
 func (*MissingTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system"
 }
+// GuardStatementElseBlockMustExitError is reported when a guard statement's else block
+// does not definitely exit (via return, panic, break, or continue).
+type GuardStatementElseBlockMustExitError struct {
+	ast.Range
+}
+
+var _ SemanticError = &GuardStatementElseBlockMustExitError{}
+var _ errors.UserError = &GuardStatementElseBlockMustExitError{}
+var _ errors.SecondaryError = &GuardStatementElseBlockMustExitError{}
+var _ errors.HasDocumentationLink = &GuardStatementElseBlockMustExitError{}
+
+func (*GuardStatementElseBlockMustExitError) isSemanticError() {}
+
+func (*GuardStatementElseBlockMustExitError) IsUserError() {}
+
+func (e *GuardStatementElseBlockMustExitError) Error() string {
+	return "guard statement else block must exit"
+}
+
+func (*GuardStatementElseBlockMustExitError) SecondaryError() string {
+	return "the else block of a guard statement must always exit using return, panic, break, or continue"
+}
+
+func (*GuardStatementElseBlockMustExitError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#guard"
+}

@@ -1775,7 +1775,7 @@ func (checker *Checker) checkResourceFieldNesting(
 // under the assumption that the checked expression might not be evaluated.
 // That means that resource invalidation and returns are not definite,
 // but only potential
-func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
+func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) (Type, *ReturnInfo) {
 	functionActivation := checker.functionActivations.Current()
 
 	initialReturnInfo := functionActivation.ReturnInfo
@@ -1807,7 +1807,7 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		nil,
 	)
 
-	return result
+	return result, temporaryReturnInfo
 }
 
 func (checker *Checker) ResetErrors() {
