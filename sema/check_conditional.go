@@ -222,3 +222,8 @@ func (checker *Checker) checkBranch(
 		},
 	)()
 }
+
+func (checker *Checker) VisitGuardStatement(statement *ast.GuardStatement) (_ struct{}) {
+	// TODO:
+	panic(errors.NewUnreachableError())
+}

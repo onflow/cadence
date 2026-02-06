@@ -1525,6 +1525,11 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 	return
 }
 
+func (c *Compiler[_, _]) VisitGuardStatement(statement *ast.GuardStatement) (_ struct{}) {
+	// TODO:
+	panic(errors.NewUnreachableError())
+}
+
 func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
 	testOffset := c.codeGen.Offset()
 

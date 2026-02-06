@@ -651,3 +651,8 @@ func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.Expressi
 	result := interpreter.evalExpression(statement.Expression)
 	return ExpressionResult{Value: result}
 }
+
+func (interpreter *Interpreter) VisitGuardStatement(statement *ast.GuardStatement) StatementResult {
+	// TODO:
+	panic(errors.NewUnreachableError())
+}
