@@ -997,6 +997,290 @@ func TestCompileIfLetScope(t *testing.T) {
 	)
 }
 
+func TestCompileGuard(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(x: Bool): Int {
+          var y = 0
+          guard x else {
+             y = 2
+             return y
+          }
+          y = 1
+          return y
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	const (
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		xIndex = iota
+		// yIndex is the index of the local variable `y`, which is the first local variable
+		yIndex
+	)
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// var y = 0
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionSetLocal{Local: yIndex},
+
+			// guard x
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionJumpIfFalse{Target: 8},
+
+			opcode.InstructionJump{Target: 17},
+
+			// else { y = 2; return y }
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionSetLocal{Local: yIndex},
+
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: yIndex},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionReturnValue{},
+
+			// Defensive unreachable
+			opcode.InstructionUnreachable{},
+
+			// y = 1
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 2},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionSetLocal{Local: yIndex},
+
+			// return y
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: yIndex},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.DecodedConstant{
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
+				Kind: constant.Int,
+			},
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+				Kind: constant.Int,
+			},
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileGuardLet(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(x: Int?): Int {
+          guard let y = x else {
+             return 2
+          }
+          return y
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	const (
+		xIndex = iota
+		tempYIndex
+		yIndex
+	)
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+
+			// let y' = x
+			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionSetLocal{
+				Local:     tempYIndex,
+				IsTempVar: true,
+			},
+
+			// if nil
+			opcode.InstructionGetLocal{Local: tempYIndex},
+			opcode.InstructionJumpIfNil{Target: 10},
+
+			// let y = y' (unwrapped in current scope)
+			opcode.InstructionGetLocal{Local: tempYIndex},
+			opcode.InstructionUnwrap{},
+			opcode.InstructionSetLocal{Local: yIndex},
+
+			opcode.InstructionJump{Target: 15},
+
+			// else { return 2 }
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
+			opcode.InstructionReturnValue{},
+
+			// Defensive unreachable
+			opcode.InstructionUnreachable{},
+
+			// return y
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: yIndex},
+			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.DecodedConstant{
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileGuardLetScope(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(y: Int?): Int {
+            var z = 0
+            guard let x = y else {
+                z = 1
+                return z
+            }
+            z = x
+            return z
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	const (
+		// yIndex is the index of the parameter `y`, which is the first parameter
+		yIndex = iota
+		// zIndex is the index of the local variable `z`, which is the first local variable
+		zIndex
+		// tempGuardLetIndex is the index of the temporary variable
+		tempGuardLetIndex
+		// xIndex is the index of the local variable `x` declared by guard
+		xIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// var z = 0
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionSetLocal{Local: zIndex},
+
+			// guard let x = y
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: yIndex},
+			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
+			opcode.InstructionSetLocal{
+				Local:     tempGuardLetIndex,
+				IsTempVar: true,
+			},
+
+			opcode.InstructionGetLocal{Local: tempGuardLetIndex},
+			opcode.InstructionJumpIfNil{Target: 14},
+
+			// not nil: unwrap and declare in current scope
+			opcode.InstructionGetLocal{Local: tempGuardLetIndex},
+			opcode.InstructionUnwrap{},
+			opcode.InstructionSetLocal{Local: xIndex},
+
+			opcode.InstructionJump{Target: 23},
+
+			// else { z = 1; return z }
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionSetLocal{Local: zIndex},
+
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: zIndex},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionReturnValue{},
+
+			// Defensive unreachable
+			opcode.InstructionUnreachable{},
+
+			// z = x
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionSetLocal{Local: zIndex},
+
+			// return z
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: zIndex},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.DecodedConstant{
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
+				Kind: constant.Int,
+			},
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
 func TestCompileSwitch(t *testing.T) {
 
 	t.Parallel()

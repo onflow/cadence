@@ -1488,7 +1488,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			c.emit(opcode.InstructionUnwrap{})
 
 			// Declare the variable *after* unwrapping the optional,
-			// in a new scope
+			// in a *new* scope
 			c.currentFunction.locals.PushNewWithCurrent()
 			additionalThenScope = true
 			name := test.Identifier.Identifier
@@ -1526,8 +1526,60 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 }
 
 func (c *Compiler[_, _]) VisitGuardStatement(statement *ast.GuardStatement) (_ struct{}) {
-	// TODO:
-	panic(errors.NewUnreachableError())
+	// TODO: is this necessary?
+	c.compilePotentiallyInheritedCode(statement, func() {
+
+		var elseJump int
+
+		switch test := statement.Test.(type) {
+		case ast.Expression:
+			c.compileExpression(test)
+			elseJump = c.emitUndefinedJumpIfFalse()
+
+		case *ast.VariableDeclaration:
+
+			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
+			c.compileVariableDeclaration(test, varDeclTypes, true)
+
+			tempIndex := c.currentFunction.generateLocalIndex()
+			c.emitSetTempLocal(tempIndex)
+
+			// Test: check if the optional is nil,
+			// and jump to the else branch if it is
+			c.emitGetLocal(tempIndex)
+			elseJump = c.emitUndefinedJumpIfNil()
+
+			// Not nil: unwrap the optional and declare the variable
+			c.emitGetLocal(tempIndex)
+			c.emit(opcode.InstructionUnwrap{})
+
+			// Declare the variable *after* unwrapping the optional,
+			// in *current* scope (no additional scope push)
+			name := test.Identifier.Identifier
+			c.emitDeclareLocal(name)
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		// Jump past the else block (normal flow when condition succeeds)
+		endJump := c.emitUndefinedJump()
+
+		// Else block: compile and patch the elseJump to here
+		c.patchJumpHere(elseJump)
+		c.compileBlock(
+			statement.Else,
+			common.DeclarationKindUnknown,
+			nil,
+		)
+
+		// Defensive return: Ensure control flow does not continue after the else block
+		c.emit(opcode.InstructionUnreachable{})
+
+		// Patch the endJump to continue after the else block
+		c.patchJumpHere(endJump)
+	})
+	return
 }
 
 func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
