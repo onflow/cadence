@@ -9820,6 +9820,60 @@ func TestCompileImportEnumCase(t *testing.T) {
 	)
 }
 
+func TestDynamicMethodInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      struct interface SI {
+          fun answer(): Int
+      }
+
+      fun answer(_ si: {SI}): Int {
+          return si.answer()
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 4)
+
+	const (
+		siIndex = iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: siIndex},
+			opcode.InstructionGetMethodDynamic{
+				MethodName:   0,
+				ReceiverType: 2,
+			},
+			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.DecodedConstant{
+			{
+				Data: "answer",
+				Kind: constant.RawString,
+			},
+		},
+		program.Constants,
+	)
+}
+
 func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 
 	t.Parallel()
@@ -9884,7 +9938,6 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 		},
 		program.Constants,
 	)
-
 }
 
 func TestCompileInjectedContract(t *testing.T) {
