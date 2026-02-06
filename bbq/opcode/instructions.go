@@ -30,14 +30,16 @@ func (i InstructionUnknown) String() string {
 func (i InstructionUnknown) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionUnknown) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionUnknown) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionUnknown) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionUnknown{}
 }
 
 // InstructionGetLocal
@@ -66,9 +68,7 @@ func (i InstructionGetLocal) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionGetLocal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
@@ -82,6 +82,12 @@ func (i InstructionGetLocal) Encode(code *[]byte) {
 func DecodeGetLocal(ip *uint16, code []byte) (i InstructionGetLocal) {
 	i.Local = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetLocal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetLocal{
+		Local: i.Local,
+	}
 }
 
 // InstructionSetLocal
@@ -113,9 +119,7 @@ func (i InstructionSetLocal) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
@@ -133,6 +137,13 @@ func DecodeSetLocal(ip *uint16, code []byte) (i InstructionSetLocal) {
 	i.Local = decodeUint16(ip, code)
 	i.IsTempVar = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionSetLocal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetLocal{
+		Local:     i.Local,
+		IsTempVar: i.IsTempVar,
+	}
 }
 
 // InstructionGetUpvalue
@@ -161,9 +172,7 @@ func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionGetUpvalue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "upvalue", i.Upvalue, colorize)
@@ -177,6 +186,12 @@ func (i InstructionGetUpvalue) Encode(code *[]byte) {
 func DecodeGetUpvalue(ip *uint16, code []byte) (i InstructionGetUpvalue) {
 	i.Upvalue = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetUpvalue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetUpvalue{
+		Upvalue: i.Upvalue,
+	}
 }
 
 // InstructionSetUpvalue
@@ -205,9 +220,7 @@ func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionSetUpvalue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "upvalue", i.Upvalue, colorize)
@@ -221,6 +234,12 @@ func (i InstructionSetUpvalue) Encode(code *[]byte) {
 func DecodeSetUpvalue(ip *uint16, code []byte) (i InstructionSetUpvalue) {
 	i.Upvalue = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionSetUpvalue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetUpvalue{
+		Upvalue: i.Upvalue,
+	}
 }
 
 // InstructionCloseUpvalue
@@ -249,9 +268,7 @@ func (i InstructionCloseUpvalue) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionCloseUpvalue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
@@ -265,6 +282,12 @@ func (i InstructionCloseUpvalue) Encode(code *[]byte) {
 func DecodeCloseUpvalue(ip *uint16, code []byte) (i InstructionCloseUpvalue) {
 	i.Local = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionCloseUpvalue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionCloseUpvalue{
+		Local: i.Local,
+	}
 }
 
 // InstructionGetGlobal
@@ -293,9 +316,7 @@ func (i InstructionGetGlobal) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionGetGlobal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "global", i.Global, colorize)
@@ -309,6 +330,12 @@ func (i InstructionGetGlobal) Encode(code *[]byte) {
 func DecodeGetGlobal(ip *uint16, code []byte) (i InstructionGetGlobal) {
 	i.Global = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetGlobal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetGlobal{
+		Global: i.Global,
+	}
 }
 
 // InstructionSetGlobal
@@ -337,9 +364,7 @@ func (i InstructionSetGlobal) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionSetGlobal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "global", i.Global, colorize)
@@ -353,6 +378,12 @@ func (i InstructionSetGlobal) Encode(code *[]byte) {
 func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
 	i.Global = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionSetGlobal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetGlobal{
+		Global: i.Global,
+	}
 }
 
 // InstructionGetField
@@ -385,14 +416,12 @@ func (i InstructionGetField) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	printfConstantArgument(sb, "fieldName", program.GetConstants()[i.FieldName], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
+	printfTypeArgument(sb, "accessedType", program.GetTypes()[i.AccessedType], colorize)
 }
 
 func (i InstructionGetField) Encode(code *[]byte) {
@@ -405,6 +434,13 @@ func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
 	i.FieldName = decodeUint16(ip, code)
 	i.AccessedType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetField) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetField{
+		FieldName:    program.GetConstants()[i.FieldName],
+		AccessedType: program.GetTypes()[i.AccessedType],
+	}
 }
 
 // InstructionRemoveField
@@ -434,12 +470,10 @@ func (i InstructionRemoveField) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionRemoveField) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	printfConstantArgument(sb, "fieldName", program.GetConstants()[i.FieldName], colorize)
 }
 
 func (i InstructionRemoveField) Encode(code *[]byte) {
@@ -450,6 +484,12 @@ func (i InstructionRemoveField) Encode(code *[]byte) {
 func DecodeRemoveField(ip *uint16, code []byte) (i InstructionRemoveField) {
 	i.FieldName = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionRemoveField) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionRemoveField{
+		FieldName: program.GetConstants()[i.FieldName],
+	}
 }
 
 // InstructionSetField
@@ -482,14 +522,12 @@ func (i InstructionSetField) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	printfConstantArgument(sb, "fieldName", program.GetConstants()[i.FieldName], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
+	printfTypeArgument(sb, "accessedType", program.GetTypes()[i.AccessedType], colorize)
 }
 
 func (i InstructionSetField) Encode(code *[]byte) {
@@ -502,6 +540,13 @@ func DecodeSetField(ip *uint16, code []byte) (i InstructionSetField) {
 	i.FieldName = decodeUint16(ip, code)
 	i.AccessedType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionSetField) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetField{
+		FieldName:    program.GetConstants()[i.FieldName],
+		AccessedType: program.GetTypes()[i.AccessedType],
+	}
 }
 
 // InstructionGetIndex
@@ -524,14 +569,16 @@ func (i InstructionGetIndex) String() string {
 func (i InstructionGetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGetIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionGetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionGetIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetIndex{}
 }
 
 // InstructionRemoveIndex
@@ -562,9 +609,7 @@ func (i InstructionRemoveIndex) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionRemoveIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "pushPlaceholder", i.PushPlaceholder, colorize)
@@ -578,6 +623,12 @@ func (i InstructionRemoveIndex) Encode(code *[]byte) {
 func DecodeRemoveIndex(ip *uint16, code []byte) (i InstructionRemoveIndex) {
 	i.PushPlaceholder = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionRemoveIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionRemoveIndex{
+		PushPlaceholder: i.PushPlaceholder,
+	}
 }
 
 // InstructionSetIndex
@@ -600,14 +651,16 @@ func (i InstructionSetIndex) String() string {
 func (i InstructionSetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionSetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionSetIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetIndex{}
 }
 
 // InstructionVoid
@@ -629,14 +682,16 @@ func (i InstructionVoid) String() string {
 func (i InstructionVoid) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionVoid) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionVoid) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionVoid) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionVoid{}
 }
 
 // InstructionTrue
@@ -658,14 +713,16 @@ func (i InstructionTrue) String() string {
 func (i InstructionTrue) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionTrue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionTrue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionTrue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionTrue{}
 }
 
 // InstructionFalse
@@ -687,14 +744,16 @@ func (i InstructionFalse) String() string {
 func (i InstructionFalse) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionFalse) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionFalse) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionFalse) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionFalse{}
 }
 
 // InstructionNil
@@ -716,14 +775,16 @@ func (i InstructionNil) String() string {
 func (i InstructionNil) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNil) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionNil) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionNil) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNil{}
 }
 
 // InstructionNewSimpleComposite
@@ -756,14 +817,12 @@ func (i InstructionNewSimpleComposite) OperandsString(sb *strings.Builder, color
 }
 
 func (i InstructionNewSimpleComposite) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 }
 
 func (i InstructionNewSimpleComposite) Encode(code *[]byte) {
@@ -776,6 +835,13 @@ func DecodeNewSimpleComposite(ip *uint16, code []byte) (i InstructionNewSimpleCo
 	i.Kind = decodeCompositeKind(ip, code)
 	i.Type = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionNewSimpleComposite) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewSimpleComposite{
+		Kind: i.Kind,
+		Type: program.GetTypes()[i.Type],
+	}
 }
 
 // InstructionNewComposite
@@ -808,14 +874,12 @@ func (i InstructionNewComposite) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionNewComposite) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 }
 
 func (i InstructionNewComposite) Encode(code *[]byte) {
@@ -828,6 +892,13 @@ func DecodeNewComposite(ip *uint16, code []byte) (i InstructionNewComposite) {
 	i.Kind = decodeCompositeKind(ip, code)
 	i.Type = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionNewComposite) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewComposite{
+		Kind: i.Kind,
+		Type: program.GetTypes()[i.Type],
+	}
 }
 
 // InstructionNewCompositeAt
@@ -863,16 +934,14 @@ func (i InstructionNewCompositeAt) OperandsString(sb *strings.Builder, colorize 
 }
 
 func (i InstructionNewCompositeAt) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "address", constants[i.Address], colorize)
+	printfConstantArgument(sb, "address", program.GetConstants()[i.Address], colorize)
 }
 
 func (i InstructionNewCompositeAt) Encode(code *[]byte) {
@@ -887,6 +956,14 @@ func DecodeNewCompositeAt(ip *uint16, code []byte) (i InstructionNewCompositeAt)
 	i.Type = decodeUint16(ip, code)
 	i.Address = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionNewCompositeAt) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewCompositeAt{
+		Kind:    i.Kind,
+		Type:    program.GetTypes()[i.Type],
+		Address: program.GetConstants()[i.Address],
+	}
 }
 
 // InstructionNewPath
@@ -918,14 +995,12 @@ func (i InstructionNewPath) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionNewPath) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "domain", i.Domain, colorize)
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "identifier", constants[i.Identifier], colorize)
+	printfConstantArgument(sb, "identifier", program.GetConstants()[i.Identifier], colorize)
 }
 
 func (i InstructionNewPath) Encode(code *[]byte) {
@@ -938,6 +1013,13 @@ func DecodeNewPath(ip *uint16, code []byte) (i InstructionNewPath) {
 	i.Domain = decodePathDomain(ip, code)
 	i.Identifier = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionNewPath) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewPath{
+		Domain:     i.Domain,
+		Identifier: program.GetConstants()[i.Identifier],
+	}
 }
 
 // InstructionNewArray
@@ -973,12 +1055,10 @@ func (i InstructionNewArray) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionNewArray) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "size", i.Size, colorize)
 	sb.WriteByte(' ')
@@ -997,6 +1077,14 @@ func DecodeNewArray(ip *uint16, code []byte) (i InstructionNewArray) {
 	i.Size = decodeUint16(ip, code)
 	i.IsResource = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionNewArray) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewArray{
+		Type:       program.GetTypes()[i.Type],
+		Size:       i.Size,
+		IsResource: i.IsResource,
+	}
 }
 
 // InstructionNewDictionary
@@ -1033,12 +1121,10 @@ func (i InstructionNewDictionary) OperandsString(sb *strings.Builder, colorize b
 }
 
 func (i InstructionNewDictionary) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "size", i.Size, colorize)
 	sb.WriteByte(' ')
@@ -1057,6 +1143,14 @@ func DecodeNewDictionary(ip *uint16, code []byte) (i InstructionNewDictionary) {
 	i.Size = decodeUint16(ip, code)
 	i.IsResource = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionNewDictionary) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewDictionary{
+		Type:       program.GetTypes()[i.Type],
+		Size:       i.Size,
+		IsResource: i.IsResource,
+	}
 }
 
 // InstructionNewRef
@@ -1089,12 +1183,10 @@ func (i InstructionNewRef) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionNewRef) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "isImplicit", i.IsImplicit, colorize)
 }
@@ -1109,6 +1201,13 @@ func DecodeNewRef(ip *uint16, code []byte) (i InstructionNewRef) {
 	i.Type = decodeUint16(ip, code)
 	i.IsImplicit = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionNewRef) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewRef{
+		Type:       program.GetTypes()[i.Type],
+		IsImplicit: i.IsImplicit,
+	}
 }
 
 // InstructionGetConstant
@@ -1137,12 +1236,10 @@ func (i InstructionGetConstant) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionGetConstant) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "constant", constants[i.Constant], colorize)
+	printfConstantArgument(sb, "constant", program.GetConstants()[i.Constant], colorize)
 }
 
 func (i InstructionGetConstant) Encode(code *[]byte) {
@@ -1153,6 +1250,12 @@ func (i InstructionGetConstant) Encode(code *[]byte) {
 func DecodeGetConstant(ip *uint16, code []byte) (i InstructionGetConstant) {
 	i.Constant = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetConstant) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetConstant{
+		Constant: program.GetConstants()[i.Constant],
+	}
 }
 
 // InstructionNewClosure
@@ -1184,12 +1287,10 @@ func (i InstructionNewClosure) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionNewClosure) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfFunctionNameArgument(sb, "function", functionNames[i.Function], colorize)
+	printfFunctionNameArgument(sb, "function", program.GetFunctionName(i.Function), colorize)
 	sb.WriteByte(' ')
 	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues, colorize)
 }
@@ -1204,6 +1305,13 @@ func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
 	i.Function = decodeUint16(ip, code)
 	i.Upvalues = decodeUpvalueArray(ip, code)
 	return i
+}
+
+func (i InstructionNewClosure) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewClosure{
+		Function: i.Function,
+		Upvalues: i.Upvalues,
+	}
 }
 
 // InstructionInvoke
@@ -1240,16 +1348,14 @@ func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, program.GetTypes())
 	sb.WriteByte(' ')
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "returnType", types[i.ReturnType], colorize)
+	printfTypeArgument(sb, "returnType", program.GetTypes()[i.ReturnType], colorize)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
@@ -1264,6 +1370,14 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 	i.ArgCount = decodeUint16(ip, code)
 	i.ReturnType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionInvoke) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionInvoke{
+		TypeArgs:   resolveTypeIndices(i.TypeArgs, program.GetTypes()),
+		ArgCount:   i.ArgCount,
+		ReturnType: program.GetTypes()[i.ReturnType],
+	}
 }
 
 // InstructionInvokeTyped
@@ -1298,16 +1412,14 @@ func (i InstructionInvokeTyped) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionInvokeTyped) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, program.GetTypes())
 	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, types)
+	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, program.GetTypes())
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "returnType", types[i.ReturnType], colorize)
+	printfTypeArgument(sb, "returnType", program.GetTypes()[i.ReturnType], colorize)
 }
 
 func (i InstructionInvokeTyped) Encode(code *[]byte) {
@@ -1322,6 +1434,14 @@ func DecodeInvokeTyped(ip *uint16, code []byte) (i InstructionInvokeTyped) {
 	i.ArgTypes = decodeUint16Array(ip, code)
 	i.ReturnType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionInvokeTyped) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionInvokeTyped{
+		TypeArgs:   resolveTypeIndices(i.TypeArgs, program.GetTypes()),
+		ArgTypes:   resolveTypeIndices(i.ArgTypes, program.GetTypes()),
+		ReturnType: program.GetTypes()[i.ReturnType],
+	}
 }
 
 // InstructionGetMethod
@@ -1354,14 +1474,12 @@ func (i InstructionGetMethod) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionGetMethod) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "method", i.Method, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "receiverType", types[i.ReceiverType], colorize)
+	printfTypeArgument(sb, "receiverType", program.GetTypes()[i.ReceiverType], colorize)
 }
 
 func (i InstructionGetMethod) Encode(code *[]byte) {
@@ -1374,6 +1492,13 @@ func DecodeGetMethod(ip *uint16, code []byte) (i InstructionGetMethod) {
 	i.Method = decodeUint16(ip, code)
 	i.ReceiverType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetMethod) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetMethod{
+		Method:       i.Method,
+		ReceiverType: program.GetTypes()[i.ReceiverType],
+	}
 }
 
 // InstructionDup
@@ -1395,14 +1520,16 @@ func (i InstructionDup) String() string {
 func (i InstructionDup) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDup) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDup) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDup) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDup{}
 }
 
 // InstructionDrop
@@ -1424,14 +1551,16 @@ func (i InstructionDrop) String() string {
 func (i InstructionDrop) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDrop) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDrop) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDrop) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDrop{}
 }
 
 // InstructionDestroy
@@ -1453,14 +1582,16 @@ func (i InstructionDestroy) String() string {
 func (i InstructionDestroy) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDestroy) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDestroy) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDestroy) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDestroy{}
 }
 
 // InstructionUnwrap
@@ -1485,14 +1616,16 @@ func (i InstructionUnwrap) String() string {
 func (i InstructionUnwrap) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionUnwrap) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionUnwrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionUnwrap) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionUnwrap{}
 }
 
 // InstructionWrap
@@ -1514,14 +1647,16 @@ func (i InstructionWrap) String() string {
 func (i InstructionWrap) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionWrap) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionWrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionWrap) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionWrap{}
 }
 
 // InstructionTransfer
@@ -1543,14 +1678,16 @@ func (i InstructionTransfer) String() string {
 func (i InstructionTransfer) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionTransfer) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionTransfer) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionTransfer{}
 }
 
 // InstructionTransferAndConvert
@@ -1583,14 +1720,12 @@ func (i InstructionTransferAndConvert) OperandsString(sb *strings.Builder, color
 }
 
 func (i InstructionTransferAndConvert) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 }
 
 func (i InstructionTransferAndConvert) Encode(code *[]byte) {
@@ -1603,6 +1738,13 @@ func DecodeTransferAndConvert(ip *uint16, code []byte) (i InstructionTransferAnd
 	i.ValueType = decodeUint16(ip, code)
 	i.TargetType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionTransferAndConvert) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionTransferAndConvert{
+		ValueType:  program.GetTypes()[i.ValueType],
+		TargetType: program.GetTypes()[i.TargetType],
+	}
 }
 
 // InstructionConvert
@@ -1635,14 +1777,12 @@ func (i InstructionConvert) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionConvert) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 }
 
 func (i InstructionConvert) Encode(code *[]byte) {
@@ -1655,6 +1795,13 @@ func DecodeConvert(ip *uint16, code []byte) (i InstructionConvert) {
 	i.ValueType = decodeUint16(ip, code)
 	i.TargetType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionConvert) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionConvert{
+		ValueType:  program.GetTypes()[i.ValueType],
+		TargetType: program.GetTypes()[i.TargetType],
+	}
 }
 
 // InstructionSimpleCast
@@ -1686,14 +1833,12 @@ func (i InstructionSimpleCast) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 }
 
 func (i InstructionSimpleCast) Encode(code *[]byte) {
@@ -1706,6 +1851,13 @@ func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
 	i.TargetType = decodeUint16(ip, code)
 	i.ValueType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionSimpleCast) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSimpleCast{
+		TargetType: program.GetTypes()[i.TargetType],
+		ValueType:  program.GetTypes()[i.ValueType],
+	}
 }
 
 // InstructionFailableCast
@@ -1739,14 +1891,12 @@ func (i InstructionFailableCast) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 }
 
 func (i InstructionFailableCast) Encode(code *[]byte) {
@@ -1759,6 +1909,13 @@ func DecodeFailableCast(ip *uint16, code []byte) (i InstructionFailableCast) {
 	i.TargetType = decodeUint16(ip, code)
 	i.ValueType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionFailableCast) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionFailableCast{
+		TargetType: program.GetTypes()[i.TargetType],
+		ValueType:  program.GetTypes()[i.ValueType],
+	}
 }
 
 // InstructionForceCast
@@ -1792,14 +1949,12 @@ func (i InstructionForceCast) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 }
 
 func (i InstructionForceCast) Encode(code *[]byte) {
@@ -1812,6 +1967,13 @@ func DecodeForceCast(ip *uint16, code []byte) (i InstructionForceCast) {
 	i.TargetType = decodeUint16(ip, code)
 	i.ValueType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionForceCast) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionForceCast{
+		TargetType: program.GetTypes()[i.TargetType],
+		ValueType:  program.GetTypes()[i.ValueType],
+	}
 }
 
 // InstructionDeref
@@ -1834,14 +1996,16 @@ func (i InstructionDeref) String() string {
 func (i InstructionDeref) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDeref) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDeref) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDeref) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDeref{}
 }
 
 // InstructionJump
@@ -1870,9 +2034,7 @@ func (i InstructionJump) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionJump) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
@@ -1886,6 +2048,12 @@ func (i InstructionJump) Encode(code *[]byte) {
 func DecodeJump(ip *uint16, code []byte) (i InstructionJump) {
 	i.Target = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionJump) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionJump{
+		Target: i.Target,
+	}
 }
 
 // InstructionJumpIfFalse
@@ -1914,9 +2082,7 @@ func (i InstructionJumpIfFalse) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionJumpIfFalse) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
@@ -1930,6 +2096,12 @@ func (i InstructionJumpIfFalse) Encode(code *[]byte) {
 func DecodeJumpIfFalse(ip *uint16, code []byte) (i InstructionJumpIfFalse) {
 	i.Target = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionJumpIfFalse) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionJumpIfFalse{
+		Target: i.Target,
+	}
 }
 
 // InstructionJumpIfTrue
@@ -1958,9 +2130,7 @@ func (i InstructionJumpIfTrue) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionJumpIfTrue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
@@ -1974,6 +2144,12 @@ func (i InstructionJumpIfTrue) Encode(code *[]byte) {
 func DecodeJumpIfTrue(ip *uint16, code []byte) (i InstructionJumpIfTrue) {
 	i.Target = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionJumpIfTrue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionJumpIfTrue{
+		Target: i.Target,
+	}
 }
 
 // InstructionJumpIfNil
@@ -2002,9 +2178,7 @@ func (i InstructionJumpIfNil) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionJumpIfNil) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
@@ -2018,6 +2192,12 @@ func (i InstructionJumpIfNil) Encode(code *[]byte) {
 func DecodeJumpIfNil(ip *uint16, code []byte) (i InstructionJumpIfNil) {
 	i.Target = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionJumpIfNil) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionJumpIfNil{
+		Target: i.Target,
+	}
 }
 
 // InstructionReturn
@@ -2039,14 +2219,16 @@ func (i InstructionReturn) String() string {
 func (i InstructionReturn) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionReturn) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionReturn) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionReturn) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionReturn{}
 }
 
 // InstructionReturnValue
@@ -2068,14 +2250,16 @@ func (i InstructionReturnValue) String() string {
 func (i InstructionReturnValue) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionReturnValue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionReturnValue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionReturnValue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionReturnValue{}
 }
 
 // InstructionSame
@@ -2098,14 +2282,16 @@ func (i InstructionSame) String() string {
 func (i InstructionSame) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSame) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionSame) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionSame) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSame{}
 }
 
 // InstructionEqual
@@ -2128,14 +2314,16 @@ func (i InstructionEqual) String() string {
 func (i InstructionEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionEqual) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionEqual{}
 }
 
 // InstructionNotEqual
@@ -2158,14 +2346,16 @@ func (i InstructionNotEqual) String() string {
 func (i InstructionNotEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNotEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionNotEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionNotEqual) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNotEqual{}
 }
 
 // InstructionNot
@@ -2188,14 +2378,16 @@ func (i InstructionNot) String() string {
 func (i InstructionNot) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNot) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionNot) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionNot) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNot{}
 }
 
 // InstructionAdd
@@ -2218,14 +2410,16 @@ func (i InstructionAdd) String() string {
 func (i InstructionAdd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionAdd) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionAdd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionAdd) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionAdd{}
 }
 
 // InstructionSubtract
@@ -2248,14 +2442,16 @@ func (i InstructionSubtract) String() string {
 func (i InstructionSubtract) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSubtract) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionSubtract) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionSubtract) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSubtract{}
 }
 
 // InstructionMultiply
@@ -2278,14 +2474,16 @@ func (i InstructionMultiply) String() string {
 func (i InstructionMultiply) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionMultiply) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionMultiply) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionMultiply) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionMultiply{}
 }
 
 // InstructionDivide
@@ -2308,14 +2506,16 @@ func (i InstructionDivide) String() string {
 func (i InstructionDivide) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDivide) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDivide) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDivide) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDivide{}
 }
 
 // InstructionMod
@@ -2338,14 +2538,16 @@ func (i InstructionMod) String() string {
 func (i InstructionMod) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionMod) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionMod) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionMod) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionMod{}
 }
 
 // InstructionNegate
@@ -2368,14 +2570,16 @@ func (i InstructionNegate) String() string {
 func (i InstructionNegate) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNegate) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionNegate) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionNegate) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNegate{}
 }
 
 // InstructionLess
@@ -2398,14 +2602,16 @@ func (i InstructionLess) String() string {
 func (i InstructionLess) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLess) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionLess) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionLess) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionLess{}
 }
 
 // InstructionLessOrEqual
@@ -2428,14 +2634,16 @@ func (i InstructionLessOrEqual) String() string {
 func (i InstructionLessOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLessOrEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionLessOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionLessOrEqual) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionLessOrEqual{}
 }
 
 // InstructionGreater
@@ -2458,14 +2666,16 @@ func (i InstructionGreater) String() string {
 func (i InstructionGreater) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGreater) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionGreater) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionGreater) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGreater{}
 }
 
 // InstructionGreaterOrEqual
@@ -2488,14 +2698,16 @@ func (i InstructionGreaterOrEqual) String() string {
 func (i InstructionGreaterOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGreaterOrEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionGreaterOrEqual) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGreaterOrEqual{}
 }
 
 // InstructionBitwiseOr
@@ -2518,14 +2730,16 @@ func (i InstructionBitwiseOr) String() string {
 func (i InstructionBitwiseOr) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseOr) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseOr) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseOr) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseOr{}
 }
 
 // InstructionBitwiseXor
@@ -2548,14 +2762,16 @@ func (i InstructionBitwiseXor) String() string {
 func (i InstructionBitwiseXor) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseXor) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseXor) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseXor) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseXor{}
 }
 
 // InstructionBitwiseAnd
@@ -2578,14 +2794,16 @@ func (i InstructionBitwiseAnd) String() string {
 func (i InstructionBitwiseAnd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseAnd) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseAnd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseAnd) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseAnd{}
 }
 
 // InstructionBitwiseLeftShift
@@ -2608,14 +2826,16 @@ func (i InstructionBitwiseLeftShift) String() string {
 func (i InstructionBitwiseLeftShift) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseLeftShift) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseLeftShift) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseLeftShift) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseLeftShift{}
 }
 
 // InstructionBitwiseRightShift
@@ -2638,14 +2858,16 @@ func (i InstructionBitwiseRightShift) String() string {
 func (i InstructionBitwiseRightShift) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseRightShift) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseRightShift) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseRightShift) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseRightShift{}
 }
 
 // InstructionIterator
@@ -2667,14 +2889,16 @@ func (i InstructionIterator) String() string {
 func (i InstructionIterator) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIterator) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionIterator) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionIterator) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionIterator{}
 }
 
 // InstructionIteratorHasNext
@@ -2696,14 +2920,16 @@ func (i InstructionIteratorHasNext) String() string {
 func (i InstructionIteratorHasNext) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorHasNext) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionIteratorHasNext) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionIteratorHasNext) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionIteratorHasNext{}
 }
 
 // InstructionIteratorNext
@@ -2725,14 +2951,16 @@ func (i InstructionIteratorNext) String() string {
 func (i InstructionIteratorNext) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorNext) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionIteratorNext) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionIteratorNext) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionIteratorNext{}
 }
 
 // InstructionIteratorEnd
@@ -2755,14 +2983,16 @@ func (i InstructionIteratorEnd) String() string {
 func (i InstructionIteratorEnd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorEnd) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionIteratorEnd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionIteratorEnd) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionIteratorEnd{}
 }
 
 // InstructionEmitEvent
@@ -2794,12 +3024,10 @@ func (i InstructionEmitEvent) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
@@ -2814,6 +3042,13 @@ func DecodeEmitEvent(ip *uint16, code []byte) (i InstructionEmitEvent) {
 	i.Type = decodeUint16(ip, code)
 	i.ArgCount = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionEmitEvent) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionEmitEvent{
+		Type:     program.GetTypes()[i.Type],
+		ArgCount: i.ArgCount,
+	}
 }
 
 // InstructionLoop
@@ -2835,14 +3070,16 @@ func (i InstructionLoop) String() string {
 func (i InstructionLoop) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLoop) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionLoop) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionLoop) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionLoop{}
 }
 
 // InstructionStatement
@@ -2864,14 +3101,16 @@ func (i InstructionStatement) String() string {
 func (i InstructionStatement) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionStatement) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionStatement) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionStatement) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionStatement{}
 }
 
 // InstructionTemplateString
@@ -2900,9 +3139,7 @@ func (i InstructionTemplateString) OperandsString(sb *strings.Builder, colorize 
 }
 
 func (i InstructionTemplateString) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "exprSize", i.ExprSize, colorize)
@@ -2916,6 +3153,12 @@ func (i InstructionTemplateString) Encode(code *[]byte) {
 func DecodeTemplateString(ip *uint16, code []byte) (i InstructionTemplateString) {
 	i.ExprSize = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionTemplateString) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionTemplateString{
+		ExprSize: i.ExprSize,
+	}
 }
 
 // InstructionGetTypeIndex
@@ -2945,12 +3188,10 @@ func (i InstructionGetTypeIndex) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionGetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 }
 
 func (i InstructionGetTypeIndex) Encode(code *[]byte) {
@@ -2961,6 +3202,12 @@ func (i InstructionGetTypeIndex) Encode(code *[]byte) {
 func DecodeGetTypeIndex(ip *uint16, code []byte) (i InstructionGetTypeIndex) {
 	i.Type = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetTypeIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetTypeIndex{
+		Type: program.GetTypes()[i.Type],
+	}
 }
 
 // InstructionRemoveTypeIndex
@@ -2991,12 +3238,10 @@ func (i InstructionRemoveTypeIndex) OperandsString(sb *strings.Builder, colorize
 }
 
 func (i InstructionRemoveTypeIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 }
 
 func (i InstructionRemoveTypeIndex) Encode(code *[]byte) {
@@ -3007,6 +3252,12 @@ func (i InstructionRemoveTypeIndex) Encode(code *[]byte) {
 func DecodeRemoveTypeIndex(ip *uint16, code []byte) (i InstructionRemoveTypeIndex) {
 	i.Type = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionRemoveTypeIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionRemoveTypeIndex{
+		Type: program.GetTypes()[i.Type],
+	}
 }
 
 // InstructionSetTypeIndex
@@ -3036,12 +3287,10 @@ func (i InstructionSetTypeIndex) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionSetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 }
 
 func (i InstructionSetTypeIndex) Encode(code *[]byte) {
@@ -3052,6 +3301,12 @@ func (i InstructionSetTypeIndex) Encode(code *[]byte) {
 func DecodeSetTypeIndex(ip *uint16, code []byte) (i InstructionSetTypeIndex) {
 	i.Type = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionSetTypeIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetTypeIndex{
+		Type: program.GetTypes()[i.Type],
+	}
 }
 
 // InstructionSetAttachmentBase
@@ -3073,14 +3328,16 @@ func (i InstructionSetAttachmentBase) String() string {
 func (i InstructionSetAttachmentBase) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSetAttachmentBase) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionSetAttachmentBase) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionSetAttachmentBase) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetAttachmentBase{}
 }
 
 // InstructionGetFieldLocal
@@ -3116,14 +3373,12 @@ func (i InstructionGetFieldLocal) OperandsString(sb *strings.Builder, colorize b
 }
 
 func (i InstructionGetFieldLocal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	printfConstantArgument(sb, "fieldName", program.GetConstants()[i.FieldName], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
+	printfTypeArgument(sb, "accessedType", program.GetTypes()[i.AccessedType], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
 }
@@ -3140,6 +3395,1697 @@ func DecodeGetFieldLocal(ip *uint16, code []byte) (i InstructionGetFieldLocal) {
 	i.AccessedType = decodeUint16(ip, code)
 	i.Local = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetFieldLocal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetFieldLocal{
+		FieldName:    program.GetConstants()[i.FieldName],
+		AccessedType: program.GetTypes()[i.AccessedType],
+		Local:        i.Local,
+	}
+}
+
+// PrettyInstructionUnknown
+//
+// Pretty form of InstructionUnknown with resolved operands.
+// An unknown instruction.
+type PrettyInstructionUnknown struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionUnknown{}
+
+func (PrettyInstructionUnknown) Opcode() Opcode {
+	return Unknown
+}
+
+func (i PrettyInstructionUnknown) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionGetLocal
+//
+// Pretty form of InstructionGetLocal with resolved operands.
+// Pushes the value of the local at the given index onto the stack.
+type PrettyInstructionGetLocal struct {
+	Local uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionGetLocal{}
+
+func (PrettyInstructionGetLocal) Opcode() Opcode {
+	return GetLocal
+}
+
+func (i PrettyInstructionGetLocal) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "local", i.Local, false)
+	return sb.String()
+}
+
+// PrettyInstructionSetLocal
+//
+// Pretty form of InstructionSetLocal with resolved operands.
+// Pops a value off the stack and then sets the local at the given index to that value.
+type PrettyInstructionSetLocal struct {
+	Local     uint16
+	IsTempVar bool
+}
+
+var _ PrettyInstruction = PrettyInstructionSetLocal{}
+
+func (PrettyInstructionSetLocal) Opcode() Opcode {
+	return SetLocal
+}
+
+func (i PrettyInstructionSetLocal) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "local", i.Local, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "isTempVar", i.IsTempVar, false)
+	return sb.String()
+}
+
+// PrettyInstructionGetUpvalue
+//
+// Pretty form of InstructionGetUpvalue with resolved operands.
+// Pushes the value of the upvalue at the given index onto the stack.
+type PrettyInstructionGetUpvalue struct {
+	Upvalue uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionGetUpvalue{}
+
+func (PrettyInstructionGetUpvalue) Opcode() Opcode {
+	return GetUpvalue
+}
+
+func (i PrettyInstructionGetUpvalue) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "upvalue", i.Upvalue, false)
+	return sb.String()
+}
+
+// PrettyInstructionSetUpvalue
+//
+// Pretty form of InstructionSetUpvalue with resolved operands.
+// Pops a value off the stack and then sets the upvalue at the given index to that value.
+type PrettyInstructionSetUpvalue struct {
+	Upvalue uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionSetUpvalue{}
+
+func (PrettyInstructionSetUpvalue) Opcode() Opcode {
+	return SetUpvalue
+}
+
+func (i PrettyInstructionSetUpvalue) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "upvalue", i.Upvalue, false)
+	return sb.String()
+}
+
+// PrettyInstructionCloseUpvalue
+//
+// Pretty form of InstructionCloseUpvalue with resolved operands.
+// Closes the upvalue for the local at the given index.
+type PrettyInstructionCloseUpvalue struct {
+	Local uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionCloseUpvalue{}
+
+func (PrettyInstructionCloseUpvalue) Opcode() Opcode {
+	return CloseUpvalue
+}
+
+func (i PrettyInstructionCloseUpvalue) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "local", i.Local, false)
+	return sb.String()
+}
+
+// PrettyInstructionGetGlobal
+//
+// Pretty form of InstructionGetGlobal with resolved operands.
+// Pushes the value of the global at the given index onto the stack.
+type PrettyInstructionGetGlobal struct {
+	Global uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionGetGlobal{}
+
+func (PrettyInstructionGetGlobal) Opcode() Opcode {
+	return GetGlobal
+}
+
+func (i PrettyInstructionGetGlobal) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "global", i.Global, false)
+	return sb.String()
+}
+
+// PrettyInstructionSetGlobal
+//
+// Pretty form of InstructionSetGlobal with resolved operands.
+// Pops a value off the stack and then sets the global at the given index to that value.
+type PrettyInstructionSetGlobal struct {
+	Global uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionSetGlobal{}
+
+func (PrettyInstructionSetGlobal) Opcode() Opcode {
+	return SetGlobal
+}
+
+func (i PrettyInstructionSetGlobal) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "global", i.Global, false)
+	return sb.String()
+}
+
+// PrettyInstructionGetField
+//
+// Pretty form of InstructionGetField with resolved operands.
+// Pops a value off the stack, the target,
+// and then pushes the value of the field at the given index onto the stack.
+type PrettyInstructionGetField struct {
+	FieldName    constant.DecodedConstant
+	AccessedType interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionGetField{}
+
+func (PrettyInstructionGetField) Opcode() Opcode {
+	return GetField
+}
+
+func (i PrettyInstructionGetField) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfConstantArgument(&sb, "fieldName", i.FieldName, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "accessedType", i.AccessedType, false)
+	return sb.String()
+}
+
+// PrettyInstructionRemoveField
+//
+// Pretty form of InstructionRemoveField with resolved operands.
+// Pops a value off the stack, the target.
+// Remove the value of the given field from the target, and pushes it onto the stack.
+type PrettyInstructionRemoveField struct {
+	FieldName constant.DecodedConstant
+}
+
+var _ PrettyInstruction = PrettyInstructionRemoveField{}
+
+func (PrettyInstructionRemoveField) Opcode() Opcode {
+	return RemoveField
+}
+
+func (i PrettyInstructionRemoveField) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfConstantArgument(&sb, "fieldName", i.FieldName, false)
+	return sb.String()
+}
+
+// PrettyInstructionSetField
+//
+// Pretty form of InstructionSetField with resolved operands.
+// Pops two values off the stack, the target and the value,
+// and then sets the field at the given index of the target to the value.
+type PrettyInstructionSetField struct {
+	FieldName    constant.DecodedConstant
+	AccessedType interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionSetField{}
+
+func (PrettyInstructionSetField) Opcode() Opcode {
+	return SetField
+}
+
+func (i PrettyInstructionSetField) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfConstantArgument(&sb, "fieldName", i.FieldName, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "accessedType", i.AccessedType, false)
+	return sb.String()
+}
+
+// PrettyInstructionGetIndex
+//
+// Pretty form of InstructionGetIndex with resolved operands.
+// Pops two values off the stack, the array and the index,
+// and then pushes the value at the given index of the array onto the stack.
+type PrettyInstructionGetIndex struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionGetIndex{}
+
+func (PrettyInstructionGetIndex) Opcode() Opcode {
+	return GetIndex
+}
+
+func (i PrettyInstructionGetIndex) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionRemoveIndex
+//
+// Pretty form of InstructionRemoveIndex with resolved operands.
+// Pops two values off the stack, the array and the index.
+// Removes the value at the given index from the array and pushes it onto the stack.
+// If pushPlaceholder is true, also pushes the placeholder value that was inserted, if any, or nil otherwise.
+type PrettyInstructionRemoveIndex struct {
+	PushPlaceholder bool
+}
+
+var _ PrettyInstruction = PrettyInstructionRemoveIndex{}
+
+func (PrettyInstructionRemoveIndex) Opcode() Opcode {
+	return RemoveIndex
+}
+
+func (i PrettyInstructionRemoveIndex) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "pushPlaceholder", i.PushPlaceholder, false)
+	return sb.String()
+}
+
+// PrettyInstructionSetIndex
+//
+// Pretty form of InstructionSetIndex with resolved operands.
+// Pops three values off the stack, the array, the index, and the value,
+// and then sets the value at the given index of the array to the value.
+type PrettyInstructionSetIndex struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionSetIndex{}
+
+func (PrettyInstructionSetIndex) Opcode() Opcode {
+	return SetIndex
+}
+
+func (i PrettyInstructionSetIndex) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionVoid
+//
+// Pretty form of InstructionVoid with resolved operands.
+// Pushes the void value onto the stack.
+type PrettyInstructionVoid struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionVoid{}
+
+func (PrettyInstructionVoid) Opcode() Opcode {
+	return Void
+}
+
+func (i PrettyInstructionVoid) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionTrue
+//
+// Pretty form of InstructionTrue with resolved operands.
+// Pushes the boolean value `true` onto the stack.
+type PrettyInstructionTrue struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionTrue{}
+
+func (PrettyInstructionTrue) Opcode() Opcode {
+	return True
+}
+
+func (i PrettyInstructionTrue) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionFalse
+//
+// Pretty form of InstructionFalse with resolved operands.
+// Pushes the boolean value `false` onto the stack.
+type PrettyInstructionFalse struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionFalse{}
+
+func (PrettyInstructionFalse) Opcode() Opcode {
+	return False
+}
+
+func (i PrettyInstructionFalse) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionNil
+//
+// Pretty form of InstructionNil with resolved operands.
+// Pushes the value `nil` onto the stack.
+type PrettyInstructionNil struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionNil{}
+
+func (PrettyInstructionNil) Opcode() Opcode {
+	return Nil
+}
+
+func (i PrettyInstructionNil) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionNewSimpleComposite
+//
+// Pretty form of InstructionNewSimpleComposite with resolved operands.
+// Creates a new instance of a simple composite value of given kind and type, at address 0x0,
+// and then pushes it onto the stack.
+type PrettyInstructionNewSimpleComposite struct {
+	Kind common.CompositeKind
+	Type interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionNewSimpleComposite{}
+
+func (PrettyInstructionNewSimpleComposite) Opcode() Opcode {
+	return NewSimpleComposite
+}
+
+func (i PrettyInstructionNewSimpleComposite) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "kind", i.Kind, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	return sb.String()
+}
+
+// PrettyInstructionNewComposite
+//
+// Pretty form of InstructionNewComposite with resolved operands.
+// Creates a new instance of the given composite kind and type, at address 0x0,
+// and then pushes it onto the stack.
+type PrettyInstructionNewComposite struct {
+	Kind common.CompositeKind
+	Type interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionNewComposite{}
+
+func (PrettyInstructionNewComposite) Opcode() Opcode {
+	return NewComposite
+}
+
+func (i PrettyInstructionNewComposite) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "kind", i.Kind, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	return sb.String()
+}
+
+// PrettyInstructionNewCompositeAt
+//
+// Pretty form of InstructionNewCompositeAt with resolved operands.
+// Creates a new instance of the given composite kind and type, at the given address,
+// and then pushes it onto the stack.
+type PrettyInstructionNewCompositeAt struct {
+	Kind    common.CompositeKind
+	Type    interpreter.StaticType
+	Address constant.DecodedConstant
+}
+
+var _ PrettyInstruction = PrettyInstructionNewCompositeAt{}
+
+func (PrettyInstructionNewCompositeAt) Opcode() Opcode {
+	return NewCompositeAt
+}
+
+func (i PrettyInstructionNewCompositeAt) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "kind", i.Kind, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	sb.WriteByte(' ')
+	printfConstantArgument(&sb, "address", i.Address, false)
+	return sb.String()
+}
+
+// PrettyInstructionNewPath
+//
+// Pretty form of InstructionNewPath with resolved operands.
+// Creates a new path with the given domain and identifier and then pushes it onto the stack.
+type PrettyInstructionNewPath struct {
+	Domain     common.PathDomain
+	Identifier constant.DecodedConstant
+}
+
+var _ PrettyInstruction = PrettyInstructionNewPath{}
+
+func (PrettyInstructionNewPath) Opcode() Opcode {
+	return NewPath
+}
+
+func (i PrettyInstructionNewPath) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "domain", i.Domain, false)
+	sb.WriteByte(' ')
+	printfConstantArgument(&sb, "identifier", i.Identifier, false)
+	return sb.String()
+}
+
+// PrettyInstructionNewArray
+//
+// Pretty form of InstructionNewArray with resolved operands.
+// Pops the given number of elements off the stack, creates a new array with the given type, size, and elements,
+// and then pushes it onto the stack.
+type PrettyInstructionNewArray struct {
+	Type       interpreter.StaticType
+	Size       uint16
+	IsResource bool
+}
+
+var _ PrettyInstruction = PrettyInstructionNewArray{}
+
+func (PrettyInstructionNewArray) Opcode() Opcode {
+	return NewArray
+}
+
+func (i PrettyInstructionNewArray) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "size", i.Size, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "isResource", i.IsResource, false)
+	return sb.String()
+}
+
+// PrettyInstructionNewDictionary
+//
+// Pretty form of InstructionNewDictionary with resolved operands.
+// Pops the given number of entries off the stack (twice the number of the given size),
+// creates a new dictionary with the given type, size, and entries,
+// and then pushes it onto the stack.
+type PrettyInstructionNewDictionary struct {
+	Type       interpreter.StaticType
+	Size       uint16
+	IsResource bool
+}
+
+var _ PrettyInstruction = PrettyInstructionNewDictionary{}
+
+func (PrettyInstructionNewDictionary) Opcode() Opcode {
+	return NewDictionary
+}
+
+func (i PrettyInstructionNewDictionary) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "size", i.Size, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "isResource", i.IsResource, false)
+	return sb.String()
+}
+
+// PrettyInstructionNewRef
+//
+// Pretty form of InstructionNewRef with resolved operands.
+// Pops a value off the stack, creates a new reference with the given type,
+// and then pushes it onto the stack.
+type PrettyInstructionNewRef struct {
+	Type       interpreter.StaticType
+	IsImplicit bool
+}
+
+var _ PrettyInstruction = PrettyInstructionNewRef{}
+
+func (PrettyInstructionNewRef) Opcode() Opcode {
+	return NewRef
+}
+
+func (i PrettyInstructionNewRef) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "isImplicit", i.IsImplicit, false)
+	return sb.String()
+}
+
+// PrettyInstructionGetConstant
+//
+// Pretty form of InstructionGetConstant with resolved operands.
+// Pushes the constant at the given index onto the stack.
+type PrettyInstructionGetConstant struct {
+	Constant constant.DecodedConstant
+}
+
+var _ PrettyInstruction = PrettyInstructionGetConstant{}
+
+func (PrettyInstructionGetConstant) Opcode() Opcode {
+	return GetConstant
+}
+
+func (i PrettyInstructionGetConstant) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfConstantArgument(&sb, "constant", i.Constant, false)
+	return sb.String()
+}
+
+// PrettyInstructionNewClosure
+//
+// Pretty form of InstructionNewClosure with resolved operands.
+// Creates a new closure with the function at the given index and pushes it onto the stack.
+type PrettyInstructionNewClosure struct {
+	Function uint16
+	Upvalues []Upvalue
+}
+
+var _ PrettyInstruction = PrettyInstructionNewClosure{}
+
+func (PrettyInstructionNewClosure) Opcode() Opcode {
+	return NewClosure
+}
+
+func (i PrettyInstructionNewClosure) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "function", i.Function, false)
+	sb.WriteByte(' ')
+	printfUpvalueArrayArgument(&sb, "upvalues", i.Upvalues, false)
+	return sb.String()
+}
+
+// PrettyInstructionInvoke
+//
+// Pretty form of InstructionInvoke with resolved operands.
+// Pops the function and arguments off the stack, invokes the function with the arguments,
+// and then pushes the result back on to the stack.
+// This instruction is only passes the argument count. If the argument types are needed, use `invokeTyped`.
+type PrettyInstructionInvoke struct {
+	TypeArgs   []interpreter.StaticType
+	ArgCount   uint16
+	ReturnType interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionInvoke{}
+
+func (PrettyInstructionInvoke) Opcode() Opcode {
+	return Invoke
+}
+
+func (i PrettyInstructionInvoke) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfPrettyTypeArrayArgument(&sb, "typeArgs", i.TypeArgs, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "argCount", i.ArgCount, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "returnType", i.ReturnType, false)
+	return sb.String()
+}
+
+// PrettyInstructionInvokeTyped
+//
+// Pretty form of InstructionInvokeTyped with resolved operands.
+// Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack. This instruction is a variant of `invoke` that includes the argument types.
+type PrettyInstructionInvokeTyped struct {
+	TypeArgs   []interpreter.StaticType
+	ArgTypes   []interpreter.StaticType
+	ReturnType interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionInvokeTyped{}
+
+func (PrettyInstructionInvokeTyped) Opcode() Opcode {
+	return InvokeTyped
+}
+
+func (i PrettyInstructionInvokeTyped) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfPrettyTypeArrayArgument(&sb, "typeArgs", i.TypeArgs, false)
+	sb.WriteByte(' ')
+	printfPrettyTypeArrayArgument(&sb, "argTypes", i.ArgTypes, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "returnType", i.ReturnType, false)
+	return sb.String()
+}
+
+// PrettyInstructionGetMethod
+//
+// Pretty form of InstructionGetMethod with resolved operands.
+// Pops a value off the stack, the receiver,
+// and then pushes the value of the function at the given index onto the stack.
+type PrettyInstructionGetMethod struct {
+	Method       uint16
+	ReceiverType interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionGetMethod{}
+
+func (PrettyInstructionGetMethod) Opcode() Opcode {
+	return GetMethod
+}
+
+func (i PrettyInstructionGetMethod) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "method", i.Method, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "receiverType", i.ReceiverType, false)
+	return sb.String()
+}
+
+// PrettyInstructionDup
+//
+// Pretty form of InstructionDup with resolved operands.
+// Pops a value off the stack, duplicates it, and then pushes the original and the copy back on to the stack.
+type PrettyInstructionDup struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionDup{}
+
+func (PrettyInstructionDup) Opcode() Opcode {
+	return Dup
+}
+
+func (i PrettyInstructionDup) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionDrop
+//
+// Pretty form of InstructionDrop with resolved operands.
+// Pops a value off the stack and discards it.
+type PrettyInstructionDrop struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionDrop{}
+
+func (PrettyInstructionDrop) Opcode() Opcode {
+	return Drop
+}
+
+func (i PrettyInstructionDrop) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionDestroy
+//
+// Pretty form of InstructionDestroy with resolved operands.
+// Pops a resource off the stack and then destroys it.
+type PrettyInstructionDestroy struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionDestroy{}
+
+func (PrettyInstructionDestroy) Opcode() Opcode {
+	return Destroy
+}
+
+func (i PrettyInstructionDestroy) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionUnwrap
+//
+// Pretty form of InstructionUnwrap with resolved operands.
+// Pops a value off the stack.
+// If the value is an optional, pushes the optional's inner value back on to the stack.
+// Panics if the value is `nil`.
+// If the value is not an option, pushes the value back on to the stack.
+type PrettyInstructionUnwrap struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionUnwrap{}
+
+func (PrettyInstructionUnwrap) Opcode() Opcode {
+	return Unwrap
+}
+
+func (i PrettyInstructionUnwrap) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionWrap
+//
+// Pretty form of InstructionWrap with resolved operands.
+// Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+type PrettyInstructionWrap struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionWrap{}
+
+func (PrettyInstructionWrap) Opcode() Opcode {
+	return Wrap
+}
+
+func (i PrettyInstructionWrap) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionTransfer
+//
+// Pretty form of InstructionTransfer with resolved operands.
+// Pops a value off the stack, calls transfer, and then pushes it back on to the stack.
+type PrettyInstructionTransfer struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionTransfer{}
+
+func (PrettyInstructionTransfer) Opcode() Opcode {
+	return Transfer
+}
+
+func (i PrettyInstructionTransfer) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionTransferAndConvert
+//
+// Pretty form of InstructionTransferAndConvert with resolved operands.
+// Pops a value off the stack, transfer and converts it to the given type,
+// and then pushes it back on to the stack.
+type PrettyInstructionTransferAndConvert struct {
+	ValueType  interpreter.StaticType
+	TargetType interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionTransferAndConvert{}
+
+func (PrettyInstructionTransferAndConvert) Opcode() Opcode {
+	return TransferAndConvert
+}
+
+func (i PrettyInstructionTransferAndConvert) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "valueType", i.ValueType, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "targetType", i.TargetType, false)
+	return sb.String()
+}
+
+// PrettyInstructionConvert
+//
+// Pretty form of InstructionConvert with resolved operands.
+// Pops a value off the stack, converts it to the given type,
+// and then pushes it back on to the stack.
+type PrettyInstructionConvert struct {
+	ValueType  interpreter.StaticType
+	TargetType interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionConvert{}
+
+func (PrettyInstructionConvert) Opcode() Opcode {
+	return Convert
+}
+
+func (i PrettyInstructionConvert) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "valueType", i.ValueType, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "targetType", i.TargetType, false)
+	return sb.String()
+}
+
+// PrettyInstructionSimpleCast
+//
+// Pretty form of InstructionSimpleCast with resolved operands.
+// Pops a value off the stack, casts it to the given type, and then pushes it back on to the stack.
+type PrettyInstructionSimpleCast struct {
+	TargetType interpreter.StaticType
+	ValueType  interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionSimpleCast{}
+
+func (PrettyInstructionSimpleCast) Opcode() Opcode {
+	return SimpleCast
+}
+
+func (i PrettyInstructionSimpleCast) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "targetType", i.TargetType, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "valueType", i.ValueType, false)
+	return sb.String()
+}
+
+// PrettyInstructionFailableCast
+//
+// Pretty form of InstructionFailableCast with resolved operands.
+// Pops a value off the stack and casts it to the given type.
+// If the value is a subtype of the given type, then casted value is pushed back on to the stack.
+// If the value is not a subtype of the given type, then a `nil` is pushed to the stack instead.
+type PrettyInstructionFailableCast struct {
+	TargetType interpreter.StaticType
+	ValueType  interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionFailableCast{}
+
+func (PrettyInstructionFailableCast) Opcode() Opcode {
+	return FailableCast
+}
+
+func (i PrettyInstructionFailableCast) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "targetType", i.TargetType, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "valueType", i.ValueType, false)
+	return sb.String()
+}
+
+// PrettyInstructionForceCast
+//
+// Pretty form of InstructionForceCast with resolved operands.
+// Pops a value off the stack, force-casts it to the given type,
+// and then pushes it back on to the stack.
+// Panics if the value is not a subtype of the given type.
+type PrettyInstructionForceCast struct {
+	TargetType interpreter.StaticType
+	ValueType  interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionForceCast{}
+
+func (PrettyInstructionForceCast) Opcode() Opcode {
+	return ForceCast
+}
+
+func (i PrettyInstructionForceCast) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "targetType", i.TargetType, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "valueType", i.ValueType, false)
+	return sb.String()
+}
+
+// PrettyInstructionDeref
+//
+// Pretty form of InstructionDeref with resolved operands.
+// Pops an (optional) reference off the stack, dereferences it,
+// and then pushes the value back on to the stack.
+type PrettyInstructionDeref struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionDeref{}
+
+func (PrettyInstructionDeref) Opcode() Opcode {
+	return Deref
+}
+
+func (i PrettyInstructionDeref) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionJump
+//
+// Pretty form of InstructionJump with resolved operands.
+// Unconditionally jumps to the given instruction.
+type PrettyInstructionJump struct {
+	Target uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionJump{}
+
+func (PrettyInstructionJump) Opcode() Opcode {
+	return Jump
+}
+
+func (i PrettyInstructionJump) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "target", i.Target, false)
+	return sb.String()
+}
+
+// PrettyInstructionJumpIfFalse
+//
+// Pretty form of InstructionJumpIfFalse with resolved operands.
+// Pops a value off the stack. If it is `false`, jumps to the target instruction.
+type PrettyInstructionJumpIfFalse struct {
+	Target uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionJumpIfFalse{}
+
+func (PrettyInstructionJumpIfFalse) Opcode() Opcode {
+	return JumpIfFalse
+}
+
+func (i PrettyInstructionJumpIfFalse) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "target", i.Target, false)
+	return sb.String()
+}
+
+// PrettyInstructionJumpIfTrue
+//
+// Pretty form of InstructionJumpIfTrue with resolved operands.
+// Pops a value off the stack. If it is `true`, jumps to the target instruction.
+type PrettyInstructionJumpIfTrue struct {
+	Target uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionJumpIfTrue{}
+
+func (PrettyInstructionJumpIfTrue) Opcode() Opcode {
+	return JumpIfTrue
+}
+
+func (i PrettyInstructionJumpIfTrue) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "target", i.Target, false)
+	return sb.String()
+}
+
+// PrettyInstructionJumpIfNil
+//
+// Pretty form of InstructionJumpIfNil with resolved operands.
+// Pops a value off the stack. If it is `nil`, jumps to the target instruction.
+type PrettyInstructionJumpIfNil struct {
+	Target uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionJumpIfNil{}
+
+func (PrettyInstructionJumpIfNil) Opcode() Opcode {
+	return JumpIfNil
+}
+
+func (i PrettyInstructionJumpIfNil) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "target", i.Target, false)
+	return sb.String()
+}
+
+// PrettyInstructionReturn
+//
+// Pretty form of InstructionReturn with resolved operands.
+// Returns from the current function, without a value.
+type PrettyInstructionReturn struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionReturn{}
+
+func (PrettyInstructionReturn) Opcode() Opcode {
+	return Return
+}
+
+func (i PrettyInstructionReturn) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionReturnValue
+//
+// Pretty form of InstructionReturnValue with resolved operands.
+// Pops a value off the stack and then returns from the current function with that value.
+type PrettyInstructionReturnValue struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionReturnValue{}
+
+func (PrettyInstructionReturnValue) Opcode() Opcode {
+	return ReturnValue
+}
+
+func (i PrettyInstructionReturnValue) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionSame
+//
+// Pretty form of InstructionSame with resolved operands.
+// Pops two values off the stack, checks if the first value is the same as the second,
+// and then pushes the result back on to the stack.
+type PrettyInstructionSame struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionSame{}
+
+func (PrettyInstructionSame) Opcode() Opcode {
+	return Same
+}
+
+func (i PrettyInstructionSame) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionEqual
+//
+// Pretty form of InstructionEqual with resolved operands.
+// Pops two values off the stack, checks if the first value is equal to the second,
+// and then pushes the result back on to the stack.
+type PrettyInstructionEqual struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionEqual{}
+
+func (PrettyInstructionEqual) Opcode() Opcode {
+	return Equal
+}
+
+func (i PrettyInstructionEqual) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionNotEqual
+//
+// Pretty form of InstructionNotEqual with resolved operands.
+// Pops two values off the stack, checks if the first value is not equal to the second,
+// and then pushes the result back on to the stack.
+type PrettyInstructionNotEqual struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionNotEqual{}
+
+func (PrettyInstructionNotEqual) Opcode() Opcode {
+	return NotEqual
+}
+
+func (i PrettyInstructionNotEqual) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionNot
+//
+// Pretty form of InstructionNot with resolved operands.
+// Pops a boolean value off the stack, negates it,
+// and then pushes the result back on to the stack.
+type PrettyInstructionNot struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionNot{}
+
+func (PrettyInstructionNot) Opcode() Opcode {
+	return Not
+}
+
+func (i PrettyInstructionNot) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionAdd
+//
+// Pretty form of InstructionAdd with resolved operands.
+// Pops two number values off the stack, adds them together,
+// and then pushes the result back on to the stack.
+type PrettyInstructionAdd struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionAdd{}
+
+func (PrettyInstructionAdd) Opcode() Opcode {
+	return Add
+}
+
+func (i PrettyInstructionAdd) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionSubtract
+//
+// Pretty form of InstructionSubtract with resolved operands.
+// Pops two number values off the stack, subtracts the second from the first,
+// and then pushes the result back on to the stack.
+type PrettyInstructionSubtract struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionSubtract{}
+
+func (PrettyInstructionSubtract) Opcode() Opcode {
+	return Subtract
+}
+
+func (i PrettyInstructionSubtract) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionMultiply
+//
+// Pretty form of InstructionMultiply with resolved operands.
+// Pops two number values off the stack, multiplies them together,
+// and then pushes the result back on to the stack.
+type PrettyInstructionMultiply struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionMultiply{}
+
+func (PrettyInstructionMultiply) Opcode() Opcode {
+	return Multiply
+}
+
+func (i PrettyInstructionMultiply) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionDivide
+//
+// Pretty form of InstructionDivide with resolved operands.
+// Pops two number values off the stack, divides the first by the second,
+// and then pushes the result back on to the stack.
+type PrettyInstructionDivide struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionDivide{}
+
+func (PrettyInstructionDivide) Opcode() Opcode {
+	return Divide
+}
+
+func (i PrettyInstructionDivide) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionMod
+//
+// Pretty form of InstructionMod with resolved operands.
+// Pops two number values off the stack, calculates the modulus of the first by the second,
+// and then pushes the result back on to the stack.
+type PrettyInstructionMod struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionMod{}
+
+func (PrettyInstructionMod) Opcode() Opcode {
+	return Mod
+}
+
+func (i PrettyInstructionMod) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionNegate
+//
+// Pretty form of InstructionNegate with resolved operands.
+// Pops a number value off the stack, negates it,
+// and then pushes the result back on to the stack.
+type PrettyInstructionNegate struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionNegate{}
+
+func (PrettyInstructionNegate) Opcode() Opcode {
+	return Negate
+}
+
+func (i PrettyInstructionNegate) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionLess
+//
+// Pretty form of InstructionLess with resolved operands.
+// Pops two values off the stack, checks if the first value is less than the second,
+// and then pushes the result back on to the stack.
+type PrettyInstructionLess struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionLess{}
+
+func (PrettyInstructionLess) Opcode() Opcode {
+	return Less
+}
+
+func (i PrettyInstructionLess) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionLessOrEqual
+//
+// Pretty form of InstructionLessOrEqual with resolved operands.
+// Pops two values off the stack, checks if the first value is less than or equal to the second,
+// and then pushes the result back on to the stack.
+type PrettyInstructionLessOrEqual struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionLessOrEqual{}
+
+func (PrettyInstructionLessOrEqual) Opcode() Opcode {
+	return LessOrEqual
+}
+
+func (i PrettyInstructionLessOrEqual) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionGreater
+//
+// Pretty form of InstructionGreater with resolved operands.
+// Pops two values off the stack, checks if the first value is greater than the second,
+// and then pushes the result back on to the stack.
+type PrettyInstructionGreater struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionGreater{}
+
+func (PrettyInstructionGreater) Opcode() Opcode {
+	return Greater
+}
+
+func (i PrettyInstructionGreater) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionGreaterOrEqual
+//
+// Pretty form of InstructionGreaterOrEqual with resolved operands.
+// Pops two values off the stack, checks if the first value is greater than or equal to the second,
+// and then pushes the result back on to the stack.
+type PrettyInstructionGreaterOrEqual struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionGreaterOrEqual{}
+
+func (PrettyInstructionGreaterOrEqual) Opcode() Opcode {
+	return GreaterOrEqual
+}
+
+func (i PrettyInstructionGreaterOrEqual) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionBitwiseOr
+//
+// Pretty form of InstructionBitwiseOr with resolved operands.
+// Pops two integer values off the stack, performs a bitwise OR operation on them,
+// and then pushes the result back on to the stack.
+type PrettyInstructionBitwiseOr struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionBitwiseOr{}
+
+func (PrettyInstructionBitwiseOr) Opcode() Opcode {
+	return BitwiseOr
+}
+
+func (i PrettyInstructionBitwiseOr) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionBitwiseXor
+//
+// Pretty form of InstructionBitwiseXor with resolved operands.
+// Pops two integer values off the stack, performs a bitwise XOR operation on them,
+// and then pushes the result back on to the stack.
+type PrettyInstructionBitwiseXor struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionBitwiseXor{}
+
+func (PrettyInstructionBitwiseXor) Opcode() Opcode {
+	return BitwiseXor
+}
+
+func (i PrettyInstructionBitwiseXor) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionBitwiseAnd
+//
+// Pretty form of InstructionBitwiseAnd with resolved operands.
+// Pops two integer values off the stack, performs a bitwise AND operation on them,
+// and then pushes the result back on to the stack.
+type PrettyInstructionBitwiseAnd struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionBitwiseAnd{}
+
+func (PrettyInstructionBitwiseAnd) Opcode() Opcode {
+	return BitwiseAnd
+}
+
+func (i PrettyInstructionBitwiseAnd) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionBitwiseLeftShift
+//
+// Pretty form of InstructionBitwiseLeftShift with resolved operands.
+// Pops two integer values off the stack, performs a bitwise left shift operation on them,
+// and then pushes the result back on to the stack.
+type PrettyInstructionBitwiseLeftShift struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionBitwiseLeftShift{}
+
+func (PrettyInstructionBitwiseLeftShift) Opcode() Opcode {
+	return BitwiseLeftShift
+}
+
+func (i PrettyInstructionBitwiseLeftShift) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionBitwiseRightShift
+//
+// Pretty form of InstructionBitwiseRightShift with resolved operands.
+// Pops two integer values off the stack, performs a bitwise right shift operation on them,
+// and then pushes the result back on to the stack.
+type PrettyInstructionBitwiseRightShift struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionBitwiseRightShift{}
+
+func (PrettyInstructionBitwiseRightShift) Opcode() Opcode {
+	return BitwiseRightShift
+}
+
+func (i PrettyInstructionBitwiseRightShift) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionIterator
+//
+// Pretty form of InstructionIterator with resolved operands.
+// Pops an iterable value from the stack, get an iterator to it, and push the iterator back onto the stack.
+type PrettyInstructionIterator struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionIterator{}
+
+func (PrettyInstructionIterator) Opcode() Opcode {
+	return Iterator
+}
+
+func (i PrettyInstructionIterator) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionIteratorHasNext
+//
+// Pretty form of InstructionIteratorHasNext with resolved operands.
+// Pops a value-iterator from the stack, calls `hasNext()` method on it, and push the result back onto the stack.
+type PrettyInstructionIteratorHasNext struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionIteratorHasNext{}
+
+func (PrettyInstructionIteratorHasNext) Opcode() Opcode {
+	return IteratorHasNext
+}
+
+func (i PrettyInstructionIteratorHasNext) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionIteratorNext
+//
+// Pretty form of InstructionIteratorNext with resolved operands.
+// Pops a value-iterator from the stack, calls `next()` method on it, and push the result back onto the stack.
+type PrettyInstructionIteratorNext struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionIteratorNext{}
+
+func (PrettyInstructionIteratorNext) Opcode() Opcode {
+	return IteratorNext
+}
+
+func (i PrettyInstructionIteratorNext) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionIteratorEnd
+//
+// Pretty form of InstructionIteratorEnd with resolved operands.
+// Pops a value-iterator from the stack end invalidates it.
+// The iterator may no longer be used after this instruction.
+type PrettyInstructionIteratorEnd struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionIteratorEnd{}
+
+func (PrettyInstructionIteratorEnd) Opcode() Opcode {
+	return IteratorEnd
+}
+
+func (i PrettyInstructionIteratorEnd) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionEmitEvent
+//
+// Pretty form of InstructionEmitEvent with resolved operands.
+// Pops arguments of the stack and then emits an event with the given type with them.
+type PrettyInstructionEmitEvent struct {
+	Type     interpreter.StaticType
+	ArgCount uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionEmitEvent{}
+
+func (PrettyInstructionEmitEvent) Opcode() Opcode {
+	return EmitEvent
+}
+
+func (i PrettyInstructionEmitEvent) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "argCount", i.ArgCount, false)
+	return sb.String()
+}
+
+// PrettyInstructionLoop
+//
+// Pretty form of InstructionLoop with resolved operands.
+// Indicates the start of a loop.
+type PrettyInstructionLoop struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionLoop{}
+
+func (PrettyInstructionLoop) Opcode() Opcode {
+	return Loop
+}
+
+func (i PrettyInstructionLoop) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionStatement
+//
+// Pretty form of InstructionStatement with resolved operands.
+// Indicates the start of a statement.
+type PrettyInstructionStatement struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionStatement{}
+
+func (PrettyInstructionStatement) Opcode() Opcode {
+	return Statement
+}
+
+func (i PrettyInstructionStatement) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionTemplateString
+//
+// Pretty form of InstructionTemplateString with resolved operands.
+// Represents a string template with an array of values (strings) and an array of expressions, pops both off the stack.
+type PrettyInstructionTemplateString struct {
+	ExprSize uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionTemplateString{}
+
+func (PrettyInstructionTemplateString) Opcode() Opcode {
+	return TemplateString
+}
+
+func (i PrettyInstructionTemplateString) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "exprSize", i.ExprSize, false)
+	return sb.String()
+}
+
+// PrettyInstructionGetTypeIndex
+//
+// Pretty form of InstructionGetTypeIndex with resolved operands.
+// Pops a value off the stack, the target,
+// and then pushes the value of the type key at the given index onto the stack.
+type PrettyInstructionGetTypeIndex struct {
+	Type interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionGetTypeIndex{}
+
+func (PrettyInstructionGetTypeIndex) Opcode() Opcode {
+	return GetTypeIndex
+}
+
+func (i PrettyInstructionGetTypeIndex) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	return sb.String()
+}
+
+// PrettyInstructionRemoveTypeIndex
+//
+// Pretty form of InstructionRemoveTypeIndex with resolved operands.
+// Pops a value off the stack, the target.
+// Remove the value of the given type key from the target.
+// Additionally destroy if removed type is resource.
+type PrettyInstructionRemoveTypeIndex struct {
+	Type interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionRemoveTypeIndex{}
+
+func (PrettyInstructionRemoveTypeIndex) Opcode() Opcode {
+	return RemoveTypeIndex
+}
+
+func (i PrettyInstructionRemoveTypeIndex) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	return sb.String()
+}
+
+// PrettyInstructionSetTypeIndex
+//
+// Pretty form of InstructionSetTypeIndex with resolved operands.
+// Pops two values off the stack, the target and the value,
+// and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
+type PrettyInstructionSetTypeIndex struct {
+	Type interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionSetTypeIndex{}
+
+func (PrettyInstructionSetTypeIndex) Opcode() Opcode {
+	return SetTypeIndex
+}
+
+func (i PrettyInstructionSetTypeIndex) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "type", i.Type, false)
+	return sb.String()
+}
+
+// PrettyInstructionSetAttachmentBase
+//
+// Pretty form of InstructionSetAttachmentBase with resolved operands.
+// Pops two values off the stack, the attachment and the base, sets the attachment's base value to base.
+type PrettyInstructionSetAttachmentBase struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionSetAttachmentBase{}
+
+func (PrettyInstructionSetAttachmentBase) Opcode() Opcode {
+	return SetAttachmentBase
+}
+
+func (i PrettyInstructionSetAttachmentBase) String() string {
+	return i.Opcode().String()
+}
+
+// PrettyInstructionGetFieldLocal
+//
+// Pretty form of InstructionGetFieldLocal with resolved operands.
+// Pops a value off the stack, the target,
+// and then pushes the value of the field at the given index onto the stack.
+type PrettyInstructionGetFieldLocal struct {
+	FieldName    constant.DecodedConstant
+	AccessedType interpreter.StaticType
+	Local        uint16
+}
+
+var _ PrettyInstruction = PrettyInstructionGetFieldLocal{}
+
+func (PrettyInstructionGetFieldLocal) Opcode() Opcode {
+	return GetFieldLocal
+}
+
+func (i PrettyInstructionGetFieldLocal) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfConstantArgument(&sb, "fieldName", i.FieldName, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "accessedType", i.AccessedType, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "local", i.Local, false)
+	return sb.String()
 }
 
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
