@@ -90,4 +90,13 @@ const (
 	// Types
 
 	ElementTypeTypeAnnotation
+	ElementTypeNominalType
+	ElementTypeOptionalType
+	ElementTypeVariableSizedType
+	ElementTypeConstantSizedType
+	ElementTypeDictionaryType
+	ElementTypeFunctionType
+	ElementTypeReferenceType
+	ElementTypeIntersectionType
+	ElementTypeInstantiationType
 )
