@@ -157,3 +157,38 @@ func TestProgram_String(t *testing.T) {
 	})
 
 }
+
+func TestProgram_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	pragma := &PragmaDeclaration{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{Identifier: "test"},
+		},
+	}
+
+	varDecl := &VariableDeclaration{
+		Identifier: Identifier{Identifier: "x"},
+	}
+
+	program := &Program{
+		declarations: []Declaration{
+			pragma,
+			varDecl,
+		},
+	}
+
+	var visited []Element
+	program.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			pragma,
+			varDecl,
+		},
+		visited,
+	)
+}

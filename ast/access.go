@@ -78,6 +78,12 @@ func (s *ConjunctiveEntitlementSet) Separator() Separator {
 	return Conjunction
 }
 
+func (s *ConjunctiveEntitlementSet) Walk(walkChild func(Element)) {
+	for _, entitlement := range s.Elements {
+		walkChild(entitlement)
+	}
+}
+
 func NewConjunctiveEntitlementSet(entitlements []*NominalType) *ConjunctiveEntitlementSet {
 	return &ConjunctiveEntitlementSet{Elements: entitlements}
 }
@@ -98,12 +104,19 @@ func (s *DisjunctiveEntitlementSet) Separator() Separator {
 	return Disjunction
 }
 
+func (s *DisjunctiveEntitlementSet) Walk(walkChild func(Element)) {
+	for _, entitlement := range s.Elements {
+		walkChild(entitlement)
+	}
+}
+
 func NewDisjunctiveEntitlementSet(entitlements []*NominalType) *DisjunctiveEntitlementSet {
 	return &DisjunctiveEntitlementSet{Elements: entitlements}
 }
 
 type Authorization interface {
 	isAuthorization()
+	Walk(walkChild func(Element))
 }
 
 type EntitlementAccess struct {
@@ -214,6 +227,12 @@ func (a *MappedAccess) MarshalJSON() ([]byte, error) {
 		Range: NewUnmeteredRangeFromPositioned(a),
 		Alias: (*Alias)(a),
 	})
+}
+
+func (a *MappedAccess) Walk(walkChild func(Element)) {
+	if a.EntitlementMap != nil {
+		walkChild(a.EntitlementMap)
+	}
 }
 
 type PrimitiveAccess uint8

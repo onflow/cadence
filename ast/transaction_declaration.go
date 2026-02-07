@@ -71,17 +71,24 @@ func (*TransactionDeclaration) ElementType() ElementType {
 }
 
 func (d *TransactionDeclaration) Walk(walkChild func(Element)) {
-	// TODO: walk parameters
+	if d.ParameterList != nil {
+		d.ParameterList.Walk(walkChild)
+	}
 	for _, declaration := range d.Fields {
 		walkChild(declaration)
+	}
+	if d.PreConditions != nil {
+		d.PreConditions.Walk(walkChild)
 	}
 	if d.Prepare != nil {
 		walkChild(d.Prepare)
 	}
+	if d.PostConditions != nil {
+		d.PostConditions.Walk(walkChild)
+	}
 	if d.Execute != nil {
 		walkChild(d.Execute)
 	}
-	// TODO: walk pre and post-conditions
 }
 
 func (*TransactionDeclaration) isDeclaration() {}

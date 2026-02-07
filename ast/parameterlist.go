@@ -77,6 +77,21 @@ func (l *ParameterList) IsEmpty() bool {
 	return l == nil || len(l.Parameters) == 0
 }
 
+func (l *ParameterList) Walk(walkChild func(Element)) {
+	if l.IsEmpty() {
+		return
+	}
+
+	for _, parameter := range l.Parameters {
+		if parameter.TypeAnnotation != nil {
+			walkChild(parameter.TypeAnnotation)
+		}
+		if parameter.DefaultArgument != nil {
+			walkChild(parameter.DefaultArgument)
+		}
+	}
+}
+
 const parameterListEmptyDoc = prettier.Text("()")
 
 var parameterSeparatorDoc prettier.Doc = prettier.Concat{
