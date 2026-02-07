@@ -680,6 +680,38 @@ func TestArrayExpression_String(t *testing.T) {
 	})
 }
 
+func TestArrayExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	val1 := &IntegerExpression{
+		PositiveLiteral: []byte("1"),
+		Base:            10,
+	}
+
+	val2 := &IntegerExpression{
+		PositiveLiteral: []byte("2"),
+		Base:            10,
+	}
+
+	expr := &ArrayExpression{
+		Values: []Expression{val1, val2},
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			val1,
+			val2,
+		},
+		visited,
+	)
+}
+
 func TestDictionaryExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -908,6 +940,51 @@ func TestDictionaryExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+}
+
+func TestDictionaryExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	key1 := &StringExpression{Value: "a"}
+	val1 := &IntegerExpression{
+		PositiveLiteral: []byte("1"),
+		Base:            10,
+	}
+
+	key2 := &StringExpression{Value: "b"}
+	val2 := &IntegerExpression{
+		PositiveLiteral: []byte("2"),
+		Base:            10,
+	}
+
+	expr := &DictionaryExpression{
+		Entries: []DictionaryEntry{
+			{
+				Key:   key1,
+				Value: val1,
+			},
+			{
+				Key:   key2,
+				Value: val2,
+			},
+		},
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			key1,
+			val1,
+			key2,
+			val2,
+		},
+		visited,
+	)
 }
 
 func TestIdentifierExpression_MarshalJSON(t *testing.T) {
@@ -1561,6 +1638,32 @@ func TestMemberExpression_String(t *testing.T) {
 
 }
 
+func TestMemberExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "obj"},
+	}
+
+	memberExpr := &MemberExpression{
+		Expression: expr,
+		Identifier: Identifier{Identifier: "field"},
+	}
+
+	var visited []Element
+	memberExpr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expr,
+		},
+		visited,
+	)
+}
+
 func TestIndexExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -1936,6 +2039,38 @@ func TestIndexExpression_String(t *testing.T) {
 	})
 }
 
+func TestIndexExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	target := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "arr"},
+	}
+
+	index := &IntegerExpression{
+		PositiveLiteral: []byte("0"),
+		Base:            10,
+	}
+
+	expr := &IndexExpression{
+		TargetExpression:   target,
+		IndexingExpression: index,
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			target,
+			index,
+		},
+		visited,
+	)
+}
+
 func TestUnaryExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -2190,6 +2325,34 @@ func TestUnaryExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+}
+
+func TestUnaryExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	unaryExpr := &UnaryExpression{
+		Expression: expr,
+		Operation:  OperationNegate,
+	}
+
+	var visited []Element
+	unaryExpr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expr,
+		},
+		visited,
+	)
+
 }
 
 func TestBinaryExpression_MarshalJSON(t *testing.T) {
@@ -2737,6 +2900,40 @@ func TestBinaryExpression_String(t *testing.T) {
 	})
 }
 
+func TestBinaryExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	left := &IntegerExpression{
+		PositiveLiteral: []byte("1"),
+		Base:            10,
+	}
+
+	right := &IntegerExpression{
+		PositiveLiteral: []byte("2"),
+		Base:            10,
+	}
+
+	expr := &BinaryExpression{
+		Left:      left,
+		Right:     right,
+		Operation: OperationPlus,
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			left,
+			right,
+		},
+		visited,
+	)
+}
+
 func TestDestroyExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -2981,6 +3178,31 @@ func TestDestroyExpression_String(t *testing.T) {
 	})
 }
 
+func TestDestroyExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "resource"},
+	}
+
+	destroyExpr := &DestroyExpression{
+		Expression: expr,
+	}
+
+	var visited []Element
+	destroyExpr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expr,
+		},
+		visited,
+	)
+}
+
 func TestForceExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -3201,6 +3423,31 @@ func TestForceExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+}
+
+func TestForceExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "optional"},
+	}
+
+	forceExpr := &ForceExpression{
+		Expression: expr,
+	}
+
+	var visited []Element
+	forceExpr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expr,
+		},
+		visited,
+	)
 }
 
 func TestConditionalExpression_MarshalJSON(t *testing.T) {
@@ -3625,7 +3872,6 @@ func TestConditionalExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
-
 }
 
 func TestConditionalExpression_String(t *testing.T) {
@@ -3780,6 +4026,41 @@ func TestConditionalExpression_String(t *testing.T) {
 		)
 	})
 
+}
+
+func TestConditionalExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	test := &BoolExpression{Value: true}
+	thenExpr := &IntegerExpression{
+		PositiveLiteral: []byte("1"),
+		Base:            10,
+	}
+	elseExpr := &IntegerExpression{
+		PositiveLiteral: []byte("2"),
+		Base:            10,
+	}
+
+	expr := &ConditionalExpression{
+		Test: test,
+		Then: thenExpr,
+		Else: elseExpr,
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			test,
+			thenExpr,
+			elseExpr,
+		},
+		visited,
+	)
 }
 
 func TestInvocationExpression_MarshalJSON(t *testing.T) {
@@ -4277,6 +4558,48 @@ func TestInvocationExpression_String(t *testing.T) {
 	})
 }
 
+func TestInvocationExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	invokedExpr := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "foo"},
+	}
+
+	typeArg := &NominalType{
+		Identifier: Identifier{Identifier: "Int"},
+	}
+
+	arg := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	expr := &InvocationExpression{
+		InvokedExpression: invokedExpr,
+		TypeArguments: []*TypeAnnotation{
+			{Type: typeArg},
+		},
+		Arguments: []*Argument{
+			{Expression: arg},
+		},
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			invokedExpr,
+			expr.TypeArguments[0],
+			arg,
+		},
+		visited,
+	)
+}
+
 func TestCastingExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -4649,7 +4972,41 @@ func TestCastingExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+}
 
+func TestCastingExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expression := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	typeAnnotation := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Int"},
+		},
+	}
+
+	expr := &CastingExpression{
+		Expression:     expression,
+		Operation:      OperationCast,
+		TypeAnnotation: typeAnnotation,
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expression,
+			typeAnnotation,
+		},
+		visited,
+	)
 }
 
 func TestCreateExpression_MarshalJSON(t *testing.T) {
@@ -4839,6 +5196,33 @@ func TestCreateExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+}
+
+func TestCreateExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	invocation := &InvocationExpression{
+		InvokedExpression: &IdentifierExpression{
+			Identifier: Identifier{Identifier: "Resource"},
+		},
+	}
+
+	expr := &CreateExpression{
+		InvocationExpression: invocation,
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			invocation,
+		},
+		visited,
+	)
 }
 
 func TestReferenceExpression_MarshalJSON(t *testing.T) {
@@ -5099,6 +5483,31 @@ func TestReferenceExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+}
+
+func TestReferenceExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "value"},
+	}
+
+	refExpr := &ReferenceExpression{
+		Expression: expr,
+	}
+
+	var visited []Element
+	refExpr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expr,
+		},
+		visited,
+	)
 }
 
 func TestFunctionExpression_MarshalJSON(t *testing.T) {
@@ -5710,6 +6119,63 @@ func TestFunctionExpression_String(t *testing.T) {
 	})
 }
 
+func TestFunctionExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	paramTypeAnnotation := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "String"},
+		},
+	}
+
+	returnTypeAnnotation := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Int"},
+		},
+	}
+
+	body := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	expr := &FunctionExpression{
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier:     Identifier{Identifier: "x"},
+					TypeAnnotation: paramTypeAnnotation,
+				},
+			},
+		},
+		ReturnTypeAnnotation: returnTypeAnnotation,
+		FunctionBlock: &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{
+					&ReturnStatement{
+						Expression: body,
+					},
+				},
+			},
+		},
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			paramTypeAnnotation,
+			returnTypeAnnotation,
+			expr.FunctionBlock,
+		},
+		visited,
+	)
+}
+
 func TestStringTemplateExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -5816,5 +6282,37 @@ func TestStringExpressionTemplate_String(t *testing.T) {
 	assert.Equal(t,
 		`"Hello, \(name)!"`,
 		expr.String(),
+	)
+}
+
+func TestStringTemplateExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expr1 := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "name"},
+	}
+
+	expr2 := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	stringTemplate := &StringTemplateExpression{
+		Values:      []string{"Hello ", ", you are ", " years old"},
+		Expressions: []Expression{expr1, expr2},
+	}
+
+	var visited []Element
+	stringTemplate.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expr1,
+			expr2,
+		},
+		visited,
 	)
 }
