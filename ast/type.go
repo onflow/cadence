@@ -805,6 +805,9 @@ func (*ReferenceType) ElementType() ElementType {
 }
 
 func (t *ReferenceType) Walk(walkChild func(Element)) {
+	if t.Authorization != nil {
+		t.Authorization.Walk(walkChild)
+	}
 	walkChild(t.Type)
 }
 
