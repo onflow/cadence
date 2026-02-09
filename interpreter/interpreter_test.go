@@ -229,6 +229,50 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 			),
 		)
 	})
+
+	t.Run("{String: Bool} to {String: Bool?}", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			NewDictionaryValue(
+				inter,
+				&DictionaryStaticType{
+					KeyType: PrimitiveStaticTypeString,
+					ValueType: &OptionalStaticType{
+						Type: PrimitiveStaticTypeBool,
+					},
+				},
+				NewUnmeteredStringValue("foo"),
+				NewSomeValueNonCopying(nil, TrueValue),
+			),
+			ConvertAndBoxWithValidation(
+				inter,
+				NewDictionaryValue(
+					inter,
+					&DictionaryStaticType{
+						KeyType:   PrimitiveStaticTypeString,
+						ValueType: PrimitiveStaticTypeBool,
+					},
+					NewUnmeteredStringValue("foo"),
+					TrueValue,
+				),
+				&sema.DictionaryType{
+					KeyType:   sema.StringType,
+					ValueType: sema.BoolType,
+				},
+				&sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.OptionalType{
+						Type: sema.BoolType,
+					},
+				},
+			),
+		)
+	})
 }
 
 func TestInterpreterBoxing(t *testing.T) {
