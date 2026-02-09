@@ -30,11 +30,11 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-func TestMinFunction(t *testing.T) {
+func TestMinOfFunction(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(InterpreterMinFunction)
+	baseValueActivation.DeclareValue(InterpreterMinOfFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
 		return ParseAndCheckWithOptions(t,
@@ -53,7 +53,7 @@ func TestMinFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = min(5, 10)
+            let result = minOf(5, 10)
         `)
 
 		require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestMinFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = min<Int8>(5, 10)
+            let result = minOf<Int8>(5, 10)
         `)
 
 		require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestMinFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = min<UFix64>(5.5, 10.5)
+            let result = minOf<UFix64>(5.5, 10.5)
         `)
 
 		require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestMinFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = min("a", "b")
+            let result = minOf("a", "b")
         `)
 
 		require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestMinFunction(t *testing.T) {
 		_, err := parseAndCheck(t, `
             fun foo(): Void {}
             fun bar(): Void {}
-            let result = min<fun(): Void>(foo, bar)
+            let result = minOf<fun(): Void>(foo, bar)
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -106,7 +106,7 @@ func TestMinFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = min(5, 10.5)
+            let result = minOf(5, 10.5)
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -114,11 +114,11 @@ func TestMinFunction(t *testing.T) {
 	})
 }
 
-func TestMaxFunction(t *testing.T) {
+func TestMaxOfFunction(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(InterpreterMaxFunction)
+	baseValueActivation.DeclareValue(InterpreterMaxOfFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
 		return ParseAndCheckWithOptions(t,
@@ -137,7 +137,7 @@ func TestMaxFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = max(5, 10)
+            let result = maxOf(5, 10)
         `)
 
 		require.NoError(t, err)
@@ -147,7 +147,7 @@ func TestMaxFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = max<Int16>(5, 10)
+            let result = maxOf<Int16>(5, 10)
         `)
 
 		require.NoError(t, err)
@@ -157,7 +157,7 @@ func TestMaxFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = max<Fix64>(5.5, 10.5)
+            let result = maxOf<Fix64>(5.5, 10.5)
         `)
 
 		require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestMaxFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = max("a", "b")
+            let result = maxOf("a", "b")
         `)
 
 		require.NoError(t, err)
@@ -177,7 +177,7 @@ func TestMaxFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = max<{String: Int}>({}, {})
+            let result = maxOf<{String: Int}>({}, {})
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -188,7 +188,7 @@ func TestMaxFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = max(5.5, 10)
+            let result = maxOf(5.5, 10)
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -196,37 +196,37 @@ func TestMaxFunction(t *testing.T) {
 	})
 }
 
-func TestMinFunctionRuntime(t *testing.T) {
+func TestMinOfFunctionRuntime(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Int min", func(t *testing.T) {
+	t.Run("Int", func(t *testing.T) {
 		t.Parallel()
 
 		inter := newInterpreter(t, `
-            access(all) let result = min(5, 10)
-        `, InterpreterMinFunction)
+            access(all) let result = minOf(5, 10)
+        `, InterpreterMinOfFunction)
 
 		result := inter.Globals.Get("result").GetValue(inter)
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
 	})
 
-	t.Run("Int max argument", func(t *testing.T) {
+	t.Run("Int, reversed", func(t *testing.T) {
 		t.Parallel()
 
 		inter := newInterpreter(t, `
-            access(all) let result = min(10, 5)
-        `, InterpreterMinFunction)
+            access(all) let result = minOf(10, 5)
+        `, InterpreterMinOfFunction)
 
 		result := inter.Globals.Get("result").GetValue(inter)
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
 	})
 
-	t.Run("UFix64", func(t *testing.T) {
+	t.Run("UFix64, explicit type argument", func(t *testing.T) {
 		t.Parallel()
 
 		inter := newInterpreter(t, `
-            access(all) let result = min<UFix64>(5.5, 10.5)
-        `, InterpreterMinFunction)
+            access(all) let result = minOf<UFix64>(5.5, 10.5)
+        `, InterpreterMinOfFunction)
 
 		result := inter.Globals.Get("result").GetValue(inter)
 		expected := interpreter.NewUnmeteredUFix64Value(550_000_000)
@@ -234,37 +234,37 @@ func TestMinFunctionRuntime(t *testing.T) {
 	})
 }
 
-func TestMaxFunctionRuntime(t *testing.T) {
+func TestMaxOfFunctionRuntime(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Int max", func(t *testing.T) {
+	t.Run("Int", func(t *testing.T) {
 		t.Parallel()
 
 		inter := newInterpreter(t, `
-            access(all) let result = max(5, 10)
-        `, InterpreterMaxFunction)
+            access(all) let result = maxOf(5, 10)
+        `, InterpreterMaxOfFunction)
 
 		result := inter.Globals.Get("result").GetValue(inter)
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
 	})
 
-	t.Run("Int min argument", func(t *testing.T) {
+	t.Run("Int, reversed", func(t *testing.T) {
 		t.Parallel()
 
 		inter := newInterpreter(t, `
-            access(all) let result = max(10, 5)
-        `, InterpreterMaxFunction)
+            access(all) let result = maxOf(10, 5)
+        `, InterpreterMaxOfFunction)
 
 		result := inter.Globals.Get("result").GetValue(inter)
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
 	})
 
-	t.Run("UFix64", func(t *testing.T) {
+	t.Run("UFix64, explicit type argument", func(t *testing.T) {
 		t.Parallel()
 
 		inter := newInterpreter(t, `
-            access(all) let result = max<UFix64>(5.5, 10.5)
-        `, InterpreterMaxFunction)
+            access(all) let result = maxOf<UFix64>(5.5, 10.5)
+        `, InterpreterMaxOfFunction)
 
 		result := inter.Globals.Get("result").GetValue(inter)
 		expected := interpreter.NewUnmeteredUFix64Value(1_050_000_000)
