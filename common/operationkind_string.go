@@ -19,9 +19,8 @@ const _OperationKind_name = "OperationKindUnknownOperationKindUnaryOperationKind
 var _OperationKind_index = [...]uint8{0, 20, 38, 57, 77}
 
 func (i OperationKind) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_OperationKind_index)-1 {
+	if i >= OperationKind(len(_OperationKind_index)-1) {
 		return "OperationKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _OperationKind_name[_OperationKind_index[idx]:_OperationKind_index[idx+1]]
+	return _OperationKind_name[_OperationKind_index[i]:_OperationKind_index[i+1]]
 }

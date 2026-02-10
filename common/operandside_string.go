@@ -18,9 +18,8 @@ const _OperandSide_name = "OperandSideUnknownOperandSideLeftOperandSideRight"
 var _OperandSide_index = [...]uint8{0, 18, 33, 49}
 
 func (i OperandSide) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_OperandSide_index)-1 {
+	if i >= OperandSide(len(_OperandSide_index)-1) {
 		return "OperandSide(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _OperandSide_name[_OperandSide_index[idx]:_OperandSide_index[idx+1]]
+	return _OperandSide_name[_OperandSide_index[i]:_OperandSide_index[i+1]]
 }

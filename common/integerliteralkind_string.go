@@ -20,9 +20,8 @@ const _IntegerLiteralKind_name = "IntegerLiteralKindUnknownIntegerLiteralKindBin
 var _IntegerLiteralKind_index = [...]uint8{0, 25, 49, 72, 97, 126}
 
 func (i IntegerLiteralKind) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_IntegerLiteralKind_index)-1 {
+	if i >= IntegerLiteralKind(len(_IntegerLiteralKind_index)-1) {
 		return "IntegerLiteralKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _IntegerLiteralKind_name[_IntegerLiteralKind_index[idx]:_IntegerLiteralKind_index[idx+1]]
+	return _IntegerLiteralKind_name[_IntegerLiteralKind_index[i]:_IntegerLiteralKind_index[i+1]]
 }

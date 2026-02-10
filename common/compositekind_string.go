@@ -22,9 +22,8 @@ const _CompositeKind_name = "CompositeKindUnknownCompositeKindStructureComposite
 var _CompositeKind_index = [...]uint8{0, 20, 42, 63, 84, 102, 119, 142}
 
 func (i CompositeKind) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_CompositeKind_index)-1 {
+	if i >= CompositeKind(len(_CompositeKind_index)-1) {
 		return "CompositeKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _CompositeKind_name[_CompositeKind_index[idx]:_CompositeKind_index[idx+1]]
+	return _CompositeKind_name[_CompositeKind_index[i]:_CompositeKind_index[i+1]]
 }

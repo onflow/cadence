@@ -40,9 +40,8 @@ const _Operation_name = "OperationUnknownOperationOrOperationAndOperationEqualOp
 var _Operation_index = [...]uint16{0, 16, 27, 39, 53, 70, 83, 99, 117, 138, 151, 165, 177, 189, 201, 216, 236, 249, 262, 283, 301, 319, 338, 357, 382, 408}
 
 func (i Operation) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_Operation_index)-1 {
+	if i >= Operation(len(_Operation_index)-1) {
 		return "Operation(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _Operation_name[_Operation_index[idx]:_Operation_index[idx+1]]
+	return _Operation_name[_Operation_index[i]:_Operation_index[i+1]]
 }

@@ -22,9 +22,8 @@ const _PrimitiveAccess_name = "AccessNotSpecifiedAccessNoneAccessSelfAccessContr
 var _PrimitiveAccess_index = [...]uint8{0, 18, 28, 38, 52, 65, 74, 97}
 
 func (i PrimitiveAccess) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_PrimitiveAccess_index)-1 {
+	if i >= PrimitiveAccess(len(_PrimitiveAccess_index)-1) {
 		return "PrimitiveAccess(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _PrimitiveAccess_name[_PrimitiveAccess_index[idx]:_PrimitiveAccess_index[idx+1]]
+	return _PrimitiveAccess_name[_PrimitiveAccess_index[i]:_PrimitiveAccess_index[i+1]]
 }

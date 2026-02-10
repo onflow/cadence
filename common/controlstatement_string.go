@@ -18,9 +18,8 @@ const _ControlStatement_name = "ControlStatementUnknownControlStatementBreakCont
 var _ControlStatement_index = [...]uint8{0, 23, 44, 68}
 
 func (i ControlStatement) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_ControlStatement_index)-1 {
+	if i >= ControlStatement(len(_ControlStatement_index)-1) {
 		return "ControlStatement(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _ControlStatement_name[_ControlStatement_index[idx]:_ControlStatement_index[idx+1]]
+	return _ControlStatement_name[_ControlStatement_index[i]:_ControlStatement_index[i+1]]
 }

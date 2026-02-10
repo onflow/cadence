@@ -20,9 +20,8 @@ const _TransferOperation_name = "TransferOperationUnknownTransferOperationCopyTr
 var _TransferOperation_index = [...]uint8{0, 24, 45, 66, 93, 128}
 
 func (i TransferOperation) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_TransferOperation_index)-1 {
+	if i >= TransferOperation(len(_TransferOperation_index)-1) {
 		return "TransferOperation(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _TransferOperation_name[_TransferOperation_index[idx]:_TransferOperation_index[idx+1]]
+	return _TransferOperation_name[_TransferOperation_index[i]:_TransferOperation_index[i+1]]
 }

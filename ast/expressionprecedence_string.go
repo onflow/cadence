@@ -32,9 +32,8 @@ const _expressionPrecedence_name = "expressionPrecedenceUnknownexpressionPrecede
 var _expressionPrecedence_index = [...]uint16{0, 27, 54, 83, 113, 143, 176, 205, 235, 265, 297, 325, 359, 386, 417, 449, 475, 502}
 
 func (i expressionPrecedence) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_expressionPrecedence_index)-1 {
+	if i >= expressionPrecedence(len(_expressionPrecedence_index)-1) {
 		return "expressionPrecedence(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _expressionPrecedence_name[_expressionPrecedence_index[idx]:_expressionPrecedence_index[idx+1]]
+	return _expressionPrecedence_name[_expressionPrecedence_index[i]:_expressionPrecedence_index[i+1]]
 }

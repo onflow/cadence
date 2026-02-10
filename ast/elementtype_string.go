@@ -69,9 +69,8 @@ const _ElementType_name = "ElementTypeUnknownElementTypeProgramElementTypeBlockE
 var _ElementType_index = [...]uint16{0, 18, 36, 52, 76, 106, 143, 174, 205, 238, 278, 310, 337, 367, 395, 423, 456, 482, 507, 535, 557, 583, 608, 631, 655, 685, 715, 739, 769, 795, 820, 845, 870, 894, 922, 953, 979, 1010, 1041, 1072, 1099, 1125, 1157, 1183, 1210, 1239, 1266, 1294, 1321, 1349, 1379, 1405, 1430, 1457, 1492}
 
 func (i ElementType) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_ElementType_index)-1 {
+	if i >= ElementType(len(_ElementType_index)-1) {
 		return "ElementType(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _ElementType_name[_ElementType_index[idx]:_ElementType_index[idx+1]]
+	return _ElementType_name[_ElementType_index[i]:_ElementType_index[i+1]]
 }

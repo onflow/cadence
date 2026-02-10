@@ -18,9 +18,8 @@ const _VariableKind_name = "VariableKindNotSpecifiedVariableKindVariableVariable
 var _VariableKind_index = [...]uint8{0, 24, 44, 64}
 
 func (i VariableKind) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_VariableKind_index)-1 {
+	if i >= VariableKind(len(_VariableKind_index)-1) {
 		return "VariableKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _VariableKind_name[_VariableKind_index[idx]:_VariableKind_index[idx+1]]
+	return _VariableKind_name[_VariableKind_index[i]:_VariableKind_index[i+1]]
 }

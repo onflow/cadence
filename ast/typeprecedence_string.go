@@ -20,9 +20,8 @@ const _TypePrecedence_name = "TypePrecedenceUnknownTypePrecedenceOptionalTypePre
 var _TypePrecedence_index = [...]uint8{0, 21, 43, 66, 93, 114}
 
 func (i TypePrecedence) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_TypePrecedence_index)-1 {
+	if i >= TypePrecedence(len(_TypePrecedence_index)-1) {
 		return "TypePrecedence(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _TypePrecedence_name[_TypePrecedence_index[idx]:_TypePrecedence_index[idx+1]]
+	return _TypePrecedence_name[_TypePrecedence_index[i]:_TypePrecedence_index[i+1]]
 }
