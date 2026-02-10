@@ -38,6 +38,20 @@ type TypeAnnotation struct {
 	IsResource bool
 }
 
+func (t *TypeAnnotation) ElementType() ElementType {
+	return ElementTypeTypeAnnotation
+}
+
+func (t *TypeAnnotation) Walk(walkChild func(Element)) {
+	if t.Type != nil {
+		walkChild(t.Type)
+	}
+}
+
+var _ HasPosition = &TypeAnnotation{}
+var _ Pretty = &TypeAnnotation{}
+var _ Element = &TypeAnnotation{}
+
 func NewTypeAnnotation(
 	memoryGauge common.MemoryGauge,
 	isResource bool,
@@ -94,7 +108,7 @@ func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 // Type
 
 type Type interface {
-	HasPosition
+	Element
 	fmt.Stringer
 	isType()
 	Doc() prettier.Doc
@@ -230,6 +244,14 @@ func (t *NominalType) CheckEqual(other Type, checker TypeEqualityChecker) error 
 	return checker.CheckNominalTypeEquality(t, other)
 }
 
+func (*NominalType) ElementType() ElementType {
+	return ElementTypeNominalType
+}
+
+func (*NominalType) Walk(_ func(Element)) {
+	// NO-OP
+}
+
 func (*NominalType) isEntitlementMapElement() {}
 
 // OptionalType represents am optional variant of another type
@@ -298,6 +320,14 @@ func (t *OptionalType) CheckEqual(other Type, checker TypeEqualityChecker) error
 	return checker.CheckOptionalTypeEquality(t, other)
 }
 
+func (*OptionalType) ElementType() ElementType {
+	return ElementTypeOptionalType
+}
+
+func (t *OptionalType) Walk(walkChild func(Element)) {
+	walkChild(t.Type)
+}
+
 // VariableSizedType is a variable sized array type
 
 type VariableSizedType struct {
@@ -361,6 +391,14 @@ func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
 
 func (t *VariableSizedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckVariableSizedTypeEquality(t, other)
+}
+
+func (*VariableSizedType) ElementType() ElementType {
+	return ElementTypeVariableSizedType
+}
+
+func (t *VariableSizedType) Walk(walkChild func(Element)) {
+	walkChild(t.Type)
 }
 
 // ConstantSizedType is a constant-sized array type
@@ -432,6 +470,15 @@ func (t *ConstantSizedType) CheckEqual(other Type, checker TypeEqualityChecker) 
 	return checker.CheckConstantSizedTypeEquality(t, other)
 }
 
+func (*ConstantSizedType) ElementType() ElementType {
+	return ElementTypeConstantSizedType
+}
+
+func (t *ConstantSizedType) Walk(walkChild func(Element)) {
+	walkChild(t.Type)
+	walkChild(t.Size)
+}
+
 // DictionaryType
 
 type DictionaryType struct {
@@ -500,6 +547,15 @@ func (t *DictionaryType) MarshalJSON() ([]byte, error) {
 
 func (t *DictionaryType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckDictionaryTypeEquality(t, other)
+}
+
+func (*DictionaryType) ElementType() ElementType {
+	return ElementTypeDictionaryType
+}
+
+func (t *DictionaryType) Walk(walkChild func(Element)) {
+	walkChild(t.KeyType)
+	walkChild(t.ValueType)
 }
 
 // FunctionType
@@ -612,6 +668,19 @@ func (t *FunctionType) MarshalJSON() ([]byte, error) {
 
 func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckFunctionTypeEquality(t, other)
+}
+
+func (*FunctionType) ElementType() ElementType {
+	return ElementTypeFunctionType
+}
+
+func (t *FunctionType) Walk(walkChild func(Element)) {
+	for _, paramTypeAnnotation := range t.ParameterTypeAnnotations {
+		walkChild(paramTypeAnnotation)
+	}
+	if t.ReturnTypeAnnotation != nil {
+		walkChild(t.ReturnTypeAnnotation)
+	}
 }
 
 // ReferenceType
@@ -731,6 +800,17 @@ func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) erro
 	return checker.CheckReferenceTypeEquality(t, other)
 }
 
+func (*ReferenceType) ElementType() ElementType {
+	return ElementTypeReferenceType
+}
+
+func (t *ReferenceType) Walk(walkChild func(Element)) {
+	if t.Authorization != nil {
+		t.Authorization.Walk(walkChild)
+	}
+	walkChild(t.Type)
+}
+
 // IntersectionType
 
 type IntersectionType struct {
@@ -813,6 +893,16 @@ func (t *IntersectionType) MarshalJSON() ([]byte, error) {
 
 func (t *IntersectionType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckIntersectionTypeEquality(t, other)
+}
+
+func (*IntersectionType) ElementType() ElementType {
+	return ElementTypeIntersectionType
+}
+
+func (t *IntersectionType) Walk(walkChild func(Element)) {
+	for _, typ := range t.Types {
+		walkChild(typ)
+	}
 }
 
 // InstantiationType represents an instantiation of a generic (nominal) type
@@ -915,6 +1005,17 @@ func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 
 func (t *InstantiationType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckInstantiationTypeEquality(t, other)
+}
+
+func (*InstantiationType) ElementType() ElementType {
+	return ElementTypeInstantiationType
+}
+
+func (t *InstantiationType) Walk(walkChild func(Element)) {
+	walkChild(t.Type)
+	for _, typeArg := range t.TypeArguments {
+		walkChild(typeArg)
+	}
 }
 
 type TypeEqualityChecker interface {

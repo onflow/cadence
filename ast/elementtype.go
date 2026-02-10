@@ -87,4 +87,17 @@ const (
 	ElementTypePathExpression
 	ElementTypeAttachExpression
 	ElementTypeStringTemplateExpression
+
+	// Types
+
+	ElementTypeTypeAnnotation
+	ElementTypeNominalType
+	ElementTypeOptionalType
+	ElementTypeVariableSizedType
+	ElementTypeConstantSizedType
+	ElementTypeDictionaryType
+	ElementTypeFunctionType
+	ElementTypeReferenceType
+	ElementTypeIntersectionType
+	ElementTypeInstantiationType
 )
