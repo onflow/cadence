@@ -4040,7 +4040,7 @@ func TestCheckNestedInterfaceInheritance(t *testing.T) {
 
 }
 
-func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
+func TestCheckInterfaceInheritanceSiblingFunctionsSubtyping(t *testing.T) {
 
 	t.Parallel()
 
@@ -4339,4 +4339,430 @@ func TestCheckInterfaceInheritanceSiblingSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+}
+
+func TestCheckInterfaceInheritanceSiblingFunctionFieldSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("subtype method is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			fun escalate(_ inbound: AnyStruct): AnyStruct
+		}
+
+		struct interface I2 {
+			let escalate: fun(AnyStruct): Int
+		}
+
+		// Note the order: Sibling with a subtype must appear second.
+		struct S: I1, I2 {
+			fun escalate(_ inbound: AnyStruct): Int {
+				return 1
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("subtype method is first sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			fun escalate(_ inbound: AnyStruct): AnyStruct
+		}
+
+		struct interface I2 {
+			let escalate: fun(AnyStruct): Int
+		}
+
+		// Note the order: Sibling with a subtype must appear first.
+		struct S: I2, I1 {
+			fun escalate(_ inbound: AnyStruct): Int {
+				return 1
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		assert.IsType(t, &sema.ConformanceError{}, errs[1])
+	})
+
+	t.Run("subtype default impl is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: AnyStruct): AnyStruct {
+                    return inbound
+                }
+            }
+
+            struct interface I2 {
+                let escalate: fun(AnyStruct): Int
+            }
+
+            // Note the order: Sibling with a subtype must appear second.
+            struct S: I1, I2 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("subtype default impl is first sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: AnyStruct): AnyStruct {
+                    return inbound
+                }
+            }
+
+            struct interface I2 {
+                let escalate: fun(AnyStruct): Int
+            }
+
+            // Note the order: Sibling with a subtype must appear first.
+            struct S: I2, I1 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("supertype default impl is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: AnyStruct): Int {
+                    return inbound as! Int
+                }
+            }
+
+            struct interface I2 {
+                let escalate: fun(AnyStruct): AnyStruct
+            }
+
+            // Note the order: Sibling with a supertype must appear second.
+            struct S: I1, I2 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("supertype default impl is first sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun escalate(_ inbound: AnyStruct): Int {
+                    return inbound as! Int
+                }
+            }
+
+            struct interface I2 {
+                let escalate: fun(AnyStruct): AnyStruct
+            }
+
+            // Note the order: Sibling with a supertype must appear first.
+            struct S: I2, I1 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("view function is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			fun foo()
+		}
+
+		struct interface I2 {
+			let foo: view fun()
+		}
+
+		// Note the order: Type with the view function must appear second.
+		struct S: I1, I2 {
+			view fun foo() {
+				return
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("view function is first sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			fun foo()
+		}
+
+		struct interface I2 {
+			let foo: view fun()
+		}
+
+		// Note the order: Type with the view function must appear first.
+		struct S: I2, I1 {
+			view fun foo() {
+				return
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		assert.IsType(t, &sema.ConformanceError{}, errs[1])
+	})
+
+	t.Run("impure default impl is second sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun foo() {
+                    return
+                }
+            }
+
+            struct interface I2 {
+                let foo: view fun()
+            }
+
+            // Note the order: Type with the impure function must appear second.
+            struct S: I2, I1 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("impure default impl is first sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                fun foo() {
+                    return
+                }
+            }
+
+            struct interface I2 {
+                let foo: view fun()
+            }
+
+            // Note the order: Type with the impure function must appear first.
+            struct S: I1, I2 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("view default impl is second sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                view fun foo() {
+                    return
+                }
+            }
+
+            struct interface I2 {
+                let foo: fun()
+            }
+
+            // Note the order: Type with the view function must appear second.
+            struct S: I2, I1 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("view default impl is first sibling", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            struct interface I1 {
+                view fun foo() {
+                    return
+                }
+            }
+
+            struct interface I2 {
+                let foo: fun()
+            }
+
+            // Note the order: Type with the view function must appear first.
+            struct S: I1, I2 {}
+        `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+}
+
+func TestCheckInterfaceInheritanceSiblingFieldFunctionSubtyping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("subtype method is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			let escalate: fun(AnyStruct): AnyStruct
+		}
+
+		struct interface I2 {
+			fun escalate(_ inbound: AnyStruct): Int
+		}
+
+		// Note the order: Sibling with a subtype must appear second.
+		struct S: I1, I2 {
+			fun escalate(_ inbound: AnyStruct): Int {
+				return 1
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		assert.IsType(t, &sema.ConformanceError{}, errs[1])
+	})
+
+	t.Run("subtype method is first sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			let escalate: fun(AnyStruct): AnyStruct
+		}
+
+		struct interface I2 {
+			fun escalate(_ inbound: AnyStruct): Int
+		}
+
+		// Note the order: Sibling with a subtype must appear first.
+		struct S: I2, I1 {
+			fun escalate(_ inbound: AnyStruct): Int {
+				return 1
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("view function is second sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			let foo: fun()
+		}
+
+		struct interface I2 {
+			view fun foo()
+		}
+
+		// Note the order: Type with the view function must appear second.
+		struct S: I1, I2 {
+			view fun foo() {
+				return
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		assert.IsType(t, &sema.ConformanceError{}, errs[1])
+	})
+
+	t.Run("view function is first sibling", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+		struct interface I1 {
+			let foo: fun()
+		}
+
+		struct interface I2 {
+			view fun foo()
+		}
+
+		// Note the order: Type with the view function must appear first.
+		struct S: I2, I1 {
+			view fun foo() {
+				return
+			}
+		}
+	`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
 }
