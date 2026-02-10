@@ -164,7 +164,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	}
 
 	if isOptionalChainingResult {
-		_ = checker.checkPotentiallyUnevaluated(func() Type {
+		_, _ = checker.checkPotentiallyUnevaluated(func() Type {
 			checkInvocation()
 			// ignored
 			return nil

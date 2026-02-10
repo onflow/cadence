@@ -1945,6 +1945,8 @@ func (vm *VM) run() {
 			opSetAttachmentBase(vm)
 		case opcode.InstructionGetFieldLocal:
 			opGetFieldLocal(vm, ins)
+		case opcode.InstructionUnreachable:
+			panic(errors.NewUnreachableError())
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
