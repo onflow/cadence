@@ -53,7 +53,7 @@ func TestMinOfFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = minOf(5, 10)
+            let result: Int = minOf(5, 10)
         `)
 
 		require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestMinOfFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = minOf<Int8>(5, 10)
+            let result: Int8 = minOf<Int8>(5, 10)
         `)
 
 		require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestMinOfFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = minOf<UFix64>(5.5, 10.5)
+            let result: UFix64 = minOf<UFix64>(5.5, 10.5)
         `)
 
 		require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestMinOfFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = minOf("a", "b")
+            let result: String = minOf("a", "b")
         `)
 
 		require.NoError(t, err)
@@ -137,7 +137,7 @@ func TestMaxOfFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = maxOf(5, 10)
+            let result: Int = maxOf(5, 10)
         `)
 
 		require.NoError(t, err)
@@ -147,7 +147,7 @@ func TestMaxOfFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = maxOf<Int16>(5, 10)
+            let result: Int16 = maxOf<Int16>(5, 10)
         `)
 
 		require.NoError(t, err)
@@ -157,7 +157,7 @@ func TestMaxOfFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = maxOf<Fix64>(5.5, 10.5)
+            let result: Fix64 = maxOf<Fix64>(5.5, 10.5)
         `)
 
 		require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestMaxOfFunction(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-            let result = maxOf("a", "b")
+            let result: String = maxOf("a", "b")
         `)
 
 		require.NoError(t, err)
