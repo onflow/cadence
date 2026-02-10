@@ -2017,7 +2017,7 @@ func NewArrayIterator(gauge common.MemoryGauge, v *ArrayValue) ValueIterator {
 		},
 	)
 
-	valueID := v.array.ValueID()
+	valueID := v.ValueID()
 
 	arrayIterator, err := v.array.Iterator()
 	if err != nil {

@@ -69,6 +69,15 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	var indexType Type
 
 	if statement.Index != nil {
+		// Check if the value type is a dictionary
+		if _, isDictionary := valueType.(*DictionaryType); isDictionary {
+			checker.report(
+				&InvalidDictionaryIndexBindingError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.Index),
+				},
+			)
+		}
+
 		index := statement.Index.Identifier
 		indexType = IntType
 		indexVariable, err := checker.valueActivations.declare(variableDeclaration{
@@ -114,14 +123,18 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 		return InvalidType
 	}
 
-	// Resources cannot be looped.
+	// Resources cannot be looped, except for dictionaries with resource values.
+	// Dictionary iteration only iterates over keys, which cannot be resources.
 	if valueType.IsResourceType() {
-		checker.report(
-			&UnsupportedResourceForLoopError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
-			},
-		)
-		return InvalidType
+		_, isDictionary := valueType.(*DictionaryType)
+		if !isDictionary {
+			checker.report(
+				&UnsupportedResourceForLoopError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+				},
+			)
+			return InvalidType
+		}
 	}
 
 	// If it's a reference, check whether the referenced type is iterable.
@@ -160,6 +173,8 @@ func (checker *Checker) iterableElementType(valueType Type, hasPosition ast.HasP
 		return valueType.ElementType(false)
 	case *InclusiveRangeType:
 		return valueType.MemberType
+	case *DictionaryType:
+		return valueType.KeyType
 	}
 
 	if valueType == StringType {
@@ -168,7 +183,7 @@ func (checker *Checker) iterableElementType(valueType Type, hasPosition ast.HasP
 
 	checker.report(
 		&TypeMismatchWithDescriptionError{
-			ExpectedTypeDescription: "array",
+			ExpectedTypeDescription: "array, dictionary, string, or inclusive range",
 			ActualType:              valueType,
 			Range:                   ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
 		},
