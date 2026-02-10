@@ -833,6 +833,32 @@ func TestGuardStatement_String(t *testing.T) {
 	})
 }
 
+func TestGuardStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	test := &BoolExpression{Value: true}
+	elseBlock := &Block{Statements: []Statement{}}
+
+	stmt := &GuardStatement{
+		Test: test,
+		Else: elseBlock,
+	}
+
+	var visited []Element
+	stmt.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			test,
+			elseBlock,
+		},
+		visited,
+	)
+}
+
 func TestWhileStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -880,32 +906,6 @@ func TestWhileStatement_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
-	)
-}
-
-func TestGuardStatement_Walk(t *testing.T) {
-
-	t.Parallel()
-
-	test := &BoolExpression{Value: true}
-	elseBlock := &Block{Statements: []Statement{}}
-
-	stmt := &GuardStatement{
-		Test: test,
-		Else: elseBlock,
-	}
-
-	var visited []Element
-	stmt.Walk(func(element Element) {
-		visited = append(visited, element)
-	})
-
-	assert.Equal(t,
-		[]Element{
-			test,
-			elseBlock,
-		},
-		visited,
 	)
 }
 
