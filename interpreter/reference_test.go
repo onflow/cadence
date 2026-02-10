@@ -3643,3 +3643,343 @@ func TestInterpretInterfaceReferenceToSelfVariable(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unauth element type, auth element value, index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[&S]
+
+                // arrayRef[0] is of type '&S'.
+                // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                let authRef = arrayRef[0] as! auth(Mutate) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("unauth element type, auth element value, in loop", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[&S]
+
+                for unauthSRef in arrayRef {
+                    // unauthSRef is of type '&S'.
+                    // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                    let authRef = unauthSRef as! auth(Mutate) &S
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("unauth element type, auth element value, higher order function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[&S]
+
+                arrayRef.map(
+                    // element type of 'arrayRef' is '&S'.
+                    // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                    fun(unauthSRef: &S): auth(Mutate) &S {
+                        return unauthSRef as! auth(Mutate) &S
+                    }
+                )
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("unauth element type, auth element value, attachment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                access(Mutate) fun foo() {}
+            }
+
+            attachment A for S {
+                access(Mutate) fun bar() {}
+            }
+
+            fun test() {
+                let s = attach A() to S()
+
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[&S]
+
+                let attachmentRef = arrayRef[0][A] as! auth(Mutate) &A?
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("auth element type, auth element value, index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[auth(Mutate) &S]
+
+                // arrayRef[0] is of type 'auth(Mutate) &S'.
+                // Should return the reference as-is
+                let authRef: auth(Mutate) &S = arrayRef[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("auth element type, auth element value, in loop", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[auth(Mutate) &S]
+
+                for unauthSRef in arrayRef {
+                    // arrayRef[0] is of type 'auth(Mutate) &S'.
+                    // Should return the reference as-is
+                    let authRef: auth(Mutate) &S = unauthSRef
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("auth element type, auth element value, higher order function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[auth(Mutate) &S]
+
+                arrayRef.map(
+                    // element type of 'arrayRef' is 'auth(Mutate) &S'.
+                    // Should pass the reference as-is.
+                    fun(authRef: auth(Mutate) &S): auth(Mutate) &S {
+                        return authRef
+                    }
+                )
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("auth element type, auth element value, attachment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                access(Mutate) fun foo() {}
+            }
+
+            attachment A for S {
+                access(Mutate) fun bar() {}
+            }
+
+            fun test() {
+                let s = attach A() to S()
+
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[auth(Mutate) &S]
+
+                let attachmentRef = arrayRef[0][A] as! auth(Mutate) &A?
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}
+
+func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unauth member type, auth member value, member expression", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct Outer {
+                let inner: &S
+                init() {
+                    var s = S()
+                    self.inner = &s as auth(Mutate) &S
+                }
+            }
+
+            struct S {}
+
+            fun test() {
+                var outer = Outer()
+                let outerRef = &outer as &Outer
+
+                // outerRef.inner is of type '&S'.
+                // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                let authRef = outerRef.inner as! auth(Mutate) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("unauth member type, auth member value, attachment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct Outer {
+                let inner: &S
+                init() {
+                    let s = attach A() to S()
+                    self.inner = &s as auth(Mutate) &S
+                }
+            }
+
+            struct S {
+                access(Mutate) fun foo() {}
+            }
+
+            attachment A for S {
+                access(Mutate) fun bar() {}
+            }
+
+            fun test() {
+                var outer = Outer()
+                let outerRef = &outer as &Outer
+
+                // outerRef.inner is of type '&S'.
+                // Attachment should NOT get any entitlements.
+                let attachmentRef = outerRef.inner[A] as! auth(Mutate) &A?
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("auth member type, auth member value, member expression", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct Outer {
+                let inner: auth(Mutate) &S
+                init() {
+                    var s = S()
+                    self.inner = &s as auth(Mutate) &S
+                }
+            }
+
+            struct S {}
+
+            fun test() {
+                var outer = Outer()
+                let outerRef = &outer as &Outer
+
+                // outerRef.inner is of type 'auth(Mutate) &S'.
+                // Should return the reference as-is
+                let authRef: auth(Mutate) &S = outerRef.inner
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("auth member type, auth member value, attachment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct Outer {
+                let inner: auth(Mutate) &S
+                init() {
+                    let s = attach A() to S()
+                    self.inner = &s as auth(Mutate) &S
+                }
+            }
+
+            struct S {
+                access(Mutate) fun foo() {}
+            }
+
+            attachment A for S {
+                access(Mutate) fun bar() {}
+            }
+
+            fun test() {
+                var outer = Outer()
+                let outerRef = &outer as &Outer
+
+                // outerRef.inner is of type 'auth(Mutate) &S'.
+                // Attachment should get the same entitlements.
+                let attachmentRef: auth(Mutate) &A? = outerRef.inner[A]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}
