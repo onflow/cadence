@@ -77,12 +77,13 @@ func (ins instruction) hasControlEffects() bool {
 }
 
 func main() {
-	if len(os.Args) != 3 {
-		panic("usage: gen instructions.yml instructions.go")
+	if len(os.Args) != 4 {
+		panic("usage: gen instructions.yml instructions.go pretty_instructions.go")
 	}
 
 	yamlPath := os.Args[1]
 	goPath := os.Args[2]
+	prettyGoPath := os.Args[3]
 
 	yamlContents, err := os.ReadFile(yamlPath)
 	if err != nil {
@@ -112,14 +113,6 @@ func main() {
 		)
 	}
 
-	// Generate pretty instruction types
-	for _, instruction := range instructions {
-		decls = append(
-			decls,
-			prettyInstructionDecls(instruction)...,
-		)
-	}
-
 	decls = append(decls, decodeInstructionFuncDecl(instructions))
 
 	writeGoFile(&buffer, decls, opcodePackagePath)
@@ -146,6 +139,30 @@ func main() {
 	writeGoFile(&buffer, []dst.Decl{generateIsControlFlowMethod(instructions)}, opcodePackagePath)
 
 	err = os.WriteFile(generatedOpcodePath, buffer.Bytes(), 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	// Generate pretty instruction types
+
+	decls = decls[:0]
+
+	for _, instruction := range instructions {
+		decls = append(
+			decls,
+			prettyInstructionDecls(instruction)...,
+		)
+	}
+
+	buffer.Reset()
+	_, err = fmt.Fprintf(&buffer, headerFormat, yamlPath)
+	if err != nil {
+		panic(err)
+	}
+
+	writeGoFile(&buffer, decls, opcodePackagePath)
+
+	err = os.WriteFile(prettyGoPath, buffer.Bytes(), 0644)
 	if err != nil {
 		panic(err)
 	}

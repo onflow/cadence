@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-//go:generate go run ./gen/main.go instructions.yml instructions.go
+//go:generate go run ./gen/main.go instructions.yml instructions.go pretty_instructions.go
 
 package opcode
 
