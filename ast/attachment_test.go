@@ -248,6 +248,44 @@ attachment  for  {}`,
 	})
 }
 
+func TestAttachmentDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	field := &FieldDeclaration{
+		Identifier: Identifier{Identifier: "field"},
+		TypeAnnotation: &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Int"},
+			},
+		},
+	}
+
+	function := &FunctionDeclaration{
+		Identifier: Identifier{Identifier: "function"},
+	}
+
+	decl := &AttachmentDeclaration{
+		Members: NewUnmeteredMembers([]Declaration{
+			field,
+			function,
+		}),
+	}
+
+	var visited []Element
+	decl.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			field,
+			function,
+		},
+		visited,
+	)
+}
+
 func TestAttachExpressionMarshallJSON(t *testing.T) {
 
 	t.Parallel()
@@ -424,6 +462,40 @@ func TestAttachExpression_String(t *testing.T) {
 	})
 }
 
+func TestAttachExpression_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	base := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "resource"},
+	}
+
+	attachment := &InvocationExpression{
+		InvokedExpression: &IdentifierExpression{
+			Identifier: Identifier{Identifier: "Attachment"},
+		},
+	}
+
+	expr := &AttachExpression{
+		Base:       base,
+		Attachment: attachment,
+	}
+
+	var visited []Element
+	expr.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			base,
+			attachment,
+		},
+		visited,
+	)
+
+}
+
 func TestRemoveStatement_MarshallJSON(t *testing.T) {
 
 	t.Parallel()
@@ -586,4 +658,35 @@ func TestRemoveStatement_String(t *testing.T) {
 			decl.String(),
 		)
 	})
+}
+
+func TestRemoveStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	attachment := &NominalType{
+		Identifier: Identifier{Identifier: "Attachment"},
+	}
+
+	value := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "resource"},
+	}
+
+	stmt := &RemoveStatement{
+		Attachment: attachment,
+		Value:      value,
+	}
+
+	var visited []Element
+	stmt.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			attachment,
+			value,
+		},
+		visited,
+	)
 }

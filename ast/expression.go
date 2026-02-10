@@ -828,6 +828,9 @@ func (*InvocationExpression) isIfStatementTest() {}
 
 func (e *InvocationExpression) Walk(walkChild func(Element)) {
 	walkChild(e.InvokedExpression)
+	for _, typeArgument := range e.TypeArguments {
+		walkChild(typeArgument)
+	}
 	for _, argument := range e.Arguments {
 		walkChild(argument.Expression)
 	}
@@ -1533,8 +1536,12 @@ func (*FunctionExpression) isExpression() {}
 func (*FunctionExpression) isIfStatementTest() {}
 
 func (e *FunctionExpression) Walk(walkChild func(Element)) {
-	// TODO: walk parameters
-	// TODO: walk return type
+	if e.ParameterList != nil {
+		e.ParameterList.Walk(walkChild)
+	}
+	if e.ReturnTypeAnnotation != nil {
+		walkChild(e.ReturnTypeAnnotation)
+	}
 	walkChild(e.FunctionBlock)
 }
 
@@ -1733,7 +1740,9 @@ func (*CastingExpression) isIfStatementTest() {}
 
 func (e *CastingExpression) Walk(walkChild func(Element)) {
 	walkChild(e.Expression)
-	// TODO: also walk type
+	if e.TypeAnnotation != nil {
+		walkChild(e.TypeAnnotation)
+	}
 }
 
 func (e *CastingExpression) String() string {
@@ -1966,7 +1975,6 @@ func (*ReferenceExpression) isIfStatementTest() {}
 
 func (e *ReferenceExpression) Walk(walkChild func(Element)) {
 	walkChild(e.Expression)
-	// TODO: walk type
 }
 
 func (e *ReferenceExpression) String() string {

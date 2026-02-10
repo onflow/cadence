@@ -21,6 +21,7 @@ package ast
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/turbolent/prettier"
 )
@@ -162,4 +163,51 @@ func TestTypeParameterList_String(t *testing.T) {
 			params.String(),
 		)
 	})
+}
+
+func TestTypeParameterList_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	typeBound1 := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Bound1"},
+		},
+	}
+
+	typeBound2 := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Bound2"},
+		},
+	}
+
+	params := &TypeParameterList{
+		TypeParameters: []*TypeParameter{
+			{
+				Identifier: Identifier{Identifier: "T"},
+				TypeBound:  typeBound1,
+			},
+			{
+				Identifier: Identifier{Identifier: "U"},
+				TypeBound:  typeBound2,
+			},
+			{
+				Identifier: Identifier{Identifier: "V"},
+				// No type bound
+			},
+		},
+	}
+
+	var visited []Element
+	params.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			typeBound1,
+			typeBound2,
+		},
+		visited,
+	)
 }
