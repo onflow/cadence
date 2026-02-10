@@ -1313,47 +1313,77 @@ func TestCompileGuard(t *testing.T) {
 	require.Len(t, functions, 1)
 
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// var y = 0
-			opcode.InstructionStatement{},
-			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetLocal{Local: yIndex},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(0),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionSetLocal{Local: yIndex},
 
 			// guard x
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionJumpIfFalse{Target: 8},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: xIndex},
+			opcode.PrettyInstructionJumpIfFalse{Target: 8},
 
-			opcode.InstructionJump{Target: 17},
+			opcode.PrettyInstructionJump{Target: 17},
 
 			// else { y = 2; return y }
-			opcode.InstructionStatement{},
-			opcode.InstructionGetConstant{Constant: 1},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetLocal{Local: yIndex},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionSetLocal{Local: yIndex},
 
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: yIndex},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: yIndex},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
 
 			// Defensive unreachable
-			opcode.InstructionUnreachable{},
+			opcode.PrettyInstructionUnreachable{},
 
 			// y = 1
-			opcode.InstructionStatement{},
-			opcode.InstructionGetConstant{Constant: 2},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetLocal{Local: yIndex},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionSetLocal{Local: yIndex},
 
 			// return y
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: yIndex},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: yIndex},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		functions[0].Code,
+		prettyInstructions(functions[0].Code, program),
 	)
 
 	assert.Equal(t,
