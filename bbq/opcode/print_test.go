@@ -29,6 +29,38 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
+type testProgram struct {
+	constants     []constant.DecodedConstant
+	types         []interpreter.StaticType
+	functionNames []string
+}
+
+var _ ProgramForInstructions = &testProgram{}
+
+func (p *testProgram) GetConstants() []constant.DecodedConstant {
+	return p.constants
+}
+
+func (p *testProgram) GetTypes() []interpreter.StaticType {
+	return p.types
+}
+
+func (p *testProgram) GetFunctionName(index uint16) string {
+	return p.functionNames[index]
+}
+
+func programForTest(
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+) ProgramForInstructions {
+	return &testProgram{
+		constants:     constants,
+		types:         types,
+		functionNames: functionNames,
+	}
+}
+
 func TestPrintRecursionFib(t *testing.T) {
 	t.Parallel()
 
@@ -86,7 +118,9 @@ func TestPrintRecursionFib(t *testing.T) {
 	var builder strings.Builder
 	const resolve = false
 	const colorize = false
-	err := PrintBytecode(&builder, code, resolve, nil, nil, nil, colorize)
+
+	program := programForTest(nil, nil, nil)
+	err := PrintBytecode(&builder, code, resolve, program, colorize)
 	require.NoError(t, err)
 
 	assert.Equal(t, expected, builder.String())
@@ -124,10 +158,8 @@ func TestPrintResolved(t *testing.T) {
 	var builder strings.Builder
 	const resolve = true
 	const colorize = false
-	err := PrintInstructions(
-		&builder,
-		instructions,
-		resolve,
+
+	program := programForTest(
 		[]constant.DecodedConstant{
 			{
 				Data: interpreter.NewUnmeteredStringValue("foo"),
@@ -149,6 +181,12 @@ func TestPrintResolved(t *testing.T) {
 			"bar",
 			"baz",
 		},
+	)
+	err := PrintInstructions(
+		&builder,
+		instructions,
+		resolve,
+		program,
 		colorize,
 	)
 	require.NoError(t, err)
@@ -373,7 +411,9 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 	var builder strings.Builder
 	const resolve = false
 	const colorize = false
-	err := PrintBytecodeWithFlow(&builder, code, resolve, nil, nil, nil, colorize)
+
+	program := programForTest(nil, nil, nil)
+	err := PrintBytecodeWithFlow(&builder, code, resolve, program, colorize)
 	require.NoError(t, err)
 
 	assert.Equal(t, expected, builder.String())

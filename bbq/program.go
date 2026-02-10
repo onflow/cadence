@@ -33,4 +33,36 @@ type Program[E, T any] struct {
 	Globals   []Global
 }
 
+var _ opcode.ProgramForInstructions = (*InstructionProgram)(nil)
+
 type InstructionProgram = Program[opcode.Instruction, StaticType]
+
+func (p *Program[E, T]) GetFunctionName(index uint16) string {
+	if int(index) >= len(p.Functions) {
+		panic("function index out of bounds")
+	}
+	function := p.Functions[index]
+	if function.QualifiedName != "" {
+		return function.QualifiedName
+	}
+	if function.Name != "" {
+		return function.Name
+	}
+	return "<anonymous>"
+}
+
+func (p *Program[E, T]) GetFunctionNames() []string {
+	names := make([]string, len(p.Functions))
+	for i := range p.Functions {
+		names[i] = p.GetFunctionName(uint16(i))
+	}
+	return names
+}
+
+func (p *Program[E, T]) GetConstants() []constant.DecodedConstant {
+	return p.Constants
+}
+
+func (p *Program[E, T]) GetTypes() []T {
+	return p.Types
+}
