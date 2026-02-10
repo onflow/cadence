@@ -35,6 +35,8 @@ type testProgram struct {
 	functionNames []string
 }
 
+var _ ProgramForInstructions = &testProgram{}
+
 func (p *testProgram) GetConstants() []constant.DecodedConstant {
 	return p.constants
 }
