@@ -1534,7 +1534,10 @@ var _ HasLocationRange = &InvalidResourceTransferError{}
 func (*InvalidResourceTransferError) IsInternalError() {}
 
 func (*InvalidResourceTransferError) Error() string {
-	return "invalid transfer of a resource value"
+	return fmt.Sprintf(
+		"%s invalid transfer of a resource value",
+		errors.InternalErrorMessagePrefix,
+	)
 }
 
 func (e *InvalidResourceTransferError) SetLocationRange(locationRange LocationRange) {
