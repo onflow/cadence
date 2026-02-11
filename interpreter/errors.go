@@ -1585,7 +1585,8 @@ func (*InvalidReferenceConversionError) IsInternalError() {}
 
 func (e *InvalidReferenceConversionError) Error() string {
 	return fmt.Sprintf(
-		"invalid reference conversion error: expect entitlements `%s`, found `%s`",
+		"%s invalid reference conversion error: expect entitlements `%s`, found `%s`",
+		errors.InternalErrorMessagePrefix,
 		e.Expected,
 		e.Actual,
 	)
