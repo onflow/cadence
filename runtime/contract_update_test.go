@@ -915,6 +915,6 @@ func TestRuntimeContractUpdateCapabilityReferenceAuthorizationChange(t *testing.
 
 	require.ErrorContains(t,
 		err,
-		"incompatible type annotations. expected `Capability<&[Int]>`, found `Capability<auth(Mutate) &[Int]>",
+		"incompatible authorizations. expected no authorization, found `Mutate`",
 	)
 }

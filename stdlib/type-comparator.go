@@ -165,11 +165,87 @@ func (c *TypeComparator) CheckReferenceTypeEquality(expected *ast.ReferenceType,
 		return newTypeMismatchError(expected, found)
 	}
 
-	if expected.Authorization != refType.Authorization {
-		return newTypeMismatchError(expected, found)
+	// TODO: ideally all authorizations would have position information.
+	//   For now, just use the position of the found type
+	switch {
+	case expected.Authorization == nil && refType.Authorization == nil:
+		// Both types have no authorization, so they are compatible.
+		break
+	case expected.Authorization != nil && refType.Authorization != nil:
+		// Both types have an authorization, so check whether they are equal.
+		err := expected.Authorization.CheckEqual(refType.Authorization, c, found)
+		if err != nil {
+			return err
+		}
+	default:
+		// One type has an authorization, but the other does not, so they are not compatible.
+		return newAuthorizationMismatchError(expected.Authorization, refType.Authorization, found)
 	}
 
 	return expected.Type.CheckEqual(refType.Type, c)
+}
+
+func (c *TypeComparator) CheckConjunctiveEntitlementSetEquality(
+	expected *ast.ConjunctiveEntitlementSet,
+	found ast.Authorization,
+	foundPos ast.HasPosition,
+) error {
+	foundConjunctiveEntitlementSet, ok := found.(*ast.ConjunctiveEntitlementSet)
+	if !ok {
+		return newAuthorizationMismatchError(expected, found, foundPos)
+	}
+
+	if len(expected.Elements) != len(foundConjunctiveEntitlementSet.Elements) {
+		return newAuthorizationMismatchError(expected, found, foundPos)
+	}
+
+	for index, expectedEntitlement := range expected.Elements {
+		foundEntitlement := foundConjunctiveEntitlementSet.Elements[index]
+		err := expectedEntitlement.CheckEqual(foundEntitlement, c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *TypeComparator) CheckDisjunctiveEntitlementSetEquality(
+	expected *ast.DisjunctiveEntitlementSet,
+	found ast.Authorization,
+	foundPos ast.HasPosition,
+) error {
+	foundDisjunctiveEntitlementSet, ok := found.(*ast.DisjunctiveEntitlementSet)
+	if !ok {
+		return newAuthorizationMismatchError(expected, found, foundPos)
+	}
+
+	if len(expected.Elements) != len(foundDisjunctiveEntitlementSet.Elements) {
+		return newAuthorizationMismatchError(expected, found, foundPos)
+	}
+
+	for index, expectedEntitlement := range expected.Elements {
+		foundEntitlement := foundDisjunctiveEntitlementSet.Elements[index]
+		err := expectedEntitlement.CheckEqual(foundEntitlement, c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *TypeComparator) CheckMappedAccessEquality(
+	expected *ast.MappedAccess,
+	found ast.Authorization,
+	foundPos ast.HasPosition,
+) error {
+	foundMappedAccess, ok := found.(*ast.MappedAccess)
+	if !ok {
+		return newAuthorizationMismatchError(expected, found, foundPos)
+	}
+
+	return expected.EntitlementMap.CheckEqual(foundMappedAccess.EntitlementMap, c)
 }
 
 func (c *TypeComparator) checkNameEquality(expectedType *ast.NominalType, foundType *ast.NominalType) bool {
@@ -246,5 +322,17 @@ func newTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismat
 		ExpectedType: expectedType,
 		FoundType:    foundType,
 		Range:        ast.NewUnmeteredRangeFromPositioned(foundType),
+	}
+}
+
+func newAuthorizationMismatchError(
+	expectedAuthorization ast.Authorization,
+	foundAuthorization ast.Authorization,
+	foundRange ast.HasPosition,
+) *AuthorizationMismatchError {
+	return &AuthorizationMismatchError{
+		ExpectedAuthorization: expectedAuthorization,
+		FoundAuthorization:    foundAuthorization,
+		Range:                 ast.NewUnmeteredRangeFromPositioned(foundRange),
 	}
 }
