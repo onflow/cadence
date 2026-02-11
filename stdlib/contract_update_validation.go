@@ -822,7 +822,7 @@ var _ errors.UserError = &TypeMismatchError{}
 func (*TypeMismatchError) IsUserError() {}
 
 func (e *TypeMismatchError) Error() string {
-	return fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`",
+	return fmt.Sprintf("incompatible types. expected `%s`, found `%s`",
 		e.ExpectedType,
 		e.FoundType,
 	)

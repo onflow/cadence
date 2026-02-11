@@ -1671,7 +1671,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			" --> 0000000000000042.Test:3:35\n" +
 			"  |\n" +
 			"3 |                 access(all) var a: Int\n" +
-			"  |                                    ^^^ incompatible type annotations. expected `String`, found `Int`\n" +
+			"  |                                    ^^^ incompatible types. expected `String`, found `Int`\n" +
 			"\n" +
 			"error: found new field `b` in `Test`\n" +
 			" --> 0000000000000042.Test:4:32\n" +
@@ -2525,7 +2525,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 	})
@@ -2589,7 +2589,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 	})
@@ -2653,7 +2653,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `[Int; 5]`, found `[Int; 10]`",
+				"incompatible types. expected `[Int; 5]`, found `[Int; 10]`",
 			)
 		})
 
@@ -2686,7 +2686,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 	})
@@ -2750,7 +2750,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `String`, found `Int`",
+				"incompatible types. expected `String`, found `Int`",
 			)
 		})
 
@@ -2783,7 +2783,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 	})
@@ -2899,7 +2899,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `{InterfaceA}`, found `{InterfaceB}`",
+				"incompatible types. expected `InterfaceA`, found `InterfaceB`",
 			)
 		})
 
@@ -2962,7 +2962,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `{InterfaceA}`, found `{InterfaceA, InterfaceB}`",
+				"incompatible types. expected `{InterfaceA}`, found `{InterfaceA, InterfaceB}`",
 			)
 		})
 	})
@@ -3026,7 +3026,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Capability<&Int>`, found `Capability<&String>`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 
@@ -3126,7 +3126,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorContains(t,
-				err, "incompatible type annotations. expected `fun (Int): Void`, found `fun (String): Void`",
+				err, "incompatible types. expected `Int`, found `String`",
 			)
 		})
 
@@ -3163,7 +3163,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `fun (Int): Void`, found `fun (Int, String): Void`",
+				"incompatible types. expected `fun (Int): Void`, found `fun (Int, String): Void`",
 			)
 		})
 
@@ -3200,7 +3200,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 
@@ -3237,7 +3237,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `fun (Int): Int`, found `view fun (Int): Int`",
+				"incompatible types. expected `fun (Int): Int`, found `view fun (Int): Int`",
 			)
 		})
 	})

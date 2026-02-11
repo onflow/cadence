@@ -109,7 +109,7 @@ func (c *TypeComparator) CheckIntersectionTypeEquality(expected *ast.Intersectio
 		foundType := foundIntersectionType.Types[index]
 		err := expectedIntersectedType.CheckEqual(foundType, c)
 		if err != nil {
-			return newTypeMismatchError(expected, found)
+			return err
 		}
 	}
 
@@ -123,7 +123,11 @@ func (c *TypeComparator) CheckInstantiationTypeEquality(expected *ast.Instantiat
 	}
 
 	err := expected.Type.CheckEqual(foundInstType.Type, c)
-	if err != nil || len(expected.TypeArguments) != len(foundInstType.TypeArguments) {
+	if err != nil {
+		return err
+	}
+
+	if len(expected.TypeArguments) != len(foundInstType.TypeArguments) {
 		return newTypeMismatchError(expected, found)
 	}
 
@@ -131,7 +135,7 @@ func (c *TypeComparator) CheckInstantiationTypeEquality(expected *ast.Instantiat
 		otherTypeArgs := foundInstType.TypeArguments[index]
 		err := typeArgs.Type.CheckEqual(otherTypeArgs.Type, c)
 		if err != nil {
-			return newTypeMismatchError(expected, found)
+			return err
 		}
 	}
 
@@ -152,7 +156,7 @@ func (c *TypeComparator) CheckFunctionTypeEquality(expected *ast.FunctionType, f
 		foundParamType := foundFuncType.ParameterTypeAnnotations[index]
 		err := expectedParamType.Type.CheckEqual(foundParamType.Type, c)
 		if err != nil {
-			return newTypeMismatchError(expected, found)
+			return err
 		}
 	}
 
