@@ -14157,4 +14157,6 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
 
 	RequireError(t, err)
 
+	var referenceConversionErr *interpreter.InvalidReferenceConversionError
+	require.ErrorAs(t, err, &referenceConversionErr)
 }
