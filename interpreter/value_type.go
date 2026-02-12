@@ -120,121 +120,113 @@ func (v TypeValue) Equal(_ ValueComparisonContext, other Value) bool {
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v TypeValue) GetMember(context MemberAccessibleContext, name string) Value {
+	switch name {
+	case sema.MetaTypeIdentifierFieldName:
+		var typeID string
+		staticType := v.Type
+		if staticType != nil {
+			typeID = string(staticType.ID())
+		}
+		memoryUsage := common.NewStringMemoryUsage(len(typeID))
+		return NewStringValue(context, memoryUsage, func() string {
+			return typeID
+		})
 
-	return GetMember(
-		context,
-		v,
-		name,
-		memberKind,
-		func() Value {
-			switch name {
-			case sema.MetaTypeIdentifierFieldName:
-				var typeID string
-				staticType := v.Type
-				if staticType != nil {
-					typeID = string(staticType.ID())
-				}
-				memoryUsage := common.NewStringMemoryUsage(len(typeID))
-				return NewStringValue(context, memoryUsage, func() string {
-					return typeID
-				})
+	case sema.MetaTypeIsRecoveredFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return FalseValue
+		}
 
-			case sema.MetaTypeIsRecoveredFieldName:
-				staticType := v.Type
-				if staticType == nil {
-					return FalseValue
-				}
+		location, _, err := common.DecodeTypeID(context, string(staticType.ID()))
+		if err != nil || location == nil {
+			return FalseValue
+		}
 
-				location, _, err := common.DecodeTypeID(context, string(staticType.ID()))
-				if err != nil || location == nil {
-					return FalseValue
-				}
+		return BoolValue(context.IsTypeInfoRecovered(location))
 
-				return BoolValue(context.IsTypeInfoRecovered(location))
+	case sema.MetaTypeAddressFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return Nil
+		}
 
-			case sema.MetaTypeAddressFieldName:
-				staticType := v.Type
-				if staticType == nil {
-					return Nil
-				}
+		var location common.Location
 
-				var location common.Location
+		switch staticType := staticType.(type) {
+		case *CompositeStaticType:
+			location = staticType.Location
 
-				switch staticType := staticType.(type) {
-				case *CompositeStaticType:
-					location = staticType.Location
+		case *InterfaceStaticType:
+			location = staticType.Location
 
-				case *InterfaceStaticType:
-					location = staticType.Location
+		default:
+			return Nil
+		}
 
-				default:
-					return Nil
-				}
+		addressLocation, ok := location.(common.AddressLocation)
+		if !ok {
+			return Nil
+		}
 
-				addressLocation, ok := location.(common.AddressLocation)
-				if !ok {
-					return Nil
-				}
+		addressValue := NewAddressValue(
+			context,
+			addressLocation.Address,
+		)
+		return NewSomeValueNonCopying(
+			context,
+			addressValue,
+		)
 
-				addressValue := NewAddressValue(
-					context,
-					addressLocation.Address,
-				)
-				return NewSomeValueNonCopying(
-					context,
-					addressValue,
-				)
+	case sema.MetaTypeContractNameFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return Nil
+		}
 
-			case sema.MetaTypeContractNameFieldName:
-				staticType := v.Type
-				if staticType == nil {
-					return Nil
-				}
+		var location common.Location
+		var qualifiedIdentifier string
 
-				var location common.Location
-				var qualifiedIdentifier string
+		switch staticType := staticType.(type) {
+		case *CompositeStaticType:
+			location = staticType.Location
+			qualifiedIdentifier = staticType.QualifiedIdentifier
 
-				switch staticType := staticType.(type) {
-				case *CompositeStaticType:
-					location = staticType.Location
-					qualifiedIdentifier = staticType.QualifiedIdentifier
+		case *InterfaceStaticType:
+			location = staticType.Location
+			qualifiedIdentifier = staticType.QualifiedIdentifier
 
-				case *InterfaceStaticType:
-					location = staticType.Location
-					qualifiedIdentifier = staticType.QualifiedIdentifier
+		default:
+			return Nil
+		}
 
-				default:
-					return Nil
-				}
+		switch location.(type) {
+		case common.AddressLocation,
+			common.StringLocation:
 
-				switch location.(type) {
-				case common.AddressLocation,
-					common.StringLocation:
-
-					separatorIndex := strings.Index(qualifiedIdentifier, ".")
-					contractNameLength := len(qualifiedIdentifier)
-					if separatorIndex >= 0 {
-						contractNameLength = separatorIndex
-					}
-
-					contractNameValue := NewStringValue(
-						context,
-						common.NewStringMemoryUsage(contractNameLength),
-						func() string {
-							return qualifiedIdentifier[0:contractNameLength]
-						},
-					)
-
-					return NewSomeValueNonCopying(context, contractNameValue)
-
-				default:
-					return Nil
-				}
+			separatorIndex := strings.Index(qualifiedIdentifier, ".")
+			contractNameLength := len(qualifiedIdentifier)
+			if separatorIndex >= 0 {
+				contractNameLength = separatorIndex
 			}
-			return nil
-		},
-	)
+
+			contractNameValue := NewStringValue(
+				context,
+				common.NewStringMemoryUsage(contractNameLength),
+				func() string {
+					return qualifiedIdentifier[0:contractNameLength]
+				},
+			)
+
+			return NewSomeValueNonCopying(context, contractNameValue)
+
+		default:
+			return Nil
+		}
+	}
+
+	return context.GetMethod(v, name)
 }
 
 func (v TypeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

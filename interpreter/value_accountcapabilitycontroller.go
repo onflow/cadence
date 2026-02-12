@@ -211,11 +211,7 @@ type deletionCheckedFunctionValue struct {
 	FunctionValue
 }
 
-func (v *AccountCapabilityControllerValue) GetMember(
-	context MemberAccessibleContext,
-	name string,
-	memberKind common.DeclarationKind,
-) (result Value) {
+func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -230,29 +226,21 @@ func (v *AccountCapabilityControllerValue) GetMember(
 	// NOTE: check if controller is already deleted
 	v.CheckDeleted()
 
-	return GetMember(
-		context,
-		v,
-		name,
-		memberKind,
-		func() Value {
-			switch name {
-			case sema.AccountCapabilityControllerTypeTagFieldName:
-				return v.GetTag(context)
+	switch name {
+	case sema.AccountCapabilityControllerTypeTagFieldName:
+		return v.GetTag(context)
 
-			case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
-				return v.CapabilityID
+	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
+		return v.CapabilityID
 
-			case sema.AccountCapabilityControllerTypeBorrowTypeFieldName:
-				return NewTypeValue(context, v.BorrowType)
+	case sema.AccountCapabilityControllerTypeBorrowTypeFieldName:
+		return NewTypeValue(context, v.BorrowType)
 
-			case sema.AccountCapabilityControllerTypeCapabilityFieldName:
-				return v.GetCapability(context)
-			}
+	case sema.AccountCapabilityControllerTypeCapabilityFieldName:
+		return v.GetCapability(context)
+	}
 
-			return nil
-		},
-	)
+	return context.GetMethod(v, name)
 }
 
 func (v *AccountCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

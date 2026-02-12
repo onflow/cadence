@@ -424,19 +424,19 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 			}
 
 			// Get transaction code
-			codeValue := transactionValue.GetMember(inter, testTransactionTypeCodeFieldName, common.DeclarationKindField)
+			codeValue := transactionValue.GetMember(inter, testTransactionTypeCodeFieldName)
 			code, ok := codeValue.(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
 			// Get authorizers
-			authorizerValue := transactionValue.GetMember(inter, testTransactionTypeAuthorizersFieldName, common.DeclarationKindField)
+			authorizerValue := transactionValue.GetMember(inter, testTransactionTypeAuthorizersFieldName)
 
 			authorizers := addressArrayValueToSlice(inter, authorizerValue)
 
 			// Get signers
-			signersValue := transactionValue.GetMember(inter, testTransactionTypeSignersFieldName, common.DeclarationKindField)
+			signersValue := transactionValue.GetMember(inter, testTransactionTypeSignersFieldName)
 
 			signerAccounts := accountsArrayValueToSlice(
 				inter,
@@ -444,7 +444,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 			)
 
 			// Get arguments
-			argsValue := transactionValue.GetMember(inter, testTransactionTypeArgumentsFieldName, common.DeclarationKindField)
+			argsValue := transactionValue.GetMember(inter, testTransactionTypeArgumentsFieldName)
 			args, err := arrayValueToSlice(inter, argsValue)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
@@ -823,41 +823,78 @@ func (t *testEmulatorBackendType) newLoadSnapshotFunction(
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	blockchain Blockchain,
-) *interpreter.SimpleCompositeValue {
+) *interpreter.CompositeValue {
 
-	compositeStaticType := interpreter.ConvertSemaToStaticType(inter, t.compositeType)
-
-	emulatorBackend := interpreter.NewSimpleCompositeValue(
+	// TODO: Use SimpleCompositeValue
+	emulatorBackend := interpreter.NewCompositeValue(
 		inter,
-		t.compositeType.ID(),
-		compositeStaticType,
+		t.compositeType.Location,
+		testEmulatorBackendTypeName,
+		common.CompositeKindStructure,
 		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
+		common.ZeroAddress,
 	)
 
-	functions := map[string]interpreter.FunctionValue{
-		testEmulatorBackendTypeExecuteScriptFunctionName:          t.newExecuteScriptFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeCreateAccountFunctionName:          t.newCreateAccountFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeAddTransactionFunctionName:         t.newAddTransactionFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeExecuteNextTransactionFunctionName: t.newExecuteNextTransactionFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeCommitBlockFunctionName:            t.newCommitBlockFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeDeployContractFunctionName:         t.newDeployContractFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeLogsFunctionName:                   t.newLogsFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeServiceAccountFunctionName:         t.newServiceAccountFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeEventsFunctionName:                 t.newEventsFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeResetFunctionName:                  t.newResetFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeMoveTimeFunctionName:               t.newMoveTimeFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeCreateSnapshotFunctionName:         t.newCreateSnapshotFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeLoadSnapshotFunctionName:           t.newLoadSnapshotFunction(inter, emulatorBackend, blockchain),
-		testEmulatorBackendTypeGetAccountFunctionName:             t.newGetAccountFunction(inter, emulatorBackend, blockchain),
+	fields := []interpreter.CompositeField{
+		{
+			Name:  testEmulatorBackendTypeExecuteScriptFunctionName,
+			Value: t.newExecuteScriptFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeCreateAccountFunctionName,
+			Value: t.newCreateAccountFunction(inter, emulatorBackend, blockchain),
+		}, {
+			Name:  testEmulatorBackendTypeAddTransactionFunctionName,
+			Value: t.newAddTransactionFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeExecuteNextTransactionFunctionName,
+			Value: t.newExecuteNextTransactionFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeCommitBlockFunctionName,
+			Value: t.newCommitBlockFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeDeployContractFunctionName,
+			Value: t.newDeployContractFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeLogsFunctionName,
+			Value: t.newLogsFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeServiceAccountFunctionName,
+			Value: t.newServiceAccountFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeEventsFunctionName,
+			Value: t.newEventsFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeResetFunctionName,
+			Value: t.newResetFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeMoveTimeFunctionName,
+			Value: t.newMoveTimeFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeCreateSnapshotFunctionName,
+			Value: t.newCreateSnapshotFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeLoadSnapshotFunctionName,
+			Value: t.newLoadSnapshotFunction(inter, emulatorBackend, blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeGetAccountFunctionName,
+			Value: t.newGetAccountFunction(inter, emulatorBackend, blockchain),
+		},
 	}
 
-	emulatorBackend.FunctionMemberGetter = func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
-		return functions[name]
+	for _, field := range fields {
+		emulatorBackend.SetMember(inter, field.Name, field.Value)
 	}
 
 	return emulatorBackend

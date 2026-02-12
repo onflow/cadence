@@ -139,28 +139,21 @@ func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool
 	return importable
 }
 
-func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
-	return GetMember(
-		context,
-		v,
-		name,
-		memberKind,
-		func() Value {
-			value, ok := v.Fields[name]
-			if ok {
-				return value
-			}
+func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string) Value {
+	value, ok := v.Fields[name]
+	if ok {
+		return value
+	}
 
-			computeField := v.ComputeField
-			if computeField != nil {
-				value = computeField(name, context)
-				if value != nil {
-					return value
-				}
-			}
-			return nil
-		},
-	)
+	computeField := v.ComputeField
+	if computeField != nil {
+		value = computeField(name, context)
+		if value != nil {
+			return value
+		}
+	}
+
+	return context.GetMethod(v, name)
 }
 
 func (v *SimpleCompositeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

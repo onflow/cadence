@@ -258,8 +258,6 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 		panic(errors.NewUnreachableError())
 	}
 
-	memberKind := memberAccessInfo.Member.DeclarationKind
-
 	return getterSetter{
 		target: target,
 		get: func(allowMissing bool) (Value, *PlaceholderValue) {
@@ -285,12 +283,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 			if isNestedResourceMove {
 				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, identifier)
 			} else {
-				resultValue = getMember(
-					interpreter,
-					target,
-					identifier,
-					memberKind,
-				)
+				resultValue = getMember(interpreter, target, identifier)
 			}
 
 			if resultValue == nil && !allowMissing {

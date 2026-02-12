@@ -154,7 +154,7 @@ type TypeIndexableValue interface {
 
 type MemberAccessibleValue interface {
 	Value
-	GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value
+	GetMember(context MemberAccessibleContext, name string) Value
 	RemoveMember(context ValueTransferContext, name string) Value
 	// SetMember returns whether a value previously existed with this name.
 	SetMember(context ValueTransferContext, name string, value Value) bool

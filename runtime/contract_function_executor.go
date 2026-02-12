@@ -237,7 +237,7 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 
 	var self interpreter.Value = contractValue
 
-	contractMember := contractValue.GetMember(inter, executor.functionName, common.DeclarationKindFunction)
+	contractMember := contractValue.GetMember(inter, executor.functionName)
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)
 	if !ok {

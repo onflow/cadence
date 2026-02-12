@@ -67,21 +67,11 @@ func NewHashAlgorithmCase(
 		nil,
 		nil,
 	)
-
 	value.Fields = map[string]interpreter.Value{
-		sema.EnumRawValueFieldName: rawValue,
-	}
-
-	// `sema.HashAlgorithmType` has the following members as function-members.
-	// Therefore, include them as functions in the value as well.
-	functions := map[string]interpreter.FunctionValue{
+		sema.EnumRawValueFieldName:                    rawValue,
 		sema.HashAlgorithmTypeHashFunctionName:        newInterpreterHashAlgorithmHashFunction(value, hasher),
 		sema.HashAlgorithmTypeHashWithTagFunctionName: newInterpreterHashAlgorithmHashWithTagFunction(value, hasher),
 	}
-	value.FunctionMemberGetter = func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
-		return functions[name]
-	}
-
 	return value, nil
 }
 

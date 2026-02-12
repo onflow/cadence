@@ -5729,12 +5729,7 @@ func GetAccessOfMember(context ValueStaticTypeContext, self Value, identifier st
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 // May return nil if the member does not exist.
-func getMember(
-	context MemberAccessibleContext,
-	self Value,
-	identifier string,
-	memberKind common.DeclarationKind,
-) Value {
+func getMember(context MemberAccessibleContext, self Value, identifier string) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members
 	// or is a built-in type that has members (`MemberAccessibleValue`),
@@ -5742,7 +5737,7 @@ func getMember(
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, identifier, memberKind)
+		result = memberAccessibleValue.GetMember(context, identifier)
 	}
 	if result == nil {
 		result = getBuiltinFunctionMember(context, self, identifier)
@@ -5752,29 +5747,6 @@ func getMember(
 	// For example, when a composite field is initialized with a force-assignment, the field's value is read.
 
 	return result
-}
-
-func GetMember(
-	context MemberAccessibleContext,
-	value MemberAccessibleValue,
-	memberName string,
-	memberKind common.DeclarationKind,
-	nonFunctionMemberGetter func() Value,
-) Value {
-	switch memberKind {
-	case common.DeclarationKindFunction:
-		return context.GetMethod(value, memberName)
-	default:
-		// The default case is used for nonFunctionMemberGetter because,
-		// constructors have the declaration kind as struct/resource/etc.
-		// And they are captured in the value as "nested variables".
-		// nonFunctionMemberGetter is responsible for handling them appropriately
-		// (Note: it is only needed for composite values)
-		if nonFunctionMemberGetter == nil {
-			return nil
-		}
-		return nonFunctionMemberGetter()
-	}
 }
 
 func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, identifier string) FunctionValue {

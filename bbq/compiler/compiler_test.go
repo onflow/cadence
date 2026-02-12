@@ -9820,60 +9820,6 @@ func TestCompileImportEnumCase(t *testing.T) {
 	)
 }
 
-func TestDynamicMethodInvocation(t *testing.T) {
-
-	t.Parallel()
-
-	checker, err := ParseAndCheck(t, `
-      struct interface SI {
-          fun answer(): Int
-      }
-
-      fun answer(_ si: {SI}): Int {
-          return si.answer()
-      }
-    `)
-	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-	)
-	program := comp.Compile()
-
-	functions := program.Functions
-	require.Len(t, functions, 4)
-
-	const (
-		siIndex = iota
-	)
-
-	assert.Equal(t,
-		[]opcode.Instruction{
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: siIndex},
-			opcode.InstructionGetMethodDynamic{
-				MethodName:   0,
-				ReceiverType: 2,
-			},
-			opcode.InstructionInvoke{ReturnType: 1},
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionReturnValue{},
-		},
-		functions[0].Code,
-	)
-
-	assert.Equal(t,
-		[]constant.DecodedConstant{
-			{
-				Data: "answer",
-				Kind: constant.RawString,
-			},
-		},
-		program.Constants,
-	)
-}
-
 func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 
 	t.Parallel()
@@ -9915,9 +9861,9 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 			opcode.InstructionJumpIfNil{Target: 11},
 			opcode.InstructionGetLocal{Local: tempIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionGetMethodDynamic{
-				MethodName:   0,
-				ReceiverType: 2,
+			opcode.InstructionGetField{
+				FieldName:    0,
+				AccessedType: 2,
 			},
 			opcode.InstructionInvoke{ReturnType: 1},
 			opcode.InstructionWrap{},
@@ -9938,6 +9884,7 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 		},
 		program.Constants,
 	)
+
 }
 
 func TestCompileInjectedContract(t *testing.T) {
@@ -10943,64 +10890,4 @@ func TestCompileBoundFunctionClosure(t *testing.T) {
 		},
 		functions[getAnswerDirectFuncIndex].Code,
 	)
-}
-
-func TestConstructorAsFunction(t *testing.T) {
-
-	t.Parallel()
-
-	checker, err := ParseAndCheck(t, `
-      contract C {
-          struct S {}
-      }
-
-      fun test() {
-          var s = C.S
-          s()
-      }
-    `)
-	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-	)
-	program := comp.Compile()
-
-	functions := program.Functions
-	require.Len(t, functions, 8)
-
-	testFunction := functions[0]
-
-	assert.Equal(t, "test", testFunction.Name)
-
-	assert.Equal(t,
-		[]opcode.Instruction{
-			opcode.InstructionStatement{},
-
-			// Load receiver: constructor value
-			// Ideally this is not needed.
-			// See the TODO in `compileMemberAccess` method in compiler.
-			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionDrop{},
-
-			// Load constructor function `C.S`
-			opcode.InstructionGetGlobal{Global: 5},
-
-			// Assign to variable `s`.
-			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetLocal{Local: 0, IsTempVar: false},
-
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionInvoke{ArgCount: 0, ReturnType: 2},
-			opcode.InstructionDrop{},
-
-			opcode.InstructionReturn{},
-		},
-		testFunction.Code,
-	)
-
-	assert.Empty(t, program.Constants)
-
 }

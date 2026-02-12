@@ -2694,15 +2694,6 @@ func (c *Compiler[_, _]) emitMethodLoad(
 	})
 }
 
-func (c *Compiler[_, _]) emitDynamicMethodLoad(methodName string, receiverType sema.Type) {
-	funcNameConstant := c.addRawStringConst(methodName)
-	receiverTypeIndex := c.getOrAddType(receiverType)
-	c.emit(opcode.InstructionGetMethodDynamic{
-		MethodName:   funcNameConstant.index,
-		ReceiverType: receiverTypeIndex,
-	})
-}
-
 func (c *Compiler[_, _]) emitVariableStore(name string) {
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
@@ -2741,12 +2732,6 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 
 	invokedExpr := expression.InvokedExpression
 
-	// Ideally we should no longer have a need to special-case member-expressions.
-	// Because when invokedExpr is compiled normally via `c.compileExpression(invokedExpr)`,
-	// `compileMemberAccess` will load the function-value onto the stack.
-	// And the `emitInvocation` below will invoke the loaded value.
-	// The special-cased `compileMethodInvocation` also does pretty much the same.
-	// TODO: Remove the special handling of member-expressions.
 	if memberExpression, isMemberExpr := expression.InvokedExpression.(*ast.MemberExpression); isMemberExpr {
 		memberInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(memberExpression)
 		if !ok {
@@ -2876,6 +2861,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 func (c *Compiler[_, _]) maybeApplyAddressQualifierToFunctionName(
 	functionName string,
 	accessedType sema.Type,
+	typeQualifiedName string,
 ) string {
 	// check if this function is location qualified by checking globalRemoveAddressTable
 	addressQualifiedFuncName := commons.QualifiedName(
@@ -2887,11 +2873,7 @@ func (c *Compiler[_, _]) maybeApplyAddressQualifierToFunctionName(
 			return addressQualifiedFuncName
 		}
 	}
-
-	return commons.TypeQualifiedName(
-		accessedType,
-		functionName,
-	)
+	return typeQualifiedName
 }
 
 func (c *Compiler[_, _]) compileMethodInvocation(
@@ -2904,13 +2886,17 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	implicitArgType sema.Type,
 	returnTypeIndex uint16,
 ) {
-	funcName := invokedExpr.Identifier.Identifier
+	var funcName string
 
 	invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 	if invocationType.IsConstructor {
 		funcName = c.maybeApplyAddressQualifierToFunctionName(
-			funcName,
+			invokedExpr.Identifier.Identifier,
 			memberInfo.AccessedType,
+			commons.TypeQualifiedName(
+				memberInfo.AccessedType,
+				invokedExpr.Identifier.Identifier,
+			),
 		)
 
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
@@ -2940,17 +2926,11 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	// that were synthetically added at the desugar phase, must be static calls.
 	isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
 
-	// If the function is accessed via optional-chaining,
-	// then the target type is the inner type of the optional.
-	accessedType := memberInfo.AccessedType
-	if isOptional {
-		accessedType = sema.UnwrapOptionalType(accessedType)
-	}
-
 	// Any invocation on restricted-types must be dynamic
 	if !isInterfaceInheritedFuncCall &&
-		isDynamicMethodInvocation(accessedType) {
+		isDynamicMethodInvocation(memberInfo.AccessedType) {
 
+		funcName = invokedExpr.Identifier.Identifier
 		if len(funcName) >= math.MaxUint16 {
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
@@ -2962,7 +2942,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// Get the method as a bound function.
 				// withOptionalChaining evaluates the target expression and leave the value on stack.
 				// i.e: the receiver is already loaded.
-				c.emitDynamicMethodLoad(funcName, accessedType)
+				c.compileMemberAccess(invokedExpr)
 
 				c.emitInvocation(
 					expression,
@@ -2979,10 +2959,21 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		return
 	}
 
+	// If the function is accessed via optional-chaining,
+	// then the target type is the inner type of the optional.
+	accessedType := memberInfo.AccessedType
+	if isOptional {
+		accessedType = sema.UnwrapOptionalType(accessedType)
+	}
+
 	// Load function value.
 	funcName = c.maybeApplyAddressQualifierToFunctionName(
-		funcName,
+		invokedExpr.Identifier.Identifier,
 		accessedType,
+		commons.TypeQualifiedName(
+			accessedType,
+			invokedExpr.Identifier.Identifier,
+		),
 	)
 
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
@@ -3234,7 +3225,9 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 // has evaluated and the value is pushed onto the stack.
 func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
-	memberName := expression.Identifier.Identifier
+	identifier := expression.Identifier.Identifier
+
+	constant := c.addRawStringConst(identifier)
 
 	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
@@ -3243,59 +3236,20 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
-		memberNameConstant := c.addRawStringConst(memberName)
 		c.emit(opcode.InstructionRemoveField{
-			FieldName: memberNameConstant.index,
+			FieldName: constant.index,
 		})
 	} else {
 		accessedType := memberAccessInfo.AccessedType
 		if memberAccessInfo.IsOptional {
 			accessedType = sema.UnwrapOptionalType(accessedType)
 		}
+		accessedTypeIndex := c.getOrAddType(accessedType)
 
-		memberKind := memberAccessInfo.Member.DeclarationKind
-
-		switch memberKind {
-		case common.DeclarationKindField:
-			accessedTypeIndex := c.getOrAddType(accessedType)
-			memberNameConstant := c.addRawStringConst(memberName)
-			c.emit(opcode.InstructionGetField{
-				FieldName:    memberNameConstant.index,
-				AccessedType: accessedTypeIndex,
-			})
-
-		case common.DeclarationKindFunction:
-			if isDynamicMethodInvocation(accessedType) {
-				c.emitDynamicMethodLoad(memberName, accessedType)
-			} else {
-				memberName = c.maybeApplyAddressQualifierToFunctionName(
-					memberName,
-					accessedType,
-				)
-				c.emitMethodLoad(memberName, accessedType)
-			}
-
-		default:
-			// Treat all other memberKinds (i.e: enum. struct, resource, etc.), as functions,
-			// because they are all constructors.
-
-			memberType, ok := memberAccessInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
-			if !ok || !memberType.IsConstructor {
-				panic(errors.NewUnreachableError())
-			}
-
-			// Drop the receiver. It's not needed.
-			// Constructors are invoked as static functions.
-			// TODO: Avoid loading the receiver for constructors.
-			c.emit(opcode.InstructionDrop{})
-
-			memberName = c.maybeApplyAddressQualifierToFunctionName(
-				memberName,
-				accessedType,
-			)
-			// Load function value
-			c.emitGlobalLoad(memberName)
-		}
+		c.emit(opcode.InstructionGetField{
+			FieldName:    constant.index,
+			AccessedType: accessedTypeIndex,
+		})
 	}
 
 	// Return a reference, if the member is accessed via a reference.
