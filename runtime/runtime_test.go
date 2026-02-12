@@ -14118,6 +14118,15 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
 
 	RequireError(t, err)
 
-	var referenceConversionErr *interpreter.InvalidReferenceConversionError
-	require.ErrorAs(t, err, &referenceConversionErr)
+	var invalidReferenceConversionErr *interpreter.InvalidReferenceConversionError
+	require.ErrorAs(t, err, &invalidReferenceConversionErr)
+
+	assert.Equal(t,
+		common.TypeID("Storage"),
+		invalidReferenceConversionErr.Expected.ID(),
+	)
+	assert.Equal(t,
+		sema.UnauthorizedAccess,
+		invalidReferenceConversionErr.Actual,
+	)
 }
