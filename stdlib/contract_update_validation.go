@@ -822,9 +822,39 @@ var _ errors.UserError = &TypeMismatchError{}
 func (*TypeMismatchError) IsUserError() {}
 
 func (e *TypeMismatchError) Error() string {
-	return fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`",
+	return fmt.Sprintf("incompatible types. expected `%s`, found `%s`",
 		e.ExpectedType,
 		e.FoundType,
+	)
+}
+
+// AuthorizationMismatchError is reported during a contract update, when an authorization of the new program
+// does not match the existing authorization.
+type AuthorizationMismatchError struct {
+	ExpectedAuthorization ast.Authorization
+	FoundAuthorization    ast.Authorization
+	ast.Range
+}
+
+var _ errors.UserError = &AuthorizationMismatchError{}
+
+func (*AuthorizationMismatchError) IsUserError() {}
+
+func (e *AuthorizationMismatchError) Error() string {
+	if e.ExpectedAuthorization == nil && e.FoundAuthorization != nil {
+		return fmt.Sprintf(
+			"incompatible authorizations. expected no authorization, found `%s`",
+			e.FoundAuthorization,
+		)
+	} else if e.ExpectedAuthorization != nil && e.FoundAuthorization == nil {
+		return fmt.Sprintf(
+			"incompatible authorizations. expected `%s`, found no authorization",
+			e.ExpectedAuthorization,
+		)
+	}
+	return fmt.Sprintf("incompatible authorizations. expected `%s`, found `%s`",
+		e.ExpectedAuthorization,
+		e.FoundAuthorization,
 	)
 }
 

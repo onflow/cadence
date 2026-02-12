@@ -1671,7 +1671,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			" --> 0000000000000042.Test:3:35\n" +
 			"  |\n" +
 			"3 |                 access(all) var a: Int\n" +
-			"  |                                    ^^^ incompatible type annotations. expected `String`, found `Int`\n" +
+			"  |                                    ^^^ incompatible types. expected `String`, found `Int`\n" +
 			"\n" +
 			"error: found new field `b` in `Test`\n" +
 			" --> 0000000000000042.Test:4:32\n" +
@@ -2400,7 +2400,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Capability<&[Int]>`, found `Capability<auth(Mutate) &[Int]>`",
+				"incompatible authorizations. expected no authorization, found `Mutate`",
 			)
 		})
 
@@ -2433,8 +2433,36 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Capability<auth(Mutate) &[Int]>`, found `Capability<&[Int]>`",
+				"incompatible authorizations. expected `Mutate`, found no authorization",
 			)
+		})
+
+		testWithValidators(t, "keep authorization", func(t *testing.T, config Config) {
+
+			const oldCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<auth(Mutate) &[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			const newCode = `
+            access(all) contract Test {
+
+                access(all) var vault: Capability<auth(Mutate) &[Int]>?
+
+                init() {
+                    self.vault = nil
+                }
+            }
+        `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
 		})
 	})
 
@@ -2497,7 +2525,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 	})
@@ -2561,7 +2589,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 	})
@@ -2625,7 +2653,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `[Int; 5]`, found `[Int; 10]`",
+				"incompatible types. expected `[Int; 5]`, found `[Int; 10]`",
 			)
 		})
 
@@ -2658,7 +2686,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 	})
@@ -2722,7 +2750,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `String`, found `Int`",
+				"incompatible types. expected `String`, found `Int`",
 			)
 		})
 
@@ -2755,7 +2783,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 	})
@@ -2871,7 +2899,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `{InterfaceA}`, found `{InterfaceB}`",
+				"incompatible types. expected `InterfaceA`, found `InterfaceB`",
 			)
 		})
 
@@ -2934,7 +2962,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `{InterfaceA}`, found `{InterfaceA, InterfaceB}`",
+				"incompatible types. expected `{InterfaceA}`, found `{InterfaceA, InterfaceB}`",
 			)
 		})
 	})
@@ -2998,7 +3026,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Capability<&Int>`, found `Capability<&String>`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 
@@ -3098,7 +3126,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorContains(t,
-				err, "incompatible type annotations. expected `fun (Int): Void`, found `fun (String): Void`",
+				err, "incompatible types. expected `Int`, found `String`",
 			)
 		})
 
@@ -3135,7 +3163,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `fun (Int): Void`, found `fun (Int, String): Void`",
+				"incompatible types. expected `fun (Int): Void`, found `fun (Int, String): Void`",
 			)
 		})
 
@@ -3172,7 +3200,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `Int`, found `String`",
+				"incompatible types. expected `Int`, found `String`",
 			)
 		})
 
@@ -3209,7 +3237,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 			require.ErrorContains(t,
 				err,
-				"incompatible type annotations. expected `fun (Int): Int`, found `view fun (Int): Int`",
+				"incompatible types. expected `fun (Int): Int`, found `view fun (Int): Int`",
 			)
 		})
 	})
@@ -3259,11 +3287,43 @@ func assertFieldTypeMismatchError(
 	assert.Equal(t, fieldName, fieldMismatchError.FieldName)
 	assert.Equal(t, erroneousDeclName, fieldMismatchError.DeclName)
 
-	var typeMismatchError *stdlib.TypeMismatchError
-	assert.ErrorAs(t, fieldMismatchError.Err, &typeMismatchError)
+	var typeMismatchErr *stdlib.TypeMismatchError
+	assert.ErrorAs(t, fieldMismatchError.Err, &typeMismatchErr)
 
-	assert.Equal(t, expectedType, typeMismatchError.ExpectedType.String())
-	assert.Equal(t, foundType, typeMismatchError.FoundType.String())
+	assert.Equal(t, expectedType, typeMismatchErr.ExpectedType.String())
+	assert.Equal(t, foundType, typeMismatchErr.FoundType.String())
+}
+
+func assertFieldAuthorizationMismatchError(
+	t *testing.T,
+	err error,
+	erroneousDeclName string,
+	fieldName string,
+	expectedAuthorization string,
+	foundAuthorization string,
+) {
+	var fieldMismatchError *stdlib.FieldMismatchError
+	require.ErrorAs(t, err, &fieldMismatchError)
+
+	assert.Equal(t, fieldName, fieldMismatchError.FieldName)
+	assert.Equal(t, erroneousDeclName, fieldMismatchError.DeclName)
+
+	var authorizationMismatchErr *stdlib.AuthorizationMismatchError
+	assert.ErrorAs(t, fieldMismatchError.Err, &authorizationMismatchErr)
+
+	expectedAuth := authorizationMismatchErr.ExpectedAuthorization
+	var expectedAuthString string
+	if expectedAuth != nil {
+		expectedAuthString = expectedAuth.String()
+	}
+	assert.Equal(t, expectedAuthorization, expectedAuthString)
+
+	foundAuth := authorizationMismatchErr.FoundAuthorization
+	var foundAuthString string
+	if foundAuth != nil {
+		foundAuthString = foundAuth.String()
+	}
+	assert.Equal(t, foundAuthorization, foundAuthString)
 }
 
 func assertConformanceMismatchError(
@@ -4457,6 +4517,168 @@ func TestAttachmentsUpdates(t *testing.T) {
 
 			var expectedErr *stdlib.TypeMismatchError
 			require.ErrorAs(t, err, &expectedErr)
+		},
+	)
+}
+
+func TestAuthorizationUpdates(t *testing.T) {
+
+	testWithValidators(t,
+		"Add authorization",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                 access(all) contract Test {
+                     access(all) entitlement E
+
+					 access(self) let cap: Capability<&AnyStruct>?
+
+					 init() {
+						 self.cap = nil
+					 }
+                 }
+            `
+
+			const newCode = `
+                 access(all) contract Test {
+                     access(all) entitlement E
+
+					 access(self) let cap: Capability<auth(Mutate) &AnyStruct>?
+
+					 init() {
+						 self.cap = nil
+					 }
+                 }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			cause := getSingleContractUpdateErrorCause(t, err, "Test")
+			assertFieldAuthorizationMismatchError(t,
+				cause,
+				"Test",
+				"cap",
+				"",
+				"Mutate",
+			)
+		},
+	)
+
+	testWithValidators(t,
+		"Remove authorization",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                 access(all) contract Test {
+                     access(all) entitlement E
+
+					 access(self) let cap: Capability<auth(Mutate) &AnyStruct>?
+
+					 init() {
+						 self.cap = nil
+					 }
+                 }
+            `
+
+			const newCode = `
+                 access(all) contract Test {
+                     access(all) entitlement E
+
+					 access(self) let cap: Capability<&AnyStruct>?
+
+					 init() {
+						 self.cap = nil
+					 }
+                 }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			cause := getSingleContractUpdateErrorCause(t, err, "Test")
+			assertFieldAuthorizationMismatchError(t,
+				cause,
+				"Test",
+				"cap",
+				"Mutate",
+				"",
+			)
+		},
+	)
+
+	testWithValidators(t,
+		"Keep authorization",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                 access(all) contract Test {
+                     access(all) entitlement E
+
+					 access(self) let cap: Capability<auth(Mutate) &AnyStruct>?
+
+					 init() {
+						 self.cap = nil
+					 }
+                 }
+            `
+
+			const newCode = `
+                 access(all) contract Test {
+                     access(all) entitlement E
+
+					 access(self) let cap: Capability<auth(Mutate) &AnyStruct>?
+
+					 init() {
+						 self.cap = nil
+					 }
+                 }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		},
+	)
+
+	testWithValidators(t,
+		"Change authorization",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                 access(all) contract Test {
+                     access(all) entitlement E
+
+					 access(self) let cap: Capability<auth(Insert, Remove) &AnyStruct>?
+
+					 init() {
+						 self.cap = nil
+					 }
+                 }
+            `
+
+			const newCode = `
+                 access(all) contract Test {
+                     access(all) entitlement E
+
+					 access(self) let cap: Capability<auth(Remove | Insert) &AnyStruct>?
+
+					 init() {
+						 self.cap = nil
+					 }
+                 }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			RequireError(t, err)
+
+			cause := getSingleContractUpdateErrorCause(t, err, "Test")
+			assertFieldAuthorizationMismatchError(t,
+				cause,
+				"Test",
+				"cap",
+				"Insert, Remove",
+				"Remove | Insert",
+			)
 		},
 	)
 }
