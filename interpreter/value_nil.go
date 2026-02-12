@@ -107,8 +107,14 @@ var nilValueMapFunction = NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 	},
 )
 
-func (v NilValue) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v NilValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v NilValue) GetMethod(_ MemberAccessibleContext, name string) FunctionValue {

@@ -71,24 +71,25 @@ func _() {
 	_ = x[GetIndex-84]
 	_ = x[RemoveIndex-85]
 	_ = x[GetMethod-86]
-	_ = x[GetTypeIndex-87]
-	_ = x[SetTypeIndex-88]
-	_ = x[RemoveTypeIndex-89]
-	_ = x[SetAttachmentBase-90]
-	_ = x[GetFieldLocal-92]
-	_ = x[Invoke-93]
-	_ = x[InvokeTyped-94]
-	_ = x[Drop-103]
-	_ = x[Dup-104]
-	_ = x[Iterator-111]
-	_ = x[IteratorHasNext-112]
-	_ = x[IteratorNext-113]
-	_ = x[IteratorEnd-114]
-	_ = x[EmitEvent-115]
-	_ = x[Loop-116]
-	_ = x[Statement-117]
-	_ = x[TemplateString-118]
-	_ = x[OpcodeMax-119]
+	_ = x[GetMethodDynamic-87]
+	_ = x[GetTypeIndex-88]
+	_ = x[SetTypeIndex-89]
+	_ = x[RemoveTypeIndex-90]
+	_ = x[SetAttachmentBase-91]
+	_ = x[GetFieldLocal-93]
+	_ = x[Invoke-94]
+	_ = x[InvokeTyped-95]
+	_ = x[Drop-104]
+	_ = x[Dup-105]
+	_ = x[Iterator-112]
+	_ = x[IteratorHasNext-113]
+	_ = x[IteratorNext-114]
+	_ = x[IteratorEnd-115]
+	_ = x[EmitEvent-116]
+	_ = x[Loop-117]
+	_ = x[Statement-118]
+	_ = x[TemplateString-119]
+	_ = x[OpcodeMax-120]
 }
 
 const (
@@ -98,7 +99,7 @@ const (
 	_Opcode_name_3 = "LessGreaterLessOrEqualGreaterOrEqualSameEqualNotEqualNot"
 	_Opcode_name_4 = "WrapUnwrapDestroyTransferAndConvertSimpleCastFailableCastForceCastDerefTransferConvert"
 	_Opcode_name_5 = "TrueFalseVoidNilNewSimpleCompositeNewCompositeNewCompositeAtNewPathNewArrayNewDictionaryNewRefNewClosure"
-	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueCloseUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndexGetMethodGetTypeIndexSetTypeIndexRemoveTypeIndexSetAttachmentBase"
+	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueCloseUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndexGetMethodGetMethodDynamicGetTypeIndexSetTypeIndexRemoveTypeIndexSetAttachmentBase"
 	_Opcode_name_7 = "GetFieldLocalInvokeInvokeTyped"
 	_Opcode_name_8 = "DropDup"
 	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementTemplateStringOpcodeMax"
@@ -111,7 +112,7 @@ var (
 	_Opcode_index_3 = [...]uint8{0, 4, 11, 22, 36, 40, 45, 53, 56}
 	_Opcode_index_4 = [...]uint8{0, 4, 10, 17, 35, 45, 57, 66, 71, 79, 86}
 	_Opcode_index_5 = [...]uint8{0, 4, 9, 13, 16, 34, 46, 60, 67, 75, 88, 94, 104}
-	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 59, 68, 77, 85, 96, 104, 112, 120, 131, 140, 152, 164, 179, 196}
+	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 59, 68, 77, 85, 96, 104, 112, 120, 131, 140, 156, 168, 180, 195, 212}
 	_Opcode_index_7 = [...]uint8{0, 13, 19, 30}
 	_Opcode_index_8 = [...]uint8{0, 4, 7}
 	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 46, 55, 59, 68, 82, 91}
@@ -136,17 +137,17 @@ func (i Opcode) String() string {
 	case 50 <= i && i <= 61:
 		i -= 50
 		return _Opcode_name_5[_Opcode_index_5[i]:_Opcode_index_5[i+1]]
-	case 72 <= i && i <= 90:
+	case 72 <= i && i <= 91:
 		i -= 72
 		return _Opcode_name_6[_Opcode_index_6[i]:_Opcode_index_6[i+1]]
-	case 92 <= i && i <= 94:
-		i -= 92
+	case 93 <= i && i <= 95:
+		i -= 93
 		return _Opcode_name_7[_Opcode_index_7[i]:_Opcode_index_7[i+1]]
-	case 103 <= i && i <= 104:
-		i -= 103
+	case 104 <= i && i <= 105:
+		i -= 104
 		return _Opcode_name_8[_Opcode_index_8[i]:_Opcode_index_8[i+1]]
-	case 111 <= i && i <= 119:
-		i -= 111
+	case 112 <= i && i <= 120:
+		i -= 112
 		return _Opcode_name_9[_Opcode_index_9[i]:_Opcode_index_9[i+1]]
 	default:
 		return "Opcode(" + strconv.FormatInt(int64(i), 10) + ")"

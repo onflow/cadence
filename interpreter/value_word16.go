@@ -388,8 +388,14 @@ func (v Word16Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Word16Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Word16Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

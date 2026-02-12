@@ -13890,6 +13890,193 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
 	})
 }
 
+func TestRuntimeInvalidReferenceCast(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	const contract1 = `
+      access(all) contract Test {
+
+          access(all) event EventOrResource()
+
+          access(all) var arr: [[AnyStruct]]
+
+          init() {
+              let optEventOrResource: EventOrResource? = nil
+              let optEventOrResourceArray = [optEventOrResource]
+              self.arr = [] as [[AnyStruct]]
+              self.arr.append(optEventOrResourceArray)
+          }
+      }
+    `
+
+	const contract2 = `
+      access(all) contract Test {
+
+          // removed event EventOrResource
+
+          access(all) var arr: [[AnyStruct]]
+
+          init() {
+              self.arr = []
+          }
+      }
+    `
+
+	const contract3 = `
+      access(all) contract Test {
+
+          // re-added
+          access(all) resource EventOrResource {}
+
+          access(all) var arr: [[AnyStruct]]
+
+          init() {
+              self.arr = []
+          }
+
+          access(all) fun run(): Void {
+              ((&self.arr[0] as auth(Mutate) &AnyStruct) as AnyStruct) as! auth(Mutate) &[AnyResource]
+          }
+      }
+    `
+
+	var accountCode []byte
+	var events []cadence.Event
+	var logs []string
+
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+			require.Empty(t, identifiers)
+			require.IsType(t, common.AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: common.AddressLocation{
+						Address: location.(common.AddressLocation).Address,
+						Name:    "Test",
+					},
+					Identifiers: []ast.Identifier{
+						{
+							Identifier: "Test",
+						},
+					},
+				},
+			}, nil
+		},
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnProgramLog: func(message string) {
+			logs = append(logs, message)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy the Test contract
+
+	deployTx1 := DeploymentTransaction("Test", []byte(contract1))
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+
+	require.NoError(t, err)
+
+	// Update the Test contract
+
+	deployTx2 := UpdateTransaction("Test", []byte(contract2))
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Update the Test contract again
+
+	deployTx3 := UpdateTransaction("Test", []byte(contract3))
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx3,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Run the Test contract
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: []byte(`
+              import 0x42
+
+              access(all) fun main() {
+                  Test.run()
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
+		},
+	)
+	RequireError(t, err)
+
+	var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
+
+	assert.Equal(t,
+		common.TypeID("auth(Mutate)&AnyStruct"),
+		transferTypeError.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("auth(Mutate)&[(A.0000000000000042.Test.EventOrResource)?]"),
+		transferTypeError.ActualType.ID(),
+	)
+}
+
 func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
 
 	t.Parallel()

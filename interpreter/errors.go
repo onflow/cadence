@@ -1534,7 +1534,10 @@ var _ HasLocationRange = &InvalidResourceTransferError{}
 func (*InvalidResourceTransferError) IsInternalError() {}
 
 func (*InvalidResourceTransferError) Error() string {
-	return "invalid transfer of a resource value"
+	return fmt.Sprintf(
+		"%s invalid transfer of a resource value",
+		errors.InternalErrorMessagePrefix,
+	)
 }
 
 func (e *InvalidResourceTransferError) SetLocationRange(locationRange LocationRange) {
@@ -1568,5 +1571,30 @@ func (e *InvalidBaseTypeError) Error() string {
 }
 
 func (e *InvalidBaseTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// InvalidReferenceConversionError
+type InvalidReferenceConversionError struct {
+	Expected sema.Access
+	Actual   sema.Access
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidReferenceConversionError{}
+var _ HasLocationRange = &InvalidReferenceConversionError{}
+
+func (*InvalidReferenceConversionError) IsInternalError() {}
+
+func (e *InvalidReferenceConversionError) Error() string {
+	return fmt.Sprintf(
+		"%s invalid reference conversion error: expect entitlements `%s`, found `%s`",
+		errors.InternalErrorMessagePrefix,
+		e.Expected,
+		e.Actual,
+	)
+}
+
+func (e *InvalidReferenceConversionError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }

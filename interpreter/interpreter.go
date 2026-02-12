@@ -2148,6 +2148,16 @@ func convertStaticType(
 			)
 		}
 	}
+
+	// If the target type is optional but the value type is not,
+	// wrap the value type in an optional
+	if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
+		return NewOptionalStaticType(
+			gauge,
+			convertStaticType(gauge, valueStaticType, targetOptionalType.Type),
+		)
+	}
+
 	return valueStaticType
 }
 
@@ -2341,7 +2351,7 @@ func convert(
 
 					value := MustConvertStoredValue(context, element)
 					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
-					return convert(context, value, valueType, targetElementType)
+					return convertAndBox(context, value, valueType, targetElementType)
 				},
 			)
 		}
@@ -2388,8 +2398,8 @@ func convert(
 					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
 					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
 
-					convertedKey := convert(context, key, keyType, targetKeyType)
-					convertedValue := convert(context, value, valueType, targetValueType)
+					convertedKey := convertAndBox(context, key, keyType, targetKeyType)
+					convertedValue := convertAndBox(context, value, valueType, targetValueType)
 
 					return convertedKey, convertedValue
 				},
@@ -2433,8 +2443,15 @@ func convert(
 
 		switch ref := value.(type) {
 		case *EphemeralReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if isReferenceConversionNotRedundant(ref, valueType, unwrappedTargetType, targetAuthorization) {
 				checkMappedEntitlements(unwrappedTargetType)
+				checkTargetIsLessPermissive(
+					context,
+					ref,
+					valueType,
+					unwrappedTargetType,
+					targetAuthorization,
+				)
 				return NewEphemeralReferenceValue(
 					context,
 					targetAuthorization,
@@ -2444,8 +2461,15 @@ func convert(
 			}
 
 		case *StorageReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if isReferenceConversionNotRedundant(ref, valueType, unwrappedTargetType, targetAuthorization) {
 				checkMappedEntitlements(unwrappedTargetType)
+				checkTargetIsLessPermissive(
+					context,
+					ref,
+					valueType,
+					unwrappedTargetType,
+					targetAuthorization,
+				)
 				return NewStorageReferenceValue(
 					context,
 					targetAuthorization,
@@ -2463,7 +2487,12 @@ func convert(
 	return value
 }
 
-func shouldConvertReference(
+// isReferenceConversionNotRedundant checks whether the conversion is not redundant.
+// i.e: either the value's static matches targetType, or value's dynamic type matches targetType.
+// This method only skips conversions that can be deemed "redundant", but doesn't skip "invalid" conversions.
+// Because not converting where it should've, is bad (is a form of entitlement escalation).
+// IMPORTANT: Callers of this method must ensure any "invalid" conversions are rejected.
+func isReferenceConversionNotRedundant(
 	ref ReferenceValue,
 	valueType sema.Type,
 	unwrappedTargetType *sema.ReferenceType,
@@ -2475,6 +2504,49 @@ func shouldConvertReference(
 
 	return !ref.BorrowType().Equal(unwrappedTargetType.Type) ||
 		!ref.GetAuthorization().Equal(targetAuthorization)
+}
+
+func checkTargetIsLessPermissive(
+	context TypeConverter,
+	ref ReferenceValue,
+	valueType sema.Type,
+	unwrappedTargetType *sema.ReferenceType,
+	targetAuthorization Authorization,
+) {
+	// Convert only if the target type is "narrowing" the entitlements.
+	// (only if the target type grants less permissions)
+	// i.e: `targetAuthorization` must be a super-set of `actualAuthorization`.
+
+	targetSemaAuthorization := unwrappedTargetType.Authorization
+
+	switch valueType := valueType.(type) {
+	case *sema.ReferenceType:
+		actualAuthorization := valueType.Authorization
+		if !sema.PermitsAccess(unwrappedTargetType.Authorization, actualAuthorization) {
+			panic(&InvalidReferenceConversionError{
+				Expected: targetSemaAuthorization,
+				Actual:   actualAuthorization,
+			})
+		}
+	default:
+		// If the `valueType` is not a reference, and the value is a reference,
+		// then the `valueType` could only be `AnyStruct`.
+		// In this case, get the entitlements from the value.
+		// (rather than treating the `actualAuthorization` as `UnauthorizedAccess`.)
+		// This is needed to preserve the entitlements when being assigned to `AnyStruct`.
+		actualAuthorization := ref.GetAuthorization()
+		if !PermitsAccess(context, targetAuthorization, actualAuthorization) {
+			actualSemaAuthorization, err := ConvertStaticAuthorizationToSemaAccess(actualAuthorization, context)
+			if err != nil {
+				panic(err)
+			}
+
+			panic(&InvalidReferenceConversionError{
+				Expected: targetSemaAuthorization,
+				Actual:   actualSemaAuthorization,
+			})
+		}
+	}
 }
 
 func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType) {
@@ -5657,7 +5729,12 @@ func GetAccessOfMember(context ValueStaticTypeContext, self Value, identifier st
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 // May return nil if the member does not exist.
-func getMember(context MemberAccessibleContext, self Value, identifier string) Value {
+func getMember(
+	context MemberAccessibleContext,
+	self Value,
+	identifier string,
+	memberKind common.DeclarationKind,
+) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members
 	// or is a built-in type that has members (`MemberAccessibleValue`),
@@ -5665,7 +5742,7 @@ func getMember(context MemberAccessibleContext, self Value, identifier string) V
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, identifier)
+		result = memberAccessibleValue.GetMember(context, identifier, memberKind)
 	}
 	if result == nil {
 		result = getBuiltinFunctionMember(context, self, identifier)
@@ -5675,6 +5752,29 @@ func getMember(context MemberAccessibleContext, self Value, identifier string) V
 	// For example, when a composite field is initialized with a force-assignment, the field's value is read.
 
 	return result
+}
+
+func GetMember(
+	context MemberAccessibleContext,
+	value MemberAccessibleValue,
+	memberName string,
+	memberKind common.DeclarationKind,
+	nonFunctionMemberGetter func() Value,
+) Value {
+	switch memberKind {
+	case common.DeclarationKindFunction:
+		return context.GetMethod(value, memberName)
+	default:
+		// The default case is used for nonFunctionMemberGetter because,
+		// constructors have the declaration kind as struct/resource/etc.
+		// And they are captured in the value as "nested variables".
+		// nonFunctionMemberGetter is responsible for handling them appropriately
+		// (Note: it is only needed for composite values)
+		if nonFunctionMemberGetter == nil {
+			return nil
+		}
+		return nonFunctionMemberGetter()
+	}
 }
 
 func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, identifier string) FunctionValue {

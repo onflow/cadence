@@ -389,8 +389,14 @@ func (v Word32Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Word32Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Word32Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
