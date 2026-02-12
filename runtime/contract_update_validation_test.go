@@ -2037,8 +2037,34 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
-		require.NoError(t, err)
+		require.Error(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertMissingDeclarationError(t, cause, "Foo")
 	})
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"Remove event with #removedType pragma",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) event Foo()
+                    access(all) event Bar()
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(Foo)
+                    access(all) event Bar()
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		},
+	)
 
 	testWithValidators(t, "Add event", func(t *testing.T, config Config) {
 

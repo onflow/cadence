@@ -426,11 +426,6 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 ) {
 	declarationKind := nestedDeclaration.DeclarationKind()
 
-	// OK to remove events - they are not stored
-	if declarationKind == common.DeclarationKindEvent {
-		return
-	}
-
 	// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
 	if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
 		!declarationKind.IsInterfaceDeclaration() {
