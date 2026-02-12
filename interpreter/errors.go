@@ -1573,3 +1573,28 @@ func (e *InvalidBaseTypeError) Error() string {
 func (e *InvalidBaseTypeError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
+
+// InvalidReferenceConversionError
+type InvalidReferenceConversionError struct {
+	Expected sema.Access
+	Actual   sema.Access
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidReferenceConversionError{}
+var _ HasLocationRange = &InvalidReferenceConversionError{}
+
+func (*InvalidReferenceConversionError) IsInternalError() {}
+
+func (e *InvalidReferenceConversionError) Error() string {
+	return fmt.Sprintf(
+		"%s invalid reference conversion error: expect entitlements `%s`, found `%s`",
+		errors.InternalErrorMessagePrefix,
+		e.Expected,
+		e.Actual,
+	)
+}
+
+func (e *InvalidReferenceConversionError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}

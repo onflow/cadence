@@ -2443,8 +2443,15 @@ func convert(
 
 		switch ref := value.(type) {
 		case *EphemeralReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if isReferenceConversionNotRedundant(ref, valueType, unwrappedTargetType, targetAuthorization) {
 				checkMappedEntitlements(unwrappedTargetType)
+				checkTargetIsLessPermissive(
+					context,
+					ref,
+					valueType,
+					unwrappedTargetType,
+					targetAuthorization,
+				)
 				return NewEphemeralReferenceValue(
 					context,
 					targetAuthorization,
@@ -2454,8 +2461,15 @@ func convert(
 			}
 
 		case *StorageReferenceValue:
-			if shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+			if isReferenceConversionNotRedundant(ref, valueType, unwrappedTargetType, targetAuthorization) {
 				checkMappedEntitlements(unwrappedTargetType)
+				checkTargetIsLessPermissive(
+					context,
+					ref,
+					valueType,
+					unwrappedTargetType,
+					targetAuthorization,
+				)
 				return NewStorageReferenceValue(
 					context,
 					targetAuthorization,
@@ -2473,7 +2487,12 @@ func convert(
 	return value
 }
 
-func shouldConvertReference(
+// isReferenceConversionNotRedundant checks whether the conversion is not redundant.
+// i.e: either the value's static matches targetType, or value's dynamic type matches targetType.
+// This method only skips conversions that can be deemed "redundant", but doesn't skip "invalid" conversions.
+// Because not converting where it should've, is bad (is a form of entitlement escalation).
+// IMPORTANT: Callers of this method must ensure any "invalid" conversions are rejected.
+func isReferenceConversionNotRedundant(
 	ref ReferenceValue,
 	valueType sema.Type,
 	unwrappedTargetType *sema.ReferenceType,
@@ -2485,6 +2504,49 @@ func shouldConvertReference(
 
 	return !ref.BorrowType().Equal(unwrappedTargetType.Type) ||
 		!ref.GetAuthorization().Equal(targetAuthorization)
+}
+
+func checkTargetIsLessPermissive(
+	context TypeConverter,
+	ref ReferenceValue,
+	valueType sema.Type,
+	unwrappedTargetType *sema.ReferenceType,
+	targetAuthorization Authorization,
+) {
+	// Convert only if the target type is "narrowing" the entitlements.
+	// (only if the target type grants less permissions)
+	// i.e: `targetAuthorization` must be a super-set of `actualAuthorization`.
+
+	targetSemaAuthorization := unwrappedTargetType.Authorization
+
+	switch valueType := valueType.(type) {
+	case *sema.ReferenceType:
+		actualAuthorization := valueType.Authorization
+		if !sema.PermitsAccess(unwrappedTargetType.Authorization, actualAuthorization) {
+			panic(&InvalidReferenceConversionError{
+				Expected: targetSemaAuthorization,
+				Actual:   actualAuthorization,
+			})
+		}
+	default:
+		// If the `valueType` is not a reference, and the value is a reference,
+		// then the `valueType` could only be `AnyStruct`.
+		// In this case, get the entitlements from the value.
+		// (rather than treating the `actualAuthorization` as `UnauthorizedAccess`.)
+		// This is needed to preserve the entitlements when being assigned to `AnyStruct`.
+		actualAuthorization := ref.GetAuthorization()
+		if !PermitsAccess(context, targetAuthorization, actualAuthorization) {
+			actualSemaAuthorization, err := ConvertStaticAuthorizationToSemaAccess(actualAuthorization, context)
+			if err != nil {
+				panic(err)
+			}
+
+			panic(&InvalidReferenceConversionError{
+				Expected: targetSemaAuthorization,
+				Actual:   actualSemaAuthorization,
+			})
+		}
+	}
 }
 
 func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType) {
