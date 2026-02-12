@@ -918,3 +918,161 @@ func TestRuntimeContractUpdateCapabilityReferenceAuthorizationChange(t *testing.
 		"incompatible authorizations. expected no authorization, found `Mutate`",
 	)
 }
+
+func TestRuntimeContractUpdateReplaceFieldWithFunction(t *testing.T) {
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	const contractName = "UpdatableContract"
+
+	const contractV1 = `
+        access(all) contract UpdatableContract {
+
+            access(all) resource TargetResource {
+                access(all) var balance: Int
+                access(all) fun withdraw(amount: Int) {
+                    log("Withdrawing 1 unit, remaining balance \(self.balance)")
+                }
+
+                init() {
+                    self.balance = 10
+                }
+            }
+
+            access(self) var ambiguousName: @TargetResource
+
+            init() {
+                self.ambiguousName <- create TargetResource()
+            }
+        }
+    `
+
+	const contractV2 = `
+        access(all) contract UpdatableContract {
+
+            access(all) enum ambiguousName: UInt8 {
+                access(all) case foobar
+            }
+
+            access(all) resource TargetResource {
+                access(all) var balance: Int
+                access(all) fun withdraw() {
+                    self.balance = self.balance - 1
+                    log("Withdrawing 1 unit, remaining balance \(self.balance)")
+                }
+                init() {
+                    self.balance = 10
+                }
+            }
+
+            init() {}
+        }
+    `
+
+	accountCodes := map[common.Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(contractName, []byte(contractV1)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Update contract
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: UpdateTransaction(contractName, []byte(contractV2)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Run script
+
+	const script = `
+        import UpdatableContract from 0x1
+
+        access(all) fun main(): UpdatableContract.ambiguousName {
+            // Should return the newly added enum constructor function,
+            // not the old value of the removed field.
+            var ambiguousNameMember = UpdatableContract.ambiguousName
+            return ambiguousNameMember(0)!
+        }
+    `
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: []byte(script),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(
+		t,
+		cadence.NewEnum([]cadence.Value{
+			cadence.NewUInt8(0),
+		}).WithType(cadence.NewEnumType(
+			common.NewAddressLocation(
+				nil,
+				signerAccount,
+				"UpdatableContract",
+			),
+			"UpdatableContract.ambiguousName",
+			cadence.UInt8Type,
+			[]cadence.Field{
+				{
+					Identifier: "rawValue",
+					Type:       cadence.UInt8Type,
+				},
+			},
+			nil,
+		)),
+		result,
+	)
+}

@@ -344,10 +344,7 @@ func (c *Context) GetMethod(
 
 	semaType := c.SemaTypeFromStaticType(staticType)
 
-	var location common.Location
-	if locatedType, ok := semaType.(sema.LocatedType); ok {
-		location = locatedType.GetLocation()
-	}
+	location := typeLocation(semaType)
 
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, name)
 
@@ -377,6 +374,17 @@ func (c *Context) GetMethod(
 		method,
 		base,
 	)
+}
+
+func typeLocation(semaType sema.Type) common.Location {
+	switch semaType := semaType.(type) {
+	case sema.LocatedType:
+		return semaType.GetLocation()
+	case *sema.ReferenceType:
+		return typeLocation(semaType.Type)
+	default:
+		return nil
+	}
 }
 
 func (c *Context) GetFunction(
@@ -469,7 +477,6 @@ func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
 			storageReference,
 			referencedValue,
 		)
-		return boundFunction
 	}
 
 	return member

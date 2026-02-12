@@ -62,7 +62,17 @@ func NewDeployedContractValue(
 		address,
 		name,
 	)
-	deployedContract.Fields[sema.DeployedContractTypePublicTypesFunctionName] = publicTypesFuncValue
+
+	// `sema.DeployedContractType` has the following members as function-members.
+	// Therefore, include them as functions in the value as well.
+	deployedContract.FunctionMemberGetter = func(name string, _ MemberAccessibleContext) FunctionValue {
+		switch name {
+		case sema.DeployedContractTypePublicTypesFunctionName:
+			return publicTypesFuncValue
+		default:
+			return nil
+		}
+	}
 
 	return deployedContract
 }
@@ -86,12 +96,14 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 			addressFieldValue := deployedContract.GetMember(
 				context,
 				sema.DeployedContractTypeAddressFieldName,
+				common.DeclarationKindField,
 			)
 			address = common.Address(AssertValueOfType[AddressValue](addressFieldValue))
 
 			nameFieldValue := deployedContract.GetMember(
 				context,
 				sema.DeployedContractTypeNameFieldName,
+				common.DeclarationKindField,
 			)
 			name = AssertValueOfType[*StringValue](nameFieldValue)
 		} else {

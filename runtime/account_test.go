@@ -2917,7 +2917,7 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 		common.ZeroAddress,
 	)
 
-	publicKeyArray1 := publicKey.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName)
+	publicKeyArray1 := publicKey.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField)
 
 	publicKey2 := publicKey.Transfer(
 		inter,
@@ -2933,7 +2933,7 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 		true, // publicKey is standalone
 	)
 
-	publicKeyArray2 := publicKey2.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName)
+	publicKeyArray2 := publicKey2.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField)
 
 	require.True(t,
 		publicKeyArray2.(interpreter.EquatableValue).

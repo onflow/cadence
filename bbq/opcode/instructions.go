@@ -1376,6 +1376,59 @@ func DecodeGetMethod(ip *uint16, code []byte) (i InstructionGetMethod) {
 	return i
 }
 
+// InstructionGetMethodDynamic
+//
+// Pops a value off the stack, the receiver,
+// and then pushes the value of the method with the given name onto the stack.
+// Methods are looked-up dynamically at runtime.
+type InstructionGetMethodDynamic struct {
+	MethodName   uint16
+	ReceiverType uint16
+}
+
+var _ Instruction = InstructionGetMethodDynamic{}
+
+func (InstructionGetMethodDynamic) Opcode() Opcode {
+	return GetMethodDynamic
+}
+
+func (i InstructionGetMethodDynamic) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionGetMethodDynamic) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "methodName", i.MethodName, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "receiverType", i.ReceiverType, colorize)
+}
+
+func (i InstructionGetMethodDynamic) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "methodName", constants[i.MethodName], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "receiverType", types[i.ReceiverType], colorize)
+}
+
+func (i InstructionGetMethodDynamic) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.MethodName)
+	emitUint16(code, i.ReceiverType)
+}
+
+func DecodeGetMethodDynamic(ip *uint16, code []byte) (i InstructionGetMethodDynamic) {
+	i.MethodName = decodeUint16(ip, code)
+	i.ReceiverType = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionDup
 //
 // Pops a value off the stack, duplicates it, and then pushes the original and the copy back on to the stack.
@@ -3204,6 +3257,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeInvokeTyped(ip, code)
 	case GetMethod:
 		return DecodeGetMethod(ip, code)
+	case GetMethodDynamic:
+		return DecodeGetMethodDynamic(ip, code)
 	case Dup:
 		return InstructionDup{}
 	case Drop:
