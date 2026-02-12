@@ -13889,3 +13889,85 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	signers := []Address{signerAccount}
+
+	accountCodes := map[Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return signers, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	tx := []byte(`
+      access(all) fun returnTargetAccount(): &AnyStruct{
+          return getAccount(0x123)
+      }
+
+      access(all) fun dummy(): auth(Storage) &Account{
+          panic("never called, just a placeholder")
+      }
+
+      transaction {
+          prepare(acct: auth(Storage) &Account) {
+              let dummyFuncArray: [fun(): auth(Storage) &Account] = [dummy]
+              acct.storage.save(dummyFuncArray as AnyStruct, to: /storage/flipflop)
+              let flipFloppingStorageRef = acct.storage.borrow<&AnyStruct>(from: /storage/flipflop)!
+
+              var downCastArray: [&[fun(): auth(Storage) &Account]] = [&[dummy]]
+              let arrayViaAnyStruct = &downCastArray as auth(Mutate) &[&AnyStruct]
+
+              arrayViaAnyStruct[0] = flipFloppingStorageRef
+
+              acct.storage.load<AnyStruct>(from: /storage/flipflop)
+              let realArray = [returnTargetAccount]
+              acct.storage.save(realArray as AnyStruct, to: /storage/flipflop)
+
+              downCastArray[0][0]().storage.save("hello world", to: /storage/blahblah)
+
+              acct.storage.load<AnyStruct>(from: /storage/flipflop)
+          }
+          execute {}
+      }
+    `)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+
+	RequireError(t, err)
+
+}
