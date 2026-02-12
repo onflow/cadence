@@ -13915,20 +13915,7 @@ func TestRuntimeInvalidReferenceCast(t *testing.T) {
 	const contract2 = `
       access(all) contract Test {
 
-          // removed event EventOrResource
-
-          access(all) var arr: [[AnyStruct]]
-
-          init() {
-              self.arr = []
-          }
-      }
-    `
-
-	const contract3 = `
-      access(all) contract Test {
-
-          // re-added
+          // changed to resource
           access(all) resource EventOrResource {}
 
           access(all) var arr: [[AnyStruct]]
@@ -14007,41 +13994,16 @@ func TestRuntimeInvalidReferenceCast(t *testing.T) {
 			UseVM:     *compile,
 		},
 	)
+
 	require.NoError(t, err)
 
-	// Update the Test contract
+	// Update the Test contract,
+	// manually to skip contract validation
 
-	deployTx2 := UpdateTransaction("Test", []byte(contract2))
+	accountCode = []byte(contract2)
+	clear(runtimeInterface.Programs)
 
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: deployTx2,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			UseVM:     *compile,
-		},
-	)
-	require.NoError(t, err)
-
-	// Update the Test contract again
-
-	deployTx3 := UpdateTransaction("Test", []byte(contract3))
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: deployTx3,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			UseVM:     *compile,
-		},
-	)
-	require.NoError(t, err)
-
-	// Run the Test contract
+	// Run the test
 
 	nextScriptLocation := NewScriptLocationGenerator()
 
@@ -14074,4 +14036,103 @@ func TestRuntimeInvalidReferenceCast(t *testing.T) {
 		common.TypeID("auth(Mutate)&[(A.0000000000000042.Test.EventOrResource)?]"),
 		transferTypeError.ActualType.ID(),
 	)
+}
+
+func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	signers := []Address{signerAccount}
+
+	accountCodes := map[Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return signers, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	tx := []byte(`
+      access(all) fun returnTargetAccount(): &AnyStruct{
+          return getAccount(0x123)
+      }
+
+      access(all) fun dummy(): auth(Storage) &Account{
+          panic("never called, just a placeholder")
+      }
+
+      transaction {
+          prepare(acct: auth(Storage) &Account) {
+              let dummyFuncArray: [fun(): auth(Storage) &Account] = [dummy]
+              acct.storage.save(dummyFuncArray as AnyStruct, to: /storage/flipflop)
+              let flipFloppingStorageRef = acct.storage.borrow<&AnyStruct>(from: /storage/flipflop)!
+
+              var downCastArray: [&[fun(): auth(Storage) &Account]] = [&[dummy]]
+              let arrayViaAnyStruct = &downCastArray as auth(Mutate) &[&AnyStruct]
+
+              arrayViaAnyStruct[0] = flipFloppingStorageRef
+
+              acct.storage.load<AnyStruct>(from: /storage/flipflop)
+              let realArray = [returnTargetAccount]
+              acct.storage.save(realArray as AnyStruct, to: /storage/flipflop)
+
+              downCastArray[0][0]().storage.save("hello world", to: /storage/blahblah)
+
+              acct.storage.load<AnyStruct>(from: /storage/flipflop)
+          }
+          execute {}
+      }
+    `)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+
+	RequireError(t, err)
+
+	if *compile {
+		var valueTransferTypeErr *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &valueTransferTypeErr)
+	} else {
+
+		var invalidReferenceConversionErr *interpreter.InvalidReferenceConversionError
+		require.ErrorAs(t, err, &invalidReferenceConversionErr)
+
+		assert.Equal(t,
+			common.TypeID("Storage"),
+			invalidReferenceConversionErr.Expected.ID(),
+		)
+		assert.Equal(t,
+			sema.UnauthorizedAccess,
+			invalidReferenceConversionErr.Actual,
+		)
+	}
 }
