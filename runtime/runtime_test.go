@@ -13890,7 +13890,7 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
 	})
 }
 
-func TestRuntimeEventRemoval(t *testing.T) {
+func TestRuntimeInvalidReferenceCast(t *testing.T) {
 
 	t.Parallel()
 
@@ -13900,13 +13900,33 @@ func TestRuntimeEventRemoval(t *testing.T) {
       access(all) contract Test {
 
           access(all) event EventOrResource()
+
+          access(all) var arr: [[AnyStruct]]
+
+          init() {
+              let optEventOrResource: EventOrResource? = nil
+              let optEventOrResourceArray = [optEventOrResource]
+              self.arr = [] as [[AnyStruct]]
+              self.arr.append(optEventOrResourceArray)
+          }
       }
     `
 
 	const contract2 = `
       access(all) contract Test {
 
-          // removed event EventOrResource
+          // changed to resource
+          access(all) resource EventOrResource {}
+
+          access(all) var arr: [[AnyStruct]]
+
+          init() {
+              self.arr = []
+          }
+
+          access(all) fun run(): Void {
+              ((&self.arr[0] as auth(Mutate) &AnyStruct) as AnyStruct) as! auth(Mutate) &[AnyResource]
+          }
       }
     `
 
@@ -13977,26 +13997,45 @@ func TestRuntimeEventRemoval(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// Update the Test contract
+	// Update the Test contract,
+	// manually to skip contract validation
 
-	deployTx2 := UpdateTransaction("Test", []byte(contract2))
+	accountCode = []byte(contract2)
+	clear(runtimeInterface.Programs)
 
-	err = runtime.ExecuteTransaction(
+	// Run the test
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	_, err = runtime.ExecuteScript(
 		Script{
-			Source: deployTx2,
+			Source: []byte(`
+              import 0x42
+
+              access(all) fun main() {
+                  Test.run()
+              }
+            `),
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 			UseVM:     *compile,
 		},
 	)
+	RequireError(t, err)
 
-	var invalidContractDeploymentErr *stdlib.InvalidContractDeploymentError
-	require.ErrorAs(t, err, &invalidContractDeploymentErr)
+	var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
 
-	require.ErrorContains(t, err, "missing event declaration `EventOrResource`")
-
+	assert.Equal(t,
+		common.TypeID("auth(Mutate)&AnyStruct"),
+		transferTypeError.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("auth(Mutate)&[(A.0000000000000042.Test.EventOrResource)?]"),
+		transferTypeError.ActualType.ID(),
+	)
 }
 
 func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
