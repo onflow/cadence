@@ -255,13 +255,13 @@ func TestInterpretEnumInContract(t *testing.T) {
 	contract, ok := c.(interpreter.MemberAccessibleValue)
 	require.True(t, ok)
 
-	eValue := contract.GetMember(inter, "e", common.DeclarationKindField)
+	eValue := contract.GetMember(inter, "e")
 	require.NotNil(t, eValue)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)
 	enumCase := eValue.(*interpreter.CompositeValue)
 
-	rawValue := enumCase.GetMember(inter, "rawValue", common.DeclarationKindField)
+	rawValue := enumCase.GetMember(inter, "rawValue")
 
 	RequireValuesEqual(
 		t,

@@ -132,7 +132,6 @@ const (
 	GetIndex
 	RemoveIndex
 	GetMethod
-	GetMethodDynamic
 	GetTypeIndex
 	SetTypeIndex
 	RemoveTypeIndex

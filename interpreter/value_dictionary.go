@@ -778,110 +778,103 @@ func (v *DictionaryValue) MeteredString(
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *DictionaryValue) GetMember(context MemberAccessibleContext, name string) Value {
 
-	return GetMember(
-		context,
-		v,
-		name,
-		memberKind,
-		func() Value {
-			switch name {
-			case "length":
-				return NewIntValueFromInt64(context, int64(v.Count()))
+	switch name {
+	case "length":
+		return NewIntValueFromInt64(context, int64(v.Count()))
 
-			case "keys":
+	case "keys":
 
-				iterator, err := v.dictionary.ReadOnlyIterator()
+		iterator, err := v.dictionary.ReadOnlyIterator()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+
+		count := v.dictionary.Count()
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: count,
+			},
+		)
+
+		return NewArrayValueWithIterator(
+			context,
+			NewVariableSizedStaticType(context, v.Type.KeyType),
+			common.ZeroAddress,
+			count,
+			func() Value {
+
+				key, err := iterator.NextKey()
 				if err != nil {
 					panic(errors.NewExternalError(err))
 				}
+				if key == nil {
+					return nil
+				}
 
-				count := v.dictionary.Count()
+				return MustConvertStoredValue(context, key).
+					Transfer(
+						context,
+						atree.Address{},
+						false,
+						nil,
+						nil,
+						false, // value is an element of parent container because it is returned from iterator.
+					)
+			},
+		)
 
-				common.UseComputation(
-					context,
-					common.ComputationUsage{
-						Kind:      common.ComputationKindAtreeMapReadIteration,
-						Intensity: count,
-					},
-				)
+	case "values":
 
-				return NewArrayValueWithIterator(
-					context,
-					NewVariableSizedStaticType(context, v.Type.KeyType),
-					common.ZeroAddress,
-					count,
-					func() Value {
+		// Use ReadOnlyIterator here because new ArrayValue is created with copied elements (not removed) from original.
+		iterator, err := v.dictionary.ReadOnlyIterator()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
 
-						key, err := iterator.NextKey()
-						if err != nil {
-							panic(errors.NewExternalError(err))
-						}
-						if key == nil {
-							return nil
-						}
+		count := v.dictionary.Count()
 
-						return MustConvertStoredValue(context, key).
-							Transfer(
-								context,
-								atree.Address{},
-								false,
-								nil,
-								nil,
-								false, // value is an element of parent container because it is returned from iterator.
-							)
-					},
-				)
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: count,
+			},
+		)
 
-			case "values":
+		return NewArrayValueWithIterator(
+			context,
+			NewVariableSizedStaticType(context, v.Type.ValueType),
+			common.ZeroAddress,
+			count,
+			func() Value {
 
-				// Use ReadOnlyIterator here because new ArrayValue is created with copied elements (not removed) from original.
-				iterator, err := v.dictionary.ReadOnlyIterator()
+				value, err := iterator.NextValue()
 				if err != nil {
 					panic(errors.NewExternalError(err))
 				}
+				if value == nil {
+					return nil
+				}
 
-				count := v.dictionary.Count()
+				return MustConvertStoredValue(context, value).
+					Transfer(
+						context,
+						atree.Address{},
+						false,
+						nil,
+						nil,
+						false, // value is an element of parent container because it is returned from iterator.
+					)
+			},
+		)
+	}
 
-				common.UseComputation(
-					context,
-					common.ComputationUsage{
-						Kind:      common.ComputationKindAtreeMapReadIteration,
-						Intensity: count,
-					},
-				)
-
-				return NewArrayValueWithIterator(
-					context,
-					NewVariableSizedStaticType(context, v.Type.ValueType),
-					common.ZeroAddress,
-					count,
-					func() Value {
-
-						value, err := iterator.NextValue()
-						if err != nil {
-							panic(errors.NewExternalError(err))
-						}
-						if value == nil {
-							return nil
-						}
-
-						return MustConvertStoredValue(context, value).
-							Transfer(
-								context,
-								atree.Address{},
-								false,
-								nil,
-								nil,
-								false, // value is an element of parent container because it is returned from iterator.
-							)
-					},
-				)
-			}
-			return nil
-		},
-	)
+	return context.GetMethod(v, name)
 }
 
 func (v *DictionaryValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

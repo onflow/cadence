@@ -233,7 +233,7 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) (result Value) {
+func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -248,32 +248,24 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	// NOTE: check if controller is already deleted
 	v.CheckDeleted()
 
-	return GetMember(
-		context,
-		v,
-		name,
-		memberKind,
-		func() Value {
-			switch name {
-			case sema.StorageCapabilityControllerTypeTagFieldName:
-				return v.GetTag(context)
+	switch name {
+	case sema.StorageCapabilityControllerTypeTagFieldName:
+		return v.GetTag(context)
 
-			case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
-				return v.CapabilityID
+	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
+		return v.CapabilityID
 
-			case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
-				return NewTypeValue(context, v.BorrowType)
+	case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
+		return NewTypeValue(context, v.BorrowType)
 
-			case sema.StorageCapabilityControllerTypeCapabilityFieldName:
-				return v.GetCapability(context)
+	case sema.StorageCapabilityControllerTypeCapabilityFieldName:
+		return v.GetCapability(context)
 
-				// NOTE: when adding new functions, ensure CheckDeleted is called,
-				// by e.g. using StorageCapabilityControllerValue.newHostFunction
-			}
+		// NOTE: when adding new functions, ensure CheckDeleted is called,
+		// by e.g. using StorageCapabilityControllerValue.newHostFunction
+	}
 
-			return nil
-		},
-	)
+	return context.GetMethod(v, name)
 }
 
 func (v *StorageCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

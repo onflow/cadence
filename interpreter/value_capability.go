@@ -145,23 +145,16 @@ func (v *IDCapabilityValue) MeteredString(
 	)
 }
 
-func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
-	return GetMember(
-		context,
-		v,
-		name,
-		memberKind,
-		func() Value {
-			switch name {
-			case sema.CapabilityTypeAddressFieldName:
-				return v.address
+func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, name string) Value {
+	switch name {
+	case sema.CapabilityTypeAddressFieldName:
+		return v.address
 
-			case sema.CapabilityTypeIDFieldName:
-				return v.ID
-			}
-			return nil
-		},
-	)
+	case sema.CapabilityTypeIDFieldName:
+		return v.ID
+	}
+
+	return context.GetMethod(v, name)
 }
 
 func (v *IDCapabilityValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

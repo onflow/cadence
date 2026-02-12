@@ -20,7 +20,6 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/bbq/vm"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -160,7 +159,7 @@ func NewPublicKeyFromValue(
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(context, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField)
+	key := publicKey.GetMember(context, sema.PublicKeyTypePublicKeyFieldName)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(context, key)
 	if err != nil {
@@ -168,7 +167,7 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(context, sema.PublicKeyTypeSignatureAlgorithmFieldName, common.DeclarationKindField)
+	signAlgoField := publicKey.GetMember(context, sema.PublicKeyTypeSignatureAlgorithmFieldName)
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -181,7 +180,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetMember(context, sema.EnumRawValueFieldName, common.DeclarationKindField)
+	rawValue := signAlgoValue.GetMember(context, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
 	}

@@ -502,7 +502,7 @@ func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, name 
 	return nil
 }
 
-func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string) Value {
 
 	if TracingEnabled {
 		startTime := time.Now()
@@ -526,51 +526,41 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string,
 		return compositeMember(context, v, builtin)
 	}
 
+	// Give computed fields precedence over stored fields for built-in types
+	if v.Location == nil {
+		if computedField := v.GetComputedField(context, name); computedField != nil {
+			return computedField
+		}
+	}
+
+	if field := v.GetField(context, name); field != nil {
+		return compositeMember(context, v, field)
+	}
+
+	if v.NestedVariables != nil {
+		variable, ok := v.NestedVariables[name]
+		if ok {
+			return variable.GetValue(context)
+		}
+	}
+
 	context = context.GetMemberAccessContextForLocation(v.Location)
 
-	return GetMember(
-		context,
-		v,
-		name,
-		memberKind,
-		func() Value {
+	// Dynamically link in the computed fields, injected fields, and functions
 
-			switch memberKind {
-			case common.DeclarationKindField:
-				// Give computed fields precedence over stored fields for built-in types.
-				if v.Location == nil {
-					if computedField := v.GetComputedField(context, name); computedField != nil {
-						return computedField
-					}
-				}
+	if computedField := v.GetComputedField(context, name); computedField != nil {
+		return computedField
+	}
 
-				if field := v.GetField(context, name); field != nil {
-					return compositeMember(context, v, field)
-				}
+	if injectedField := v.GetInjectedField(context, name); injectedField != nil {
+		return injectedField
+	}
 
-				// Dynamically link in the computed fields and injected fields.
-				// Computed fields were already checked above, for builtin-types.
-				if v.Location != nil {
-					if computedField := v.GetComputedField(context, name); computedField != nil {
-						return computedField
-					}
-				}
+	if function := context.GetMethod(v, name); function != nil {
+		return function
+	}
 
-				if injectedField := v.GetInjectedField(context, name); injectedField != nil {
-					return injectedField
-				}
-			default:
-				if v.NestedVariables != nil {
-					variable, ok := v.NestedVariables[name]
-					if ok {
-						return variable.GetValue(context)
-					}
-				}
-			}
-
-			return nil
-		},
-	)
+	return nil
 }
 
 func compositeMember(context FunctionCreationContext, compositeValue Value, memberValue Value) Value {
@@ -1842,8 +1832,7 @@ func (v *CompositeValue) getAttachmentValue(
 	context MemberAccessibleContext,
 	ty sema.Type,
 ) *CompositeValue {
-	// Attachments are always fields.
-	attachment := v.GetMember(context, AttachmentMemberName(string(ty.ID())), common.DeclarationKindField)
+	attachment := v.GetMember(context, AttachmentMemberName(string(ty.ID())))
 	if attachment != nil {
 		return attachment.(*CompositeValue)
 	}

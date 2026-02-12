@@ -131,22 +131,16 @@ func (v *EphemeralReferenceValue) ReferencedValue(_ ValueStaticTypeContext, _ bo
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
 	var result Value
 
 	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, name, memberKind)
+		result = memberAccessibleValue.GetMember(context, name)
 	}
 
 	if result == nil {
 		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
-		return GetMember(
-			context,
-			v,
-			name,
-			memberKind,
-			nil,
-		)
+		result = context.GetMethod(v, name)
 	}
 
 	return result

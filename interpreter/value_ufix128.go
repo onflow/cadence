@@ -493,14 +493,8 @@ func ConvertUFix128(memoryGauge common.MemoryGauge, value Value) UFix128Value {
 	return NewUFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-func (v UFix128Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
-	return GetMember(
-		context,
-		v,
-		name,
-		memberKind,
-		nil,
-	)
+func (v UFix128Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
 func (v UFix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

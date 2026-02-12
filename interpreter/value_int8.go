@@ -569,14 +569,8 @@ func (v Int8Value) BitwiseRightShift(context ValueStaticTypeContext, other Integ
 	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
-	return GetMember(
-		context,
-		v,
-		name,
-		memberKind,
-		nil,
-	)
+func (v Int8Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
 func (v Int8Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

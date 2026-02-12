@@ -179,7 +179,7 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Len(t, traceOps, 4)
 		assert.Equal(t, "composite.setMember", traceOps[3])
 
-		value.GetMember(inter, "abc", common.DeclarationKindField)
+		value.GetMember(inter, "abc")
 		require.Len(t, traceOps, 5)
 		assert.Equal(t, "composite.getMember", traceOps[4])
 

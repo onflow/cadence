@@ -615,7 +615,7 @@ func TestOwnerCompositeSet(t *testing.T) {
 
 	composite.SetMember(inter, fieldName, value)
 
-	element := composite.GetMember(inter, fieldName, common.DeclarationKindField)
+	element := composite.GetMember(inter, fieldName)
 	require.IsType(t, &CompositeValue{}, element)
 	value = element.(*CompositeValue)
 
@@ -649,7 +649,7 @@ func TestOwnerCompositeTransfer(t *testing.T) {
 	require.IsType(t, &CompositeValue{}, transferred)
 	composite = transferred.(*CompositeValue)
 
-	element := composite.GetMember(inter, fieldName, common.DeclarationKindField)
+	element := composite.GetMember(inter, fieldName)
 	require.IsType(t, &CompositeValue{}, element)
 	value = element.(*CompositeValue)
 

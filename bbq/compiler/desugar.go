@@ -2131,19 +2131,18 @@ func newEnumLookupFuncType(
 	gauge common.MemoryGauge,
 	enumType *sema.CompositeType,
 ) *sema.FunctionType {
-	return &sema.FunctionType{
-		Purity:        enumType.ConstructorPurity,
-		IsConstructor: true,
-		Parameters: []sema.Parameter{
+	return sema.NewSimpleFunctionType(
+		sema.FunctionPurityImpure,
+		[]sema.Parameter{
 			{
 				Identifier:     sema.EnumRawValueFieldName,
 				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
 			},
 		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.NewTypeAnnotation(
 			sema.NewOptionalType(gauge, enumType),
 		),
-	}
+	)
 }
 
 func simpleFunctionDeclaration(
