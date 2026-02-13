@@ -77,12 +77,13 @@ func (ins instruction) hasControlEffects() bool {
 }
 
 func main() {
-	if len(os.Args) != 3 {
-		panic("usage: gen instructions.yml instructions.go")
+	if len(os.Args) != 4 {
+		panic("usage: gen instructions.yml instructions.go pretty_instructions.go")
 	}
 
 	yamlPath := os.Args[1]
 	goPath := os.Args[2]
+	prettyGoPath := os.Args[3]
 
 	yamlContents, err := os.ReadFile(yamlPath)
 	if err != nil {
@@ -103,12 +104,15 @@ func main() {
 	}
 
 	var decls []dst.Decl
+
+	// Generate regular instruction types
 	for _, instruction := range instructions {
 		decls = append(
 			decls,
 			instructionDecls(instruction)...,
 		)
 	}
+
 	decls = append(decls, decodeInstructionFuncDecl(instructions))
 
 	writeGoFile(&buffer, decls, opcodePackagePath)
@@ -118,7 +122,13 @@ func main() {
 		panic(err)
 	}
 
-	generatedOpcodePath := "opcode_flow.go"
+	// Compute the path for opcode_flow.go relative to instructions.go
+	opcodeDir := ""
+	if idx := strings.LastIndex(goPath, "/"); idx >= 0 {
+		opcodeDir = goPath[:idx+1]
+	}
+	generatedOpcodePath := opcodeDir + "opcode_flow.go"
+
 	// write opcode.isControlFlow to separate hardcoded file
 	buffer.Reset()
 	_, err = fmt.Fprintf(&buffer, headerFormat, yamlPath)
@@ -129,6 +139,30 @@ func main() {
 	writeGoFile(&buffer, []dst.Decl{generateIsControlFlowMethod(instructions)}, opcodePackagePath)
 
 	err = os.WriteFile(generatedOpcodePath, buffer.Bytes(), 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	// Generate pretty instruction types
+
+	decls = decls[:0]
+
+	for _, instruction := range instructions {
+		decls = append(
+			decls,
+			prettyInstructionDecls(instruction)...,
+		)
+	}
+
+	buffer.Reset()
+	_, err = fmt.Fprintf(&buffer, headerFormat, yamlPath)
+	if err != nil {
+		panic(err)
+	}
+
+	writeGoFile(&buffer, decls, opcodePackagePath)
+
+	err = os.WriteFile(prettyGoPath, buffer.Bytes(), 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -334,6 +368,8 @@ func instructionDecls(instruction instruction) []dst.Decl {
 	if len(instruction.Operands) > 0 {
 		decls = append(decls, instructionDecodeFuncDecl(instruction))
 	}
+	// Add Pretty() method for all instructions
+	decls = append(decls, instructionPrettyMethodDecl(instruction))
 	return decls
 }
 
@@ -744,7 +780,12 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeTypeIndices:
 			funcName = "printfTypeArrayArgument"
 			extraArgs = []dst.Expr{
-				dst.NewIdent("types"),
+				&dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("program"),
+						Sel: dst.NewIdent("GetTypes"),
+					},
+				},
 			}
 
 		case operandTypeUpvalues:
@@ -753,7 +794,12 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeConstantIndex:
 			funcName = "printfConstantArgument"
 			arg = &dst.IndexExpr{
-				X: dst.NewIdent("constants"),
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("program"),
+						Sel: dst.NewIdent("GetConstants"),
+					},
+				},
 				Index: &dst.SelectorExpr{
 					X:   dst.NewIdent("i"),
 					Sel: operandIdent(operand),
@@ -763,7 +809,12 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 		case operandTypeTypeIndex:
 			funcName = "printfTypeArgument"
 			arg = &dst.IndexExpr{
-				X: dst.NewIdent("types"),
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("program"),
+						Sel: dst.NewIdent("GetTypes"),
+					},
+				},
 				Index: &dst.SelectorExpr{
 					X:   dst.NewIdent("i"),
 					Sel: operandIdent(operand),
@@ -772,11 +823,16 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 
 		case operandTypeFunctionIndex:
 			funcName = "printfFunctionNameArgument"
-			arg = &dst.IndexExpr{
-				X: dst.NewIdent("functionNames"),
-				Index: &dst.SelectorExpr{
-					X:   dst.NewIdent("i"),
-					Sel: operandIdent(operand),
+			arg = &dst.CallExpr{
+				Fun: &dst.SelectorExpr{
+					X:   dst.NewIdent("program"),
+					Sel: dst.NewIdent("GetFunctionName"),
+				},
+				Args: []dst.Expr{
+					&dst.SelectorExpr{
+						X:   dst.NewIdent("i"),
+						Sel: operandIdent(operand),
+					},
 				},
 			}
 
@@ -843,32 +899,11 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 		},
 		{
 			Names: []*dst.Ident{
-				dst.NewIdent("constants"),
+				dst.NewIdent("program"),
 			},
-			Type: &dst.ArrayType{
-				Elt: &dst.Ident{
-					Path: constantPackagePath,
-					Name: "DecodedConstant",
-				},
-			},
-		},
-		{
-			Names: []*dst.Ident{
-				dst.NewIdent("types"),
-			},
-			Type: &dst.ArrayType{
-				Elt: &dst.Ident{
-					Path: interpreterPackagePath,
-					Name: "StaticType",
-				},
-			},
-		},
-		{
-			Names: []*dst.Ident{
-				dst.NewIdent("functionNames"),
-			},
-			Type: &dst.ArrayType{
-				Elt: dst.NewIdent("string"),
+			Type: &dst.Ident{
+				Name: "ProgramForInstructions",
+				Path: opcodePackagePath,
 			},
 		},
 		{
@@ -1147,6 +1182,547 @@ func instructionDecodeFuncDecl(ins instruction) *dst.FuncDecl {
 							dst.NewIdent("i"),
 						},
 						Type: instructionIdent(ins),
+					},
+				},
+			},
+		},
+		Body: &dst.BlockStmt{
+			List: stmts,
+		},
+	}
+}
+
+// prettyOperandType returns the resolved type for a given operand type
+func prettyOperandType(operand operand) dst.Expr {
+	switch operand.Type {
+	case operandTypeConstantIndex:
+		return &dst.Ident{
+			Name: "DecodedConstant",
+			Path: constantPackagePath,
+		}
+	case operandTypeTypeIndex:
+		return &dst.Ident{
+			Name: "StaticType",
+			Path: interpreterPackagePath,
+		}
+	case operandTypeTypeIndices:
+		return &dst.ArrayType{
+			Elt: &dst.Ident{
+				Name: "StaticType",
+				Path: interpreterPackagePath,
+			},
+		}
+	case operandTypeBool:
+		return dst.NewIdent("bool")
+	case operandTypeLocalIndex,
+		operandTypeGlobalIndex,
+		operandTypeUpvalueIndex,
+		operandTypeFunctionIndex,
+		operandTypeOffset,
+		operandTypeSize:
+		return dst.NewIdent("uint16")
+	case operandTypeCastKind:
+		return &dst.Ident{
+			Name: "CastKind",
+			Path: opcodePackagePath,
+		}
+	case operandTypePathDomain:
+		return &dst.Ident{
+			Name: "PathDomain",
+			Path: commonPackagePath,
+		}
+	case operandTypeCompositeKind:
+		return &dst.Ident{
+			Name: "CompositeKind",
+			Path: commonPackagePath,
+		}
+	case operandTypeUpvalues:
+		return &dst.ArrayType{
+			Elt: &dst.Ident{
+				Name: "Upvalue",
+				Path: opcodePackagePath,
+			},
+		}
+	default:
+		panic(fmt.Sprintf("unsupported operand type: %s", operand.Type))
+	}
+}
+
+func prettyInstructionIdent(ins instruction) *dst.Ident {
+	return dst.NewIdent("PrettyInstruction" + firstUpper(ins.Name))
+}
+
+// prettyInstructionDecls generates all declarations for a pretty instruction type
+func prettyInstructionDecls(ins instruction) []dst.Decl {
+	return []dst.Decl{
+		prettyInstructionTypeDecl(ins),
+		prettyInstructionConformanceDecl(ins),
+		prettyInstructionOpcodeFuncDecl(ins),
+		prettyInstructionStringFuncDecl(ins),
+	}
+}
+
+// prettyInstructionTypeDecl generates the struct type declaration for a pretty instruction
+func prettyInstructionTypeDecl(ins instruction) dst.Decl {
+	comment := fmt.Sprintf(
+		typeCommentFormat,
+		prettyInstructionIdent(ins).String(),
+		"Pretty form of "+instructionIdent(ins).String()+" with resolved operands.\n// "+
+			strings.ReplaceAll(ins.Description, "\n", "\n// "),
+	)
+
+	fields := make([]*dst.Field, len(ins.Operands))
+	for i, operand := range ins.Operands {
+		fields[i] = &dst.Field{
+			Names: []*dst.Ident{operandIdent(operand)},
+			Type:  prettyOperandType(operand),
+		}
+	}
+
+	return &dst.GenDecl{
+		Tok: token.TYPE,
+		Specs: []dst.Spec{
+			&dst.TypeSpec{
+				Name: prettyInstructionIdent(ins),
+				Type: &dst.StructType{
+					Fields: &dst.FieldList{
+						List: fields,
+					},
+				},
+			},
+		},
+		Decs: dst.GenDeclDecorations{
+			NodeDecs: dst.NodeDecs{
+				Start: []string{comment},
+			},
+		},
+	}
+}
+
+// prettyInstructionConformanceDecl generates the conformance check for PrettyInstruction interface
+func prettyInstructionConformanceDecl(ins instruction) *dst.GenDecl {
+	return &dst.GenDecl{
+		Tok: token.VAR,
+		Specs: []dst.Spec{
+			&dst.ValueSpec{
+				Names: []*dst.Ident{
+					dst.NewIdent("_"),
+				},
+				Type: &dst.Ident{
+					Name: "PrettyInstruction",
+					Path: opcodePackagePath,
+				},
+				Values: []dst.Expr{
+					&dst.CompositeLit{
+						Type: prettyInstructionIdent(ins),
+					},
+				},
+			},
+		},
+	}
+}
+
+// prettyInstructionOpcodeFuncDecl generates the Opcode() method for a pretty instruction
+func prettyInstructionOpcodeFuncDecl(ins instruction) *dst.FuncDecl {
+	stmt := &dst.ReturnStmt{
+		Results: []dst.Expr{
+			dst.NewIdent(firstUpper(ins.Name)),
+		},
+		Decs: dst.ReturnStmtDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.NewLine,
+			},
+		},
+	}
+	return &dst.FuncDecl{
+		Recv: &dst.FieldList{
+			List: []*dst.Field{
+				{
+					Type: prettyInstructionIdent(ins),
+				},
+			},
+		},
+		Name: dst.NewIdent("Opcode"),
+		Type: &dst.FuncType{
+			Params: &dst.FieldList{},
+			Results: &dst.FieldList{
+				List: []*dst.Field{
+					{
+						Type: &dst.Ident{
+							Name: "Opcode",
+							Path: opcodePackagePath,
+						},
+					},
+				},
+			},
+		},
+		Body: &dst.BlockStmt{
+			List: []dst.Stmt{
+				stmt,
+			},
+		},
+	}
+}
+
+// prettyInstructionStringFuncDecl generates the String() method for a pretty instruction
+func prettyInstructionStringFuncDecl(ins instruction) *dst.FuncDecl {
+	var stmts []dst.Stmt
+
+	opcodeStringExpr := &dst.CallExpr{
+		Fun: &dst.SelectorExpr{
+			X: &dst.CallExpr{
+				Fun: &dst.SelectorExpr{
+					X:   dst.NewIdent("i"),
+					Sel: dst.NewIdent("Opcode"),
+				},
+			},
+			Sel: dst.NewIdent("String"),
+		},
+	}
+
+	if len(ins.Operands) == 0 {
+		stmt := &dst.ReturnStmt{
+			Results: []dst.Expr{
+				opcodeStringExpr,
+			},
+			Decs: dst.ReturnStmtDecorations{
+				NodeDecs: dst.NodeDecs{
+					Before: dst.NewLine,
+					After:  dst.NewLine,
+				},
+			},
+		}
+		stmts = append(stmts, stmt)
+	} else {
+		stmts = append(
+			stmts,
+			&dst.DeclStmt{
+				Decl: &dst.GenDecl{
+					Tok: token.VAR,
+					Specs: []dst.Spec{
+						&dst.ValueSpec{
+							Names: []*dst.Ident{
+								dst.NewIdent("sb"),
+							},
+							Type: &dst.Ident{
+								Path: "strings",
+								Name: "Builder",
+							},
+						},
+					},
+				},
+				Decs: dst.DeclStmtDecorations{
+					NodeDecs: dst.NodeDecs{
+						Before: dst.NewLine,
+						After:  dst.NewLine,
+					},
+				},
+			},
+		)
+
+		stmts = append(
+			stmts,
+			&dst.ExprStmt{
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("sb"),
+						Sel: dst.NewIdent("WriteString"),
+					},
+					Args: []dst.Expr{
+						opcodeStringExpr,
+					},
+				},
+			},
+		)
+
+		// Generate operand formatting
+		for _, operand := range ins.Operands {
+			stmts = append(
+				stmts,
+				&dst.ExprStmt{
+					X: &dst.CallExpr{
+						Fun: &dst.SelectorExpr{
+							X:   dst.NewIdent("sb"),
+							Sel: dst.NewIdent("WriteByte"),
+						},
+						Args: []dst.Expr{
+							&dst.BasicLit{
+								Kind:  token.CHAR,
+								Value: "' '",
+							},
+						},
+					},
+				},
+			)
+
+			var formatExpr dst.Expr
+			operandExpr := &dst.SelectorExpr{
+				X:   dst.NewIdent("i"),
+				Sel: operandIdent(operand),
+			}
+
+			switch operand.Type {
+			case operandTypeConstantIndex:
+				// printfConstantArgument(sb, "name", constant, false)
+				formatExpr = &dst.CallExpr{
+					Fun: dst.NewIdent("printfConstantArgument"),
+					Args: []dst.Expr{
+						&dst.UnaryExpr{
+							Op: token.AND,
+							X:  dst.NewIdent("sb"),
+						},
+						&dst.BasicLit{
+							Kind:  token.STRING,
+							Value: fmt.Sprintf(`"%s"`, operand.Name),
+						},
+						operandExpr,
+						dst.NewIdent("false"),
+					},
+				}
+			case operandTypeTypeIndex:
+				// printfTypeArgument(sb, "name", type, false)
+				formatExpr = &dst.CallExpr{
+					Fun: dst.NewIdent("printfTypeArgument"),
+					Args: []dst.Expr{
+						&dst.UnaryExpr{
+							Op: token.AND,
+							X:  dst.NewIdent("sb"),
+						},
+						&dst.BasicLit{
+							Kind:  token.STRING,
+							Value: fmt.Sprintf(`"%s"`, operand.Name),
+						},
+						operandExpr,
+						dst.NewIdent("false"),
+					},
+				}
+			case operandTypeTypeIndices:
+				// For []StaticType, we need a custom formatter
+				formatExpr = &dst.CallExpr{
+					Fun: dst.NewIdent("printfPrettyTypeArrayArgument"),
+					Args: []dst.Expr{
+						&dst.UnaryExpr{
+							Op: token.AND,
+							X:  dst.NewIdent("sb"),
+						},
+						&dst.BasicLit{
+							Kind:  token.STRING,
+							Value: fmt.Sprintf(`"%s"`, operand.Name),
+						},
+						operandExpr,
+						dst.NewIdent("false"),
+					},
+				}
+			case operandTypeUpvalues:
+				formatExpr = &dst.CallExpr{
+					Fun: dst.NewIdent("printfUpvalueArrayArgument"),
+					Args: []dst.Expr{
+						&dst.UnaryExpr{
+							Op: token.AND,
+							X:  dst.NewIdent("sb"),
+						},
+						&dst.BasicLit{
+							Kind:  token.STRING,
+							Value: fmt.Sprintf(`"%s"`, operand.Name),
+						},
+						operandExpr,
+						dst.NewIdent("false"),
+					},
+				}
+			default:
+				formatExpr = &dst.CallExpr{
+					Fun: dst.NewIdent("printfArgument"),
+					Args: []dst.Expr{
+						&dst.UnaryExpr{
+							Op: token.AND,
+							X:  dst.NewIdent("sb"),
+						},
+						&dst.BasicLit{
+							Kind:  token.STRING,
+							Value: fmt.Sprintf(`"%s"`, operand.Name),
+						},
+						operandExpr,
+						dst.NewIdent("false"),
+					},
+				}
+			}
+
+			stmts = append(stmts, &dst.ExprStmt{X: formatExpr})
+		}
+
+		stmts = append(
+			stmts,
+			&dst.ReturnStmt{
+				Results: []dst.Expr{
+					&dst.CallExpr{
+						Fun: &dst.SelectorExpr{
+							X:   dst.NewIdent("sb"),
+							Sel: dst.NewIdent("String"),
+						},
+					},
+				},
+				Decs: dst.ReturnStmtDecorations{
+					NodeDecs: dst.NodeDecs{
+						Before: dst.NewLine,
+						After:  dst.NewLine,
+					},
+				},
+			},
+		)
+	}
+
+	return &dst.FuncDecl{
+		Recv: &dst.FieldList{
+			List: []*dst.Field{
+				{
+					Names: []*dst.Ident{
+						dst.NewIdent("i"),
+					},
+					Type: prettyInstructionIdent(ins),
+				},
+			},
+		},
+		Name: dst.NewIdent("String"),
+		Type: &dst.FuncType{
+			Params: &dst.FieldList{},
+			Results: &dst.FieldList{
+				List: []*dst.Field{
+					{
+						Type: dst.NewIdent("string"),
+					},
+				},
+			},
+		},
+		Body: &dst.BlockStmt{
+			List: stmts,
+		},
+	}
+}
+
+// instructionPrettyMethodDecl generates the Pretty() method on the regular instruction
+func instructionPrettyMethodDecl(ins instruction) *dst.FuncDecl {
+	var stmts []dst.Stmt
+
+	// Build the composite literal for the pretty instruction
+	var fields []*dst.KeyValueExpr
+	for _, operand := range ins.Operands {
+		var valueExpr dst.Expr
+		operandFieldExpr := &dst.SelectorExpr{
+			X:   dst.NewIdent("i"),
+			Sel: operandIdent(operand),
+		}
+
+		switch operand.Type {
+		case operandTypeConstantIndex:
+			// program.GetConstants()[i.FieldName]
+			valueExpr = &dst.IndexExpr{
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("program"),
+						Sel: dst.NewIdent("GetConstants"),
+					},
+				},
+				Index: operandFieldExpr,
+			}
+		case operandTypeTypeIndex:
+			// program.GetTypes()[i.Type]
+			valueExpr = &dst.IndexExpr{
+				X: &dst.CallExpr{
+					Fun: &dst.SelectorExpr{
+						X:   dst.NewIdent("program"),
+						Sel: dst.NewIdent("GetTypes"),
+					},
+				},
+				Index: operandFieldExpr,
+			}
+		case operandTypeTypeIndices:
+			// Convert []uint16 to []StaticType
+			// Create a helper call that maps over the array
+			valueExpr = &dst.CallExpr{
+				Fun: dst.NewIdent("resolveTypeIndices"),
+				Args: []dst.Expr{
+					operandFieldExpr,
+					&dst.CallExpr{
+						Fun: &dst.SelectorExpr{
+							X:   dst.NewIdent("program"),
+							Sel: dst.NewIdent("GetTypes"),
+						},
+					},
+				},
+			}
+		default:
+			// No resolution needed, just copy the field
+			valueExpr = operandFieldExpr
+		}
+
+		field := &dst.KeyValueExpr{
+			Key:   operandIdent(operand),
+			Value: valueExpr,
+		}
+
+		field.Decorations().Before = dst.NewLine
+		field.Decorations().After = dst.NewLine
+
+		fields = append(fields, field)
+	}
+
+	returnStmt := &dst.ReturnStmt{
+		Results: []dst.Expr{
+			&dst.CompositeLit{
+				Type: prettyInstructionIdent(ins),
+				Elts: func() []dst.Expr {
+					result := make([]dst.Expr, len(fields))
+					for i, field := range fields {
+						result[i] = field
+					}
+					return result
+				}(),
+			},
+		},
+		Decs: dst.ReturnStmtDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.NewLine,
+			},
+		},
+	}
+
+	stmts = append(stmts, returnStmt)
+
+	return &dst.FuncDecl{
+		Recv: &dst.FieldList{
+			List: []*dst.Field{
+				{
+					Names: []*dst.Ident{
+						dst.NewIdent("i"),
+					},
+					Type: instructionIdent(ins),
+				},
+			},
+		},
+		Name: dst.NewIdent("Pretty"),
+		Type: &dst.FuncType{
+			Params: &dst.FieldList{
+				List: []*dst.Field{
+					{
+						Names: []*dst.Ident{
+							dst.NewIdent("program"),
+						},
+						Type: &dst.Ident{
+							Name: "ProgramForInstructions",
+							Path: opcodePackagePath,
+						},
+					},
+				},
+			},
+			Results: &dst.FieldList{
+				List: []*dst.Field{
+					{
+						Type: &dst.Ident{
+							Name: "PrettyInstruction",
+							Path: opcodePackagePath,
+						},
 					},
 				},
 			},

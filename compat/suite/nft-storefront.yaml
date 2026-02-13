@@ -1,0 +1,7 @@
+description: NFT Storefront
+maintainers:
+url: https://github.com/onflow/nft-storefront.git
+branch: main
+cadence_tests:
+- path: .
+  command: flow test tests/*.cdc

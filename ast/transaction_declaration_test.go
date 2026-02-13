@@ -507,3 +507,96 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		decl.String(),
 	)
 }
+
+func TestTransactionDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	paramTypeAnnotation := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Int"},
+		},
+	}
+
+	fieldDecl := &FieldDeclaration{
+		Identifier: Identifier{Identifier: "f"},
+		TypeAnnotation: &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "String"},
+			},
+		},
+	}
+
+	prepareBlock := &FunctionBlock{
+		Block: &Block{
+			Statements: []Statement{},
+		},
+	}
+
+	preCondition := &TestCondition{
+		Test: &BoolExpression{Value: true},
+	}
+
+	postCondition := &TestCondition{
+		Test: &BoolExpression{Value: false},
+	}
+
+	executeBlock := &FunctionBlock{
+		Block: &Block{
+			Statements: []Statement{},
+		},
+	}
+
+	decl := &TransactionDeclaration{
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier:     Identifier{Identifier: "x"},
+					TypeAnnotation: paramTypeAnnotation,
+				},
+			},
+		},
+		Fields: []*FieldDeclaration{
+			fieldDecl,
+		},
+		Prepare: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindPrepare,
+			FunctionDeclaration: &FunctionDeclaration{
+				FunctionBlock: prepareBlock,
+			},
+		},
+		PreConditions: &Conditions{
+			Conditions: []Condition{
+				preCondition,
+			},
+		},
+		Execute: &SpecialFunctionDeclaration{
+			Kind: common.DeclarationKindExecute,
+			FunctionDeclaration: &FunctionDeclaration{
+				FunctionBlock: executeBlock,
+			},
+		},
+		PostConditions: &Conditions{
+			Conditions: []Condition{
+				postCondition,
+			},
+		},
+	}
+
+	var visited []Element
+	decl.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			paramTypeAnnotation,
+			fieldDecl,
+			preCondition,
+			decl.Prepare,
+			postCondition,
+			decl.Execute,
+		},
+		visited,
+	)
+}
