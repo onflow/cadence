@@ -74,12 +74,22 @@ func NewHashAlgorithmCase(
 
 	// `sema.HashAlgorithmType` has the following members as function-members.
 	// Therefore, include them as functions in the value as well.
-	functions := map[string]interpreter.FunctionValue{
-		sema.HashAlgorithmTypeHashFunctionName:        newInterpreterHashAlgorithmHashFunction(value, hasher),
-		sema.HashAlgorithmTypeHashWithTagFunctionName: newInterpreterHashAlgorithmHashWithTagFunction(value, hasher),
-	}
+	functions := map[string]interpreter.FunctionValue{}
+
 	value.FunctionMemberGetter = func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
-		return functions[name]
+		function, ok := functions[name]
+		if !ok {
+			switch name {
+			case sema.HashAlgorithmTypeHashFunctionName:
+				function = newInterpreterHashAlgorithmHashFunction(value, hasher)
+			case sema.HashAlgorithmTypeHashWithTagFunctionName:
+				function = newInterpreterHashAlgorithmHashWithTagFunction(value, hasher)
+			}
+
+			functions[name] = function
+		}
+
+		return function
 	}
 
 	return value, nil
