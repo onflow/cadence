@@ -420,6 +420,25 @@
       - name: "method"
         type: "function"
 
+
+- name: "getMethodDynamic"
+  description: |
+    Pops a value off the stack, the receiver,
+    and then pushes the value of the method with the given name onto the stack.
+    Methods are looked-up dynamically at runtime.
+  operands:
+    - name: "methodName"
+      type: "constantIndex"
+    - name: "receiverType"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "receiver"
+        type: "value"
+    push:
+      - name: "method"
+        type: "function"
+
 # Value stack instructions
 
 - name: "dup"

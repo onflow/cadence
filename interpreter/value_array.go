@@ -935,13 +935,20 @@ func (v *ArrayValue) Contains(
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(context MemberAccessibleContext, name string) Value {
-	switch name {
-	case "length":
-		return NewIntValueFromInt64(context, int64(v.Count()))
-	}
-
-	return context.GetMethod(v, name)
+func (v *ArrayValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			switch name {
+			case "length":
+				return NewIntValueFromInt64(context, int64(v.Count()))
+			}
+			return nil
+		},
+	)
 }
 
 func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

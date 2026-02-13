@@ -184,18 +184,24 @@ func (v *StorageReferenceValue) MustReferencedValue(
 	return *referencedValue
 }
 
-func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
+func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 	referencedValue := v.MustReferencedValue(context)
 
 	var member Value
 
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
-		member = memberAccessibleValue.GetMember(context, name)
+		member = memberAccessibleValue.GetMember(context, name, memberKind)
 	}
 
 	if member == nil {
 		// NOTE: Must call the `GetMethod` of the `StorageReferenceValue`, not of the referenced-value.
-		member = context.GetMethod(v, name)
+		member = GetMember(
+			context,
+			v,
+			name,
+			memberKind,
+			nil,
+		)
 	}
 
 	// If the member is a function, it is always a bound-function.
