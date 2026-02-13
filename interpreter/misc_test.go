@@ -14522,3 +14522,62 @@ func TestInterpretPlaceholderConfusion(t *testing.T) {
 	var transferTypeError *interpreter.ValueTransferTypeError
 	require.ErrorAs(t, err, &transferTypeError)
 }
+
+func TestInterpretImplicitElementBoxing(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Type {
+                let ints: [Int] = [42]
+                let opts: [Int?] = ints
+                return opts[0].getType()
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredTypeValue(
+				&interpreter.OptionalStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			),
+			value,
+		)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Type {
+                let ints: {String: Int} = {"foo": 42}
+                let opts: {String: Int?} = ints
+                return opts["foo"].getType()
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredTypeValue(
+				// NOTE: Int?? as dictionary access returns an optional
+				&interpreter.OptionalStaticType{
+					Type: &interpreter.OptionalStaticType{
+						Type: interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			),
+			value,
+		)
+	})
+}

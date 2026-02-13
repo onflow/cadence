@@ -20,6 +20,7 @@ package ast
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/turbolent/prettier"
@@ -49,9 +50,9 @@ const (
 func (s Separator) String() string {
 	switch s {
 	case Disjunction:
-		return " |"
+		return " | "
 	case Conjunction:
-		return ","
+		return ", "
 	}
 	panic(errors.NewUnreachableError())
 }
@@ -68,7 +69,11 @@ type ConjunctiveEntitlementSet struct {
 
 var _ EntitlementSet = &ConjunctiveEntitlementSet{}
 
-func (ConjunctiveEntitlementSet) isAuthorization() {}
+func NewConjunctiveEntitlementSet(entitlements []*NominalType) *ConjunctiveEntitlementSet {
+	return &ConjunctiveEntitlementSet{Elements: entitlements}
+}
+
+func (*ConjunctiveEntitlementSet) isAuthorization() {}
 
 func (s *ConjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
@@ -84,8 +89,23 @@ func (s *ConjunctiveEntitlementSet) Walk(walkChild func(Element)) {
 	}
 }
 
-func NewConjunctiveEntitlementSet(entitlements []*NominalType) *ConjunctiveEntitlementSet {
-	return &ConjunctiveEntitlementSet{Elements: entitlements}
+func (s *ConjunctiveEntitlementSet) CheckEqual(
+	other Authorization,
+	c TypeEqualityChecker,
+	pos HasPosition,
+) error {
+	return c.CheckConjunctiveEntitlementSetEquality(s, other, pos)
+}
+
+func (s *ConjunctiveEntitlementSet) String() string {
+	var sb strings.Builder
+	for i, entitlement := range s.Elements {
+		sb.WriteString(entitlement.String())
+		if i < len(s.Elements)-1 {
+			sb.WriteString(s.Separator().String())
+		}
+	}
+	return sb.String()
 }
 
 type DisjunctiveEntitlementSet struct {
@@ -94,7 +114,11 @@ type DisjunctiveEntitlementSet struct {
 
 var _ EntitlementSet = &DisjunctiveEntitlementSet{}
 
-func (DisjunctiveEntitlementSet) isAuthorization() {}
+func NewDisjunctiveEntitlementSet(entitlements []*NominalType) *DisjunctiveEntitlementSet {
+	return &DisjunctiveEntitlementSet{Elements: entitlements}
+}
+
+func (*DisjunctiveEntitlementSet) isAuthorization() {}
 
 func (s *DisjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
@@ -110,13 +134,30 @@ func (s *DisjunctiveEntitlementSet) Walk(walkChild func(Element)) {
 	}
 }
 
-func NewDisjunctiveEntitlementSet(entitlements []*NominalType) *DisjunctiveEntitlementSet {
-	return &DisjunctiveEntitlementSet{Elements: entitlements}
+func (s *DisjunctiveEntitlementSet) CheckEqual(
+	other Authorization,
+	c TypeEqualityChecker,
+	pos HasPosition,
+) error {
+	return c.CheckDisjunctiveEntitlementSetEquality(s, other, pos)
+}
+
+func (s *DisjunctiveEntitlementSet) String() string {
+	var sb strings.Builder
+	for i, entitlement := range s.Elements {
+		sb.WriteString(entitlement.String())
+		if i < len(s.Elements)-1 {
+			sb.WriteString(s.Separator().String())
+		}
+	}
+	return sb.String()
 }
 
 type Authorization interface {
+	fmt.Stringer
 	isAuthorization()
 	Walk(walkChild func(Element))
+	CheckEqual(Authorization, TypeEqualityChecker, HasPosition) error
 }
 
 type EntitlementAccess struct {
@@ -233,6 +274,10 @@ func (a *MappedAccess) Walk(walkChild func(Element)) {
 	if a.EntitlementMap != nil {
 		walkChild(a.EntitlementMap)
 	}
+}
+
+func (a *MappedAccess) CheckEqual(other Authorization, c TypeEqualityChecker, pos HasPosition) error {
+	return c.CheckMappedAccessEquality(a, other, pos)
 }
 
 type PrimitiveAccess uint8

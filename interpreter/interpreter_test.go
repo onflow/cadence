@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 var compile = flag.Bool("compile", false, "Run tests using the compiler")
@@ -190,6 +191,86 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		assert.Equal(t,
 			Nil,
 			value,
+		)
+	})
+
+	t.Run("[Bool] to [Bool?]", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			NewArrayValue(
+				inter,
+				&VariableSizedStaticType{
+					Type: &OptionalStaticType{
+						Type: PrimitiveStaticTypeBool,
+					},
+				},
+				common.Address{},
+				NewSomeValueNonCopying(nil, TrueValue),
+			),
+			ConvertAndBoxWithValidation(
+				inter,
+				NewArrayValue(
+					inter,
+					&VariableSizedStaticType{Type: PrimitiveStaticTypeBool},
+					common.Address{},
+					TrueValue,
+				),
+				&sema.VariableSizedType{Type: sema.BoolType},
+				&sema.VariableSizedType{
+					Type: &sema.OptionalType{
+						Type: sema.BoolType,
+					},
+				},
+			),
+		)
+	})
+
+	t.Run("{String: Bool} to {String: Bool?}", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			NewDictionaryValue(
+				inter,
+				&DictionaryStaticType{
+					KeyType: PrimitiveStaticTypeString,
+					ValueType: &OptionalStaticType{
+						Type: PrimitiveStaticTypeBool,
+					},
+				},
+				NewUnmeteredStringValue("foo"),
+				NewSomeValueNonCopying(nil, TrueValue),
+			),
+			ConvertAndBoxWithValidation(
+				inter,
+				NewDictionaryValue(
+					inter,
+					&DictionaryStaticType{
+						KeyType:   PrimitiveStaticTypeString,
+						ValueType: PrimitiveStaticTypeBool,
+					},
+					NewUnmeteredStringValue("foo"),
+					TrueValue,
+				),
+				&sema.DictionaryType{
+					KeyType:   sema.StringType,
+					ValueType: sema.BoolType,
+				},
+				&sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.OptionalType{
+						Type: sema.BoolType,
+					},
+				},
+			),
 		)
 	})
 }

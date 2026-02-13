@@ -749,11 +749,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 
 				for i, entitlement := range entitlements {
 					if i > 0 {
-						doc = append(
-							doc,
-							separatorDoc,
-							prettier.Space,
-						)
+						doc = append(doc, separatorDoc)
 					}
 					doc = append(doc, docOrEmpty(entitlement))
 				}
@@ -1028,4 +1024,8 @@ type TypeEqualityChecker interface {
 	CheckReferenceTypeEquality(*ReferenceType, Type) error
 	CheckIntersectionTypeEquality(*IntersectionType, Type) error
 	CheckInstantiationTypeEquality(*InstantiationType, Type) error
+
+	CheckConjunctiveEntitlementSetEquality(*ConjunctiveEntitlementSet, Authorization, HasPosition) error
+	CheckDisjunctiveEntitlementSetEquality(*DisjunctiveEntitlementSet, Authorization, HasPosition) error
+	CheckMappedAccessEquality(*MappedAccess, Authorization, HasPosition) error
 }
