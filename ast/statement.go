@@ -302,6 +302,81 @@ func (s *IfStatement) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// GuardStatement
+
+type GuardStatement struct {
+	Test     IfStatementTest
+	Else     *Block
+	StartPos Position `json:"-"`
+}
+
+var _ Element = &GuardStatement{}
+var _ Statement = &GuardStatement{}
+
+func NewGuardStatement(
+	gauge common.MemoryGauge,
+	test IfStatementTest,
+	elseBlock *Block,
+	startPos Position,
+) *GuardStatement {
+	common.UseMemory(gauge, common.GuardStatementMemoryUsage)
+	return &GuardStatement{
+		Test:     test,
+		Else:     elseBlock,
+		StartPos: startPos,
+	}
+}
+
+func (*GuardStatement) ElementType() ElementType {
+	return ElementTypeGuardStatement
+}
+
+func (*GuardStatement) isStatement() {}
+
+func (s *GuardStatement) StartPosition() Position {
+	return s.StartPos
+}
+
+func (s *GuardStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return s.Else.EndPosition(memoryGauge)
+}
+
+func (s *GuardStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Test)
+	walkChild(s.Else)
+}
+
+const guardStatementGuardKeywordSpaceDoc = prettier.Text("guard ")
+const guardStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
+
+func (s *GuardStatement) Doc() prettier.Doc {
+	return prettier.Group{
+		Doc: prettier.Concat{
+			guardStatementGuardKeywordSpaceDoc,
+			docOrEmpty(s.Test),
+			guardStatementSpaceElseKeywordSpaceDoc,
+			s.Else.Doc(),
+		},
+	}
+}
+
+func (s *GuardStatement) String() string {
+	return Prettier(s)
+}
+
+func (s *GuardStatement) MarshalJSON() ([]byte, error) {
+	type Alias GuardStatement
+	return json.Marshal(&struct {
+		*Alias
+		Type string
+		Range
+	}{
+		Type:  "GuardStatement",
+		Range: NewUnmeteredRangeFromPositioned(s),
+		Alias: (*Alias)(s),
+	})
+}
+
 // WhileStatement
 
 type WhileStatement struct {

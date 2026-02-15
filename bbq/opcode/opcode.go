@@ -176,6 +176,7 @@ const (
 	Loop
 	Statement
 	TemplateString
+	Unreachable
 
 	// NOTE: not an actual opcode, must be last item
 	OpcodeMax
