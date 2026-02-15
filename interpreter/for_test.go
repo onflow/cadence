@@ -1185,3 +1185,217 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 		}
 	}
 }
+
+func TestInterpretForDictionary(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic dictionary iteration", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): [String] {
+                let dict: {String: Int} = {"a": 1, "b": 2, "c": 3}
+                let keys: [String] = []
+                for key in dict {
+                    keys.append(key)
+                }
+                return keys
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("c"),
+				interpreter.NewUnmeteredStringValue("b"),
+				interpreter.NewUnmeteredStringValue("a"),
+			),
+			value,
+		)
+	})
+
+	t.Run("empty dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Int {
+                let dict: {String: Int} = {}
+                var count = 0
+                for key in dict {
+                    count = count + 1
+                }
+                return count
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			value,
+		)
+	})
+
+	t.Run("break statement", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Int {
+                let dict: {Int: String} = {1: "a", 2: "b", 3: "c", 4: "d"}
+                var count = 0
+                for key in dict {
+                    count = count + 1
+                    if count == 2 {
+                        break
+                    }
+                }
+                return count
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			value,
+		)
+	})
+
+	t.Run("continue statement", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Int {
+                let dict: {Int: String} = {1: "a", 2: "b", 3: "c", 4: "d"}
+                var sum = 0
+                for key in dict {
+                    if key == 2 {
+                        continue
+                    }
+                    sum = sum + key
+                }
+                return sum
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Sum should be 1 + 3 + 4 = 8 (skipping 2)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(8),
+			value,
+		)
+	})
+
+	t.Run("dictionary reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): [String] {
+                let dict: {String: Int} = {"x": 10, "y": 20}
+                let dictRef = &dict as &{String: Int}
+                let keys: [String] = []
+                for key in dictRef {
+                    keys.append(key)
+                }
+                return keys
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("x"),
+				interpreter.NewUnmeteredStringValue("y"),
+			),
+			value,
+		)
+	})
+
+	t.Run("nested dictionary iteration", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Int {
+                let dict1: {Int: String} = {1: "a", 2: "b"}
+                let dict2: {Int: String} = {10: "x", 20: "y"}
+                var sum = 0
+                for key1 in dict1 {
+                    for key2 in dict2 {
+                        sum = sum + key1 + key2
+                    }
+                }
+                return sum
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Expected: (1+10) + (1+20) + (2+10) + (2+20) = 11 + 21 + 12 + 22 = 66
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(66),
+			value,
+		)
+	})
+
+	t.Run("integer key dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Int {
+                let dict: {Int: String} = {1: "a", 2: "b", 3: "c"}
+                var sum = 0
+                for key in dict {
+                    sum = sum + key
+                }
+                return sum
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(6),
+			value,
+		)
+	})
+}
