@@ -28,16 +28,56 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-// MinOfFunction
+const ComparisonContractLocation = common.IdentifierLocation("Comparison")
 
-const minOfFunctionName = "minOf"
+var ComparisonContractSemaImport = sema.VirtualImport{
+	ValueElements: func() *sema.StringImportElementOrderedMap {
+		elements := &sema.StringImportElementOrderedMap{}
+		elements.Set(minFunctionName, sema.ImportElement{
+			Type:            minFunctionType,
+			DeclarationKind: common.DeclarationKindFunction,
+			Access:          sema.PrimitiveAccess(ast.AccessAll),
+		})
+		elements.Set(maxFunctionName, sema.ImportElement{
+			Type:            maxFunctionType,
+			DeclarationKind: common.DeclarationKindFunction,
+			Access:          sema.PrimitiveAccess(ast.AccessAll),
+		})
+		return elements
+	}(),
+}
 
-const minOfFunctionDocString = `
+var ComparisonContractInterpreterImport = interpreter.VirtualImport{
+	Globals: []interpreter.VirtualImportGlobal{
+		{
+			Name: minFunctionName,
+			Value: interpreter.NewStaticHostFunctionValueFromNativeFunction(
+				nil,
+				minFunctionType,
+				NativeMinFunction,
+			),
+		},
+		{
+			Name: maxFunctionName,
+			Value: interpreter.NewStaticHostFunctionValueFromNativeFunction(
+				nil,
+				maxFunctionType,
+				NativeMaxFunction,
+			),
+		},
+	},
+}
+
+// MinFunction
+
+const minFunctionName = "min"
+
+const minFunctionDocString = `
 Returns the minimum of the two given values.
 The arguments must be of the same comparable type.
 `
 
-var minOfFunctionType = func() *sema.FunctionType {
+var minFunctionType = func() *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
 		Name: "T",
 		// No TypeBound - we check comparability in TypeArgumentsCheck
@@ -86,7 +126,7 @@ var minOfFunctionType = func() *sema.FunctionType {
 					Range:            ast.NewRangeFromPositioned(memoryGauge, invocationRange),
 					Details: fmt.Sprintf(
 						"Type argument for `%s` must be a comparable type, got `%s`",
-						minOfFunctionName,
+						minFunctionName,
 						typeArg,
 					),
 				})
@@ -95,7 +135,7 @@ var minOfFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-var NativeMinOfFunction = interpreter.NativeFunction(
+var NativeMinFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
@@ -123,32 +163,16 @@ var NativeMinOfFunction = interpreter.NativeFunction(
 	},
 )
 
-var InterpreterMinOfFunction = NewNativeStandardLibraryStaticFunction(
-	minOfFunctionName,
-	minOfFunctionType,
-	minOfFunctionDocString,
-	NativeMinOfFunction,
-	false,
-)
+// MaxFunction
 
-var VMMinOfFunction = NewNativeStandardLibraryStaticFunction(
-	minOfFunctionName,
-	minOfFunctionType,
-	minOfFunctionDocString,
-	NativeMinOfFunction,
-	true,
-)
+const maxFunctionName = "max"
 
-// MaxOfFunction
-
-const maxOfFunctionName = "maxOf"
-
-const maxOfFunctionDocString = `
+const maxFunctionDocString = `
 Returns the maximum of the two given values.
 The arguments must be of the same comparable type.
 `
 
-var maxOfFunctionType = func() *sema.FunctionType {
+var maxFunctionType = func() *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
 		Name: "T",
 		// No TypeBound - we check comparability in TypeArgumentsCheck
@@ -197,7 +221,7 @@ var maxOfFunctionType = func() *sema.FunctionType {
 					Range:            ast.NewRangeFromPositioned(memoryGauge, invocationRange),
 					Details: fmt.Sprintf(
 						"Type argument for `%s` must be a comparable type, got `%s`",
-						maxOfFunctionName,
+						maxFunctionName,
 						typeArg,
 					),
 				})
@@ -206,7 +230,7 @@ var maxOfFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-var NativeMaxOfFunction = interpreter.NativeFunction(
+var NativeMaxFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
@@ -232,20 +256,4 @@ var NativeMaxOfFunction = interpreter.NativeFunction(
 		}
 		return b
 	},
-)
-
-var InterpreterMaxOfFunction = NewNativeStandardLibraryStaticFunction(
-	maxOfFunctionName,
-	maxOfFunctionType,
-	maxOfFunctionDocString,
-	NativeMaxOfFunction,
-	false,
-)
-
-var VMMaxOfFunction = NewNativeStandardLibraryStaticFunction(
-	maxOfFunctionName,
-	maxOfFunctionType,
-	maxOfFunctionDocString,
-	NativeMaxOfFunction,
-	true,
 )
