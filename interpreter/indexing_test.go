@@ -22,10 +22,11 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/onflow/atree"
-	"github.com/onflow/cadence/common"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
