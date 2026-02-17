@@ -456,9 +456,11 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 		})
 	}
 
-	nominalType := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
+	attachmentRemoveTypes := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
 
-	removed := base.RemoveTypeKey(interpreter, nominalType)
+	interpreter.checkIndexedValue(attachmentRemoveTypes.BaseType, base)
+
+	removed := base.RemoveTypeKey(interpreter, attachmentRemoveTypes.AttachmentType)
 
 	// attachment not present on this base
 	if removed == nil {
