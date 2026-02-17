@@ -1691,7 +1691,7 @@ func opGetTypeIndex(vm *VM, ins opcode.InstructionGetTypeIndex) {
 	)
 
 	// Get attachment type
-	attachmentTypeIndex := ins.IndexedType
+	attachmentTypeIndex := ins.IndexingType
 	attachmentStaticType := vm.loadType(attachmentTypeIndex)
 	attachmentSemaType := context.SemaTypeFromStaticType(attachmentStaticType)
 
@@ -1712,7 +1712,7 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 	)
 
 	// Get attachment type
-	attachmentTypeIndex := ins.IndexedType
+	attachmentTypeIndex := ins.IndexingType
 	attachmentStaticType := vm.loadType(attachmentTypeIndex)
 	attachmentSemaType := context.SemaTypeFromStaticType(attachmentStaticType)
 	attachment := fieldValue.(*interpreter.CompositeValue)

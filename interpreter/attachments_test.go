@@ -1927,8 +1927,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
-		require.ErrorAs(t, err, &attachmentError)
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
 	})
 
 	t.Run("array attach", func(t *testing.T) {

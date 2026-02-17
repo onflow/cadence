@@ -443,6 +443,9 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 	removeTarget := interpreter.evalExpression(removeStatement.Value)
 	base, ok := removeTarget.(*CompositeValue)
 
+	attachmentRemoveTypes := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
+	interpreter.checkIndexedValue(attachmentRemoveTypes.BaseType, base)
+
 	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
 		panic(&InvalidAttachmentOperationTargetError{
@@ -455,10 +458,6 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 			Value: base,
 		})
 	}
-
-	attachmentRemoveTypes := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
-
-	interpreter.checkIndexedValue(attachmentRemoveTypes.BaseType, base)
 
 	removed := base.RemoveTypeKey(interpreter, attachmentRemoveTypes.AttachmentType)
 

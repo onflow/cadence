@@ -14178,23 +14178,17 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
 			)
 
 			RequireError(t, err)
+			var indexedTypeError *interpreter.IndexedTypeError
+			require.ErrorAs(t, err, &indexedTypeError)
 
-			if *compile {
-				var valueTransferTypeErr *interpreter.ValueTransferTypeError
-				require.ErrorAs(t, err, &valueTransferTypeErr)
-			} else {
-				var indexedTypeError *interpreter.IndexedTypeError
-				require.ErrorAs(t, err, &indexedTypeError)
-
-				assert.Equal(t,
-					common.TypeID(expectedTypeID),
-					indexedTypeError.ExpectedType.ID(),
-				)
-				assert.Equal(t,
-					common.TypeID(actualTypeID),
-					indexedTypeError.ActualType.ID(),
-				)
-			}
+			assert.Equal(t,
+				common.TypeID(expectedTypeID),
+				indexedTypeError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID(actualTypeID),
+				indexedTypeError.ActualType.ID(),
+			)
 		})
 	}
 }
