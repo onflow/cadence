@@ -43,6 +43,11 @@ var ComparisonContractSemaImport = sema.VirtualImport{
 			DeclarationKind: common.DeclarationKindFunction,
 			Access:          sema.PrimitiveAccess(ast.AccessAll),
 		})
+		elements.Set(clampFunctionName, sema.ImportElement{
+			Type:            clampFunctionType,
+			DeclarationKind: common.DeclarationKindFunction,
+			Access:          sema.PrimitiveAccess(ast.AccessAll),
+		})
 		return elements
 	}(),
 }
@@ -63,6 +68,14 @@ var ComparisonContractInterpreterImport = interpreter.VirtualImport{
 				nil,
 				maxFunctionType,
 				NativeMaxFunction,
+			),
+		},
+		{
+			Name: clampFunctionName,
+			Value: interpreter.NewStaticHostFunctionValueFromNativeFunction(
+				nil,
+				clampFunctionType,
+				NativeClampFunction,
 			),
 		},
 	},
@@ -243,17 +256,129 @@ var NativeMaxFunction = interpreter.NativeFunction(
 
 		comparableA, ok := a.(interpreter.ComparableValue)
 		if !ok {
-			panic(fmt.Sprintf("max: first argument is not comparable: %T", a))
+			panic(errors.NewUnreachableError())
 		}
 
 		comparableB, ok := b.(interpreter.ComparableValue)
 		if !ok {
-			panic(fmt.Sprintf("max: second argument is not comparable: %T", b))
+			panic(errors.NewUnreachableError())
 		}
 
 		if bool(comparableA.Greater(context, comparableB)) {
 			return a
 		}
 		return b
+	},
+)
+
+// ClampFunction
+
+const clampFunctionName = "clamp"
+
+const clampFunctionDocString = `
+Returns the value clamped to the inclusive range [min, max].
+If the value is less than min, min is returned.
+If the value is greater than max, max is returned.
+Otherwise, the value itself is returned.
+The arguments must be of the same comparable type.
+`
+
+var clampFunctionType = func() *sema.FunctionType {
+	typeParameter := &sema.TypeParameter{
+		Name: "T",
+		// No TypeBound - we check comparability in TypeArgumentsCheck
+	}
+
+	typeAnnotation := sema.NewTypeAnnotation(
+		&sema.GenericType{
+			TypeParameter: typeParameter,
+		},
+	)
+
+	return &sema.FunctionType{
+		Purity: sema.FunctionPurityView,
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
+		Parameters: []sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: typeAnnotation,
+			},
+			{
+				Label:          "min",
+				Identifier:     "min",
+				TypeAnnotation: typeAnnotation,
+			},
+			{
+				Label:          "max",
+				Identifier:     "max",
+				TypeAnnotation: typeAnnotation,
+			},
+		},
+		ReturnTypeAnnotation: typeAnnotation,
+		TypeArgumentsCheck: func(
+			memoryGauge common.MemoryGauge,
+			typeArguments *sema.TypeParameterTypeOrderedMap,
+			_ []*ast.TypeAnnotation,
+			invocationRange ast.HasPosition,
+			report func(err error),
+		) {
+			typeArg, ok := typeArguments.Get(typeParameter)
+			if !ok || typeArg == nil {
+				// Invalid, already reported by checker
+				return
+			}
+
+			if !typeArg.IsComparable() {
+				report(&sema.InvalidTypeArgumentError{
+					TypeArgumentName: typeParameter.Name,
+					Range:            ast.NewRangeFromPositioned(memoryGauge, invocationRange),
+					Details: fmt.Sprintf(
+						"Type argument for `%s` must be a comparable type, got `%s`",
+						clampFunctionName,
+						typeArg,
+					),
+				})
+			}
+		},
+	}
+}()
+
+var NativeClampFunction = interpreter.NativeFunction(
+	func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		value := args[0]
+		min := args[1]
+		max := args[2]
+
+		comparableValue, ok := value.(interpreter.ComparableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		comparableMin, ok := min.(interpreter.ComparableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		comparableMax, ok := max.(interpreter.ComparableValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if comparableValue.Less(context, comparableMin) {
+			return min
+		}
+		if comparableValue.Greater(context, comparableMax) {
+			return max
+		}
+		return value
 	},
 )

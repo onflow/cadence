@@ -375,3 +375,184 @@ func TestMaxFunctionRuntime(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 }
+
+func TestClampFunction(t *testing.T) {
+	t.Parallel()
+
+	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
+		return ParseAndCheckWithOptions(t,
+			code,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(
+						_ *sema.Checker,
+						importedLocation common.Location,
+						_ ast.Range,
+					) (sema.Import, error) {
+						if importedLocation == ComparisonContractLocation {
+							return ComparisonContractSemaImport, nil
+						}
+						return nil, fmt.Errorf("unexpected import: %s", importedLocation)
+					},
+				},
+			},
+		)
+	}
+
+	t.Run("Int", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            import Comparison
+
+            let result: Int = clamp(7, min: 1, max: 10)
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Int8", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            import Comparison
+
+            let result: Int8 = clamp<Int8>(7, min: 1, max: 10)
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("UFix64", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            import Comparison
+
+            let result: UFix64 = clamp<UFix64>(7.5, min: 1.0, max: 10.0)
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("String", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            import Comparison
+
+            let result: String = clamp("d", min: "a", max: "f")
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non-comparable type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            import Comparison
+
+            let result = clamp<{String: Int}>({}, min: {}, max: {})
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("mismatched types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := parseAndCheck(t, `
+            import Comparison
+
+            let result = clamp(5, min: 1, max: 10.0)
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+}
+
+func TestClampFunctionRuntime(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Int, within range", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newInterpreterWithComparison(t, `
+            import Comparison
+
+            access(all) let result = clamp(7, min: 1, max: 10)
+        `)
+
+		result := inter.Globals.Get("result").GetValue(inter)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(7), result)
+	})
+
+	t.Run("Int, below min", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newInterpreterWithComparison(t, `
+            import Comparison
+
+            access(all) let result = clamp(0, min: 1, max: 10)
+        `)
+
+		result := inter.Globals.Get("result").GetValue(inter)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
+	})
+
+	t.Run("Int, above max", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newInterpreterWithComparison(t, `
+            import Comparison
+
+            access(all) let result = clamp(20, min: 1, max: 10)
+        `)
+
+		result := inter.Globals.Get("result").GetValue(inter)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
+	})
+
+	t.Run("Int, equal to min", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newInterpreterWithComparison(t, `
+            import Comparison
+
+            access(all) let result = clamp(1, min: 1, max: 10)
+        `)
+
+		result := inter.Globals.Get("result").GetValue(inter)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
+	})
+
+	t.Run("Int, equal to max", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newInterpreterWithComparison(t, `
+            import Comparison
+
+            access(all) let result = clamp(10, min: 1, max: 10)
+        `)
+
+		result := inter.Globals.Get("result").GetValue(inter)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
+	})
+
+	t.Run("UFix64, explicit type argument", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newInterpreterWithComparison(t, `
+            import Comparison
+
+            access(all) let result = clamp<UFix64>(7.5, min: 1.0, max: 10.0)
+        `)
+
+		result := inter.Globals.Get("result").GetValue(inter)
+		expected := interpreter.NewUnmeteredUFix64Value(750_000_000)
+		assert.Equal(t, expected, result)
+	})
+}
