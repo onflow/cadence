@@ -1,6 +1,6 @@
 module github.com/onflow/cadence/tools/compatibility_check
 
-go 1.25.0
+go 1.24.0
 
 require (
 	github.com/onflow/cadence v1.8.6
