@@ -1768,6 +1768,8 @@ func (d *Desugar) DesugarFunctionExpression(expression *ast.FunctionExpression) 
 	return functionExpr
 }
 
+// IMPORTANT: Always create a new empty initializer for each use-case.
+// Shouldn't reuse declarations as they get used as keys in the elaboration.
 func newEmptyInitializer(memoryGauge common.MemoryGauge) *ast.SpecialFunctionDeclaration {
 	initializer := ast.NewFunctionDeclaration(
 		memoryGauge,
