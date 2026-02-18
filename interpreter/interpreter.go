@@ -2452,11 +2452,24 @@ func convert(
 					unwrappedTargetType,
 					targetAuthorization,
 				)
+
+				// Recursively convert the inner value.
+				targetInnerType := unwrappedTargetType.Type
+				innerValue := ref.Value
+
+				innerValueType := context.SemaTypeFromStaticType(innerValue.StaticType(context))
+				convertedInnerValue := convertAndBox(
+					context,
+					innerValue,
+					innerValueType,
+					targetInnerType,
+				)
+
 				return NewEphemeralReferenceValue(
 					context,
 					targetAuthorization,
-					ref.Value,
-					unwrappedTargetType.Type,
+					convertedInnerValue,
+					targetInnerType,
 				)
 			}
 

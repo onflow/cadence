@@ -4038,3 +4038,30 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretNestedReferenceCasting(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                var authArrayRef: auth(E1) &[auth(E2) &Int] = &[&1]
+
+                var arrayRef: &[&Int] = authArrayRef
+
+                let downCastedAuthArrayRef = arrayRef as! &[auth(E2) &Int]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+}
