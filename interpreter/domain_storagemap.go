@@ -365,6 +365,11 @@ func (s *DomainStorageMap) Iterator() DomainStorageMapIterator {
 	}
 }
 
+// ReadOnlyLoadedValueIterator returs the *atree.MapLoadedValueIterator from the underlying ordered map.
+func (s *DomainStorageMap) ReadOnlyLoadedValueIterator() (*atree.MapLoadedValueIterator, error) {
+	return s.orderedMap.ReadOnlyLoadedValueIterator()
+}
+
 // DomainStorageMapIterator is an iterator over DomainStorageMap
 type DomainStorageMapIterator struct {
 	mapIterator atree.MapIterator
