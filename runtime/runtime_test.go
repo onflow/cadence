@@ -14259,3 +14259,173 @@ func TestRuntimeEntitlementEscalationViaStorageReference(t *testing.T) {
 	var dereferenceError *interpreter.DereferenceError
 	require.ErrorAs(t, err, &dereferenceError)
 }
+
+func TestRuntimeBaseDowncastAfterContractUpgrade(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	const contractV1 = `
+        access(all) contract Test {
+
+            access(all) entitlement E
+
+            access(all) resource R {
+                access(E) fun secretMethod(): String {
+                    return "secret"
+                }
+            }
+
+            access(all) attachment Tracker for R {
+                access(all) fun getInfo(): String {
+                    return "tracking"
+                }
+            }
+
+            access(all) fun createR(): @R {
+                return <- create R()
+            }
+        }
+    `
+
+	const contractV2 = `
+        access(all) contract Test {
+
+            access(all) entitlement E
+
+            access(all) resource R {
+                access(E) fun secretMethod(): String {
+                    return "secret"
+                }
+            }
+
+            access(all) attachment Tracker for R {
+
+                access(all) fun getInfo(): String {
+                    return "tracking"
+                }
+
+                access(all) fun getSecret(): String {
+                    let authBase = base as! auth(Test.E) &Test.R
+                    return authBase.secretMethod()
+                }
+            }
+
+            access(all) fun createR(): @R {
+                return <- create R()
+            }
+        }
+    `
+
+	accountCodes := map[Location][]byte{}
+
+	signerAddress := common.MustBytesToAddress([]byte{0x1})
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy the contract
+
+	deployTx := DeploymentTransaction("Test", []byte(contractV1))
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	victimTx := []byte(`
+        import Test from 0x1
+
+        transaction {
+            prepare(signer: auth(Storage) &Account) {
+                let r <- Test.createR()
+                let rWithTracker <- attach Test.Tracker() to <- r
+                signer.storage.save(<- rWithTracker, to: /storage/r)
+            }
+        }
+    `)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: victimTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Update the contract
+
+	updateTx := UpdateTransaction("Test", []byte(contractV2))
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: updateTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	clear(runtimeInterface.Programs)
+
+	// Run transaction
+
+	tx := []byte(`
+        import Test from 0x1
+
+        transaction {
+            prepare(signer: auth(Storage) &Account) {
+                let r <- signer.storage.load<@Test.R>(from: /storage/r)!
+                let result = r[Test.Tracker]!.getSecret()
+                destroy r
+            }
+        }
+    `)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+
+	RequireError(t, err)
+
+	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchError)
+}
