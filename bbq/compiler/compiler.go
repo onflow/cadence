@@ -4343,17 +4343,11 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
 
-	baseTyp, ok := baseType.(sema.EntitlementSupportingType)
-	if !ok {
-		// simulates defensive check in interpreter
-		panic(errors.NewUnreachableError())
-	}
-
-	baseAccess := baseTyp.SupportedEntitlements().Access()
+	// within the constructor, base is unauthorized (unlike self, which remains fully entitled)
 	refType := sema.NewReferenceType(
 		c.Config.MemoryGauge,
-		baseAccess,
-		baseTyp,
+		sema.UnauthorizedAccess,
+		baseType,
 	)
 
 	// create reference to base to pass as implicit arg

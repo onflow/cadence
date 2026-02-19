@@ -1567,17 +1567,12 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
 	// Instead, we create an implicit constructor argument containing a reference to the base.
 
-	// within the constructor, the attachment's base and self references should be fully entitled,
-	// as the constructor of the attachment is only callable by the owner of the base
-	baseType := MustSemaTypeOfValue(base, interpreter).(sema.EntitlementSupportingType)
-	baseAccess := baseType.SupportedEntitlements().Access()
-	auth := ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
-
+	// within the constructor, base is unauthorized (unlike self, which remains fully entitled)
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
 
 	baseValue := NewEphemeralReferenceValue(
 		interpreter,
-		auth,
+		UnauthorizedAccess,
 		base,
 		MustSemaTypeOfValue(base, interpreter).(*sema.CompositeType),
 	)
