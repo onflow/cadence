@@ -4063,6 +4063,18 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 
 		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[auth(S.test.E2)&Int]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&Int]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -4086,6 +4098,18 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 
 		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:auth(S.test.E2)&Int}"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&Int}"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
 	})
 
 	t.Run("function returning reference", func(t *testing.T) {
@@ -4122,8 +4146,39 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 
 		_, err = inter.Invoke("testCastingInvocationResult")
 		RequireError(t, err)
-		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		if *compile {
+			var invalidReferenceConversionError *interpreter.InvalidReferenceConversionError
+			assert.ErrorAs(t, err, &invalidReferenceConversionError)
+
+			assert.Equal(
+				t,
+				"E",
+				invalidReferenceConversionError.ExpectedAuthorization.String(),
+			)
+
+			assert.Equal(
+				t,
+				sema.UnauthorizedAccess,
+				invalidReferenceConversionError.ActualAuthorization,
+			)
+
+		} else {
+			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+			assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+			assert.Equal(
+				t,
+				common.TypeID("auth(S.test.E)&Int"),
+				forceCastTypeMismatchError.ExpectedType.ID(),
+			)
+
+			assert.Equal(
+				t,
+				common.TypeID("&Int"),
+				forceCastTypeMismatchError.ActualType.ID(),
+			)
+		}
 	})
 
 	t.Run("function with reference parameter", func(t *testing.T) {
@@ -4165,6 +4220,18 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 
 		var invalidReferenceConversionError *interpreter.InvalidReferenceConversionError
 		assert.ErrorAs(t, err, &invalidReferenceConversionError)
+
+		assert.Equal(
+			t,
+			"E",
+			invalidReferenceConversionError.ExpectedAuthorization.String(),
+		)
+
+		assert.Equal(
+			t,
+			sema.UnauthorizedAccess,
+			invalidReferenceConversionError.ActualAuthorization,
+		)
 	})
 }
 
@@ -4202,5 +4269,62 @@ func TestInterpretNestedStorageReferenceCasting(t *testing.T) {
 
 		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[auth(S.test.E2)&Int]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&Int]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(
+			t,
+			address,
+			true,
+			nil,
+			`
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let value: {String: auth(E2) &Int} = {"one": &1}
+                account.storage.save(value as AnyStruct, to: /storage/value)
+                let authArrayRef = account.storage.borrow<auth(E1) &{String: auth(E2) &Int}>(from: /storage/value)!
+
+                let arrayRef: &{String: &Int} = authArrayRef
+
+                let downCastedAuthArrayRef = arrayRef as! &{String: auth(E2) &Int}
+            }`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:auth(S.test.E2)&Int}"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&Int}"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
 	})
 }

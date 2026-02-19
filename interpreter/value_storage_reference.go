@@ -139,15 +139,27 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 
 	if v.BorrowedType != nil {
 		staticType := referenced.StaticType(context)
+		semaType := context.SemaTypeFromStaticType(staticType)
 
 		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
-			semaType := context.SemaTypeFromStaticType(staticType)
 
 			return nil, &StoredValueTypeMismatchError{
 				ExpectedType: v.BorrowedType,
 				ActualType:   semaType,
 			}
 		}
+
+		// The dereferenced value must always comply to the borrowed type.
+		// For e.g: If the reference borrowed was with fewer entitlements than the actual
+		// entitlements present in the value (references can be temporarily stored in storage),
+		// then the excess entitlements needs to be stripped off before returning.
+		// Therefore, always convert to the borrow type when dereferencing.
+		referenced = convertAndBox(
+			context,
+			referenced,
+			semaType,
+			v.BorrowedType,
+		)
 	}
 
 	return &referenced, nil

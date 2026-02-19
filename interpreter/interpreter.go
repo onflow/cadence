@@ -2537,8 +2537,8 @@ func checkTargetIsLessPermissive(
 		actualAuthorization := valueType.Authorization
 		if !sema.PermitsAccess(unwrappedTargetType.Authorization, actualAuthorization) {
 			panic(&InvalidReferenceConversionError{
-				Expected: targetSemaAuthorization,
-				Actual:   actualAuthorization,
+				ExpectedAuthorization: targetSemaAuthorization,
+				ActualAuthorization:   actualAuthorization,
 			})
 		}
 	default:
@@ -2555,8 +2555,8 @@ func checkTargetIsLessPermissive(
 			}
 
 			panic(&InvalidReferenceConversionError{
-				Expected: targetSemaAuthorization,
-				Actual:   actualSemaAuthorization,
+				ExpectedAuthorization: targetSemaAuthorization,
+				ActualAuthorization:   actualSemaAuthorization,
 			})
 		}
 	}
