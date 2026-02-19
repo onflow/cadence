@@ -14044,74 +14044,94 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
 
 	runtime := NewTestRuntime()
 
-	codes := map[string]string{
-		"function returning reference": `
-
-          access(all) fun returnTargetAccount(): &AnyStruct{
-              return getAccount(0x123)
-          }
-
-          access(all) fun dummy(): auth(Storage) &Account{
-              panic("never called, just a placeholder")
-          }
-
-          transaction {
-              prepare(acct: auth(Storage) &Account) {
-                  let dummyFuncArray: [fun(): auth(Storage) &Account] = [dummy]
-                  acct.storage.save(dummyFuncArray as AnyStruct, to: /storage/flipflop)
-                  let flipFloppingStorageRef = acct.storage.borrow<&AnyStruct>(from: /storage/flipflop)!
-
-                  var downCastArray: [&[fun(): auth(Storage) &Account]] = [&[dummy]]
-                  let arrayViaAnyStruct = &downCastArray as auth(Mutate) &[&AnyStruct]
-
-                  arrayViaAnyStruct[0] = flipFloppingStorageRef
-
-                  acct.storage.load<AnyStruct>(from: /storage/flipflop)
-                  let realArray = [returnTargetAccount]
-                  acct.storage.save(realArray as AnyStruct, to: /storage/flipflop)
-
-                  downCastArray[0][0]().storage.save("hello world", to: /storage/blahblah)
-
-                  acct.storage.load<AnyStruct>(from: /storage/flipflop)
-              }
-              execute {}
-          }`,
-
-		"function returning nested reference": `
-            access(all) fun returnTargetAccount(): [&Account]{
-		        return [getAccount(0x123)]
-		    }
-
-		    access(all) fun dummy(): [auth(Storage) &Account] {
-		        panic("never called, just a placeholder")
-		    }
-
-		    transaction {
-		        prepare(acct: auth(Storage) &Account) {
-		            let dummyFuncArray: [fun(): [auth(Storage) &Account]] = [dummy]
-		            acct.storage.save(dummyFuncArray as AnyStruct, to: /storage/flipflop)
-		            let flipFloppingStorageRef = acct.storage.borrow<&AnyStruct>(from: /storage/flipflop)!
-
-		            var downCastArray: [&[fun(): [auth(Storage) &Account]]] = [&[dummy]]
-		            let arrayViaAnyStruct = &downCastArray as auth(Mutate) &[&AnyStruct]
-
-		            arrayViaAnyStruct[0] = flipFloppingStorageRef
-
-		            acct.storage.load<AnyStruct>(from: /storage/flipflop)
-		            let realArray = [returnTargetAccount]
-		            acct.storage.save(realArray as AnyStruct, to: /storage/flipflop)
-
-		            downCastArray[0][0]()[0].storage.save("hello world", to: /storage/blahblah)
-
-		            acct.storage.load<AnyStruct>(from: /storage/flipflop)
-		        }
-		        execute {}
-		    }
-		`,
+	type testCase struct {
+		name           string
+		code           string
+		expectedTypeID string
+		actualTypeID   string
 	}
 
-	for name, code := range codes {
-		name := name
+	codes := []testCase{
+		{
+			name: "function returning reference",
+			code: `
+              access(all) fun returnTargetAccount(): &AnyStruct{
+                  return getAccount(0x123)
+              }
+
+              access(all) fun dummy(): auth(Storage) &Account{
+                  panic("never called, just a placeholder")
+              }
+
+              transaction {
+                  prepare(acct: auth(Storage) &Account) {
+                      let dummyFuncArray: [fun(): auth(Storage) &Account] = [dummy]
+                      acct.storage.save(dummyFuncArray as AnyStruct, to: /storage/flipflop)
+                      let flipFloppingStorageRef = acct.storage.borrow<&AnyStruct>(from: /storage/flipflop)!
+
+                      var downCastArray: [&[fun(): auth(Storage) &Account]] = [&[dummy]]
+                      let arrayViaAnyStruct = &downCastArray as auth(Mutate) &[&AnyStruct]
+
+                      arrayViaAnyStruct[0] = flipFloppingStorageRef
+
+                      acct.storage.load<AnyStruct>(from: /storage/flipflop)
+                      let realArray = [returnTargetAccount]
+                      acct.storage.save(realArray as AnyStruct, to: /storage/flipflop)
+
+                      downCastArray[0][0]().storage.save("hello world", to: /storage/blahblah)
+
+                      acct.storage.load<AnyStruct>(from: /storage/flipflop)
+                  }
+                  execute {}
+              }
+            `,
+			expectedTypeID: "&[fun():auth(Storage)&Account]",
+			actualTypeID:   "&[fun():&AnyStruct]",
+		},
+		{
+			name: "function returning nested reference",
+			code: `
+              access(all) fun returnTargetAccount(): [&Account]{
+                  return [getAccount(0x123)]
+              }
+
+              access(all) fun dummy(): [auth(Storage) &Account] {
+                  panic("never called, just a placeholder")
+              }
+
+              transaction {
+                  prepare(acct: auth(Storage) &Account) {
+                      let dummyFuncArray: [fun(): [auth(Storage) &Account]] = [dummy]
+                      acct.storage.save(dummyFuncArray as AnyStruct, to: /storage/flipflop)
+                      let flipFloppingStorageRef = acct.storage.borrow<&AnyStruct>(from: /storage/flipflop)!
+
+                      var downCastArray: [&[fun(): [auth(Storage) &Account]]] = [&[dummy]]
+                      let arrayViaAnyStruct = &downCastArray as auth(Mutate) &[&AnyStruct]
+
+                      arrayViaAnyStruct[0] = flipFloppingStorageRef
+
+                      acct.storage.load<AnyStruct>(from: /storage/flipflop)
+                      let realArray = [returnTargetAccount]
+                      acct.storage.save(realArray as AnyStruct, to: /storage/flipflop)
+
+                      downCastArray[0][0]()[0].storage.save("hello world", to: /storage/blahblah)
+
+                      acct.storage.load<AnyStruct>(from: /storage/flipflop)
+                  }
+                  execute {}
+              }
+            `,
+			expectedTypeID: "&[fun():[auth(Storage)&Account]]",
+			actualTypeID:   "&[fun():[&Account]]",
+		},
+	}
+
+	for _, testCase := range codes {
+		name := testCase.name
+		code := testCase.code
+		expectedTypeID := testCase.expectedTypeID
+		actualTypeID := testCase.actualTypeID
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -14158,24 +14178,17 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
 			)
 
 			RequireError(t, err)
+			var indexedTypeError *interpreter.IndexedTypeError
+			require.ErrorAs(t, err, &indexedTypeError)
 
-			if *compile {
-				var valueTransferTypeErr *interpreter.ValueTransferTypeError
-				require.ErrorAs(t, err, &valueTransferTypeErr)
-			} else {
-
-				var invalidReferenceConversionErr *interpreter.InvalidReferenceConversionError
-				require.ErrorAs(t, err, &invalidReferenceConversionErr)
-
-				assert.Equal(t,
-					common.TypeID("Storage"),
-					invalidReferenceConversionErr.Expected.ID(),
-				)
-				assert.Equal(t,
-					sema.UnauthorizedAccess,
-					invalidReferenceConversionErr.Actual,
-				)
-			}
+			assert.Equal(t,
+				common.TypeID(expectedTypeID),
+				indexedTypeError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID(actualTypeID),
+				indexedTypeError.ActualType.ID(),
+			)
 		})
 	}
 }
