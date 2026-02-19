@@ -138,14 +138,11 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 	}
 
 	if v.BorrowedType != nil {
-		staticType := referenced.StaticType(context)
-		semaType := context.SemaTypeFromStaticType(staticType)
-
-		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
-
+		valueType := MustSemaTypeOfValue(referenced, context)
+		if !sema.IsSubType(valueType, v.BorrowedType) {
 			return nil, &StoredValueTypeMismatchError{
 				ExpectedType: v.BorrowedType,
-				ActualType:   semaType,
+				ActualType:   valueType,
 			}
 		}
 
@@ -157,7 +154,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 		referenced = convertAndBox(
 			context,
 			referenced,
-			semaType,
+			valueType,
 			v.BorrowedType,
 		)
 	}
