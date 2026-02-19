@@ -4039,7 +4039,7 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
 	})
 }
 
-func TestInterpretNestedReferenceCasting(t *testing.T) {
+func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 	t.Parallel()
 
 	t.Run("array", func(t *testing.T) {
@@ -4050,13 +4050,152 @@ func TestInterpretNestedReferenceCasting(t *testing.T) {
             entitlement E2
 
             fun test() {
-                var authArrayRef: auth(E1) &[auth(E2) &Int] = &[&1]
+                let authArrayRef: auth(E1) &[auth(E2) &Int] = &[&1]
 
-                var arrayRef: &[&Int] = authArrayRef
+                let arrayRef: &[&Int] = authArrayRef
 
                 let downCastedAuthArrayRef = arrayRef as! &[auth(E2) &Int]
             }
         `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let authDictionaryRef: auth(E1) &{String: auth(E2) &Int} = &{"one": &1}
+
+                let dictionaryRef: &{String: &Int} = authDictionaryRef
+
+                let downCastedAuthDictionaryRef = dictionaryRef as! &{String: auth(E2) &Int}
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("function returning reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun authRefReturningFunc():auth(E) &Int {
+                return &1
+            }
+
+            fun testCasting() {
+                let refReturningFunc: (fun():&Int) = authRefReturningFunc
+                let downCastedAuthRefReturningFunc = refReturningFunc as! (fun():auth(E) &Int)
+            }
+
+            fun testInvoking() {
+                let refReturningFunc: (fun():&Int) = authRefReturningFunc
+                refReturningFunc()
+            }
+
+            fun testCastingInvocationResult() {
+                let refReturningFunc: (fun():&Int) = authRefReturningFunc
+                refReturningFunc() as! auth(E) &Int
+            }
+        `)
+
+		_, err := inter.Invoke("testCasting")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testInvoking")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testCastingInvocationResult")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("function with reference parameter", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun refParamFunc(_ a: &Int) {}
+
+            fun tryDownCasting(_ a: &Int) {
+                let authA = a as! auth(E) &Int
+            }
+
+            fun testCasting() {
+                let authRefParamFunc: fun(auth(E) &Int) = refParamFunc
+                let downCastedRefParamFunc = authRefParamFunc as! fun(&Int)
+            }
+
+            fun testInvoking() {
+                let authRefParamFunc: fun(auth(E) &Int) = refParamFunc
+                authRefParamFunc(&1 as auth(E) &Int)
+            }
+
+            fun testDownCastingParam() {
+                let authRefParamFunc: fun(auth(E) &Int) = tryDownCasting
+                authRefParamFunc(&1 as auth(E) &Int)
+            }
+        `)
+
+		_, err := inter.Invoke("testCasting")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testInvoking")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testDownCastingParam")
+		RequireError(t, err)
+
+		var invalidReferenceConversionError *interpreter.InvalidReferenceConversionError
+		assert.ErrorAs(t, err, &invalidReferenceConversionError)
+	})
+}
+
+func TestInterpretNestedStorageReferenceCasting(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(
+			t,
+			address,
+			true,
+			nil,
+			`
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let value: [auth(E2) &Int] = [&1]
+                account.storage.save(value as AnyStruct, to: /storage/value)
+                let authArrayRef = account.storage.borrow<auth(E1) &[auth(E2) &Int]>(from: /storage/value)!
+
+                let arrayRef: &[&Int] = authArrayRef
+
+                let downCastedAuthArrayRef = arrayRef as! &[auth(E2) &Int]
+            }`,
+			sema.Config{},
+		)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
