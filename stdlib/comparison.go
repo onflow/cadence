@@ -264,7 +264,7 @@ var NativeMaxFunction = interpreter.NativeFunction(
 			panic(errors.NewUnreachableError())
 		}
 
-		if bool(comparableA.Greater(context, comparableB)) {
+		if comparableA.Greater(context, comparableB) {
 			return a
 		}
 		return b
