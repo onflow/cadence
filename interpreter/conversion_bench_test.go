@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/interpreter"
 )
 
@@ -31,7 +30,7 @@ func BenchmarkByteArrayValueToByteSlice(b *testing.B) {
 
 	inter := newTestInterpreter(b)
 
-	elements := make([]interpreter.Value, elementCount)
+	elements := make([]Value, elementCount)
 	for i := range elements {
 		elements[i] = NewUnmeteredUInt8Value(uint8(i))
 	}
