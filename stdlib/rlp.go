@@ -215,7 +215,7 @@ func RLPDecodeList(
 	)
 }
 
-var rlpContractMethods = map[string]interpreter.FunctionValue{
+var rlpContractFields = map[string]interpreter.Value{
 	RLPTypeDecodeListFunctionName:   interpreterRLPDecodeListFunction,
 	RLPTypeDecodeStringFunctionName: interpreterRLPDecodeStringFunction,
 }
@@ -227,11 +227,9 @@ var rlpContractValue = interpreter.NewSimpleCompositeValue(
 	RLPType.ID(),
 	RLPTypeStaticType,
 	nil,
+	rlpContractFields,
 	nil,
 	nil,
-	func(name string, context interpreter.MemberAccessibleContext) interpreter.FunctionValue {
-		return rlpContractMethods[name]
-	},
 	nil,
 	nil,
 )

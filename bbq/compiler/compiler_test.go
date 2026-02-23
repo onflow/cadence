@@ -1796,7 +1796,7 @@ func TestCompileIndex(t *testing.T) {
 			opcode.InstructionGetLocal{Local: arrayIndex},
 			opcode.InstructionGetLocal{Local: indexIndex},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 2},
-			opcode.InstructionGetIndex{},
+			opcode.InstructionGetIndex{IndexedType: 3},
 
 			// return
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
@@ -1843,7 +1843,7 @@ func TestCompileAssignIndex(t *testing.T) {
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 2},
 			opcode.InstructionGetLocal{Local: valueIndex},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetIndex{},
+			opcode.InstructionSetIndex{IndexedType: 3},
 			opcode.InstructionReturn{},
 		},
 		functions[0].Code,
@@ -6774,7 +6774,7 @@ func TestCompileLineNumberInfo(t *testing.T) {
 			opcode.InstructionGetLocal{Local: valueIndex},
 			opcode.InstructionAdd{},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
-			opcode.InstructionSetIndex{},
+			opcode.InstructionSetIndex{IndexedType: 3},
 
 			// return
 			opcode.InstructionReturn{},
@@ -7485,7 +7485,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionGetLocal{Local: tempYIndex},
 				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
 				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionRemoveIndex{},
+				opcode.InstructionRemoveIndex{IndexedType: 2},
 				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
 
 				// Second value assignment.
@@ -7495,7 +7495,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 4},
-				opcode.InstructionSetIndex{},
+				opcode.InstructionSetIndex{IndexedType: 2},
 
 				// Store the transferred y-value above (already on stack), to z.
 				// z <- y["r"]
@@ -8580,7 +8580,7 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 			// get left value
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
-			opcode.InstructionGetIndex{},
+			opcode.InstructionGetIndex{IndexedType: 1},
 			opcode.InstructionSetLocal{
 				Local:     tempIndex5,
 				IsTempVar: true,
@@ -8589,7 +8589,7 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 			// get right value
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
-			opcode.InstructionGetIndex{},
+			opcode.InstructionGetIndex{IndexedType: 1},
 			opcode.InstructionSetLocal{
 				Local:     tempIndex6,
 				IsTempVar: true,
@@ -8609,13 +8609,13 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetLocal{Local: tempIndex6},
-			opcode.InstructionSetIndex{},
+			opcode.InstructionSetIndex{IndexedType: 1},
 
 			// set left index with right value
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionGetLocal{Local: tempIndex5},
-			opcode.InstructionSetIndex{},
+			opcode.InstructionSetIndex{IndexedType: 1},
 
 			// Return
 			opcode.InstructionReturn{},
@@ -8747,7 +8747,7 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			// get left value
 			opcode.InstructionGetLocal{Local: leftTargetIndex},
 			opcode.InstructionGetLocal{Local: leftIndexIndex},
-			opcode.InstructionRemoveIndex{PushPlaceholder: true},
+			opcode.InstructionRemoveIndex{IndexedType: 1, PushPlaceholder: true},
 			opcode.InstructionSetLocal{Local: leftInsertedPlaceholderIndex},
 			opcode.InstructionSetLocal{
 				Local:     leftValueIndex,
@@ -8757,7 +8757,7 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			// get right value
 			opcode.InstructionGetLocal{Local: rightTargetIndex},
 			opcode.InstructionGetLocal{Local: rightIndexIndex},
-			opcode.InstructionRemoveIndex{PushPlaceholder: false},
+			opcode.InstructionRemoveIndex{IndexedType: 1, PushPlaceholder: false},
 			opcode.InstructionSetLocal{
 				Local:     rightValueIndex,
 				IsTempVar: true,
@@ -8773,7 +8773,7 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.InstructionGetLocal{Local: leftTargetIndex},
 			opcode.InstructionGetLocal{Local: leftIndexIndex},
 			opcode.InstructionGetLocal{Local: leftValueIndex},
-			opcode.InstructionSetIndex{},
+			opcode.InstructionSetIndex{IndexedType: 1},
 
 			// jump to the end
 			opcode.InstructionJump{Target: 51},
@@ -8798,13 +8798,13 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.InstructionGetLocal{Local: leftTargetIndex},
 			opcode.InstructionGetLocal{Local: leftIndexIndex},
 			opcode.InstructionGetLocal{Local: rightValueIndex},
-			opcode.InstructionSetIndex{},
+			opcode.InstructionSetIndex{IndexedType: 1},
 
 			// set right index with left value
 			opcode.InstructionGetLocal{Local: rightTargetIndex},
 			opcode.InstructionGetLocal{Local: rightIndexIndex},
 			opcode.InstructionGetLocal{Local: leftValueIndex},
-			opcode.InstructionSetIndex{},
+			opcode.InstructionSetIndex{IndexedType: 1},
 
 			// destroy rs
 			opcode.InstructionStatement{},
@@ -9681,7 +9681,7 @@ func TestCompileAttachments(t *testing.T) {
 				// get s back on stack
 				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
 				// attachment operation, attach A to s-copy
-				opcode.InstructionSetTypeIndex{Type: 3},
+				opcode.InstructionSetTypeIndex{IndexedType: 1, IndexingType: 3},
 				// return value is s-copy
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 				// finish assignment of s
@@ -9691,7 +9691,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: sLocalIndex},
 				// access A on s: s[A], returns attachment reference as optional
-				opcode.InstructionGetTypeIndex{Type: 3},
+				opcode.InstructionGetTypeIndex{IndexedType: 1, IndexingType: 3},
 				opcode.InstructionSetLocal{
 					Local:     attachmentLocalIndex,
 					IsTempVar: true,

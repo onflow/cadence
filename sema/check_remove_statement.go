@@ -81,7 +81,13 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 
 	checker.enforceViewAssignment(statement, statement.Value)
 
-	checker.Elaboration.SetAttachmentRemoveTypes(statement, nominalType)
+	checker.Elaboration.SetAttachmentRemoveTypes(
+		statement,
+		RemoveExpressionTypes{
+			AttachmentType: attachmentType,
+			BaseType:       base,
+		},
+	)
 
 	return
 }
