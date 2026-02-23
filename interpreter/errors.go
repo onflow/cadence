@@ -752,6 +752,31 @@ func (e *UseBeforeInitializationError) SetLocationRange(locationRange LocationRa
 	e.LocationRange = locationRange
 }
 
+// IndexedTypeError
+type IndexedTypeError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.InternalError = &IndexedTypeError{}
+var _ HasLocationRange = &IndexedTypeError{}
+
+func (*IndexedTypeError) IsInternalError() {}
+
+func (e *IndexedTypeError) Error() string {
+	return fmt.Sprintf(
+		"%s invalid indexed type: expected `%s`, got `%s`",
+		errors.InternalErrorMessagePrefix,
+		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
+	)
+}
+
+func (e *IndexedTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // MemberAccessTypeError
 type MemberAccessTypeError struct {
 	ExpectedType sema.Type
