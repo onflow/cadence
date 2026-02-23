@@ -1768,17 +1768,17 @@ func (d *Desugar) DesugarFunctionExpression(expression *ast.FunctionExpression) 
 	return functionExpr
 }
 
-var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
-	// This is created only once per compilation. So no need to meter memory.
-
+// IMPORTANT: Always create a new empty initializer for each use-case.
+// Shouldn't reuse declarations as they get used as keys in the elaboration.
+func newEmptyInitializer(memoryGauge common.MemoryGauge) *ast.SpecialFunctionDeclaration {
 	initializer := ast.NewFunctionDeclaration(
-		nil,
+		memoryGauge,
 		ast.AccessNotSpecified,
 		ast.FunctionPurityUnspecified,
 		false,
 		false,
 		ast.NewIdentifier(
-			nil,
+			memoryGauge,
 			commons.InitFunctionName,
 			ast.EmptyPosition,
 		),
@@ -1786,8 +1786,8 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 		nil,
 		nil,
 		ast.NewFunctionBlock(
-			nil,
-			ast.NewBlock(nil, nil, ast.EmptyRange),
+			memoryGauge,
+			ast.NewBlock(memoryGauge, nil, ast.EmptyRange),
 			nil,
 			nil,
 		),
@@ -1796,18 +1796,18 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 	)
 
 	return ast.NewSpecialFunctionDeclaration(
-		nil,
+		memoryGauge,
 		common.DeclarationKindInitializer,
 		initializer,
 	)
-}()
+}
 
+// Add an empty initializer
 func (d *Desugar) addEmptyInitializer(compositeType *sema.CompositeType, members *[]ast.Declaration) {
-	// Add an empty initializer
+	emptyInitializer := newEmptyInitializer(d.memoryGauge)
 	*members = append(*members, emptyInitializer)
 
 	initializerFuncType := sema.CompositeConstructorFunctionType(compositeType)
-
 	d.elaboration.SetFunctionDeclarationFunctionType(emptyInitializer.FunctionDeclaration, initializerFuncType)
 }
 

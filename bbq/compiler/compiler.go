@@ -1925,7 +1925,16 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		c.emitGetLocal(indexExprIndexLocal)
 		c.compileExpression(secondValue)
 		c.mustEmitTransferAndConvert(secondValueType, firstValueType)
-		c.emit(opcode.InstructionSetIndex{})
+
+		indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(firstValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		indexedType := c.getOrAddType(indexExpressionTypes.IndexedType)
+
+		c.emit(opcode.InstructionSetIndex{
+			IndexedType: indexedType,
+		})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2023,7 +2032,15 @@ func (c *Compiler[_, _]) compileAssignment(
 		c.compileExpression(value)
 		c.mustEmitTransferAndConvert(valueType, targetType)
 
-		c.emit(opcode.InstructionSetIndex{})
+		indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(target)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		indexedType := c.getOrAddType(indexExpressionTypes.IndexedType)
+
+		c.emit(opcode.InstructionSetIndex{
+			IndexedType: indexedType,
+		})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2251,7 +2268,16 @@ func (c *Compiler[_, _]) compileSwapSet(
 		c.emitGetLocal(targetIndex)
 		c.emitGetLocal(transferredKeyIndex)
 		c.emitGetLocal(valueIndex)
-		c.emit(opcode.InstructionSetIndex{})
+
+		indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(sideExpression)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		indexedType := c.getOrAddType(indexExpressionTypes.IndexedType)
+
+		c.emit(opcode.InstructionSetIndex{
+			IndexedType: indexedType,
+		})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -3266,9 +3292,12 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
 	c.compileExpression(expression.TargetExpression)
 
-	if attachmentType, ok := c.DesugaredElaboration.AttachmentAccessTypes(expression); ok {
+	if attachmentAccessTypes, ok := c.DesugaredElaboration.AttachmentAccessTypes(expression); ok {
+		indexedType := c.getOrAddType(attachmentAccessTypes.BaseType)
+		indexingType := c.getOrAddType(attachmentAccessTypes.AttachmentType)
 		c.emit(opcode.InstructionGetTypeIndex{
-			Type: c.getOrAddType(attachmentType),
+			IndexedType:  indexedType,
+			IndexingType: indexingType,
 		})
 	} else {
 		c.compileExpression(expression.IndexingExpression)
@@ -3293,14 +3322,19 @@ func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(
 		panic(errors.NewUnreachableError())
 	}
 
+	indexedType := c.getOrAddType(indexExpressionTypes.IndexedType)
+
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
 		c.emit(opcode.InstructionRemoveIndex{
+			IndexedType:     indexedType,
 			PushPlaceholder: pushPlaceholderValue,
 		})
 		emittedRemoveIndexWithPushPlaceholder = pushPlaceholderValue
 	} else {
-		c.emit(opcode.InstructionGetIndex{})
+		c.emit(opcode.InstructionGetIndex{
+			IndexedType: indexedType,
+		})
 	}
 
 	// Return a reference, if the element is accessed via a reference.
@@ -4322,10 +4356,15 @@ func (c *Compiler[_, _]) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMa
 func (c *Compiler[_, _]) VisitRemoveStatement(statement *ast.RemoveStatement) (_ struct{}) {
 	// load base onto stack
 	c.compileExpression(statement.Value)
+
 	// remove attachment from base
-	nominalType := c.DesugaredElaboration.AttachmentRemoveTypes(statement)
+	attachmentRemoveTypes := c.DesugaredElaboration.AttachmentRemoveTypes(statement)
+	attachmentTypeIndex := c.getOrAddType(attachmentRemoveTypes.AttachmentType)
+	baseTypeIndex := c.getOrAddType(attachmentRemoveTypes.BaseType)
+
 	c.emit(opcode.InstructionRemoveTypeIndex{
-		Type: c.getOrAddType(nominalType),
+		IndexedType:  baseTypeIndex,
+		IndexingType: attachmentTypeIndex,
 	})
 	return
 }
@@ -4377,8 +4416,13 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 
 	// add attachment value as a member of transferred base
 	// returns the result
+
+	indexedType := c.getOrAddType(baseType)
+	indexingType := c.getOrAddType(attachmentType)
+
 	c.emit(opcode.InstructionSetTypeIndex{
-		Type: c.getOrAddType(attachmentType),
+		IndexedType:  indexedType,
+		IndexingType: indexingType,
 	})
 	return
 }

@@ -140,12 +140,16 @@
   description: |
     Pops two values off the stack, the array and the index,
     and then pushes the value at the given index of the array onto the stack.
+  operands:
+    - name: "indexedType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "array"
         type: "array"
       - name: "index"
         type: "integer"
+
     push:
       - name: "value"
         type: "value"
@@ -157,6 +161,8 @@
     Removes the value at the given index from the array and pushes it onto the stack.
     If pushPlaceholder is true, also pushes the placeholder value that was inserted, if any, or nil otherwise.
   operands:
+    - name: "indexedType"
+      type: "typeIndex"
     - name: "pushPlaceholder"
       type: "bool"
   valueEffects:
@@ -175,6 +181,9 @@
   description: |
     Pops three values off the stack, the array, the index, and the value,
     and then sets the value at the given index of the array to the value.
+  operands:
+    - name: "indexedType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "array"
@@ -1022,7 +1031,9 @@
     Pops a value off the stack, the target,
     and then pushes the value of the type key at the given index onto the stack.
   operands:
-    - name: "type"
+    - name: "indexedType"
+      type: "typeIndex"
+    - name: "indexingType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -1038,7 +1049,9 @@
     Remove the value of the given type key from the target.
     Additionally destroy if removed type is resource.
   operands:
-    - name: "type"
+    - name: "indexedType"
+      type: "typeIndex"
+    - name: "indexingType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -1050,7 +1063,9 @@
     Pops two values off the stack, the target and the value,
     and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
   operands:
-    - name: "type"
+    - name: "indexedType"
+      type: "typeIndex"
+    - name: "indexingType"
       type: "typeIndex"
   valueEffects:
     pop:
