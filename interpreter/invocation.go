@@ -32,7 +32,8 @@ type Invocation struct {
 	InvocationContext InvocationContext
 	Arguments         []Value
 	ArgumentTypes     []sema.Type
-	ReturnType        sema.Type
+	ReturnType           sema.Type
+	HasImplicitArgument  bool
 }
 
 func NewInvocation(

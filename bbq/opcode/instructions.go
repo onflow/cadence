@@ -1249,9 +1249,10 @@ func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
 // and then pushes the result back on to the stack.
 // This instruction is only passes the argument count. If the argument types are needed, use `invokeTyped`.
 type InstructionInvoke struct {
-	TypeArgs   []uint16
-	ArgCount   uint16
-	ReturnType uint16
+	TypeArgs            []uint16
+	ArgCount            uint16
+	ReturnType          uint16
+	HasImplicitArgument bool
 }
 
 var _ Instruction = InstructionInvoke{}
@@ -1274,6 +1275,8 @@ func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "returnType", i.ReturnType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
 }
 
 func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
@@ -1287,6 +1290,8 @@ func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 	sb.WriteByte(' ')
 	printfTypeArgument(sb, "returnType", types[i.ReturnType], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
@@ -1294,12 +1299,14 @@ func (i InstructionInvoke) Encode(code *[]byte) {
 	emitUint16Array(code, i.TypeArgs)
 	emitUint16(code, i.ArgCount)
 	emitUint16(code, i.ReturnType)
+	emitBool(code, i.HasImplicitArgument)
 }
 
 func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 	i.TypeArgs = decodeUint16Array(ip, code)
 	i.ArgCount = decodeUint16(ip, code)
 	i.ReturnType = decodeUint16(ip, code)
+	i.HasImplicitArgument = decodeBool(ip, code)
 	return i
 }
 
@@ -1307,9 +1314,10 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 //
 // Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack. This instruction is a variant of `invoke` that includes the argument types.
 type InstructionInvokeTyped struct {
-	TypeArgs   []uint16
-	ArgTypes   []uint16
-	ReturnType uint16
+	TypeArgs            []uint16
+	ArgTypes            []uint16
+	ReturnType          uint16
+	HasImplicitArgument bool
 }
 
 var _ Instruction = InstructionInvokeTyped{}
@@ -1332,6 +1340,8 @@ func (i InstructionInvokeTyped) OperandsString(sb *strings.Builder, colorize boo
 	printfUInt16ArrayArgument(sb, "argTypes", i.ArgTypes, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "returnType", i.ReturnType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
 }
 
 func (i InstructionInvokeTyped) ResolvedOperandsString(sb *strings.Builder,
@@ -1345,6 +1355,8 @@ func (i InstructionInvokeTyped) ResolvedOperandsString(sb *strings.Builder,
 	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, types)
 	sb.WriteByte(' ')
 	printfTypeArgument(sb, "returnType", types[i.ReturnType], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
 }
 
 func (i InstructionInvokeTyped) Encode(code *[]byte) {
@@ -1352,12 +1364,14 @@ func (i InstructionInvokeTyped) Encode(code *[]byte) {
 	emitUint16Array(code, i.TypeArgs)
 	emitUint16Array(code, i.ArgTypes)
 	emitUint16(code, i.ReturnType)
+	emitBool(code, i.HasImplicitArgument)
 }
 
 func DecodeInvokeTyped(ip *uint16, code []byte) (i InstructionInvokeTyped) {
 	i.TypeArgs = decodeUint16Array(ip, code)
 	i.ArgTypes = decodeUint16Array(ip, code)
 	i.ReturnType = decodeUint16(ip, code)
+	i.HasImplicitArgument = decodeBool(ip, code)
 	return i
 }
 
