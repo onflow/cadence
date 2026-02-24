@@ -903,6 +903,30 @@ func (e *ContainerMutationError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
 
+// ContainerReadError
+type ContainerReadError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = &ContainerReadError{}
+var _ HasLocationRange = &ContainerReadError{}
+
+func (*ContainerReadError) IsUserError() {}
+
+func (e *ContainerReadError) Error() string {
+	return fmt.Sprintf(
+		"invalid container read: expected a subtype of `%s`, found `%s`",
+		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
+	)
+}
+
+func (e *ContainerReadError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // NonStorableValueError
 type NonStorableValueError struct {
 	Value Value
