@@ -376,6 +376,8 @@
       type: "size"
     - name: "returnType"
       type: "typeIndex"
+    - name: "hasImplicitArgument"
+      type: "bool"
   valueEffects:
     pop:
       - name: "arguments"
@@ -400,6 +402,8 @@
       type: "typeIndices"
     - name: "returnType"
       type: "typeIndex"
+    - name: "hasImplicitArgument"
+      type: "bool"
   valueEffects:
     pop:
       - name: "arguments"

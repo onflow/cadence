@@ -1577,6 +1577,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				var self Value = value
 				if declaration.Kind() == common.CompositeKindAttachment {
+					if !invocation.HasImplicitArgument {
+						panic(&InvalidAttachmentConstructorError{
+							LocationRange: invocation.LocationRange,
+						})
+					}
 
 					attachmentType := MustSemaTypeOfValue(value, invocationContext).(*sema.CompositeType)
 					// Self's type in the constructor is fully entitled, since
