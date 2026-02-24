@@ -992,7 +992,7 @@ func TestAssertEqual(t *testing.T) {
 		assert.ErrorContains(
 			t,
 			err,
-			"not equal: expected: {1: true, 2: false}, actual: {2: true, 1: true}",
+			"not equal: expected: {2: false, 1: true}, actual: {2: true, 1: true}",
 		)
 	})
 

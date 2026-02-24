@@ -435,6 +435,7 @@ func (v *DictionaryValue) iterate(
 
 			keyValue := MustConvertStoredValue(context, key)
 			valueValue := MustConvertStoredValue(context, value)
+			checkContainerRead(context, v.Type.ValueType, valueValue)
 
 			CheckInvalidatedResourceOrResourceReference(keyValue, context)
 			CheckInvalidatedResourceOrResourceReference(valueValue, context)
@@ -664,7 +665,9 @@ func (v *DictionaryValue) Get(
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(context, storedValue), true
+	result := MustConvertStoredValue(context, storedValue)
+	checkContainerRead(context, v.Type.ValueType, result)
+	return result, true
 }
 
 func (v *DictionaryValue) GetKey(context ContainerReadContext, keyValue Value) Value {
@@ -861,15 +864,16 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, name string
 					return nil
 				}
 
-				return MustConvertStoredValue(context, value).
-					Transfer(
-						context,
-						atree.Address{},
-						false,
-						nil,
-						nil,
-						false, // value is an element of parent container because it is returned from iterator.
-					)
+				convertedValue := MustConvertStoredValue(context, value)
+				checkContainerRead(context, v.Type.ValueType, convertedValue)
+				return convertedValue.Transfer(
+					context,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+					false, // value is an element of parent container because it is returned from iterator.
+				)
 			},
 		)
 	}
@@ -1005,15 +1009,16 @@ func (v *DictionaryValue) Remove(
 
 	// Value
 
-	existingValue := StoredValue(context, existingValueStorable, storage).
-		Transfer(
-			context,
-			atree.Address{},
-			true,
-			existingValueStorable,
-			nil,
-			true, // value is standalone because it was removed from parent container.
-		)
+	existingValue := StoredValue(context, existingValueStorable, storage)
+	checkContainerRead(context, v.Type.ValueType, existingValue)
+	existingValue = existingValue.Transfer(
+		context,
+		atree.Address{},
+		true,
+		existingValueStorable,
+		nil,
+		true, // value is standalone because it was removed from parent container.
+	)
 
 	return NewSomeValueNonCopying(context, existingValue)
 }
@@ -1775,6 +1780,7 @@ var NativeDictionaryForEachKeyFunction = NativeFunction(
 // DictionaryKeyIterator
 
 type DictionaryKeyIterator struct {
+	valueType   StaticType
 	mapIterator atree.MapIterator
 }
 
@@ -1794,6 +1800,7 @@ func NewDictionaryKeyIterator(gauge common.MemoryGauge, v *DictionaryValue) Dict
 	}
 
 	return DictionaryKeyIterator{
+		valueType:   v.Type.ValueType,
 		mapIterator: mapIterator,
 	}
 }
@@ -1823,10 +1830,10 @@ func (i DictionaryKeyIterator) NextKey(gauge common.Gauge) Value {
 	return MustConvertStoredValue(gauge, atreeValue)
 }
 
-func (i DictionaryKeyIterator) Next(gauge common.Gauge) (Value, Value) {
+func (i DictionaryKeyIterator) Next(context ValueStaticTypeContext) (Value, Value) {
 
 	common.UseComputation(
-		gauge,
+		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeMapReadIteration,
 			Intensity: 1,
@@ -1840,6 +1847,7 @@ func (i DictionaryKeyIterator) Next(gauge common.Gauge) (Value, Value) {
 	if atreeKeyValue == nil {
 		return nil, nil
 	}
-	return MustConvertStoredValue(gauge, atreeKeyValue),
-		MustConvertStoredValue(gauge, atreeValue)
+	valueResult := MustConvertStoredValue(context, atreeValue)
+	checkContainerRead(context, i.valueType, valueResult)
+	return MustConvertStoredValue(context, atreeKeyValue), valueResult
 }

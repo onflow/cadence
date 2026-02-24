@@ -467,7 +467,13 @@ func (checker *Checker) checkTypeIndexingExpression(
 		return InvalidType
 	}
 
-	checker.Elaboration.SetAttachmentAccessTypes(indexExpression, nominalType)
+	checker.Elaboration.SetAttachmentAccessTypes(
+		indexExpression,
+		AttachmentAccessTypes{
+			AttachmentType: nominalType,
+			BaseType:       targetType,
+		},
+	)
 
 	checker.checkUnusedExpressionResourceLoss(targetType, targetExpression)
 
