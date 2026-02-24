@@ -14581,3 +14581,87 @@ func TestInterpretImplicitElementBoxing(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretContainerMutationCheckThroughReference(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      struct S {}
+
+      fun getSAsAnyRef(): &AnyStruct{
+          return &S()
+      }
+
+      fun getSAuthRef(): auth(Mutate) &S {
+          let opt: auth(Mutate) &S? = nil
+          // always fails
+          return opt!
+      }
+
+      fun test() {
+          let path = /storage/x
+
+          let downCastArray: [&[fun(): auth(Mutate) &S]] = [&[getSAuthRef]]
+          let arrayViaAnyStruct = &downCastArray as auth(Mutate) &[&AnyStruct]
+
+          account.storage.save([getSAuthRef] as AnyStruct, to: path)
+          arrayViaAnyStruct[0] = account.storage.borrow<&AnyStruct>(from: path)!
+
+          account.storage.load<AnyStruct>(from: path)
+          account.storage.save([getSAsAnyRef] as AnyStruct, to: path)
+
+          downCastArray[0][0]
+      }
+    `
+
+	// `account: auth(...) &Account`
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name: "account",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: stdlib.NewAccountReferenceValue(
+			NoOpFunctionCreationContext{},
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.FullyEntitledAccountAccess,
+		),
+		Kind: common.DeclarationKindConstant,
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	RequireError(t, err)
+
+	var containerReadError *interpreter.ContainerReadError
+	require.ErrorAs(t, err, &containerReadError)
+}
