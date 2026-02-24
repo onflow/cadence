@@ -2765,6 +2765,8 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 		panic(errors.NewDefaultUserError("invalid number of arguments"))
 	}
 
+	hasImplicitArgument := implicitArgIndex != nil
+
 	invokedExpr := expression.InvokedExpression
 
 	// Ideally we should no longer have a need to special-case member-expressions.
@@ -2791,6 +2793,7 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				implicitArgIndex,
 				implicitArgType,
 				returnTypeIndex,
+				hasImplicitArgument,
 			)
 			return
 		}
@@ -2811,6 +2814,7 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 		invocationTypes,
 		uint16(argumentCount),
 		returnTypeIndex,
+		hasImplicitArgument,
 	)
 
 	return
@@ -2823,6 +2827,7 @@ func (c *Compiler[_, _]) emitInvocation(
 	invocationTypes sema.InvocationExpressionTypes,
 	argumentCount uint16,
 	returnTypeIndex uint16,
+	hasImplicitArgument bool,
 ) {
 	// Compile arguments
 	c.compileArguments(expression.Arguments, invocationTypes)
@@ -2833,16 +2838,18 @@ func (c *Compiler[_, _]) emitInvocation(
 		argTypes := c.loadArgumentTypes(invocationTypes)
 		argTypes = c.addImplicitArgumentTyped(implicitArgIndex, implicitArgType, argTypes)
 		c.emit(opcode.InstructionInvokeTyped{
-			TypeArgs:   typeArgs,
-			ArgTypes:   argTypes,
-			ReturnType: returnTypeIndex,
+			TypeArgs:            typeArgs,
+			ArgTypes:            argTypes,
+			ReturnType:          returnTypeIndex,
+			HasImplicitArgument: hasImplicitArgument,
 		})
 	} else {
 		argumentCount = c.addImplicitArgument(implicitArgIndex, argumentCount)
 		c.emit(opcode.InstructionInvoke{
-			TypeArgs:   typeArgs,
-			ArgCount:   argumentCount,
-			ReturnType: returnTypeIndex,
+			TypeArgs:            typeArgs,
+			ArgCount:            argumentCount,
+			ReturnType:          returnTypeIndex,
+			HasImplicitArgument: hasImplicitArgument,
 		})
 	}
 }
@@ -2929,6 +2936,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	implicitArgIndex *uint16,
 	implicitArgType sema.Type,
 	returnTypeIndex uint16,
+	hasImplicitArgument bool,
 ) {
 	funcName := invokedExpr.Identifier.Identifier
 
@@ -2951,6 +2959,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			invocationTypes,
 			argumentCount,
 			returnTypeIndex,
+			hasImplicitArgument,
 		)
 
 		return
@@ -2997,6 +3006,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					invocationTypes,
 					argumentCount,
 					returnTypeIndex,
+					hasImplicitArgument,
 				)
 			},
 			true,
@@ -3028,6 +3038,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			invocationTypes,
 			argumentCount,
 			returnTypeIndex,
+			hasImplicitArgument,
 		)
 	} else {
 		c.withOptionalChaining(
@@ -3049,6 +3060,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					invocationTypes,
 					argumentCount,
 					returnTypeIndex,
+					hasImplicitArgument,
 				)
 			},
 			true,
