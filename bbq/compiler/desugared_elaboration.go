@@ -442,11 +442,11 @@ func (e *DesugaredElaboration) AttachTypes(expression *ast.AttachExpression) sem
 	return e.elaboration.AttachTypes(expression)
 }
 
-func (e *DesugaredElaboration) AttachmentAccessTypes(expression *ast.IndexExpression) (ty sema.Type, ok bool) {
+func (e *DesugaredElaboration) AttachmentAccessTypes(expression *ast.IndexExpression) (ty sema.AttachmentAccessTypes, ok bool) {
 	return e.elaboration.AttachmentAccessTypes(expression)
 }
 
-func (e *DesugaredElaboration) AttachmentRemoveTypes(statement *ast.RemoveStatement) (ty sema.Type) {
+func (e *DesugaredElaboration) AttachmentRemoveTypes(statement *ast.RemoveStatement) (ty sema.RemoveExpressionTypes) {
 	return e.elaboration.AttachmentRemoveTypes(statement)
 }
 

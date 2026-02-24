@@ -509,6 +509,7 @@ func DecodeSetField(ip *uint16, code []byte) (i InstructionSetField) {
 // Pops two values off the stack, the array and the index,
 // and then pushes the value at the given index of the array onto the stack.
 type InstructionGetIndex struct {
+	IndexedType uint16
 }
 
 var _ Instruction = InstructionGetIndex{}
@@ -518,20 +519,34 @@ func (InstructionGetIndex) Opcode() Opcode {
 }
 
 func (i InstructionGetIndex) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
 }
 
-func (i InstructionGetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
+func (i InstructionGetIndex) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+}
 
 func (i InstructionGetIndex) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexedType", types[i.IndexedType], colorize)
 }
 
 func (i InstructionGetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.IndexedType)
+}
+
+func DecodeGetIndex(ip *uint16, code []byte) (i InstructionGetIndex) {
+	i.IndexedType = decodeUint16(ip, code)
+	return i
 }
 
 // InstructionRemoveIndex
@@ -540,6 +555,7 @@ func (i InstructionGetIndex) Encode(code *[]byte) {
 // Removes the value at the given index from the array and pushes it onto the stack.
 // If pushPlaceholder is true, also pushes the placeholder value that was inserted, if any, or nil otherwise.
 type InstructionRemoveIndex struct {
+	IndexedType     uint16
 	PushPlaceholder bool
 }
 
@@ -558,6 +574,8 @@ func (i InstructionRemoveIndex) String() string {
 
 func (i InstructionRemoveIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "pushPlaceholder", i.PushPlaceholder, colorize)
 }
 
@@ -567,15 +585,19 @@ func (i InstructionRemoveIndex) ResolvedOperandsString(sb *strings.Builder,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexedType", types[i.IndexedType], colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "pushPlaceholder", i.PushPlaceholder, colorize)
 }
 
 func (i InstructionRemoveIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.IndexedType)
 	emitBool(code, i.PushPlaceholder)
 }
 
 func DecodeRemoveIndex(ip *uint16, code []byte) (i InstructionRemoveIndex) {
+	i.IndexedType = decodeUint16(ip, code)
 	i.PushPlaceholder = decodeBool(ip, code)
 	return i
 }
@@ -585,6 +607,7 @@ func DecodeRemoveIndex(ip *uint16, code []byte) (i InstructionRemoveIndex) {
 // Pops three values off the stack, the array, the index, and the value,
 // and then sets the value at the given index of the array to the value.
 type InstructionSetIndex struct {
+	IndexedType uint16
 }
 
 var _ Instruction = InstructionSetIndex{}
@@ -594,20 +617,34 @@ func (InstructionSetIndex) Opcode() Opcode {
 }
 
 func (i InstructionSetIndex) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
 }
 
-func (i InstructionSetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
+func (i InstructionSetIndex) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+}
 
 func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexedType", types[i.IndexedType], colorize)
 }
 
 func (i InstructionSetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.IndexedType)
+}
+
+func DecodeSetIndex(ip *uint16, code []byte) (i InstructionSetIndex) {
+	i.IndexedType = decodeUint16(ip, code)
+	return i
 }
 
 // InstructionVoid
@@ -2923,7 +2960,8 @@ func DecodeTemplateString(ip *uint16, code []byte) (i InstructionTemplateString)
 // Pops a value off the stack, the target,
 // and then pushes the value of the type key at the given index onto the stack.
 type InstructionGetTypeIndex struct {
-	Type uint16
+	IndexedType  uint16
+	IndexingType uint16
 }
 
 var _ Instruction = InstructionGetTypeIndex{}
@@ -2941,7 +2979,9 @@ func (i InstructionGetTypeIndex) String() string {
 
 func (i InstructionGetTypeIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexingType", i.IndexingType, colorize)
 }
 
 func (i InstructionGetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
@@ -2950,16 +2990,20 @@ func (i InstructionGetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "indexedType", types[i.IndexedType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexingType", types[i.IndexingType], colorize)
 }
 
 func (i InstructionGetTypeIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.IndexedType)
+	emitUint16(code, i.IndexingType)
 }
 
 func DecodeGetTypeIndex(ip *uint16, code []byte) (i InstructionGetTypeIndex) {
-	i.Type = decodeUint16(ip, code)
+	i.IndexedType = decodeUint16(ip, code)
+	i.IndexingType = decodeUint16(ip, code)
 	return i
 }
 
@@ -2969,7 +3013,8 @@ func DecodeGetTypeIndex(ip *uint16, code []byte) (i InstructionGetTypeIndex) {
 // Remove the value of the given type key from the target.
 // Additionally destroy if removed type is resource.
 type InstructionRemoveTypeIndex struct {
-	Type uint16
+	IndexedType  uint16
+	IndexingType uint16
 }
 
 var _ Instruction = InstructionRemoveTypeIndex{}
@@ -2987,7 +3032,9 @@ func (i InstructionRemoveTypeIndex) String() string {
 
 func (i InstructionRemoveTypeIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexingType", i.IndexingType, colorize)
 }
 
 func (i InstructionRemoveTypeIndex) ResolvedOperandsString(sb *strings.Builder,
@@ -2996,16 +3043,20 @@ func (i InstructionRemoveTypeIndex) ResolvedOperandsString(sb *strings.Builder,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "indexedType", types[i.IndexedType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexingType", types[i.IndexingType], colorize)
 }
 
 func (i InstructionRemoveTypeIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.IndexedType)
+	emitUint16(code, i.IndexingType)
 }
 
 func DecodeRemoveTypeIndex(ip *uint16, code []byte) (i InstructionRemoveTypeIndex) {
-	i.Type = decodeUint16(ip, code)
+	i.IndexedType = decodeUint16(ip, code)
+	i.IndexingType = decodeUint16(ip, code)
 	return i
 }
 
@@ -3014,7 +3065,8 @@ func DecodeRemoveTypeIndex(ip *uint16, code []byte) (i InstructionRemoveTypeInde
 // Pops two values off the stack, the target and the value,
 // and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
 type InstructionSetTypeIndex struct {
-	Type uint16
+	IndexedType  uint16
+	IndexingType uint16
 }
 
 var _ Instruction = InstructionSetTypeIndex{}
@@ -3032,7 +3084,9 @@ func (i InstructionSetTypeIndex) String() string {
 
 func (i InstructionSetTypeIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexingType", i.IndexingType, colorize)
 }
 
 func (i InstructionSetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
@@ -3041,16 +3095,20 @@ func (i InstructionSetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "indexedType", types[i.IndexedType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexingType", types[i.IndexingType], colorize)
 }
 
 func (i InstructionSetTypeIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.IndexedType)
+	emitUint16(code, i.IndexingType)
 }
 
 func DecodeSetTypeIndex(ip *uint16, code []byte) (i InstructionSetTypeIndex) {
-	i.Type = decodeUint16(ip, code)
+	i.IndexedType = decodeUint16(ip, code)
+	i.IndexingType = decodeUint16(ip, code)
 	return i
 }
 
@@ -3167,11 +3225,11 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	case SetField:
 		return DecodeSetField(ip, code)
 	case GetIndex:
-		return InstructionGetIndex{}
+		return DecodeGetIndex(ip, code)
 	case RemoveIndex:
 		return DecodeRemoveIndex(ip, code)
 	case SetIndex:
-		return InstructionSetIndex{}
+		return DecodeSetIndex(ip, code)
 	case Void:
 		return InstructionVoid{}
 	case True:

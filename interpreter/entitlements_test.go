@@ -2231,3 +2231,43 @@ func TestInterpretEntitlementConversion(t *testing.T) {
 		require.ErrorAs(t, err, &transferTypeError)
 	})
 }
+
+func TestInterpretBaseDowncast(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+        entitlement E
+
+        resource R {
+            access(E) fun foo() {}
+        }
+
+        access(all) attachment A for R {
+
+            access(all) fun getBase(): auth(E) &R {
+				return base as! auth(E) &R
+			}
+        }
+
+        fun test() {
+            let r <- attach A() to <-create R()
+            r[A]!.getBase().foo()
+            destroy r
+        }
+    `)
+
+	_, err := inter.Invoke("test")
+	RequireError(t, err)
+
+	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+	assert.Equal(t,
+		common.TypeID("auth(S.test.E)&S.test.R"),
+		forceCastTypeMismatchErr.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("&S.test.R"),
+		forceCastTypeMismatchErr.ActualType.ID(),
+	)
+}
