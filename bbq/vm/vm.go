@@ -202,6 +202,7 @@ func (vm *VM) pushCallFrame(
 	receiver Value,
 	arguments []Value,
 	returnType bbq.StaticType,
+	hasImplicitArgument bool,
 ) {
 	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
 		panic(&interpreter.CallStackLimitExceededError{
@@ -236,11 +237,12 @@ func (vm *VM) pushCallFrame(
 	}
 
 	callFrame := callFrame{
-		localsCount:  localsCount,
-		localsOffset: offset,
-		function:     functionValue,
-		tracingInfo:  tracingInfo,
-		returnType:   returnType,
+		localsCount:         localsCount,
+		localsOffset:        offset,
+		function:            functionValue,
+		tracingInfo:         tracingInfo,
+		returnType:          returnType,
+		hasImplicitArgument: hasImplicitArgument,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -430,6 +432,7 @@ func (vm *VM) invokeExternally(
 		nil,
 		nil,
 		staticReturnType,
+		false,
 	)
 
 	// Runs the VM for compiled functions.
@@ -973,6 +976,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		typeArguments,
 		nil,
 		returnType,
+		ins.HasImplicitArgument,
 	)
 }
 
@@ -1009,6 +1013,7 @@ func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
 		typeArguments,
 		argumentTypes,
 		returnType,
+		ins.HasImplicitArgument,
 	)
 }
 
@@ -1051,6 +1056,7 @@ func invokeFunction(
 	typeArguments []bbq.StaticType,
 	argumentTypes []bbq.StaticType,
 	returnType bbq.StaticType,
+	hasImplicitArgument bool,
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
@@ -1081,6 +1087,7 @@ func invokeFunction(
 			receiver,
 			arguments,
 			returnType,
+			hasImplicitArgument,
 		)
 
 	case *NativeFunctionValue:
@@ -1746,6 +1753,10 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 }
 
 func opSetAttachmentBase(vm *VM) {
+	if !vm.callFrame.hasImplicitArgument {
+		panic(&interpreter.InvalidAttachmentConstructorError{})
+	}
+
 	base, attachment := vm.pop2()
 
 	attachmentComposite, ok := attachment.(*interpreter.CompositeValue)

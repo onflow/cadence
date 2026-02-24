@@ -1247,6 +1247,27 @@ func (e *InvalidAttachmentOperationTargetError) SetLocationRange(locationRange L
 	e.LocationRange = locationRange
 }
 
+// InvalidAttachmentConstructorError
+type InvalidAttachmentConstructorError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidAttachmentConstructorError{}
+var _ HasLocationRange = &InvalidAttachmentConstructorError{}
+
+func (*InvalidAttachmentConstructorError) IsInternalError() {}
+
+func (e *InvalidAttachmentConstructorError) Error() string {
+	return fmt.Sprintf(
+		"%s attachment constructor can only be called from an attach expression",
+		errors.InternalErrorMessagePrefix,
+	)
+}
+
+func (e *InvalidAttachmentConstructorError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // RecursiveTransferError
 type RecursiveTransferError struct {
 	LocationRange
