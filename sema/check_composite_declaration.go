@@ -1816,8 +1816,6 @@ func CompositeLikeConstructorType(
 			ParameterList.
 			EffectiveArgumentLabels()
 
-		constructorFunctionType.Parameters = compositeType.ConstructorParameters
-
 		// NOTE: Don't use `constructorFunctionType`, as it has a return type.
 		//   The initializer itself has a `Void` return type.
 
@@ -1839,6 +1837,7 @@ func CompositeConstructorFunctionType(compositeType *CompositeType) *FunctionTyp
 		Purity:               compositeType.ConstructorPurity,
 		IsConstructor:        true,
 		ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
+		Parameters:           compositeType.ConstructorParameters,
 	}
 }
 

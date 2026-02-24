@@ -1922,7 +1922,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
         fun test() {
             var s = S()
             var ref = &s as &S
-            remove A from S
+            remove A from ref
         }
         `, ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(_ error) {},
@@ -2019,6 +2019,78 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		_, err := inter.Invoke("test")
 		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
 		require.ErrorAs(t, err, &attachmentError)
+	})
+
+	t.Run("remove from a constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
+            struct S {}
+
+            attachment A for S {}
+
+            fun test() {
+                remove A from S
+            }`,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(_ error) {},
+			},
+		)
+
+		_, err := inter.Invoke("test")
+		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
+		require.ErrorAs(t, err, &attachmentError)
+	})
+}
+
+func TestInterpretAttachmentConstructorGuard(t *testing.T) {
+	t.Parallel()
+
+	t.Run("direct call panics", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
+            struct S {}
+            attachment A for S {}
+            fun test() {
+                let f = A
+                let a <- f()
+                destroy a
+            }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(_ error) {},
+		})
+
+		_, err := inter.Invoke("test")
+		var constructorError *interpreter.InvalidAttachmentConstructorError
+		require.ErrorAs(t, err, &constructorError)
+	})
+
+	t.Run("attach expression succeeds", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+            attachment A for S {
+                access(all) fun foo(): Int { return 42 }
+            }
+            fun test(): Int {
+                let s = attach A() to S()
+                return s[A]!.foo()
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 42),
+			result,
+		)
 	})
 }
 

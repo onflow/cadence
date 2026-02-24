@@ -202,6 +202,7 @@ func (vm *VM) pushCallFrame(
 	receiver Value,
 	arguments []Value,
 	returnType bbq.StaticType,
+	hasImplicitArgument bool,
 ) {
 	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
 		panic(&interpreter.CallStackLimitExceededError{
@@ -236,11 +237,12 @@ func (vm *VM) pushCallFrame(
 	}
 
 	callFrame := callFrame{
-		localsCount:  localsCount,
-		localsOffset: offset,
-		function:     functionValue,
-		tracingInfo:  tracingInfo,
-		returnType:   returnType,
+		localsCount:         localsCount,
+		localsOffset:        offset,
+		function:            functionValue,
+		tracingInfo:         tracingInfo,
+		returnType:          returnType,
+		hasImplicitArgument: hasImplicitArgument,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -430,6 +432,7 @@ func (vm *VM) invokeExternally(
 		nil,
 		nil,
 		staticReturnType,
+		false,
 	)
 
 	// Runs the VM for compiled functions.
@@ -870,30 +873,51 @@ func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 	global.SetValue(vm.context, value)
 }
 
-func opSetIndex(vm *VM) {
+func opSetIndex(vm *VM, ins opcode.InstructionSetIndex) {
 	container, index, value := vm.pop3()
-	containerValue := container.(interpreter.ValueIndexableValue)
-	containerValue.SetKey(vm.context, index, value)
+	indexableValue := container.(interpreter.ValueIndexableValue)
+
+	checkIndexedType(
+		vm,
+		ins.IndexedType,
+		indexableValue,
+	)
+
+	indexableValue.SetKey(vm.context, index, value)
 }
 
-func opGetIndex(vm *VM) {
+func opGetIndex(vm *VM, ins opcode.InstructionGetIndex) {
 	container, index := vm.pop2()
-	containerValue := container.(interpreter.ValueIndexableValue)
-	element := containerValue.GetKey(vm.context, index)
+	indexableValue := container.(interpreter.ValueIndexableValue)
+
+	checkIndexedType(
+		vm,
+		ins.IndexedType,
+		indexableValue,
+	)
+
+	element := indexableValue.GetKey(vm.context, index)
 	vm.push(element)
 }
 
 func opRemoveIndex(vm *VM, ins opcode.InstructionRemoveIndex) {
 	context := vm.context
 	container, index := vm.pop2()
-	containerValue := container.(interpreter.ValueIndexableValue)
-	element := containerValue.RemoveKey(context, index)
+	indexableValue := container.(interpreter.ValueIndexableValue)
+
+	checkIndexedType(
+		vm,
+		ins.IndexedType,
+		indexableValue,
+	)
+
+	element := indexableValue.RemoveKey(context, index)
 
 	// Insert a placeholder value at the removed index to mark it as deleted.
 	placeholder := &interpreter.PlaceholderValue{}
 	// Note: Must use `InsertKey` here, not `SetKey`,
 	// and disable mutation check, because the placeholder is not a real value.
-	containerValue.InsertKeyWithMutationCheck(
+	indexableValue.InsertKeyWithMutationCheck(
 		context,
 		index,
 		placeholder,
@@ -903,6 +927,25 @@ func opRemoveIndex(vm *VM, ins opcode.InstructionRemoveIndex) {
 	if ins.PushPlaceholder {
 		vm.push(placeholder)
 	}
+}
+
+func checkIndexedType(
+	vm *VM,
+	indexedTypeIndex uint16,
+	indexedValue Value,
+) {
+	accessedType := vm.loadType(indexedTypeIndex)
+
+	context := vm.context
+
+	// TODO: Avoid sema type conversion.
+	indexedSemaType := context.SemaTypeFromStaticType(accessedType)
+
+	interpreter.CheckIndexedType(
+		context,
+		indexedValue,
+		indexedSemaType,
+	)
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
@@ -933,6 +976,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		typeArguments,
 		nil,
 		returnType,
+		ins.HasImplicitArgument,
 	)
 }
 
@@ -969,6 +1013,7 @@ func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
 		typeArguments,
 		argumentTypes,
 		returnType,
+		ins.HasImplicitArgument,
 	)
 }
 
@@ -1011,6 +1056,7 @@ func invokeFunction(
 	typeArguments []bbq.StaticType,
 	argumentTypes []bbq.StaticType,
 	returnType bbq.StaticType,
+	hasImplicitArgument bool,
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
@@ -1041,6 +1087,7 @@ func invokeFunction(
 			receiver,
 			arguments,
 			returnType,
+			hasImplicitArgument,
 		)
 
 	case *NativeFunctionValue:
@@ -1224,7 +1271,12 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	memberAccessibleValue.SetMember(vm.context, fieldName, fieldValue)
 }
 
-func getField(vm *VM, memberAccessibleValue interpreter.MemberAccessibleValue, fieldNameIndex uint16, accessedTypeIndex uint16) Value {
+func getField(
+	vm *VM,
+	memberAccessibleValue interpreter.MemberAccessibleValue,
+	fieldNameIndex uint16,
+	accessedTypeIndex uint16,
+) Value {
 
 	checkMemberAccessTargetType(
 		vm,
@@ -1639,13 +1691,19 @@ func opGetTypeIndex(vm *VM, ins opcode.InstructionGetTypeIndex) {
 
 	target := vm.pop()
 
+	checkIndexedType(
+		vm,
+		ins.IndexedType,
+		target,
+	)
+
 	// Get attachment type
-	typeIndex := ins.Type
-	staticType := vm.loadType(typeIndex)
-	typ := context.SemaTypeFromStaticType(staticType)
+	attachmentTypeIndex := ins.IndexingType
+	attachmentStaticType := vm.loadType(attachmentTypeIndex)
+	attachmentSemaType := context.SemaTypeFromStaticType(attachmentStaticType)
 
 	compositeValue := target.(interpreter.TypeIndexableValue)
-	value := compositeValue.GetTypeKey(context, typ)
+	value := compositeValue.GetTypeKey(context, attachmentSemaType)
 	vm.push(value)
 }
 
@@ -1654,10 +1712,16 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 
 	fieldValue, target := vm.pop2()
 
+	checkIndexedType(
+		vm,
+		ins.IndexedType,
+		target,
+	)
+
 	// Get attachment type
-	typeIndex := ins.Type
-	staticType := vm.loadType(typeIndex)
-	typ := context.SemaTypeFromStaticType(staticType)
+	attachmentTypeIndex := ins.IndexingType
+	attachmentStaticType := vm.loadType(attachmentTypeIndex)
+	attachmentSemaType := context.SemaTypeFromStaticType(attachmentStaticType)
 	attachment := fieldValue.(*interpreter.CompositeValue)
 
 	base := target.(*interpreter.CompositeValue)
@@ -1681,7 +1745,7 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 
 	base.SetTypeKey(
 		context,
-		typ,
+		attachmentSemaType,
 		fieldValue,
 	)
 	attachment.SetBaseValue(context, base)
@@ -1689,6 +1753,10 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 }
 
 func opSetAttachmentBase(vm *VM) {
+	if !vm.callFrame.hasImplicitArgument {
+		panic(&interpreter.InvalidAttachmentConstructorError{})
+	}
+
 	base, attachment := vm.pop2()
 
 	attachmentComposite, ok := attachment.(*interpreter.CompositeValue)
@@ -1713,9 +1781,15 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	target := vm.pop()
 	context := vm.context
 
+	checkIndexedType(
+		vm,
+		ins.IndexedType,
+		target,
+	)
+
 	// Get attachment type
-	typeIndex := ins.Type
-	staticType := vm.loadType(typeIndex)
+	attachmentTypeIndex := ins.IndexingType
+	staticType := vm.loadType(attachmentTypeIndex)
 	typ := context.SemaTypeFromStaticType(staticType)
 
 	base, ok := target.(*interpreter.CompositeValue)
@@ -1850,9 +1924,9 @@ func (vm *VM) run() {
 		case opcode.InstructionSetGlobal:
 			opSetGlobal(vm, ins)
 		case opcode.InstructionSetIndex:
-			opSetIndex(vm)
+			opSetIndex(vm, ins)
 		case opcode.InstructionGetIndex:
-			opGetIndex(vm)
+			opGetIndex(vm, ins)
 		case opcode.InstructionRemoveIndex:
 			opRemoveIndex(vm, ins)
 		case opcode.InstructionGetMethod:

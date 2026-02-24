@@ -159,7 +159,12 @@ func (v *VMInvokable) invoke(
 
 	if interpreterErr != nil {
 		return nil,
-			fmt.Errorf("VM didn't produce any errors, but the interpreter did: %w", interpreterErr)
+			// IMPORTANT: do not include interpreter error as is (using `%w` formatting),
+			// because error assertions (`assert.ErrorAs` function) will treat is as a valid error from VM.
+			fmt.Errorf(
+				"VM didn't produce any errors, but the interpreter did: %s",
+				interpreterErr.Error(),
+			)
 	}
 
 	vmErr = v.compareStorage()

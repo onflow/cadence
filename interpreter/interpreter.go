@@ -1577,6 +1577,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				var self Value = value
 				if declaration.Kind() == common.CompositeKindAttachment {
+					if !invocation.HasImplicitArgument {
+						panic(&InvalidAttachmentConstructorError{
+							LocationRange: invocation.LocationRange,
+						})
+					}
 
 					attachmentType := MustSemaTypeOfValue(value, invocationContext).(*sema.CompositeType)
 					// Self's type in the constructor is fully entitled, since
@@ -5861,6 +5866,26 @@ func checkContainerMutation(
 
 	if !IsSubType(context, actualElementType, elementType) {
 		panic(&ContainerMutationError{
+			ExpectedType: context.SemaTypeFromStaticType(elementType),
+			ActualType:   MustSemaTypeOfValue(element, context),
+		})
+	}
+}
+
+func checkContainerRead(
+	context ValueStaticTypeContext,
+	elementType StaticType,
+	element Value,
+) {
+	_, ok := element.(*StorageReferenceValue)
+	if !ok {
+		return
+	}
+
+	actualElementType := element.StaticType(context)
+
+	if !IsSubType(context, actualElementType, elementType) {
+		panic(&ContainerReadError{
 			ExpectedType: context.SemaTypeFromStaticType(elementType),
 			ActualType:   MustSemaTypeOfValue(element, context),
 		})
