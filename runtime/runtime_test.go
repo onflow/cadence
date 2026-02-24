@@ -2488,7 +2488,7 @@ func TestRuntimeSyntaxError(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	_, err := runtime.ExecuteScript(
 		Script{
@@ -2496,11 +2496,14 @@ func TestRuntimeSyntaxError(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Location:  nextScriptLocation(),
 			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
+
+	var syntaxErr *parser.SyntaxError
+	require.ErrorAs(t, err, &syntaxErr)
 
 }
 
