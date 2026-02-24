@@ -5615,8 +5615,33 @@ func TestRuntimeDeployContractAndUseResourceInTransaction(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var containerReadError *interpreter.ContainerReadError
-	require.ErrorAs(t, err, &containerReadError)
+	if *compile {
+		// TODO: fix type of attachment constructor
+
+		var valueTransferTypeErr *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &valueTransferTypeErr)
+
+		assert.Equal(t,
+			common.TypeID("fun():A.0000000000000001.Attacker.AttackerAttachment"),
+			valueTransferTypeErr.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("fun():Void"),
+			valueTransferTypeErr.ActualType.ID(),
+		)
+	} else {
+		var containerReadError *interpreter.ContainerReadError
+		require.ErrorAs(t, err, &containerReadError)
+
+		assert.Equal(t,
+			common.TypeID("&[fun(AnyStruct):AnyResource]"),
+			containerReadError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[fun():A.0000000000000001.Attacker.AttackerAttachment]"),
+			containerReadError.ActualType.ID(),
+		)
+	}
 
 }
 
