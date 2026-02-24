@@ -944,7 +944,7 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 		declaration.Range,
 	)
 
-	initializerFuncType := sema.CompositeConstructorFunctionType(compositeType)
+	initializerFuncType := compositeType.ConstructorFunctionType()
 
 	hasInit := false
 	for _, member := range desugaredMembers {
@@ -1054,7 +1054,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		declaration.Range,
 	)
 
-	initializerFuncType := sema.CompositeConstructorFunctionType(compositeType)
+	initializerFuncType := compositeType.ConstructorFunctionType()
 
 	hasInit := false
 	for _, member := range desugaredMembers {
@@ -1080,7 +1080,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		if compositeType.Kind == common.CompositeKindEnum {
 			// generate enum initializer
 			enumInitializer := newEnumInitializer(d.memoryGauge, compositeType, d.elaboration)
-			enumInitializerFuncType := newEnumInitializerFuncType(compositeType.EnumRawType)
+			enumInitializerFuncType := newEnumInitializerFuncType(compositeType)
 			d.elaboration.SetFunctionDeclarationFunctionType(enumInitializer.FunctionDeclaration, enumInitializerFuncType)
 			desugaredMembers = append(desugaredMembers, enumInitializer)
 
@@ -1681,7 +1681,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 
 	// Always add empty initializer for transactions.
 	// To be updated later by compilation.
-	initializerFuncType := sema.CompositeConstructorFunctionType(compositeType)
+	initializerFuncType := compositeType.ConstructorFunctionType()
 	d.addEmptyInitializer(initializerFuncType, &members)
 
 	compositeDecl := ast.NewCompositeDeclaration(
@@ -1961,16 +1961,16 @@ func newEnumInitializer(
 	)
 }
 
-func newEnumInitializerFuncType(rawValueType sema.Type) *sema.FunctionType {
+func newEnumInitializerFuncType(enumType *sema.CompositeType) *sema.FunctionType {
 	return sema.NewSimpleFunctionType(
 		sema.FunctionPurityImpure,
 		[]sema.Parameter{
 			{
 				Identifier:     sema.EnumRawValueFieldName,
-				TypeAnnotation: sema.NewTypeAnnotation(rawValueType),
+				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
 			},
 		},
-		sema.VoidTypeAnnotation,
+		sema.NewTypeAnnotation(enumType),
 	)
 }
 
