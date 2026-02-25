@@ -14671,6 +14671,7 @@ func TestInterpretContainerMutationCheckThroughReference(t *testing.T) {
 	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	var containerReadError *interpreter.ContainerReadError
-	require.ErrorAs(t, err, &containerReadError)
+	var containerMutationErr *interpreter.ContainerMutationError
+	require.ErrorAs(t, err, &containerMutationErr)
+
 }
