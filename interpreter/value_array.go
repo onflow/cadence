@@ -297,7 +297,6 @@ func (v *ArrayValue) iterate(
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 			elementValue := MustConvertStoredValue(context, element)
-			checkContainerRead(context, v.Type.ElementType(), elementValue)
 			CheckInvalidatedResourceOrResourceReference(elementValue, context)
 
 			if transferElements {
@@ -548,8 +547,6 @@ func (v *ArrayValue) Get(context ContainerReadContext, index int) Value {
 	}
 
 	result := MustConvertStoredValue(context, storedValue)
-
-	checkContainerRead(context, v.Type.ElementType(), result)
 
 	return result
 }
@@ -863,7 +860,6 @@ func (v *ArrayValue) Remove(context ContainerMutationContext, index int) Value {
 	storable := v.RemoveWithoutTransfer(context, index)
 
 	value := StoredValue(context, storable, context.Storage())
-	checkContainerRead(context, v.Type.ElementType(), value)
 
 	return value.Transfer(
 		context,
@@ -1718,7 +1714,6 @@ func (v *ArrayValue) Filter(
 				if value == nil {
 					return nil
 				}
-				checkContainerRead(context, v.Type.ElementType(), value)
 
 				result := invokeFunctionValue(
 					context,
@@ -1819,7 +1814,6 @@ func (v *ArrayValue) Map(
 			}
 
 			value := MustConvertStoredValue(context, atreeValue)
-			checkContainerRead(context, v.Type.ElementType(), value)
 
 			result := invokeFunctionValue(
 				context,
@@ -2095,7 +2089,6 @@ func (i *ArrayIterator) Next(context ValueIteratorContext) Value {
 	// atree.Array iterator returns low-level atree.Value,
 	// convert to high-level interpreter.Value
 	result := MustConvertStoredValue(context, atreeValue)
-	checkContainerRead(context, i.elementType, result)
 	return result
 }
 
