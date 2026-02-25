@@ -1515,6 +1515,41 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 
 	valueType := value.StaticType(context)
 
+	// TODO: need to forbid escalation in nested types, e.g. &T -> &[auth(E) &U]
+
+	// If the value is specifically a storage reference,
+	// and the target type is a reference,
+	// then we report the value as a storage reference with the target type's borrow type
+	// (but keep the same authorization and target storage address/path).
+	//
+	// This allows storage references to be cast to different reference types,
+	// which is valid, as the storage reference's targeted value can also
+	// be replaced by a value of a different type.
+	//
+	// It is important we perform a type check of the storage reference's borrow type
+	// against the targeted value's type each time we use the reference (dereference it).
+
+	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
+		if referenceTargetType, ok := targetType.(*interpreter.ReferenceStaticType); ok {
+			borrowType := interpreter.MustConvertStaticToSemaType(
+				referenceTargetType.ReferencedType,
+				context,
+			)
+
+			if !storageReference.BorrowedType.Equal(borrowType) {
+
+				value = interpreter.NewStorageReferenceValue(
+					context,
+					storageReference.Authorization,
+					storageReference.TargetStorageAddress,
+					storageReference.TargetPath,
+					borrowType,
+				)
+				valueType = value.StaticType(context)
+			}
+		}
+	}
+
 	return value, valueType
 }
 
