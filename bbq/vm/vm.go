@@ -1493,6 +1493,8 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 }
 
 func castValueAndValueType(context *Context, targetType bbq.StaticType, value Value) (Value, bbq.StaticType) {
+	// (for interpreter, see Interpreter.castValueAndValueType)
+
 	// if the value itself has a mapped entitlement type in its authorization
 	// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
 	// substitution must also be performed on its entitlements
