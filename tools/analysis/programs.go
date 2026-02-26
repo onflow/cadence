@@ -159,6 +159,8 @@ func (programs *Programs) check(
 				var loadError error
 
 				switch importedLocation {
+				case stdlib.ComparisonContractLocation:
+					return stdlib.ComparisonContractSemaImport, nil
 				case stdlib.CryptoContractLocation:
 					// If the elaboration for the crypto contract is available, take it.
 					elaboration = programs.CryptoContractElaboration
