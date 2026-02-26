@@ -570,6 +570,34 @@ transaction(amount: UFix64, to: Address) {
     }
 }
 `
+const jansRealFlowTokenTransferTransaction = `
+import FungibleToken from 0x1
+import FlowToken from 0x1
+
+transaction(amount: UFix64, to: Address){
+
+    prepare(signer: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account) {
+        var f: fun(): Void = fun(){}
+        f = fun() {
+                var i = 0
+                while i < 26 {
+                    i = i + 1
+
+            let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)!
+            let receiverRef = getAccount(to)
+                .capabilities.borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)!
+            receiverRef.deposit(from: <-vaultRef.withdraw(amount: 0.00001))
+
+                }
+        }
+        f()
+    }
+
+    execute {
+        var f: fun(): Void = fun(){}
+    }
+}
+`
 
 const realFlowTokenBalanceScript = `
 import FungibleToken from 0x1
@@ -755,7 +783,7 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
 		err = runtime.ExecuteTransaction(
 			Script{
-				Source: []byte(realFlowTokenTransferTransaction),
+				Source: []byte(jansRealFlowTokenTransferTransaction),
 				Arguments: encodeArgs([]cadence.Value{
 					sendAmount,
 					cadence.Address(receiverAddress),
