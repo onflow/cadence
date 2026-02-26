@@ -75,13 +75,20 @@ type StorageWriter interface {
 var _ StorageWriter = &Interpreter{}
 
 type ValueStaticTypeContext interface {
+	valueStaticTypeContext
+	ValueConversionContext
+}
+
+var _ ValueStaticTypeContext = &Interpreter{}
+
+type valueStaticTypeContext interface {
 	common.Gauge
 	StorageReader
 	TypeConverter
 	IsTypeInfoRecovered(location common.Location) bool
 }
 
-var _ ValueStaticTypeContext = &Interpreter{}
+var _ valueStaticTypeContext = &Interpreter{}
 
 type ValueStaticTypeConformanceContext interface {
 	ValueStaticTypeContext
@@ -91,7 +98,7 @@ type ValueStaticTypeConformanceContext interface {
 var _ ValueStaticTypeConformanceContext = &Interpreter{}
 
 type StorageContext interface {
-	ValueStaticTypeContext
+	valueStaticTypeContext
 	common.MemoryGauge
 	StorageMutationTracker
 	StorageIterationTracker
@@ -170,6 +177,7 @@ var _ ValueStringContext = &Interpreter{}
 type ValueCloneContext interface {
 	StorageContext
 	ReferenceTracker
+	ValueConversionContext
 }
 
 var _ ValueCloneContext = &Interpreter{}
@@ -424,7 +432,6 @@ type EventContext interface {
 var _ EventContext = &Interpreter{}
 
 type AttachmentContext interface {
-	ValueStaticTypeContext
 	ReferenceCreationContext
 	SetAttachmentIteration(composite *CompositeValue, state bool) bool
 }
