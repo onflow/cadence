@@ -177,7 +177,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		// That means that resource invalidation and returns
 		// are not definite, but only potential.
 
-		rightType = checker.checkPotentiallyUnevaluated(func() Type {
+		rightType, _ = checker.checkPotentiallyUnevaluated(func() Type {
 			var expectedType Type
 			if !leftIsInvalid {
 				if optionalLeftType, ok := leftType.(*OptionalType); ok {

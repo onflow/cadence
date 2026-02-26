@@ -95,6 +95,8 @@ func parseStatement(p *parser) (ast.Statement, error) {
 			return parseContinueStatement(p), nil
 		case KeywordIf:
 			return parseIfStatement(p)
+		case KeywordGuard:
+			return parseGuardStatement(p)
 		case KeywordSwitch:
 			return parseSwitchStatement(p)
 		case KeywordWhile:
@@ -302,6 +304,27 @@ func parseContinueStatement(p *parser) *ast.ContinueStatement {
 	return ast.NewContinueStatement(p.memoryGauge, tokenRange)
 }
 
+// parseOptionalBinding parses an optional binding (let/var) if present,
+// otherwise returns nil
+func parseOptionalBinding(p *parser) (*ast.VariableDeclaration, error) {
+	if p.current.Type != lexer.TokenIdentifier {
+		return nil, nil
+	}
+
+	switch string(p.currentTokenSource()) {
+	case KeywordLet:
+		const isLet = true
+		return parseVariableDeclaration(p, ast.AccessNotSpecified, nil, isLet, "")
+
+	case KeywordVar:
+		const isLet = false
+		return parseVariableDeclaration(p, ast.AccessNotSpecified, nil, isLet, "")
+
+	default:
+		return nil, nil
+	}
+}
+
 func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 	var ifStatements []*ast.IfStatement
@@ -314,27 +337,9 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		p.nextSemanticToken()
 
-		var variableDeclaration *ast.VariableDeclaration
-		var err error
-
-		if p.current.Type == lexer.TokenIdentifier {
-			switch string(p.currentTokenSource()) {
-			case KeywordLet:
-				const isLet = true
-				variableDeclaration, err =
-					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, isLet, "")
-				if err != nil {
-					return nil, err
-				}
-
-			case KeywordVar:
-				const isLet = false
-				variableDeclaration, err =
-					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, isLet, "")
-				if err != nil {
-					return nil, err
-				}
-			}
+		variableDeclaration, err := parseOptionalBinding(p)
+		if err != nil {
+			return nil, err
 		}
 
 		var expression ast.Expression
@@ -389,7 +394,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 		)
 
 		if variableDeclaration != nil {
-			variableDeclaration.ParentIfStatement = ifStatement
+			variableDeclaration.ParentControlStatement = ifStatement
 		}
 
 		ifStatements = append(ifStatements, ifStatement)
@@ -414,6 +419,68 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 	}
 
 	return result, nil
+}
+
+func parseGuardStatement(p *parser) (*ast.GuardStatement, error) {
+
+	startPos := p.current.StartPos
+
+	// Skip the `guard` keyword
+	p.nextSemanticToken()
+
+	variableDeclaration, err := parseOptionalBinding(p)
+	if err != nil {
+		return nil, err
+	}
+
+	var expression ast.Expression
+
+	// If no variable declaration, parse as expression
+	if variableDeclaration == nil {
+		expression, err = parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Guard must have an else block
+	p.skipSpaceAndComments()
+	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordElse) {
+		return nil, &MissingElseInGuardStatementError{
+			GotToken: p.current,
+		}
+	}
+
+	// Skip the `else` keyword
+	p.nextSemanticToken()
+
+	elseBlock, err := parseBlock(p)
+	if err != nil {
+		return nil, err
+	}
+
+	var test ast.IfStatementTest
+	switch {
+	case variableDeclaration != nil:
+		test = variableDeclaration
+	case expression != nil:
+		test = expression
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	guardStatement := ast.NewGuardStatement(
+		p.memoryGauge,
+		test,
+		elseBlock,
+		startPos,
+	)
+
+	if variableDeclaration != nil {
+		variableDeclaration.ParentControlStatement = guardStatement
+	}
+
+	return guardStatement, nil
 }
 
 func parseWhileStatement(p *parser) (*ast.WhileStatement, error) {

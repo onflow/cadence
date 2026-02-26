@@ -356,6 +356,11 @@ func generateErrors() []namedError {
 				Pos: placeholderPosition,
 			},
 		},
+		{"parser.MissingElseInGuardStatementError",
+			&parser.MissingElseInGuardStatementError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingEndOfParenthesizedExpressionError",
 			&parser.MissingEndOfParenthesizedExpressionError{
 				GotToken: placeholderToken,
@@ -822,6 +827,11 @@ func generateErrors() []namedError {
 		},
 		{"sema.FunctionExpressionInConditionError",
 			&sema.FunctionExpressionInConditionError{
+				Range: placeholderRange,
+			},
+		},
+		{"sema.GuardStatementElseBlockMustExitError",
+			&sema.GuardStatementElseBlockMustExitError{
 				Range: placeholderRange,
 			},
 		},

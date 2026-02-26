@@ -97,7 +97,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	// That means that resource invalidations and
 	// returns are not definite, but only potential.
 
-	_ = checker.checkPotentiallyUnevaluated(func() Type {
+	_, _ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.Current().WithLoop(func() {
 			checker.checkBlock(statement.Block)
 		})

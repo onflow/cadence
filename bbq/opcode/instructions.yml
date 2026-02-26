@@ -1024,6 +1024,10 @@
       - name: "string"
         type: "string"
 
+- name: "unreachable"
+  description: |
+    Indicates an unreachable code location. If executed, the program panics.
+
 # Attachment instructions
 
 - name: "getTypeIndex"

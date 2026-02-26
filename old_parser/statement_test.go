@@ -512,7 +512,7 @@ func TestParseIfStatement(t *testing.T) {
 			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 		}
 
-		expected.Test.(*ast.VariableDeclaration).ParentIfStatement = expected
+		expected.Test.(*ast.VariableDeclaration).ParentControlStatement = expected
 
 		AssertEqualWithDiff(t,
 			[]ast.Statement{
@@ -562,7 +562,7 @@ func TestParseIfStatement(t *testing.T) {
 			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 		}
 
-		expected.Test.(*ast.VariableDeclaration).ParentIfStatement = expected
+		expected.Test.(*ast.VariableDeclaration).ParentControlStatement = expected
 
 		AssertEqualWithDiff(t,
 			[]ast.Statement{
@@ -1598,8 +1598,8 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 				Pos:        ast.Position{Offset: 42, Line: 3, Column: 23},
 			},
 		},
-		StartPos:          ast.Position{Offset: 34, Line: 3, Column: 15},
-		ParentIfStatement: ifStatement,
+		StartPos:               ast.Position{Offset: 34, Line: 3, Column: 15},
+		ParentControlStatement: ifStatement,
 	}
 
 	ifStatement.Test = ifTestVariableDeclaration
