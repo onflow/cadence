@@ -13553,9 +13553,18 @@ func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
       transaction {
           prepare(account: auth(Storage) &Account) {
               account.storage.save([account] as AnyStruct, to:/storage/x)
+
+              // Array is borrowed with having the element type as '&Account'.
+              // i.e: element type is unauthorized.
               var r = account.storage.borrow<auth(Mutate) &[&Account]>(from:/storage/x)!
+
+              // Therefore, the type of the remove function is 'fun(Int): &Account'.
+              // i.e: return type is also unauthorized.
               var f = r.remove 
+
+              // Therefore, this casting would fail.
               var ff = f as! (fun(Int): auth(Storage) &Account)
+
               account.storage.load<AnyStruct>(from:/storage/x)
               let publicAccount = getAccount(account.address)
               account.storage.save([publicAccount] as AnyStruct, to:/storage/x)
@@ -13586,8 +13595,8 @@ func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
 
 	RequireError(t, err)
 
-	var dereferenceError *interpreter.DereferenceError
-	require.ErrorAs(t, err, &dereferenceError)
+	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
 
 type testComputationGauge struct {
