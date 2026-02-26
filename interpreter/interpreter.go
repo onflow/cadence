@@ -1577,6 +1577,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				var self Value = value
 				if declaration.Kind() == common.CompositeKindAttachment {
+					if !invocation.HasImplicitArgument {
+						panic(&InvalidAttachmentConstructorError{
+							LocationRange: invocation.LocationRange,
+						})
+					}
 
 					attachmentType := MustSemaTypeOfValue(value, invocationContext).(*sema.CompositeType)
 					// Self's type in the constructor is fully entitled, since
@@ -2452,11 +2457,24 @@ func convert(
 					unwrappedTargetType,
 					targetAuthorization,
 				)
+
+				// Recursively convert the inner value.
+				targetInnerType := unwrappedTargetType.Type
+				innerValue := ref.Value
+
+				innerValueType := context.SemaTypeFromStaticType(innerValue.StaticType(context))
+				convertedInnerValue := convertAndBox(
+					context,
+					innerValue,
+					innerValueType,
+					targetInnerType,
+				)
+
 				return NewEphemeralReferenceValue(
 					context,
 					targetAuthorization,
-					ref.Value,
-					unwrappedTargetType.Type,
+					convertedInnerValue,
+					targetInnerType,
 				)
 			}
 
@@ -2524,8 +2542,8 @@ func checkTargetIsLessPermissive(
 		actualAuthorization := valueType.Authorization
 		if !sema.PermitsAccess(unwrappedTargetType.Authorization, actualAuthorization) {
 			panic(&InvalidReferenceConversionError{
-				Expected: targetSemaAuthorization,
-				Actual:   actualAuthorization,
+				ExpectedAuthorization: targetSemaAuthorization,
+				ActualAuthorization:   actualAuthorization,
 			})
 		}
 	default:
@@ -2542,8 +2560,8 @@ func checkTargetIsLessPermissive(
 			}
 
 			panic(&InvalidReferenceConversionError{
-				Expected: targetSemaAuthorization,
-				Actual:   actualSemaAuthorization,
+				ExpectedAuthorization: targetSemaAuthorization,
+				ActualAuthorization:   actualSemaAuthorization,
 			})
 		}
 	}

@@ -392,7 +392,9 @@ func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
 	return false
 }
 
-type NoOpReferenceCreationContext struct{}
+type NoOpReferenceCreationContext struct {
+	interpreter.NoOpStringContext
+}
 
 var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
 

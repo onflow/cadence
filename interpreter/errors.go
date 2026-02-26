@@ -1247,6 +1247,27 @@ func (e *InvalidAttachmentOperationTargetError) SetLocationRange(locationRange L
 	e.LocationRange = locationRange
 }
 
+// InvalidAttachmentConstructorError
+type InvalidAttachmentConstructorError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidAttachmentConstructorError{}
+var _ HasLocationRange = &InvalidAttachmentConstructorError{}
+
+func (*InvalidAttachmentConstructorError) IsInternalError() {}
+
+func (e *InvalidAttachmentConstructorError) Error() string {
+	return fmt.Sprintf(
+		"%s attachment constructor can only be called from an attach expression",
+		errors.InternalErrorMessagePrefix,
+	)
+}
+
+func (e *InvalidAttachmentConstructorError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // RecursiveTransferError
 type RecursiveTransferError struct {
 	LocationRange
@@ -1625,8 +1646,8 @@ func (e *InvalidBaseTypeError) SetLocationRange(locationRange LocationRange) {
 
 // InvalidReferenceConversionError
 type InvalidReferenceConversionError struct {
-	Expected sema.Access
-	Actual   sema.Access
+	ExpectedAuthorization sema.Access
+	ActualAuthorization   sema.Access
 	LocationRange
 }
 
@@ -1639,8 +1660,8 @@ func (e *InvalidReferenceConversionError) Error() string {
 	return fmt.Sprintf(
 		"%s invalid reference conversion error: expect entitlements `%s`, found `%s`",
 		errors.InternalErrorMessagePrefix,
-		e.Expected,
-		e.Actual,
+		e.ExpectedAuthorization,
+		e.ActualAuthorization,
 	)
 }
 

@@ -148,6 +148,7 @@ func invokeFunctionValueWithEval[T any](
 		returnType,
 		context.LocationRange(),
 	)
+	invocation.HasImplicitArgument = implicitArgumentValue != nil
 
 	resultValue := function.Invoke(invocation)
 

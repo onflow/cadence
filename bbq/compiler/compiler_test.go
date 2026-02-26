@@ -9677,7 +9677,7 @@ func TestCompileAttachments(t *testing.T) {
 				// get s reference
 				opcode.InstructionGetLocal{Local: sRefLocalIndex},
 				// invoke A constructor with &s as arg, puts A on stack
-				opcode.InstructionInvoke{ArgCount: 2, ReturnType: 3},
+				opcode.InstructionInvoke{ArgCount: 2, ReturnType: 3, HasImplicitArgument: true},
 				// get s back on stack
 				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
 				// attachment operation, attach A to s-copy
