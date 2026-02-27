@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
@@ -396,18 +397,42 @@ func TestInterpretInvocationReferenceAuthorizationReturnValueTypeCheck(t *testin
                 }
             }
 
-            fun test() {
+            fun testS() {
                 let s = S()
-                s.foo()
+                let ref = s.foo()
+            }
 
+            fun testSI() {
                 let si: {SI} = S()
-                si.foo()
+                let ref = si.foo()
+            }
+
+            fun testSIDowncast() {
+                let si: {SI} = S()
+                si.foo() as! auth(Mutate) &[Int]
             }
         `,
 		sema.Config{},
 	)
 
-	_, err := inter.Invoke("test")
+	_, err := inter.Invoke("testS")
 	require.NoError(t, err)
 
+	_, err = inter.Invoke("testSI")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testSIDowncast")
+	RequireError(t, err)
+
+	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+	assert.Equal(t,
+		common.TypeID("auth(Mutate)&[Int]"),
+		forceCastTypeMismatchErr.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("&[Int]"),
+		forceCastTypeMismatchErr.ActualType.ID(),
+	)
 }
