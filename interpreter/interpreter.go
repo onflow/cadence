@@ -2313,6 +2313,45 @@ func convert(
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUFix64(context, value)
 		}
+
+	case sema.AnyStructType:
+
+		// Assigning/casting to `AnyStruct` should strip-off all entitlements.
+		targetAuthorization := UnauthorizedAccess
+
+		switch ref := value.(type) {
+		case *EphemeralReferenceValue:
+			// Recursively convert the inner value.
+			targetInnerType := sema.AnyStructType
+			innerValue := ref.Value
+
+			innerValueType := context.SemaTypeFromStaticType(innerValue.StaticType(context))
+			convertedInnerValue := convertAndBox(
+				context,
+				innerValue,
+				innerValueType,
+				targetInnerType,
+			)
+
+			return NewEphemeralReferenceValue(
+				context,
+				targetAuthorization,
+				convertedInnerValue,
+				targetInnerType,
+			)
+
+		case *StorageReferenceValue:
+			return NewStorageReferenceValue(
+				context,
+				targetAuthorization,
+				ref.TargetStorageAddress,
+				ref.TargetPath,
+				sema.AnyStructType,
+			)
+
+		default:
+			return value
+		}
 	}
 
 	switch unwrappedTargetType := unwrappedTargetType.(type) {
