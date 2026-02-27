@@ -700,8 +700,14 @@ func (v Int128Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewInt128ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int128Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Int128Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Int128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

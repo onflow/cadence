@@ -113,8 +113,14 @@ func (v PathValue) MeteredString(
 	return v.String()
 }
 
-func (v PathValue) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v PathValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 var NativePathValueToStringFunction = NativeFunction(
