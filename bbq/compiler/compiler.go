@@ -298,7 +298,7 @@ func (c *Compiler[E, _]) addGlobal(name string, kind bbq.GlobalKind) bbq.Global 
 	case bbq.GlobalKindContract:
 		global = bbq.NewContractGlobal(c.Config.MemoryGauge, name, nil, uint16(count))
 	default:
-		panic(errors.NewDefaultUserError("unsupported global kind %#q", kind))
+		panic(errors.NewDefaultUserError("unsupported global kind %#q", kind.String()))
 	}
 
 	c.Globals[name] = global

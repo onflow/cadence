@@ -1,6 +1,6 @@
 module github.com/onflow/cadence/tools/unkeyed
 
-go 1.24
+go 1.26
 
 require (
 	golang.org/x/exp/typeparams v0.0.0-20250210185358-939b2ce775ac
