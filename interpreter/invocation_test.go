@@ -371,3 +371,43 @@ func TestInterpretInvocationOnTypeConfusedValue(t *testing.T) {
 	var memberAccessTypeError *interpreter.MemberAccessTypeError
 	require.ErrorAs(t, err, &memberAccessTypeError)
 }
+
+func TestInterpretInvocationReferenceAuthorizationReturnValueTypeCheck(t *testing.T) {
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _, _ := testAccount(
+		t,
+		address,
+		true,
+		nil,
+		`
+            struct interface SI {
+                fun foo(): &[Int] {
+                    pre { true }
+                }
+            }
+
+            struct S: SI {
+
+                fun foo(): auth(Mutate) &[Int] {
+                    return &[]
+                }
+            }
+
+            fun test() {
+                let s = S()
+                s.foo()
+
+                let si: {SI} = S()
+                si.foo()
+            }
+        `,
+		sema.Config{},
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+}
