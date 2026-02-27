@@ -149,8 +149,14 @@ func (v *SomeValue) MeteredString(
 	return v.value.MeteredString(context, seenReferences)
 }
 
-func (v *SomeValue) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v *SomeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v *SomeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

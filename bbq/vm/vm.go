@@ -1018,11 +1018,13 @@ func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
 }
 
 func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
+	context := vm.context
+
 	globalIndex := ins.Method
 	globals := vm.callFrame.function.Executable.Globals
 
 	variable := globals[globalIndex]
-	method := variable.GetValue(vm.context).(FunctionValue)
+	method := variable.GetValue(context).(FunctionValue)
 
 	receiver := vm.pop()
 
@@ -1035,18 +1037,66 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	var base *interpreter.EphemeralReferenceValue
 	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
 		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
-			base, receiver = AttachmentBaseAndSelfValues(vm.context, refValue, method)
+			base, receiver = AttachmentBaseAndSelfValues(context, refValue, method)
 		}
 	}
 
 	boundFunction := NewBoundFunctionValue(
-		vm.context,
+		context,
 		receiver,
 		method,
 		base,
 	)
 
+	maybeUpdateStorageReferenceBoundFunctionReceiver(context, receiver, boundFunction)
+
 	vm.push(boundFunction)
+}
+
+func opGetMethodDynamic(vm *VM, ins opcode.InstructionGetMethodDynamic) {
+	context := vm.context
+
+	fieldName := getRawStringConstant(vm, ins.MethodName)
+
+	receiver := vm.pop().(interpreter.MemberAccessibleValue)
+
+	checkMemberAccessTargetType(
+		vm,
+		ins.ReceiverType,
+		receiver,
+	)
+
+	method, ok := context.GetMethod(receiver, fieldName).(*BoundFunctionValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if method == nil {
+		panic(&interpreter.UseBeforeInitializationError{
+			Name: fieldName,
+		})
+	}
+
+	maybeUpdateStorageReferenceBoundFunctionReceiver(context, receiver, method)
+
+	vm.push(method)
+}
+
+func maybeUpdateStorageReferenceBoundFunctionReceiver(
+	context *Context,
+	receiver Value,
+	boundFunction *BoundFunctionValue,
+) {
+	if storageReference, ok := receiver.(*interpreter.StorageReferenceValue); ok {
+		referencedValue := storageReference.MustReferencedValue(context)
+
+		// Ignore the "updated" return value, since the bound function is a pointer.
+		_ = context.MaybeUpdateStorageReferenceMemberReceiver(
+			storageReference,
+			referencedValue,
+			boundFunction,
+		)
+	}
 }
 
 func invokeFunction(
@@ -1155,21 +1205,34 @@ func loadArgumentTypes(vm *VM, argTypes []uint16) []bbq.StaticType {
 	return argumentTypes
 }
 
-func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value, isNative bool) Value {
-	switch typedValue := value.(type) {
+func maybeDereferenceReceiver(
+	context interpreter.ValueStaticTypeContext,
+	receiverReference interpreter.ReferenceValue,
+	isNative bool,
+) Value {
+
+	switch typedValue := receiverReference.(type) {
 	case *interpreter.EphemeralReferenceValue:
 		// Do not dereference attachments, so that the receiver is a reference as expected.
 		// Exception: Native function receiver needs to be dereferenced to match interpreter.
-		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok && !isNative {
-			if val.Kind == common.CompositeKindAttachment {
-				return value
+		innerValue := typedValue.Value
+		if innerValue, ok := innerValue.(*interpreter.CompositeValue); ok && !isNative {
+			if innerValue.Kind == common.CompositeKindAttachment {
+				return receiverReference
 			}
 		}
-		return typedValue.Value
+		return innerValue
 	case *interpreter.StorageReferenceValue:
-		return typedValue.MustReferencedValue(context)
+		referencedValue := receiverReference.ReferencedValue(context, true)
+		// `storageRef.ReferencedValue()` above already checks for the type validity, if it's not nil.
+		// If nil, that means the value has been moved out of storage.
+		if referencedValue == nil {
+			panic(&interpreter.ReferencedValueChangedError{})
+		}
+
+		return *referencedValue
 	default:
-		return value
+		return receiverReference
 	}
 }
 
@@ -1287,7 +1350,7 @@ func getField(
 	// VM assumes the field name is always a string.
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
-	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName)
+	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName, common.DeclarationKindField)
 	if fieldValue == nil {
 		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,
@@ -1931,6 +1994,8 @@ func (vm *VM) run() {
 			opRemoveIndex(vm, ins)
 		case opcode.InstructionGetMethod:
 			opGetMethod(vm, ins)
+		case opcode.InstructionGetMethodDynamic:
+			opGetMethodDynamic(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
 		case opcode.InstructionInvokeTyped:
