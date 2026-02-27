@@ -2540,7 +2540,7 @@ func checkTargetIsLessPermissive(
 	switch valueType := valueType.(type) {
 	case *sema.ReferenceType:
 		actualAuthorization := valueType.Authorization
-		if !sema.PermitsAccess(unwrappedTargetType.Authorization, actualAuthorization) {
+		if !sema.PermitsAccess(targetSemaAuthorization, actualAuthorization) {
 			panic(&InvalidReferenceConversionError{
 				ExpectedAuthorization: targetSemaAuthorization,
 				ActualAuthorization:   actualAuthorization,
