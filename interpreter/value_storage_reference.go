@@ -151,7 +151,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 		// entitlements present in the value (references can be temporarily stored in storage),
 		// then the excess entitlements needs to be stripped off before returning.
 		// Therefore, always convert to the borrow type when dereferencing.
-		referenced = convertAndBox(
+		referenced = ConvertAndBox(
 			context,
 			referenced,
 			valueType,
