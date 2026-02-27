@@ -409,17 +409,25 @@ func (*StringValue) RemoveKey(_ ContainerMutationContext, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) GetMember(context MemberAccessibleContext, name string) Value {
-	switch name {
-	case sema.StringTypeLengthFieldName:
-		length := v.Length(context)
-		return NewIntValueFromInt64(context, int64(length))
+func (v *StringValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			switch name {
+			case sema.StringTypeLengthFieldName:
+				length := v.Length(context)
+				return NewIntValueFromInt64(context, int64(length))
 
-	case sema.StringTypeUtf8FieldName:
-		return ByteSliceToByteArrayValue(context, []byte(v.Str))
-	}
+			case sema.StringTypeUtf8FieldName:
+				return ByteSliceToByteArrayValue(context, []byte(v.Str))
+			}
 
-	return context.GetMethod(v, name)
+			return nil
+		},
+	)
 }
 
 func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

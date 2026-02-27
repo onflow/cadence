@@ -262,7 +262,9 @@ func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string) Value {
+func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	// Host Functions have variables with both fields and functions.
+	// So validating / or returning one or the other isn't possible at the moment.
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue(context)
@@ -452,7 +454,7 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	// then pass the reference as-is to the invocation.
 	// Otherwise, always dereference, at the time of the invocation.
 
-	receiver := GetReceiver(
+	receiver := getReceiver(
 		f.SelfReference,
 		f.selfIsReference,
 		inter,
@@ -462,7 +464,7 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function.Invoke(invocation)
 }
 
-func GetReceiver(
+func getReceiver(
 	receiverReference ReferenceValue,
 	receiverIsReference bool,
 	context ValueStaticTypeContext,
