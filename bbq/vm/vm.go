@@ -600,17 +600,17 @@ func opReturnValue(vm *VM, ins opcode.InstructionReturnValue) {
 	// Defensively check the return value's actual type matches the expected return type.
 	if poppedCallFrame != nil {
 		expectedReturnType := poppedCallFrame.returnType
-		checkValueTransferTypes(context, value, expectedReturnType)
+		value = checkAndConvertReturnValue(context, value, expectedReturnType)
 	}
 
 	vm.push(value)
 }
 
-func checkValueTransferTypes(
+func checkAndConvertReturnValue(
 	context *Context,
 	value interpreter.Value,
 	expectedValueType bbq.StaticType,
-) {
+) interpreter.Value {
 	actualValueType := value.StaticType(context)
 
 	if !context.IsSubType(actualValueType, expectedValueType) {
@@ -621,6 +621,18 @@ func checkValueTransferTypes(
 			ActualType:   actualSemaType,
 		})
 	}
+
+	if actualValueType == expectedValueType ||
+		actualValueType.Equal(expectedValueType) {
+		return value
+	}
+
+	return ConvertAndBox(
+		context,
+		value,
+		actualValueType,
+		expectedValueType,
+	)
 }
 
 func opReturn(vm *VM) {
@@ -1170,9 +1182,10 @@ func invokeFunction(
 			arguments,
 		)
 
-		// Defensively check the return value's actual type matches the expected return type.
+		// Defensively check whether the return value's actual type matches the
+		// expected return type. If so, then convert the value to the expected type.
 		// For compiled functions, this happens when unwinding the call-frame.
-		checkValueTransferTypes(context, result, returnType)
+		result = checkAndConvertReturnValue(context, result, returnType)
 
 		vm.push(result)
 

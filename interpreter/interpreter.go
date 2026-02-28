@@ -550,7 +550,7 @@ func PrepareExternalInvocationArgumentsWithValidation(
 		}
 	}
 
-	var convertAndBox = convertAndBox
+	var convertAndBox = ConvertAndBox
 	if validateConvertAndBox {
 		convertAndBox = ConvertAndBoxWithValidation
 	}
@@ -2008,7 +2008,7 @@ func ConvertAndBoxWithValidation(
 		}
 	}
 
-	result := convertAndBox(
+	result := ConvertAndBox(
 		context,
 		transferredValue,
 		valueType,
@@ -2057,8 +2057,8 @@ func TransferIfNotResourceAndConvert(
 	)
 }
 
-// convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func convertAndBox(
+// ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
+func ConvertAndBox(
 	context ValueConversionContext,
 	value Value,
 	valueType sema.Type,
@@ -2356,7 +2356,7 @@ func convert(
 
 					value := MustConvertStoredValue(context, element)
 					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
-					return convertAndBox(context, value, valueType, targetElementType)
+					return ConvertAndBox(context, value, valueType, targetElementType)
 				},
 			)
 		}
@@ -2403,8 +2403,8 @@ func convert(
 					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
 					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
 
-					convertedKey := convertAndBox(context, key, keyType, targetKeyType)
-					convertedValue := convertAndBox(context, value, valueType, targetValueType)
+					convertedKey := ConvertAndBox(context, key, keyType, targetKeyType)
+					convertedValue := ConvertAndBox(context, value, valueType, targetValueType)
 
 					return convertedKey, convertedValue
 				},
@@ -2463,7 +2463,7 @@ func convert(
 				innerValue := ref.Value
 
 				innerValueType := context.SemaTypeFromStaticType(innerValue.StaticType(context))
-				convertedInnerValue := convertAndBox(
+				convertedInnerValue := ConvertAndBox(
 					context,
 					innerValue,
 					innerValueType,
