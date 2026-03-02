@@ -2750,6 +2750,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 
 		// Condition wrapper is a static function.
 		return NewWrappedFunctionValue(
+			interpreter,
 			inner,
 			NewStaticHostFunctionValue(
 				interpreter,

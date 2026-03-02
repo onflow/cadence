@@ -566,12 +566,12 @@ var _ Value = WrappedFunctionValue{}
 var _ FunctionValue = WrappedFunctionValue{}
 
 func NewWrappedFunctionValue(
+	gauge common.MemoryGauge,
 	innerFunction FunctionValue,
 	wrappingFunction FunctionValue,
 ) WrappedFunctionValue {
 
-	// TODO:
-	//common.UseMemory(gauge, common.WrappedFunctionValueMemoryUsage)
+	common.UseMemory(gauge, common.WrappedFunctionValueMemoryUsage)
 
 	return WrappedFunctionValue{
 		InnerFunction:    innerFunction,
