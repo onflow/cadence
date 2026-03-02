@@ -116,7 +116,11 @@ func ByteValueToByte(memoryGauge common.MemoryGauge, element Value) (byte, error
 	return b, nil
 }
 
-var estimatedEncodedUint8Size = UInt8Value(math.MaxUint8).ByteSize()
+var (
+	estimatedEncodedUint8Size          = UInt8Value(math.MaxUint8).ByteSize()
+	atreeSlabSize                      = uint32(1024)
+	estimatedMaxUint8CountPerAtreeSlab = atreeSlabSize / estimatedEncodedUint8Size
+)
 
 func ByteSliceToByteArrayValue(context ArrayCreationContext, bytes []byte) *ArrayValue {
 	return ByteSliceToByteArrayValueWithType(context, ByteArrayStaticType, bytes)
@@ -139,6 +143,26 @@ func ByteSliceToByteArrayValueWithType(
 	arrayType ArrayStaticType,
 	bytes []byte,
 ) *ArrayValue {
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindCreateArrayValue,
+			Intensity: 1,
+		},
+	)
+
+	if len(bytes) >= int(estimatedMaxUint8CountPerAtreeSlab) {
+		// Note that atree.ByteSliceToByteArray() avoids using atree.NewArrayFromBatchData() for single-slab atree array.
+		// Given this, meter atree array batch construction only when multi-slab atree array is very likely to be created.
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeArrayBatchConstruction,
+				Intensity: uint64(len(bytes)),
+			},
+		)
+	}
+
 	atreeArray, err := atree.ByteSliceToByteArray[UInt8Value](
 		context.Storage(),
 		atree.Address(common.ZeroAddress),
