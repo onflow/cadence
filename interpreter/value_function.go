@@ -597,8 +597,7 @@ func (f WrappedFunctionValue) MeteredString(
 }
 
 func (f WrappedFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
-	// TODO:
-	//visitor.VisitWrappedFunctionValue(context, f)
+	visitor.VisitWrappedFunctionValue(context, f)
 }
 
 func (f WrappedFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
