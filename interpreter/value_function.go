@@ -555,3 +555,114 @@ func NewUnmeteredBoundHostFunctionValue(
 }
 
 type BoundFunctionGenerator func(MemberAccessibleValue) BoundFunctionValue
+
+// WrappedFunctionValue
+type WrappedFunctionValue struct {
+	InnerFunction    FunctionValue
+	WrappingFunction FunctionValue
+}
+
+var _ Value = WrappedFunctionValue{}
+var _ FunctionValue = WrappedFunctionValue{}
+
+func NewWrappedFunctionValue(
+	gauge common.MemoryGauge,
+	innerFunction FunctionValue,
+	wrappingFunction FunctionValue,
+) WrappedFunctionValue {
+
+	common.UseMemory(gauge, common.WrappedFunctionValueMemoryUsage)
+
+	return WrappedFunctionValue{
+		InnerFunction:    innerFunction,
+		WrappingFunction: wrappingFunction,
+	}
+}
+
+func (WrappedFunctionValue) IsValue() {}
+
+func (f WrappedFunctionValue) String() string {
+	return f.RecursiveString(SeenReferences{})
+}
+
+func (f WrappedFunctionValue) RecursiveString(seenReferences SeenReferences) string {
+	return f.WrappingFunction.RecursiveString(seenReferences)
+}
+
+func (f WrappedFunctionValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
+	return f.WrappingFunction.MeteredString(context, seenReferences)
+}
+
+func (f WrappedFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
+	visitor.VisitWrappedFunctionValue(context, f)
+}
+
+func (f WrappedFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
+	// NO-OP
+}
+
+func (f WrappedFunctionValue) StaticType(context ValueStaticTypeContext) StaticType {
+	return f.WrappingFunction.StaticType(context)
+}
+
+func (WrappedFunctionValue) IsImportable(_ ValueImportableContext) bool {
+	return false
+}
+
+func (WrappedFunctionValue) IsFunctionValue() {}
+
+func (f WrappedFunctionValue) FunctionType(context ValueStaticTypeContext) *sema.FunctionType {
+	return f.WrappingFunction.FunctionType(context)
+}
+
+func (f WrappedFunctionValue) Invoke(invocation Invocation) Value {
+	return f.WrappingFunction.Invoke(invocation)
+}
+
+func (f WrappedFunctionValue) ConformsToStaticType(
+	context ValueStaticTypeConformanceContext,
+	results TypeConformanceResults,
+) bool {
+	return f.WrappingFunction.ConformsToStaticType(
+		context,
+		results,
+	)
+}
+
+func (f WrappedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
+	return NonStorable{Value: f}, nil
+}
+
+func (WrappedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (WrappedFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
+	return false
+}
+
+func (f WrappedFunctionValue) Transfer(
+	context ValueTransferContext,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+	_ map[atree.ValueID]struct{},
+	_ bool,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		RemoveReferencedSlab(context, storable)
+	}
+	return f
+}
+
+func (f WrappedFunctionValue) Clone(_ ValueCloneContext) Value {
+	return f
+}
+
+func (WrappedFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
+	// NO-OP
+}

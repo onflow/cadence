@@ -4196,38 +4196,20 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 		_, err = inter.Invoke("testCastingInvocationResult")
 		RequireError(t, err)
 
-		if *compile {
-			var invalidReferenceConversionError *interpreter.InvalidReferenceConversionError
-			assert.ErrorAs(t, err, &invalidReferenceConversionError)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 
-			assert.Equal(
-				t,
-				"E",
-				invalidReferenceConversionError.ExpectedAuthorization.String(),
-			)
+		assert.Equal(
+			t,
+			common.TypeID("auth(S.test.E)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
 
-			assert.Equal(
-				t,
-				sema.UnauthorizedAccess,
-				invalidReferenceConversionError.ActualAuthorization,
-			)
-
-		} else {
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			assert.ErrorAs(t, err, &forceCastTypeMismatchError)
-
-			assert.Equal(
-				t,
-				common.TypeID("auth(S.test.E)&Int"),
-				forceCastTypeMismatchError.ExpectedType.ID(),
-			)
-
-			assert.Equal(
-				t,
-				common.TypeID("&Int"),
-				forceCastTypeMismatchError.ActualType.ID(),
-			)
-		}
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
 	})
 
 	t.Run("function with reference parameter", func(t *testing.T) {

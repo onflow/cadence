@@ -550,7 +550,7 @@ func PrepareExternalInvocationArgumentsWithValidation(
 		}
 	}
 
-	var convertAndBox = convertAndBox
+	var convertAndBox = ConvertAndBox
 	if validateConvertAndBox {
 		convertAndBox = ConvertAndBoxWithValidation
 	}
@@ -2008,7 +2008,7 @@ func ConvertAndBoxWithValidation(
 		}
 	}
 
-	result := convertAndBox(
+	result := ConvertAndBox(
 		context,
 		transferredValue,
 		valueType,
@@ -2057,8 +2057,8 @@ func TransferIfNotResourceAndConvert(
 	)
 }
 
-// convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func convertAndBox(
+// ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
+func ConvertAndBox(
 	context ValueConversionContext,
 	value Value,
 	valueType sema.Type,
@@ -2356,7 +2356,7 @@ func convert(
 
 					value := MustConvertStoredValue(context, element)
 					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
-					return convertAndBox(context, value, valueType, targetElementType)
+					return ConvertAndBox(context, value, valueType, targetElementType)
 				},
 			)
 		}
@@ -2403,8 +2403,8 @@ func convert(
 					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
 					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
 
-					convertedKey := convertAndBox(context, key, keyType, targetKeyType)
-					convertedValue := convertAndBox(context, value, valueType, targetValueType)
+					convertedKey := ConvertAndBox(context, key, keyType, targetKeyType)
+					convertedValue := ConvertAndBox(context, value, valueType, targetValueType)
 
 					return convertedKey, convertedValue
 				},
@@ -2463,7 +2463,7 @@ func convert(
 				innerValue := ref.Value
 
 				innerValueType := context.SemaTypeFromStaticType(innerValue.StaticType(context))
-				convertedInnerValue := convertAndBox(
+				convertedInnerValue := ConvertAndBox(
 					context,
 					innerValue,
 					innerValueType,
@@ -2540,7 +2540,7 @@ func checkTargetIsLessPermissive(
 	switch valueType := valueType.(type) {
 	case *sema.ReferenceType:
 		actualAuthorization := valueType.Authorization
-		if !sema.PermitsAccess(unwrappedTargetType.Authorization, actualAuthorization) {
+		if !sema.PermitsAccess(targetSemaAuthorization, actualAuthorization) {
 			panic(&InvalidReferenceConversionError{
 				ExpectedAuthorization: targetSemaAuthorization,
 				ActualAuthorization:   actualAuthorization,
@@ -2749,100 +2749,104 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 		}
 
 		// Condition wrapper is a static function.
-		return NewStaticHostFunctionValue(
+		return NewWrappedFunctionValue(
 			interpreter,
-			functionType,
-			func(invocation Invocation) Value {
-				// Start a new activation record.
-				// Lexical scope: use the function declaration's activation record,
-				// not the current one (which would be dynamic scope)
-				interpreter.activations.PushNewWithParent(lexicalScope)
-				defer interpreter.activations.Pop()
+			inner,
+			NewStaticHostFunctionValue(
+				interpreter,
+				functionType,
+				func(invocation Invocation) Value {
+					// Start a new activation record.
+					// Lexical scope: use the function declaration's activation record,
+					// not the current one (which would be dynamic scope)
+					interpreter.activations.PushNewWithParent(lexicalScope)
+					defer interpreter.activations.Pop()
 
-				if declaration.ParameterList != nil {
-					interpreter.bindParameterArguments(
-						declaration.ParameterList,
-						invocation.Arguments,
-					)
-				}
-
-				if invocation.Self != nil {
-					interpreter.declareSelfVariable(*invocation.Self)
-				}
-				if invocation.Base != nil {
-					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
-				}
-
-				// NOTE: It is important to wrap the invocation in a function,
-				//  so the inner function isn't invoked here
-
-				body := func() StatementResult {
-
-					// Pre- and post-condition wrappers "re-declare" the same
-					// parameters as are used in the actual body of the function,
-					// see the use of bindParameterArguments at the start of this function wrapper.
-					//
-					// When these parameters are given resource-kinded arguments,
-					// this can trick the resource analysis into believing that these
-					// resources exist in multiple variables at once
-					// (one for each condition wrapper + the function itself).
-					//
-					// This is not the case, however, as execution of the pre- and post-conditions
-					// occurs strictly before and after execution of the body respectively.
-					//
-					// To prevent the analysis from reporting a false positive here,
-					// when we enter the body of the wrapped function,
-					// we invalidate any resources that were assigned to parameters by the precondition block,
-					// and then restore them after execution of the wrapped function,
-					// for use by the post-condition block.
-
-					type argumentVariable struct {
-						variable Variable
-						value    ResourceKindedValue
+					if declaration.ParameterList != nil {
+						interpreter.bindParameterArguments(
+							declaration.ParameterList,
+							invocation.Arguments,
+						)
 					}
 
-					var argumentVariables []argumentVariable
-					for _, argument := range invocation.Arguments {
-						resourceKindedValue := interpreter.resourceForValidation(argument)
-						if resourceKindedValue == nil {
-							continue
+					if invocation.Self != nil {
+						interpreter.declareSelfVariable(*invocation.Self)
+					}
+					if invocation.Base != nil {
+						interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
+					}
+
+					// NOTE: It is important to wrap the invocation in a function,
+					//  so the inner function isn't invoked here
+
+					body := func() StatementResult {
+
+						// Pre- and post-condition wrappers "re-declare" the same
+						// parameters as are used in the actual body of the function,
+						// see the use of bindParameterArguments at the start of this function wrapper.
+						//
+						// When these parameters are given resource-kinded arguments,
+						// this can trick the resource analysis into believing that these
+						// resources exist in multiple variables at once
+						// (one for each condition wrapper + the function itself).
+						//
+						// This is not the case, however, as execution of the pre- and post-conditions
+						// occurs strictly before and after execution of the body respectively.
+						//
+						// To prevent the analysis from reporting a false positive here,
+						// when we enter the body of the wrapped function,
+						// we invalidate any resources that were assigned to parameters by the precondition block,
+						// and then restore them after execution of the wrapped function,
+						// for use by the post-condition block.
+
+						type argumentVariable struct {
+							variable Variable
+							value    ResourceKindedValue
 						}
 
-						argumentVariables = append(
-							argumentVariables,
-							argumentVariable{
-								variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
-								value:    resourceKindedValue,
-							},
-						)
+						var argumentVariables []argumentVariable
+						for _, argument := range invocation.Arguments {
+							resourceKindedValue := interpreter.resourceForValidation(argument)
+							if resourceKindedValue == nil {
+								continue
+							}
 
-						interpreter.invalidateResource(resourceKindedValue)
+							argumentVariables = append(
+								argumentVariables,
+								argumentVariable{
+									variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
+									value:    resourceKindedValue,
+								},
+							)
+
+							interpreter.invalidateResource(resourceKindedValue)
+						}
+
+						// NOTE: It is important to actually return the value returned
+						//   from the inner function, otherwise it is lost
+
+						returnValue := inner.Invoke(invocation)
+
+						// Restore the resources which were temporarily invalidated
+						// before execution of the inner function
+
+						for _, argumentVariable := range argumentVariables {
+							value := argumentVariable.value
+							interpreter.invalidateResource(value)
+							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
+						}
+						return ReturnResult{Value: returnValue}
 					}
 
-					// NOTE: It is important to actually return the value returned
-					//   from the inner function, otherwise it is lost
-
-					returnValue := inner.Invoke(invocation)
-
-					// Restore the resources which were temporarily invalidated
-					// before execution of the inner function
-
-					for _, argumentVariable := range argumentVariables {
-						value := argumentVariable.value
-						interpreter.invalidateResource(value)
-						interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
-					}
-					return ReturnResult{Value: returnValue}
-				}
-
-				return interpreter.visitFunctionBody(
-					beforeStatements,
-					preConditions,
-					body,
-					rewrittenPostConditions,
-					functionType.ReturnTypeAnnotation.Type,
-				)
-			},
+					return interpreter.visitFunctionBody(
+						beforeStatements,
+						preConditions,
+						body,
+						rewrittenPostConditions,
+						functionType.ReturnTypeAnnotation.Type,
+					)
+				},
+			),
 		)
 	}
 }
