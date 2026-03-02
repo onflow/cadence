@@ -149,7 +149,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 		// entitlements present in the value (references can be temporarily stored in storage),
 		// then the excess entitlements needs to be stripped off before returning.
 		// Therefore, always convert to the borrow type when dereferencing.
-		referenced = convertAndBox(
+		referenced = ConvertAndBox(
 			context,
 			referenced,
 			valueType,
@@ -191,18 +191,24 @@ func (v *StorageReferenceValue) MustReferencedValue(
 	return *referencedValue
 }
 
-func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
+func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 	referencedValue := v.MustReferencedValue(context)
 
 	var member Value
 
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
-		member = memberAccessibleValue.GetMember(context, name)
+		member = memberAccessibleValue.GetMember(context, name, memberKind)
 	}
 
 	if member == nil {
 		// NOTE: Must call the `GetMethod` of the `StorageReferenceValue`, not of the referenced-value.
-		member = context.GetMethod(v, name)
+		member = GetMember(
+			context,
+			v,
+			name,
+			memberKind,
+			nil,
+		)
 	}
 
 	// If the member is a function, it is always a bound-function.

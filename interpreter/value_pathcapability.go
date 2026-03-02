@@ -167,16 +167,25 @@ func (v *PathCapabilityValue) newCheckFunction(
 	)
 }
 
-func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, name string) Value {
-	switch name {
-	case sema.CapabilityTypeAddressFieldName:
-		return v.address
+func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 
-	case sema.CapabilityTypeIDFieldName:
-		return InvalidCapabilityID
-	}
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			switch name {
+			case sema.CapabilityTypeAddressFieldName:
+				return v.address
 
-	return context.GetMethod(v, name)
+			case sema.CapabilityTypeIDFieldName:
+				return InvalidCapabilityID
+			}
+
+			return nil
+		},
+	)
 }
 
 func (v *PathCapabilityValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

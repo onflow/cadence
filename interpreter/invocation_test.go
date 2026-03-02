@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
@@ -370,4 +371,68 @@ func TestInterpretInvocationOnTypeConfusedValue(t *testing.T) {
 
 	var memberAccessTypeError *interpreter.MemberAccessTypeError
 	require.ErrorAs(t, err, &memberAccessTypeError)
+}
+
+func TestInterpretInvocationReferenceAuthorizationReturnValueTypeCheck(t *testing.T) {
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _, _ := testAccount(
+		t,
+		address,
+		true,
+		nil,
+		`
+            struct interface SI {
+                fun foo(): &[Int] {
+                    pre { true }
+                }
+            }
+
+            struct S: SI {
+
+                fun foo(): auth(Mutate) &[Int] {
+                    return &[]
+                }
+            }
+
+            fun testS() {
+                let s = S()
+                let ref = s.foo()
+            }
+
+            fun testSI() {
+                let si: {SI} = S()
+                let ref = si.foo()
+            }
+
+            fun testSIDowncast() {
+                let si: {SI} = S()
+                si.foo() as! auth(Mutate) &[Int]
+            }
+        `,
+		sema.Config{},
+	)
+
+	_, err := inter.Invoke("testS")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testSI")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testSIDowncast")
+	RequireError(t, err)
+
+	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+	assert.Equal(t,
+		common.TypeID("auth(Mutate)&[Int]"),
+		forceCastTypeMismatchErr.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("&[Int]"),
+		forceCastTypeMismatchErr.ActualType.ID(),
+	)
 }
