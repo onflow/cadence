@@ -340,6 +340,11 @@ func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
 ) interpreter.FunctionValue {
+
+	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
+		value = storageReference.MustReferencedValue(c).(interpreter.MemberAccessibleValue)
+	}
+
 	staticType := value.StaticType(c)
 
 	semaType := c.SemaTypeFromStaticType(staticType)
