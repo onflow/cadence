@@ -3307,3 +3307,506 @@ func TestType_IsOrContainsReference(t *testing.T) {
 		test(testCase)
 	}
 }
+
+func TestWalkType(t *testing.T) {
+	t.Parallel()
+
+	collect := func(ty Type) []Type {
+		var visited []Type
+		WalkType(ty, func(ty Type) bool {
+			visited = append(visited, ty)
+			return true
+		})
+		return visited
+	}
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t,
+			[]Type(nil),
+			collect(nil),
+		)
+	})
+
+	t.Run("SimpleType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &SimpleType{
+			Name: "Bool",
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("NumericType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &NumericType{
+			name: "Int",
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("FixedPointNumericType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &FixedPointNumericType{
+			name: "Fix64",
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("AddressType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &AddressType{}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("OptionalType", func(t *testing.T) {
+		t.Parallel()
+
+		innerType := IntType
+
+		ty := &OptionalType{
+			Type: innerType,
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+				innerType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("VariableSizedType", func(t *testing.T) {
+		t.Parallel()
+
+		elementType := StringType
+
+		ty := &VariableSizedType{
+			Type: elementType,
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+				elementType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("ConstantSizedType", func(t *testing.T) {
+		t.Parallel()
+
+		elementType := BoolType
+
+		ty := &ConstantSizedType{
+			Type: elementType,
+			Size: 3,
+		}
+
+		assert.Equal(t,
+
+			[]Type{
+				ty,
+				elementType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("DictionaryType", func(t *testing.T) {
+		t.Parallel()
+
+		keyType := StringType
+		valueType := IntType
+
+		ty := &DictionaryType{
+			KeyType:   keyType,
+			ValueType: valueType,
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+				keyType,
+				valueType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("InclusiveRangeType without member type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InclusiveRangeType{}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("InclusiveRangeType with member type", func(t *testing.T) {
+		t.Parallel()
+
+		memberType := IntType
+
+		ty := &InclusiveRangeType{
+			MemberType: memberType,
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+				memberType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("ReferenceType", func(t *testing.T) {
+		t.Parallel()
+
+		referencedType := IntType
+
+		ty := &ReferenceType{
+			Authorization: UnauthorizedAccess,
+			Type:          referencedType,
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+				referencedType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("CapabilityType, without borrow type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &CapabilityType{}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("CapabilityType, with borrow type", func(t *testing.T) {
+		t.Parallel()
+
+		referencedType := IntType
+
+		borrowType := &ReferenceType{
+			Authorization: UnauthorizedAccess,
+			Type:          referencedType,
+		}
+
+		ty := &CapabilityType{
+			BorrowType: borrowType,
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+				borrowType,
+				referencedType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("FunctionType", func(t *testing.T) {
+		t.Parallel()
+
+		typeBound := NumberType
+
+		param1Type := StringType
+		param2Type := BoolType
+		returnType := IntType
+
+		ty := &FunctionType{
+			TypeParameters: []*TypeParameter{
+				{Name: "T", TypeBound: typeBound},
+				{Name: "U"},
+			},
+			Parameters: []Parameter{
+				{TypeAnnotation: NewTypeAnnotation(param1Type)},
+				{TypeAnnotation: NewTypeAnnotation(param2Type)},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(returnType),
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+				typeBound,
+				param1Type,
+				param2Type,
+				returnType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("CompositeType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &CompositeType{
+			Identifier: "S",
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("InterfaceType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InterfaceType{
+			Identifier: "I",
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("GenericType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &GenericType{
+			TypeParameter: &TypeParameter{Name: "T"},
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("TransactionType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TransactionType{}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("EntitlementType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &EntitlementType{
+			Identifier: "E",
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("EntitlementMapType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &EntitlementMapType{
+			Identifier: "M",
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("IntersectionType", func(t *testing.T) {
+		t.Parallel()
+
+		interface1 := &InterfaceType{
+			Identifier: "I1",
+		}
+		interface2 := &InterfaceType{
+			Identifier: "I2",
+		}
+
+		ty := &IntersectionType{
+			Types: []*InterfaceType{
+				interface1,
+				interface2,
+			},
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+				interface1,
+				interface2,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		// {String: &(Int?)}
+
+		innerType := IntType
+		referencedType := &OptionalType{
+			Type: innerType,
+		}
+		referenceType := &ReferenceType{
+			Authorization: UnauthorizedAccess,
+			Type:          referencedType,
+		}
+		keyType := StringType
+		ty := &DictionaryType{
+			KeyType:   keyType,
+			ValueType: referenceType,
+		}
+
+		assert.Equal(t,
+			[]Type{
+				ty,
+				keyType,
+				referenceType,
+				referencedType,
+				innerType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("stop at root", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: IntType,
+		}
+
+		var visited []Type
+		result := WalkType(ty, func(ty Type) bool {
+			visited = append(visited, ty)
+			// stop immediately, without visiting the child type
+			return false
+		})
+		assert.False(t, result)
+		assert.Equal(t,
+			[]Type{
+				ty,
+			},
+			visited,
+		)
+	})
+
+	t.Run("stop at child", func(t *testing.T) {
+		t.Parallel()
+
+		// &(Int?)
+		innerType := IntType
+		referencedType := &OptionalType{
+			Type: innerType,
+		}
+		ty := &ReferenceType{
+			Authorization: UnauthorizedAccess,
+			Type:          referencedType,
+		}
+
+		var visited []Type
+		result := WalkType(ty, func(ty Type) bool {
+			visited = append(visited, ty)
+			// stop when we reach the referenced type (OptionalType)
+			return ty != referencedType
+		})
+
+		assert.False(t, result)
+		assert.Equal(t,
+			[]Type{
+				ty,
+				referencedType,
+			},
+			visited,
+		)
+	})
+
+	t.Run("stop mid-dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		// {String: Int}
+		keyType := StringType
+		valueType := IntType
+		ty := &DictionaryType{
+			KeyType:   keyType,
+			ValueType: valueType,
+		}
+
+		var visited []Type
+		result := WalkType(ty, func(ty Type) bool {
+			visited = append(visited, ty)
+			// stop after visiting key type
+			return ty != keyType
+		})
+
+		assert.False(t, result)
+		assert.Equal(t,
+			[]Type{
+				ty,
+				keyType,
+			},
+			visited,
+		)
+	})
+}
