@@ -1591,8 +1591,6 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 
 	valueType := value.StaticType(context)
 
-	// TODO: need to forbid escalation in nested types, e.g. &T -> &[auth(E) &U]
-
 	// If the value is specifically a storage reference,
 	// and the target type is a reference,
 	// then we report the value as a storage reference with the target type's borrow type
@@ -1607,6 +1605,7 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 
 	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
 		if referenceTargetType, ok := targetType.(*interpreter.ReferenceStaticType); ok {
+
 			borrowType := interpreter.MustConvertStaticToSemaType(
 				referenceTargetType.ReferencedType,
 				context,
@@ -1614,14 +1613,31 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 
 			if !storageReference.BorrowedType.Equal(borrowType) {
 
-				value = interpreter.NewStorageReferenceValue(
-					context,
-					storageReference.Authorization,
-					storageReference.TargetStorageAddress,
-					storageReference.TargetPath,
-					borrowType,
-				)
-				valueType = value.StaticType(context)
+				// Require the target type to not be or have an authorized reference in its type tree
+
+				hasAuthorizedReference := !targetType.Walk(func(ty interpreter.StaticType) bool {
+					if referenceType, ok := ty.(*interpreter.ReferenceStaticType); ok &&
+						referenceType.Authorization != interpreter.UnauthorizedAccess {
+
+						// stop iteration
+						return false
+					}
+
+					// continue iteration
+					return true
+				})
+
+				if !hasAuthorizedReference {
+
+					value = interpreter.NewStorageReferenceValue(
+						context,
+						storageReference.Authorization,
+						storageReference.TargetStorageAddress,
+						storageReference.TargetPath,
+						borrowType,
+					)
+					valueType = value.StaticType(context)
+				}
 			}
 		}
 	}

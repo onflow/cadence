@@ -1417,8 +1417,6 @@ func (interpreter *Interpreter) castValueAndValueType(targetType sema.Type, valu
 	valueStaticType := value.StaticType(interpreter)
 	valueSemaType := interpreter.SemaTypeFromStaticType(valueStaticType)
 
-	// TODO: need to forbid escalation in nested types, e.g. &T -> &[auth(E) &U]
-
 	// If the value is specifically a storage reference,
 	// and the target type is a reference,
 	// then we report the value as a storage reference with the target type's borrow type
@@ -1435,17 +1433,33 @@ func (interpreter *Interpreter) castValueAndValueType(targetType sema.Type, valu
 		if referenceTargetType, ok := targetType.(*sema.ReferenceType); ok &&
 			!storageReference.BorrowedType.Equal(referenceTargetType.Type) {
 
-			value = NewStorageReferenceValue(
-				interpreter,
-				storageReference.Authorization,
-				storageReference.TargetStorageAddress,
-				storageReference.TargetPath,
-				referenceTargetType.Type,
-			)
-			valueSemaType = MustConvertStaticToSemaType(
-				value.StaticType(interpreter),
-				interpreter,
-			)
+			// Require the target type to not be or have an authorized reference in its type tree
+
+			hasAuthorizedReference := !targetType.Walk(func(ty sema.Type) bool {
+				if referenceType, ok := ty.(*sema.ReferenceType); ok &&
+					referenceType.Authorization != sema.UnauthorizedAccess {
+
+					// stop iteration
+					return false
+				}
+
+				// continue iteration
+				return true
+			})
+
+			if !hasAuthorizedReference {
+				value = NewStorageReferenceValue(
+					interpreter,
+					storageReference.Authorization,
+					storageReference.TargetStorageAddress,
+					storageReference.TargetPath,
+					referenceTargetType.Type,
+				)
+				valueSemaType = MustConvertStaticToSemaType(
+					value.StaticType(interpreter),
+					interpreter,
+				)
+			}
 		}
 	}
 

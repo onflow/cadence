@@ -14467,8 +14467,17 @@ func TestRuntimeEntitlementEscalationViaStorageReference(t *testing.T) {
 
 	RequireError(t, err)
 
-	var dereferenceError *interpreter.DereferenceError
-	require.ErrorAs(t, err, &dereferenceError)
+	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+	assert.Equal(t,
+		common.TypeID("&[auth(Storage)&Account]"),
+		forceCastTypeMismatchErr.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("&AnyStruct"),
+		forceCastTypeMismatchErr.ActualType.ID(),
+	)
 }
 
 func TestRuntimeBaseDowncastAfterContractUpgrade(t *testing.T) {
