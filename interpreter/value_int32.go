@@ -647,3 +647,11 @@ func (v Int32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (Int32Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (Int32Value) CanCopy() bool {
+	return true
+}
+
+func (v Int32Value) Copy() (atree.Storable, error) {
+	return v, nil
+}

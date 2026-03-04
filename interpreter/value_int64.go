@@ -644,3 +644,11 @@ func (v Int64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (Int64Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (Int64Value) CanCopy() bool {
+	return true
+}
+
+func (v Int64Value) Copy() (atree.Storable, error) {
+	return v, nil
+}

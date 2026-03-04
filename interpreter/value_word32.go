@@ -469,3 +469,11 @@ func (v Word32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (Word32Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (Word32Value) CanCopy() bool {
+	return true
+}
+
+func (v Word32Value) Copy() (atree.Storable, error) {
+	return v, nil
+}

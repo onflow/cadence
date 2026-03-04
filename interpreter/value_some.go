@@ -511,6 +511,18 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
+func (s SomeStorable) CanCopy() bool {
+	return s.UnwrapAtreeStorable().CanCopy()
+}
+
+func (s SomeStorable) Copy() (atree.Storable, error) {
+	copied, err := s.UnwrapAtreeStorable().Copy()
+	if err != nil {
+		return nil, err
+	}
+	return s.WrapAtreeStorable(copied), nil
+}
+
 // Native some functions
 
 var NativeOptionalMapFunction = NativeFunction(

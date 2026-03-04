@@ -617,3 +617,11 @@ func ufix128SaturationArithmaticResult(
 		panic(err)
 	}
 }
+
+func (UFix128Value) CanCopy() bool {
+	return true
+}
+
+func (v UFix128Value) Copy() (atree.Storable, error) {
+	return v, nil
+}

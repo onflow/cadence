@@ -607,3 +607,13 @@ func (v Word256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (Word256Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (Word256Value) CanCopy() bool {
+	return true
+}
+
+func (v Word256Value) Copy() (atree.Storable, error) {
+	return Word256Value{
+		BigInt: new(big.Int).Set(v.BigInt),
+	}, nil
+}

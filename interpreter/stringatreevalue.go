@@ -75,8 +75,12 @@ func (v StringAtreeValue) ID() string {
 	return string(v)
 }
 
-func (v StringAtreeValue) Copy() atree.Storable {
-	return v
+func (StringAtreeValue) CanCopy() bool {
+	return true
+}
+
+func (v StringAtreeValue) Copy() (atree.Storable, error) {
+	return v, nil
 }
 
 func StringAtreeValueHashInput(v atree.Value, _ []byte) ([]byte, error) {

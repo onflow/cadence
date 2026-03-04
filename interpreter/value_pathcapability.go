@@ -310,6 +310,19 @@ func (v *PathCapabilityValue) AddressPath() AddressPath {
 	}
 }
 
+func (*PathCapabilityValue) CanCopy() bool {
+	return true
+}
+
+func (v *PathCapabilityValue) Copy() (atree.Storable, error) {
+	// Use shallow copy of StaticType since static type isn't expected to be changed.
+	return &PathCapabilityValue{
+		BorrowType: v.BorrowType,
+		Path:       v.Path,
+		address:    v.address,
+	}, nil
+}
+
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
 	// encodedPathCapabilityValueAddressFieldKey    uint64 = 0

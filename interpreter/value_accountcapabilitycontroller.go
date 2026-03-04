@@ -207,6 +207,14 @@ func (v *AccountCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
+func (*AccountCapabilityControllerValue) CanCopy() bool {
+	return false
+}
+
+func (*AccountCapabilityControllerValue) Copy() (atree.Storable, error) {
+	return nil, atree.NewCopyError("AccountCapabilityControllerValue", "can't copy AccountCapabilityControllerValue")
+}
+
 type deletionCheckedFunctionValue struct {
 	FunctionValue
 }

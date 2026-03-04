@@ -742,3 +742,13 @@ func (v Int256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (Int256Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (Int256Value) CanCopy() bool {
+	return true
+}
+
+func (v Int256Value) Copy() (atree.Storable, error) {
+	return Int256Value{
+		BigInt: new(big.Int).Set(v.BigInt),
+	}, nil
+}

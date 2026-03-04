@@ -484,6 +484,14 @@ func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v.UFix64Value.IntegerPart())
 }
 
+func (UFix64Value) CanCopy() bool {
+	return true
+}
+
+func (v UFix64Value) Copy() (atree.Storable, error) {
+	return v, nil
+}
+
 func fix128BigIntToUFix64(
 	memoryGauge common.MemoryGauge,
 	bigInt *big.Int,

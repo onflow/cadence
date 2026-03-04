@@ -465,3 +465,11 @@ func (v Word8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (Word8Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (Word8Value) CanCopy() bool {
+	return true
+}
+
+func (v Word8Value) Copy() (atree.Storable, error) {
+	return v, nil
+}

@@ -1280,13 +1280,6 @@ func (v *ArrayValue) Transfer(
 
 	if needsStoreTo || !isResourceKinded {
 
-		// Use non-readonly iterator here because iterated
-		// value can be removed if remove parameter is true.
-		iterator, err := v.array.Iterator()
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
 		elementUsage, dataSlabs, metaDataSlabs := common.NewAtreeArrayMemoryUsages(
 			v.array.Count(),
 			v.elementSize,
@@ -1295,72 +1288,92 @@ func (v *ArrayValue) Transfer(
 		common.UseMemory(context, dataSlabs)
 		common.UseMemory(context, metaDataSlabs)
 
-		func() {
+		isArraySafeToCopy := v.array.IsWithinSingleSlab() && isSafeToCopyType(v.Type.ElementType())
+		canCopy := isArraySafeToCopy || v.array.CanCopy()
 
-			if TracingEnabled {
-				startTime := time.Now()
-
-				defer func() {
-					valueID := array.ValueID().String()
-					typeID := string(v.Type.ID())
-
-					context.ReportAtreeNewArrayFromBatchDataTrace(
-						valueID,
-						typeID,
-						time.Since(startTime),
-					)
-				}()
-			}
-
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeArrayBatchConstruction,
-					Intensity: uint64(count),
-				},
-			)
-
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeArrayReadIteration,
-					Intensity: uint64(count),
-				},
-			)
-
-			array, err = atree.NewArrayFromBatchData(
-				context.Storage(),
-				address,
-				v.array.Type(),
-				func() (atree.Value, error) {
-
-					// Computation was already metered above
-
-					value, err := iterator.Next()
-					if err != nil {
-						return nil, err
-					}
-					if value == nil {
-						return nil, nil
-					}
-
-					element := MustConvertStoredValue(context, value).
-						Transfer(
-							context,
-							address,
-							remove,
-							nil,
-							preventTransfer,
-							false, // value has a parent container because it is from iterator.
-						)
-
-					return element, nil
-				},
-			)
+		if canCopy {
+			copiedArray, err := v.array.Copy(address)
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
-		}()
+
+			array = copiedArray
+
+		} else {
+			// Use non-readonly iterator here because iterated
+			// value can be removed if remove parameter is true.
+			iterator, err := v.array.Iterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			func() {
+
+				if TracingEnabled {
+					startTime := time.Now()
+
+					defer func() {
+						valueID := array.ValueID().String()
+						typeID := string(v.Type.ID())
+
+						context.ReportAtreeNewArrayFromBatchDataTrace(
+							valueID,
+							typeID,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeArrayBatchConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeArrayReadIteration,
+						Intensity: uint64(count),
+					},
+				)
+
+				array, err = atree.NewArrayFromBatchData(
+					context.Storage(),
+					address,
+					v.array.Type(),
+					func() (atree.Value, error) {
+
+						// Computation was already metered above
+
+						value, err := iterator.Next()
+						if err != nil {
+							return nil, err
+						}
+						if value == nil {
+							return nil, nil
+						}
+
+						element := MustConvertStoredValue(context, value).
+							Transfer(
+								context,
+								address,
+								remove,
+								nil,
+								preventTransfer,
+								false, // value has a parent container because it is from iterator.
+							)
+
+						return element, nil
+					},
+				)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+			}()
+		}
 
 		if remove {
 
@@ -1372,7 +1385,7 @@ func (v *ArrayValue) Transfer(
 				},
 			)
 
-			err = v.array.PopIterate(func(storable atree.Storable) {
+			err := v.array.PopIterate(func(storable atree.Storable) {
 				RemoveReferencedSlab(context, storable)
 			})
 			if err != nil {
@@ -2318,3 +2331,20 @@ var NativeArrayRemoveLastFunction = NativeFunction(
 		return thisArray.RemoveLast(context)
 	},
 )
+
+func isSafeToCopyType(t StaticType) bool {
+	pt, ok := t.(PrimitiveStaticType)
+	if !ok {
+		return false
+	}
+	switch pt {
+	case PrimitiveStaticTypeBool:
+		return true
+	case PrimitiveStaticTypeAddress:
+		return true
+	case PrimitiveStaticTypeCharacter:
+		return true
+	default:
+		return (pt >= PrimitiveStaticTypeInt && pt <= PrimitiveStaticTypeUFix128) // Int*, UInt*, Word*, Fix*, UFix*
+	}
+}

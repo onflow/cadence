@@ -499,3 +499,11 @@ func (v *StorageCapabilityControllerValue) newSetTagFunction(
 		NativeStorageCapabilityControllerSetTagFunction,
 	)
 }
+
+func (*StorageCapabilityControllerValue) CanCopy() bool {
+	return false
+}
+
+func (v *StorageCapabilityControllerValue) Copy() (atree.Storable, error) {
+	return nil, atree.NewCopyError("StorageCapabilityControllerValue", "can't copy StorageCapabilityControllerValue")
+}

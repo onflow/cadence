@@ -335,6 +335,14 @@ func (TypeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (TypeValue) CanCopy() bool {
+	return true
+}
+
+func (v TypeValue) Copy() (atree.Storable, error) {
+	return v, nil
+}
+
 // HashInput returns a byte slice containing:
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)

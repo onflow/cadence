@@ -562,3 +562,18 @@ func (v IntValue) Clone(_ ValueCloneContext) Value {
 func (IntValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
+
+func (v IntValue) CanCopy() bool {
+	return v.IntValue.CanCopy()
+}
+
+func (v IntValue) Copy() (atree.Storable, error) {
+	copied, err := v.IntValue.Copy()
+	if err != nil {
+		return nil, err
+	}
+
+	return IntValue{
+		IntValue: copied.(values.IntValue),
+	}, nil
+}

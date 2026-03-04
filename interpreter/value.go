@@ -73,6 +73,14 @@ func (NonStorable) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (NonStorable) CanCopy() bool {
+	return false
+}
+
+func (NonStorable) Copy() (atree.Storable, error) {
+	return nil, atree.NewCopyError("NonStorable", "can't copy NonStorable")
+}
+
 // Value is the Cadence value hierarchy which is heavily tied to the interpreter and persistent storage,
 // and has lots of implementation details.
 //

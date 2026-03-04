@@ -166,6 +166,14 @@ func (v PathLinkValue) ChildStorables() []atree.Storable {
 	}
 }
 
+func (PathLinkValue) CanCopy() bool {
+	return true
+}
+
+func (v PathLinkValue) Copy() (atree.Storable, error) {
+	return v, nil
+}
+
 // Deprecated: AccountLinkValue
 type AccountLinkValue struct{}
 
@@ -283,6 +291,14 @@ func (v AccountLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 
 func (v AccountLinkValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (AccountLinkValue) CanCopy() bool {
+	return true
+}
+
+func (v AccountLinkValue) Copy() (atree.Storable, error) {
+	return v, nil
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

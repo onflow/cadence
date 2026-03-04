@@ -300,3 +300,11 @@ func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (PathValue) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (PathValue) CanCopy() bool {
+	return true
+}
+
+func (v PathValue) Copy() (atree.Storable, error) {
+	return v, nil
+}

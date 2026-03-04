@@ -45,6 +45,7 @@ func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, v
 }
 
 var _ Value = &PublishedValue{}
+var _ atree.Storable = &PublishedValue{}
 var _ atree.Value = &PublishedValue{}
 var _ EquatableValue = &PublishedValue{}
 
@@ -193,4 +194,12 @@ func (v *PublishedValue) ChildStorables() []atree.Storable {
 		v.Recipient,
 		v.Value,
 	}
+}
+
+func (*PublishedValue) CanCopy() bool {
+	return false
+}
+
+func (v *PublishedValue) Copy() (atree.Storable, error) {
+	return v, atree.NewCopyError("PublishedValue", "can't copy PublishedValue")
 }

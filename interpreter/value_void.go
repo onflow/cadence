@@ -128,3 +128,11 @@ func (v VoidValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (VoidValue) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (VoidValue) CanCopy() bool {
+	return true
+}
+
+func (v VoidValue) Copy() (atree.Storable, error) {
+	return v, nil
+}

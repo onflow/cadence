@@ -588,3 +588,11 @@ func (v UInt64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (UInt64Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (UInt64Value) CanCopy() bool {
+	return true
+}
+
+func (v UInt64Value) Copy() (atree.Storable, error) {
+	return v, nil
+}

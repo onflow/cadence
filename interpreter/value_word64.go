@@ -495,3 +495,11 @@ func (v Word64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (Word64Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (Word64Value) CanCopy() bool {
+	return true
+}
+
+func (v Word64Value) Copy() (atree.Storable, error) {
+	return v, nil
+}
