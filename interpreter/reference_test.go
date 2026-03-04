@@ -4126,6 +4126,35 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 		)
 	})
 
+	t.Run("array with interface element type - type narrowing", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that type narrowing (interface -> concrete) works for nested references.
+		// If we have an array of `&S` borrowed as `[&{SI}]`, we should be able to
+		// downcast to `&[&S]` to see the actual concrete element types.
+		inter := parseCheckAndPrepare(t, `
+			struct interface SI {}
+			struct S: SI {}
+
+			fun test() {
+				let s1 = S()
+				let s2 = S()
+
+				// Create array with concrete reference elements
+				let array: [&S] = [&s1, &s2]
+
+				// Borrow as interface element type
+				let interfaceArrayRef: &[&{SI}] = &array as &[&{SI}]
+
+				// Type narrowing: downcast to see concrete element types
+				interfaceArrayRef as! &[&S]
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 	t.Run("dictionary", func(t *testing.T) {
 		t.Parallel()
 
@@ -4159,6 +4188,32 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 			common.TypeID("&{String:&Int}"),
 			forceCastTypeMismatchError.ActualType.ID(),
 		)
+	})
+
+	t.Run("dictionary with interface value type - type narrowing", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that type narrowing works for dictionary value types.
+		inter := parseCheckAndPrepare(t, `
+			struct interface SI {}
+			struct S: SI {}
+
+			fun test() {
+				let s = S()
+
+				// Create dictionary with concrete reference values
+				let dict: {String: &S} = {"key": &s}
+
+				// Borrow as interface value type
+				let interfaceDictRef: &{String: &{SI}} = &dict as &{String: &{SI}}
+
+				// Type narrowing: downcast to see concrete value types
+				interfaceDictRef as! &{String: &S}
+			}
+		`)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
 	})
 
 	t.Run("function returning reference", func(t *testing.T) {
