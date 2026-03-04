@@ -949,10 +949,7 @@ func (t *OptionalType) Walk(visit func(ty Type) bool) bool {
 	if !visit(t) {
 		return false
 	}
-	if !t.Type.Walk(visit) {
-		return false
-	}
-	return true
+	return t.Type.Walk(visit)
 }
 
 func (t *OptionalType) Unify(
@@ -3364,10 +3361,7 @@ func (t *VariableSizedType) Walk(visit func(ty Type) bool) bool {
 	if !visit(t) {
 		return false
 	}
-	if !t.Type.Walk(visit) {
-		return false
-	}
-	return true
+	return t.Type.Walk(visit)
 }
 
 func (*VariableSizedType) isValueIndexableType() bool {
@@ -3577,10 +3571,7 @@ func (t *ConstantSizedType) Walk(visit func(ty Type) bool) bool {
 	if !visit(t) {
 		return false
 	}
-	if !t.Type.Walk(visit) {
-		return false
-	}
-	return true
+	return t.Type.Walk(visit)
 }
 
 func (*ConstantSizedType) isValueIndexableType() bool {
@@ -4344,10 +4335,7 @@ func (t *FunctionType) Walk(visit func(ty Type) bool) bool {
 			return false
 		}
 	}
-	if !t.ReturnTypeAnnotation.Type.Walk(visit) {
-		return false
-	}
-	return true
+	return t.ReturnTypeAnnotation.Type.Walk(visit)
 }
 
 func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
@@ -6671,10 +6659,7 @@ func (t *DictionaryType) Walk(visit func(ty Type) bool) bool {
 	if !t.KeyType.Walk(visit) {
 		return false
 	}
-	if !t.ValueType.Walk(visit) {
-		return false
-	}
-	return true
+	return t.ValueType.Walk(visit)
 }
 
 func (t *DictionaryType) CheckInstantiated(
@@ -7208,9 +7193,7 @@ func (t *InclusiveRangeType) Walk(visit func(ty Type) bool) bool {
 		return false
 	}
 	if t.MemberType != nil {
-		if !t.MemberType.Walk(visit) {
-			return false
-		}
+		return t.MemberType.Walk(visit)
 	}
 	return true
 }
@@ -7664,10 +7647,7 @@ func (t *ReferenceType) Walk(visit func(ty Type) bool) bool {
 	if !visit(t) {
 		return false
 	}
-	if !t.Type.Walk(visit) {
-		return false
-	}
-	return true
+	return t.Type.Walk(visit)
 }
 
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
@@ -9299,9 +9279,7 @@ func (t *CapabilityType) Walk(visit func(ty Type) bool) bool {
 		return false
 	}
 	if t.BorrowType != nil {
-		if !t.BorrowType.Walk(visit) {
-			return false
-		}
+		return t.BorrowType.Walk(visit)
 	}
 	return true
 }

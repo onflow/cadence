@@ -381,10 +381,7 @@ func (t *VariableSizedStaticType) Walk(visit func(ty StaticType) bool) bool {
 	if !visit(t) {
 		return false
 	}
-	if !t.Type.Walk(visit) {
-		return false
-	}
-	return true
+	return t.Type.Walk(visit)
 }
 
 // InclusiveRangeStaticType
@@ -450,10 +447,7 @@ func (t InclusiveRangeStaticType) Walk(visit func(ty StaticType) bool) bool {
 	if !visit(t) {
 		return false
 	}
-	if !t.ElementType.Walk(visit) {
-		return false
-	}
-	return true
+	return t.ElementType.Walk(visit)
 }
 
 func (t InclusiveRangeStaticType) BaseType() StaticType {
@@ -556,10 +550,7 @@ func (t *ConstantSizedStaticType) Walk(visit func(ty StaticType) bool) bool {
 	if !visit(t) {
 		return false
 	}
-	if !t.Type.Walk(visit) {
-		return false
-	}
-	return true
+	return t.Type.Walk(visit)
 }
 
 // DictionaryStaticType
@@ -644,10 +635,7 @@ func (t *DictionaryStaticType) Walk(visit func(ty StaticType) bool) bool {
 	if !t.KeyType.Walk(visit) {
 		return false
 	}
-	if !t.ValueType.Walk(visit) {
-		return false
-	}
-	return true
+	return t.ValueType.Walk(visit)
 }
 
 // OptionalStaticType
@@ -715,10 +703,7 @@ func (t *OptionalStaticType) Walk(visit func(ty StaticType) bool) bool {
 	if !visit(t) {
 		return false
 	}
-	if !t.Type.Walk(visit) {
-		return false
-	}
-	return true
+	return t.Type.Walk(visit)
 }
 
 var NilStaticType = &OptionalStaticType{
@@ -1123,10 +1108,7 @@ func (t *ReferenceStaticType) Walk(visit func(ty StaticType) bool) bool {
 	if !visit(t) {
 		return false
 	}
-	if !t.ReferencedType.Walk(visit) {
-		return false
-	}
-	return true
+	return t.ReferencedType.Walk(visit)
 }
 
 // CapabilityStaticType
@@ -1211,9 +1193,7 @@ func (t *CapabilityStaticType) Walk(visit func(ty StaticType) bool) bool {
 		return false
 	}
 	if t.BorrowType != nil {
-		if !t.BorrowType.Walk(visit) {
-			return false
-		}
+		return t.BorrowType.Walk(visit)
 	}
 	return true
 }
