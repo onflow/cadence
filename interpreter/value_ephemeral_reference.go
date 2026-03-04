@@ -112,45 +112,19 @@ func (v *EphemeralReferenceValue) MeteredString(
 }
 
 func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	// For container types (arrays, dictionaries) where the borrow type is also
-	// a container type, we need to compute a static type that:
+	// Compute a static type that:
 	// 1. Preserves the actual type structure (to allow type narrowing, e.g., &{RI} -> &R)
-	// 2. Masks entitlements to match the borrow type (to prevent entitlement escalation)
+	// 2. Uses the borrow type's authorization (to prevent entitlement escalation)
 	//
 	// For example:
-	// - Actual: [auth(E) &T], Borrow: [&T] -> Static: [&T] (entitlements masked)
+	// - Actual: [auth(E) &T], Borrow: [&T] -> Static: [&T] (authorization from borrow type)
 	// - Actual: [&R], Borrow: [&{RI}] -> Static: [&R] (type narrowing preserved)
-	//
-	// For non-container types (structs, resources), or when the borrow type
-	// is a non-container type (e.g., AnyStruct), use the actual type to allow
-	// legitimate type narrowing.
-	var innerStaticType StaticType
-	switch v.Value.(type) {
-	case *ArrayValue:
-		if borrowArrayType, isBorrowTypeArray := v.BorrowedType.(sema.ArrayType); isBorrowTypeArray {
-			actualStaticType := v.Value.StaticType(context)
-			innerStaticType = maskEntitlementsInStaticType(
-				context,
-				actualStaticType,
-				borrowArrayType,
-			)
-		} else {
-			innerStaticType = v.Value.StaticType(context)
-		}
-	case *DictionaryValue:
-		if borrowDictType, isBorrowTypeDict := v.BorrowedType.(*sema.DictionaryType); isBorrowTypeDict {
-			actualStaticType := v.Value.StaticType(context)
-			innerStaticType = maskEntitlementsInStaticType(
-				context,
-				actualStaticType,
-				borrowDictType,
-			)
-		} else {
-			innerStaticType = v.Value.StaticType(context)
-		}
-	default:
-		innerStaticType = v.Value.StaticType(context)
-	}
+	actualStaticType := v.Value.StaticType(context)
+	innerStaticType := applyBorrowTypeAuthorization(
+		context,
+		actualStaticType,
+		v.BorrowedType,
+	)
 
 	return NewReferenceStaticType(
 		context,
@@ -159,10 +133,10 @@ func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) Sta
 	)
 }
 
-// maskEntitlementsInStaticType returns a static type that preserves the
-// actual type structure but masks entitlements to match what the borrow type permits.
+// applyBorrowTypeAuthorization returns a static type that preserves the
+// actual type structure but uses the borrow type's authorization for references.
 // This prevents entitlement escalation while allowing type narrowing.
-func maskEntitlementsInStaticType(
+func applyBorrowTypeAuthorization(
 	gauge common.MemoryGauge,
 	actualStaticType StaticType,
 	borrowSemaType sema.Type,
@@ -170,47 +144,27 @@ func maskEntitlementsInStaticType(
 	switch actual := actualStaticType.(type) {
 	case *VariableSizedStaticType:
 		if borrowArray, ok := borrowSemaType.(*sema.VariableSizedType); ok {
-			maskedElementType := maskEntitlementsInStaticType(
-				gauge,
-				actual.Type,
-				borrowArray.Type,
-			)
-			return NewVariableSizedStaticType(gauge, maskedElementType)
+			elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowArray.Type)
+			return NewVariableSizedStaticType(gauge, elementType)
 		}
 
 	case *ConstantSizedStaticType:
 		if borrowArray, ok := borrowSemaType.(*sema.ConstantSizedType); ok {
-			maskedElementType := maskEntitlementsInStaticType(
-				gauge,
-				actual.Type,
-				borrowArray.Type,
-			)
-			return NewConstantSizedStaticType(gauge, maskedElementType, actual.Size)
+			elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowArray.Type)
+			return NewConstantSizedStaticType(gauge, elementType, actual.Size)
 		}
 
 	case *DictionaryStaticType:
 		if borrowDict, ok := borrowSemaType.(*sema.DictionaryType); ok {
-			maskedKeyType := maskEntitlementsInStaticType(
-				gauge,
-				actual.KeyType,
-				borrowDict.KeyType,
-			)
-			maskedValueType := maskEntitlementsInStaticType(
-				gauge,
-				actual.ValueType,
-				borrowDict.ValueType,
-			)
-			return NewDictionaryStaticType(gauge, maskedKeyType, maskedValueType)
+			keyType := applyBorrowTypeAuthorization(gauge, actual.KeyType, borrowDict.KeyType)
+			valueType := applyBorrowTypeAuthorization(gauge, actual.ValueType, borrowDict.ValueType)
+			return NewDictionaryStaticType(gauge, keyType, valueType)
 		}
 
 	case *OptionalStaticType:
 		if borrowOptional, ok := borrowSemaType.(*sema.OptionalType); ok {
-			maskedInnerType := maskEntitlementsInStaticType(
-				gauge,
-				actual.Type,
-				borrowOptional.Type,
-			)
-			return NewOptionalStaticType(gauge, maskedInnerType)
+			innerType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowOptional.Type)
+			return NewOptionalStaticType(gauge, innerType)
 		}
 
 	case *ReferenceStaticType:
