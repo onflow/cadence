@@ -112,10 +112,38 @@ func (v *EphemeralReferenceValue) MeteredString(
 }
 
 func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
+	// For container types (arrays, dictionaries) where the borrow type is also
+	// a container type, use BorrowedType to prevent entitlement escalation via
+	// downcasting. If someone has a reference `&[&T]` pointing to an array that
+	// actually contains `auth(E) &T` elements, the static type should reflect
+	// what the reference permits (`&[&T]`), not what's actually stored.
+	// Entitlement stripping happens lazily when elements are accessed.
+	//
+	// For non-container types (structs, resources), or when the borrow type
+	// is a non-container type (e.g., AnyStruct), use the actual type to allow
+	// legitimate type narrowing (e.g., downcasting `&{RI}` to `&R` or
+	// `&AnyStruct` to `&[T]`).
+	var innerStaticType StaticType
+	switch v.Value.(type) {
+	case *ArrayValue:
+		if _, isBorrowTypeArray := v.BorrowedType.(sema.ArrayType); isBorrowTypeArray {
+			innerStaticType = ConvertSemaToStaticType(context, v.BorrowedType)
+		} else {
+			innerStaticType = v.Value.StaticType(context)
+		}
+	case *DictionaryValue:
+		if _, isBorrowTypeDict := v.BorrowedType.(*sema.DictionaryType); isBorrowTypeDict {
+			innerStaticType = ConvertSemaToStaticType(context, v.BorrowedType)
+		} else {
+			innerStaticType = v.Value.StaticType(context)
+		}
+	default:
+		innerStaticType = v.Value.StaticType(context)
+	}
 	return NewReferenceStaticType(
 		context,
 		v.Authorization,
-		v.Value.StaticType(context),
+		innerStaticType,
 	)
 }
 

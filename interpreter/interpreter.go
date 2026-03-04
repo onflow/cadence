@@ -2458,23 +2458,17 @@ func convert(
 					targetAuthorization,
 				)
 
-				// Recursively convert the inner value.
-				targetInnerType := unwrappedTargetType.Type
-				innerValue := ref.Value
-
-				innerValueType := context.SemaTypeFromStaticType(innerValue.StaticType(context))
-				convertedInnerValue := ConvertAndBox(
-					context,
-					innerValue,
-					innerValueType,
-					targetInnerType,
-				)
-
+				// Do NOT recursively convert the inner value.
+				// Keep the reference pointing to the same underlying value.
+				// Entitlement stripping for nested elements happens lazily
+				// when they are accessed (via CreateReferenceValue/ConvertAndBoxWithValidation).
+				// The EphemeralReferenceValue.StaticType() method uses BorrowedType
+				// to prevent entitlement escalation via downcasting.
 				return NewEphemeralReferenceValue(
 					context,
 					targetAuthorization,
-					convertedInnerValue,
-					targetInnerType,
+					ref.Value,
+					unwrappedTargetType.Type,
 				)
 			}
 
