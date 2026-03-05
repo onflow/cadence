@@ -1454,10 +1454,7 @@ func (interpreter *Interpreter) castValueAndValueType(targetType sema.Type, valu
 					storageReference.TargetPath,
 					referenceTargetType.Type,
 				)
-				valueSemaType = MustConvertStaticToSemaType(
-					value.StaticType(interpreter),
-					interpreter,
-				)
+				valueSemaType = MustSemaTypeOfValue(value, interpreter)
 			}
 		}
 	}
