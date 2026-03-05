@@ -1418,6 +1418,7 @@ func ConvertSemaTransactionToStaticTransactionType(
 	)
 }
 
+// Deprecated: Use TypeConverter.SemaAccessFromStaticAuthorization instead.
 // ConvertStaticAuthorizationToSemaAccess converts authorization of static-types
 // to the sema-type representation of the same.
 //

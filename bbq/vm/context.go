@@ -563,7 +563,7 @@ func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorizati
 		return semaAccess, nil
 	}
 
-	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c)
+	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c) //nolint:staticcheck
 	if err != nil {
 		return nil, err
 	}

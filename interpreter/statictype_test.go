@@ -1783,7 +1783,7 @@ func (s staticTypeConversionHandler) SemaTypeFromStaticType(staticType StaticTyp
 }
 
 func (s staticTypeConversionHandler) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
-	return ConvertStaticAuthorizationToSemaAccess(auth, s)
+	return ConvertStaticAuthorizationToSemaAccess(auth, s) //nolint:staticcheck
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {

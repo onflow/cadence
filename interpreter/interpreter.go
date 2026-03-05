@@ -2548,7 +2548,7 @@ func checkTargetIsLessPermissive(
 		// This is needed to preserve the entitlements when being assigned to `AnyStruct`.
 		actualAuthorization := ref.GetAuthorization()
 		if !PermitsAccess(context, targetAuthorization, actualAuthorization) {
-			actualSemaAuthorization, err := ConvertStaticAuthorizationToSemaAccess(actualAuthorization, context)
+			actualSemaAuthorization, err := context.SemaAccessFromStaticAuthorization(actualAuthorization)
 			if err != nil {
 				panic(err)
 			}
@@ -6718,7 +6718,7 @@ func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
 }
 
 func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
-	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
+	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter) //nolint:staticcheck
 }
 
 func StorageReference(
