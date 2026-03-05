@@ -688,11 +688,11 @@ func (UInt256Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (UInt256Value) CanCopy() bool {
+func (UInt256Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v UInt256Value) Copy() (atree.Storable, error) {
+func (v UInt256Value) CopyNonRefSimple() (atree.Storable, error) {
 	return UInt256Value{
 		BigInt: new(big.Int).Set(v.BigInt),
 	}, nil

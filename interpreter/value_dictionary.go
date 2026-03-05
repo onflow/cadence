@@ -1407,11 +1407,11 @@ func (v *DictionaryValue) Transfer(
 		)
 		common.UseMemory(context, elementMemoryUse)
 
-		isDictSafeToCopy := v.dictionary.IsWithinSingleSlab() && isSafeToCopyType(v.Type.KeyType) && isSafeToCopyType(v.Type.ValueType)
-		canCopy := isDictSafeToCopy || v.dictionary.CanCopy()
+		isDictSafeToCopy := v.dictionary.IsWithinSingleSlab() && canCopyNonRefSimpleForType(v.Type.KeyType) && canCopyNonRefSimpleForType(v.Type.ValueType)
+		canCopyNonRefSimple := isDictSafeToCopy || v.dictionary.CanCopyNonRefSimple()
 
-		if canCopy {
-			copiedDictionary, err := v.dictionary.Copy(address, atree.NewDefaultDigesterBuilder())
+		if canCopyNonRefSimple {
+			copiedDictionary, err := v.dictionary.CopyNonRefSimple(address, atree.NewDefaultDigesterBuilder())
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}

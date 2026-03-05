@@ -335,11 +335,11 @@ func (TypeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (TypeValue) CanCopy() bool {
+func (TypeValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v TypeValue) Copy() (atree.Storable, error) {
+func (v TypeValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 

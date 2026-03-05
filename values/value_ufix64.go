@@ -298,10 +298,10 @@ func (v UFix64Value) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeUint64(uint64(v))
 }
 
-func (v UFix64Value) CanCopy() bool {
+func (v UFix64Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v UFix64Value) Copy() (atree.Storable, error) {
+func (v UFix64Value) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

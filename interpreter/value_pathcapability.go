@@ -310,11 +310,11 @@ func (v *PathCapabilityValue) AddressPath() AddressPath {
 	}
 }
 
-func (*PathCapabilityValue) CanCopy() bool {
+func (*PathCapabilityValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v *PathCapabilityValue) Copy() (atree.Storable, error) {
+func (v *PathCapabilityValue) CopyNonRefSimple() (atree.Storable, error) {
 	// Use shallow copy of StaticType since static type isn't expected to be changed.
 	return &PathCapabilityValue{
 		BorrowType: v.BorrowType,

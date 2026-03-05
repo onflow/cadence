@@ -200,10 +200,10 @@ func (v NilValue) InnerValueType(_ ValueStaticTypeContext) sema.Type {
 	return sema.NeverType
 }
 
-func (NilValue) CanCopy() bool {
+func (NilValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v NilValue) Copy() (atree.Storable, error) {
+func (v NilValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

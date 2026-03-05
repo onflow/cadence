@@ -743,11 +743,11 @@ func (Int256Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (Int256Value) CanCopy() bool {
+func (Int256Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v Int256Value) Copy() (atree.Storable, error) {
+func (v Int256Value) CopyNonRefSimple() (atree.Storable, error) {
 	return Int256Value{
 		BigInt: new(big.Int).Set(v.BigInt),
 	}, nil

@@ -648,10 +648,10 @@ func (Int32Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (Int32Value) CanCopy() bool {
+func (Int32Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v Int32Value) Copy() (atree.Storable, error) {
+func (v Int32Value) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

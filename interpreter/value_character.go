@@ -262,11 +262,11 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, name string) 
 	return context.GetMethod(v, name)
 }
 
-func (CharacterValue) CanCopy() bool {
+func (CharacterValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v CharacterValue) Copy() (atree.Storable, error) {
+func (v CharacterValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 

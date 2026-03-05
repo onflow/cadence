@@ -368,11 +368,11 @@ func (v IntValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeBigInt(v.BigInt)
 }
 
-func (IntValue) CanCopy() bool {
+func (IntValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v IntValue) Copy() (atree.Storable, error) {
+func (v IntValue) CopyNonRefSimple() (atree.Storable, error) {
 	return IntValue{
 		BigInt: new(big.Int).Set(v.BigInt),
 	}, nil

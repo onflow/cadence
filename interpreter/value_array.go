@@ -1288,11 +1288,11 @@ func (v *ArrayValue) Transfer(
 		common.UseMemory(context, dataSlabs)
 		common.UseMemory(context, metaDataSlabs)
 
-		isArraySafeToCopy := v.array.IsWithinSingleSlab() && isSafeToCopyType(v.Type.ElementType())
-		canCopy := isArraySafeToCopy || v.array.CanCopy()
+		isArraySafeToCopy := v.array.IsWithinSingleSlab() && canCopyNonRefSimpleForType(v.Type.ElementType())
+		canCopyNonRefSimple := isArraySafeToCopy || v.array.CanCopyNonRefSimple()
 
-		if canCopy {
-			copiedArray, err := v.array.Copy(address)
+		if canCopyNonRefSimple {
+			copiedArray, err := v.array.CopyNonRefSimple(address)
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -2332,7 +2332,7 @@ var NativeArrayRemoveLastFunction = NativeFunction(
 	},
 )
 
-func isSafeToCopyType(t StaticType) bool {
+func canCopyNonRefSimpleForType(t StaticType) bool {
 	pt, ok := t.(PrimitiveStaticType)
 	if !ok {
 		return false

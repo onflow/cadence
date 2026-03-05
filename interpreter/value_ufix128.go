@@ -618,10 +618,10 @@ func ufix128SaturationArithmaticResult(
 	}
 }
 
-func (UFix128Value) CanCopy() bool {
+func (UFix128Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v UFix128Value) Copy() (atree.Storable, error) {
+func (v UFix128Value) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

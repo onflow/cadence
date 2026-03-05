@@ -166,11 +166,11 @@ func (v PathLinkValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (PathLinkValue) CanCopy() bool {
+func (PathLinkValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v PathLinkValue) Copy() (atree.Storable, error) {
+func (v PathLinkValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 
@@ -293,11 +293,11 @@ func (v AccountLinkValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (AccountLinkValue) CanCopy() bool {
+func (AccountLinkValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v AccountLinkValue) Copy() (atree.Storable, error) {
+func (v AccountLinkValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 

@@ -511,12 +511,12 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
-func (s SomeStorable) CanCopy() bool {
-	return s.UnwrapAtreeStorable().CanCopy()
+func (s SomeStorable) CanCopyNonRefSimple() bool {
+	return s.UnwrapAtreeStorable().CanCopyNonRefSimple()
 }
 
-func (s SomeStorable) Copy() (atree.Storable, error) {
-	copied, err := s.UnwrapAtreeStorable().Copy()
+func (s SomeStorable) CopyNonRefSimple() (atree.Storable, error) {
+	copied, err := s.UnwrapAtreeStorable().CopyNonRefSimple()
 	if err != nil {
 		return nil, err
 	}

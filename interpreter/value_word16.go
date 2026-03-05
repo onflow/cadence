@@ -469,10 +469,10 @@ func (Word16Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (Word16Value) CanCopy() bool {
+func (Word16Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v Word16Value) Copy() (atree.Storable, error) {
+func (v Word16Value) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

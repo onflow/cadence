@@ -781,11 +781,11 @@ func (*StringValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (*StringValue) CanCopy() bool {
+func (*StringValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v *StringValue) Copy() (atree.Storable, error) {
+func (v *StringValue) CopyNonRefSimple() (atree.Storable, error) {
 	return &StringValue{
 		Str:             v.Str,
 		UnnormalizedStr: v.UnnormalizedStr,

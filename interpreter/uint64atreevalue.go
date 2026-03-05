@@ -60,11 +60,11 @@ func (Uint64AtreeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (Uint64AtreeValue) CanCopy() bool {
+func (Uint64AtreeValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v Uint64AtreeValue) Copy() (atree.Storable, error) {
+func (v Uint64AtreeValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 

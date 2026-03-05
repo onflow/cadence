@@ -1312,10 +1312,10 @@ func (v *CompositeValue) Transfer(
 		common.UseMemory(context, elementMemoryUse)
 
 		isSingleSlabEnum := (v.Kind == common.CompositeKindEnum && v.dictionary.IsWithinSingleSlab())
-		canCopy := isSingleSlabEnum || v.dictionary.CanCopy()
+		canCopyNonRefSimple := isSingleSlabEnum || v.dictionary.CanCopyNonRefSimple()
 
-		if canCopy {
-			copiedDictionary, err := v.dictionary.Copy(address, atree.NewDefaultDigesterBuilder())
+		if canCopyNonRefSimple {
+			copiedDictionary, err := v.dictionary.CopyNonRefSimple(address, atree.NewDefaultDigesterBuilder())
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}

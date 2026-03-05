@@ -301,10 +301,10 @@ func (PathValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (PathValue) CanCopy() bool {
+func (PathValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v PathValue) Copy() (atree.Storable, error) {
+func (v PathValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

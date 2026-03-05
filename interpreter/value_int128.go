@@ -775,11 +775,11 @@ func (Int128Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (Int128Value) CanCopy() bool {
+func (Int128Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v Int128Value) Copy() (atree.Storable, error) {
+func (v Int128Value) CopyNonRefSimple() (atree.Storable, error) {
 	return Int128Value{
 		BigInt: new(big.Int).Set(v.BigInt),
 	}, nil

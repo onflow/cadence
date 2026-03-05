@@ -608,11 +608,11 @@ func (Word256Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (Word256Value) CanCopy() bool {
+func (Word256Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v Word256Value) Copy() (atree.Storable, error) {
+func (v Word256Value) CopyNonRefSimple() (atree.Storable, error) {
 	return Word256Value{
 		BigInt: new(big.Int).Set(v.BigInt),
 	}, nil

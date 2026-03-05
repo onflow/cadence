@@ -603,11 +603,11 @@ func (Fix64Value) Scale() int {
 	return sema.Fix64Scale
 }
 
-func (Fix64Value) CanCopy() bool {
+func (Fix64Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v Fix64Value) Copy() (atree.Storable, error) {
+func (v Fix64Value) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 

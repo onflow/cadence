@@ -605,11 +605,11 @@ func (v Fix128Value) ToBigInt() *big.Int {
 	return fixedpoint.Fix128ToBigInt(fix.Fix128(v))
 }
 
-func (Fix128Value) CanCopy() bool {
+func (Fix128Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v Fix128Value) Copy() (atree.Storable, error) {
+func (v Fix128Value) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 

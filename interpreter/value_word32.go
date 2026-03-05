@@ -470,10 +470,10 @@ func (Word32Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (Word32Value) CanCopy() bool {
+func (Word32Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v Word32Value) Copy() (atree.Storable, error) {
+func (v Word32Value) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

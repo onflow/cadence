@@ -596,10 +596,10 @@ func (UInt8Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (UInt8Value) CanCopy() bool {
+func (UInt8Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v UInt8Value) Copy() (atree.Storable, error) {
+func (v UInt8Value) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

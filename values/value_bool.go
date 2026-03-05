@@ -97,10 +97,10 @@ func (v BoolValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeBool(bool(v))
 }
 
-func (BoolValue) CanCopy() bool {
+func (BoolValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v BoolValue) Copy() (atree.Storable, error) {
+func (v BoolValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

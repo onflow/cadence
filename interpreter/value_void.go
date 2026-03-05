@@ -129,10 +129,10 @@ func (VoidValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (VoidValue) CanCopy() bool {
+func (VoidValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v VoidValue) Copy() (atree.Storable, error) {
+func (v VoidValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }

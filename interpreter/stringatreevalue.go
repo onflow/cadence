@@ -75,11 +75,11 @@ func (v StringAtreeValue) ID() string {
 	return string(v)
 }
 
-func (StringAtreeValue) CanCopy() bool {
+func (StringAtreeValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v StringAtreeValue) Copy() (atree.Storable, error) {
+func (v StringAtreeValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 

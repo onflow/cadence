@@ -271,11 +271,11 @@ func (v *IDCapabilityValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (IDCapabilityValue) CanCopy() bool {
+func (IDCapabilityValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v *IDCapabilityValue) Copy() (atree.Storable, error) {
+func (v *IDCapabilityValue) CopyNonRefSimple() (atree.Storable, error) {
 	// Use shallow copy of StaticType since static type isn't expected to be changed.
 	return &IDCapabilityValue{
 		BorrowType: v.BorrowType,

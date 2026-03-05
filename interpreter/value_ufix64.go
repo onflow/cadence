@@ -484,11 +484,11 @@ func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v.UFix64Value.IntegerPart())
 }
 
-func (UFix64Value) CanCopy() bool {
+func (UFix64Value) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v UFix64Value) Copy() (atree.Storable, error) {
+func (v UFix64Value) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 

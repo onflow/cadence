@@ -196,10 +196,10 @@ func (v *PublishedValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (*PublishedValue) CanCopy() bool {
+func (*PublishedValue) CanCopyNonRefSimple() bool {
 	return false
 }
 
-func (v *PublishedValue) Copy() (atree.Storable, error) {
-	return v, atree.NewCopyError("PublishedValue", "can't copy PublishedValue")
+func (v *PublishedValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, fmt.Errorf("can't copy PublishedValue as a non-reference simple storable")
 }

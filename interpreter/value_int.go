@@ -563,12 +563,12 @@ func (IntValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v IntValue) CanCopy() bool {
-	return v.IntValue.CanCopy()
+func (v IntValue) CanCopyNonRefSimple() bool {
+	return v.IntValue.CanCopyNonRefSimple()
 }
 
-func (v IntValue) Copy() (atree.Storable, error) {
-	copied, err := v.IntValue.Copy()
+func (v IntValue) CopyNonRefSimple() (atree.Storable, error) {
+	copied, err := v.IntValue.CopyNonRefSimple()
 	if err != nil {
 		return nil, err
 	}

@@ -268,11 +268,11 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (AddressValue) CanCopy() bool {
+func (AddressValue) CanCopyNonRefSimple() bool {
 	return true
 }
 
-func (v AddressValue) Copy() (atree.Storable, error) {
+func (v AddressValue) CopyNonRefSimple() (atree.Storable, error) {
 	return v, nil
 }
 
