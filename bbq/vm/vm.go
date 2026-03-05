@@ -1606,10 +1606,7 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
 		if referenceTargetType, ok := targetType.(*interpreter.ReferenceStaticType); ok {
 
-			borrowType := interpreter.MustConvertStaticToSemaType(
-				referenceTargetType.ReferencedType,
-				context,
-			)
+			borrowType := context.SemaTypeFromStaticType(referenceTargetType.ReferencedType)
 
 			if !storageReference.BorrowedType.Equal(borrowType) {
 

@@ -1414,8 +1414,7 @@ func (interpreter *Interpreter) castValueAndValueType(targetType sema.Type, valu
 		value = Unbox(value)
 	}
 
-	valueStaticType := value.StaticType(interpreter)
-	valueSemaType := interpreter.SemaTypeFromStaticType(valueStaticType)
+	valueSemaType := MustSemaTypeOfValue(value, interpreter)
 
 	// If the value is specifically a storage reference,
 	// and the target type is a reference,
