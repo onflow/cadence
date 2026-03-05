@@ -411,7 +411,7 @@ func CheckMemberAccessTargetType(
 
 			// Convert target static type to sema type, if not done already
 			if targetSemaType == nil {
-				targetSemaType = MustConvertStaticToSemaType(targetStaticType, context)
+				targetSemaType = context.SemaTypeFromStaticType(targetStaticType)
 			}
 
 			panic(&MemberAccessTypeError{
@@ -425,7 +425,7 @@ func CheckMemberAccessTargetType(
 
 		// Convert target static type to sema type, if not done already
 		if targetSemaType == nil {
-			targetSemaType = MustConvertStaticToSemaType(targetStaticType, context)
+			targetSemaType = context.SemaTypeFromStaticType(targetStaticType)
 		}
 
 		panic(&MemberAccessTypeError{
@@ -456,7 +456,7 @@ func CheckIndexedType(
 	indexedValueStaticType := indexedValue.StaticType(context)
 
 	if !IsSubTypeOfSemaType(context, indexedValueStaticType, indexedType) {
-		indexedValueSemaType := MustConvertStaticToSemaType(indexedValueStaticType, context)
+		indexedValueSemaType := context.SemaTypeFromStaticType(indexedValueStaticType)
 		panic(&IndexedTypeError{
 			ExpectedType: indexedType,
 			ActualType:   indexedValueSemaType,

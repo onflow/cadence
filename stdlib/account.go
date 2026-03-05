@@ -4415,7 +4415,7 @@ func getCheckedCapabilityController(
 	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
 
 	controllerBorrowType, ok :=
-		interpreter.MustConvertStaticToSemaType(controllerBorrowStaticType, context).(*sema.ReferenceType)
+		context.SemaTypeFromStaticType(controllerBorrowStaticType).(*sema.ReferenceType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -4684,7 +4684,7 @@ func AccountCapabilitiesGet(
 	}
 
 	capabilityBorrowType, ok :=
-		interpreter.MustConvertStaticToSemaType(capabilityStaticBorrowType, invocationContext).(*sema.ReferenceType)
+		invocationContext.SemaTypeFromStaticType(capabilityStaticBorrowType).(*sema.ReferenceType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}

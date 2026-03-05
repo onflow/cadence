@@ -7687,7 +7687,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		valueCreationContext,
 		interpreter.UnauthorizedAccess,
 		arrayValue,
-		interpreter.MustConvertStaticToSemaType(arrayStaticType, inter),
+		inter.SemaTypeFromStaticType(arrayStaticType),
 	)
 
 	_, err = inter.Invoke("test", ref)
@@ -13082,13 +13082,12 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 		)
 		require.NotNil(t, storageMap)
 
-		fooType := interpreter.MustConvertStaticToSemaType(
+		fooType := inter.SemaTypeFromStaticType(
 			&interpreter.CompositeStaticType{
 				Location:            TestLocation,
 				TypeID:              TestLocation.TypeID(nil, "Foo"),
 				QualifiedIdentifier: "Foo",
 			},
-			inter,
 		)
 
 		ref := interpreter.NewStorageReferenceValue(

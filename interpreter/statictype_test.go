@@ -1779,11 +1779,11 @@ func (s staticTypeConversionHandler) MeterMemory(_ common.MemoryUsage) error {
 }
 
 func (s staticTypeConversionHandler) SemaTypeFromStaticType(staticType StaticType) sema.Type {
-	return MustConvertStaticToSemaType(staticType, s)
+	return MustConvertStaticToSemaType(staticType, s) //nolint:staticcheck
 }
 
 func (s staticTypeConversionHandler) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
-	return ConvertStaticAuthorizationToSemaAccess(auth, s)
+	return ConvertStaticAuthorizationToSemaAccess(auth, s) //nolint:staticcheck
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {

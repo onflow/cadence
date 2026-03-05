@@ -456,7 +456,7 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	}
 
 	// TODO: avoid the sema-type conversion
-	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
+	semaType = interpreter.MustConvertStaticToSemaType(staticType, c) //nolint:staticcheck
 
 	if c.semaTypeCache == nil {
 		c.semaTypeCache = make(map[commons.TypeCacheKey]sema.Type)
@@ -563,7 +563,7 @@ func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorizati
 		return semaAccess, nil
 	}
 
-	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c)
+	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c) //nolint:staticcheck
 	if err != nil {
 		return nil, err
 	}
