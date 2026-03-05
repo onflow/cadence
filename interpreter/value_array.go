@@ -2332,6 +2332,8 @@ var NativeArrayRemoveLastFunction = NativeFunction(
 	},
 )
 
+// canCopyNonRefSimpleForType returns true if CopyNonRefSimple()
+// always returns true for the given type's storable.
 func canCopyNonRefSimpleForType(t StaticType) bool {
 	pt, ok := t.(PrimitiveStaticType)
 	if !ok {
@@ -2344,7 +2346,31 @@ func canCopyNonRefSimpleForType(t StaticType) bool {
 		return true
 	case PrimitiveStaticTypeCharacter:
 		return true
-	default:
-		return (pt >= PrimitiveStaticTypeInt && pt <= PrimitiveStaticTypeUFix128) // Int*, UInt*, Word*, Fix*, UFix*
+	case PrimitiveStaticTypeInt8,
+		PrimitiveStaticTypeInt16,
+		PrimitiveStaticTypeInt32,
+		PrimitiveStaticTypeInt64,
+		PrimitiveStaticTypeInt128,
+		PrimitiveStaticTypeInt256:
+		return true
+	case PrimitiveStaticTypeUInt8,
+		PrimitiveStaticTypeUInt16,
+		PrimitiveStaticTypeUInt32,
+		PrimitiveStaticTypeUInt64,
+		PrimitiveStaticTypeUInt128,
+		PrimitiveStaticTypeUInt256:
+		return true
+	case PrimitiveStaticTypeWord8,
+		PrimitiveStaticTypeWord16,
+		PrimitiveStaticTypeWord32,
+		PrimitiveStaticTypeWord64,
+		PrimitiveStaticTypeWord128,
+		PrimitiveStaticTypeWord256:
+		return true
+	case PrimitiveStaticTypeFix64, PrimitiveStaticTypeFix128:
+		return true
+	case PrimitiveStaticTypeUFix64, PrimitiveStaticTypeUFix128:
+		return true
 	}
+	return false
 }
