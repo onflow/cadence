@@ -6697,7 +6697,7 @@ func (interpreter *Interpreter) DefaultDestroyEvents(resourceValue *CompositeVal
 }
 
 func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) sema.Type {
-	return MustConvertStaticToSemaType(staticType, interpreter)
+	return MustConvertStaticToSemaType(staticType, interpreter) //nolint:staticcheck
 }
 
 func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(

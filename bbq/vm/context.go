@@ -456,7 +456,7 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	}
 
 	// TODO: avoid the sema-type conversion
-	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
+	semaType = interpreter.MustConvertStaticToSemaType(staticType, c) //nolint:staticcheck
 
 	if c.semaTypeCache == nil {
 		c.semaTypeCache = make(map[commons.TypeCacheKey]sema.Type)
