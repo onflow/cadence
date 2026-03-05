@@ -102,12 +102,10 @@ func (v *StorageReferenceValue) MeteredString(
 }
 
 func (v *StorageReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	self := v.MustReferencedValue(context)
-
 	return NewReferenceStaticType(
 		context,
 		v.Authorization,
-		self.StaticType(context),
+		ConvertSemaToStaticType(context, v.BorrowedType),
 	)
 }
 

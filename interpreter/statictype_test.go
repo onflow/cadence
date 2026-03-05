@@ -2768,3 +2768,367 @@ func TestStaticType_IsDeprecated(t *testing.T) {
 		test(testCase)
 	}
 }
+
+func TestWalkStaticType(t *testing.T) {
+	t.Parallel()
+
+	collect := func(ty StaticType) []StaticType {
+		var visited []StaticType
+		WalkStaticType(ty, func(ty StaticType) bool {
+			visited = append(visited, ty)
+			return true
+		})
+		return visited
+	}
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t,
+			[]StaticType(nil),
+			collect(nil),
+		)
+	})
+
+	t.Run("PrimitiveStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := PrimitiveStaticTypeInt
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("CompositeStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &CompositeStaticType{
+			TypeID: "S.test.S",
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("InterfaceStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InterfaceStaticType{
+			TypeID: "S.test.I",
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("VariableSizedStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		elementType := PrimitiveStaticTypeString
+
+		ty := &VariableSizedStaticType{
+			Type: elementType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				elementType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("ConstantSizedStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		elementType := PrimitiveStaticTypeBool
+
+		ty := &ConstantSizedStaticType{
+			Type: elementType,
+			Size: 3,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				elementType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("DictionaryStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		keyType := PrimitiveStaticTypeString
+		valueType := PrimitiveStaticTypeInt
+
+		ty := &DictionaryStaticType{
+			KeyType:   keyType,
+			ValueType: valueType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				keyType,
+				valueType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("OptionalStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		innerType := PrimitiveStaticTypeInt
+
+		ty := &OptionalStaticType{
+			Type: innerType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				innerType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("IntersectionStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		interface1 := &InterfaceStaticType{TypeID: "S.test.I1"}
+		interface2 := &InterfaceStaticType{TypeID: "S.test.I2"}
+
+		ty := &IntersectionStaticType{
+			Types: []*InterfaceStaticType{
+				interface1,
+				interface2,
+			},
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				interface1,
+				interface2,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("ReferenceStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		referencedType := PrimitiveStaticTypeInt
+
+		ty := &ReferenceStaticType{
+			Authorization:  UnauthorizedAccess,
+			ReferencedType: referencedType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				referencedType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("CapabilityStaticType, without borrow type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &CapabilityStaticType{}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("CapabilityStaticType, with borrow type", func(t *testing.T) {
+		t.Parallel()
+
+		referencedType := PrimitiveStaticTypeInt
+
+		borrowType := &ReferenceStaticType{
+			Authorization:  UnauthorizedAccess,
+			ReferencedType: referencedType,
+		}
+
+		ty := &CapabilityStaticType{
+			BorrowType: borrowType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				borrowType,
+				referencedType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("FunctionStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := FunctionStaticType{
+			FunctionType: &sema.FunctionType{},
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("InclusiveRangeStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		elementType := PrimitiveStaticTypeInt
+
+		ty := InclusiveRangeStaticType{
+			ElementType: elementType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				elementType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		// {String: &(Int?)}
+
+		innerType := PrimitiveStaticTypeInt
+		referencedType := &OptionalStaticType{
+			Type: innerType,
+		}
+		referenceType := &ReferenceStaticType{
+			Authorization:  UnauthorizedAccess,
+			ReferencedType: referencedType,
+		}
+		keyType := PrimitiveStaticTypeString
+		ty := &DictionaryStaticType{
+			KeyType:   keyType,
+			ValueType: referenceType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				keyType,
+				referenceType,
+				referencedType,
+				innerType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("stop at root", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: PrimitiveStaticTypeInt,
+		}
+
+		var visited []StaticType
+		result := WalkStaticType(ty, func(ty StaticType) bool {
+			visited = append(visited, ty)
+			// stop immediately, without visiting the child type
+			return false
+		})
+		assert.False(t, result)
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			visited,
+		)
+	})
+
+	t.Run("stop at child", func(t *testing.T) {
+		t.Parallel()
+
+		// &(Int?)
+		innerType := PrimitiveStaticTypeInt
+		referencedType := &OptionalStaticType{
+			Type: innerType,
+		}
+		ty := &ReferenceStaticType{
+			Authorization:  UnauthorizedAccess,
+			ReferencedType: referencedType,
+		}
+
+		var visited []StaticType
+		result := WalkStaticType(ty, func(ty StaticType) bool {
+			visited = append(visited, ty)
+			// stop when we reach the referenced type (OptionalStaticType)
+			return ty != referencedType
+		})
+
+		assert.False(t, result)
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				referencedType,
+			},
+			visited,
+		)
+	})
+
+	t.Run("stop mid-dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		// {String: Int}
+		keyType := PrimitiveStaticTypeString
+		valueType := PrimitiveStaticTypeInt
+		ty := &DictionaryStaticType{
+			KeyType:   keyType,
+			ValueType: valueType,
+		}
+
+		var visited []StaticType
+		result := WalkStaticType(ty, func(ty StaticType) bool {
+			visited = append(visited, ty)
+			// stop after visiting key type
+			return ty != keyType
+		})
+
+		assert.False(t, result)
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				keyType,
+			},
+			visited,
+		)
+	})
+}

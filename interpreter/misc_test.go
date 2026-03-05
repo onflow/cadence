@@ -13082,12 +13082,21 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 		)
 		require.NotNil(t, storageMap)
 
+		fooType := interpreter.MustConvertStaticToSemaType(
+			&interpreter.CompositeStaticType{
+				Location:            TestLocation,
+				TypeID:              TestLocation.TypeID(nil, "Foo"),
+				QualifiedIdentifier: "Foo",
+			},
+			inter,
+		)
+
 		ref := interpreter.NewStorageReferenceValue(
 			nil,
 			interpreter.UnauthorizedAccess,
 			address,
 			path,
-			nil,
+			fooType,
 		)
 
 		result, err := inter.Invoke("update", ref)
@@ -13115,7 +13124,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 			interpreter.UnauthorizedAccess,
 			address,
 			path,
-			nil,
+			fooType,
 		)
 
 		result, err = inter.Invoke("updateAgain", ref)
@@ -14662,6 +14671,7 @@ func TestInterpretContainerMutationCheckThroughReference(t *testing.T) {
 	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	var containerReadError *interpreter.ContainerReadError
-	require.ErrorAs(t, err, &containerReadError)
+	var containerMutationErr *interpreter.ContainerMutationError
+	require.ErrorAs(t, err, &containerMutationErr)
+
 }

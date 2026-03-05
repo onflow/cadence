@@ -1348,25 +1348,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		// if the value itself has a mapped entitlement type in its authorization
-		// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
-		// substitution must also be performed on its entitlements
-		//
-		// we do this here (as opposed to in `IsSubTypeOfSemaType`) because casting is the only way that
-		// an entitlement can "traverse the boundary", so to speak, between runtime and static types, and
-		// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
-		// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
-		// so we don't substitute them.
-
-		// if the target is anystruct or anyresource we want to preserve optionals
-		unboxedExpectedType := sema.UnwrapOptionalType(expectedType)
-		if !(unboxedExpectedType == sema.AnyStructType || unboxedExpectedType == sema.AnyResourceType) {
-			// otherwise dynamic cast now always unboxes optionals
-			value = Unbox(value)
-		}
-
-		valueStaticType := value.StaticType(interpreter)
-		valueSemaType := interpreter.SemaTypeFromStaticType(valueStaticType)
+		value, valueSemaType := interpreter.castValueAndValueType(expectedType, value)
 
 		isSubType := sema.IsSubType(valueSemaType, expectedType)
 
@@ -1409,6 +1391,75 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func (interpreter *Interpreter) castValueAndValueType(targetType sema.Type, value Value) (Value, sema.Type) {
+	// (for VM, see vm.castValueAndValueType)
+
+	// if the value itself has a mapped entitlement type in its authorization
+	// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
+	// substitution must also be performed on its entitlements
+	//
+	// we do this here (as opposed to in `IsSubTypeOfSemaType`) because casting is the only way that
+	// an entitlement can "traverse the boundary", so to speak, between runtime and static types, and
+	// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
+	// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
+	// so we don't substitute them.
+
+	// If the target is `AnyStruct` or `AnyResource` we want to preserve optionals
+	unboxedExpectedType := sema.UnwrapOptionalType(targetType)
+	if !(unboxedExpectedType == sema.AnyStructType ||
+		unboxedExpectedType == sema.AnyResourceType) {
+		// otherwise dynamic cast now always unboxes optionals
+		value = Unbox(value)
+	}
+
+	valueSemaType := MustSemaTypeOfValue(value, interpreter)
+
+	// If the value is specifically a storage reference,
+	// and the target type is a reference,
+	// then we report the value as a storage reference with the target type's borrow type
+	// (but keep the same authorization and target storage address/path).
+	//
+	// This allows storage references to be cast to different reference types,
+	// which is valid, as the storage reference's targeted value can also
+	// be replaced by a value of a different type.
+	//
+	// It is important we perform a type check of the storage reference's borrow type
+	// against the targeted value's type each time we use the reference (dereference it).
+
+	if storageReference, ok := value.(*StorageReferenceValue); ok {
+		if referenceTargetType, ok := targetType.(*sema.ReferenceType); ok &&
+			!storageReference.BorrowedType.Equal(referenceTargetType.Type) {
+
+			// Require the target type to not be or have an authorized reference in its type tree
+
+			hasAuthorizedReference := !targetType.Walk(func(ty sema.Type) bool {
+				if referenceType, ok := ty.(*sema.ReferenceType); ok &&
+					referenceType.Authorization != sema.UnauthorizedAccess {
+
+					// stop iteration
+					return false
+				}
+
+				// continue iteration
+				return true
+			})
+
+			if !hasAuthorizedReference {
+				value = NewStorageReferenceValue(
+					interpreter,
+					storageReference.Authorization,
+					storageReference.TargetStorageAddress,
+					storageReference.TargetPath,
+					referenceTargetType.Type,
+				)
+				valueSemaType = MustSemaTypeOfValue(value, interpreter)
+			}
+		}
+	}
+
+	return value, valueSemaType
 }
 
 func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpression) Value {
