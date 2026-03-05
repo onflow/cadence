@@ -4126,30 +4126,97 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 		)
 	})
 
-	t.Run("array with interface element type - type narrowing", func(t *testing.T) {
+	t.Run("interface array type narrowing", func(t *testing.T) {
 		t.Parallel()
 
 		// Test that type narrowing (interface -> concrete) works for nested references.
 		// If we have an array of `&S` borrowed as `[&{SI}]`, we should be able to
 		// downcast to `&[&S]` to see the actual concrete element types.
 		inter := parseCheckAndPrepare(t, `
-			struct interface SI {}
-			struct S: SI {}
+            struct interface SI {}
+            struct S: SI {}
 
-			fun test() {
-				let s1 = S()
-				let s2 = S()
+            fun test() {
+                let s = S()
 
-				// Create array with concrete reference elements
-				let array: [&S] = [&s1, &s2]
+                // Create array with concrete reference elements
+                let arrayRef: &[&S] = &[&s]
 
-				// Borrow as interface element type
-				let interfaceArrayRef: &[&{SI}] = &array as &[&{SI}]
+                // Assign to array type with interface element type
+                let interfaceArrayRef: &[&{SI}] = arrayRef
 
-				// Type narrowing: downcast to see concrete element types
-				interfaceArrayRef as! &[&S]
-			}
-		`)
+                // Type narrowing: downcast to see concrete element types.
+                // Should succeed because only interface type is narrowed, and NO attempt to gain entitlements.
+                interfaceArrayRef as! &[&S]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("interface array type narrowing with entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that type narrowing (interface -> concrete) works for nested references.
+		// If we have an array of `&S` borrowed as `[&{SI}]`, we should be able to
+		// downcast to `&[&S]` to see the actual concrete element types.
+		inter := parseCheckAndPrepare(t, `
+            struct interface SI {}
+            struct S: SI {}
+
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let s = S()
+
+                // Create array with concrete reference elements
+                let arrayRef: auth(E2) &[auth(E2) &S] = &[&s]
+
+                // Assign to array type with interface element type
+                let interfaceArrayRef: &[&{SI}] = arrayRef
+
+                // Type narrowing: downcast to see concrete element types, and gain entitlements.
+                // Should fail because of the attempt to gain entitlements.
+                interfaceArrayRef as! &[auth(E2) &S]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[auth(S.test.E2)&S.test.S]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&S.test.S]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array to &AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let authArrayRef: auth(E1) &[auth(E2) &Int] = &[&1]
+
+                let arrayRef: &AnyStruct = authArrayRef
+
+                let downCastedAuthArrayRef = arrayRef as! &[auth(E2) &Int]
+            }
+        `)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -4167,6 +4234,7 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 
                 let dictionaryRef: &{String: &Int} = authDictionaryRef
 
+                // Should fail because of the attempt to gain entitlements.
                 let downCastedAuthDictionaryRef = dictionaryRef as! &{String: auth(E2) &Int}
             }
         `)
@@ -4190,27 +4258,94 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 		)
 	})
 
-	t.Run("dictionary with interface value type - type narrowing", func(t *testing.T) {
+	t.Run("interface dictionary type narrowing", func(t *testing.T) {
 		t.Parallel()
 
 		// Test that type narrowing works for dictionary value types.
 		inter := parseCheckAndPrepare(t, `
-			struct interface SI {}
-			struct S: SI {}
+            struct interface SI {}
+            struct S: SI {}
 
-			fun test() {
-				let s = S()
+            fun test() {
+                let s = S()
 
-				// Create dictionary with concrete reference values
-				let dict: {String: &S} = {"key": &s}
+                // Create dictionary with concrete reference values
+                let dictRef: &{String: &S} = &{"key": &s}
 
-				// Borrow as interface value type
-				let interfaceDictRef: &{String: &{SI}} = &dict as &{String: &{SI}}
+                // Assign to interface dictionary type
+                let interfaceDictRef: &{String: &{SI}} = dictRef
 
-				// Type narrowing: downcast to see concrete value types
-				interfaceDictRef as! &{String: &S}
-			}
-		`)
+                // Type narrowing: downcast to see concrete value types.
+                // Should succeed because only interface type is narrowed, and NO attempt to gain entitlements.
+                interfaceDictRef as! &{String: &S}
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("interface dictionary type narrowing with entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that type narrowing works for dictionary value types.
+		inter := parseCheckAndPrepare(t, `
+            struct interface SI {}
+            struct S: SI {}
+
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let s = S()
+
+                // Create dictionary with concrete reference values
+                let dictRef: auth(E1) &{String: auth(E2) &S} = &{"key": &s}
+
+                // Assign to interface dictionary type
+                let interfaceDictRef: &{String: &{SI}} = dictRef
+
+                // Type narrowing: downcast to see concrete value types, and gain entitlements
+                // Should fail because of the attempt to gain entitlements.
+                interfaceDictRef as! &{String: auth(E2) &S}
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:auth(S.test.E2)&S.test.S}"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&S.test.S}"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("dictionary to &AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let authDictionaryRef: auth(E1) &{String: auth(E2) &Int} = &{"one": &1}
+
+                let dictionaryRef: &AnyStruct = authDictionaryRef
+
+                // Should fail because of the attempt to gain entitlements.
+                let downCastedAuthDictionaryRef = dictionaryRef as! &{String: auth(E2) &Int}
+            }
+        `)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -4428,22 +4563,22 @@ func TestInterpretNestedEphemeralReferenceMutation(t *testing.T) {
 		// Test that mutations through a converted reference are visible in the original.
 		// Use a simpler case without nested reference types to avoid entitlement issues.
 		inter := parseCheckAndPrepare(t, `
-			entitlement E
+            entitlement E
 
-			fun test(): Int {
-				let array: [Int] = [1]
-				let authArrayRef: auth(E, Mutate) &[Int] = &array
+            fun test(): Int {
+                let array: [Int] = [1]
+                let authArrayRef: auth(E, Mutate) &[Int] = &array
 
-				// Convert to a reference with fewer entitlements
-				let arrayRef: auth(Mutate) &[Int] = authArrayRef
+                // Convert to a reference with fewer entitlements
+                let arrayRef: auth(Mutate) &[Int] = authArrayRef
 
-				// Append through the converted reference
-				arrayRef.append(2)
+                // Append through the converted reference
+                arrayRef.append(2)
 
-				// The original array should have length 2
-				return array.length
-			}
-		`)
+                // The original array should have length 2
+                return array.length
+            }
+        `)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -4460,22 +4595,22 @@ func TestInterpretNestedEphemeralReferenceMutation(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
-			entitlement E
+            entitlement E
 
-			fun test(): Int {
-				let dict: {String: Int} = {"one": 1}
-				let authDictRef: auth(E, Mutate, Insert) &{String: Int} = &dict
+            fun test(): Int {
+                let dict: {String: Int} = {"one": 1}
+                let authDictRef: auth(E, Mutate, Insert) &{String: Int} = &dict
 
-				// Convert to a reference with fewer entitlements
-				let dictRef: auth(Mutate) &{String: Int} = authDictRef
+                // Convert to a reference with fewer entitlements
+                let dictRef: auth(Mutate) &{String: Int} = authDictRef
 
-				// Insert through the converted reference
-				dictRef["two"] = 2
+                // Insert through the converted reference
+                dictRef["two"] = 2
 
-				// The original dictionary should have 2 keys
-				return dict.length
-			}
-		`)
+                // The original dictionary should have 2 keys
+                return dict.length
+            }
+        `)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -4495,28 +4630,28 @@ func TestInterpretNestedEphemeralReferenceMutation(t *testing.T) {
 		// doesn't create a copy - both references point to the same array.
 		// Mutations that match the actual array type should work.
 		inter := parseCheckAndPrepare(t, `
-			entitlement E1
-			entitlement E2
+            entitlement E1
+            entitlement E2
 
-			fun test(): Int {
-				var intVal1: Int = 1
-				var intVal2: Int = 2
-				let ref1: auth(E2) &Int = &intVal1
-				let ref2: auth(E2) &Int = &intVal2
+            fun test(): Int {
+                var intVal1: Int = 1
+                var intVal2: Int = 2
+                let ref1: auth(E2) &Int = &intVal1
+                let ref2: auth(E2) &Int = &intVal2
 
-				let array: [auth(E2) &Int] = [ref1]
-				let authArrayRef: auth(E1, Mutate) &[auth(E2) &Int] = &array
+                let array: [auth(E2) &Int] = [ref1]
+                let authArrayRef: auth(E1, Mutate) &[auth(E2) &Int] = &array
 
-				// Convert to a reference with fewer entitlements on outer reference
-				let arrayRef: auth(Mutate) &[auth(E2) &Int] = authArrayRef
+                // Convert to a reference with fewer entitlements on outer reference
+                let arrayRef: auth(Mutate) &[auth(E2) &Int] = authArrayRef
 
-				// Append through the converted reference (element type matches)
-				arrayRef.append(ref2)
+                // Append through the converted reference (element type matches)
+                arrayRef.append(ref2)
 
-				// The original array should have length 2
-				return array.length
-			}
-		`)
+                // The original array should have length 2
+                return array.length
+            }
+        `)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
