@@ -152,7 +152,28 @@ func invokeFunctionValueWithEval[T any](
 
 	resultValue := function.Invoke(invocation)
 
-	functionReturnType := function.FunctionType(context).ReturnTypeAnnotation.Type.Resolve(typeArguments)
+	// Determine the function's return type, by unwrapping any bound/wrapped functions.
+	// This is needed to handle invocations of functions of composite values,
+	// where the composite type implements an interface which defines the function,
+	// but the composite's function has a more specific return type than the interface's function.
+
+	functionForReturnType := function
+
+	for {
+		switch typedFunctionForReturnType := functionForReturnType.(type) {
+		case BoundFunctionValue:
+			functionForReturnType = typedFunctionForReturnType.Function
+			continue
+
+		case WrappedFunctionValue:
+			functionForReturnType = typedFunctionForReturnType.InnerFunction
+			continue
+		}
+
+		break
+	}
+
+	functionReturnType := functionForReturnType.FunctionType(context).ReturnTypeAnnotation.Type.Resolve(typeArguments)
 
 	// Only convert and box.
 	// No need to transfer, since transfer would happen later, when the return value gets assigned.

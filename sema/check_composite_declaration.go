@@ -2483,8 +2483,9 @@ func (checker *Checker) checkSpecialFunction(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+		// within the constructor, base is unauthorized (unlike self, which remains fully entitled)
 		checker.declareBaseValue(
-			fnAccess,
+			UnauthorizedAccess,
 			attachmentType.baseType,
 			attachmentType,
 			attachmentType.baseTypeDocString)

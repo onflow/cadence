@@ -424,19 +424,19 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 			}
 
 			// Get transaction code
-			codeValue := transactionValue.GetMember(inter, testTransactionTypeCodeFieldName)
+			codeValue := transactionValue.GetMember(inter, testTransactionTypeCodeFieldName, common.DeclarationKindField)
 			code, ok := codeValue.(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
 			// Get authorizers
-			authorizerValue := transactionValue.GetMember(inter, testTransactionTypeAuthorizersFieldName)
+			authorizerValue := transactionValue.GetMember(inter, testTransactionTypeAuthorizersFieldName, common.DeclarationKindField)
 
 			authorizers := addressArrayValueToSlice(inter, authorizerValue)
 
 			// Get signers
-			signersValue := transactionValue.GetMember(inter, testTransactionTypeSignersFieldName)
+			signersValue := transactionValue.GetMember(inter, testTransactionTypeSignersFieldName, common.DeclarationKindField)
 
 			signerAccounts := accountsArrayValueToSlice(
 				inter,
@@ -444,7 +444,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 			)
 
 			// Get arguments
-			argsValue := transactionValue.GetMember(inter, testTransactionTypeArgumentsFieldName)
+			argsValue := transactionValue.GetMember(inter, testTransactionTypeArgumentsFieldName, common.DeclarationKindField)
 			args, err := arrayValueToSlice(inter, argsValue)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))

@@ -252,14 +252,21 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(context MemberAccessibleContext, name string) Value {
-	switch name {
-	case sema.CharacterTypeUtf8FieldName:
-		common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
-		return ByteSliceToByteArrayValue(context, []byte(v.Str))
-	}
-
-	return context.GetMethod(v, name)
+func (v CharacterValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			switch name {
+			case sema.CharacterTypeUtf8FieldName:
+				common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
+				return ByteSliceToByteArrayValue(context, []byte(v.Str))
+			}
+			return nil
+		},
+	)
 }
 
 var NativeCharacterValueToStringFunction = NativeFunction(

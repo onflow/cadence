@@ -1820,7 +1820,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		)
 	})
 
-	t.Run("fully entitled in init", func(t *testing.T) {
+	t.Run("self fully entitled in init", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1837,7 +1837,6 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
                 init() {
                     let x = self as! auth(X, E, G) &A
-                    let y = base as! auth(X, E, G) &R
                 }
             }
 
@@ -1849,6 +1848,44 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("base unentitled in init", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement X
+            entitlement E
+            entitlement G
+
+            resource R {
+                access(X, E, G) fun foo() {}
+            }
+
+            access(all) attachment A for R {
+
+                init() {
+                    let x = base as! auth(X) &R
+                    let e = base as! auth(E) &R
+                    let g = base as! auth(G) &R
+                }
+            }
+
+            fun test() {
+                let r <- attach A() to <-create R()
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+		assert.Equal(t, common.TypeID("auth(S.test.X)&S.test.R"), forceCastTypeMismatchErr.ExpectedType.ID())
+		assert.Equal(t, common.TypeID("&S.test.R"), forceCastTypeMismatchErr.ActualType.ID())
 	})
 
 	t.Run("composed attachment access", func(t *testing.T) {

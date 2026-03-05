@@ -425,8 +425,14 @@ func (v UFix64Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	return scratch[:9]
 }
 
-func (v UFix64Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v UFix64Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v UFix64Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

@@ -21,6 +21,8 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -2760,4 +2762,85 @@ func TestInterpretAttachmentToTypeConfusedValue(t *testing.T) {
 
 	var invalidBaseTypeError *interpreter.InvalidBaseTypeError
 	require.ErrorAs(t, err, &invalidBaseTypeError)
+}
+
+func TestInterpretAttachmentBaseUnauthorizedInInit(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           resource R {
+              let x: Int
+
+              init(x: Int) {
+                  self.x = x
+              }
+           }
+
+           attachment A for R {
+              let x: Int
+
+              init() {
+                  self.x = base.x
+              }
+
+              fun getX(): Int {
+                  return self.x
+              }
+           }
+
+           fun test(): Int {
+               let r <- create R(x: 42)
+               let r2 <- attach A() to <-r
+               let i = r2[A]?.getX()!
+               destroy r2
+               return i
+           }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+			result,
+		)
+	})
+
+	t.Run("invalid downcast", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           entitlement E
+
+           resource R {
+              access(E) let x: Int
+
+              init(x: Int) {
+                  self.x = x
+              }
+           }
+
+           attachment A for R {
+              init() {
+				  base as! auth(E) &R
+              }
+           }
+
+           fun test() {
+               let r <- create R(x: 42)
+               let r2 <- attach A() to <-r
+               destroy r2
+           }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+	})
 }

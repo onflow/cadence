@@ -988,7 +988,6 @@ func TestAssertEqual(t *testing.T) {
 
 		var assertionErr *AssertionError
 		assert.ErrorAs(t, err, &assertionErr)
-
 		assert.ErrorContains(
 			t,
 			err,

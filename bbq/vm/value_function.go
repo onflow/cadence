@@ -299,17 +299,20 @@ func (v *NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpre
 	)
 }
 
-func (v *NativeFunctionValue) GetMember(context interpreter.MemberAccessibleContext, name string) interpreter.Value {
-	value, ok := v.fields[name]
-	if ok {
-		return value
-	}
-
-	if function := context.GetMethod(v, name); function != nil {
-		return function
-	}
-
-	return nil
+func (v *NativeFunctionValue) GetMember(
+	context interpreter.MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+) interpreter.Value {
+	return interpreter.GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() interpreter.Value {
+			return v.fields[name]
+		},
+	)
 }
 
 func (*NativeFunctionValue) RemoveMember(_ interpreter.ValueTransferContext, _ string) interpreter.Value {
@@ -333,8 +336,7 @@ func (v *NativeFunctionValue) IsNative() bool {
 
 // BoundFunctionValue is a function-wrapper which captures the receivers of an object-method.
 type BoundFunctionValue struct {
-	ReceiverReference   interpreter.ReferenceValue
-	receiverIsReference bool
+	ReceiverReference interpreter.ReferenceValue
 
 	Method       FunctionValue
 	functionType *sema.FunctionType
@@ -348,7 +350,7 @@ func NewBoundFunctionValue(
 	receiver interpreter.Value,
 	method FunctionValue,
 	base *interpreter.EphemeralReferenceValue,
-) FunctionValue {
+) *BoundFunctionValue {
 
 	common.UseMemory(context, boundFunctionMemoryUsage)
 
@@ -356,19 +358,12 @@ func NewBoundFunctionValue(
 	// This reference is later used to check the validity of the referenced value/resource.
 	// For attachments, 'self' is already a reference. So no need to create a reference again.
 
-	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver)
-
-	if compositeValue, ok := receiver.(*interpreter.CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
-		// Force the receiver to be a reference if it is an attachment.
-		// This is because self in attachments are always references.
-		receiverIsRef = true
-	}
+	receiverRef, _ := interpreter.ReceiverReference(context, receiver)
 
 	return &BoundFunctionValue{
-		Method:              method,
-		ReceiverReference:   receiverRef,
-		receiverIsReference: receiverIsRef,
-		Base:                base,
+		Method:            method,
+		ReceiverReference: receiverRef,
+		Base:              base,
 	}
 }
 
@@ -495,12 +490,14 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 }
 
 func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
-	receiver := interpreter.GetReceiver(
-		v.ReceiverReference,
-		v.receiverIsReference,
+
+	interpreter.CheckInvalidatedResourceOrResourceReference(v.ReceiverReference, context)
+
+	return maybeDereferenceReceiver(
 		context,
+		v.ReceiverReference,
+		v.IsNative(),
 	)
-	return maybeDereferenceReceiver(context, *receiver, v.IsNative())
 }
 
 func (v *BoundFunctionValue) IsNative() bool {

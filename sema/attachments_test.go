@@ -4661,3 +4661,48 @@ func TestCheckAccessOnNonEntitlementSupportingBaseCreatesUnauthorizedReference(t
 
 	require.NoError(t, err)
 }
+
+func TestCheckAttachmentBaseUnauthorizedInInit(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {
+                access(all) fun foo() {}
+            }
+
+            attachment A for R {
+                init() {
+                    base.foo()
+                }
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            resource R {
+                access(E) fun foo() {}
+            }
+
+            attachment A for R {
+                init() {
+                    base.foo()
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+}
