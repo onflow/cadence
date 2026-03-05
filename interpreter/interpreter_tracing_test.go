@@ -201,7 +201,7 @@ func TestInterpreterTracing(t *testing.T) {
 		)
 		require.NotNil(t, array)
 		require.Len(t, traceOps, 11)
-		assert.Equal(t, "atreeMap.newFromBatchData", traceOps[7])
+		assert.Equal(t, "atreeMap.newSingleSlab", traceOps[7])
 		assert.Equal(t, "composite.transfer", traceOps[8])
 		assert.Equal(t, "atreeArray.newFromBatchData", traceOps[9])
 		assert.Equal(t, "array.construct", traceOps[10])

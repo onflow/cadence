@@ -1407,16 +1407,50 @@ func (v *DictionaryValue) Transfer(
 		)
 		common.UseMemory(context, elementMemoryUse)
 
-		isDictSafeToCopy := v.dictionary.IsWithinSingleSlab() && canCopyNonRefSimpleForType(v.Type.KeyType) && canCopyNonRefSimpleForType(v.Type.ValueType)
+		digesterBuilder := atree.NewDefaultDigesterBuilder()
+
+		isDictSafeToCopy := v.dictionary.IsWithinSingleSlab() &&
+			canCopyNonRefSimpleForType(v.Type.KeyType) &&
+			canCopyNonRefSimpleForType(v.Type.ValueType)
 		canCopyNonRefSimple := isDictSafeToCopy || v.dictionary.CanCopyNonRefSimple()
 
 		if canCopyNonRefSimple {
-			copiedDictionary, err := v.dictionary.CopyNonRefSimple(address, atree.NewDefaultDigesterBuilder())
-			if err != nil {
-				panic(errors.NewExternalError(err))
-			}
 
-			dictionary = copiedDictionary
+			func() {
+
+				if TracingEnabled {
+					startTime := time.Now()
+
+					defer func() {
+						valueID := dictionary.ValueID().String()
+						typeID := string(v.Type.ID())
+						seed := v.dictionary.Seed()
+
+						context.ReportAtreeNewMapSingleSlabTrace(
+							valueID,
+							typeID,
+							seed,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapSingleSlabConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				copiedDictionary, err := v.dictionary.CopyNonRefSimple(address, digesterBuilder)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				dictionary = copiedDictionary
+
+			}()
 
 		} else {
 
@@ -1468,7 +1502,7 @@ func (v *DictionaryValue) Transfer(
 				dictionary, err = atree.NewMapFromBatchData(
 					context.Storage(),
 					address,
-					atree.NewDefaultDigesterBuilder(),
+					digesterBuilder,
 					v.dictionary.Type(),
 					valueComparator,
 					hashInputProvider,

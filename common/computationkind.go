@@ -252,6 +252,7 @@ const (
 	_
 	_
 	ComputationKindAtreeMapConstruction
+	ComputationKindAtreeMapSingleSlabConstruction
 	ComputationKindAtreeMapBatchConstruction
 	ComputationKindAtreeMapHas
 	ComputationKindAtreeMapGet

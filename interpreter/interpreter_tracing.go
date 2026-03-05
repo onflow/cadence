@@ -49,7 +49,11 @@ const (
 	tracingSetMemberPostfix    = "setMember"
 	tracingRemoveMemberPostfix = "removeMember"
 
+	tracingAtreeArrayNewSingleSlabPostfix    = "newSingleSlab"
+	tracingAtreeArrayNewFromBatchDataPostfix = "newFromBatchData"
+
 	tracingAtreeMapNew                     = "new"
+	tracingAtreeMapNewSingleSlabPostfix    = "newSingleSlab"
 	tracingAtreeMapNewFromBatchDataPostfix = "newFromBatchData"
 )
 
@@ -79,9 +83,11 @@ type Tracer interface {
 	ReportCompositeValueSetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 	ReportCompositeValueRemoveMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 
+	ReportAtreeNewArraySingleSlabTrace(valueID string, typeID string, duration time.Duration)
 	ReportAtreeNewArrayFromBatchDataTrace(valueID string, typeID string, duration time.Duration)
 
 	ReportAtreeNewMapTrace(valueID string, typeID string, seed uint64, duration time.Duration)
+	ReportAtreeNewMapSingleSlabTrace(valueID string, typeID string, seed uint64, duration time.Duration)
 	ReportAtreeNewMapFromBatchDataTrace(valueID string, typeID string, seed uint64, duration time.Duration)
 }
 
@@ -438,13 +444,25 @@ func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
 	)
 }
 
+func (t CallbackTracer) ReportAtreeNewArraySingleSlabTrace(
+	valueID string,
+	typeID string,
+	duration time.Duration,
+) {
+	t(
+		tracingAtreeArrayPrefix+tracingAtreeArrayNewSingleSlabPostfix,
+		duration,
+		prepareContainerValueTraceAttrs(valueID, typeID),
+	)
+}
+
 func (t CallbackTracer) ReportAtreeNewArrayFromBatchDataTrace(
 	valueID string,
 	typeID string,
 	duration time.Duration,
 ) {
 	t(
-		tracingAtreeArrayPrefix+tracingAtreeMapNewFromBatchDataPostfix,
+		tracingAtreeArrayPrefix+tracingAtreeArrayNewFromBatchDataPostfix,
 		duration,
 		prepareContainerValueTraceAttrs(valueID, typeID),
 	)
@@ -468,6 +486,19 @@ func (t CallbackTracer) ReportAtreeNewMapTrace(
 ) {
 	t(
 		tracingAtreeMapPrefix+tracingAtreeMapNew,
+		duration,
+		prepareAtreeMapTraceAttrs(valueID, typeID, seed),
+	)
+}
+
+func (t CallbackTracer) ReportAtreeNewMapSingleSlabTrace(
+	valueID string,
+	typeID string,
+	seed uint64,
+	duration time.Duration,
+) {
+	t(
+		tracingAtreeMapPrefix+tracingAtreeMapNewSingleSlabPostfix,
 		duration,
 		prepareAtreeMapTraceAttrs(valueID, typeID, seed),
 	)
@@ -543,9 +574,14 @@ func (NoOpTracer) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ st
 
 func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ time.Duration) {}
 
+func (NoOpTracer) ReportAtreeNewArraySingleSlabTrace(_ string, _ string, _ time.Duration) {}
+
 func (NoOpTracer) ReportAtreeNewArrayFromBatchDataTrace(_ string, _ string, _ time.Duration) {}
 
 func (NoOpTracer) ReportAtreeNewMapTrace(_ string, _ string, _ uint64, _ time.Duration) {}
+
+func (NoOpTracer) ReportAtreeNewMapSingleSlabTrace(_ string, _ string, _ uint64, _ time.Duration) {
+}
 
 func (NoOpTracer) ReportAtreeNewMapFromBatchDataTrace(_ string, _ string, _ uint64, _ time.Duration) {
 }

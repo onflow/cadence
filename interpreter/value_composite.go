@@ -1311,16 +1311,48 @@ func (v *CompositeValue) Transfer(
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(elementCount, 0)
 		common.UseMemory(context, elementMemoryUse)
 
-		isSingleSlabEnum := (v.Kind == common.CompositeKindEnum && v.dictionary.IsWithinSingleSlab())
+		digesterBuilder := atree.NewDefaultDigesterBuilder()
+
+		isSingleSlabEnum := v.Kind == common.CompositeKindEnum && v.dictionary.IsWithinSingleSlab()
 		canCopyNonRefSimple := isSingleSlabEnum || v.dictionary.CanCopyNonRefSimple()
 
 		if canCopyNonRefSimple {
-			copiedDictionary, err := v.dictionary.CopyNonRefSimple(address, atree.NewDefaultDigesterBuilder())
-			if err != nil {
-				panic(errors.NewExternalError(err))
-			}
 
-			dictionary = copiedDictionary
+			func() {
+
+				if TracingEnabled {
+					startTime := time.Now()
+
+					defer func() {
+						valueID := dictionary.ValueID().String()
+						typeID := string(v.TypeID())
+						seed := v.dictionary.Seed()
+
+						context.ReportAtreeNewMapSingleSlabTrace(
+							valueID,
+							typeID,
+							seed,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapSingleSlabConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				copiedDictionary, err := v.dictionary.CopyNonRefSimple(address, digesterBuilder)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				dictionary = copiedDictionary
+
+			}()
 
 		} else {
 
@@ -1372,7 +1404,7 @@ func (v *CompositeValue) Transfer(
 				dictionary, err = atree.NewMapFromBatchData(
 					context.Storage(),
 					address,
-					atree.NewDefaultDigesterBuilder(),
+					digesterBuilder,
 					v.dictionary.Type(),
 					StringAtreeValueComparator,
 					StringAtreeValueHashInput,

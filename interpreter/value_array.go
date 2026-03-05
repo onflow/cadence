@@ -1292,12 +1292,39 @@ func (v *ArrayValue) Transfer(
 		canCopyNonRefSimple := isArraySafeToCopy || v.array.CanCopyNonRefSimple()
 
 		if canCopyNonRefSimple {
-			copiedArray, err := v.array.CopyNonRefSimple(address)
-			if err != nil {
-				panic(errors.NewExternalError(err))
-			}
 
-			array = copiedArray
+			func() {
+
+				if TracingEnabled {
+					startTime := time.Now()
+
+					defer func() {
+						valueID := array.ValueID().String()
+						typeID := string(v.Type.ID())
+
+						context.ReportAtreeNewArraySingleSlabTrace(
+							valueID,
+							typeID,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeArraySingleSlabConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				copiedArray, err := v.array.CopyNonRefSimple(address)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				array = copiedArray
+			}()
 
 		} else {
 			// Use non-readonly iterator here because iterated

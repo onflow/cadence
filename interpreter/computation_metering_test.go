@@ -104,6 +104,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
 
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
@@ -113,6 +114,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
 			},
 			computationGauge.usages,
 		)
@@ -148,21 +150,29 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 4},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
 			},
 			computationGauge.usages,
 		)
@@ -198,6 +208,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 5},
 
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 
@@ -206,22 +217,28 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
 			},
 			computationGauge.usages,
 		)
@@ -254,6 +271,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 6},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 6},
 
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
@@ -261,6 +279,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
 			},
 			computationGauge.usages,
 		)
@@ -295,16 +314,19 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
 
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 6},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 6},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 6},
 			},
 			computationGauge.usages,
 		)
@@ -342,6 +364,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindLoop, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
@@ -620,6 +643,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 				{Kind: common.ComputationKindLoop, Intensity: 1},
 				{Kind: common.ComputationKindLoop, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 5},
 			},
 			computationGauge.usages,
 		)
@@ -974,6 +998,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
 			},
 			computationGauge.usages,
 		)
@@ -1083,6 +1108,8 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 1},
+
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArraySet, Intensity: 1},
 			},
@@ -1252,6 +1279,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
@@ -1333,6 +1361,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 5},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
@@ -1450,6 +1479,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 3},
@@ -1491,6 +1521,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 3},
@@ -1541,6 +1572,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
 				{Kind: common.ComputationKindTransferDictionaryValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeMapSingleSlabConstruction, Intensity: 3},
 			},
 			computationGauge.usages,
 		)
@@ -1698,6 +1730,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
 				{Kind: common.ComputationKindTransferDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSingleSlabConstruction, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
@@ -1912,6 +1945,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
 				{Kind: common.ComputationKindTransferCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSingleSlabConstruction, Intensity: 1},
 			},
 			computationGauge.usages,
 		)
@@ -2309,6 +2343,7 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
 				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
@@ -2423,6 +2458,7 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
 				{Kind: common.ComputationKindSTDLIBRLPDecodeList, Intensity: 2},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
