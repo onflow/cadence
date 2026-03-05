@@ -151,17 +151,25 @@ func ByteSliceToByteArrayValueWithType(
 		},
 	)
 
-	if len(bytes) >= int(estimatedMaxUint8CountPerAtreeSlab) {
-		// Note that atree.ByteSliceToByteArray() avoids using atree.NewArrayFromBatchData() for single-slab atree array.
-		// Given this, meter atree array batch construction only when multi-slab atree array is very likely to be created.
-		common.UseComputation(
-			context,
-			common.ComputationUsage{
-				Kind:      common.ComputationKindAtreeArrayBatchConstruction,
-				Intensity: uint64(len(bytes)),
-			},
-		)
+	count := len(bytes)
+
+	// Meter computation for atree.ByteSliceToByteArray().
+	// When a single-slab atree array is constructed, meter ComputationKindAtreeArraySingleSlabConstruction.
+	// When a multi-slab atree array is created, then atree.NewArrayFromBatchData() is used,
+	// so meter AtreeArrayBatchConstruction.
+	var computationKind common.ComputationKind
+	if count < int(estimatedMaxUint8CountPerAtreeSlab) {
+		computationKind = common.ComputationKindAtreeArraySingleSlabConstruction
+	} else {
+		computationKind = common.ComputationKindAtreeArrayBatchConstruction
 	}
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      computationKind,
+			Intensity: uint64(count),
+		},
+	)
 
 	atreeArray, err := atree.ByteSliceToByteArray[UInt8Value](
 		context.Storage(),

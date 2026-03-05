@@ -2361,6 +2361,7 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 4},
 				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
 			},
 			computationGauge.usages,
 		)
@@ -2478,6 +2479,7 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 1},
 			},
 			computationGauge.usages,
 		)
