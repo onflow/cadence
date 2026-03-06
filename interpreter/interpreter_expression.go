@@ -224,7 +224,8 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 			interpreter.checkIndexedValue(indexedType, target)
 			value := target.GetKey(interpreter, transferredIndexingValue)
 
-			// If the indexing value is a reference, then return a reference for the resulting value.
+			// Return a reference, if the element is accessed via a reference.
+			// This is pre-computed at the checker.
 			if indexExpressionTypes.ReturnReference {
 				expectedType := indexExpressionTypes.ResultType
 
@@ -234,6 +235,12 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 					value,
 					expectedType,
 				)
+			} else {
+				// When accessing an element through a reference, the underlying
+				// container's element type may differ from the reference's element type.
+				// For example, `&[Int?]` referencing `[Int]`: GetKey returns `Int`,
+				// but the expected type is `Int?`. Box the value to match.
+				value = BoxOptional(interpreter, value, indexExpressionTypes.ResultType)
 			}
 
 			return value, nil

@@ -4707,3 +4707,213 @@ func TestInterpretNestedEphemeralReferenceMutation(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretReferenceElementBoxing(t *testing.T) {
+
+	t.Parallel()
+
+	sType := &interpreter.CompositeStaticType{
+		Location:            TestLocation,
+		QualifiedIdentifier: "S",
+		TypeID:              TestLocation.TypeID(nil, "S"),
+	}
+
+	t.Run("array, primitive element", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): Type {
+              let array: [Int] = [1, 2]
+              let ref: &[Int?] = &array
+              return ref[0].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("array, struct element", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+
+          fun test(): Type {
+              let array: [S] = [S(), S()]
+              let ref: &[S?] = &array
+              return ref[0].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewReferenceStaticType(nil,
+						interpreter.UnauthorizedAccess,
+						sType,
+					),
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("dictionary, primitive value", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): Type {
+              let dict: {String: Int} = {"a": 1}
+              let ref: &{String: Int?} = &dict
+              return ref["a"].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Dictionary access returns V?, so for &{String: Int?} the result is Int??.
+		// The underlying dict returns Some(1), which needs to be boxed to Some(Some(1))
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("dictionary, struct value", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+
+          fun test(): Type {
+              let dict: {String: S} = {"a": S()}
+              let ref: &{String: S?} = &dict
+              return ref["a"].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.NewReferenceStaticType(
+							nil,
+							interpreter.UnauthorizedAccess,
+							sType,
+						),
+					),
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("array, nested primitive element", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): Type {
+              let array: [Int] = [1, 2]
+              let ref: &[Int??] = &array
+              return ref[0].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("dictionary, nested primitive element", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): Type {
+              let dict: {String: Int} = {"a": 1}
+              let ref: &{String: Int??} = &dict
+              return ref["a"].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Dictionary access returns V??, so for &{String: Int??} the result is Int???.
+		// The underlying dict returns Some(Some(1)), which needs to be boxed to Some(Some(Some(1)))
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.NewOptionalStaticType(
+							nil,
+							interpreter.PrimitiveStaticTypeInt,
+						),
+					),
+				),
+			},
+			result,
+		)
+	})
+
+}
