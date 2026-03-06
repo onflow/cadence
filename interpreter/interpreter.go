@@ -2318,36 +2318,19 @@ func convert(
 
 		// Assigning/casting to `AnyStruct` should strip-off all entitlements.
 		targetAuthorization := UnauthorizedAccess
+		targetBorrowType := sema.AnyStructType
 
 		switch ref := value.(type) {
 		case *EphemeralReferenceValue:
-			// Recursively convert the inner value.
-			targetInnerType := sema.AnyStructType
-			innerValue := ref.Value
-
-			innerValueType := context.SemaTypeFromStaticType(innerValue.StaticType(context))
-			convertedInnerValue := convertAndBox(
-				context,
-				innerValue,
-				innerValueType,
-				targetInnerType,
-			)
-
 			return NewEphemeralReferenceValue(
 				context,
 				targetAuthorization,
-				convertedInnerValue,
-				targetInnerType,
+				ref.Value,
+				targetBorrowType,
 			)
 
-		case *StorageReferenceValue:
-			return NewStorageReferenceValue(
-				context,
-				targetAuthorization,
-				ref.TargetStorageAddress,
-				ref.TargetPath,
-				sema.AnyStructType,
-			)
+		// TODO
+		//case *StorageReferenceValue:
 
 		default:
 			return value

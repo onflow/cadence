@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"sync"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -33,6 +35,9 @@ type EphemeralReferenceValue struct {
 	// BorrowedType is the T in &T
 	BorrowedType  sema.Type
 	Authorization Authorization
+
+	staticType     StaticType
+	staticTypeOnce sync.Once
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -119,18 +124,23 @@ func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) Sta
 	// For example:
 	// - Actual: [auth(E) &T], Borrow: [&T] -> Static: [&T] (authorization from borrow type)
 	// - Actual: [&R], Borrow: [&{RI}] -> Static: [&R] (type narrowing preserved)
-	actualStaticType := v.Value.StaticType(context)
-	innerStaticType := applyBorrowTypeAuthorization(
-		context,
-		actualStaticType,
-		v.BorrowedType,
-	)
 
-	return NewReferenceStaticType(
-		context,
-		v.Authorization,
-		innerStaticType,
-	)
+	v.staticTypeOnce.Do(func() {
+		actualStaticType := v.Value.StaticType(context)
+		innerStaticType := applyBorrowTypeAuthorization(
+			context,
+			actualStaticType,
+			v.BorrowedType,
+		)
+
+		v.staticType = NewReferenceStaticType(
+			context,
+			v.Authorization,
+			innerStaticType,
+		)
+	})
+
+	return v.staticType
 }
 
 // applyBorrowTypeAuthorization returns a static type that preserves the
@@ -139,38 +149,78 @@ func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) Sta
 func applyBorrowTypeAuthorization(
 	gauge common.MemoryGauge,
 	actualStaticType StaticType,
-	borrowSemaType sema.Type,
+	borrowType sema.Type,
 ) StaticType {
 	switch actual := actualStaticType.(type) {
 	case *VariableSizedStaticType:
-		if borrowArray, ok := borrowSemaType.(*sema.VariableSizedType); ok {
-			elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowArray.Type)
-			return NewVariableSizedStaticType(gauge, elementType)
+		var borrowedElementType sema.Type
+
+		if borrowType == sema.AnyStructType {
+			borrowedElementType = sema.AnyStructType
+		} else if borrowArray, ok := borrowType.(*sema.VariableSizedType); ok {
+			borrowedElementType = borrowArray.Type
+		} else {
+			break
 		}
+
+		elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowedElementType)
+		return NewVariableSizedStaticType(gauge, elementType)
 
 	case *ConstantSizedStaticType:
-		if borrowArray, ok := borrowSemaType.(*sema.ConstantSizedType); ok {
-			elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowArray.Type)
-			return NewConstantSizedStaticType(gauge, elementType, actual.Size)
+		var borrowedElementType sema.Type
+
+		if borrowType == sema.AnyStructType {
+			borrowedElementType = sema.AnyStructType
+		} else if borrowArray, ok := borrowType.(*sema.ConstantSizedType); ok {
+			borrowedElementType = borrowArray.Type
+		} else {
+			break
 		}
+
+		elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowedElementType)
+		return NewConstantSizedStaticType(gauge, elementType, actual.Size)
 
 	case *DictionaryStaticType:
-		if borrowDict, ok := borrowSemaType.(*sema.DictionaryType); ok {
-			keyType := applyBorrowTypeAuthorization(gauge, actual.KeyType, borrowDict.KeyType)
-			valueType := applyBorrowTypeAuthorization(gauge, actual.ValueType, borrowDict.ValueType)
-			return NewDictionaryStaticType(gauge, keyType, valueType)
+		var borrowedKeyType, borrowedValueType sema.Type
+
+		if borrowType == sema.AnyStructType {
+			borrowedKeyType = sema.AnyStructType
+			borrowedValueType = sema.AnyStructType
+		} else if borrowDict, ok := borrowType.(*sema.DictionaryType); ok {
+			borrowedKeyType = borrowDict.KeyType
+			borrowedValueType = borrowDict.ValueType
+		} else {
+			break
 		}
+
+		keyType := applyBorrowTypeAuthorization(gauge, actual.KeyType, borrowedKeyType)
+		valueType := applyBorrowTypeAuthorization(gauge, actual.ValueType, borrowedValueType)
+		return NewDictionaryStaticType(gauge, keyType, valueType)
 
 	case *OptionalStaticType:
-		if borrowOptional, ok := borrowSemaType.(*sema.OptionalType); ok {
-			innerType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowOptional.Type)
-			return NewOptionalStaticType(gauge, innerType)
+		var borrowedInnerType sema.Type
+
+		if borrowType == sema.AnyStructType {
+			borrowedInnerType = sema.AnyStructType
+		} else if borrowOptional, ok := borrowType.(*sema.OptionalType); ok {
+			borrowedInnerType = borrowOptional.Type
+		} else {
+			break
 		}
 
+		innerType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowedInnerType)
+		return NewOptionalStaticType(gauge, innerType)
+
 	case *ReferenceStaticType:
-		if borrowRef, ok := borrowSemaType.(*sema.ReferenceType); ok {
-			// Use the actual referenced type as the inner type, but with the borrow type's authorization,
-			// instead of the actual referenced type's authorization.
+		// Use the actual referenced type as the inner type, but with the borrow type's authorization,
+		// instead of the actual referenced type's authorization.
+
+		if borrowType == sema.AnyStructType {
+			// `AnyStruct` must be treated as unauthorized.
+			return NewReferenceStaticType(gauge, UnauthorizedAccess, actual.ReferencedType)
+		}
+
+		if borrowRef, ok := borrowType.(*sema.ReferenceType); ok {
 			borrowAuth := ConvertSemaAccessToStaticAuthorization(gauge, borrowRef.Authorization)
 			return NewReferenceStaticType(gauge, borrowAuth, actual.ReferencedType)
 		}
