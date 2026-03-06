@@ -1409,10 +1409,10 @@ func (v *DictionaryValue) Transfer(
 
 		digesterBuilder := atree.NewDefaultDigesterBuilder()
 
-		isDictSafeToCopy := v.dictionary.IsWithinSingleSlab() &&
+		isSingleSlabCopyableDictType := v.dictionary.IsWithinSingleSlab() &&
 			canCopyNonRefSimpleForType(v.Type.KeyType) &&
 			canCopyNonRefSimpleForType(v.Type.ValueType)
-		canCopyNonRefSimple := isDictSafeToCopy || v.dictionary.CanCopyNonRefSimple()
+		canCopyNonRefSimple := isSingleSlabCopyableDictType || v.dictionary.CanCopyNonRefSimple()
 
 		if canCopyNonRefSimple {
 

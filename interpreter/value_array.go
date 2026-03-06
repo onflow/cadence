@@ -1288,8 +1288,8 @@ func (v *ArrayValue) Transfer(
 		common.UseMemory(context, dataSlabs)
 		common.UseMemory(context, metaDataSlabs)
 
-		isArraySafeToCopy := v.array.IsWithinSingleSlab() && canCopyNonRefSimpleForType(v.Type.ElementType())
-		canCopyNonRefSimple := isArraySafeToCopy || v.array.CanCopyNonRefSimple()
+		isSingleSlabCopyableArrayType := v.array.IsWithinSingleSlab() && canCopyNonRefSimpleForType(v.Type.ElementType())
+		canCopyNonRefSimple := isSingleSlabCopyableArrayType || v.array.CanCopyNonRefSimple()
 
 		if canCopyNonRefSimple {
 
