@@ -3164,16 +3164,13 @@ func TestInterpretOptionalReference(t *testing.T) {
 
 		value, err := inter.Invoke("present")
 		require.NoError(t, err)
-		require.Equal(
-			t,
-			&interpreter.EphemeralReferenceValue{
-				Value:         interpreter.NewUnmeteredIntValueFromInt64(1),
-				BorrowedType:  sema.IntType,
-				Authorization: interpreter.UnauthorizedAccess,
-			},
-			value,
-		)
 
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		referenceValue := value.(*interpreter.EphemeralReferenceValue)
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), referenceValue.Value)
+		require.Equal(t, sema.IntType, referenceValue.BorrowedType)
+		require.Equal(t, interpreter.UnauthorizedAccess, referenceValue.Authorization)
 	})
 
 	t.Run("absent", func(t *testing.T) {
