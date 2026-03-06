@@ -1313,8 +1313,10 @@ func (v *CompositeValue) Transfer(
 
 		digesterBuilder := atree.NewDefaultDigesterBuilder()
 
-		isSingleSlabEnum := v.Kind == common.CompositeKindEnum && v.dictionary.IsWithinSingleSlab()
-		canCopyNonRefSimple := isSingleSlabEnum || v.dictionary.CanCopyNonRefSimple()
+		// We need to check enum data because the raw type for enum is an integer subtype.
+		// Large Int or UInt values can be stored in a separate slab which isn't copyable.
+
+		canCopyNonRefSimple := v.dictionary.CanCopyNonRefSimple()
 
 		if canCopyNonRefSimple {
 

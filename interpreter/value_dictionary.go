@@ -1409,6 +1409,10 @@ func (v *DictionaryValue) Transfer(
 
 		digesterBuilder := atree.NewDefaultDigesterBuilder()
 
+		// Check if atree.OrderedMap can be copied using v.dictionary.CopyNonRefSimple():
+		// - Use the fast path that looks at the dictionary key type and value type by calling canCopyNonRefSimpleForType().
+		// - If the fast path fails, then look at the dictionary element data by calling v.dictionary.CanCopyNonRefSimple().
+
 		isSingleSlabCopyableDictType := v.dictionary.IsWithinSingleSlab() &&
 			canCopyNonRefSimpleForType(v.Type.KeyType) &&
 			canCopyNonRefSimpleForType(v.Type.ValueType)

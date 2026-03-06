@@ -1288,6 +1288,10 @@ func (v *ArrayValue) Transfer(
 		common.UseMemory(context, dataSlabs)
 		common.UseMemory(context, metaDataSlabs)
 
+		// Check if atree.Array can be copied using v.array.CopyNonRefSimple():
+		// - Use the fast path that looks at the array element type by calling canCopyNonRefSimpleForType().
+		// - If the fast path fails, then look at the array element data by calling v.array.CanCopyNonRefSimple().
+
 		isSingleSlabCopyableArrayType := v.array.IsWithinSingleSlab() && canCopyNonRefSimpleForType(v.Type.ElementType())
 		canCopyNonRefSimple := isSingleSlabCopyableArrayType || v.array.CanCopyNonRefSimple()
 
