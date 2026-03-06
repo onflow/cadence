@@ -35,6 +35,7 @@ type TypeConverter interface {
 
 var _ TypeConverter = &Interpreter{}
 
+// Deprecated: Use TypeConverter.SemaTypeFromStaticType instead.
 func MustConvertStaticToSemaType(staticType StaticType, typeConverter TypeConverter) sema.Type {
 	semaType, err := ConvertStaticToSemaType(typeConverter, staticType)
 	if err != nil {

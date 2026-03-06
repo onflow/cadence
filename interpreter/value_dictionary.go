@@ -435,7 +435,6 @@ func (v *DictionaryValue) iterate(
 
 			keyValue := MustConvertStoredValue(context, key)
 			valueValue := MustConvertStoredValue(context, value)
-			checkContainerRead(context, v.Type.ValueType, valueValue)
 
 			CheckInvalidatedResourceOrResourceReference(keyValue, context)
 			CheckInvalidatedResourceOrResourceReference(valueValue, context)
@@ -666,7 +665,7 @@ func (v *DictionaryValue) Get(
 	}
 
 	result := MustConvertStoredValue(context, storedValue)
-	checkContainerRead(context, v.Type.ValueType, result)
+
 	return result, true
 }
 
@@ -871,7 +870,6 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, name string
 						}
 
 						convertedValue := MustConvertStoredValue(context, value)
-						checkContainerRead(context, v.Type.ValueType, convertedValue)
 						return convertedValue.Transfer(
 							context,
 							atree.Address{},
@@ -1017,7 +1015,6 @@ func (v *DictionaryValue) Remove(
 	// Value
 
 	existingValue := StoredValue(context, existingValueStorable, storage)
-	checkContainerRead(context, v.Type.ValueType, existingValue)
 	existingValue = existingValue.Transfer(
 		context,
 		atree.Address{},
@@ -1855,6 +1852,5 @@ func (i DictionaryKeyIterator) Next(context ValueStaticTypeContext) (Value, Valu
 		return nil, nil
 	}
 	valueResult := MustConvertStoredValue(context, atreeValue)
-	checkContainerRead(context, i.valueType, valueResult)
 	return MustConvertStoredValue(context, atreeKeyValue), valueResult
 }

@@ -1569,6 +1569,8 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 }
 
 func castValueAndValueType(context *Context, targetType bbq.StaticType, value Value) (Value, bbq.StaticType) {
+	// (for interpreter, see Interpreter.castValueAndValueType)
+
 	// if the value itself has a mapped entitlement type in its authorization
 	// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
 	// substitution must also be performed on its entitlements
@@ -1588,6 +1590,54 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	}
 
 	valueType := value.StaticType(context)
+
+	// If the value is specifically a storage reference,
+	// and the target type is a reference,
+	// then we report the value as a storage reference with the target type's borrow type
+	// (but keep the same authorization and target storage address/path).
+	//
+	// This allows storage references to be cast to different reference types,
+	// which is valid, as the storage reference's targeted value can also
+	// be replaced by a value of a different type.
+	//
+	// It is important we perform a type check of the storage reference's borrow type
+	// against the targeted value's type each time we use the reference (dereference it).
+
+	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
+		if referenceTargetType, ok := targetType.(*interpreter.ReferenceStaticType); ok {
+
+			borrowType := context.SemaTypeFromStaticType(referenceTargetType.ReferencedType)
+
+			if !storageReference.BorrowedType.Equal(borrowType) {
+
+				// Require the target type to not be or have an authorized reference in its type tree
+
+				hasAuthorizedReference := !targetType.Walk(func(ty interpreter.StaticType) bool {
+					if referenceType, ok := ty.(*interpreter.ReferenceStaticType); ok &&
+						referenceType.Authorization != interpreter.UnauthorizedAccess {
+
+						// stop iteration
+						return false
+					}
+
+					// continue iteration
+					return true
+				})
+
+				if !hasAuthorizedReference {
+
+					value = interpreter.NewStorageReferenceValue(
+						context,
+						storageReference.Authorization,
+						storageReference.TargetStorageAddress,
+						storageReference.TargetPath,
+						borrowType,
+					)
+					valueType = value.StaticType(context)
+				}
+			}
+		}
+	}
 
 	return value, valueType
 }

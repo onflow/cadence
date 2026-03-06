@@ -340,6 +340,11 @@ func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
 ) interpreter.FunctionValue {
+
+	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
+		value = storageReference.MustReferencedValue(c).(interpreter.MemberAccessibleValue)
+	}
+
 	staticType := value.StaticType(c)
 
 	semaType := c.SemaTypeFromStaticType(staticType)
@@ -451,7 +456,7 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	}
 
 	// TODO: avoid the sema-type conversion
-	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
+	semaType = interpreter.MustConvertStaticToSemaType(staticType, c) //nolint:staticcheck
 
 	if c.semaTypeCache == nil {
 		c.semaTypeCache = make(map[commons.TypeCacheKey]sema.Type)
@@ -558,7 +563,7 @@ func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorizati
 		return semaAccess, nil
 	}
 
-	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c)
+	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c) //nolint:staticcheck
 	if err != nil {
 		return nil, err
 	}

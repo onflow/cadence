@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"sync"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -33,6 +35,9 @@ type StorageReferenceValue struct {
 	TargetPath           PathValue
 	TargetStorageAddress common.Address
 	Authorization        Authorization
+
+	staticType     StaticType
+	staticTypeOnce sync.Once
 }
 
 var _ Value = &StorageReferenceValue{}
@@ -102,13 +107,15 @@ func (v *StorageReferenceValue) MeteredString(
 }
 
 func (v *StorageReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	self := v.MustReferencedValue(context)
+	v.staticTypeOnce.Do(func() {
+		v.staticType = NewReferenceStaticType(
+			context,
+			v.Authorization,
+			ConvertSemaToStaticType(context, v.BorrowedType),
+		)
+	})
 
-	return NewReferenceStaticType(
-		context,
-		v.Authorization,
-		self.StaticType(context),
-	)
+	return v.staticType
 }
 
 func (v *StorageReferenceValue) GetAuthorization() Authorization {

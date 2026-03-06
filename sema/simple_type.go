@@ -137,6 +137,10 @@ func (t *SimpleType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *SimpleType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (*SimpleType) Unify(
 	_ Type,
 	_ *TypeParameterTypeOrderedMap,

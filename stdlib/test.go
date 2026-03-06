@@ -432,7 +432,7 @@ func newMatcherWithGenericTestFunction(
 				argumentStaticType := argument.StaticType(invocationContext)
 
 				if !interpreter.IsSubTypeOfSemaType(invocationContext, argumentStaticType, parameterType) {
-					argumentSemaType := interpreter.MustConvertStaticToSemaType(argumentStaticType, invocationContext)
+					argumentSemaType := invocationContext.SemaTypeFromStaticType(argumentStaticType)
 
 					panic(&interpreter.TypeMismatchError{
 						ExpectedType: parameterType,

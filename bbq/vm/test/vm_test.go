@@ -5434,9 +5434,11 @@ func TestIntegers(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, "5", result.String())
+
+			staticType := result.StaticType(nil)
 			assert.Equal(t,
 				integerType,
-				interpreter.MustConvertStaticToSemaType(result.StaticType(nil), nil),
+				interpreter.MustConvertStaticToSemaType(staticType, nil), //nolint:staticcheck
 			)
 		})
 	}
@@ -5501,9 +5503,11 @@ func TestFixedPoint(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, expected, result.String())
+
+			staticType := result.StaticType(nil)
 			assert.Equal(t,
 				fixedPointType,
-				interpreter.MustConvertStaticToSemaType(result.StaticType(nil), nil),
+				interpreter.MustConvertStaticToSemaType(staticType, nil), //nolint:staticcheck
 			)
 		})
 	}

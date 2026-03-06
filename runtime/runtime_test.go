@@ -5615,16 +5615,16 @@ func TestRuntimeDeployContractAndUseResourceInTransaction(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var containerReadError *interpreter.ContainerReadError
-	require.ErrorAs(t, err, &containerReadError)
+	var containerMutationErr *interpreter.ContainerMutationError
+	require.ErrorAs(t, err, &containerMutationErr)
 
 	assert.Equal(t,
 		common.TypeID("&[fun(AnyStruct):AnyResource]"),
-		containerReadError.ExpectedType.ID(),
+		containerMutationErr.ExpectedType.ID(),
 	)
 	assert.Equal(t,
-		common.TypeID("&[fun():A.0000000000000001.Attacker.AttackerAttachment]"),
-		containerReadError.ActualType.ID(),
+		common.TypeID("&AnyStruct"),
+		containerMutationErr.ActualType.ID(),
 	)
 }
 
@@ -10870,6 +10870,7 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		)
 
 		require.Error(t, err)
+
 		var dereferenceError *interpreter.DereferenceError
 		require.ErrorAs(t, err, &dereferenceError)
 	})
@@ -14281,7 +14282,7 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
               }
             `,
 			expectedTypeID: "&[fun():auth(Storage)&Account]",
-			actualTypeID:   "&[fun():&AnyStruct]",
+			actualTypeID:   "&AnyStruct",
 		},
 		{
 			name: "function returning nested reference",
@@ -14317,7 +14318,7 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
               }
             `,
 			expectedTypeID: "&[fun():[auth(Storage)&Account]]",
-			actualTypeID:   "&[fun():[&Account]]",
+			actualTypeID:   "&AnyStruct",
 		},
 	}
 
@@ -14374,16 +14375,16 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
 
 			RequireError(t, err)
 
-			var containerReadError *interpreter.ContainerReadError
-			require.ErrorAs(t, err, &containerReadError)
+			var containerMutationErr *interpreter.ContainerMutationError
+			require.ErrorAs(t, err, &containerMutationErr)
 
 			assert.Equal(t,
 				common.TypeID(expectedTypeID),
-				containerReadError.ExpectedType.ID(),
+				containerMutationErr.ExpectedType.ID(),
 			)
 			assert.Equal(t,
 				common.TypeID(actualTypeID),
-				containerReadError.ActualType.ID(),
+				containerMutationErr.ActualType.ID(),
 			)
 		})
 	}
@@ -14465,8 +14466,18 @@ func TestRuntimeEntitlementEscalationViaStorageReference(t *testing.T) {
 	)
 
 	RequireError(t, err)
-	var dereferenceError *interpreter.DereferenceError
-	require.ErrorAs(t, err, &dereferenceError)
+
+	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+	assert.Equal(t,
+		common.TypeID("&[auth(Storage)&Account]"),
+		forceCastTypeMismatchErr.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("&AnyStruct"),
+		forceCastTypeMismatchErr.ActualType.ID(),
+	)
 }
 
 func TestRuntimeBaseDowncastAfterContractUpgrade(t *testing.T) {

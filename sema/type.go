@@ -177,6 +177,10 @@ type Type interface {
 	TypeAnnotationState() TypeAnnotationState
 	Rewrite(rewrite TypeRewriter) (result Type, rewritten bool)
 
+	// Walk calls the given function for this type and every type it is composed of.
+	// If the function returns false, the walk is stopped entirely.
+	Walk(visit func(ty Type) bool) bool
+
 	// Unify attempts to unify the given type with this type, i.e., resolve type parameters
 	// in generic types (see `GenericType`) using the given type parameters.
 	//
@@ -352,6 +356,16 @@ func VisitThisAndNested(t Type, visit func(ty Type)) {
 	containerType.GetNestedTypes().Foreach(func(_ string, nestedType Type) {
 		VisitThisAndNested(nestedType, visit)
 	})
+}
+
+// WalkType calls the given function for the given type and every type it is composed of.
+// If the function returns false, the walk is stopped entirely.
+// Returns false if the walk was stopped.
+func WalkType(t Type, visit func(ty Type) bool) bool {
+	if t == nil {
+		return true
+	}
+	return t.Walk(visit)
 }
 
 func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdentifier string) Type {
@@ -931,6 +945,13 @@ func (t *OptionalType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
+func (t *OptionalType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
+}
+
 func (t *OptionalType) Unify(
 	other Type,
 	typeArguments *TypeParameterTypeOrderedMap,
@@ -1170,6 +1191,10 @@ func (*GenericType) TypeAnnotationState() TypeAnnotationState {
 
 func (t *GenericType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
+}
+
+func (t *GenericType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
 }
 
 func (t *GenericType) Unify(
@@ -1499,6 +1524,10 @@ func (t *NumericType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *NumericType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (t *NumericType) MinInt() *big.Int {
 	return t.minInt
 }
@@ -1739,6 +1768,10 @@ func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
 
 func (t *FixedPointNumericType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
+}
+
+func (t *FixedPointNumericType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
 }
 
 func (t *FixedPointNumericType) MinInt() *big.Int {
@@ -3324,6 +3357,13 @@ func (t *VariableSizedType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
+func (t *VariableSizedType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
+}
+
 func (*VariableSizedType) isValueIndexableType() bool {
 	return true
 }
@@ -3525,6 +3565,13 @@ func (t *ConstantSizedType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 		}
 	}
 	return applyTypeRewriter(rewrite, result, rewritten)
+}
+
+func (t *ConstantSizedType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
 }
 
 func (*ConstantSizedType) isValueIndexableType() bool {
@@ -4269,6 +4316,26 @@ func (t *FunctionType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	}
 
 	return applyTypeRewriter(rewrite, result, anyRewritten)
+}
+
+func (t *FunctionType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	for _, typeParameter := range t.TypeParameters {
+		if typeParameter.TypeBound == nil {
+			continue
+		}
+		if !typeParameter.TypeBound.Walk(visit) {
+			return false
+		}
+	}
+	for i := range t.Parameters {
+		if !t.Parameters[i].TypeAnnotation.Type.Walk(visit) {
+			return false
+		}
+	}
+	return t.ReturnTypeAnnotation.Type.Walk(visit)
 }
 
 func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
@@ -5492,6 +5559,10 @@ func (t *CompositeType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *CompositeType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (*CompositeType) Unify(
 	_ Type,
 	_ *TypeParameterTypeOrderedMap,
@@ -6300,6 +6371,10 @@ func (t *InterfaceType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *InterfaceType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (*InterfaceType) Unify(
 	_ Type,
 	_ *TypeParameterTypeOrderedMap,
@@ -6575,6 +6650,16 @@ func (t *DictionaryType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 		}
 	}
 	return applyTypeRewriter(rewrite, result, rewritten)
+}
+
+func (t *DictionaryType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if !t.KeyType.Walk(visit) {
+		return false
+	}
+	return t.ValueType.Walk(visit)
 }
 
 func (t *DictionaryType) CheckInstantiated(
@@ -7103,6 +7188,16 @@ func (t *InclusiveRangeType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
+func (t *InclusiveRangeType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if t.MemberType != nil {
+		return t.MemberType.Walk(visit)
+	}
+	return true
+}
+
 func (t *InclusiveRangeType) BaseType() Type {
 	if t.MemberType == nil {
 		return nil
@@ -7548,6 +7643,13 @@ func (t *ReferenceType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
+func (t *ReferenceType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
+}
+
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
 	return t.Type.GetMembers()
 }
@@ -7758,6 +7860,10 @@ func (*AddressType) TypeAnnotationState() TypeAnnotationState {
 
 func (t *AddressType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
+}
+
+func (t *AddressType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
 }
 
 var AddressTypeMinIntBig = new(big.Int)
@@ -8599,6 +8705,10 @@ func (t *TransactionType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *TransactionType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
 	// Return cached members if already computed
 	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
@@ -8898,6 +9008,18 @@ func (t *IntersectionType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *IntersectionType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	for _, interfaceType := range t.Types {
+		if !interfaceType.Walk(visit) {
+			return false
+		}
+	}
+	return true
+}
+
 func (t *IntersectionType) GetMembers() map[string]MemberResolver {
 	// Return cached members if already computed
 	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
@@ -9150,6 +9272,16 @@ func (t *CapabilityType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 		}
 	}
 	return applyTypeRewriter(rewrite, result, rewritten)
+}
+
+func (t *CapabilityType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if t.BorrowType != nil {
+		return t.BorrowType.Walk(visit)
+	}
+	return true
 }
 
 func (t *CapabilityType) Unify(
@@ -9725,6 +9857,10 @@ func (t *EntitlementType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *EntitlementType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (*EntitlementType) Unify(
 	_ Type,
 	_ *TypeParameterTypeOrderedMap,
@@ -9893,6 +10029,10 @@ func (*EntitlementMapType) TypeAnnotationState() TypeAnnotationState {
 
 func (t *EntitlementMapType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
+}
+
+func (t *EntitlementMapType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
 }
 
 func (*EntitlementMapType) Unify(

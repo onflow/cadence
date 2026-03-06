@@ -36,6 +36,8 @@ type EphemeralReferenceValue struct {
 	BorrowedType  sema.Type
 	Authorization Authorization
 
+	// Referenced value cannot change.
+	// Hence, it's safe to store the static-type.
 	staticType     StaticType
 	staticTypeOnce sync.Once
 }

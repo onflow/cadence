@@ -3164,16 +3164,13 @@ func TestInterpretOptionalReference(t *testing.T) {
 
 		value, err := inter.Invoke("present")
 		require.NoError(t, err)
-		require.Equal(
-			t,
-			&interpreter.EphemeralReferenceValue{
-				Value:         interpreter.NewUnmeteredIntValueFromInt64(1),
-				BorrowedType:  sema.IntType,
-				Authorization: interpreter.UnauthorizedAccess,
-			},
-			value,
-		)
 
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		referenceValue := value.(*interpreter.EphemeralReferenceValue)
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), referenceValue.Value)
+		require.Equal(t, sema.IntType, referenceValue.BorrowedType)
+		require.Equal(t, interpreter.UnauthorizedAccess, referenceValue.Authorization)
 	})
 
 	t.Run("absent", func(t *testing.T) {
@@ -4488,6 +4485,49 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 
 func TestInterpretNestedStorageReferenceCasting(t *testing.T) {
 	t.Parallel()
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(
+			t,
+			address,
+			true,
+			nil,
+			`
+            entitlement E
+
+            fun test() {
+                account.storage.save(1, to: /storage/value)
+                let authRef = account.storage.borrow<auth(E) &Int>(from: /storage/value)!
+
+                let ref: &Int = authRef
+
+                let downCastedAuthRef = ref as! auth(E) &Int
+            }`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("auth(S.test.E)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
 
 	t.Run("array", func(t *testing.T) {
 		t.Parallel()
