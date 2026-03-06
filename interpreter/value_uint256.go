@@ -687,3 +687,13 @@ func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (UInt256Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (UInt256Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UInt256Value) CopyNonRefSimple() (atree.Storable, error) {
+	return UInt256Value{
+		BigInt: new(big.Int).Set(v.BigInt),
+	}, nil
+}

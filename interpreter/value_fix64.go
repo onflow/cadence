@@ -603,6 +603,14 @@ func (Fix64Value) Scale() int {
 	return sema.Fix64Scale
 }
 
+func (Fix64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Fix64Value) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}
+
 func fix128BigIntToFix64(
 	memoryGauge common.MemoryGauge,
 	bigInt *big.Int,

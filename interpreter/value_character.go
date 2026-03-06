@@ -262,6 +262,14 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, name string) 
 	return context.GetMethod(v, name)
 }
 
+func (CharacterValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v CharacterValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}
+
 var NativeCharacterValueToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,

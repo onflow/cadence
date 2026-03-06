@@ -605,6 +605,14 @@ func (v Fix128Value) ToBigInt() *big.Int {
 	return fixedpoint.Fix128ToBigInt(fix.Fix128(v))
 }
 
+func (Fix128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Fix128Value) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}
+
 func handleFixedpointError(err error) {
 	switch err.(type) {
 	// `fix.ErrUnderflow` happens when the value is within the range but is too small

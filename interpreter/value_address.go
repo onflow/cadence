@@ -268,6 +268,14 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (AddressValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v AddressValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}
+
 func AddressValueFromByteArray(context ContainerMutationContext, byteArray *ArrayValue) AddressValue {
 	bytes, err := ByteArrayValueToByteSlice(context, byteArray)
 	if err != nil {

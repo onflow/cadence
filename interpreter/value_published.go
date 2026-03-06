@@ -45,6 +45,7 @@ func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, v
 }
 
 var _ Value = &PublishedValue{}
+var _ atree.Storable = &PublishedValue{}
 var _ atree.Value = &PublishedValue{}
 var _ EquatableValue = &PublishedValue{}
 
@@ -193,4 +194,12 @@ func (v *PublishedValue) ChildStorables() []atree.Storable {
 		v.Recipient,
 		v.Value,
 	}
+}
+
+func (*PublishedValue) CanCopyNonRefSimple() bool {
+	return false
+}
+
+func (v *PublishedValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, fmt.Errorf("can't copy PublishedValue as a non-reference simple storable")
 }

@@ -781,6 +781,18 @@ func (*StringValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (*StringValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v *StringValue) CopyNonRefSimple() (atree.Storable, error) {
+	return &StringValue{
+		Str:             v.Str,
+		UnnormalizedStr: v.UnnormalizedStr,
+		length:          v.length,
+	}, nil
+}
+
 // Memory is NOT metered for this value
 var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteArrayType)
 

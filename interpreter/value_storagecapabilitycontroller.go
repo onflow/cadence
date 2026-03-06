@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -498,4 +500,12 @@ func (v *StorageCapabilityControllerValue) newSetTagFunction(
 		sema.StorageCapabilityControllerTypeSetTagFunctionType,
 		NativeStorageCapabilityControllerSetTagFunction,
 	)
+}
+
+func (*StorageCapabilityControllerValue) CanCopyNonRefSimple() bool {
+	return false
+}
+
+func (v *StorageCapabilityControllerValue) CopyNonRefSimple() (atree.Storable, error) {
+	return nil, fmt.Errorf("can't copy StorageCapabilityControllerValue as a non-reference simple storable")
 }

@@ -617,3 +617,11 @@ func ufix128SaturationArithmaticResult(
 		panic(err)
 	}
 }
+
+func (UFix128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UFix128Value) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}

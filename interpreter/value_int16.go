@@ -648,3 +648,11 @@ func (v Int16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (Int16Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (Int16Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Int16Value) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}

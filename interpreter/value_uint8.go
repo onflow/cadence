@@ -595,3 +595,11 @@ func (v UInt8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (UInt8Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (UInt8Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UInt8Value) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}

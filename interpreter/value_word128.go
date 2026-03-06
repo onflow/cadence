@@ -607,3 +607,13 @@ func (v Word128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (Word128Value) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (Word128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Word128Value) CopyNonRefSimple() (atree.Storable, error) {
+	return Word128Value{
+		BigInt: new(big.Int).Set(v.BigInt),
+	}, nil
+}

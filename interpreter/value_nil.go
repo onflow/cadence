@@ -199,3 +199,11 @@ func (NilValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 func (v NilValue) InnerValueType(_ ValueStaticTypeContext) sema.Type {
 	return sema.NeverType
 }
+
+func (NilValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v NilValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}

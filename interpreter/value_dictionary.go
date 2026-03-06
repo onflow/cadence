@@ -1391,16 +1391,6 @@ func (v *DictionaryValue) Transfer(
 
 	if needsStoreTo || !isResourceKinded {
 
-		valueComparator := newValueComparator(context)
-		hashInputProvider := newHashInputProvider(context)
-
-		// Use non-readonly iterator here because iterated
-		// value can be removed if remove parameter is true.
-		iterator, err := v.dictionary.Iterator(valueComparator, hashInputProvider)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
 		elementCount := v.dictionary.Count()
 
 		elementOverhead, dataUse, metaDataUse := common.NewAtreeMapMemoryUsages(
@@ -1417,86 +1407,148 @@ func (v *DictionaryValue) Transfer(
 		)
 		common.UseMemory(context, elementMemoryUse)
 
-		func() {
-			seed := v.dictionary.Seed()
+		digesterBuilder := atree.NewDefaultDigesterBuilder()
 
-			if TracingEnabled {
-				startTime := time.Now()
+		// Check if atree.OrderedMap can be copied using v.dictionary.CopyNonRefSimple():
+		// - Use the fast path that looks at the dictionary key type and value type by calling canCopyNonRefSimpleForType().
+		// - If the fast path fails, then look at the dictionary element data by calling v.dictionary.CanCopyNonRefSimple().
 
-				defer func() {
-					valueID := dictionary.ValueID().String()
-					typeID := string(v.Type.ID())
+		isSingleSlabCopyableDictType := v.dictionary.IsWithinSingleSlab() &&
+			canCopyNonRefSimpleForType(v.Type.KeyType) &&
+			canCopyNonRefSimpleForType(v.Type.ValueType)
+		canCopyNonRefSimple := isSingleSlabCopyableDictType || v.dictionary.CanCopyNonRefSimple()
 
-					context.ReportAtreeNewMapFromBatchDataTrace(
-						valueID,
-						typeID,
-						seed,
-						time.Since(startTime),
-					)
-				}()
-			}
+		if canCopyNonRefSimple {
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeMapReadIteration,
-					Intensity: uint64(count),
-				},
-			)
+			func() {
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeMapBatchConstruction,
-					Intensity: uint64(count),
-				},
-			)
+				if TracingEnabled {
+					startTime := time.Now()
 
-			dictionary, err = atree.NewMapFromBatchData(
-				context.Storage(),
-				address,
-				atree.NewDefaultDigesterBuilder(),
-				v.dictionary.Type(),
-				valueComparator,
-				hashInputProvider,
-				seed,
-				func() (atree.Value, atree.Value, error) {
+					defer func() {
+						valueID := dictionary.ValueID().String()
+						typeID := string(v.Type.ID())
+						seed := v.dictionary.Seed()
 
-					atreeKey, atreeValue, err := iterator.Next()
-					if err != nil {
-						return nil, nil, err
-					}
-					if atreeKey == nil || atreeValue == nil {
-						return nil, nil, nil
-					}
-
-					key := MustConvertStoredValue(context, atreeKey).
-						Transfer(
-							context,
-							address,
-							remove,
-							nil,
-							preventTransfer,
-							false, // atreeKey has parent container because it is returned from iterator.
+						context.ReportAtreeNewMapSingleSlabTrace(
+							valueID,
+							typeID,
+							seed,
+							time.Since(startTime),
 						)
+					}()
+				}
 
-					value := MustConvertStoredValue(context, atreeValue).
-						Transfer(
-							context,
-							address,
-							remove,
-							nil,
-							preventTransfer,
-							false, // atreeValue has parent container because it is returned from iterator.
-						)
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapSingleSlabConstruction,
+						Intensity: uint64(count),
+					},
+				)
 
-					return key, value, nil
-				},
-			)
+				copiedDictionary, err := v.dictionary.CopyNonRefSimple(address, digesterBuilder)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				dictionary = copiedDictionary
+
+			}()
+
+		} else {
+
+			valueComparator := newValueComparator(context)
+			hashInputProvider := newHashInputProvider(context)
+
+			// Use non-readonly iterator here because iterated
+			// value can be removed if remove parameter is true.
+			iterator, err := v.dictionary.Iterator(valueComparator, hashInputProvider)
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
-		}()
+
+			func() {
+				seed := v.dictionary.Seed()
+
+				if TracingEnabled {
+					startTime := time.Now()
+
+					defer func() {
+						valueID := dictionary.ValueID().String()
+						typeID := string(v.Type.ID())
+
+						context.ReportAtreeNewMapFromBatchDataTrace(
+							valueID,
+							typeID,
+							seed,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapReadIteration,
+						Intensity: uint64(count),
+					},
+				)
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapBatchConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				dictionary, err = atree.NewMapFromBatchData(
+					context.Storage(),
+					address,
+					digesterBuilder,
+					v.dictionary.Type(),
+					valueComparator,
+					hashInputProvider,
+					seed,
+					func() (atree.Value, atree.Value, error) {
+
+						atreeKey, atreeValue, err := iterator.Next()
+						if err != nil {
+							return nil, nil, err
+						}
+						if atreeKey == nil || atreeValue == nil {
+							return nil, nil, nil
+						}
+
+						key := MustConvertStoredValue(context, atreeKey).
+							Transfer(
+								context,
+								address,
+								remove,
+								nil,
+								preventTransfer,
+								false, // atreeKey has parent container because it is returned from iterator.
+							)
+
+						value := MustConvertStoredValue(context, atreeValue).
+							Transfer(
+								context,
+								address,
+								remove,
+								nil,
+								preventTransfer,
+								false, // atreeValue has parent container because it is returned from iterator.
+							)
+
+						return key, value, nil
+					},
+				)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+			}()
+		}
 
 		if remove {
 			common.UseComputation(
@@ -1507,7 +1559,7 @@ func (v *DictionaryValue) Transfer(
 				},
 			)
 
-			err = v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
+			err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 				RemoveReferencedSlab(context, keyStorable)
 				RemoveReferencedSlab(context, valueStorable)
 			})

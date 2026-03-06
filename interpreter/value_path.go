@@ -300,3 +300,11 @@ func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 func (PathValue) ChildStorables() []atree.Storable {
 	return nil
 }
+
+func (PathValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v PathValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}

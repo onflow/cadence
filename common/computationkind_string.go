@@ -47,16 +47,17 @@ func _() {
 	_ = x[ComputationKindAtreeArrayReadIteration-1207]
 	_ = x[ComputationKindAtreeArrayPopIteration-1208]
 	_ = x[ComputationKindAtreeMapConstruction-1220]
-	_ = x[ComputationKindAtreeMapBatchConstruction-1221]
-	_ = x[ComputationKindAtreeMapHas-1222]
-	_ = x[ComputationKindAtreeMapGet-1223]
-	_ = x[ComputationKindAtreeMapSet-1224]
-	_ = x[ComputationKindAtreeMapRemove-1225]
-	_ = x[ComputationKindAtreeMapReadIteration-1226]
-	_ = x[ComputationKindAtreeMapPopIteration-1227]
+	_ = x[ComputationKindAtreeMapSingleSlabConstruction-1221]
+	_ = x[ComputationKindAtreeMapBatchConstruction-1222]
+	_ = x[ComputationKindAtreeMapHas-1223]
+	_ = x[ComputationKindAtreeMapGet-1224]
+	_ = x[ComputationKindAtreeMapSet-1225]
+	_ = x[ComputationKindAtreeMapRemove-1226]
+	_ = x[ComputationKindAtreeMapReadIteration-1227]
+	_ = x[ComputationKindAtreeMapPopIteration-1228]
 }
 
-const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueStringToLowerStringDecodeHexGraphemesIterationStringComparisonEncodeValueWordSliceOperationUintParseIntParseBigIntParseUfixParseFixParseSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListAtreeArraySingleSlabConstructionAtreeArrayBatchConstructionAtreeArrayGetAtreeArraySetAtreeArrayAppendAtreeArrayInsertAtreeArrayRemoveAtreeArrayReadIterationAtreeArrayPopIterationAtreeMapConstructionAtreeMapBatchConstructionAtreeMapHasAtreeMapGetAtreeMapSetAtreeMapRemoveAtreeMapReadIterationAtreeMapPopIteration"
+const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueStringToLowerStringDecodeHexGraphemesIterationStringComparisonEncodeValueWordSliceOperationUintParseIntParseBigIntParseUfixParseFixParseSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListAtreeArraySingleSlabConstructionAtreeArrayBatchConstructionAtreeArrayGetAtreeArraySetAtreeArrayAppendAtreeArrayInsertAtreeArrayRemoveAtreeArrayReadIterationAtreeArrayPopIterationAtreeMapConstructionAtreeMapSingleSlabConstructionAtreeMapBatchConstructionAtreeMapHasAtreeMapGetAtreeMapSetAtreeMapRemoveAtreeMapReadIterationAtreeMapPopIteration"
 
 var _ComputationKind_map = map[ComputationKind]string{
 	0:    _ComputationKind_name[0:7],
@@ -98,13 +99,14 @@ var _ComputationKind_map = map[ComputationKind]string{
 	1207: _ComputationKind_name[572:595],
 	1208: _ComputationKind_name[595:617],
 	1220: _ComputationKind_name[617:637],
-	1221: _ComputationKind_name[637:662],
-	1222: _ComputationKind_name[662:673],
-	1223: _ComputationKind_name[673:684],
-	1224: _ComputationKind_name[684:695],
-	1225: _ComputationKind_name[695:709],
-	1226: _ComputationKind_name[709:730],
-	1227: _ComputationKind_name[730:750],
+	1221: _ComputationKind_name[637:667],
+	1222: _ComputationKind_name[667:692],
+	1223: _ComputationKind_name[692:703],
+	1224: _ComputationKind_name[703:714],
+	1225: _ComputationKind_name[714:725],
+	1226: _ComputationKind_name[725:739],
+	1227: _ComputationKind_name[739:760],
+	1228: _ComputationKind_name[760:780],
 }
 
 func (i ComputationKind) String() string {
