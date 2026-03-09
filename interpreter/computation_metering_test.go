@@ -2687,12 +2687,22 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		bigIntExceeding500Bytes := new(big.Int).Exp(big.NewInt(2), big.NewInt(5000), nil)
+		bigIntExceedingSingleSlab := new(big.Int).Exp(big.NewInt(2), big.NewInt(3880), nil)
+		rawValue := interpreter.NewUnmeteredIntValueFromBigInt(bigIntExceedingSingleSlab)
+
+		storable, err := rawValue.Storable(
+			inter.Storage(),
+			atree.AddressUndefined,
+			atree.MaxInlineMapElementSize(),
+		)
+		require.NoError(t, err)
+
+		require.IsType(t, atree.SlabIDStorable{}, storable)
 
 		fields := []interpreter.CompositeField{
 			{
 				Name:  "rawValue",
-				Value: interpreter.NewUnmeteredIntValueFromBigInt(bigIntExceeding500Bytes),
+				Value: rawValue,
 			},
 		}
 
