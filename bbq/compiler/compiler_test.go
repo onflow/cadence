@@ -7486,7 +7486,6 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
 				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 				opcode.InstructionRemoveIndex{IndexedType: 2},
-				opcode.InstructionBoxOptional{TargetType: 4},
 				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
 
 				// Second value assignment.
