@@ -2166,6 +2166,34 @@ func convertStaticType(
 	return valueStaticType
 }
 
+// semaTypeWithStrippedEntitlements returns a copy of the given sema type with all
+// reference authorizations set to UnauthorizedAccess. Used when assigning to AnyStruct
+// so that the result preserves the type structure (e.g. [&Int] not [AnyStruct]).
+func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) sema.Type {
+	switch t := typ.(type) {
+	case *sema.ReferenceType:
+		return sema.NewReferenceType(
+			gauge,
+			sema.UnauthorizedAccess,
+			semaTypeWithStrippedEntitlements(gauge, t.Type),
+		)
+	case *sema.VariableSizedType:
+		return sema.NewVariableSizedType(gauge, semaTypeWithStrippedEntitlements(gauge, t.Type))
+	case *sema.ConstantSizedType:
+		return sema.NewConstantSizedType(gauge, semaTypeWithStrippedEntitlements(gauge, t.Type), t.Size)
+	case *sema.DictionaryType:
+		return sema.NewDictionaryType(
+			gauge,
+			semaTypeWithStrippedEntitlements(gauge, t.KeyType),
+			semaTypeWithStrippedEntitlements(gauge, t.ValueType),
+		)
+	case *sema.OptionalType:
+		return sema.NewOptionalType(gauge, semaTypeWithStrippedEntitlements(gauge, t.Type))
+	default:
+		return typ
+	}
+}
+
 func convert(
 	context ValueCreationContext,
 	value Value,
@@ -2327,6 +2355,94 @@ func convert(
 				targetAuthorization,
 				ref.Value,
 				targetBorrowType,
+			)
+
+		case *ArrayValue:
+			// When assigning container values to AnyStruct, strip entitlements from nested references
+			// but preserve the type structure (e.g. [auth(E2)&Int] -> [&Int], not [AnyStruct]).
+			arrayValue := ref
+			oldArrayStaticType, ok := arrayValue.StaticType(context).(ArrayStaticType)
+			if !ok {
+				return value
+			}
+			elementStaticType := oldArrayStaticType.ElementType()
+			elementSemaType := context.SemaTypeFromStaticType(elementStaticType)
+			strippedElementSemaType := semaTypeWithStrippedEntitlements(context, elementSemaType)
+			var strippedArraySemaType sema.Type
+			switch t := oldArrayStaticType.(type) {
+			case *VariableSizedStaticType:
+				strippedArraySemaType = sema.NewVariableSizedType(context, strippedElementSemaType)
+			case *ConstantSizedStaticType:
+				strippedArraySemaType = sema.NewConstantSizedType(context, strippedElementSemaType, t.Size)
+			default:
+				return value
+			}
+			targetArrayStaticType := convertStaticType(context, oldArrayStaticType, strippedArraySemaType).(ArrayStaticType)
+			array := arrayValue.array
+			iterator, err := array.ReadOnlyIterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+			return NewArrayValueWithIterator(
+				context,
+				targetArrayStaticType,
+				arrayValue.GetOwner(),
+				array.Count(),
+				func() Value {
+					element, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+					if element == nil {
+						return nil
+					}
+					elemValue := MustConvertStoredValue(context, element)
+					elemSemaType := context.SemaTypeFromStaticType(elemValue.StaticType(context))
+					return ConvertAndBox(context, elemValue, elemSemaType, strippedElementSemaType)
+				},
+			)
+
+		case *DictionaryValue:
+			// When assigning container values to AnyStruct, strip entitlements from nested references
+			// but preserve the type structure (e.g. {String: auth(E2)&Int} -> {String: &Int}, not {String: AnyStruct}).
+			dictValue := ref
+			oldDictStaticType, ok := dictValue.StaticType(context).(*DictionaryStaticType)
+			if !ok {
+				return value
+			}
+			keySemaType := context.SemaTypeFromStaticType(oldDictStaticType.KeyType)
+			valueSemaType := context.SemaTypeFromStaticType(oldDictStaticType.ValueType)
+			strippedKeySemaType := semaTypeWithStrippedEntitlements(context, keySemaType)
+			strippedValueSemaType := semaTypeWithStrippedEntitlements(context, valueSemaType)
+			strippedDictSemaType := sema.NewDictionaryType(context, strippedKeySemaType, strippedValueSemaType)
+			targetDictStaticType := convertStaticType(context, oldDictStaticType, strippedDictSemaType).(*DictionaryStaticType)
+			dictionary := dictValue.dictionary
+			iterator, err := dictionary.ReadOnlyIterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+			return newDictionaryValueWithIterator(
+				context,
+				targetDictStaticType,
+				dictionary.Count(),
+				dictionary.Seed(),
+				common.Address(dictionary.Address()),
+				func() (Value, Value) {
+					k, v, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+					if k == nil || v == nil {
+						return nil, nil
+					}
+					key := MustConvertStoredValue(context, k)
+					val := MustConvertStoredValue(context, v)
+					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
+					valueType := context.SemaTypeFromStaticType(val.StaticType(context))
+					convertedKey := ConvertAndBox(context, key, keyType, strippedKeySemaType)
+					convertedValue := ConvertAndBox(context, val, valueType, strippedValueSemaType)
+					return convertedKey, convertedValue
+				},
 			)
 
 		// TODO
