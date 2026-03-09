@@ -236,10 +236,10 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 					expectedType,
 				)
 			} else {
-				// When accessing an element through a reference, the underlying
-				// container's element type may differ from the reference's element type.
-				// For example, `&[Int?]` referencing `[Int]`: GetKey returns `Int`,
-				// but the expected type is `Int?`. Box the value to match.
+				// When accessing an element, the underlying container's element type may differ
+				// from the reference's element type.
+				// For example, when the static type is `[Int?]`, but the container's run-time type is `[Int]`,
+				// then it stores `Int` elements, but the result of type of the access is `Int`. Box the value to match.
 				if _, isOptional := indexExpressionTypes.ResultType.(*sema.OptionalType); isOptional {
 					value = BoxOptional(interpreter, value, indexExpressionTypes.ResultType)
 				}
