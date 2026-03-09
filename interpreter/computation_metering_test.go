@@ -19,11 +19,13 @@
 package interpreter_test
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -2576,4 +2578,153 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 		)
 	})
 
+}
+
+func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("small enum transfer", func(t *testing.T) {
+		storage := NewUnmeteredInMemoryStorage()
+
+		elaboration := sema.NewElaboration(nil)
+		elaboration.SetCompositeType(
+			testCompositeValueType.ID(),
+			testCompositeValueType,
+		)
+
+		computationGauge := newTestComputationGauge()
+
+		inter, err := interpreter.NewInterpreter(
+			&interpreter.Program{
+				Elaboration: elaboration,
+			},
+			TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				ComputationGauge:              computationGauge,
+				AtreeValueValidationEnabled:   true,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		fields := []interpreter.CompositeField{
+			{
+				Name:  "rawValue",
+				Value: interpreter.NewUnmeteredUInt8Value(42),
+			},
+		}
+
+		enumValue := interpreter.NewCompositeValue(
+			inter,
+			common.StringLocation("test"),
+			"Priority",
+			common.CompositeKindEnum,
+			fields,
+			common.ZeroAddress,
+		)
+
+		newOwner := common.Address{0x1}
+
+		transferred := enumValue.Transfer(
+			inter,
+			atree.Address(newOwner),
+			false,
+			nil,
+			nil,
+			true, // Enum value is standalone.
+		)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				// Transferring of a copyable enum value requires single slab construction.
+				{Kind: common.ComputationKindTransferCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSingleSlabConstruction, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+
+		transferredComposite, ok := transferred.(*interpreter.CompositeValue)
+		require.True(t, ok)
+
+		require.Equal(t, enumValue.GetMember(inter, "rawValue"), transferredComposite.GetMember(inter, "rawValue"))
+	})
+
+	t.Run("large enum transfer", func(t *testing.T) {
+		storage := NewUnmeteredInMemoryStorage()
+
+		elaboration := sema.NewElaboration(nil)
+		elaboration.SetCompositeType(
+			testCompositeValueType.ID(),
+			testCompositeValueType,
+		)
+
+		computationGauge := newTestComputationGauge()
+
+		inter, err := interpreter.NewInterpreter(
+			&interpreter.Program{
+				Elaboration: elaboration,
+			},
+			TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				ComputationGauge:              computationGauge,
+				AtreeValueValidationEnabled:   true,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		bigIntExceeding500Bytes := new(big.Int).Exp(big.NewInt(2), big.NewInt(5000), nil)
+
+		fields := []interpreter.CompositeField{
+			{
+				Name:  "rawValue",
+				Value: interpreter.NewUnmeteredIntValueFromBigInt(bigIntExceeding500Bytes),
+			},
+		}
+
+		enumValue := interpreter.NewCompositeValue(
+			inter,
+			common.StringLocation("test"),
+			"Priority",
+			common.CompositeKindEnum,
+			fields,
+			common.ZeroAddress,
+		)
+
+		newOwner := common.Address{0x1}
+
+		transferred := enumValue.Transfer(
+			inter,
+			atree.Address(newOwner),
+			false,
+			nil,
+			nil,
+			true, // Enum value is standalone.
+		)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				// Transferring a non-copyable enum value (with the raw value stored in a separate slab)
+				// requires batch construction and iteration over the original enum.
+				{Kind: common.ComputationKindTransferCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
+			},
+			computationGauge.usages,
+		)
+
+		transferredComposite, ok := transferred.(*interpreter.CompositeValue)
+		require.True(t, ok)
+
+		require.Equal(t, enumValue.GetMember(inter, "rawValue"), transferredComposite.GetMember(inter, "rawValue"))
+	})
 }
