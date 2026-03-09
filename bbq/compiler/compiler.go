@@ -3403,6 +3403,17 @@ func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(
 			Type:       index,
 			IsImplicit: true,
 		})
+	} else if _, isReference := indexExpressionTypes.IndexedType.(*sema.ReferenceType); isReference {
+		// When accessing an element through a reference, the underlying
+		// container's element type may differ from the reference's element type.
+		// For example, `&[Int?]` referencing `[Int]`: GetKey returns `Int`,
+		// but the expected type is `Int?`. Box the value to match.
+		if _, isOptional := indexExpressionTypes.ResultType.(*sema.OptionalType); isOptional {
+			resultType := c.getOrAddType(indexExpressionTypes.ResultType)
+			c.emit(opcode.InstructionBoxOptional{
+				TargetType: resultType,
+			})
+		}
 	}
 
 	return

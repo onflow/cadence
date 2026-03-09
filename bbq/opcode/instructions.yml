@@ -512,6 +512,21 @@
       - name: "optional"
         type: "value"
 
+- name: "boxOptional"
+  description: |
+    Pops a value off the stack, boxes it into an optional if needed to match the target type,
+    and then pushes it back on to the stack.
+  operands:
+    - name: "targetType"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
 # Conversion instructions
 
 - name: "transfer"
