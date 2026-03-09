@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
