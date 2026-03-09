@@ -2586,6 +2586,8 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 	t.Parallel()
 
 	t.Run("small enum transfer", func(t *testing.T) {
+		t.Parallel()
+
 		storage := NewUnmeteredInMemoryStorage()
 
 		elaboration := sema.NewElaboration(nil)
@@ -2652,10 +2654,15 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 		transferredComposite, ok := transferred.(*interpreter.CompositeValue)
 		require.True(t, ok)
 
-		require.Equal(t, enumValue.GetMember(inter, "rawValue"), transferredComposite.GetMember(inter, "rawValue"))
+		require.Equal(t,
+			enumValue.GetMember(inter, "rawValue"),
+			transferredComposite.GetMember(inter, "rawValue"),
+		)
 	})
 
 	t.Run("large enum transfer", func(t *testing.T) {
+		t.Parallel()
+
 		storage := NewUnmeteredInMemoryStorage()
 
 		elaboration := sema.NewElaboration(nil)
@@ -2726,6 +2733,9 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 		transferredComposite, ok := transferred.(*interpreter.CompositeValue)
 		require.True(t, ok)
 
-		require.Equal(t, enumValue.GetMember(inter, "rawValue"), transferredComposite.GetMember(inter, "rawValue"))
+		require.Equal(t,
+			enumValue.GetMember(inter, "rawValue"),
+			transferredComposite.GetMember(inter, "rawValue"),
+		)
 	})
 }
