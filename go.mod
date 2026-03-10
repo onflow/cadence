@@ -18,7 +18,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/leanovate/gopter v0.2.11
 	github.com/logrusorgru/aurora/v4 v4.0.0
-	github.com/onflow/atree v0.13.1-0.20260305200207-dad78366916d
+	github.com/onflow/atree v0.13.1-0.20260310140135-94d27fa0e3b3
 	github.com/onflow/crypto v0.25.3
 	github.com/onflow/fixed-point v0.1.1
 	github.com/rivo/uniseg v0.4.7
