@@ -2154,15 +2154,6 @@ func convertStaticType(
 		}
 	}
 
-	// If the target type is optional but the value type is not,
-	// wrap the value type in an optional
-	if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
-		return NewOptionalStaticType(
-			gauge,
-			convertStaticType(gauge, valueStaticType, targetOptionalType.Type),
-		)
-	}
-
 	return valueStaticType
 }
 
@@ -2355,8 +2346,8 @@ func convert(
 					}
 
 					value := MustConvertStoredValue(context, element)
-					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
-					return ConvertAndBox(context, value, valueType, targetElementType)
+					valueType := MustSemaTypeOfValue(value, context)
+					return convert(context, value, valueType, targetElementType)
 				},
 			)
 		}
@@ -2400,11 +2391,11 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					value := MustConvertStoredValue(context, v)
 
-					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
-					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
+					keyType := MustSemaTypeOfValue(key, context)
+					valueType := MustSemaTypeOfValue(value, context)
 
-					convertedKey := ConvertAndBox(context, key, keyType, targetKeyType)
-					convertedValue := ConvertAndBox(context, value, valueType, targetValueType)
+					convertedKey := convert(context, key, keyType, targetKeyType)
+					convertedValue := convert(context, value, valueType, targetValueType)
 
 					return convertedKey, convertedValue
 				},

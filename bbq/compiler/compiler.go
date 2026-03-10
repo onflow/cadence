@@ -3393,22 +3393,21 @@ func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(
 		c.emit(opcode.InstructionGetIndex{
 			IndexedType: indexedType,
 		})
-	}
 
-	// Return a reference, if the element is accessed via a reference.
-	// This is pre-computed at the checker.
-	if indexExpressionTypes.ReturnReference {
-		index := c.getOrAddType(indexExpressionTypes.ResultType)
-		c.emit(opcode.InstructionNewRef{
-			Type:       index,
-			IsImplicit: true,
-		})
-	} else if _, isReference := indexExpressionTypes.IndexedType.(*sema.ReferenceType); isReference {
-		// When accessing an element through a reference, the underlying
-		// container's element type may differ from the reference's element type.
-		// For example, `&[Int?]` referencing `[Int]`: GetKey returns `Int`,
-		// but the expected type is `Int?`. Box the value to match.
-		if _, isOptional := indexExpressionTypes.ResultType.(*sema.OptionalType); isOptional {
+		// Return a reference, if the element is accessed via a reference.
+		// This is pre-computed at the checker.
+		if indexExpressionTypes.ReturnReference {
+			index := c.getOrAddType(indexExpressionTypes.ResultType)
+			c.emit(opcode.InstructionNewRef{
+				Type:       index,
+				IsImplicit: true,
+			})
+		} else if _, isOptional := indexExpressionTypes.ResultType.(*sema.OptionalType); isOptional {
+			// When accessing an element, the underlying container's element type may differ
+			// from the reference's element type.
+			// For example, when the static type is `[Int?]`, but the container's run-time type is `[Int]`,
+			// then it stores `Int` elements, but the result type of the access is `Int?`.
+			// Box the value to match.
 			resultType := c.getOrAddType(indexExpressionTypes.ResultType)
 			c.emit(opcode.InstructionBoxOptional{
 				TargetType: resultType,
