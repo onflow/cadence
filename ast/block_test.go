@@ -187,6 +187,42 @@ func TestBlock_String(t *testing.T) {
 	)
 }
 
+func TestBlock_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	stmt1 := &ReturnStatement{
+		Expression: &IntegerExpression{
+			PositiveLiteral: []byte("1"),
+			Base:            10,
+		},
+	}
+
+	stmt2 := &ExpressionStatement{
+		Expression: &IntegerExpression{
+			PositiveLiteral: []byte("2"),
+			Base:            10,
+		},
+	}
+
+	block := &Block{
+		Statements: []Statement{stmt1, stmt2},
+	}
+
+	var visited []Element
+	block.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			stmt1,
+			stmt2,
+		},
+		visited,
+	)
+}
+
 func TestFunctionBlock_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -793,6 +829,47 @@ func TestFunctionBlock_String(t *testing.T) {
 
 }
 
+func TestFunctionBlock_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	block := &Block{
+		Statements: []Statement{},
+	}
+
+	preCondition := &TestCondition{
+		Test: &BoolExpression{Value: true},
+	}
+
+	postCondition := &TestCondition{
+		Test: &BoolExpression{Value: false},
+	}
+
+	funcBlock := &FunctionBlock{
+		Block: block,
+		PreConditions: &Conditions{
+			Conditions: []Condition{preCondition},
+		},
+		PostConditions: &Conditions{
+			Conditions: []Condition{postCondition},
+		},
+	}
+
+	var visited []Element
+	funcBlock.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			preCondition,
+			block,
+			postCondition,
+		},
+		visited,
+	)
+}
+
 func TestTestCondition_Doc(t *testing.T) {
 	t.Parallel()
 
@@ -893,4 +970,27 @@ func TestTestCondition_Doc(t *testing.T) {
 			condition.Doc(),
 		)
 	})
+}
+
+func TestEmitCondition_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	invocation := &InvocationExpression{
+		InvokedExpression: &IdentifierExpression{
+			Identifier: Identifier{Identifier: "Event"},
+		},
+	}
+
+	condition := &EmitCondition{
+		InvocationExpression: invocation,
+	}
+
+	var visited []Element
+	condition.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t, []Element{invocation}, visited)
+
 }

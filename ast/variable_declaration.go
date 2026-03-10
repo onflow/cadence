@@ -107,7 +107,9 @@ func (d *VariableDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 func (*VariableDeclaration) isIfStatementTest() {}
 
 func (d *VariableDeclaration) Walk(walkChild func(Element)) {
-	// TODO: walk type
+	if d.TypeAnnotation != nil {
+		walkChild(d.TypeAnnotation)
+	}
 	walkChild(d.Value)
 	if d.SecondValue != nil {
 		walkChild(d.SecondValue)

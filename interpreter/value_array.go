@@ -297,6 +297,7 @@ func (v *ArrayValue) iterate(
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 			elementValue := MustConvertStoredValue(context, element)
+			checkContainerRead(context, v.Type.ElementType(), elementValue)
 			CheckInvalidatedResourceOrResourceReference(elementValue, context)
 
 			if transferElements {
@@ -519,7 +520,7 @@ func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int) {
 	}
 }
 
-func (v *ArrayValue) Get(gauge common.Gauge, index int) Value {
+func (v *ArrayValue) Get(context ContainerReadContext, index int) Value {
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -532,7 +533,8 @@ func (v *ArrayValue) Get(gauge common.Gauge, index int) Value {
 	}
 
 	common.UseComputation(
-		gauge, common.ComputationUsage{
+		context,
+		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeArrayGet,
 			Intensity: 1,
 		},
@@ -545,7 +547,11 @@ func (v *ArrayValue) Get(gauge common.Gauge, index int) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(gauge, storedValue)
+	result := MustConvertStoredValue(context, storedValue)
+
+	checkContainerRead(context, v.Type.ElementType(), result)
+
+	return result
 }
 
 func (v *ArrayValue) SetKey(context ContainerMutationContext, key Value, value Value) {
@@ -857,6 +863,7 @@ func (v *ArrayValue) Remove(context ContainerMutationContext, index int) Value {
 	storable := v.RemoveWithoutTransfer(context, index)
 
 	value := StoredValue(context, storable, context.Storage())
+	checkContainerRead(context, v.Type.ElementType(), value)
 
 	return value.Transfer(
 		context,
@@ -1711,6 +1718,7 @@ func (v *ArrayValue) Filter(
 				if value == nil {
 					return nil
 				}
+				checkContainerRead(context, v.Type.ElementType(), value)
 
 				result := invokeFunctionValue(
 					context,
@@ -1811,6 +1819,7 @@ func (v *ArrayValue) Map(
 			}
 
 			value := MustConvertStoredValue(context, atreeValue)
+			checkContainerRead(context, v.Type.ElementType(), value)
 
 			result := invokeFunctionValue(
 				context,
@@ -2001,6 +2010,7 @@ func (v *ArrayValue) Inlined() bool {
 // Array iterator
 
 type ArrayIterator struct {
+	elementType   StaticType
 	valueID       atree.ValueID
 	atreeIterator atree.ArrayIterator
 	next          atree.Value
@@ -2025,6 +2035,7 @@ func NewArrayIterator(gauge common.MemoryGauge, v *ArrayValue) ValueIterator {
 	}
 
 	return &ArrayIterator{
+		elementType:   v.Type.ElementType(),
 		valueID:       valueID,
 		atreeIterator: arrayIterator,
 	}
@@ -2083,7 +2094,9 @@ func (i *ArrayIterator) Next(context ValueIteratorContext) Value {
 
 	// atree.Array iterator returns low-level atree.Value,
 	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(context, atreeValue)
+	result := MustConvertStoredValue(context, atreeValue)
+	checkContainerRead(context, i.elementType, result)
+	return result
 }
 
 func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {

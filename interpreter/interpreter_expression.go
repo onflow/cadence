@@ -43,8 +43,8 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 		// NOTE: check `AttachmentAccessTypes` instead of switching on `TypeIndexableValue` or `ValueIndexableValue`.
 		// An `*EphemeralReferenceValue` value is both a `TypeIndexableValue` and a `ValueIndexableValue` statically,
 		// but at runtime can only be used as one or the other.
-		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
-			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
+		if attachmentAccessTypes, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
+			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentAccessTypes.AttachmentType)
 		} else {
 			return interpreter.valueIndexExpressionGetterSetter(expression)
 		}
@@ -95,10 +95,18 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 		panic(errors.NewUnreachableError())
 	}
 
+	elaboration := interpreter.Program.Elaboration
+
+	// IMPORTANT: This base type should only be used in 'get' operations.
+	attachmentAccessTypes, ok := elaboration.AttachmentAccessTypes(indexExpression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
 	return getterSetter{
 		target: target,
 		get: func(_ bool) (Value, *PlaceholderValue) {
-			CheckInvalidatedResourceOrResourceReference(target, interpreter)
+			interpreter.checkIndexedValue(attachmentAccessTypes.BaseType, target)
 			value := target.GetTypeKey(interpreter, attachmentType)
 			return value, nil
 		},
@@ -196,7 +204,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 
 	if isNestedResourceMove {
 		get = func(_ bool) (Value, *PlaceholderValue) {
-			CheckInvalidatedResourceOrResourceReference(target, interpreter)
+			interpreter.checkIndexedValue(indexedType, target)
 			value := target.RemoveKey(interpreter, transferredIndexingValue)
 
 			// Insert a placeholder value at the removed index to mark it as deleted.
@@ -213,7 +221,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 		}
 	} else {
 		get = func(_ bool) (Value, *PlaceholderValue) {
-			CheckInvalidatedResourceOrResourceReference(target, interpreter)
+			interpreter.checkIndexedValue(indexedType, target)
 			value := target.GetKey(interpreter, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
@@ -236,7 +244,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 		target: target,
 		get:    get,
 		set: func(value Value) {
-			CheckInvalidatedResourceOrResourceReference(target, interpreter)
+			interpreter.checkIndexedValue(indexedType, target)
 			target.SetKey(interpreter, transferredIndexingValue, value)
 		},
 	}
@@ -416,6 +424,35 @@ func CheckMemberAccessTargetType(
 		panic(&MemberAccessTypeError{
 			ExpectedType: expectedType,
 			ActualType:   targetSemaType,
+		})
+	}
+}
+
+func (interpreter *Interpreter) checkIndexedValue(
+	indexedType sema.Type,
+	indexedValue Value,
+) {
+	CheckInvalidatedResourceOrResourceReference(indexedValue, interpreter)
+
+	CheckIndexedType(
+		interpreter,
+		indexedValue,
+		indexedType,
+	)
+}
+
+func CheckIndexedType(
+	context ValueStaticTypeContext,
+	indexedValue Value,
+	indexedType sema.Type,
+) {
+	indexedValueStaticType := indexedValue.StaticType(context)
+
+	if !IsSubTypeOfSemaType(context, indexedValueStaticType, indexedType) {
+		indexedValueSemaType := MustConvertStaticToSemaType(indexedValueStaticType, context)
+		panic(&IndexedTypeError{
+			ExpectedType: indexedType,
+			ActualType:   indexedValueSemaType,
 		})
 	}
 }
@@ -1104,8 +1141,12 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 	// NOTE: check `AttachmentAccessTypes` instead of switching on `TypeIndexableValue` or `ValueIndexableValue`.
 	// An `*EphemeralReferenceValue` value is both a `TypeIndexableValue` and a `ValueIndexableValue` statically,
 	// but at runtime can only be used as one or the other.
-	if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
-		value, _ := interpreter.typeIndexExpressionGetterSetter(expression, attachmentType).get(allowMissing)
+	if attachmentAccessTypes, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
+		indexExpGetterSetter := interpreter.typeIndexExpressionGetterSetter(
+			expression,
+			attachmentAccessTypes.AttachmentType,
+		)
+		value, _ := indexExpGetterSetter.get(allowMissing)
 		return value
 	} else {
 		value, _ := interpreter.valueIndexExpressionGetterSetter(expression).get(allowMissing)

@@ -26,7 +26,6 @@ import (
 
 	"github.com/logrusorgru/aurora/v4"
 
-	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/interpreter"
 )
 
@@ -34,20 +33,15 @@ func PrintBytecode(
 	builder *strings.Builder,
 	code []byte,
 	resolve bool,
-	constants []constant.DecodedConstant,
-	types [][]byte,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool,
 ) error {
 	instructions := DecodeInstructions(code)
-	staticTypes := DecodeStaticTypes(types)
 	return PrintInstructions(
 		builder,
 		instructions,
 		resolve,
-		constants,
-		staticTypes,
-		functionNames,
+		program,
 		colorize,
 	)
 }
@@ -56,20 +50,15 @@ func PrintBytecodeWithFlow(
 	builder *strings.Builder,
 	code []byte,
 	resolve bool,
-	constants []constant.DecodedConstant,
-	types [][]byte,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool,
 ) error {
 	instructions := DecodeInstructions(code)
-	staticTypes := DecodeStaticTypes(types)
 	return PrintInstructionsWithFlow(
 		builder,
 		instructions,
 		resolve,
-		constants,
-		staticTypes,
-		functionNames,
+		program,
 		colorize,
 	)
 }
@@ -93,9 +82,7 @@ func PrintInstructions(
 	builder *strings.Builder,
 	instructions []Instruction,
 	resolve bool,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool,
 ) error {
 
@@ -107,9 +94,7 @@ func PrintInstructions(
 		if resolve {
 			instruction.ResolvedOperandsString(
 				&operandsBuilder,
-				constants,
-				types,
-				functionNames,
+				program,
 				colorize,
 			)
 		} else {
@@ -150,9 +135,7 @@ func PrintInstructionsWithFlow(
 	builder *strings.Builder,
 	instructions []Instruction,
 	resolve bool,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool,
 ) error {
 
@@ -164,7 +147,7 @@ func PrintInstructionsWithFlow(
 		colorize:     colorize,
 		instructions: instructions,
 	}
-	blockOutput := blockRenderer.renderBasicBlocks(constants, types, functionNames, resolve)
+	blockOutput := blockRenderer.renderBasicBlocks(program, resolve)
 	builder.WriteString(blockOutput)
 
 	return nil
@@ -334,9 +317,7 @@ type BlockRenderer struct {
 
 // renderBasicBlocks creates a basic block visualization
 func (r *BlockRenderer) renderBasicBlocks(
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	resolve bool,
 ) string {
 	var builder strings.Builder
@@ -346,7 +327,7 @@ func (r *BlockRenderer) renderBasicBlocks(
 
 	// Render each basic block
 	for i, block := range r.analysis.BasicBlocks {
-		r.renderBlock(&builder, i, block, constants, types, functionNames, resolve)
+		r.renderBlock(&builder, i, block, program, resolve)
 
 		// Show connections to other blocks
 		if connections, hasConnections := blockConnections[i]; hasConnections {
@@ -448,9 +429,7 @@ func (r *BlockRenderer) renderBlock(
 	builder *strings.Builder,
 	blockIndex int,
 	block BasicBlock,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	resolve bool,
 ) {
 	// Block header
@@ -485,9 +464,7 @@ func (r *BlockRenderer) renderBlock(
 		if resolve {
 			instruction.ResolvedOperandsString(
 				&operandsBuilder,
-				constants,
-				types,
-				functionNames,
+				program,
 				r.colorize,
 			)
 		} else {

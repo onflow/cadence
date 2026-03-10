@@ -5,10 +5,8 @@ package opcode
 import (
 	"strings"
 
-	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
 )
 
 // InstructionUnknown
@@ -30,14 +28,16 @@ func (i InstructionUnknown) String() string {
 func (i InstructionUnknown) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionUnknown) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionUnknown) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionUnknown) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionUnknown{}
 }
 
 // InstructionGetLocal
@@ -66,9 +66,7 @@ func (i InstructionGetLocal) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionGetLocal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
@@ -82,6 +80,12 @@ func (i InstructionGetLocal) Encode(code *[]byte) {
 func DecodeGetLocal(ip *uint16, code []byte) (i InstructionGetLocal) {
 	i.Local = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetLocal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetLocal{
+		Local: i.Local,
+	}
 }
 
 // InstructionSetLocal
@@ -113,9 +117,7 @@ func (i InstructionSetLocal) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
@@ -133,6 +135,13 @@ func DecodeSetLocal(ip *uint16, code []byte) (i InstructionSetLocal) {
 	i.Local = decodeUint16(ip, code)
 	i.IsTempVar = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionSetLocal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetLocal{
+		Local:     i.Local,
+		IsTempVar: i.IsTempVar,
+	}
 }
 
 // InstructionGetUpvalue
@@ -161,9 +170,7 @@ func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionGetUpvalue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "upvalue", i.Upvalue, colorize)
@@ -177,6 +184,12 @@ func (i InstructionGetUpvalue) Encode(code *[]byte) {
 func DecodeGetUpvalue(ip *uint16, code []byte) (i InstructionGetUpvalue) {
 	i.Upvalue = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetUpvalue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetUpvalue{
+		Upvalue: i.Upvalue,
+	}
 }
 
 // InstructionSetUpvalue
@@ -205,9 +218,7 @@ func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionSetUpvalue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "upvalue", i.Upvalue, colorize)
@@ -221,6 +232,12 @@ func (i InstructionSetUpvalue) Encode(code *[]byte) {
 func DecodeSetUpvalue(ip *uint16, code []byte) (i InstructionSetUpvalue) {
 	i.Upvalue = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionSetUpvalue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetUpvalue{
+		Upvalue: i.Upvalue,
+	}
 }
 
 // InstructionCloseUpvalue
@@ -249,9 +266,7 @@ func (i InstructionCloseUpvalue) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionCloseUpvalue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
@@ -265,6 +280,12 @@ func (i InstructionCloseUpvalue) Encode(code *[]byte) {
 func DecodeCloseUpvalue(ip *uint16, code []byte) (i InstructionCloseUpvalue) {
 	i.Local = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionCloseUpvalue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionCloseUpvalue{
+		Local: i.Local,
+	}
 }
 
 // InstructionGetGlobal
@@ -293,9 +314,7 @@ func (i InstructionGetGlobal) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionGetGlobal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "global", i.Global, colorize)
@@ -309,6 +328,12 @@ func (i InstructionGetGlobal) Encode(code *[]byte) {
 func DecodeGetGlobal(ip *uint16, code []byte) (i InstructionGetGlobal) {
 	i.Global = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetGlobal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetGlobal{
+		Global: i.Global,
+	}
 }
 
 // InstructionSetGlobal
@@ -337,9 +362,7 @@ func (i InstructionSetGlobal) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionSetGlobal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "global", i.Global, colorize)
@@ -353,6 +376,12 @@ func (i InstructionSetGlobal) Encode(code *[]byte) {
 func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
 	i.Global = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionSetGlobal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetGlobal{
+		Global: i.Global,
+	}
 }
 
 // InstructionGetField
@@ -385,14 +414,12 @@ func (i InstructionGetField) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	printfConstantArgument(sb, "fieldName", program.GetConstants()[i.FieldName], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
+	printfTypeArgument(sb, "accessedType", program.GetTypes()[i.AccessedType], colorize)
 }
 
 func (i InstructionGetField) Encode(code *[]byte) {
@@ -405,6 +432,13 @@ func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
 	i.FieldName = decodeUint16(ip, code)
 	i.AccessedType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetField) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetField{
+		FieldName:    program.GetConstants()[i.FieldName],
+		AccessedType: program.GetTypes()[i.AccessedType],
+	}
 }
 
 // InstructionRemoveField
@@ -434,12 +468,10 @@ func (i InstructionRemoveField) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionRemoveField) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	printfConstantArgument(sb, "fieldName", program.GetConstants()[i.FieldName], colorize)
 }
 
 func (i InstructionRemoveField) Encode(code *[]byte) {
@@ -450,6 +482,12 @@ func (i InstructionRemoveField) Encode(code *[]byte) {
 func DecodeRemoveField(ip *uint16, code []byte) (i InstructionRemoveField) {
 	i.FieldName = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionRemoveField) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionRemoveField{
+		FieldName: program.GetConstants()[i.FieldName],
+	}
 }
 
 // InstructionSetField
@@ -482,14 +520,12 @@ func (i InstructionSetField) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	printfConstantArgument(sb, "fieldName", program.GetConstants()[i.FieldName], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
+	printfTypeArgument(sb, "accessedType", program.GetTypes()[i.AccessedType], colorize)
 }
 
 func (i InstructionSetField) Encode(code *[]byte) {
@@ -504,11 +540,19 @@ func DecodeSetField(ip *uint16, code []byte) (i InstructionSetField) {
 	return i
 }
 
+func (i InstructionSetField) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetField{
+		FieldName:    program.GetConstants()[i.FieldName],
+		AccessedType: program.GetTypes()[i.AccessedType],
+	}
+}
+
 // InstructionGetIndex
 //
 // Pops two values off the stack, the array and the index,
 // and then pushes the value at the given index of the array onto the stack.
 type InstructionGetIndex struct {
+	IndexedType uint16
 }
 
 var _ Instruction = InstructionGetIndex{}
@@ -518,20 +562,38 @@ func (InstructionGetIndex) Opcode() Opcode {
 }
 
 func (i InstructionGetIndex) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
 }
 
-func (i InstructionGetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
+func (i InstructionGetIndex) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+}
 
 func (i InstructionGetIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexedType", program.GetTypes()[i.IndexedType], colorize)
 }
 
 func (i InstructionGetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.IndexedType)
+}
+
+func DecodeGetIndex(ip *uint16, code []byte) (i InstructionGetIndex) {
+	i.IndexedType = decodeUint16(ip, code)
+	return i
+}
+
+func (i InstructionGetIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetIndex{
+		IndexedType: program.GetTypes()[i.IndexedType],
+	}
 }
 
 // InstructionRemoveIndex
@@ -540,6 +602,7 @@ func (i InstructionGetIndex) Encode(code *[]byte) {
 // Removes the value at the given index from the array and pushes it onto the stack.
 // If pushPlaceholder is true, also pushes the placeholder value that was inserted, if any, or nil otherwise.
 type InstructionRemoveIndex struct {
+	IndexedType     uint16
 	PushPlaceholder bool
 }
 
@@ -558,26 +621,37 @@ func (i InstructionRemoveIndex) String() string {
 
 func (i InstructionRemoveIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+	sb.WriteByte(' ')
 	printfArgument(sb, "pushPlaceholder", i.PushPlaceholder, colorize)
 }
 
 func (i InstructionRemoveIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexedType", program.GetTypes()[i.IndexedType], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "pushPlaceholder", i.PushPlaceholder, colorize)
 }
 
 func (i InstructionRemoveIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.IndexedType)
 	emitBool(code, i.PushPlaceholder)
 }
 
 func DecodeRemoveIndex(ip *uint16, code []byte) (i InstructionRemoveIndex) {
+	i.IndexedType = decodeUint16(ip, code)
 	i.PushPlaceholder = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionRemoveIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionRemoveIndex{
+		IndexedType:     program.GetTypes()[i.IndexedType],
+		PushPlaceholder: i.PushPlaceholder,
+	}
 }
 
 // InstructionSetIndex
@@ -585,6 +659,7 @@ func DecodeRemoveIndex(ip *uint16, code []byte) (i InstructionRemoveIndex) {
 // Pops three values off the stack, the array, the index, and the value,
 // and then sets the value at the given index of the array to the value.
 type InstructionSetIndex struct {
+	IndexedType uint16
 }
 
 var _ Instruction = InstructionSetIndex{}
@@ -594,20 +669,38 @@ func (InstructionSetIndex) Opcode() Opcode {
 }
 
 func (i InstructionSetIndex) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
 }
 
-func (i InstructionSetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
+func (i InstructionSetIndex) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+}
 
 func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexedType", program.GetTypes()[i.IndexedType], colorize)
 }
 
 func (i InstructionSetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.IndexedType)
+}
+
+func DecodeSetIndex(ip *uint16, code []byte) (i InstructionSetIndex) {
+	i.IndexedType = decodeUint16(ip, code)
+	return i
+}
+
+func (i InstructionSetIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetIndex{
+		IndexedType: program.GetTypes()[i.IndexedType],
+	}
 }
 
 // InstructionVoid
@@ -629,14 +722,16 @@ func (i InstructionVoid) String() string {
 func (i InstructionVoid) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionVoid) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionVoid) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionVoid) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionVoid{}
 }
 
 // InstructionTrue
@@ -658,14 +753,16 @@ func (i InstructionTrue) String() string {
 func (i InstructionTrue) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionTrue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionTrue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionTrue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionTrue{}
 }
 
 // InstructionFalse
@@ -687,14 +784,16 @@ func (i InstructionFalse) String() string {
 func (i InstructionFalse) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionFalse) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionFalse) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionFalse) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionFalse{}
 }
 
 // InstructionNil
@@ -716,14 +815,16 @@ func (i InstructionNil) String() string {
 func (i InstructionNil) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNil) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionNil) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionNil) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNil{}
 }
 
 // InstructionNewSimpleComposite
@@ -756,14 +857,12 @@ func (i InstructionNewSimpleComposite) OperandsString(sb *strings.Builder, color
 }
 
 func (i InstructionNewSimpleComposite) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 }
 
 func (i InstructionNewSimpleComposite) Encode(code *[]byte) {
@@ -776,6 +875,13 @@ func DecodeNewSimpleComposite(ip *uint16, code []byte) (i InstructionNewSimpleCo
 	i.Kind = decodeCompositeKind(ip, code)
 	i.Type = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionNewSimpleComposite) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewSimpleComposite{
+		Kind: i.Kind,
+		Type: program.GetTypes()[i.Type],
+	}
 }
 
 // InstructionNewComposite
@@ -808,14 +914,12 @@ func (i InstructionNewComposite) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionNewComposite) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 }
 
 func (i InstructionNewComposite) Encode(code *[]byte) {
@@ -828,6 +932,13 @@ func DecodeNewComposite(ip *uint16, code []byte) (i InstructionNewComposite) {
 	i.Kind = decodeCompositeKind(ip, code)
 	i.Type = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionNewComposite) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewComposite{
+		Kind: i.Kind,
+		Type: program.GetTypes()[i.Type],
+	}
 }
 
 // InstructionNewCompositeAt
@@ -863,16 +974,14 @@ func (i InstructionNewCompositeAt) OperandsString(sb *strings.Builder, colorize 
 }
 
 func (i InstructionNewCompositeAt) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "address", constants[i.Address], colorize)
+	printfConstantArgument(sb, "address", program.GetConstants()[i.Address], colorize)
 }
 
 func (i InstructionNewCompositeAt) Encode(code *[]byte) {
@@ -887,6 +996,14 @@ func DecodeNewCompositeAt(ip *uint16, code []byte) (i InstructionNewCompositeAt)
 	i.Type = decodeUint16(ip, code)
 	i.Address = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionNewCompositeAt) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewCompositeAt{
+		Kind:    i.Kind,
+		Type:    program.GetTypes()[i.Type],
+		Address: program.GetConstants()[i.Address],
+	}
 }
 
 // InstructionNewPath
@@ -918,14 +1035,12 @@ func (i InstructionNewPath) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionNewPath) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "domain", i.Domain, colorize)
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "identifier", constants[i.Identifier], colorize)
+	printfConstantArgument(sb, "identifier", program.GetConstants()[i.Identifier], colorize)
 }
 
 func (i InstructionNewPath) Encode(code *[]byte) {
@@ -938,6 +1053,13 @@ func DecodeNewPath(ip *uint16, code []byte) (i InstructionNewPath) {
 	i.Domain = decodePathDomain(ip, code)
 	i.Identifier = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionNewPath) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewPath{
+		Domain:     i.Domain,
+		Identifier: program.GetConstants()[i.Identifier],
+	}
 }
 
 // InstructionNewArray
@@ -973,12 +1095,10 @@ func (i InstructionNewArray) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionNewArray) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "size", i.Size, colorize)
 	sb.WriteByte(' ')
@@ -997,6 +1117,14 @@ func DecodeNewArray(ip *uint16, code []byte) (i InstructionNewArray) {
 	i.Size = decodeUint16(ip, code)
 	i.IsResource = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionNewArray) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewArray{
+		Type:       program.GetTypes()[i.Type],
+		Size:       i.Size,
+		IsResource: i.IsResource,
+	}
 }
 
 // InstructionNewDictionary
@@ -1033,12 +1161,10 @@ func (i InstructionNewDictionary) OperandsString(sb *strings.Builder, colorize b
 }
 
 func (i InstructionNewDictionary) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "size", i.Size, colorize)
 	sb.WriteByte(' ')
@@ -1057,6 +1183,14 @@ func DecodeNewDictionary(ip *uint16, code []byte) (i InstructionNewDictionary) {
 	i.Size = decodeUint16(ip, code)
 	i.IsResource = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionNewDictionary) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewDictionary{
+		Type:       program.GetTypes()[i.Type],
+		Size:       i.Size,
+		IsResource: i.IsResource,
+	}
 }
 
 // InstructionNewRef
@@ -1089,12 +1223,10 @@ func (i InstructionNewRef) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionNewRef) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "isImplicit", i.IsImplicit, colorize)
 }
@@ -1109,6 +1241,13 @@ func DecodeNewRef(ip *uint16, code []byte) (i InstructionNewRef) {
 	i.Type = decodeUint16(ip, code)
 	i.IsImplicit = decodeBool(ip, code)
 	return i
+}
+
+func (i InstructionNewRef) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewRef{
+		Type:       program.GetTypes()[i.Type],
+		IsImplicit: i.IsImplicit,
+	}
 }
 
 // InstructionGetConstant
@@ -1137,12 +1276,10 @@ func (i InstructionGetConstant) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionGetConstant) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "constant", constants[i.Constant], colorize)
+	printfConstantArgument(sb, "constant", program.GetConstants()[i.Constant], colorize)
 }
 
 func (i InstructionGetConstant) Encode(code *[]byte) {
@@ -1153,6 +1290,12 @@ func (i InstructionGetConstant) Encode(code *[]byte) {
 func DecodeGetConstant(ip *uint16, code []byte) (i InstructionGetConstant) {
 	i.Constant = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetConstant) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetConstant{
+		Constant: program.GetConstants()[i.Constant],
+	}
 }
 
 // InstructionNewClosure
@@ -1184,12 +1327,10 @@ func (i InstructionNewClosure) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionNewClosure) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfFunctionNameArgument(sb, "function", functionNames[i.Function], colorize)
+	printfFunctionNameArgument(sb, "function", program.GetFunctionName(i.Function), colorize)
 	sb.WriteByte(' ')
 	printfUpvalueArrayArgument(sb, "upvalues", i.Upvalues, colorize)
 }
@@ -1204,6 +1345,13 @@ func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
 	i.Function = decodeUint16(ip, code)
 	i.Upvalues = decodeUpvalueArray(ip, code)
 	return i
+}
+
+func (i InstructionNewClosure) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNewClosure{
+		Function: i.Function,
+		Upvalues: i.Upvalues,
+	}
 }
 
 // InstructionInvoke
@@ -1240,16 +1388,14 @@ func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, program.GetTypes())
 	sb.WriteByte(' ')
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "returnType", types[i.ReturnType], colorize)
+	printfTypeArgument(sb, "returnType", program.GetTypes()[i.ReturnType], colorize)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
@@ -1264,6 +1410,14 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 	i.ArgCount = decodeUint16(ip, code)
 	i.ReturnType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionInvoke) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionInvoke{
+		TypeArgs:   resolveTypeIndices(i.TypeArgs, program.GetTypes()),
+		ArgCount:   i.ArgCount,
+		ReturnType: program.GetTypes()[i.ReturnType],
+	}
 }
 
 // InstructionInvokeTyped
@@ -1298,16 +1452,14 @@ func (i InstructionInvokeTyped) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionInvokeTyped) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
+	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, program.GetTypes())
 	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, types)
+	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, program.GetTypes())
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "returnType", types[i.ReturnType], colorize)
+	printfTypeArgument(sb, "returnType", program.GetTypes()[i.ReturnType], colorize)
 }
 
 func (i InstructionInvokeTyped) Encode(code *[]byte) {
@@ -1322,6 +1474,14 @@ func DecodeInvokeTyped(ip *uint16, code []byte) (i InstructionInvokeTyped) {
 	i.ArgTypes = decodeUint16Array(ip, code)
 	i.ReturnType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionInvokeTyped) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionInvokeTyped{
+		TypeArgs:   resolveTypeIndices(i.TypeArgs, program.GetTypes()),
+		ArgTypes:   resolveTypeIndices(i.ArgTypes, program.GetTypes()),
+		ReturnType: program.GetTypes()[i.ReturnType],
+	}
 }
 
 // InstructionGetMethod
@@ -1354,14 +1514,12 @@ func (i InstructionGetMethod) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionGetMethod) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "method", i.Method, colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "receiverType", types[i.ReceiverType], colorize)
+	printfTypeArgument(sb, "receiverType", program.GetTypes()[i.ReceiverType], colorize)
 }
 
 func (i InstructionGetMethod) Encode(code *[]byte) {
@@ -1374,6 +1532,13 @@ func DecodeGetMethod(ip *uint16, code []byte) (i InstructionGetMethod) {
 	i.Method = decodeUint16(ip, code)
 	i.ReceiverType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetMethod) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetMethod{
+		Method:       i.Method,
+		ReceiverType: program.GetTypes()[i.ReceiverType],
+	}
 }
 
 // InstructionDup
@@ -1395,14 +1560,16 @@ func (i InstructionDup) String() string {
 func (i InstructionDup) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDup) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDup) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDup) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDup{}
 }
 
 // InstructionDrop
@@ -1424,14 +1591,16 @@ func (i InstructionDrop) String() string {
 func (i InstructionDrop) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDrop) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDrop) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDrop) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDrop{}
 }
 
 // InstructionDestroy
@@ -1453,14 +1622,16 @@ func (i InstructionDestroy) String() string {
 func (i InstructionDestroy) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDestroy) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDestroy) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDestroy) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDestroy{}
 }
 
 // InstructionUnwrap
@@ -1485,14 +1656,16 @@ func (i InstructionUnwrap) String() string {
 func (i InstructionUnwrap) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionUnwrap) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionUnwrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionUnwrap) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionUnwrap{}
 }
 
 // InstructionWrap
@@ -1514,14 +1687,16 @@ func (i InstructionWrap) String() string {
 func (i InstructionWrap) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionWrap) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionWrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionWrap) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionWrap{}
 }
 
 // InstructionTransfer
@@ -1543,14 +1718,16 @@ func (i InstructionTransfer) String() string {
 func (i InstructionTransfer) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionTransfer) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionTransfer) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionTransfer{}
 }
 
 // InstructionTransferAndConvert
@@ -1583,14 +1760,12 @@ func (i InstructionTransferAndConvert) OperandsString(sb *strings.Builder, color
 }
 
 func (i InstructionTransferAndConvert) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 }
 
 func (i InstructionTransferAndConvert) Encode(code *[]byte) {
@@ -1603,6 +1778,13 @@ func DecodeTransferAndConvert(ip *uint16, code []byte) (i InstructionTransferAnd
 	i.ValueType = decodeUint16(ip, code)
 	i.TargetType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionTransferAndConvert) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionTransferAndConvert{
+		ValueType:  program.GetTypes()[i.ValueType],
+		TargetType: program.GetTypes()[i.TargetType],
+	}
 }
 
 // InstructionConvert
@@ -1635,14 +1817,12 @@ func (i InstructionConvert) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionConvert) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 }
 
 func (i InstructionConvert) Encode(code *[]byte) {
@@ -1655,6 +1835,13 @@ func DecodeConvert(ip *uint16, code []byte) (i InstructionConvert) {
 	i.ValueType = decodeUint16(ip, code)
 	i.TargetType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionConvert) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionConvert{
+		ValueType:  program.GetTypes()[i.ValueType],
+		TargetType: program.GetTypes()[i.TargetType],
+	}
 }
 
 // InstructionSimpleCast
@@ -1686,14 +1873,12 @@ func (i InstructionSimpleCast) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 }
 
 func (i InstructionSimpleCast) Encode(code *[]byte) {
@@ -1706,6 +1891,13 @@ func DecodeSimpleCast(ip *uint16, code []byte) (i InstructionSimpleCast) {
 	i.TargetType = decodeUint16(ip, code)
 	i.ValueType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionSimpleCast) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSimpleCast{
+		TargetType: program.GetTypes()[i.TargetType],
+		ValueType:  program.GetTypes()[i.ValueType],
+	}
 }
 
 // InstructionFailableCast
@@ -1739,14 +1931,12 @@ func (i InstructionFailableCast) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 }
 
 func (i InstructionFailableCast) Encode(code *[]byte) {
@@ -1759,6 +1949,13 @@ func DecodeFailableCast(ip *uint16, code []byte) (i InstructionFailableCast) {
 	i.TargetType = decodeUint16(ip, code)
 	i.ValueType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionFailableCast) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionFailableCast{
+		TargetType: program.GetTypes()[i.TargetType],
+		ValueType:  program.GetTypes()[i.ValueType],
+	}
 }
 
 // InstructionForceCast
@@ -1792,14 +1989,12 @@ func (i InstructionForceCast) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "valueType", types[i.ValueType], colorize)
+	printfTypeArgument(sb, "valueType", program.GetTypes()[i.ValueType], colorize)
 }
 
 func (i InstructionForceCast) Encode(code *[]byte) {
@@ -1812,6 +2007,13 @@ func DecodeForceCast(ip *uint16, code []byte) (i InstructionForceCast) {
 	i.TargetType = decodeUint16(ip, code)
 	i.ValueType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionForceCast) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionForceCast{
+		TargetType: program.GetTypes()[i.TargetType],
+		ValueType:  program.GetTypes()[i.ValueType],
+	}
 }
 
 // InstructionDeref
@@ -1834,14 +2036,16 @@ func (i InstructionDeref) String() string {
 func (i InstructionDeref) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDeref) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDeref) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDeref) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDeref{}
 }
 
 // InstructionJump
@@ -1870,9 +2074,7 @@ func (i InstructionJump) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionJump) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
@@ -1886,6 +2088,12 @@ func (i InstructionJump) Encode(code *[]byte) {
 func DecodeJump(ip *uint16, code []byte) (i InstructionJump) {
 	i.Target = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionJump) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionJump{
+		Target: i.Target,
+	}
 }
 
 // InstructionJumpIfFalse
@@ -1914,9 +2122,7 @@ func (i InstructionJumpIfFalse) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionJumpIfFalse) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
@@ -1930,6 +2136,12 @@ func (i InstructionJumpIfFalse) Encode(code *[]byte) {
 func DecodeJumpIfFalse(ip *uint16, code []byte) (i InstructionJumpIfFalse) {
 	i.Target = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionJumpIfFalse) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionJumpIfFalse{
+		Target: i.Target,
+	}
 }
 
 // InstructionJumpIfTrue
@@ -1958,9 +2170,7 @@ func (i InstructionJumpIfTrue) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionJumpIfTrue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
@@ -1974,6 +2184,12 @@ func (i InstructionJumpIfTrue) Encode(code *[]byte) {
 func DecodeJumpIfTrue(ip *uint16, code []byte) (i InstructionJumpIfTrue) {
 	i.Target = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionJumpIfTrue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionJumpIfTrue{
+		Target: i.Target,
+	}
 }
 
 // InstructionJumpIfNil
@@ -2002,9 +2218,7 @@ func (i InstructionJumpIfNil) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionJumpIfNil) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "target", i.Target, colorize)
@@ -2018,6 +2232,12 @@ func (i InstructionJumpIfNil) Encode(code *[]byte) {
 func DecodeJumpIfNil(ip *uint16, code []byte) (i InstructionJumpIfNil) {
 	i.Target = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionJumpIfNil) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionJumpIfNil{
+		Target: i.Target,
+	}
 }
 
 // InstructionReturn
@@ -2039,14 +2259,16 @@ func (i InstructionReturn) String() string {
 func (i InstructionReturn) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionReturn) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionReturn) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionReturn) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionReturn{}
 }
 
 // InstructionReturnValue
@@ -2068,14 +2290,16 @@ func (i InstructionReturnValue) String() string {
 func (i InstructionReturnValue) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionReturnValue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionReturnValue) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionReturnValue) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionReturnValue{}
 }
 
 // InstructionSame
@@ -2098,14 +2322,16 @@ func (i InstructionSame) String() string {
 func (i InstructionSame) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSame) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionSame) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionSame) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSame{}
 }
 
 // InstructionEqual
@@ -2128,14 +2354,16 @@ func (i InstructionEqual) String() string {
 func (i InstructionEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionEqual) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionEqual{}
 }
 
 // InstructionNotEqual
@@ -2158,14 +2386,16 @@ func (i InstructionNotEqual) String() string {
 func (i InstructionNotEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNotEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionNotEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionNotEqual) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNotEqual{}
 }
 
 // InstructionNot
@@ -2188,14 +2418,16 @@ func (i InstructionNot) String() string {
 func (i InstructionNot) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNot) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionNot) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionNot) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNot{}
 }
 
 // InstructionAdd
@@ -2218,14 +2450,16 @@ func (i InstructionAdd) String() string {
 func (i InstructionAdd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionAdd) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionAdd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionAdd) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionAdd{}
 }
 
 // InstructionSubtract
@@ -2248,14 +2482,16 @@ func (i InstructionSubtract) String() string {
 func (i InstructionSubtract) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSubtract) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionSubtract) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionSubtract) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSubtract{}
 }
 
 // InstructionMultiply
@@ -2278,14 +2514,16 @@ func (i InstructionMultiply) String() string {
 func (i InstructionMultiply) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionMultiply) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionMultiply) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionMultiply) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionMultiply{}
 }
 
 // InstructionDivide
@@ -2308,14 +2546,16 @@ func (i InstructionDivide) String() string {
 func (i InstructionDivide) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDivide) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionDivide) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionDivide) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionDivide{}
 }
 
 // InstructionMod
@@ -2338,14 +2578,16 @@ func (i InstructionMod) String() string {
 func (i InstructionMod) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionMod) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionMod) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionMod) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionMod{}
 }
 
 // InstructionNegate
@@ -2368,14 +2610,16 @@ func (i InstructionNegate) String() string {
 func (i InstructionNegate) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNegate) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionNegate) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionNegate) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionNegate{}
 }
 
 // InstructionLess
@@ -2398,14 +2642,16 @@ func (i InstructionLess) String() string {
 func (i InstructionLess) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLess) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionLess) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionLess) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionLess{}
 }
 
 // InstructionLessOrEqual
@@ -2428,14 +2674,16 @@ func (i InstructionLessOrEqual) String() string {
 func (i InstructionLessOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLessOrEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionLessOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionLessOrEqual) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionLessOrEqual{}
 }
 
 // InstructionGreater
@@ -2458,14 +2706,16 @@ func (i InstructionGreater) String() string {
 func (i InstructionGreater) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGreater) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionGreater) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionGreater) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGreater{}
 }
 
 // InstructionGreaterOrEqual
@@ -2488,14 +2738,16 @@ func (i InstructionGreaterOrEqual) String() string {
 func (i InstructionGreaterOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGreaterOrEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionGreaterOrEqual) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionGreaterOrEqual) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGreaterOrEqual{}
 }
 
 // InstructionBitwiseOr
@@ -2518,14 +2770,16 @@ func (i InstructionBitwiseOr) String() string {
 func (i InstructionBitwiseOr) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseOr) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseOr) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseOr) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseOr{}
 }
 
 // InstructionBitwiseXor
@@ -2548,14 +2802,16 @@ func (i InstructionBitwiseXor) String() string {
 func (i InstructionBitwiseXor) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseXor) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseXor) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseXor) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseXor{}
 }
 
 // InstructionBitwiseAnd
@@ -2578,14 +2834,16 @@ func (i InstructionBitwiseAnd) String() string {
 func (i InstructionBitwiseAnd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseAnd) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseAnd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseAnd) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseAnd{}
 }
 
 // InstructionBitwiseLeftShift
@@ -2608,14 +2866,16 @@ func (i InstructionBitwiseLeftShift) String() string {
 func (i InstructionBitwiseLeftShift) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseLeftShift) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseLeftShift) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseLeftShift) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseLeftShift{}
 }
 
 // InstructionBitwiseRightShift
@@ -2638,14 +2898,16 @@ func (i InstructionBitwiseRightShift) String() string {
 func (i InstructionBitwiseRightShift) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseRightShift) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionBitwiseRightShift) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionBitwiseRightShift) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBitwiseRightShift{}
 }
 
 // InstructionIterator
@@ -2667,14 +2929,16 @@ func (i InstructionIterator) String() string {
 func (i InstructionIterator) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIterator) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionIterator) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionIterator) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionIterator{}
 }
 
 // InstructionIteratorHasNext
@@ -2696,14 +2960,16 @@ func (i InstructionIteratorHasNext) String() string {
 func (i InstructionIteratorHasNext) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorHasNext) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionIteratorHasNext) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionIteratorHasNext) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionIteratorHasNext{}
 }
 
 // InstructionIteratorNext
@@ -2725,14 +2991,16 @@ func (i InstructionIteratorNext) String() string {
 func (i InstructionIteratorNext) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorNext) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionIteratorNext) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionIteratorNext) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionIteratorNext{}
 }
 
 // InstructionIteratorEnd
@@ -2755,14 +3023,16 @@ func (i InstructionIteratorEnd) String() string {
 func (i InstructionIteratorEnd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorEnd) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionIteratorEnd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionIteratorEnd) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionIteratorEnd{}
 }
 
 // InstructionEmitEvent
@@ -2794,12 +3064,10 @@ func (i InstructionEmitEvent) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "type", program.GetTypes()[i.Type], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
@@ -2814,6 +3082,13 @@ func DecodeEmitEvent(ip *uint16, code []byte) (i InstructionEmitEvent) {
 	i.Type = decodeUint16(ip, code)
 	i.ArgCount = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionEmitEvent) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionEmitEvent{
+		Type:     program.GetTypes()[i.Type],
+		ArgCount: i.ArgCount,
+	}
 }
 
 // InstructionLoop
@@ -2835,14 +3110,16 @@ func (i InstructionLoop) String() string {
 func (i InstructionLoop) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLoop) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionLoop) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionLoop) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionLoop{}
 }
 
 // InstructionStatement
@@ -2864,14 +3141,16 @@ func (i InstructionStatement) String() string {
 func (i InstructionStatement) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionStatement) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionStatement) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionStatement) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionStatement{}
 }
 
 // InstructionTemplateString
@@ -2900,9 +3179,7 @@ func (i InstructionTemplateString) OperandsString(sb *strings.Builder, colorize 
 }
 
 func (i InstructionTemplateString) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "exprSize", i.ExprSize, colorize)
@@ -2918,12 +3195,19 @@ func DecodeTemplateString(ip *uint16, code []byte) (i InstructionTemplateString)
 	return i
 }
 
+func (i InstructionTemplateString) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionTemplateString{
+		ExprSize: i.ExprSize,
+	}
+}
+
 // InstructionGetTypeIndex
 //
 // Pops a value off the stack, the target,
 // and then pushes the value of the type key at the given index onto the stack.
 type InstructionGetTypeIndex struct {
-	Type uint16
+	IndexedType  uint16
+	IndexingType uint16
 }
 
 var _ Instruction = InstructionGetTypeIndex{}
@@ -2941,26 +3225,37 @@ func (i InstructionGetTypeIndex) String() string {
 
 func (i InstructionGetTypeIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexingType", i.IndexingType, colorize)
 }
 
 func (i InstructionGetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "indexedType", program.GetTypes()[i.IndexedType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexingType", program.GetTypes()[i.IndexingType], colorize)
 }
 
 func (i InstructionGetTypeIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.IndexedType)
+	emitUint16(code, i.IndexingType)
 }
 
 func DecodeGetTypeIndex(ip *uint16, code []byte) (i InstructionGetTypeIndex) {
-	i.Type = decodeUint16(ip, code)
+	i.IndexedType = decodeUint16(ip, code)
+	i.IndexingType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetTypeIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetTypeIndex{
+		IndexedType:  program.GetTypes()[i.IndexedType],
+		IndexingType: program.GetTypes()[i.IndexingType],
+	}
 }
 
 // InstructionRemoveTypeIndex
@@ -2969,7 +3264,8 @@ func DecodeGetTypeIndex(ip *uint16, code []byte) (i InstructionGetTypeIndex) {
 // Remove the value of the given type key from the target.
 // Additionally destroy if removed type is resource.
 type InstructionRemoveTypeIndex struct {
-	Type uint16
+	IndexedType  uint16
+	IndexingType uint16
 }
 
 var _ Instruction = InstructionRemoveTypeIndex{}
@@ -2987,26 +3283,37 @@ func (i InstructionRemoveTypeIndex) String() string {
 
 func (i InstructionRemoveTypeIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexingType", i.IndexingType, colorize)
 }
 
 func (i InstructionRemoveTypeIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "indexedType", program.GetTypes()[i.IndexedType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexingType", program.GetTypes()[i.IndexingType], colorize)
 }
 
 func (i InstructionRemoveTypeIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.IndexedType)
+	emitUint16(code, i.IndexingType)
 }
 
 func DecodeRemoveTypeIndex(ip *uint16, code []byte) (i InstructionRemoveTypeIndex) {
-	i.Type = decodeUint16(ip, code)
+	i.IndexedType = decodeUint16(ip, code)
+	i.IndexingType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionRemoveTypeIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionRemoveTypeIndex{
+		IndexedType:  program.GetTypes()[i.IndexedType],
+		IndexingType: program.GetTypes()[i.IndexingType],
+	}
 }
 
 // InstructionSetTypeIndex
@@ -3014,7 +3321,8 @@ func DecodeRemoveTypeIndex(ip *uint16, code []byte) (i InstructionRemoveTypeInde
 // Pops two values off the stack, the target and the value,
 // and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
 type InstructionSetTypeIndex struct {
-	Type uint16
+	IndexedType  uint16
+	IndexingType uint16
 }
 
 var _ Instruction = InstructionSetTypeIndex{}
@@ -3032,26 +3340,37 @@ func (i InstructionSetTypeIndex) String() string {
 
 func (i InstructionSetTypeIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "type", i.Type, colorize)
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexingType", i.IndexingType, colorize)
 }
 
 func (i InstructionSetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	printfTypeArgument(sb, "indexedType", program.GetTypes()[i.IndexedType], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexingType", program.GetTypes()[i.IndexingType], colorize)
 }
 
 func (i InstructionSetTypeIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.Type)
+	emitUint16(code, i.IndexedType)
+	emitUint16(code, i.IndexingType)
 }
 
 func DecodeSetTypeIndex(ip *uint16, code []byte) (i InstructionSetTypeIndex) {
-	i.Type = decodeUint16(ip, code)
+	i.IndexedType = decodeUint16(ip, code)
+	i.IndexingType = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionSetTypeIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetTypeIndex{
+		IndexedType:  program.GetTypes()[i.IndexedType],
+		IndexingType: program.GetTypes()[i.IndexingType],
+	}
 }
 
 // InstructionSetAttachmentBase
@@ -3073,14 +3392,16 @@ func (i InstructionSetAttachmentBase) String() string {
 func (i InstructionSetAttachmentBase) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSetAttachmentBase) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 }
 
 func (i InstructionSetAttachmentBase) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+}
+
+func (i InstructionSetAttachmentBase) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionSetAttachmentBase{}
 }
 
 // InstructionGetFieldLocal
@@ -3116,14 +3437,12 @@ func (i InstructionGetFieldLocal) OperandsString(sb *strings.Builder, colorize b
 }
 
 func (i InstructionGetFieldLocal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
+	program ProgramForInstructions,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+	printfConstantArgument(sb, "fieldName", program.GetConstants()[i.FieldName], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
+	printfTypeArgument(sb, "accessedType", program.GetTypes()[i.AccessedType], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "local", i.Local, colorize)
 }
@@ -3140,6 +3459,14 @@ func DecodeGetFieldLocal(ip *uint16, code []byte) (i InstructionGetFieldLocal) {
 	i.AccessedType = decodeUint16(ip, code)
 	i.Local = decodeUint16(ip, code)
 	return i
+}
+
+func (i InstructionGetFieldLocal) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetFieldLocal{
+		FieldName:    program.GetConstants()[i.FieldName],
+		AccessedType: program.GetTypes()[i.AccessedType],
+		Local:        i.Local,
+	}
 }
 
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
@@ -3167,11 +3494,11 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	case SetField:
 		return DecodeSetField(ip, code)
 	case GetIndex:
-		return InstructionGetIndex{}
+		return DecodeGetIndex(ip, code)
 	case RemoveIndex:
 		return DecodeRemoveIndex(ip, code)
 	case SetIndex:
-		return InstructionSetIndex{}
+		return DecodeSetIndex(ip, code)
 	case Void:
 		return InstructionVoid{}
 	case True:
