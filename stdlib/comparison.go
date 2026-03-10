@@ -33,21 +33,33 @@ const ComparisonContractLocation = common.IdentifierLocation("Comparison")
 var ComparisonContractSemaImport = sema.VirtualImport{
 	ValueElements: func() *sema.StringImportElementOrderedMap {
 		elements := &sema.StringImportElementOrderedMap{}
-		elements.Set(minFunctionName, sema.ImportElement{
-			Type:            minFunctionType,
-			DeclarationKind: common.DeclarationKindFunction,
-			Access:          sema.PrimitiveAccess(ast.AccessAll),
-		})
-		elements.Set(maxFunctionName, sema.ImportElement{
-			Type:            maxFunctionType,
-			DeclarationKind: common.DeclarationKindFunction,
-			Access:          sema.PrimitiveAccess(ast.AccessAll),
-		})
-		elements.Set(clampFunctionName, sema.ImportElement{
-			Type:            clampFunctionType,
-			DeclarationKind: common.DeclarationKindFunction,
-			Access:          sema.PrimitiveAccess(ast.AccessAll),
-		})
+		elements.Set(
+			minFunctionName,
+			sema.ImportElement{
+				Type:            minFunctionType,
+				DeclarationKind: common.DeclarationKindFunction,
+				Access:          sema.PrimitiveAccess(ast.AccessAll),
+				DocString:       minFunctionDocString,
+			},
+		)
+		elements.Set(
+			maxFunctionName,
+			sema.ImportElement{
+				Type:            maxFunctionType,
+				DeclarationKind: common.DeclarationKindFunction,
+				Access:          sema.PrimitiveAccess(ast.AccessAll),
+				DocString:       maxFunctionDocString,
+			},
+		)
+		elements.Set(
+			clampFunctionName,
+			sema.ImportElement{
+				Type:            clampFunctionType,
+				DeclarationKind: common.DeclarationKindFunction,
+				Access:          sema.PrimitiveAccess(ast.AccessAll),
+				DocString:       clampFunctionDocString,
+			},
+		)
 		return elements
 	}(),
 }
