@@ -42,6 +42,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	}
 
 	valueType := checker.VisitExpression(valueExpression, statement, expectedType)
+	checker.checkUnusedExpressionResourceLoss(valueType, valueExpression)
 
 	// Only get the element type if the array is not a resource array.
 	// Otherwise, in addition to the `UnsupportedResourceForLoopError`,

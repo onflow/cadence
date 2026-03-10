@@ -182,6 +182,39 @@ func TestCheckInvalidForValueResource(t *testing.T) {
 	assert.IsType(t, &sema.UnsupportedResourceForLoopError{}, errs[0])
 }
 
+func TestCheckForValueDictionaryResource(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun test() {
+          let xs <- {"a": <-create R()}
+          for x in xs { }
+          destroy xs
+      }
+    `)
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidForValueDictionaryResource(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun test() {
+          for x in {"a": <-create R()} { }
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+}
+
 func TestCheckInvalidForBlock(t *testing.T) {
 
 	t.Parallel()
