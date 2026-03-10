@@ -12119,18 +12119,15 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	variable := inter.GetGlobal("ref")
-	require.NotNil(t, variable)
+	value := inter.GetGlobal("ref")
+	require.NotNil(t, value)
 
-	require.Equal(
-		t,
-		&interpreter.EphemeralReferenceValue{
-			Value:         interpreter.NewUnmeteredIntValueFromInt64(2),
-			BorrowedType:  sema.IntType,
-			Authorization: interpreter.UnauthorizedAccess,
-		},
-		variable,
-	)
+	require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+	referenceValue := value.(*interpreter.EphemeralReferenceValue)
+
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), referenceValue.Value)
+	require.Equal(t, sema.IntType, referenceValue.BorrowedType)
+	require.Equal(t, interpreter.UnauthorizedAccess, referenceValue.Authorization)
 }
 
 func TestInterpretNilCoalesceAnyResourceAndPanic(t *testing.T) {

@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"sync"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -33,6 +35,11 @@ type EphemeralReferenceValue struct {
 	// BorrowedType is the T in &T
 	BorrowedType  sema.Type
 	Authorization Authorization
+
+	// Referenced value cannot change.
+	// Hence, it's safe to store the static-type.
+	staticType     StaticType
+	staticTypeOnce sync.Once
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -119,18 +126,23 @@ func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) Sta
 	// For example:
 	// - Actual: [auth(E) &T], Borrow: [&T] -> Static: [&T] (authorization from borrow type)
 	// - Actual: [&R], Borrow: [&{RI}] -> Static: [&R] (type narrowing preserved)
-	actualStaticType := v.Value.StaticType(context)
-	innerStaticType := applyBorrowTypeAuthorization(
-		context,
-		actualStaticType,
-		v.BorrowedType,
-	)
 
-	return NewReferenceStaticType(
-		context,
-		v.Authorization,
-		innerStaticType,
-	)
+	v.staticTypeOnce.Do(func() {
+		actualStaticType := v.Value.StaticType(context)
+		innerStaticType := applyBorrowTypeAuthorization(
+			context,
+			actualStaticType,
+			v.BorrowedType,
+		)
+
+		v.staticType = NewReferenceStaticType(
+			context,
+			v.Authorization,
+			innerStaticType,
+		)
+	})
+
+	return v.staticType
 }
 
 // applyBorrowTypeAuthorization returns a static type that preserves the
