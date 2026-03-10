@@ -1699,6 +1699,14 @@ func opWrap(vm *VM) {
 	vm.replaceTop(optional)
 }
 
+func opBoxOptional(vm *VM, ins opcode.InstructionBoxOptional) {
+	targetType := vm.loadType(ins.TargetType)
+	targetSemaType := vm.context.SemaTypeFromStaticType(targetType)
+	value := vm.peek()
+	boxed := interpreter.BoxOptional(vm.context, value, targetSemaType)
+	vm.replaceTop(boxed)
+}
+
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 	typeIndex := ins.Type
 	typ := vm.loadType(typeIndex).(interpreter.ArrayStaticType)
@@ -2115,6 +2123,8 @@ func (vm *VM) run() {
 			opNot(vm)
 		case opcode.InstructionWrap:
 			opWrap(vm)
+		case opcode.InstructionBoxOptional:
+			opBoxOptional(vm, ins)
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		case opcode.InstructionEmitEvent:

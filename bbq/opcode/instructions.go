@@ -1628,6 +1628,51 @@ func (i InstructionWrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionBoxOptional
+//
+// Pops a value off the stack, boxes it into an optional if needed to match the target type,
+// and then pushes it back on to the stack.
+type InstructionBoxOptional struct {
+	TargetType uint16
+}
+
+var _ Instruction = InstructionBoxOptional{}
+
+func (InstructionBoxOptional) Opcode() Opcode {
+	return BoxOptional
+}
+
+func (i InstructionBoxOptional) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionBoxOptional) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "targetType", i.TargetType, colorize)
+}
+
+func (i InstructionBoxOptional) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+}
+
+func (i InstructionBoxOptional) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.TargetType)
+}
+
+func DecodeBoxOptional(ip *uint16, code []byte) (i InstructionBoxOptional) {
+	i.TargetType = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionTransfer
 //
 // Pops a value off the stack, calls transfer, and then pushes it back on to the stack.
@@ -3341,6 +3386,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionUnwrap{}
 	case Wrap:
 		return InstructionWrap{}
+	case BoxOptional:
+		return DecodeBoxOptional(ip, code)
 	case Transfer:
 		return InstructionTransfer{}
 	case TransferAndConvert:
