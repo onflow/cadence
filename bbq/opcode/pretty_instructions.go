@@ -265,6 +265,7 @@ func (i PrettyInstructionSetField) String() string {
 // Pops two values off the stack, the array and the index,
 // and then pushes the value at the given index of the array onto the stack.
 type PrettyInstructionGetIndex struct {
+	IndexedType interpreter.StaticType
 }
 
 var _ PrettyInstruction = PrettyInstructionGetIndex{}
@@ -274,7 +275,11 @@ func (PrettyInstructionGetIndex) Opcode() Opcode {
 }
 
 func (i PrettyInstructionGetIndex) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "indexedType", i.IndexedType, false)
+	return sb.String()
 }
 
 // PrettyInstructionRemoveIndex
@@ -284,6 +289,7 @@ func (i PrettyInstructionGetIndex) String() string {
 // Removes the value at the given index from the array and pushes it onto the stack.
 // If pushPlaceholder is true, also pushes the placeholder value that was inserted, if any, or nil otherwise.
 type PrettyInstructionRemoveIndex struct {
+	IndexedType     interpreter.StaticType
 	PushPlaceholder bool
 }
 
@@ -297,6 +303,8 @@ func (i PrettyInstructionRemoveIndex) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "indexedType", i.IndexedType, false)
+	sb.WriteByte(' ')
 	printfArgument(&sb, "pushPlaceholder", i.PushPlaceholder, false)
 	return sb.String()
 }
@@ -307,6 +315,7 @@ func (i PrettyInstructionRemoveIndex) String() string {
 // Pops three values off the stack, the array, the index, and the value,
 // and then sets the value at the given index of the array to the value.
 type PrettyInstructionSetIndex struct {
+	IndexedType interpreter.StaticType
 }
 
 var _ PrettyInstruction = PrettyInstructionSetIndex{}
@@ -316,7 +325,11 @@ func (PrettyInstructionSetIndex) Opcode() Opcode {
 }
 
 func (i PrettyInstructionSetIndex) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "indexedType", i.IndexedType, false)
+	return sb.String()
 }
 
 // PrettyInstructionVoid
@@ -1583,7 +1596,8 @@ func (i PrettyInstructionTemplateString) String() string {
 // Pops a value off the stack, the target,
 // and then pushes the value of the type key at the given index onto the stack.
 type PrettyInstructionGetTypeIndex struct {
-	Type interpreter.StaticType
+	IndexedType  interpreter.StaticType
+	IndexingType interpreter.StaticType
 }
 
 var _ PrettyInstruction = PrettyInstructionGetTypeIndex{}
@@ -1596,7 +1610,9 @@ func (i PrettyInstructionGetTypeIndex) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	sb.WriteByte(' ')
-	printfTypeArgument(&sb, "type", i.Type, false)
+	printfTypeArgument(&sb, "indexedType", i.IndexedType, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "indexingType", i.IndexingType, false)
 	return sb.String()
 }
 
@@ -1607,7 +1623,8 @@ func (i PrettyInstructionGetTypeIndex) String() string {
 // Remove the value of the given type key from the target.
 // Additionally destroy if removed type is resource.
 type PrettyInstructionRemoveTypeIndex struct {
-	Type interpreter.StaticType
+	IndexedType  interpreter.StaticType
+	IndexingType interpreter.StaticType
 }
 
 var _ PrettyInstruction = PrettyInstructionRemoveTypeIndex{}
@@ -1620,7 +1637,9 @@ func (i PrettyInstructionRemoveTypeIndex) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	sb.WriteByte(' ')
-	printfTypeArgument(&sb, "type", i.Type, false)
+	printfTypeArgument(&sb, "indexedType", i.IndexedType, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "indexingType", i.IndexingType, false)
 	return sb.String()
 }
 
@@ -1630,7 +1649,8 @@ func (i PrettyInstructionRemoveTypeIndex) String() string {
 // Pops two values off the stack, the target and the value,
 // and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
 type PrettyInstructionSetTypeIndex struct {
-	Type interpreter.StaticType
+	IndexedType  interpreter.StaticType
+	IndexingType interpreter.StaticType
 }
 
 var _ PrettyInstruction = PrettyInstructionSetTypeIndex{}
@@ -1643,7 +1663,9 @@ func (i PrettyInstructionSetTypeIndex) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	sb.WriteByte(' ')
-	printfTypeArgument(&sb, "type", i.Type, false)
+	printfTypeArgument(&sb, "indexedType", i.IndexedType, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "indexingType", i.IndexingType, false)
 	return sb.String()
 }
 

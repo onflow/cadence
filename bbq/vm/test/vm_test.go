@@ -11791,3 +11791,39 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 
 	assert.Equal(t, []string{`"x"`}, logs)
 }
+
+func TestInitializerFunctionType(t *testing.T) {
+
+	t.Parallel()
+
+	programVM, err := CompileAndPrepareToInvoke(t,
+		`
+          struct S {}
+          struct T {}
+
+          fun getTypeOfConstructorS(): Type {
+              return S.getType()
+          }
+
+          fun getTypeOfConstructorT(): Type {
+              return T.getType()
+          }
+        `,
+		CompilerAndVMOptions{},
+	)
+	require.NoError(t, err)
+
+	result, err := programVM.InvokeExternally("getTypeOfConstructorS")
+	if err == nil {
+		require.Equal(t, 0, programVM.StackSize())
+	}
+	metaType := result.(interpreter.TypeValue)
+	assert.Equal(t, common.TypeID("view fun():S.test.S"), metaType.Type.ID())
+
+	result, err = programVM.InvokeExternally("getTypeOfConstructorT")
+	if err == nil {
+		require.Equal(t, 0, programVM.StackSize())
+	}
+	metaType = result.(interpreter.TypeValue)
+	assert.Equal(t, common.TypeID("view fun():S.test.T"), metaType.Type.ID())
+}

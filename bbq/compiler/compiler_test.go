@@ -2262,7 +2262,11 @@ func TestCompileIndex(t *testing.T) {
 				ValueType:  interpreter.PrimitiveStaticTypeInt,
 				TargetType: interpreter.PrimitiveStaticTypeInteger,
 			},
-			opcode.PrettyInstructionGetIndex{},
+			opcode.PrettyInstructionGetIndex{
+				IndexedType: &interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			},
 
 			// return
 			opcode.PrettyInstructionTransferAndConvert{
@@ -2318,7 +2322,11 @@ func TestCompileAssignIndex(t *testing.T) {
 				ValueType:  interpreter.PrimitiveStaticTypeInt,
 				TargetType: interpreter.PrimitiveStaticTypeInt,
 			},
-			opcode.PrettyInstructionSetIndex{},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: &interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			},
 			opcode.PrettyInstructionReturn{},
 		},
 		prettyInstructions(functions[0].Code, program),
@@ -8115,7 +8123,11 @@ func TestCompileLineNumberInfo(t *testing.T) {
 				ValueType:  interpreter.PrimitiveStaticTypeInt,
 				TargetType: interpreter.PrimitiveStaticTypeInt,
 			},
-			opcode.PrettyInstructionSetIndex{},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: &interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			},
 
 			// return
 			opcode.PrettyInstructionReturn{},
@@ -8944,7 +8956,9 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 					ValueType:  stringType,
 					TargetType: stringType,
 				},
-				opcode.PrettyInstructionRemoveIndex{},
+				opcode.PrettyInstructionRemoveIndex{
+					IndexedType: dictionaryType,
+				},
 				opcode.PrettyInstructionTransferAndConvert{
 					ValueType:  optionalRType,
 					TargetType: optionalRType,
@@ -8960,7 +8974,10 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 					ValueType:  rType,
 					TargetType: optionalRType,
 				},
-				opcode.PrettyInstructionSetIndex{},
+				opcode.PrettyInstructionSetIndex{
+					// TODO:
+					IndexedType: dictionaryType,
+				},
 
 				// Store the transferred y-value above (already on stack), to z.
 				// z <- y["r"]
@@ -10343,7 +10360,11 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 			// get left value
 			opcode.PrettyInstructionGetLocal{Local: tempIndex1},
 			opcode.PrettyInstructionGetLocal{Local: tempIndex2},
-			opcode.PrettyInstructionGetIndex{},
+			opcode.PrettyInstructionGetIndex{
+				IndexedType: &interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+			},
 			opcode.PrettyInstructionSetLocal{
 				Local:     tempIndex5,
 				IsTempVar: true,
@@ -10352,7 +10373,11 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 			// get right value
 			opcode.PrettyInstructionGetLocal{Local: tempIndex3},
 			opcode.PrettyInstructionGetLocal{Local: tempIndex4},
-			opcode.PrettyInstructionGetIndex{},
+			opcode.PrettyInstructionGetIndex{
+				IndexedType: &interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+			},
 			opcode.PrettyInstructionSetLocal{
 				Local:     tempIndex6,
 				IsTempVar: true,
@@ -10378,13 +10403,21 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: tempIndex1},
 			opcode.PrettyInstructionGetLocal{Local: tempIndex2},
 			opcode.PrettyInstructionGetLocal{Local: tempIndex6},
-			opcode.PrettyInstructionSetIndex{},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: &interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+			},
 
 			// set left index with right value
 			opcode.PrettyInstructionGetLocal{Local: tempIndex3},
 			opcode.PrettyInstructionGetLocal{Local: tempIndex4},
 			opcode.PrettyInstructionGetLocal{Local: tempIndex5},
-			opcode.PrettyInstructionSetIndex{},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: &interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+			},
 
 			// Return
 			opcode.PrettyInstructionReturn{},
@@ -10465,6 +10498,10 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 		Type: rType,
 	}
 
+	rArrayType := &interpreter.VariableSizedStaticType{
+		Type: rType,
+	}
+
 	assert.Equal(t,
 		[]opcode.PrettyInstruction{
 			opcode.PrettyInstructionStatement{},
@@ -10539,7 +10576,10 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			// get left value
 			opcode.PrettyInstructionGetLocal{Local: leftTargetIndex},
 			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
-			opcode.PrettyInstructionRemoveIndex{PushPlaceholder: true},
+			opcode.PrettyInstructionRemoveIndex{
+				IndexedType:     rArrayType,
+				PushPlaceholder: true,
+			},
 			opcode.PrettyInstructionSetLocal{Local: leftInsertedPlaceholderIndex},
 			opcode.PrettyInstructionSetLocal{
 				Local:     leftValueIndex,
@@ -10549,7 +10589,10 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			// get right value
 			opcode.PrettyInstructionGetLocal{Local: rightTargetIndex},
 			opcode.PrettyInstructionGetLocal{Local: rightIndexIndex},
-			opcode.PrettyInstructionRemoveIndex{PushPlaceholder: false},
+			opcode.PrettyInstructionRemoveIndex{
+				IndexedType:     rArrayType,
+				PushPlaceholder: false,
+			},
 			opcode.PrettyInstructionSetLocal{
 				Local:     rightValueIndex,
 				IsTempVar: true,
@@ -10565,7 +10608,9 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: leftTargetIndex},
 			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
 			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
-			opcode.PrettyInstructionSetIndex{},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: rArrayType,
+			},
 
 			// jump to the end
 			opcode.PrettyInstructionJump{Target: 51},
@@ -10590,13 +10635,17 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: leftTargetIndex},
 			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
 			opcode.PrettyInstructionGetLocal{Local: rightValueIndex},
-			opcode.PrettyInstructionSetIndex{},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: rArrayType,
+			},
 
 			// set right index with left value
 			opcode.PrettyInstructionGetLocal{Local: rightTargetIndex},
 			opcode.PrettyInstructionGetLocal{Local: rightIndexIndex},
 			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
-			opcode.PrettyInstructionSetIndex{},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: rArrayType,
+			},
 
 			// destroy rs
 			opcode.PrettyInstructionStatement{},
@@ -11787,7 +11836,10 @@ func TestCompileAttachments(t *testing.T) {
 				// get s back on stack
 				opcode.PrettyInstructionGetLocal{Local: sTmpLocalIndex},
 				// attachment operation, attach A to s-copy
-				opcode.PrettyInstructionSetTypeIndex{Type: aType},
+				opcode.PrettyInstructionSetTypeIndex{
+					IndexedType:  sType,
+					IndexingType: aType,
+				},
 				// return value is s-copy
 				opcode.PrettyInstructionTransferAndConvert{
 					ValueType:  sType,
@@ -11800,7 +11852,10 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetLocal{Local: sLocalIndex},
 				// access A on s: s[A], returns attachment reference as optional
-				opcode.PrettyInstructionGetTypeIndex{Type: aType},
+				opcode.PrettyInstructionGetTypeIndex{
+					IndexedType:  sType,
+					IndexingType: aType,
+				},
 				opcode.PrettyInstructionSetLocal{
 					Local:     attachmentLocalIndex,
 					IsTempVar: true,

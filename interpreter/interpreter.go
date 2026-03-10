@@ -5867,6 +5867,26 @@ func checkContainerMutation(
 	}
 }
 
+func checkContainerRead(
+	context ValueStaticTypeContext,
+	elementType StaticType,
+	element Value,
+) {
+	_, ok := element.(*StorageReferenceValue)
+	if !ok {
+		return
+	}
+
+	actualElementType := element.StaticType(context)
+
+	if !IsSubType(context, actualElementType, elementType) {
+		panic(&ContainerReadError{
+			ExpectedType: context.SemaTypeFromStaticType(elementType),
+			ActualType:   MustSemaTypeOfValue(element, context),
+		})
+	}
+}
+
 func RemoveReferencedSlab(context StorageContext, storable atree.Storable) {
 	slabIDStorable, ok := storable.(atree.SlabIDStorable)
 	if !ok {

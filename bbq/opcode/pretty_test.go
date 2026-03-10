@@ -245,9 +245,6 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		{opcode.InstructionIteratorEnd{}, opcode.PrettyInstructionIteratorEnd{}},
 		{opcode.InstructionLoop{}, opcode.PrettyInstructionLoop{}},
 		{opcode.InstructionStatement{}, opcode.PrettyInstructionStatement{}},
-		{opcode.InstructionGetIndex{}, opcode.PrettyInstructionGetIndex{}},
-		{opcode.InstructionRemoveIndex{}, opcode.PrettyInstructionRemoveIndex{}},
-		{opcode.InstructionSetIndex{}, opcode.PrettyInstructionSetIndex{}},
 		{opcode.InstructionSetAttachmentBase{}, opcode.PrettyInstructionSetAttachmentBase{}},
 
 		// Instructions with non-resolvable operands only
@@ -410,21 +407,42 @@ func TestPrettyInstructionMapping(t *testing.T) {
 			},
 		},
 		{
-			opcode.InstructionGetTypeIndex{Type: 1},
+			opcode.InstructionGetIndex{IndexedType: 1},
+			opcode.PrettyInstructionGetIndex{
+				IndexedType: interpreter.PrimitiveStaticTypeString,
+			},
+		},
+		{
+			opcode.InstructionRemoveIndex{IndexedType: 1},
+			opcode.PrettyInstructionRemoveIndex{
+				IndexedType: interpreter.PrimitiveStaticTypeString,
+			},
+		},
+		{
+			opcode.InstructionSetIndex{IndexedType: 1},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: interpreter.PrimitiveStaticTypeString,
+			},
+		},
+		{
+			opcode.InstructionGetTypeIndex{IndexedType: 1, IndexingType: 1},
 			opcode.PrettyInstructionGetTypeIndex{
-				Type: interpreter.PrimitiveStaticTypeString,
+				IndexedType:  interpreter.PrimitiveStaticTypeString,
+				IndexingType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 		{
-			opcode.InstructionRemoveTypeIndex{Type: 1},
+			opcode.InstructionRemoveTypeIndex{IndexedType: 1, IndexingType: 1},
 			opcode.PrettyInstructionRemoveTypeIndex{
-				Type: interpreter.PrimitiveStaticTypeString,
+				IndexedType:  interpreter.PrimitiveStaticTypeString,
+				IndexingType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 		{
-			opcode.InstructionSetTypeIndex{Type: 1},
+			opcode.InstructionSetTypeIndex{IndexedType: 1, IndexingType: 1},
 			opcode.PrettyInstructionSetTypeIndex{
-				Type: interpreter.PrimitiveStaticTypeString,
+				IndexedType:  interpreter.PrimitiveStaticTypeString,
+				IndexingType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 		{

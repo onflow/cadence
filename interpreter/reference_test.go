@@ -4038,3 +4038,52 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretDereferenceGetType(t *testing.T) {
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
+      fun use(_ anyRef: AnyStruct) {
+          log(anyRef.getType())
+
+          let optOptRef = anyRef as? (&Int)?
+          log(optOptRef.getType())
+
+          if optOptRef != nil {
+              let optRef = optOptRef!
+              log(optRef.getType())
+
+              if optRef != nil {
+                  let ref = optRef!
+                  log(ref.getType())
+              }
+          }
+	  }
+
+      fun test() {
+          let ref: &Int = &1 as &Int
+          log(ref.getType())
+
+          let optRef: (&Int)? = ref
+          log(optRef.getType())
+
+          use(optRef)
+      }
+	`)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			"Type<Int>()",
+			"Type<&Int?>()",
+			"Type<&Int?>()",
+			"Type<&Int??>()",
+			"Type<&Int?>()",
+			"Type<Int>()",
+		},
+		getLogs(),
+	)
+}

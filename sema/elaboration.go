@@ -133,6 +133,16 @@ type AttachExpressionTypes struct {
 	BaseType   Type
 }
 
+type AttachmentAccessTypes struct {
+	AttachmentType Type
+	BaseType       Type
+}
+
+type RemoveExpressionTypes struct {
+	AttachmentType Type
+	BaseType       Type
+}
+
 type Elaboration struct {
 	interfaceTypesAndDeclarationsBiMap      *bimap.BiMap[*InterfaceType, *ast.InterfaceDeclaration]
 	entitlementTypesAndDeclarationsBiMap    *bimap.BiMap[*EntitlementType, *ast.EntitlementDeclaration]
@@ -181,8 +191,8 @@ type Elaboration struct {
 	runtimeCastTypes                   map[*ast.CastingExpression]RuntimeCastTypes
 	referenceExpressionBorrowTypes     map[*ast.ReferenceExpression]Type
 	indexExpressionTypes               map[*ast.IndexExpression]IndexExpressionTypes
-	attachmentAccessTypes              map[*ast.IndexExpression]Type
-	attachmentRemoveTypes              map[*ast.RemoveStatement]Type
+	attachmentAccessTypes              map[*ast.IndexExpression]AttachmentAccessTypes
+	attachmentRemoveTypes              map[*ast.RemoveStatement]RemoveExpressionTypes
 	attachTypes                        map[*ast.AttachExpression]AttachExpressionTypes
 	forceExpressionTypes               map[*ast.ForceExpression]Type
 	staticCastTypes                    map[*ast.CastingExpression]CastTypes
@@ -1010,7 +1020,7 @@ func (e *Elaboration) SetNumberConversionArgumentTypes(
 func (e *Elaboration) AttachmentAccessTypes(
 	expression *ast.IndexExpression,
 ) (
-	ty Type, ok bool,
+	ty AttachmentAccessTypes, ok bool,
 ) {
 	if e.attachmentAccessTypes == nil {
 		return
@@ -1021,10 +1031,10 @@ func (e *Elaboration) AttachmentAccessTypes(
 
 func (e *Elaboration) SetAttachmentAccessTypes(
 	expression *ast.IndexExpression,
-	ty Type,
+	ty AttachmentAccessTypes,
 ) {
 	if e.attachmentAccessTypes == nil {
-		e.attachmentAccessTypes = map[*ast.IndexExpression]Type{}
+		e.attachmentAccessTypes = map[*ast.IndexExpression]AttachmentAccessTypes{}
 	}
 	e.attachmentAccessTypes[expression] = ty
 }
@@ -1032,7 +1042,7 @@ func (e *Elaboration) SetAttachmentAccessTypes(
 func (e *Elaboration) AttachmentRemoveTypes(
 	stmt *ast.RemoveStatement,
 ) (
-	ty Type,
+	ty RemoveExpressionTypes,
 ) {
 	if e.attachmentRemoveTypes == nil {
 		return
@@ -1042,10 +1052,10 @@ func (e *Elaboration) AttachmentRemoveTypes(
 
 func (e *Elaboration) SetAttachmentRemoveTypes(
 	stmt *ast.RemoveStatement,
-	ty Type,
+	ty RemoveExpressionTypes,
 ) {
 	if e.attachmentRemoveTypes == nil {
-		e.attachmentRemoveTypes = map[*ast.RemoveStatement]Type{}
+		e.attachmentRemoveTypes = map[*ast.RemoveStatement]RemoveExpressionTypes{}
 	}
 	e.attachmentRemoveTypes[stmt] = ty
 }

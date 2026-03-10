@@ -365,6 +365,22 @@ func (s *DomainStorageMap) Iterator() DomainStorageMapIterator {
 	}
 }
 
+// ReadOnlyLoadedValueIterator returs an iterator which allows
+// iterating over loaded keys and values of the storage map.
+func (s *DomainStorageMap) ReadOnlyLoadedValueIterator() DomainStorageMapIterator {
+	mapIterator, err := s.orderedMap.ReadOnlyLoadedValueIterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return DomainStorageMapIterator{
+		mapIterator: mapLoadedValueIterator{
+			MapLoadedValueIterator: mapIterator,
+		},
+		storage: s.orderedMap.Storage,
+	}
+}
+
 // DomainStorageMapIterator is an iterator over DomainStorageMap
 type DomainStorageMapIterator struct {
 	mapIterator atree.MapIterator
@@ -442,4 +458,24 @@ func (i DomainStorageMapIterator) NextValue(gauge common.Gauge) Value {
 	}
 
 	return MustConvertStoredValue(gauge, v)
+}
+
+type mapLoadedValueIterator struct {
+	*atree.MapLoadedValueIterator
+}
+
+var _ atree.MapIterator = mapLoadedValueIterator{}
+
+func (i mapLoadedValueIterator) CanMutate() bool {
+	return false
+}
+
+func (i mapLoadedValueIterator) NextKey() (atree.Value, error) {
+	key, _, err := i.Next()
+	return key, err
+}
+
+func (i mapLoadedValueIterator) NextValue() (atree.Value, error) {
+	_, value, err := i.Next()
+	return value, err
 }
