@@ -305,6 +305,7 @@ var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 var _ atreeContainerBackedValue = &DictionaryValue{}
+var _ IterableValue = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
 
