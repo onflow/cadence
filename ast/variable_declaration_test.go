@@ -414,3 +414,45 @@ let foo: @AB <- true <- false`,
 		)
 	})
 }
+
+func TestVariableDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	typeAnnotation := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Int"},
+		},
+	}
+
+	value := &IntegerExpression{
+		PositiveLiteral: []byte("1"),
+		Base:            10,
+	}
+
+	secondValue := &IntegerExpression{
+		PositiveLiteral: []byte("2"),
+		Base:            10,
+	}
+
+	decl := &VariableDeclaration{
+		Identifier:     Identifier{Identifier: "x"},
+		TypeAnnotation: typeAnnotation,
+		Value:          value,
+		SecondValue:    secondValue,
+	}
+
+	var visited []Element
+	decl.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			typeAnnotation,
+			value,
+			secondValue,
+		},
+		visited,
+	)
+}

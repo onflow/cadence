@@ -317,6 +317,7 @@ func (*RemoveStatement) ElementType() ElementType {
 func (*RemoveStatement) isStatement() {}
 
 func (s *RemoveStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Attachment)
 	walkChild(s.Value)
 }
 

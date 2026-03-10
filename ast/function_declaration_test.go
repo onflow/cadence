@@ -499,6 +499,86 @@ fun xyz<A, B: C>(ok foobar: AB): @CD {}`,
 	})
 }
 
+func TestFunctionDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	typeBound := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Bound"},
+		},
+	}
+
+	paramTypeAnnotation := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "String"},
+		},
+	}
+
+	defaultArg := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	returnTypeAnnotation := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Int"},
+		},
+	}
+
+	body := &IntegerExpression{
+		PositiveLiteral: []byte("1"),
+		Base:            10,
+	}
+
+	decl := &FunctionDeclaration{
+		Identifier: Identifier{Identifier: "foo"},
+		TypeParameterList: &TypeParameterList{
+			TypeParameters: []*TypeParameter{
+				{
+					Identifier: Identifier{Identifier: "T"},
+					TypeBound:  typeBound,
+				},
+			},
+		},
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier:      Identifier{Identifier: "x"},
+					TypeAnnotation:  paramTypeAnnotation,
+					DefaultArgument: defaultArg,
+				},
+			},
+		},
+		ReturnTypeAnnotation: returnTypeAnnotation,
+		FunctionBlock: &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{
+					&ReturnStatement{
+						Expression: body,
+					},
+				},
+			},
+		},
+	}
+
+	var visited []Element
+	decl.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			typeBound,
+			paramTypeAnnotation,
+			defaultArg,
+			returnTypeAnnotation,
+			decl.FunctionBlock,
+		},
+		visited,
+	)
+}
+
 func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -893,5 +973,86 @@ func TestSpecialFunctionDeclaration_String(t *testing.T) {
 	require.Equal(t,
 		"init(ok foobar: AB): @CD {}",
 		decl.String(),
+	)
+}
+func TestSpecialFunctionDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	typeBound := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Bound"},
+		},
+	}
+
+	paramTypeAnnotation := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "String"},
+		},
+	}
+
+	defaultArg := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	returnTypeAnnotation := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Int"},
+		},
+	}
+
+	body := &IntegerExpression{
+		PositiveLiteral: []byte("1"),
+		Base:            10,
+	}
+
+	decl := &SpecialFunctionDeclaration{
+		FunctionDeclaration: &FunctionDeclaration{
+			Identifier: Identifier{Identifier: "foo"},
+			TypeParameterList: &TypeParameterList{
+				TypeParameters: []*TypeParameter{
+					{
+						Identifier: Identifier{Identifier: "T"},
+						TypeBound:  typeBound,
+					},
+				},
+			},
+			ParameterList: &ParameterList{
+				Parameters: []*Parameter{
+					{
+						Identifier:      Identifier{Identifier: "x"},
+						TypeAnnotation:  paramTypeAnnotation,
+						DefaultArgument: defaultArg,
+					},
+				},
+			},
+			ReturnTypeAnnotation: returnTypeAnnotation,
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{
+						&ReturnStatement{
+							Expression: body,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	var visited []Element
+	decl.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			typeBound,
+			paramTypeAnnotation,
+			defaultArg,
+			returnTypeAnnotation,
+			decl.FunctionDeclaration.FunctionBlock,
+		},
+		visited,
 	)
 }

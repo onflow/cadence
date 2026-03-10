@@ -426,6 +426,54 @@ xyz: @CD`,
 	})
 }
 
+func TestFieldDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with type annotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeAnnotation := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Int"},
+			},
+		}
+
+		decl := &FieldDeclaration{
+			Identifier:     Identifier{Identifier: "foo"},
+			TypeAnnotation: typeAnnotation,
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				typeAnnotation,
+			},
+			visited,
+		)
+	})
+
+	t.Run("without type annotation", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "foo"},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Empty(t, visited)
+	})
+}
+
 func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -1037,5 +1085,35 @@ func TestEnumCaseDeclaration_String(t *testing.T) {
 	require.Equal(t,
 		"case x",
 		decl.String(),
+	)
+}
+
+func TestCompositeDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	field := &FieldDeclaration{
+		Identifier: Identifier{Identifier: "field"},
+		TypeAnnotation: &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Int"},
+			},
+		},
+	}
+
+	decl := &CompositeDeclaration{
+		Members: NewUnmeteredMembers([]Declaration{field}),
+	}
+
+	var visited []Element
+	decl.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			field,
+		},
+		visited,
 	)
 }

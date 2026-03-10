@@ -16,40 +16,14 @@
  * limitations under the License.
  */
 
-package vm
+package opcode
 
-import (
-	"fmt"
-
-	"github.com/onflow/cadence/errors"
-)
-
-type LinkerError struct {
-	Message string
-}
-
-var _ error = LinkerError{}
-var _ errors.InternalError = LinkerError{}
-
-func (l LinkerError) IsInternalError() {
-}
-
-func (l LinkerError) Error() string {
-	return l.Message
-}
-
-// UnknownFunctionError
-type UnknownFunctionError struct {
-	name string
-}
-
-var _ errors.UserError = UnknownFunctionError{}
-
-func (UnknownFunctionError) IsUserError() {}
-
-func (e UnknownFunctionError) Error() string {
-	return fmt.Sprintf("%s unknown function `%s`",
-		errors.InternalErrorMessagePrefix,
-		e.name,
-	)
+// PrettyInstruction represents an instruction with resolved operands.
+// Pretty instructions are for debugging and display purposes only, not for runtime execution.
+// They are useful for human-readable instruction dumps, analysis tools, debugging, and testing.
+// They replace index-based operands (constantIndex, typeIndex, functionIndex)
+// with their resolved values (DecodedConstant, StaticType, string) for easier human readability.
+type PrettyInstruction interface {
+	String() string
+	Opcode() Opcode
 }

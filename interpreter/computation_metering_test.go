@@ -2359,13 +2359,67 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 4},
-				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
-				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
-				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
-				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
-				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+			},
+			computationGauge.usages,
+		)
+	})
+
+	t.Run("decodeLargeString", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge()
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.RLPContract)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, stdlib.RLPContract)
+
+		storage := NewUnmeteredInMemoryStorage()
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+             fun test() {
+                 // "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce porta malesuada imperdiet. Sed erat erat, aliquam sed volutpat sed, volutpat ac sapien. Pellentesque sit amet arcu ut magna vehicula finibus non eu felis. Etiam sed tellus congue, sodales ante eget, dictum eros. In at metus sapien fusce."
+                 RLP.decodeString([0xb9, 0x1, 0x2c, 0x4c, 0x6f, 0x72, 0x65, 0x6d, 0x20, 0x69, 0x70, 0x73, 0x75, 0x6d, 0x20, 0x64, 0x6f, 0x6c, 0x6f, 0x72, 0x20, 0x73, 0x69, 0x74, 0x20, 0x61, 0x6d, 0x65, 0x74, 0x2c, 0x20, 0x63, 0x6f, 0x6e, 0x73, 0x65, 0x63, 0x74, 0x65, 0x74, 0x75, 0x72, 0x20, 0x61, 0x64, 0x69, 0x70, 0x69, 0x73, 0x63, 0x69, 0x6e, 0x67, 0x20, 0x65, 0x6c, 0x69, 0x74, 0x2e, 0x20, 0x46, 0x75, 0x73, 0x63, 0x65, 0x20, 0x70, 0x6f, 0x72, 0x74, 0x61, 0x20, 0x6d, 0x61, 0x6c, 0x65, 0x73, 0x75, 0x61, 0x64, 0x61, 0x20, 0x69, 0x6d, 0x70, 0x65, 0x72, 0x64, 0x69, 0x65, 0x74, 0x2e, 0x20, 0x53, 0x65, 0x64, 0x20, 0x65, 0x72, 0x61, 0x74, 0x20, 0x65, 0x72, 0x61, 0x74, 0x2c, 0x20, 0x61, 0x6c, 0x69, 0x71, 0x75, 0x61, 0x6d, 0x20, 0x73, 0x65, 0x64, 0x20, 0x76, 0x6f, 0x6c, 0x75, 0x74, 0x70, 0x61, 0x74, 0x20, 0x73, 0x65, 0x64, 0x2c, 0x20, 0x76, 0x6f, 0x6c, 0x75, 0x74, 0x70, 0x61, 0x74, 0x20, 0x61, 0x63, 0x20, 0x73, 0x61, 0x70, 0x69, 0x65, 0x6e, 0x2e, 0x20, 0x50, 0x65, 0x6c, 0x6c, 0x65, 0x6e, 0x74, 0x65, 0x73, 0x71, 0x75, 0x65, 0x20, 0x73, 0x69, 0x74, 0x20, 0x61, 0x6d, 0x65, 0x74, 0x20, 0x61, 0x72, 0x63, 0x75, 0x20, 0x75, 0x74, 0x20, 0x6d, 0x61, 0x67, 0x6e, 0x61, 0x20, 0x76, 0x65, 0x68, 0x69, 0x63, 0x75, 0x6c, 0x61, 0x20, 0x66, 0x69, 0x6e, 0x69, 0x62, 0x75, 0x73, 0x20, 0x6e, 0x6f, 0x6e, 0x20, 0x65, 0x75, 0x20, 0x66, 0x65, 0x6c, 0x69, 0x73, 0x2e, 0x20, 0x45, 0x74, 0x69, 0x61, 0x6d, 0x20, 0x73, 0x65, 0x64, 0x20, 0x74, 0x65, 0x6c, 0x6c, 0x75, 0x73, 0x20, 0x63, 0x6f, 0x6e, 0x67, 0x75, 0x65, 0x2c, 0x20, 0x73, 0x6f, 0x64, 0x61, 0x6c, 0x65, 0x73, 0x20, 0x61, 0x6e, 0x74, 0x65, 0x20, 0x65, 0x67, 0x65, 0x74, 0x2c, 0x20, 0x64, 0x69, 0x63, 0x74, 0x75, 0x6d, 0x20, 0x65, 0x72, 0x6f, 0x73, 0x2e, 0x20, 0x49, 0x6e, 0x20, 0x61, 0x74, 0x20, 0x6d, 0x65, 0x74, 0x75, 0x73, 0x20, 0x73, 0x61, 0x70, 0x69, 0x65, 0x6e, 0x20, 0x66, 0x75, 0x73, 0x63, 0x65, 0x2e])
+             }
+           `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t,
+			[]common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 303},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 303},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 303},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 300},
 			},
 			computationGauge.usages,
 		)
@@ -2421,13 +2475,11 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 2},
-				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
-				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindSTDLIBRLPDecodeList, Intensity: 2},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
-				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 1},
 			},
 			computationGauge.usages,
 		)
