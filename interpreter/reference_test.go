@@ -3671,6 +3671,30 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
+	t.Run("AnyStruct element type, auth element value, index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as &[AnyStruct]
+
+                // arrayRef[0] is of type '&AnyStruct'.
+                // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                let authRef = arrayRef[0] as! auth(Mutate) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
 	t.Run("unauth element type, auth element value, in loop", func(t *testing.T) {
 		t.Parallel()
 
@@ -3884,6 +3908,37 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
+	t.Run("AnyStruct member type, auth member value, member expression", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct Outer {
+                let inner: AnyStruct
+                init() {
+                    var s = S()
+                    self.inner = &s as auth(Mutate) &S
+                }
+            }
+
+            struct S {}
+
+            fun test() {
+                var outer = Outer()
+                let outerRef = &outer as &Outer
+
+                // outerRef.inner is of type '&AnyStruct'.
+                // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                let authRef = outerRef.inner as! auth(Mutate) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
 	t.Run("unauth member type, auth member value, attachment", func(t *testing.T) {
 		t.Parallel()
 
@@ -3982,4 +4037,53 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
+}
+
+func TestInterpretDereferenceGetType(t *testing.T) {
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
+      fun use(_ anyRef: AnyStruct) {
+          log(anyRef.getType())
+
+          let optOptRef = anyRef as? (&Int)?
+          log(optOptRef.getType())
+
+          if optOptRef != nil {
+              let optRef = optOptRef!
+              log(optRef.getType())
+
+              if optRef != nil {
+                  let ref = optRef!
+                  log(ref.getType())
+              }
+          }
+	  }
+
+      fun test() {
+          let ref: &Int = &1 as &Int
+          log(ref.getType())
+
+          let optRef: (&Int)? = ref
+          log(optRef.getType())
+
+          use(optRef)
+      }
+	`)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			"Type<Int>()",
+			"Type<&Int?>()",
+			"Type<&Int?>()",
+			"Type<&Int??>()",
+			"Type<&Int?>()",
+			"Type<Int>()",
+		},
+		getLogs(),
+	)
 }

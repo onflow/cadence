@@ -27,7 +27,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/test_utils/common_utils"
 )
@@ -100,11 +99,11 @@ func AssertValuesEqual(t testing.TB, context interpreter.ValueComparisonContext,
 	return true
 }
 
-func ArrayElements(gauge common.Gauge, array *interpreter.ArrayValue) []interpreter.Value {
+func ArrayElements(context interpreter.ContainerReadContext, array *interpreter.ArrayValue) []interpreter.Value {
 	count := array.Count()
 	result := make([]interpreter.Value, count)
 	for i := 0; i < count; i++ {
-		result[i] = array.Get(gauge, i)
+		result[i] = array.Get(context, i)
 	}
 	return result
 }

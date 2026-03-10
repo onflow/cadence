@@ -1920,7 +1920,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
         fun test() {
             var s = S()
             var ref = &s as &S
-            remove A from S
+            remove A from ref
         }
         `, ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(_ error) {},
@@ -2013,6 +2013,28 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
         `, ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(_ error) {},
 		})
+
+		_, err := inter.Invoke("test")
+		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
+		require.ErrorAs(t, err, &attachmentError)
+	})
+
+	t.Run("remove from a constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
+            struct S {}
+
+            attachment A for S {}
+
+            fun test() {
+                remove A from S
+            }`,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(_ error) {},
+			},
+		)
 
 		_, err := inter.Invoke("test")
 		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
