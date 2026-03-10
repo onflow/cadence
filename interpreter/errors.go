@@ -1647,3 +1647,22 @@ func (e *InvalidReferenceConversionError) Error() string {
 func (e *InvalidReferenceConversionError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
+
+// StorableCopyError
+type StorableCopyError struct {
+	storableType string
+}
+
+var _ errors.InternalError = &StorableCopyError{}
+
+func NewStorableCopyError(storableType string) *StorableCopyError {
+	return &StorableCopyError{
+		storableType: storableType,
+	}
+}
+
+func (*StorableCopyError) IsInternalError() {}
+
+func (e *StorableCopyError) Error() string {
+	return fmt.Sprintf("cannot call CopyNonRefSimple for storable %q", e.storableType)
+}

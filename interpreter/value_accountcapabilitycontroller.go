@@ -19,8 +19,6 @@
 package interpreter
 
 import (
-	"fmt"
-
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -214,7 +212,7 @@ func (*AccountCapabilityControllerValue) CanCopyNonRefSimple() bool {
 }
 
 func (*AccountCapabilityControllerValue) CopyNonRefSimple() (atree.Storable, error) {
-	return nil, fmt.Errorf("can't copy AccountCapabilityControllerValue as a non-reference simple storable")
+	return nil, NewStorableCopyError("AccountCapabilityControllerValue")
 }
 
 type deletionCheckedFunctionValue struct {

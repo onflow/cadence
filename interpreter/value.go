@@ -78,7 +78,7 @@ func (NonStorable) CanCopyNonRefSimple() bool {
 }
 
 func (NonStorable) CopyNonRefSimple() (atree.Storable, error) {
-	return nil, fmt.Errorf("can't copy NonStorable as a non-reference simple storable")
+	return nil, NewStorableCopyError("NonStorable")
 }
 
 // Value is the Cadence value hierarchy which is heavily tied to the interpreter and persistent storage,
