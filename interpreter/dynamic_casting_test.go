@@ -4367,3 +4367,69 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretDynamicCastContainer(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [Int] {
+              let array: [Int] = [1, 2]
+              let arrayOfOptionals: [Int?] = array
+              return arrayOfOptionals as! [Int]
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			result,
+		)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+		  fun test(): {String: Int} {
+			  let dict: {String: Int} = {"a": 1, "b": 2}
+              let dictOfOptionals: {String: Int?} = dict
+              return dictOfOptionals as! {String: Int}
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewDictionaryValue(
+				inter,
+				interpreter.NewDictionaryStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				interpreter.NewUnmeteredStringValue("a"),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredStringValue("b"),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			result,
+		)
+	})
+}

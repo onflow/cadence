@@ -205,12 +205,10 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 			NewArrayValue(
 				inter,
 				&VariableSizedStaticType{
-					Type: &OptionalStaticType{
-						Type: PrimitiveStaticTypeBool,
-					},
+					Type: PrimitiveStaticTypeBool,
 				},
 				common.Address{},
-				NewSomeValueNonCopying(nil, TrueValue),
+				TrueValue,
 			),
 			ConvertAndBoxWithValidation(
 				inter,
@@ -241,13 +239,11 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 			NewDictionaryValue(
 				inter,
 				&DictionaryStaticType{
-					KeyType: PrimitiveStaticTypeString,
-					ValueType: &OptionalStaticType{
-						Type: PrimitiveStaticTypeBool,
-					},
+					KeyType:   PrimitiveStaticTypeString,
+					ValueType: PrimitiveStaticTypeBool,
 				},
 				NewUnmeteredStringValue("foo"),
-				NewSomeValueNonCopying(nil, TrueValue),
+				TrueValue,
 			),
 			ConvertAndBoxWithValidation(
 				inter,

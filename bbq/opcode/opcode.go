@@ -88,7 +88,7 @@ const (
 	Deref
 	Transfer
 	Convert
-	_
+	BoxOptional
 	_
 	_
 
