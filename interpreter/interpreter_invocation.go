@@ -114,10 +114,13 @@ func invokeFunctionValueWithEval[T any](
 	}
 
 	actualFunctionType := innerFunction.FunctionType(context)
+	actualParameters := actualFunctionType.Parameters
+	actualParamsCount := len(actualParameters)
 
 	var transferredArguments []Value
 
 	argumentCount := len(arguments)
+
 	if argumentCount > 0 {
 		transferredArguments = make([]Value, argumentCount)
 
@@ -127,7 +130,25 @@ func invokeFunctionValueWithEval[T any](
 			argumentValue := evaluate(argument)
 
 			if i < parameterTypeCount {
-				parameterType := parameterTypes[i]
+
+				// The actual function's parameter types may differ from the call-site parameter types
+				// due to function parameter contravariance.
+				// e.g.:
+				//   fun funcWithOptionalParam(_ a: Int?): UInt8? { ... }
+				//   let f: fun(Int): UInt8? = funcWithOptionalParam
+				//   f(4)  // call-site param type is Int, actual param type is Int?
+				var parameterType sema.Type
+				if i < actualParamsCount {
+					parameterType = actualParameters[i].TypeAnnotation.Type.Resolve(typeArguments)
+				}
+
+				// actual param type may be nil if the parameter type contains unresolved generic types
+				// (e.g., calling a generic host function like Optional.map).
+				// In that case, use the statically computed type.
+				if parameterType == nil {
+					parameterType = parameterTypes[i]
+				}
+
 				transferredArguments[i] = TransferIfNotResourceAndConvert(
 					context,
 					argumentValue,
@@ -144,35 +165,6 @@ func invokeFunctionValueWithEval[T any](
 					true, // argument is standalone.
 				)
 			}
-		}
-	}
-
-	// Box arguments to match the actual function's parameter types.
-	// The actual function's parameter types may differ from the call-site parameter types
-	// due to function parameter contravariance.
-	// e.g.:
-	//   fun funcWithOptionalParam(_ a: Int?): UInt8? { ... }
-	//   let f: fun(Int): UInt8? = funcWithOptionalParam
-	//   f(4)  // call-site param type is Int, actual param type is Int?
-
-	actualParameters := actualFunctionType.Parameters
-	actualParameterCount := len(actualParameters)
-
-	for i := 0; i < argumentCount && i < parameterTypeCount && i < actualParameterCount; i++ {
-		callSiteParamType := parameterTypes[i]
-		actualParamType := actualParameters[i].TypeAnnotation.Type.Resolve(typeArguments)
-		// actualParamType may be nil if the parameter type contains unresolved generic types
-		// (e.g., calling a generic host function like Optional.map).
-		// In that case, skip boxing — the generic types are resolved by the call-site elaboration.
-		if actualParamType == nil {
-			continue
-		}
-		if !actualParamType.Equal(callSiteParamType) {
-			transferredArguments[i] = BoxOptional(
-				context,
-				transferredArguments[i],
-				actualParamType,
-			)
 		}
 	}
 

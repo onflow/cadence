@@ -560,4 +560,38 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), result)
 	})
+
+	t.Run("reference type parameter", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(
+			t,
+			`
+            fun test() {
+                let funcWithAuthReferenceParam: fun(auth(Mutate) &Int) = funcWithNonAuthReferenceParam
+                funcWithAuthReferenceParam(&4 as auth(Mutate) &Int)
+            }
+
+            fun funcWithNonAuthReferenceParam(_ ref: &Int) {
+                let any: AnyStruct = ref
+                let authRef = any as! auth(Mutate) &Int
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+		assert.Equal(t,
+			common.TypeID("auth(Mutate)&Int"),
+			forceCastTypeMismatchErr.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchErr.ActualType.ID(),
+		)
+	})
 }
