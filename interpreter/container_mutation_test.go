@@ -196,7 +196,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
+		var mutationError *interpreter.ValueTransferTypeError
 		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
@@ -216,11 +216,23 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
+		var mutationError *interpreter.ValueTransferTypeError
 		require.ErrorAs(t, err, &mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.StringType,
+			},
+			mutationError.ExpectedType,
+		)
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.AnyStructType,
+			},
+			mutationError.ActualType,
+		)
 	})
 
 	t.Run("array insert valid", func(t *testing.T) {
@@ -270,7 +282,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
+		var mutationError *interpreter.ValueTransferTypeError
 		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
@@ -292,7 +304,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
+		var mutationError *interpreter.ValueTransferTypeError
 		require.ErrorAs(t, err, &mutationError)
 
 		// Check original array
@@ -662,7 +674,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
+		var mutationError *interpreter.ValueTransferTypeError
 		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
@@ -682,7 +694,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
+		var mutationError *interpreter.ValueTransferTypeError
 		require.ErrorAs(t, err, &mutationError)
 
 		assert.Equal(t, sema.PublicPathType, mutationError.ExpectedType)
