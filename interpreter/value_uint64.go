@@ -566,6 +566,7 @@ func (v UInt64Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -587,4 +588,13 @@ func (v UInt64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (UInt64Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (UInt64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UInt64Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

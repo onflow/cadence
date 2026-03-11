@@ -758,6 +758,7 @@ func (v *StringValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -779,6 +780,15 @@ func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (*StringValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (*StringValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v *StringValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 // Memory is NOT metered for this value

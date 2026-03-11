@@ -557,6 +557,7 @@ func (v Fix128Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -603,6 +604,15 @@ func (Fix128Value) Scale() int {
 
 func (v Fix128Value) ToBigInt() *big.Int {
 	return fixedpoint.Fix128ToBigInt(fix.Fix128(v))
+}
+
+func (Fix128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Fix128Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 func handleFixedpointError(err error) {

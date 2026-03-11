@@ -242,6 +242,8 @@ func (v *IDCapabilityValue) Transfer(
 		v.DeepRemove(context, true)
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
+	// For example, if this function doesn't use shallow copy the other should do the same.
 	return v
 }
 
@@ -269,4 +271,13 @@ func (v *IDCapabilityValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
 		v.address,
 	}
+}
+
+func (IDCapabilityValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v *IDCapabilityValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

@@ -552,6 +552,7 @@ func (v IntValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -561,4 +562,13 @@ func (v IntValue) Clone(_ ValueCloneContext) Value {
 
 func (IntValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
+}
+
+func (v IntValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v IntValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

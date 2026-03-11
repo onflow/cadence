@@ -572,6 +572,7 @@ func (v Fix64Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -601,6 +602,15 @@ func (v Fix64Value) IntegerPart() NumberValue {
 
 func (Fix64Value) Scale() int {
 	return sema.Fix64Scale
+}
+
+func (Fix64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Fix64Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 func fix128BigIntToFix64(

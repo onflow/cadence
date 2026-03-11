@@ -1287,13 +1287,6 @@ func (v *ArrayValue) Transfer(
 
 	if needsStoreTo || !isResourceKinded {
 
-		// Use non-readonly iterator here because iterated
-		// value can be removed if remove parameter is true.
-		iterator, err := v.array.Iterator()
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
 		elementUsage, dataSlabs, metaDataSlabs := common.NewAtreeArrayMemoryUsages(
 			v.array.Count(),
 			v.elementSize,
@@ -1302,72 +1295,123 @@ func (v *ArrayValue) Transfer(
 		common.UseMemory(context, dataSlabs)
 		common.UseMemory(context, metaDataSlabs)
 
-		func() {
+		// Check if atree.Array can be copied using v.array.CopyNonRefSimple():
+		// - Use the fast path that looks at the array element type by calling canCopyNonRefSimpleForType().
+		// - If the fast path fails, then look at the array element data by calling v.array.CanCopyNonRefSimple().
 
-			if TracingEnabled {
-				startTime := time.Now()
+		isSingleSlabCopyableArrayType := v.array.IsWithinSingleSlab() && canCopyNonRefSimpleForType(v.Type.ElementType())
+		canCopyNonRefSimple := isSingleSlabCopyableArrayType || v.array.CanCopyNonRefSimple()
 
-				defer func() {
-					valueID := array.ValueID().String()
-					typeID := string(v.Type.ID())
+		if canCopyNonRefSimple {
 
-					context.ReportAtreeNewArrayFromBatchDataTrace(
-						valueID,
-						typeID,
-						time.Since(startTime),
-					)
-				}()
-			}
+			func() {
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeArrayBatchConstruction,
-					Intensity: uint64(count),
-				},
-			)
+				if TracingEnabled {
+					startTime := time.Now()
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeArrayReadIteration,
-					Intensity: uint64(count),
-				},
-			)
+					defer func() {
+						valueID := array.ValueID().String()
+						typeID := string(v.Type.ID())
 
-			array, err = atree.NewArrayFromBatchData(
-				context.Storage(),
-				address,
-				v.array.Type(),
-				func() (atree.Value, error) {
-
-					// Computation was already metered above
-
-					value, err := iterator.Next()
-					if err != nil {
-						return nil, err
-					}
-					if value == nil {
-						return nil, nil
-					}
-
-					element := MustConvertStoredValue(context, value).
-						Transfer(
-							context,
-							address,
-							remove,
-							nil,
-							preventTransfer,
-							false, // value has a parent container because it is from iterator.
+						context.ReportAtreeNewArraySingleSlabTrace(
+							valueID,
+							typeID,
+							time.Since(startTime),
 						)
+					}()
+				}
 
-					return element, nil
-				},
-			)
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeArraySingleSlabConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				copiedArray, err := v.array.CopyNonRefSimple(address)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				array = copiedArray
+			}()
+
+		} else {
+			// Use non-readonly iterator here because iterated
+			// value can be removed if remove parameter is true.
+			iterator, err := v.array.Iterator()
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
-		}()
+
+			func() {
+
+				if TracingEnabled {
+					startTime := time.Now()
+
+					defer func() {
+						valueID := array.ValueID().String()
+						typeID := string(v.Type.ID())
+
+						context.ReportAtreeNewArrayFromBatchDataTrace(
+							valueID,
+							typeID,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeArrayBatchConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeArrayReadIteration,
+						Intensity: uint64(count),
+					},
+				)
+
+				array, err = atree.NewArrayFromBatchData(
+					context.Storage(),
+					address,
+					v.array.Type(),
+					func() (atree.Value, error) {
+
+						// Computation was already metered above
+
+						value, err := iterator.Next()
+						if err != nil {
+							return nil, err
+						}
+						if value == nil {
+							return nil, nil
+						}
+
+						element := MustConvertStoredValue(context, value).
+							Transfer(
+								context,
+								address,
+								remove,
+								nil,
+								preventTransfer,
+								false, // value has a parent container because it is from iterator.
+							)
+
+						return element, nil
+					},
+				)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+			}()
+		}
 
 		if remove {
 
@@ -1379,7 +1423,7 @@ func (v *ArrayValue) Transfer(
 				},
 			)
 
-			err = v.array.PopIterate(func(storable atree.Storable) {
+			err := v.array.PopIterate(func(storable atree.Storable) {
 				RemoveReferencedSlab(context, storable)
 			})
 			if err != nil {
@@ -2331,3 +2375,46 @@ var NativeArrayRemoveLastFunction = NativeFunction(
 		return thisArray.RemoveLast(context)
 	},
 )
+
+// canCopyNonRefSimpleForType returns true if CopyNonRefSimple()
+// always returns true for the given type's storable.
+func canCopyNonRefSimpleForType(t StaticType) bool {
+	pt, ok := t.(PrimitiveStaticType)
+	if !ok {
+		return false
+	}
+	switch pt {
+	case PrimitiveStaticTypeBool:
+		return true
+	case PrimitiveStaticTypeAddress:
+		return true
+	case PrimitiveStaticTypeCharacter:
+		return true
+	case PrimitiveStaticTypeInt8,
+		PrimitiveStaticTypeInt16,
+		PrimitiveStaticTypeInt32,
+		PrimitiveStaticTypeInt64,
+		PrimitiveStaticTypeInt128,
+		PrimitiveStaticTypeInt256:
+		return true
+	case PrimitiveStaticTypeUInt8,
+		PrimitiveStaticTypeUInt16,
+		PrimitiveStaticTypeUInt32,
+		PrimitiveStaticTypeUInt64,
+		PrimitiveStaticTypeUInt128,
+		PrimitiveStaticTypeUInt256:
+		return true
+	case PrimitiveStaticTypeWord8,
+		PrimitiveStaticTypeWord16,
+		PrimitiveStaticTypeWord32,
+		PrimitiveStaticTypeWord64,
+		PrimitiveStaticTypeWord128,
+		PrimitiveStaticTypeWord256:
+		return true
+	case PrimitiveStaticTypeFix64, PrimitiveStaticTypeFix128:
+		return true
+	case PrimitiveStaticTypeUFix64, PrimitiveStaticTypeUFix128:
+		return true
+	}
+	return false
+}

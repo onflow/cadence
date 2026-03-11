@@ -179,6 +179,8 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(transferContext, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
+	// For example, if this function doesn't use shallow copy the other should do the same.
 	return v
 }
 
@@ -205,6 +207,15 @@ func (v *AccountCapabilityControllerValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
 		v.CapabilityID,
 	}
+}
+
+func (*AccountCapabilityControllerValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v *AccountCapabilityControllerValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 type deletionCheckedFunctionValue struct {

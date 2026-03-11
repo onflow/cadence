@@ -469,6 +469,7 @@ func (v UFix64Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -482,6 +483,15 @@ func (UFix64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 
 func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v.UFix64Value.IntegerPart())
+}
+
+func (UFix64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UFix64Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 func fix128BigIntToUFix64(
