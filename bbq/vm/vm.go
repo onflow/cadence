@@ -436,6 +436,7 @@ func (vm *VM) invokeExternally(
 		nil,
 		staticReturnType,
 		false,
+		false,
 		withValidation,
 	)
 
@@ -994,6 +995,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 		nil,
 		returnType,
 		ins.HasImplicitArgument,
+		false,
 		true,
 	)
 }
@@ -1034,6 +1036,7 @@ func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
 		parameterTypes,
 		returnType,
 		ins.HasImplicitArgument,
+		ins.SkipArgumentConversion,
 		true,
 	)
 }
@@ -1131,6 +1134,7 @@ func invokeFunction(
 	parameterTypes []bbq.StaticType,
 	returnType bbq.StaticType,
 	hasImplicitArgument bool,
+	skipArgumentConversion bool,
 	withValidation bool,
 ) {
 	context := vm.context
@@ -1145,62 +1149,16 @@ func invokeFunction(
 		functionValue = boundFunction.Method
 	}
 
-	// Convert arguments to match the actual function's parameter types.
-	// When a function is invoked through a variable with a more specific function type,
-	// arguments may need boxing/conversion (e.g., Int -> Int? for parameter contravariance).
-	// Use the original function value (before BoundFunctionValue unwrapping) to get the
-	// resolved function type, since NativeFunctionValue.FunctionType() may panic
-	// for receiver-dependent types (e.g., Optional.map).
-	actualFuncType := originalFunctionValue.FunctionType(context)
-	actualParams := actualFuncType.Parameters
-
-	paramIndex := 0
-	lastArgIndex := len(arguments) - 1
-
-	for currentArgIndex, arg := range arguments {
-		// Attachment-base is an implicit argument. Skip it form conversions.
-		if isImplicitArgument(
-			currentArgIndex,
-			lastArgIndex,
-			boundFunction,
-			hasImplicitArgument,
-		) {
-			continue
-		}
-
-		var paramType bbq.StaticType
-		if paramIndex < len(actualParams) {
-			paramSemaType := actualParams[paramIndex].TypeAnnotation.Type.Resolve(emptyTypeParametersMap)
-			if paramSemaType != nil {
-				paramType = interpreter.ConvertSemaToStaticType(context, paramSemaType)
-			}
-		}
-
-		if paramType == nil && paramIndex < len(parameterTypes) {
-			paramType = parameterTypes[paramIndex]
-		}
-
-		paramIndex++
-
-		// Argument types may not always be available.
-		// e.g: Invoking the function externally.
-		var argumentType bbq.StaticType
-		if currentArgIndex < len(argumentTypes) {
-			argumentType = argumentTypes[currentArgIndex]
-		} else {
-			argumentType = arg.StaticType(vm.context)
-		}
-
-		convertAndBox := ConvertAndBox
-		if withValidation {
-			convertAndBox = ConvertAndBoxWithValidation
-		}
-
-		arguments[currentArgIndex] = convertAndBox(
+	if !skipArgumentConversion {
+		arguments = convertAndBoxArguments(
 			context,
-			arg,
-			argumentType,
-			paramType,
+			originalFunctionValue,
+			boundFunction,
+			arguments,
+			argumentTypes,
+			parameterTypes,
+			hasImplicitArgument,
+			withValidation,
 		)
 	}
 
@@ -1264,6 +1222,78 @@ func invokeFunction(
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func convertAndBoxArguments(
+	context *Context,
+	originalFunctionValue FunctionValue,
+	boundFunctionValue *BoundFunctionValue,
+	arguments []Value,
+	argumentTypes []bbq.StaticType,
+	parameterTypes []bbq.StaticType,
+	hasImplicitArgument bool,
+	withValidation bool,
+) []Value {
+	// Convert arguments to match the actual function's parameter types.
+	// When a function is invoked through a variable with a more specific function type,
+	// arguments may need boxing/conversion (e.g., Int -> Int? for parameter contravariance).
+	// Use the original function value (before BoundFunctionValue unwrapping) to get the
+	// resolved function type, since NativeFunctionValue.FunctionType() may panic
+	// for receiver-dependent types (e.g., Optional.map).
+	actualFuncType := originalFunctionValue.FunctionType(context)
+	actualParams := actualFuncType.Parameters
+
+	paramIndex := 0
+	lastArgIndex := len(arguments) - 1
+
+	for currentArgIndex, arg := range arguments {
+		// Attachment-base is an implicit argument. Skip it form conversions.
+		if isImplicitArgument(
+			currentArgIndex,
+			lastArgIndex,
+			boundFunctionValue,
+			hasImplicitArgument,
+		) {
+			continue
+		}
+
+		var paramType bbq.StaticType
+		if paramIndex < len(actualParams) {
+			paramSemaType := actualParams[paramIndex].TypeAnnotation.Type.Resolve(emptyTypeParametersMap)
+			if paramSemaType != nil {
+				paramType = interpreter.ConvertSemaToStaticType(context, paramSemaType)
+			}
+		}
+
+		if paramType == nil && paramIndex < len(parameterTypes) {
+			paramType = parameterTypes[paramIndex]
+		}
+
+		paramIndex++
+
+		// Argument types may not always be available.
+		// e.g: Invoking the function externally.
+		var argumentType bbq.StaticType
+		if currentArgIndex < len(argumentTypes) {
+			argumentType = argumentTypes[currentArgIndex]
+		} else {
+			argumentType = arg.StaticType(context)
+		}
+
+		convertAndBox := ConvertAndBox
+		if withValidation {
+			convertAndBox = ConvertAndBoxWithValidation
+		}
+
+		arguments[currentArgIndex] = convertAndBox(
+			context,
+			arg,
+			argumentType,
+			paramType,
+		)
+	}
+
+	return arguments
 }
 
 func isImplicitArgument(

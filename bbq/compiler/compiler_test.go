@@ -3300,9 +3300,10 @@ func TestCompileDefaultFunction(t *testing.T) {
 			opcode.InstructionGetLocal{Local: xIndex},
 			// NOTE: no transfer or convert of argument
 			opcode.InstructionInvokeTyped{
-				ArgTypes:   []uint16{intTypeIndex},
-				ParamTypes: []uint16{intTypeIndex},
-				ReturnType: 6,
+				ArgTypes:               []uint16{intTypeIndex},
+				ParamTypes:             []uint16{intTypeIndex},
+				ReturnType:             6,
+				SkipArgumentConversion: true,
 			},
 
 			// return
@@ -10435,9 +10436,10 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 			// Invoke `collectEvents` with the above event.
 			// `collectEvents(...)`
 			opcode.InstructionInvokeTyped{
-				ArgTypes:   []uint16{11, 12},
-				ParamTypes: []uint16{11, 12},
-				ReturnType: 10,
+				ArgTypes:               []uint16{11, 12},
+				ParamTypes:             []uint16{11, 12},
+				ReturnType:             10,
+				SkipArgumentConversion: true,
 			},
 			opcode.InstructionDrop{},
 

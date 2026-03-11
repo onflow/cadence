@@ -193,8 +193,8 @@ func TestPrintInstruction(t *testing.T) {
 		"Invoke typeArgs:[772, 1286] argCount:1 returnType:258 hasImplicitArgument:true": {
 			byte(Invoke), 0, 2, 3, 4, 5, 6, 0, 1, 1, 2, 1,
 		},
-		"InvokeTyped typeArgs:[772, 1286] argTypes:[1800, 2304, 258] paramTypes:[1800, 2304, 258] returnType:772 hasImplicitArgument:true": {
-			byte(InvokeTyped), 0, 2, 3, 4, 5, 6, 0, 3, 7, 8, 9, 0, 1, 2, 0, 3, 7, 8, 9, 0, 1, 2, 3, 4, 1,
+		"InvokeTyped typeArgs:[772, 1286] argTypes:[1800, 2304, 258] paramTypes:[1800, 2304, 258] returnType:772 hasImplicitArgument:true skipArgumentConversion:true": {
+			byte(InvokeTyped), 0, 2, 3, 4, 5, 6, 0, 3, 7, 8, 9, 0, 1, 2, 0, 3, 7, 8, 9, 0, 1, 2, 3, 4, 1, 1,
 		},
 
 		"NewRef type:258 isImplicit:true": {byte(NewRef), 1, 2, 1},

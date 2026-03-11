@@ -1314,11 +1314,12 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 //
 // Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack. This instruction is a variant of `invoke` that includes the argument types.
 type InstructionInvokeTyped struct {
-	TypeArgs            []uint16
-	ArgTypes            []uint16
-	ParamTypes          []uint16
-	ReturnType          uint16
-	HasImplicitArgument bool
+	TypeArgs               []uint16
+	ArgTypes               []uint16
+	ParamTypes             []uint16
+	ReturnType             uint16
+	HasImplicitArgument    bool
+	SkipArgumentConversion bool
 }
 
 var _ Instruction = InstructionInvokeTyped{}
@@ -1345,6 +1346,8 @@ func (i InstructionInvokeTyped) OperandsString(sb *strings.Builder, colorize boo
 	printfArgument(sb, "returnType", i.ReturnType, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "skipArgumentConversion", i.SkipArgumentConversion, colorize)
 }
 
 func (i InstructionInvokeTyped) ResolvedOperandsString(sb *strings.Builder,
@@ -1362,6 +1365,8 @@ func (i InstructionInvokeTyped) ResolvedOperandsString(sb *strings.Builder,
 	printfTypeArgument(sb, "returnType", types[i.ReturnType], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "skipArgumentConversion", i.SkipArgumentConversion, colorize)
 }
 
 func (i InstructionInvokeTyped) Encode(code *[]byte) {
@@ -1371,6 +1376,7 @@ func (i InstructionInvokeTyped) Encode(code *[]byte) {
 	emitUint16Array(code, i.ParamTypes)
 	emitUint16(code, i.ReturnType)
 	emitBool(code, i.HasImplicitArgument)
+	emitBool(code, i.SkipArgumentConversion)
 }
 
 func DecodeInvokeTyped(ip *uint16, code []byte) (i InstructionInvokeTyped) {
@@ -1379,6 +1385,7 @@ func DecodeInvokeTyped(ip *uint16, code []byte) (i InstructionInvokeTyped) {
 	i.ParamTypes = decodeUint16Array(ip, code)
 	i.ReturnType = decodeUint16(ip, code)
 	i.HasImplicitArgument = decodeBool(ip, code)
+	i.SkipArgumentConversion = decodeBool(ip, code)
 	return i
 }
 

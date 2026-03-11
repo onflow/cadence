@@ -2836,11 +2836,12 @@ func (c *Compiler[_, _]) emitInvocation(
 	paramTypes := c.loadTypes(invocationTypes.ParameterTypes)
 
 	c.emit(opcode.InstructionInvokeTyped{
-		TypeArgs:            typeArgs,
-		ArgTypes:            argTypes,
-		ParamTypes:          paramTypes,
-		ReturnType:          returnTypeIndex,
-		HasImplicitArgument: hasImplicitArgument,
+		TypeArgs:               typeArgs,
+		ArgTypes:               argTypes,
+		ParamTypes:             paramTypes,
+		ReturnType:             returnTypeIndex,
+		HasImplicitArgument:    hasImplicitArgument,
+		SkipArgumentConversion: invocationTypes.PassArgumentsWithoutTransferOrConvert,
 	})
 }
 

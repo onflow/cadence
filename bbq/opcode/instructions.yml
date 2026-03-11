@@ -406,6 +406,8 @@
       type: "typeIndex"
     - name: "hasImplicitArgument"
       type: "bool"
+    - name: "skipArgumentConversion"
+      type: "bool"
   valueEffects:
     pop:
       - name: "arguments"
