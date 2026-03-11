@@ -540,6 +540,7 @@ func (v UInt32Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -568,5 +569,6 @@ func (UInt32Value) CanCopyNonRefSimple() bool {
 }
 
 func (v UInt32Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
 	return v, nil
 }

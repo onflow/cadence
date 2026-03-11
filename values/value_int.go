@@ -373,7 +373,5 @@ func (IntValue) CanCopyNonRefSimple() bool {
 }
 
 func (v IntValue) CopyNonRefSimple() (atree.Storable, error) {
-	return IntValue{
-		BigInt: new(big.Int).Set(v.BigInt),
-	}, nil
+	return v, nil
 }

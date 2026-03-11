@@ -245,6 +245,7 @@ func (v AddressValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(transferContext, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -273,6 +274,7 @@ func (AddressValue) CanCopyNonRefSimple() bool {
 }
 
 func (v AddressValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
 	return v, nil
 }
 

@@ -242,6 +242,8 @@ func (v *IDCapabilityValue) Transfer(
 		v.DeepRemove(context, true)
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
+	// For example, if this function doesn't use shallow copy the other should do the same.
 	return v
 }
 
@@ -276,10 +278,6 @@ func (IDCapabilityValue) CanCopyNonRefSimple() bool {
 }
 
 func (v *IDCapabilityValue) CopyNonRefSimple() (atree.Storable, error) {
-	// Use shallow copy of StaticType since static type isn't expected to be changed.
-	return &IDCapabilityValue{
-		BorrowType: v.BorrowType,
-		address:    v.address,
-		ID:         v.ID,
-	}, nil
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

@@ -201,5 +201,5 @@ func (*PublishedValue) CanCopyNonRefSimple() bool {
 }
 
 func (v *PublishedValue) CopyNonRefSimple() (atree.Storable, error) {
-	return v, fmt.Errorf("can't copy PublishedValue as a non-reference simple storable")
+	return nil, NewStorableCopyError("PublishedValue")
 }
