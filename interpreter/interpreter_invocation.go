@@ -91,6 +91,30 @@ func invokeFunctionValueWithEval[T any](
 
 	parameterTypeCount := len(parameterTypes)
 
+	// Determine the actual function's type, by unwrapping any bound/wrapped functions.
+	// This is needed because:
+	// - The actual function's parameter types may be more general than the call-site types
+	//   (parameter contravariance), so arguments may need to be boxed.
+	// - The actual function's return type may be more specific than the call-site types
+	//   (return type covariance), so the return value may need to be boxed.
+
+	innerFunction := function
+	for {
+		switch typedFunction := innerFunction.(type) {
+		case BoundFunctionValue:
+			innerFunction = typedFunction.Function
+			continue
+
+		case WrappedFunctionValue:
+			innerFunction = typedFunction.InnerFunction
+			continue
+		}
+
+		break
+	}
+
+	actualFunctionType := innerFunction.FunctionType(context)
+
 	var transferredArguments []Value
 
 	argumentCount := len(arguments)
@@ -123,6 +147,35 @@ func invokeFunctionValueWithEval[T any](
 		}
 	}
 
+	// Box arguments to match the actual function's parameter types.
+	// The actual function's parameter types may differ from the call-site parameter types
+	// due to function parameter contravariance.
+	// e.g.:
+	//   fun funcWithOptionalParam(_ a: Int?): UInt8? { ... }
+	//   let f: fun(Int): UInt8? = funcWithOptionalParam
+	//   f(4)  // call-site param type is Int, actual param type is Int?
+
+	actualParameters := actualFunctionType.Parameters
+	actualParameterCount := len(actualParameters)
+
+	for i := 0; i < argumentCount && i < parameterTypeCount && i < actualParameterCount; i++ {
+		callSiteParamType := parameterTypes[i]
+		actualParamType := actualParameters[i].TypeAnnotation.Type.Resolve(typeArguments)
+		// actualParamType may be nil if the parameter type contains unresolved generic types
+		// (e.g., calling a generic host function like Optional.map).
+		// In that case, skip boxing — the generic types are resolved by the call-site elaboration.
+		if actualParamType == nil {
+			continue
+		}
+		if !actualParamType.Equal(callSiteParamType) {
+			transferredArguments[i] = BoxOptional(
+				context,
+				transferredArguments[i],
+				actualParamType,
+			)
+		}
+	}
+
 	// add the implicit argument to the end of the argument list, if it exists
 	if implicitArgumentValue != nil {
 		transferredImplicitArgument := implicitArgumentValue.Transfer(
@@ -152,29 +205,6 @@ func invokeFunctionValueWithEval[T any](
 
 	resultValue := function.Invoke(invocation)
 
-	// Determine the function's return type, by unwrapping any bound/wrapped functions.
-	// This is needed to handle invocations of functions of composite values,
-	// where the composite type implements an interface which defines the function,
-	// but the composite's function has a more specific return type than the interface's function.
-
-	functionForReturnType := function
-
-	for {
-		switch typedFunctionForReturnType := functionForReturnType.(type) {
-		case BoundFunctionValue:
-			functionForReturnType = typedFunctionForReturnType.Function
-			continue
-
-		case WrappedFunctionValue:
-			functionForReturnType = typedFunctionForReturnType.InnerFunction
-			continue
-		}
-
-		break
-	}
-
-	functionReturnType := functionForReturnType.FunctionType(context).ReturnTypeAnnotation.Type.Resolve(typeArguments)
-
 	// Only convert and box.
 	// No need to transfer, since transfer would happen later, when the return value gets assigned.
 	//
@@ -193,6 +223,8 @@ func invokeFunctionValueWithEval[T any](
 	//   return i.foo()?.bar
 	//
 	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
+
+	functionReturnType := actualFunctionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
 
 	return ConvertAndBoxWithValidation(
 		context,

@@ -436,3 +436,128 @@ func TestInterpretInvocationReferenceAuthorizationReturnValueTypeCheck(t *testin
 		forceCastTypeMismatchErr.ActualType.ID(),
 	)
 }
+
+func TestInterpretFunctionParameterContravariance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("optional parameter via function variable", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): UInt8? {
+                let f: fun(Int): UInt8? = funcWithOptionalParam
+                return f(4)
+            }
+
+            fun funcWithOptionalParam(_ a: Int?): UInt8? {
+                return a.map(fun (_ n: Int): UInt8 {
+                    return UInt8(n)
+                })
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.IsType(t, &interpreter.SomeValue{}, result)
+		innerValue := result.(*interpreter.SomeValue).InnerValue()
+		assert.Equal(t, interpreter.UInt8Value(4), innerValue)
+	})
+
+	t.Run("multiple parameters", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): [Type] {
+                let f: fun(Int, String): [Type] = actualFunc
+                return f(1, "hello")
+            }
+
+            fun actualFunc(_ a: Int?, _ b: String?): [Type] {
+                return [
+                    a.getType(),
+                    b.getType()
+                ]
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeMetaType,
+				),
+				common.ZeroAddress,
+				interpreter.NewTypeValue(
+					inter,
+					interpreter.NewOptionalStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+				interpreter.NewTypeValue(
+					inter,
+					interpreter.NewOptionalStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeString,
+					),
+				),
+			),
+			result,
+		)
+	})
+
+	t.Run("nested optional", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Type {
+                let f: fun(Int): Type = actualFunc
+                return f(4)
+            }
+
+            fun actualFunc(_ a: Int??): Type {
+                return a.getType()
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t,
+			interpreter.NewTypeValue(
+				inter,
+				interpreter.NewOptionalStaticType(
+					inter,
+					interpreter.NewOptionalStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+			),
+			result,
+		)
+	})
+
+	t.Run("same types, no boxing needed", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Int {
+                let f: fun(Int): Int = identity
+                return f(42)
+            }
+
+            fun identity(_ a: Int): Int {
+                return a
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+}

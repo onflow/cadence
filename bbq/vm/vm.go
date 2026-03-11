@@ -1132,6 +1132,27 @@ func invokeFunction(
 		functionValue = boundFunction.Method
 	}
 
+	// Box arguments to match the actual function's parameter types.
+	// When a function is invoked through a variable with a more specific function type,
+	// arguments may need boxing (e.g., Int -> Int? for parameter contravariance).
+	// Use the original function value (before BoundFunctionValue unwrapping) to get the
+	// resolved function type, since NativeFunctionValue.FunctionType() may panic
+	// for receiver-dependent types (e.g., Optional.map).
+	actualFuncType := originalFunctionValue.FunctionType(context)
+	actualParams := actualFuncType.Parameters
+
+	for i, arg := range arguments {
+		if i >= len(actualParams) {
+			break
+		}
+		actualParamSemaType := actualParams[i].TypeAnnotation.Type
+		paramStaticType := interpreter.ConvertSemaToStaticType(context, actualParamSemaType)
+		argStaticType := arg.StaticType(context)
+		if argStaticType != paramStaticType && !argStaticType.Equal(paramStaticType) {
+			arguments[i] = interpreter.BoxOptional(context, arg, actualParamSemaType)
+		}
+	}
+
 	var receiver Value
 
 	switch functionValue := functionValue.(type) {
