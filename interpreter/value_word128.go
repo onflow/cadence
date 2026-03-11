@@ -585,6 +585,7 @@ func (v Word128Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -613,7 +614,6 @@ func (Word128Value) CanCopyNonRefSimple() bool {
 }
 
 func (v Word128Value) CopyNonRefSimple() (atree.Storable, error) {
-	return Word128Value{
-		BigInt: new(big.Int).Set(v.BigInt),
-	}, nil
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

@@ -203,6 +203,8 @@ func (v *StorageCapabilityControllerValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
+	// For example, if this function doesn't use shallow copy the other should do the same.
 	return v
 }
 
@@ -501,9 +503,10 @@ func (v *StorageCapabilityControllerValue) newSetTagFunction(
 }
 
 func (*StorageCapabilityControllerValue) CanCopyNonRefSimple() bool {
-	return false
+	return true
 }
 
 func (v *StorageCapabilityControllerValue) CopyNonRefSimple() (atree.Storable, error) {
-	return nil, NewStorableCopyError("StorageCapabilityControllerValue")
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

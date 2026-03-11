@@ -664,6 +664,7 @@ func (v UIntValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -692,7 +693,6 @@ func (UIntValue) CanCopyNonRefSimple() bool {
 }
 
 func (v UIntValue) CopyNonRefSimple() (atree.Storable, error) {
-	return UIntValue{
-		BigInt: new(big.Int).Set(v.BigInt),
-	}, nil
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

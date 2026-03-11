@@ -312,6 +312,7 @@ func (v TypeValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -340,6 +341,7 @@ func (TypeValue) CanCopyNonRefSimple() bool {
 }
 
 func (v TypeValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
 	return v, nil
 }
 

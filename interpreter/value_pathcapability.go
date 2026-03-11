@@ -272,6 +272,7 @@ func (v *PathCapabilityValue) Transfer(
 		v.DeepRemove(context, true)
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -315,12 +316,8 @@ func (*PathCapabilityValue) CanCopyNonRefSimple() bool {
 }
 
 func (v *PathCapabilityValue) CopyNonRefSimple() (atree.Storable, error) {
-	// Use shallow copy of StaticType since static type isn't expected to be changed.
-	return &PathCapabilityValue{
-		BorrowType: v.BorrowType,
-		Path:       v.Path,
-		address:    v.address,
-	}, nil
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
