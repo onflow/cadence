@@ -112,15 +112,23 @@ func TestCompileRecursionFib(t *testing.T) {
 			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionSubtract{},
-			opcode.InstructionTransferAndConvert{ValueType: intTypeIndex, TargetType: intTypeIndex},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 1},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{intTypeIndex},
+				ParamTypes: []uint16{intTypeIndex},
+				ReturnType: 1,
+			},
 			// fib(n - 2)
 			opcode.InstructionGetGlobal{Global: 0},
 			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionSubtract{},
-			opcode.InstructionTransferAndConvert{ValueType: intTypeIndex, TargetType: intTypeIndex},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 1},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{intTypeIndex},
+				ParamTypes: []uint16{intTypeIndex},
+				ReturnType: 1,
+			},
 			opcode.InstructionAdd{},
 			// return
 			opcode.InstructionTransferAndConvert{ValueType: intTypeIndex, TargetType: intTypeIndex},
@@ -1987,7 +1995,9 @@ func TestCompileExpressionStatement(t *testing.T) {
 			// f()
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{
+				ReturnType: 1,
+			},
 			opcode.InstructionDrop{},
 
 			opcode.InstructionReturn{},
@@ -2834,7 +2844,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 				// let foo = Foo()
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: initFuncIndex},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 				opcode.InstructionSetLocal{Local: fooIndex},
 
@@ -2843,9 +2853,10 @@ func TestCompileMethodInvocation(t *testing.T) {
 				opcode.InstructionGetLocal{Local: fooIndex},
 				opcode.InstructionGetMethod{Method: fFuncIndex, ReceiverType: 1},
 				opcode.InstructionTrue{},
-				opcode.InstructionTransferAndConvert{ValueType: intTypeIndex, TargetType: intTypeIndex},
-				opcode.InstructionInvoke{
-					ArgCount:   1,
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{intTypeIndex},
+					ParamTypes: []uint16{intTypeIndex},
 					ReturnType: 2,
 				},
 				opcode.InstructionDrop{},
@@ -2922,7 +2933,7 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 				// let foo <- create Foo()
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: initFuncIndex},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 				opcode.InstructionSetLocal{Local: fooIndex},
 
@@ -3288,8 +3299,9 @@ func TestCompileDefaultFunction(t *testing.T) {
 			opcode.InstructionGetMethod{Method: interfaceFunctionIndex, ReceiverType: 7},
 			opcode.InstructionGetLocal{Local: xIndex},
 			// NOTE: no transfer or convert of argument
-			opcode.InstructionInvoke{
-				ArgCount:   1,
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{intTypeIndex},
+				ParamTypes: []uint16{intTypeIndex},
 				ReturnType: 6,
 			},
 
@@ -3388,8 +3400,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
-				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 1},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{2},
+					ParamTypes: []uint16{2},
+					ReturnType: 1,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3475,8 +3491,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{3},
+					ParamTypes: []uint16{3},
+					ReturnType: 2,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3562,8 +3582,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
-				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 3},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{4},
+					ParamTypes: []uint16{4},
+					ReturnType: 3,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3699,8 +3723,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 7, TargetType: 7},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 6},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{7},
+					ParamTypes: []uint16{7},
+					ReturnType: 6,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3741,8 +3769,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 7, TargetType: 7},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 6},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{7},
+					ParamTypes: []uint16{7},
+					ReturnType: 6,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -3901,8 +3933,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 8, TargetType: 8},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 7},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{8},
+					ParamTypes: []uint16{8},
+					ReturnType: 7,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -4104,11 +4140,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// Load receiver `A.TestStruct()`
 				opcode.InstructionGetGlobal{Global: 10},
-				opcode.InstructionInvoke{ReturnType: 11},
+				opcode.InstructionInvokeTyped{ReturnType: 11},
 
 				// Get function value `A.TestStruct.test()`
 				opcode.InstructionGetMethod{Method: 11, ReceiverType: 11},
-				opcode.InstructionInvoke{ReturnType: 10},
+				opcode.InstructionInvokeTyped{ReturnType: 10},
 
 				// if !<condition>
 				opcode.InstructionNot{},
@@ -4118,8 +4154,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: panicMessageIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 13, TargetType: 13},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 12},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{13},
+					ParamTypes: []uint16{13},
+					ReturnType: 12,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -4245,9 +4285,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionGetConstant{Constant: 1},
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvoke{
-					ArgCount:   1,
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{3},
+					ParamTypes: []uint16{3},
 					ReturnType: 2,
 				},
 				opcode.InstructionDrop{},
@@ -4284,9 +4325,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 2},
 				opcode.InstructionGetConstant{Constant: 1},
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvoke{
-					ArgCount:   1,
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{3},
+					ParamTypes: []uint16{3},
 					ReturnType: 2,
 				},
 				opcode.InstructionDrop{},
@@ -5171,8 +5213,12 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPreConditionGlobalIndex},
 			opcode.InstructionGetConstant{Constant: preErrorMessageConstIndex},
-			opcode.InstructionTransferAndConvert{ValueType: 8, TargetType: 8},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 7},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{8},
+				ParamTypes: []uint16{8},
+				ReturnType: 7,
+			},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
@@ -5210,8 +5256,12 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPostConditionGlobalIndex},
 			opcode.InstructionGetConstant{Constant: postErrorMessageConstIndex},
-			opcode.InstructionTransferAndConvert{ValueType: 8, TargetType: 8},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 7},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{8},
+				ParamTypes: []uint16{8},
+				ReturnType: 7,
+			},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
@@ -5455,8 +5505,12 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 1},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{2},
+					ParamTypes: []uint16{2},
+					ReturnType: 1,
+				},
 				opcode.InstructionDrop{},
 
 				// return
@@ -5527,8 +5581,12 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionGetConstant{Constant: 1},
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{3},
+					ParamTypes: []uint16{3},
+					ReturnType: 2,
+				},
 				opcode.InstructionDrop{},
 
 				// return $_result
@@ -5569,7 +5627,7 @@ func TestCompileReturns(t *testing.T) {
 
 				// invoke `voidReturnFunc()`
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 
 				// Drop the returning void value
 				opcode.InstructionDrop{},
@@ -5586,8 +5644,12 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 2},
 				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{3},
+					ParamTypes: []uint16{3},
+					ReturnType: 2,
+				},
 				opcode.InstructionDrop{},
 
 				// return $_result
@@ -5646,8 +5708,12 @@ func TestCompileFunctionExpression(t *testing.T) {
 			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionGetLocal{Local: addOneIndex},
 			opcode.InstructionGetConstant{Constant: 2},
-			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{2},
+				ParamTypes: []uint16{2},
+				ReturnType: 2,
+			},
 			opcode.InstructionAdd{},
 			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 			opcode.InstructionReturnValue{},
@@ -5734,8 +5800,12 @@ func TestCompileInnerFunction(t *testing.T) {
 			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionGetLocal{Local: addOneIndex},
 			opcode.InstructionGetConstant{Constant: 2},
-			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{2},
+				ParamTypes: []uint16{2},
+				ReturnType: 2,
+			},
 			opcode.InstructionAdd{},
 			opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 			opcode.InstructionReturnValue{},
@@ -6132,7 +6202,7 @@ func TestCompileRecursiveInnerFunction(t *testing.T) {
 			opcode.InstructionGetUpvalue{
 				Upvalue: innerUpvalueIndex,
 			},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionDrop{},
 			opcode.InstructionReturn{},
 		},
@@ -6692,8 +6762,12 @@ func TestCompileArgument(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0},
 			opcode.InstructionGetLocal{Local: xIndex},
-			opcode.InstructionTransferAndConvert{ValueType: intTypeIndex, TargetType: xParameterTypeIndex},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: voidTypeIndex},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{intTypeIndex},
+				ParamTypes: []uint16{xParameterTypeIndex},
+				ReturnType: voidTypeIndex,
+			},
 			opcode.InstructionDrop{},
 
 			opcode.InstructionReturn{},
@@ -7306,7 +7380,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Load `Foo.bar` function
 				opcode.InstructionGetMethod{Method: 5, ReceiverType: 4},
-				opcode.InstructionInvoke{ReturnType: 3},
+				opcode.InstructionInvokeTyped{ReturnType: 3},
 				opcode.InstructionWrap{},
 				opcode.InstructionJump{Target: 16},
 
@@ -7364,14 +7438,14 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				// let x: @R <- create R()
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 				opcode.InstructionSetLocal{Local: xIndex},
 
 				// var y: @R? <- create R()
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
 
@@ -7447,7 +7521,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				// let x: @R <- create R()
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 				opcode.InstructionSetLocal{Local: xIndex},
 
@@ -7456,7 +7530,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionGetConstant{Constant: 0},
 				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransfer{},
 				opcode.InstructionConvert{ValueType: 1, TargetType: 1},
 				opcode.InstructionNewDictionary{Type: 2, Size: 1, IsResource: true},
@@ -7563,14 +7637,14 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				// let x: @R <- create R()
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 5},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 				opcode.InstructionSetLocal{Local: xIndex},
 
 				// var y <- {"r" : <- create R()}
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 2},
+				opcode.InstructionInvokeTyped{ReturnType: 2},
 				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
 
@@ -7660,14 +7734,14 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				// let x: @R <- create R()
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 				opcode.InstructionSetLocal{Local: xIndex},
 
 				// var y: @R? <- create R()
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
 
@@ -7914,8 +7988,12 @@ func TestCompileEnum(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: testLookupGlobalIndex},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
-				opcode.InstructionTransferAndConvert{ValueType: rawValueTypeIndex, TargetType: rawValueTypeIndex},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{rawValueTypeIndex},
+					ParamTypes: []uint16{rawValueTypeIndex},
+					ReturnType: 2,
+				},
 				opcode.InstructionDrop{},
 				opcode.InstructionReturn{},
 			},
@@ -8029,18 +8107,26 @@ func TestCompileOptionalArgument(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionTrue{},
-				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
+				opcode.InstructionTransfer{},
 				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvokeTyped{ArgTypes: []uint16{2, 3}, ReturnType: 1},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{2, 3},
+					ParamTypes: []uint16{2, 3},
+					ReturnType: 1,
+				},
 				opcode.InstructionDrop{},
 
 				// assert(false)
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionFalse{},
-				opcode.InstructionTransferAndConvert{ValueType: 2, TargetType: 2},
-				opcode.InstructionInvokeTyped{ArgTypes: []uint16{2}, ReturnType: 1},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{2},
+					ParamTypes: []uint16{2},
+					ReturnType: 1,
+				},
 				opcode.InstructionDrop{},
 				opcode.InstructionReturn{},
 			},
@@ -8122,7 +8208,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 				// Name: "Foo",
 				opcode.InstructionGetConstant{Constant: contractNameIndex},
-				opcode.InstructionTransferAndConvert{ValueType: 8, TargetType: 8},
+				opcode.InstructionTransfer{},
 
 				// Contract code
 				opcode.InstructionGetConstant{Constant: contractCodeIndex},
@@ -8130,13 +8216,17 @@ func TestCompileOptionalArgument(t *testing.T) {
 					FieldName:    utf8FieldNameIndex,
 					AccessedType: 8,
 				},
-				opcode.InstructionTransferAndConvert{ValueType: 9, TargetType: 9},
+				opcode.InstructionTransfer{},
 
 				// Message: "Optional arg"
 				opcode.InstructionGetConstant{Constant: optionalArgIndex},
 				opcode.InstructionTransfer{},
 
-				opcode.InstructionInvokeTyped{ArgTypes: []uint16{8, 9, 8}, ReturnType: 5},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{8, 9, 8},
+					ParamTypes: []uint16{8, 9},
+					ReturnType: 5,
+				},
 				opcode.InstructionDrop{},
 
 				opcode.InstructionReturn{},
@@ -8421,7 +8511,7 @@ func TestCompileSwapMembers(t *testing.T) {
 			// let s = S()
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 1},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionSetLocal{Local: sIndex},
 
@@ -8692,7 +8782,7 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 
 			// let rs <- [<- create R()]
 			opcode.InstructionGetGlobal{Global: 1},
-			opcode.InstructionInvoke{ReturnType: 2},
+			opcode.InstructionInvokeTyped{ReturnType: 2},
 			opcode.InstructionTransfer{},
 			opcode.InstructionConvert{ValueType: 2, TargetType: 2},
 
@@ -9090,7 +9180,7 @@ func TestForStatementCapturing(t *testing.T) {
 			// f()
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: 3},
-			opcode.InstructionInvoke{ReturnType: 2},
+			opcode.InstructionInvokeTyped{ReturnType: 2},
 			opcode.InstructionDrop{},
 
 			// next iteration
@@ -9193,8 +9283,12 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{3},
+					ParamTypes: []uint16{3},
+					ReturnType: 2,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -9298,8 +9392,12 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
-				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 3},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{4},
+					ParamTypes: []uint16{4},
+					ReturnType: 3,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -9384,8 +9482,12 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{3},
+					ParamTypes: []uint16{3},
+					ReturnType: 2,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -9488,8 +9590,12 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
-				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 3},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{4},
+					ParamTypes: []uint16{4},
+					ReturnType: 3,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -9579,8 +9685,12 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
-				opcode.InstructionTransferAndConvert{ValueType: 3, TargetType: 3},
-				opcode.InstructionInvoke{ArgCount: 1, ReturnType: 2},
+				opcode.InstructionTransfer{},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:   []uint16{3},
+					ParamTypes: []uint16{3},
+					ReturnType: 2,
+				},
 
 				// Drop since it's a statement-expression
 				opcode.InstructionDrop{},
@@ -9649,7 +9759,7 @@ func TestCompileAttachments(t *testing.T) {
 				// STATEMENT: var s = S()
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: sConstructorGlobalIndex},
-				opcode.InstructionInvoke{ReturnType: 1},
+				opcode.InstructionInvokeTyped{ReturnType: 1},
 				opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 				opcode.InstructionSetLocal{Local: sLocalIndex},
 
@@ -9673,11 +9783,16 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionGetGlobal{Global: aConstructorGlobalIndex},
 				// get 3
 				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{ValueType: 4, TargetType: 4},
+				opcode.InstructionTransfer{},
 				// get s reference
 				opcode.InstructionGetLocal{Local: sRefLocalIndex},
 				// invoke A constructor with &s as arg, puts A on stack
-				opcode.InstructionInvoke{ArgCount: 2, ReturnType: 3, HasImplicitArgument: true},
+				opcode.InstructionInvokeTyped{
+					ArgTypes:            []uint16{4, 2},
+					ParamTypes:          []uint16{4},
+					ReturnType:          3,
+					HasImplicitArgument: true,
+				},
 				// get s back on stack
 				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
 				// attachment operation, attach A to s-copy
@@ -9702,7 +9817,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionUnwrap{},
 				// call foo if not nil
 				opcode.InstructionGetMethod{Method: 8, ReceiverType: 5},
-				opcode.InstructionInvoke{ReturnType: 4},
+				opcode.InstructionInvokeTyped{ReturnType: 4},
 				opcode.InstructionWrap{},
 				opcode.InstructionJump{Target: 33},
 				opcode.InstructionNil{},
@@ -9856,7 +9971,7 @@ func TestDynamicMethodInvocation(t *testing.T) {
 				MethodName:   0,
 				ReceiverType: 2,
 			},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionReturnValue{},
 		},
@@ -9919,7 +10034,7 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 				MethodName:   0,
 				ReceiverType: 2,
 			},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionWrap{},
 			opcode.InstructionJump{Target: 12},
 			opcode.InstructionNil{},
@@ -10062,8 +10177,12 @@ func TestCompileInjectedContract(t *testing.T) {
 				FieldName:    0,
 				AccessedType: 6,
 			},
-			opcode.InstructionTransferAndConvert{ValueType: 5, TargetType: 5},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 5},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{5},
+				ParamTypes: []uint16{5},
+				ReturnType: 5,
+			},
 			opcode.InstructionTransferAndConvert{ValueType: 5, TargetType: 5},
 			// return
 			opcode.InstructionReturnValue{},
@@ -10294,20 +10413,32 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: inheritedEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionGetField{FieldName: 2, AccessedType: 5},
-			opcode.InstructionTransferAndConvert{ValueType: 7, TargetType: 7},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 11},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{7},
+				ParamTypes: []uint16{7},
+				ReturnType: 11,
+			},
 
 			// Construct the self defined event
 			// Foo.ABC.ResourceDestroyed(self.x)
 			opcode.InstructionGetGlobal{Global: selfDefinedABCEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionGetField{FieldName: 2, AccessedType: 13},
-			opcode.InstructionTransferAndConvert{ValueType: 7, TargetType: 7},
-			opcode.InstructionInvoke{ArgCount: 1, ReturnType: 12},
+			opcode.InstructionTransfer{},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{7},
+				ParamTypes: []uint16{7},
+				ReturnType: 12,
+			},
 
 			// Invoke `collectEvents` with the above event.
 			// `collectEvents(...)`
-			opcode.InstructionInvoke{ArgCount: 2, ReturnType: 10},
+			opcode.InstructionInvokeTyped{
+				ArgTypes:   []uint16{11, 12},
+				ParamTypes: []uint16{11, 12},
+				ReturnType: 10,
+			},
 			opcode.InstructionDrop{},
 
 			// Return
@@ -10600,7 +10731,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionSetLocal{Local: 0},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionSetLocal{Local: 1},
 			opcode.InstructionStatement{},
@@ -10610,7 +10741,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionJumpIfFalse{Target: 20},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionSetLocal{Local: 1},
 			opcode.InstructionJump{Target: 24},
@@ -10646,7 +10777,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0},
 			// combined instrs
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionSetLocal{Local: 1},
 			opcode.InstructionStatement{},
@@ -10656,7 +10787,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 			opcode.InstructionJumpIfFalse{Target: 19},
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 0},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionSetLocal{Local: 1},
 			opcode.InstructionJump{Target: 22},
@@ -10703,7 +10834,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 1},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionSetLocal{Local: 0},
 			opcode.InstructionStatement{},
@@ -10729,7 +10860,7 @@ func TestPeepholeOptimizer(t *testing.T) {
 		assert.Equal(t, []opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: 1},
-			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionInvokeTyped{ReturnType: 1},
 			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
 			opcode.InstructionSetLocal{Local: 0},
 			opcode.InstructionStatement{},
@@ -10925,7 +11056,7 @@ func TestCompileBoundFunctionClosure(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetUpvalue{Upvalue: 0},
 			opcode.InstructionGetMethod{Method: 4, ReceiverType: 1},
-			opcode.InstructionInvoke{ReturnType: 5},
+			opcode.InstructionInvokeTyped{ReturnType: 5},
 			opcode.InstructionTransferAndConvert{ValueType: 5, TargetType: 5},
 			opcode.InstructionReturnValue{},
 		},
@@ -10937,7 +11068,7 @@ func TestCompileBoundFunctionClosure(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionGetMethod{Method: 4, ReceiverType: 1},
-			opcode.InstructionInvoke{ReturnType: 5},
+			opcode.InstructionInvokeTyped{ReturnType: 5},
 			opcode.InstructionTransferAndConvert{ValueType: 5, TargetType: 5},
 			opcode.InstructionReturnValue{},
 		},
@@ -10993,7 +11124,7 @@ func TestConstructorAsFunction(t *testing.T) {
 
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionInvoke{ArgCount: 0, ReturnType: 2},
+			opcode.InstructionInvokeTyped{ReturnType: 2},
 			opcode.InstructionDrop{},
 
 			opcode.InstructionReturn{},

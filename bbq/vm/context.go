@@ -449,6 +449,10 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 }
 
 func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
+	if staticType == nil {
+		return nil
+	}
+
 	typeCacheKey := commons.NewTypeCacheKeyFromStaticType(staticType)
 	semaType, ok := c.semaTypeCache[typeCacheKey]
 	if ok {

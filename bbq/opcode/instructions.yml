@@ -400,6 +400,8 @@
       type: "typeIndices"
     - name: "argTypes"
       type: "typeIndices"
+    - name: "paramTypes"
+      type: "typeIndices"
     - name: "returnType"
       type: "typeIndex"
     - name: "hasImplicitArgument"
