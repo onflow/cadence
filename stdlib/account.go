@@ -3961,7 +3961,7 @@ func getStorageCapabilityControllerIDsIterator(
 
 	count = uint64(capabilityIDSet.Count())
 	nextCapabilityID = func() (uint64, bool) {
-		keyValue := iterator.NextKey(context)
+		keyValue := iterator.Next(context)
 		if keyValue == nil {
 			return 0, false
 		}
