@@ -427,6 +427,10 @@ func (vm *VM) invokeExternally(
 
 	staticReturnType := interpreter.ConvertSemaToStaticType(vm.context, returnType)
 
+	// Argument validation is disabled means an invalid argument is passed intentionally.
+	// Therefore, skip the argument conversion as well (argument needs to be passed as-is).
+	skipArgumentConversion := !withValidation
+
 	invokeFunction(
 		vm,
 		functionValue,
@@ -436,7 +440,7 @@ func (vm *VM) invokeExternally(
 		nil,
 		staticReturnType,
 		false,
-		false,
+		skipArgumentConversion,
 		withValidation,
 	)
 

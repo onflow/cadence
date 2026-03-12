@@ -26,7 +26,6 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -206,33 +205,12 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	value := interpreter.NewUnmeteredUIntValueFromUint64(42)
 
-	test := inter.GetGlobal("test").(interpreter.FunctionValue)
-
-	invocation := interpreter.NewInvocation(
-		inter,
-		nil,
-		nil,
-		[]interpreter.Value{value},
-		[]sema.Type{sema.IntType},
-		nil,
-		sema.IntType,
-		interpreter.LocationRange{},
-	)
-
-	_, err := interpreter.InvokeFunction(
-		inter,
-		test,
-		invocation,
-	)
+	// Intentionally passing wrong type of value
+	_, err := inter.InvokeUncheckedForTestingOnly("test", value) //nolint:staticcheck
 	RequireError(t, err)
 
-	if *compile {
-		var internalErr errors.InternalError
-		require.ErrorAs(t, err, &internalErr)
-	} else {
-		var memberAccessTypeError *interpreter.MemberAccessTypeError
-		require.ErrorAs(t, err, &memberAccessTypeError)
-	}
+	var memberAccessTypeError *interpreter.MemberAccessTypeError
+	require.ErrorAs(t, err, &memberAccessTypeError)
 }
 
 func TestInterpretInvocationReturnTypeValidation(t *testing.T) {
