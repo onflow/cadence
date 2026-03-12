@@ -2845,26 +2845,6 @@ func (c *Compiler[_, _]) emitInvocation(
 	})
 }
 
-func (c *Compiler[_, _]) addImplicitArgument(
-	implicitArgIndex *uint16,
-	argCount uint16,
-) uint16 {
-	if implicitArgIndex == nil {
-		return argCount
-	}
-
-	// Add the implicit argument to the end of the argument list, if it exists.
-	// Used in attachments, the attachment constructor/init expects an implicit argument:
-	// a reference to the base value used to set base.
-	// This hides the base argument away from the user.
-
-	// Load implicit argument from locals
-	// Base is at the back of the argument list, only for attachment initialization.
-	c.emitGetLocal(*implicitArgIndex)
-
-	return argCount + 1
-}
-
 func (c *Compiler[_, _]) addImplicitArgumentTyped(
 	implicitArgIndex *uint16,
 	implicitArgType sema.Type,
