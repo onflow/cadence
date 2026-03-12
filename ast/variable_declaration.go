@@ -27,17 +27,17 @@ import (
 )
 
 type VariableDeclaration struct {
-	Value             Expression
-	SecondValue       Expression
-	TypeAnnotation    *TypeAnnotation
-	Transfer          *Transfer
-	SecondTransfer    *Transfer
-	ParentIfStatement *IfStatement `json:"-"`
-	DocString         string
-	Identifier        Identifier
-	StartPos          Position `json:"-"`
-	Access            Access
-	IsConstant        bool
+	Value                  Expression
+	SecondValue            Expression
+	TypeAnnotation         *TypeAnnotation
+	Transfer               *Transfer
+	SecondTransfer         *Transfer
+	ParentControlStatement Statement `json:"-"`
+	DocString              string
+	Identifier             Identifier
+	StartPos               Position `json:"-"`
+	Access                 Access
+	IsConstant             bool
 }
 
 var _ Element = &VariableDeclaration{}

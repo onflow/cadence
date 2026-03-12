@@ -101,6 +101,7 @@ type StatementVisitor[T any] interface {
 	VisitContinueStatement(*ContinueStatement) T
 	VisitBreakStatement(*BreakStatement) T
 	VisitIfStatement(*IfStatement) T
+	VisitGuardStatement(*GuardStatement) T
 	VisitForStatement(*ForStatement) T
 	VisitAssignmentStatement(*AssignmentStatement) T
 	VisitWhileStatement(*WhileStatement) T
@@ -125,6 +126,9 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 
 	case ElementTypeIfStatement:
 		return visitor.VisitIfStatement(statement.(*IfStatement))
+
+	case ElementTypeGuardStatement:
+		return visitor.VisitGuardStatement(statement.(*GuardStatement))
 
 	case ElementTypeForStatement:
 		return visitor.VisitForStatement(statement.(*ForStatement))

@@ -246,6 +246,7 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		{opcode.InstructionLoop{}, opcode.PrettyInstructionLoop{}},
 		{opcode.InstructionStatement{}, opcode.PrettyInstructionStatement{}},
 		{opcode.InstructionSetAttachmentBase{}, opcode.PrettyInstructionSetAttachmentBase{}},
+		{opcode.InstructionUnreachable{}, opcode.PrettyInstructionUnreachable{}},
 
 		// Instructions with non-resolvable operands only
 		{

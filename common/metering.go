@@ -148,6 +148,7 @@ var (
 	SwitchStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindSwitchStatement)
 	WhileStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindWhileStatement)
 	RemoveStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindRemoveStatement)
+	GuardStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindGuardStatement)
 
 	// AST Expressions
 

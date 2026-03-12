@@ -301,6 +301,7 @@ func TestPrintInstruction(t *testing.T) {
 		"Statement":                       {byte(Statement)},
 		"TemplateString exprSize:258":     {byte(TemplateString), 1, 2, 3, 4},
 		"GetFieldLocal fieldName:258 accessedType:258 local:772": {byte(GetFieldLocal), 1, 2, 1, 2, 3, 4},
+		"Unreachable": {byte(Unreachable)},
 	}
 
 	// Check if there is any opcode that is not tested

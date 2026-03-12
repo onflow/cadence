@@ -1590,6 +1590,23 @@ func (i PrettyInstructionTemplateString) String() string {
 	return sb.String()
 }
 
+// PrettyInstructionUnreachable
+//
+// Pretty form of InstructionUnreachable with resolved operands.
+// Indicates an unreachable code location. If executed, the program panics.
+type PrettyInstructionUnreachable struct {
+}
+
+var _ PrettyInstruction = PrettyInstructionUnreachable{}
+
+func (PrettyInstructionUnreachable) Opcode() Opcode {
+	return Unreachable
+}
+
+func (i PrettyInstructionUnreachable) String() string {
+	return i.Opcode().String()
+}
+
 // PrettyInstructionGetTypeIndex
 //
 // Pretty form of InstructionGetTypeIndex with resolved operands.

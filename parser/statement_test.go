@@ -516,7 +516,7 @@ func TestParseIfStatement(t *testing.T) {
 			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 		}
 
-		expected.Test.(*ast.VariableDeclaration).ParentIfStatement = expected
+		expected.Test.(*ast.VariableDeclaration).ParentControlStatement = expected
 
 		AssertEqualWithDiff(t,
 			[]ast.Statement{
@@ -566,13 +566,201 @@ func TestParseIfStatement(t *testing.T) {
 			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 		}
 
-		expected.Test.(*ast.VariableDeclaration).ParentIfStatement = expected
+		expected.Test.(*ast.VariableDeclaration).ParentControlStatement = expected
 
 		AssertEqualWithDiff(t,
 			[]ast.Statement{
 				expected,
 			},
 			result,
+		)
+	})
+}
+
+func TestParseGuardStatement(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with boolean expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("guard true else { return }")
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.GuardStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					Else: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ReturnStatement{
+								Expression: nil,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
+									EndPos:   ast.Position{Line: 1, Column: 23, Offset: 23},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+							EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with let optional binding", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("guard let x = y else { return }")
+		require.Empty(t, errs)
+
+		expected := &ast.GuardStatement{
+			Test: &ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
+				IsConstant: true,
+				Identifier: ast.Identifier{
+					Identifier: "x",
+					Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
+				},
+				Transfer: &ast.Transfer{
+					Operation: ast.TransferOperationCopy,
+					Pos:       ast.Position{Line: 1, Column: 12, Offset: 12},
+				},
+				Value: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "y",
+						Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+			},
+			Else: &ast.Block{
+				Statements: []ast.Statement{
+					&ast.ReturnStatement{
+						Expression: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
+							EndPos:   ast.Position{Line: 1, Column: 28, Offset: 28},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+					EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
+				},
+			},
+			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+		}
+
+		// Set parent control statement
+		expected.Test.(*ast.VariableDeclaration).ParentControlStatement = expected
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{expected},
+			result,
+		)
+	})
+
+	t.Run("with var optional binding", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("guard var x = y else { return }")
+		require.Empty(t, errs)
+
+		expected := &ast.GuardStatement{
+			Test: &ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
+				IsConstant: false,
+				Identifier: ast.Identifier{
+					Identifier: "x",
+					Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
+				},
+				Transfer: &ast.Transfer{
+					Operation: ast.TransferOperationCopy,
+					Pos:       ast.Position{Line: 1, Column: 12, Offset: 12},
+				},
+				Value: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "y",
+						Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+			},
+			Else: &ast.Block{
+				Statements: []ast.Statement{
+					&ast.ReturnStatement{
+						Expression: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
+							EndPos:   ast.Position{Line: 1, Column: 28, Offset: 28},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+					EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
+				},
+			},
+			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+		}
+
+		// Set parent control statement
+		expected.Test.(*ast.VariableDeclaration).ParentControlStatement = expected
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{expected},
+			result,
+		)
+	})
+
+	t.Run("missing else", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "guard true { return }"
+		_, errs := testParseStatements(code)
+		require.Len(t, errs, 1)
+
+		var missingElseErr *MissingElseInGuardStatementError
+		require.ErrorAs(t, errs[0], &missingElseErr)
+
+		fixes := missingElseErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert 'else' keyword",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "else ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+								EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"guard true else { return }",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -2014,8 +2202,8 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 				Pos:        ast.Position{Offset: 42, Line: 3, Column: 23},
 			},
 		},
-		StartPos:          ast.Position{Offset: 34, Line: 3, Column: 15},
-		ParentIfStatement: ifStatement,
+		StartPos:               ast.Position{Offset: 34, Line: 3, Column: 15},
+		ParentControlStatement: ifStatement,
 	}
 
 	ifStatement.Test = ifTestVariableDeclaration
