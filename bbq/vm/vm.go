@@ -1263,12 +1263,18 @@ func convertAndBoxArguments(
 
 		var paramType bbq.StaticType
 		if paramIndex < len(actualParams) {
+			// TODO: Properly resolve the type parameters.
 			paramSemaType := actualParams[paramIndex].TypeAnnotation.Type.Resolve(emptyTypeParametersMap)
 			if paramSemaType != nil {
 				paramType = interpreter.ConvertSemaToStaticType(context, paramSemaType)
 			}
 		}
 
+		// It is possible that resolving the type-parameter may not always be successful,
+		// because type-parameters are not always explicitly provided.
+		// e.g: `Array.filter` function implicitly derive the type-parameter from the value,
+		// and is not provided explicitly at the invocation.
+		// In that case, use the statically computed type.
 		if paramType == nil && paramIndex < len(parameterTypes) {
 			paramType = parameterTypes[paramIndex]
 		}

@@ -142,8 +142,10 @@ func invokeFunctionValueWithEval[T any](
 					parameterType = actualParameters[i].TypeAnnotation.Type.Resolve(typeArguments)
 				}
 
-				// actual param type may be nil if the parameter type contains unresolved generic types
-				// (e.g., calling a generic host function like Optional.map).
+				// It is possible that resolving the type-parameter may not always be successful,
+				// because type-parameters are not always explicitly provided.
+				// e.g: `Array.filter` function implicitly derive the type-parameter from the value,
+				// and is not provided explicitly at the invocation.
 				// In that case, use the statically computed type.
 				if parameterType == nil {
 					parameterType = parameterTypes[i]
