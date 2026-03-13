@@ -21,8 +21,6 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/test_utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -31,10 +29,12 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
+	"github.com/onflow/cadence/bbq/commons"
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/bbq/vm/test"
@@ -719,23 +719,21 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 			methodInvoked = true
 			assert.Len(t, args, 1)
 
+			var expectedArg interpreter.Value
 			if *compile {
+				// Currently, VM does not resolve type-parameters at runtime.
+				// Therefore, it takes the statically known parameter type, which is `Int`.
+				// So the argument does not get boxed.
 				// TODO: Update the assert once the type-parameter resolving is
 				// supported for invocations in the VM.
-				assert.Equal(
-					t,
-					interpreter.NewUnmeteredIntValueFromInt64(4),
-					args[0],
-				)
+				expectedArg = interpreter.NewUnmeteredIntValueFromInt64(4)
 			} else {
-				assert.Equal(
-					t,
-					interpreter.NewUnmeteredSomeValueNonCopying(
-						interpreter.NewUnmeteredIntValueFromInt64(4),
-					),
-					args[0],
+				expectedArg = interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredIntValueFromInt64(4),
 				)
 			}
+			assert.Equal(t, expectedArg, args[0])
+
 			return interpreter.Void
 		}
 
