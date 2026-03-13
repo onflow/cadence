@@ -110,4 +110,14 @@ func init() {
 			interpreter.NativeAccountStorageCheckFunction(nil, nil),
 		),
 	)
+
+	// Account.Storage.limitedToPaths
+	registerBuiltinTypeBoundFunction(
+		accountStorageTypeName,
+		NewNativeFunctionValue(
+			sema.Account_StorageTypeLimitedToPathsFunctionName,
+			sema.Account_StorageTypeLimitedToPathsFunctionType,
+			interpreter.NativeAccountStorageLimitedToPathsFunction(nil, nil),
+		),
+	)
 }

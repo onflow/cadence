@@ -4716,7 +4716,7 @@ func NativeAccountStorageIterateFunction(
 			address,
 			domain,
 			pathType,
-			allowedPaths,
+			getEffectiveAllowedPaths(receiver, allowedPaths),
 		)
 	}
 }
@@ -4942,7 +4942,7 @@ func NativeAccountStorageSaveFunction(
 			context,
 			args,
 			addressValue,
-			allowedPaths,
+			getEffectiveAllowedPaths(receiver, allowedPaths),
 		)
 	}
 }
@@ -5036,7 +5036,7 @@ func NativeAccountStorageTypeFunction(
 			context,
 			args,
 			address,
-			allowedPaths,
+			getEffectiveAllowedPaths(receiver, allowedPaths),
 		)
 	}
 }
@@ -5140,7 +5140,7 @@ func NativeAccountStorageCopyFunction(
 			args,
 			semaBorrowType,
 			address,
-			allowedPaths,
+			getEffectiveAllowedPaths(receiver, allowedPaths),
 		)
 	}
 }
@@ -5164,7 +5164,7 @@ func NativeAccountStorageLoadFunction(
 			args,
 			semaBorrowType,
 			address,
-			allowedPaths,
+			getEffectiveAllowedPaths(receiver, allowedPaths),
 		)
 	}
 }
@@ -5327,7 +5327,7 @@ func NativeAccountStorageBorrowFunction(
 			args,
 			typeParameter,
 			address,
-			allowedPaths,
+			getEffectiveAllowedPaths(receiver, allowedPaths),
 		)
 	}
 }
@@ -5410,7 +5410,7 @@ func NativeAccountStorageCheckFunction(
 			address,
 			args,
 			typeArgument,
-			allowedPaths,
+			getEffectiveAllowedPaths(receiver, allowedPaths),
 		)
 	}
 }

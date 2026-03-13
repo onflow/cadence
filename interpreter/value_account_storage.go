@@ -156,6 +156,13 @@ func NewAccountStorageValue(
 		stringer,
 	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
+	if allowedPaths != nil {
+		storageValue = storageValue.WithPrivateField(
+			accountStoragePrivateAllowedPathsFieldName,
+			allowedPaths,
+		)
+	}
+
 	return storageValue
 }
 
@@ -168,7 +175,40 @@ func isPathAllowed(path PathValue, allowedPaths map[PathValue]struct{}) bool {
 	return ok
 }
 
-// accountStorageLimitedToPathsFunction creates the bound function for limitedToPaths.
+const accountStoragePrivateAllowedPathsFieldName = "allowedPaths"
+
+// getAllowedPathsFromReceiver extracts the allowed paths set
+// from a receiver's private field.
+// Returns nil if no restriction is set.
+func getAllowedPathsFromReceiver(receiver Value) map[PathValue]struct{} {
+	composite, ok := receiver.(*SimpleCompositeValue)
+	if !ok {
+		return nil
+	}
+
+	field := composite.PrivateField(accountStoragePrivateAllowedPathsFieldName)
+	if field == nil {
+		return nil
+	}
+
+	allowedPaths, ok := field.(map[PathValue]struct{})
+	if !ok {
+		return nil
+	}
+
+	return allowedPaths
+}
+
+// getEffectiveAllowedPaths returns the allowed paths for a storage operation.
+// If closureAllowedPaths is non-nil (interpreter path), it is used directly.
+// Otherwise, the allowed paths are extracted from the receiver's private field (BBQ VM path).
+func getEffectiveAllowedPaths(receiver Value, closureAllowedPaths map[PathValue]struct{}) map[PathValue]struct{} {
+	if closureAllowedPaths != nil {
+		return closureAllowedPaths
+	}
+	return getAllowedPathsFromReceiver(receiver)
+}
+
 func accountStorageLimitedToPathsFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
@@ -182,62 +222,70 @@ func accountStorageLimitedToPathsFunction(
 		context,
 		storageValue,
 		sema.Account_StorageTypeLimitedToPathsFunctionType,
-		func(
-			context NativeFunctionContext,
-			_ TypeArgumentsIterator,
-			_ ArgumentTypesIterator,
-			_ Value,
-			args []Value,
-		) Value {
-			pathsArray, ok := args[0].(*ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newAllowedPaths := make(map[PathValue]struct{})
-			pathsArray.Iterate(
-				context,
-				func(element Value) (resume bool) {
-					pathValue, ok := element.(PathValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-					// If there is an existing allowlist (nested limitedToPaths call),
-					// only include paths that are in both sets (intersection).
-					if !isPathAllowed(pathValue, existingAllowedPaths) {
-						return true
-					}
-					newAllowedPaths[pathValue] = struct{}{}
-					return true
-				},
-				false,
-			)
-
-			limitedStorageValue := NewAccountStorageValue(
-				context,
-				address,
-				storageUsedGet,
-				storageCapacityGet,
-				newAllowedPaths,
-			)
-
-			authorization := NewEntitlementSetAuthorization(
-				context,
-				func() []common.TypeID {
-					return []common.TypeID{
-						sema.StorageType.ID(),
-					}
-				},
-				1,
-				sema.Conjunction,
-			)
-
-			return NewEphemeralReferenceValue(
-				context,
-				authorization,
-				limitedStorageValue,
-				sema.Account_StorageType,
-			)
-		},
+		NativeAccountStorageLimitedToPathsFunction(&address, existingAllowedPaths),
 	)
+}
+
+func NativeAccountStorageLimitedToPathsFunction(
+	addressPointer *AddressValue,
+	allowedPaths map[PathValue]struct{},
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		address := GetAddressValue(receiver, addressPointer)
+		existingAllowedPaths := getEffectiveAllowedPaths(receiver, allowedPaths)
+
+		pathsArray, ok := args[0].(*ArrayValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		newAllowedPaths := make(map[PathValue]struct{})
+		pathsArray.Iterate(
+			context,
+			func(element Value) (resume bool) {
+				pathValue, ok := element.(PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				if !isPathAllowed(pathValue, existingAllowedPaths) {
+					return true
+				}
+				newAllowedPaths[pathValue] = struct{}{}
+				return true
+			},
+			false,
+		)
+
+		limitedStorageValue := NewAccountStorageValue(
+			context,
+			address,
+			nil,
+			nil,
+			newAllowedPaths,
+		)
+
+		authorization := NewEntitlementSetAuthorization(
+			context,
+			func() []common.TypeID {
+				return []common.TypeID{
+					sema.StorageType.ID(),
+				}
+			},
+			1,
+			sema.Conjunction,
+		)
+
+		return NewEphemeralReferenceValue(
+			context,
+			authorization,
+			limitedStorageValue,
+			sema.Account_StorageType,
+		)
+	}
 }
