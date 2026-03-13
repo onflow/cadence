@@ -567,6 +567,30 @@ func (e *OverwriteError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
 
+// PathNotAllowedError
+type PathNotAllowedError struct {
+	LocationRange
+	Path    PathValue
+	Address AddressValue
+}
+
+var _ errors.UserError = &PathNotAllowedError{}
+var _ HasLocationRange = &PathNotAllowedError{}
+
+func (*PathNotAllowedError) IsUserError() {}
+
+func (e *PathNotAllowedError) Error() string {
+	return fmt.Sprintf(
+		"path %s in account %s is not allowed in limited storage",
+		e.Path,
+		e.Address,
+	)
+}
+
+func (e *PathNotAllowedError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // ArrayIndexOutOfBoundsError
 type ArrayIndexOutOfBoundsError struct {
 	LocationRange

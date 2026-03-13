@@ -439,6 +439,35 @@ then the callback must stop iteration by returning false.
 Otherwise, iteration aborts.
 `
 
+const Account_StorageTypeLimitedToPathsFunctionName = "limitedToPaths"
+
+var Account_StorageTypeLimitedToPathsFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "paths",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+				Type: PathType,
+			}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&ReferenceType{
+			Type: Account_StorageType,
+			Authorization: newEntitlementAccess(
+				[]Type{StorageType},
+				Conjunction,
+			),
+		},
+	),
+}
+
+const Account_StorageTypeLimitedToPathsFunctionDocString = `
+Returns a new reference to this account's storage that only allows
+access to the given paths. Operations on any other path behave as if
+nothing is stored there. Saving to a non-allowed path aborts.
+`
+
 const Account_StorageTypeName = "Storage"
 
 var Account_StorageType = func() *CompositeType {
@@ -553,6 +582,16 @@ func init() {
 			Account_StorageTypeForEachStoredFunctionName,
 			Account_StorageTypeForEachStoredFunctionType,
 			Account_StorageTypeForEachStoredFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_StorageType,
+			newEntitlementAccess(
+				[]Type{StorageType},
+				Conjunction,
+			),
+			Account_StorageTypeLimitedToPathsFunctionName,
+			Account_StorageTypeLimitedToPathsFunctionType,
+			Account_StorageTypeLimitedToPathsFunctionDocString,
 		),
 	}
 
