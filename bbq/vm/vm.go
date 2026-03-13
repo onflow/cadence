@@ -1215,6 +1215,21 @@ func convertAndBoxArguments(
 	paramIndex := 0
 	lastArgIndex := len(arguments) - 1
 
+	// Catch and re-panic transfer/conversion errors for arguments as user-errors.
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		if transferError, ok := r.(*interpreter.ValueTransferTypeError); ok {
+			panic(&interpreter.InvalidArgumentTypeError{
+				ExpectedType: transferError.ExpectedType,
+				ActualType:   transferError.ActualType,
+			})
+		}
+		panic(r)
+	}()
+
 	for currentArgIndex, arg := range arguments {
 		// Attachment-base is an implicit argument. Skip it form conversions.
 		if isImplicitArgument(
