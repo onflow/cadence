@@ -4620,7 +4620,7 @@ func IsSubTypeOfSemaType(typeConverter TypeConverter, staticSubType StaticType, 
 	return sema.IsSubType(semaSubType, superType)
 }
 
-func domainPaths(context StorageContext, address common.Address, domain common.PathDomain) []Value {
+func domainPaths(context StorageContext, address common.Address, domain common.PathDomain, allowedPaths map[PathValue]struct{}) []Value {
 	storageMap := context.Storage().GetDomainStorageMap(context, address, domain.StorageDomain(), false)
 	if storageMap == nil {
 		return []Value{}
@@ -4635,6 +4635,9 @@ func domainPaths(context StorageContext, address common.Address, domain common.P
 			// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
 			identifier := string(key.(StringAtreeValue))
 			path := NewPathValue(context, domain, identifier)
+			if !isPathAllowed(path, allowedPaths) {
+				continue
+			}
 			paths = append(paths, path)
 		}
 	}
@@ -4646,9 +4649,10 @@ func accountPaths(
 	addressValue AddressValue,
 	domain common.PathDomain,
 	pathType StaticType,
+	allowedPaths map[PathValue]struct{},
 ) *ArrayValue {
 	address := addressValue.ToAddress()
-	values := domainPaths(context, address, domain)
+	values := domainPaths(context, address, domain, allowedPaths)
 	return NewArrayValue(
 		context,
 		NewVariableSizedStaticType(context, pathType),
@@ -4660,24 +4664,28 @@ func accountPaths(
 func publicAccountPaths(
 	context ArrayCreationContext,
 	addressValue AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) *ArrayValue {
 	return accountPaths(
 		context,
 		addressValue,
 		common.PathDomainPublic,
 		PrimitiveStaticTypePublicPath,
+		allowedPaths,
 	)
 }
 
 func storageAccountPaths(
 	context ArrayCreationContext,
 	addressValue AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) *ArrayValue {
 	return accountPaths(
 		context,
 		addressValue,
 		common.PathDomainStorage,
 		PrimitiveStaticTypeStoragePath,
+		allowedPaths,
 	)
 }
 
@@ -4691,6 +4699,7 @@ func NativeAccountStorageIterateFunction(
 	addressPointer *AddressValue,
 	domain common.PathDomain,
 	pathType sema.Type,
+	allowedPaths map[PathValue]struct{},
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -4707,6 +4716,7 @@ func NativeAccountStorageIterateFunction(
 			address,
 			domain,
 			pathType,
+			allowedPaths,
 		)
 	}
 }
@@ -4718,13 +4728,14 @@ func newStorageIterationFunction(
 	addressValue AddressValue,
 	domain common.PathDomain,
 	pathType sema.Type,
+	allowedPaths map[PathValue]struct{},
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
-		NativeAccountStorageIterateFunction(&addressValue, domain, pathType),
+		NativeAccountStorageIterateFunction(&addressValue, domain, pathType, allowedPaths),
 	)
 }
 
@@ -4734,6 +4745,7 @@ func AccountStorageIterate(
 	address common.Address,
 	domain common.PathDomain,
 	pathType sema.Type,
+	allowedPaths map[PathValue]struct{},
 ) Value {
 	fn, ok := arguments[0].(FunctionValue)
 	if !ok {
@@ -4754,6 +4766,15 @@ func AccountStorageIterate(
 
 	for key, value := storageIterator.Next(invocationContext); key != nil && value != nil; key, value = storageIterator.Next(invocationContext) {
 
+		// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+		identifier := string(key.(StringAtreeValue))
+		pathValue := NewPathValue(invocationContext, domain, identifier)
+
+		// Skip paths not in the allowed set
+		if !isPathAllowed(pathValue, allowedPaths) {
+			continue
+		}
+
 		staticType := value.StaticType(invocationContext)
 
 		// Perform a forced value de-referencing to see if the associated type is not broken.
@@ -4768,9 +4789,6 @@ func AccountStorageIterate(
 			continue
 		}
 
-		// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
-		identifier := string(key.(StringAtreeValue))
-		pathValue := NewPathValue(invocationContext, domain, identifier)
 		runtimeType := NewTypeValue(invocationContext, staticType)
 
 		arguments := []Value{pathValue, runtimeType}
@@ -4909,6 +4927,7 @@ func checkValue(
 
 func NativeAccountStorageSaveFunction(
 	addressPointer *AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -4923,6 +4942,7 @@ func NativeAccountStorageSaveFunction(
 			context,
 			args,
 			addressValue,
+			allowedPaths,
 		)
 	}
 }
@@ -4931,13 +4951,14 @@ func authAccountStorageSaveFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeSaveFunctionType,
-		NativeAccountStorageSaveFunction(&addressValue),
+		NativeAccountStorageSaveFunction(&addressValue, allowedPaths),
 	)
 }
 
@@ -4945,12 +4966,20 @@ func AccountStorageSave(
 	context InvocationContext,
 	arguments []Value,
 	addressValue AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) Value {
 	value := arguments[0]
 
 	path, ok := arguments[1].(PathValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
+	}
+
+	if !isPathAllowed(path, allowedPaths) {
+		panic(&PathNotAllowedError{
+			Address: addressValue,
+			Path:    path,
+		})
 	}
 
 	domain := path.Domain.StorageDomain()
@@ -4992,6 +5021,7 @@ func AccountStorageSave(
 
 func NativeAccountStorageTypeFunction(
 	addressPointer *AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -5006,6 +5036,7 @@ func NativeAccountStorageTypeFunction(
 			context,
 			args,
 			address,
+			allowedPaths,
 		)
 	}
 }
@@ -5014,13 +5045,14 @@ func authAccountStorageTypeFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeTypeFunctionType,
-		NativeAccountStorageTypeFunction(&addressValue),
+		NativeAccountStorageTypeFunction(&addressValue, allowedPaths),
 	)
 }
 
@@ -5028,10 +5060,15 @@ func AccountStorageType(
 	interpreter InvocationContext,
 	arguments []Value,
 	address common.Address,
+	allowedPaths map[PathValue]struct{},
 ) Value {
 	path, ok := arguments[0].(PathValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
+	}
+
+	if !isPathAllowed(path, allowedPaths) {
+		return Nil
 	}
 
 	domain := path.Domain.StorageDomain()
@@ -5058,12 +5095,14 @@ func authAccountStorageLoadFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) BoundFunctionValue {
 	return authAccountLoadFunction(
 		context,
 		storageValue,
 		addressValue,
 		sema.Account_StorageTypeLoadFunctionType,
+		allowedPaths,
 	)
 }
 
@@ -5071,17 +5110,20 @@ func authAccountStorageCopyFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) BoundFunctionValue {
 	return authAccountCopyFunction(
 		context,
 		storageValue,
 		addressValue,
 		sema.Account_StorageTypeCopyFunctionType,
+		allowedPaths,
 	)
 }
 
 func NativeAccountStorageCopyFunction(
 	addressPointer *AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -5098,12 +5140,14 @@ func NativeAccountStorageCopyFunction(
 			args,
 			semaBorrowType,
 			address,
+			allowedPaths,
 		)
 	}
 }
 
 func NativeAccountStorageLoadFunction(
 	addressPointer *AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -5120,6 +5164,7 @@ func NativeAccountStorageLoadFunction(
 			args,
 			semaBorrowType,
 			address,
+			allowedPaths,
 		)
 	}
 }
@@ -5129,13 +5174,14 @@ func authAccountCopyFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 	functionType *sema.FunctionType,
+	allowedPaths map[PathValue]struct{},
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
-		NativeAccountStorageCopyFunction(&addressValue),
+		NativeAccountStorageCopyFunction(&addressValue, allowedPaths),
 	)
 }
 
@@ -5144,13 +5190,14 @@ func authAccountLoadFunction(
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 	functionType *sema.FunctionType,
+	allowedPaths map[PathValue]struct{},
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
-		NativeAccountStorageLoadFunction(&addressValue),
+		NativeAccountStorageLoadFunction(&addressValue, allowedPaths),
 	)
 }
 
@@ -5159,10 +5206,15 @@ func AccountStorageCopy(
 	arguments []Value,
 	typeParameter sema.Type,
 	address common.Address,
+	allowedPaths map[PathValue]struct{},
 ) Value {
 	path, ok := arguments[0].(PathValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
+	}
+
+	if !isPathAllowed(path, allowedPaths) {
+		return Nil
 	}
 
 	domain := path.Domain.StorageDomain()
@@ -5207,10 +5259,15 @@ func AccountStorageLoad(
 	arguments []Value,
 	typeParameter sema.Type,
 	address common.Address,
+	allowedPaths map[PathValue]struct{},
 ) Value {
 	path, ok := arguments[0].(PathValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
+	}
+
+	if !isPathAllowed(path, allowedPaths) {
+		return Nil
 	}
 
 	domain := path.Domain.StorageDomain()
@@ -5253,6 +5310,7 @@ func AccountStorageLoad(
 
 func NativeAccountStorageBorrowFunction(
 	addressPointer *AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -5269,6 +5327,7 @@ func NativeAccountStorageBorrowFunction(
 			args,
 			typeParameter,
 			address,
+			allowedPaths,
 		)
 	}
 }
@@ -5277,13 +5336,14 @@ func authAccountStorageBorrowFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeBorrowFunctionType,
-		NativeAccountStorageBorrowFunction(&addressValue),
+		NativeAccountStorageBorrowFunction(&addressValue, allowedPaths),
 	)
 }
 
@@ -5292,10 +5352,15 @@ func AccountStorageBorrow(
 	arguments []Value,
 	typeParameter sema.Type,
 	address common.Address,
+	allowedPaths map[PathValue]struct{},
 ) Value {
 	path, ok := arguments[0].(PathValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
+	}
+
+	if !isPathAllowed(path, allowedPaths) {
+		return Nil
 	}
 
 	referenceType, ok := typeParameter.(*sema.ReferenceType)
@@ -5328,6 +5393,7 @@ func AccountStorageBorrow(
 
 func NativeAccountStorageCheckFunction(
 	addressPointer *AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -5344,6 +5410,7 @@ func NativeAccountStorageCheckFunction(
 			address,
 			args,
 			typeArgument,
+			allowedPaths,
 		)
 	}
 }
@@ -5352,13 +5419,14 @@ func authAccountStorageCheckFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
+	allowedPaths map[PathValue]struct{},
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeCheckFunctionType,
-		NativeAccountStorageCheckFunction(&addressValue),
+		NativeAccountStorageCheckFunction(&addressValue, allowedPaths),
 	)
 }
 
@@ -5367,10 +5435,15 @@ func AccountStorageCheck(
 	address common.Address,
 	arguments []Value,
 	typeParameter sema.Type,
+	allowedPaths map[PathValue]struct{},
 ) Value {
 	path, ok := arguments[0].(PathValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
+	}
+
+	if !isPathAllowed(path, allowedPaths) {
+		return FalseValue
 	}
 
 	domain := path.Domain.StorageDomain()

@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -32,11 +33,14 @@ var account_StorageStaticType StaticType = PrimitiveStaticTypeAccount_Storage
 var account_StorageFieldNames []string = nil
 
 // NewAccountStorageValue constructs an Account.Storage value.
+// When allowedPaths is nil, all paths are accessible (unlimited storage).
+// When allowedPaths is non-nil, only the specified paths are accessible.
 func NewAccountStorageValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	storageUsedGet func(context MemberAccessibleContext) UInt64Value,
 	storageCapacityGet func(context MemberAccessibleContext) UInt64Value,
+	allowedPaths map[PathValue]struct{},
 ) Value {
 
 	var storageValue *SimpleCompositeValue
@@ -53,6 +57,7 @@ func NewAccountStorageValue(
 				address,
 				common.PathDomainPublic,
 				sema.PublicPathType,
+				allowedPaths,
 			)
 
 		case sema.Account_StorageTypeForEachStoredFunctionName:
@@ -63,25 +68,36 @@ func NewAccountStorageValue(
 				address,
 				common.PathDomainStorage,
 				sema.StoragePathType,
+				allowedPaths,
 			)
 
 		case sema.Account_StorageTypeTypeFunctionName:
-			return authAccountStorageTypeFunction(context, storageValue, address)
+			return authAccountStorageTypeFunction(context, storageValue, address, allowedPaths)
 
 		case sema.Account_StorageTypeLoadFunctionName:
-			return authAccountStorageLoadFunction(context, storageValue, address)
+			return authAccountStorageLoadFunction(context, storageValue, address, allowedPaths)
 
 		case sema.Account_StorageTypeCopyFunctionName:
-			return authAccountStorageCopyFunction(context, storageValue, address)
+			return authAccountStorageCopyFunction(context, storageValue, address, allowedPaths)
 
 		case sema.Account_StorageTypeSaveFunctionName:
-			return authAccountStorageSaveFunction(context, storageValue, address)
+			return authAccountStorageSaveFunction(context, storageValue, address, allowedPaths)
 
 		case sema.Account_StorageTypeBorrowFunctionName:
-			return authAccountStorageBorrowFunction(context, storageValue, address)
+			return authAccountStorageBorrowFunction(context, storageValue, address, allowedPaths)
 
 		case sema.Account_StorageTypeCheckFunctionName:
-			return authAccountStorageCheckFunction(context, storageValue, address)
+			return authAccountStorageCheckFunction(context, storageValue, address, allowedPaths)
+
+		case sema.Account_StorageTypeLimitedToPathsFunctionName:
+			return accountStorageLimitedToPathsFunction(
+				context,
+				storageValue,
+				address,
+				storageUsedGet,
+				storageCapacityGet,
+				allowedPaths,
+			)
 		}
 
 		return nil
@@ -90,10 +106,10 @@ func NewAccountStorageValue(
 	computeField := func(name string, context MemberAccessibleContext) Value {
 		switch name {
 		case sema.Account_StorageTypePublicPathsFieldName:
-			return publicAccountPaths(context, address)
+			return publicAccountPaths(context, address, allowedPaths)
 
 		case sema.Account_StorageTypeStoragePathsFieldName:
-			return storageAccountPaths(context, address)
+			return storageAccountPaths(context, address, allowedPaths)
 
 		case sema.Account_StorageTypeUsedFieldName:
 			return storageUsedGet(context)
@@ -141,4 +157,87 @@ func NewAccountStorageValue(
 	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return storageValue
+}
+
+// isPathAllowed returns true if allowedPaths is nil (unlimited) or the path is in the set.
+func isPathAllowed(path PathValue, allowedPaths map[PathValue]struct{}) bool {
+	if allowedPaths == nil {
+		return true
+	}
+	_, ok := allowedPaths[path]
+	return ok
+}
+
+// accountStorageLimitedToPathsFunction creates the bound function for limitedToPaths.
+func accountStorageLimitedToPathsFunction(
+	context FunctionCreationContext,
+	storageValue *SimpleCompositeValue,
+	address AddressValue,
+	storageUsedGet func(context MemberAccessibleContext) UInt64Value,
+	storageCapacityGet func(context MemberAccessibleContext) UInt64Value,
+	existingAllowedPaths map[PathValue]struct{},
+) BoundFunctionValue {
+
+	return NewBoundHostFunctionValue(
+		context,
+		storageValue,
+		sema.Account_StorageTypeLimitedToPathsFunctionType,
+		func(
+			context NativeFunctionContext,
+			_ TypeArgumentsIterator,
+			_ ArgumentTypesIterator,
+			_ Value,
+			args []Value,
+		) Value {
+			pathsArray, ok := args[0].(*ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			newAllowedPaths := make(map[PathValue]struct{})
+			pathsArray.Iterate(
+				context,
+				func(element Value) (resume bool) {
+					pathValue, ok := element.(PathValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+					// If there is an existing allowlist (nested limitedToPaths call),
+					// only include paths that are in both sets (intersection).
+					if !isPathAllowed(pathValue, existingAllowedPaths) {
+						return true
+					}
+					newAllowedPaths[pathValue] = struct{}{}
+					return true
+				},
+				false,
+			)
+
+			limitedStorageValue := NewAccountStorageValue(
+				context,
+				address,
+				storageUsedGet,
+				storageCapacityGet,
+				newAllowedPaths,
+			)
+
+			authorization := NewEntitlementSetAuthorization(
+				context,
+				func() []common.TypeID {
+					return []common.TypeID{
+						sema.StorageType.ID(),
+					}
+				},
+				1,
+				sema.Conjunction,
+			)
+
+			return NewEphemeralReferenceValue(
+				context,
+				authorization,
+				limitedStorageValue,
+				sema.Account_StorageType,
+			)
+		},
+	)
 }
