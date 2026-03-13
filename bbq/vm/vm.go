@@ -413,6 +413,7 @@ func (vm *VM) prepareAndInvokeExternallyWithValidation(
 		functionValue,
 		preparedArguments,
 		returnType,
+		validateConvertAndBox,
 	)
 }
 
@@ -420,10 +421,15 @@ func (vm *VM) invokeExternally(
 	functionValue FunctionValue,
 	arguments []Value,
 	returnType sema.Type,
+	withValidation bool,
 ) (Value, error) {
 	// NOTE: can't fill argument types, as they are unknown
 
 	staticReturnType := interpreter.ConvertSemaToStaticType(vm.context, returnType)
+
+	// Argument validation is disabled means an invalid argument is passed intentionally.
+	// Therefore, skip the argument conversion as well (argument needs to be passed as-is).
+	skipArgumentConversion := !withValidation
 
 	invokeFunction(
 		vm,
@@ -431,8 +437,11 @@ func (vm *VM) invokeExternally(
 		arguments,
 		nil,
 		nil,
+		nil,
 		staticReturnType,
 		false,
+		skipArgumentConversion,
+		withValidation,
 	)
 
 	// Runs the VM for compiled functions.
@@ -963,39 +972,8 @@ func checkIndexedType(
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-
-	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
-
-	// Load the invoked value
-	functionValue := vm.pop()
-
-	// Return value type
-	returnType := vm.loadType(ins.ReturnType)
-
-	// Add base to front of arguments if the function is bound and base is defined.
-	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
-		base := boundFunction.Base
-		if base != nil {
-			arguments = append([]Value{base}, arguments...)
-		}
-	}
-
-	invokeFunction(
-		vm,
-		functionValue,
-		arguments,
-		typeArguments,
-		nil,
-		returnType,
-		ins.HasImplicitArgument,
-	)
-}
-
-func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
-	// Load type arguments
-	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-	argumentTypes := loadArgumentTypes(vm, ins.ArgTypes)
+	argumentTypes := loadTypes(vm, ins.ArgTypes)
+	parameterTypes := loadTypes(vm, ins.ParamTypes)
 
 	// Load arguments
 	arguments := vm.popN(len(ins.ArgTypes))
@@ -1024,8 +1002,11 @@ func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
 		arguments,
 		typeArguments,
 		argumentTypes,
+		parameterTypes,
 		returnType,
 		ins.HasImplicitArgument,
+		ins.SkipArgumentConversion,
+		true,
 	)
 }
 
@@ -1111,14 +1092,19 @@ func maybeUpdateStorageReferenceBoundFunctionReceiver(
 	}
 }
 
+var emptyTypeParametersMap = &sema.TypeParameterTypeOrderedMap{}
+
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
 	arguments []Value,
 	typeArguments []bbq.StaticType,
 	argumentTypes []bbq.StaticType,
+	parameterTypes []bbq.StaticType,
 	returnType bbq.StaticType,
 	hasImplicitArgument bool,
+	skipArgumentConversion bool,
+	withValidation bool,
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
@@ -1130,6 +1116,19 @@ func invokeFunction(
 	boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue)
 	if isBoundFunction {
 		functionValue = boundFunction.Method
+	}
+
+	if !skipArgumentConversion {
+		arguments = convertAndBoxArguments(
+			context,
+			originalFunctionValue,
+			boundFunction,
+			arguments,
+			argumentTypes,
+			parameterTypes,
+			hasImplicitArgument,
+			withValidation,
+		)
 	}
 
 	var receiver Value
@@ -1194,6 +1193,117 @@ func invokeFunction(
 	}
 }
 
+func convertAndBoxArguments(
+	context *Context,
+	originalFunctionValue FunctionValue,
+	boundFunctionValue *BoundFunctionValue,
+	arguments []Value,
+	argumentTypes []bbq.StaticType,
+	parameterTypes []bbq.StaticType,
+	hasImplicitArgument bool,
+	withValidation bool,
+) []Value {
+	// Convert arguments to match the actual function's parameter types.
+	// When a function is invoked through a variable with a more specific function type,
+	// arguments may need boxing/conversion (e.g., Int -> Int? for parameter contravariance).
+	// Use the original function value (before BoundFunctionValue unwrapping) to get the
+	// resolved function type, since NativeFunctionValue.FunctionType() may panic
+	// for receiver-dependent types (e.g., Optional.map).
+	actualFuncType := originalFunctionValue.FunctionType(context)
+	actualParams := actualFuncType.Parameters
+
+	paramIndex := 0
+	lastArgIndex := len(arguments) - 1
+
+	// Catch and re-panic transfer/conversion errors for arguments as user-errors.
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		if transferError, ok := r.(*interpreter.ValueTransferTypeError); ok {
+			panic(&interpreter.InvalidArgumentTypeError{
+				ExpectedType: transferError.ExpectedType,
+				ActualType:   transferError.ActualType,
+			})
+		}
+		panic(r)
+	}()
+
+	for currentArgIndex, arg := range arguments {
+		// Attachment-base is an implicit argument. Skip it form conversions.
+		if isImplicitArgument(
+			currentArgIndex,
+			lastArgIndex,
+			boundFunctionValue,
+			hasImplicitArgument,
+		) {
+			continue
+		}
+
+		var paramType bbq.StaticType
+		if paramIndex < len(actualParams) {
+			// TODO: Properly resolve the type parameters.
+			paramSemaType := actualParams[paramIndex].TypeAnnotation.Type.Resolve(emptyTypeParametersMap)
+			if paramSemaType != nil {
+				paramType = interpreter.ConvertSemaToStaticType(context, paramSemaType)
+			}
+		}
+
+		// It is possible that resolving the type-parameter may not always be successful,
+		// because type-parameters are not always explicitly provided.
+		// e.g: `Array.filter` function implicitly derive the type-parameter from the value,
+		// and is not provided explicitly at the invocation.
+		// In that case, use the statically computed type.
+		if paramType == nil && paramIndex < len(parameterTypes) {
+			paramType = parameterTypes[paramIndex]
+		}
+
+		paramIndex++
+
+		// Argument types may not always be available.
+		// e.g: Invoking the function externally.
+		var argumentType bbq.StaticType
+		if currentArgIndex < len(argumentTypes) {
+			argumentType = argumentTypes[currentArgIndex]
+		} else {
+			argumentType = arg.StaticType(context)
+		}
+
+		convertAndBox := ConvertAndBox
+		if withValidation {
+			convertAndBox = ConvertAndBoxWithValidation
+		}
+
+		arguments[currentArgIndex] = convertAndBox(
+			context,
+			arg,
+			argumentType,
+			paramType,
+		)
+	}
+
+	return arguments
+}
+
+func isImplicitArgument(
+	currentArgIndex int,
+	lastArgIndex int,
+	boundFunction *BoundFunctionValue,
+	hasImplicitArgument bool,
+) bool {
+	// TODO: See if we can simplify the passing of `base` to be more explicit.
+
+	// When invoking a bound function of an attachment, base is the very first argument.
+	if currentArgIndex == 0 && boundFunction != nil &&
+		boundFunction.Base != nil {
+		return true
+	}
+
+	// During `attach A() to T`, the base is passed in as the last argument.
+	return hasImplicitArgument && currentArgIndex == lastArgIndex
+}
+
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	var typeArguments []bbq.StaticType
 	if len(typeArgs) > 0 {
@@ -1206,16 +1316,16 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	return typeArguments
 }
 
-func loadArgumentTypes(vm *VM, argTypes []uint16) []bbq.StaticType {
-	var argumentTypes []bbq.StaticType
-	if len(argTypes) > 0 {
-		argumentTypes = make([]bbq.StaticType, 0, len(argTypes))
-		for _, typeIndex := range argTypes {
-			typeArg := vm.loadType(typeIndex)
-			argumentTypes = append(argumentTypes, typeArg)
+func loadTypes(vm *VM, typeIndices []uint16) []bbq.StaticType {
+	var types []bbq.StaticType
+	if len(typeIndices) > 0 {
+		types = make([]bbq.StaticType, 0, len(typeIndices))
+		for _, typeIndex := range typeIndices {
+			typ := vm.loadType(typeIndex)
+			types = append(types, typ)
 		}
 	}
-	return argumentTypes
+	return types
 }
 
 func maybeDereferenceReceiver(
@@ -2069,8 +2179,6 @@ func (vm *VM) run() {
 			opGetMethodDynamic(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
-		case opcode.InstructionInvokeTyped:
-			opInvokeTyped(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:
@@ -2265,7 +2373,12 @@ func (vm *VM) invokeFunction(
 	returnType sema.Type,
 ) (Value, error) {
 	functionValue := function.(FunctionValue)
-	return vm.invokeExternally(functionValue, arguments, returnType)
+	return vm.invokeExternally(
+		functionValue,
+		arguments,
+		returnType,
+		true,
+	)
 }
 
 func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {

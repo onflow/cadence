@@ -1644,3 +1644,33 @@ func (e *InvalidReferenceConversionError) Error() string {
 func (e *InvalidReferenceConversionError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
+
+// InvalidArgumentTypeError
+type InvalidArgumentTypeError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = &InvalidArgumentTypeError{}
+var _ HasLocationRange = &InvalidArgumentTypeError{}
+
+func (*InvalidArgumentTypeError) IsUserError() {}
+
+func (e *InvalidArgumentTypeError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"%s invalid transfer of value: expected `%s`, got `%s`",
+		errors.InternalErrorMessagePrefix,
+		expected,
+		actual,
+	)
+}
+
+func (e *InvalidArgumentTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}

@@ -26,7 +26,6 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -206,33 +205,12 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	value := interpreter.NewUnmeteredUIntValueFromUint64(42)
 
-	test := inter.GetGlobal("test").(interpreter.FunctionValue)
-
-	invocation := interpreter.NewInvocation(
-		inter,
-		nil,
-		nil,
-		[]interpreter.Value{value},
-		[]sema.Type{sema.IntType},
-		nil,
-		sema.IntType,
-		interpreter.LocationRange{},
-	)
-
-	_, err := interpreter.InvokeFunction(
-		inter,
-		test,
-		invocation,
-	)
+	// Intentionally passing wrong type of value
+	_, err := inter.InvokeUncheckedForTestingOnly("test", value) //nolint:staticcheck
 	RequireError(t, err)
 
-	if *compile {
-		var internalErr errors.InternalError
-		require.ErrorAs(t, err, &internalErr)
-	} else {
-		var memberAccessTypeError *interpreter.MemberAccessTypeError
-		require.ErrorAs(t, err, &memberAccessTypeError)
-	}
+	var memberAccessTypeError *interpreter.MemberAccessTypeError
+	require.ErrorAs(t, err, &memberAccessTypeError)
 }
 
 func TestInterpretInvocationReturnTypeValidation(t *testing.T) {
@@ -435,4 +413,163 @@ func TestInterpretInvocationReferenceAuthorizationReturnValueTypeCheck(t *testin
 		common.TypeID("&[Int]"),
 		forceCastTypeMismatchErr.ActualType.ID(),
 	)
+}
+
+func TestInterpretFunctionParameterContravariance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("optional parameter via function variable", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): UInt8? {
+                let f: fun(Int): UInt8? = funcWithOptionalParam
+                return f(4)
+            }
+
+            fun funcWithOptionalParam(_ a: Int?): UInt8? {
+                return a.map(fun (_ n: Int): UInt8 {
+                    return UInt8(n)
+                })
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.IsType(t, &interpreter.SomeValue{}, result)
+		innerValue := result.(*interpreter.SomeValue).InnerValue()
+		assert.Equal(t, interpreter.UInt8Value(4), innerValue)
+	})
+
+	t.Run("multiple parameters", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): [Type] {
+                let f: fun(Int, String): [Type] = actualFunc
+                return f(1, "hello")
+            }
+
+            fun actualFunc(_ a: Int?, _ b: String?): [Type] {
+                return [
+                    a.getType(),
+                    b.getType()
+                ]
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeMetaType,
+				),
+				common.ZeroAddress,
+				interpreter.NewTypeValue(
+					inter,
+					interpreter.NewOptionalStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+				interpreter.NewTypeValue(
+					inter,
+					interpreter.NewOptionalStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeString,
+					),
+				),
+			),
+			result,
+		)
+	})
+
+	t.Run("nested optional", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Type {
+                let f: fun(Int): Type = actualFunc
+                return f(4)
+            }
+
+            fun actualFunc(_ a: Int??): Type {
+                return a.getType()
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t,
+			interpreter.NewTypeValue(
+				inter,
+				interpreter.NewOptionalStaticType(
+					inter,
+					interpreter.NewOptionalStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+			),
+			result,
+		)
+	})
+
+	t.Run("same types, no boxing needed", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Int {
+                let f: fun(Int): Int = identity
+                return f(42)
+            }
+
+            fun identity(_ a: Int): Int {
+                return a
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+
+	t.Run("reference type parameter", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(
+			t,
+			`
+            fun test() {
+                let funcWithAuthReferenceParam: fun(auth(Mutate) &Int) = funcWithNonAuthReferenceParam
+                funcWithAuthReferenceParam(&4 as auth(Mutate) &Int)
+            }
+
+            fun funcWithNonAuthReferenceParam(_ ref: &Int) {
+                let any: AnyStruct = ref
+                let authRef = any as! auth(Mutate) &Int
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+		assert.Equal(t,
+			common.TypeID("auth(Mutate)&Int"),
+			forceCastTypeMismatchErr.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchErr.ActualType.ID(),
+		)
+	})
 }

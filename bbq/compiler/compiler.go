@@ -2789,7 +2789,6 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				memberInfo,
 				memberExpression,
 				invocationTypes,
-				uint16(argumentCount),
 				implicitArgIndex,
 				implicitArgType,
 				returnTypeIndex,
@@ -2812,7 +2811,6 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 		implicitArgIndex,
 		implicitArgType,
 		invocationTypes,
-		uint16(argumentCount),
 		returnTypeIndex,
 		hasImplicitArgument,
 	)
@@ -2825,7 +2823,6 @@ func (c *Compiler[_, _]) emitInvocation(
 	implicitArgIndex *uint16,
 	implicitArgType sema.Type,
 	invocationTypes sema.InvocationExpressionTypes,
-	argumentCount uint16,
 	returnTypeIndex uint16,
 	hasImplicitArgument bool,
 ) {
@@ -2834,44 +2831,18 @@ func (c *Compiler[_, _]) emitInvocation(
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
 
-	if invocationTypes.PassArgumentTypes {
-		argTypes := c.loadArgumentTypes(invocationTypes)
-		argTypes = c.addImplicitArgumentTyped(implicitArgIndex, implicitArgType, argTypes)
-		c.emit(opcode.InstructionInvokeTyped{
-			TypeArgs:            typeArgs,
-			ArgTypes:            argTypes,
-			ReturnType:          returnTypeIndex,
-			HasImplicitArgument: hasImplicitArgument,
-		})
-	} else {
-		argumentCount = c.addImplicitArgument(implicitArgIndex, argumentCount)
-		c.emit(opcode.InstructionInvoke{
-			TypeArgs:            typeArgs,
-			ArgCount:            argumentCount,
-			ReturnType:          returnTypeIndex,
-			HasImplicitArgument: hasImplicitArgument,
-		})
-	}
-}
+	argTypes := c.loadTypes(invocationTypes.ArgumentTypes)
+	argTypes = c.addImplicitArgumentTyped(implicitArgIndex, implicitArgType, argTypes)
+	paramTypes := c.loadTypes(invocationTypes.ParameterTypes)
 
-func (c *Compiler[_, _]) addImplicitArgument(
-	implicitArgIndex *uint16,
-	argCount uint16,
-) uint16 {
-	if implicitArgIndex == nil {
-		return argCount
-	}
-
-	// Add the implicit argument to the end of the argument list, if it exists.
-	// Used in attachments, the attachment constructor/init expects an implicit argument:
-	// a reference to the base value used to set base.
-	// This hides the base argument away from the user.
-
-	// Load implicit argument from locals
-	// Base is at the back of the argument list, only for attachment initialization.
-	c.emitGetLocal(*implicitArgIndex)
-
-	return argCount + 1
+	c.emit(opcode.InstructionInvoke{
+		TypeArgs:               typeArgs,
+		ArgTypes:               argTypes,
+		ParamTypes:             paramTypes,
+		ReturnType:             returnTypeIndex,
+		HasImplicitArgument:    hasImplicitArgument,
+		SkipArgumentConversion: invocationTypes.PassArgumentsWithoutTransferOrConvert,
+	})
 }
 
 func (c *Compiler[_, _]) addImplicitArgumentTyped(
@@ -2932,7 +2903,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	memberInfo sema.MemberAccessInfo,
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
-	argumentCount uint16,
 	implicitArgIndex *uint16,
 	implicitArgType sema.Type,
 	returnTypeIndex uint16,
@@ -2957,7 +2927,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			implicitArgIndex,
 			implicitArgType,
 			invocationTypes,
-			argumentCount,
 			returnTypeIndex,
 			hasImplicitArgument,
 		)
@@ -3004,7 +2973,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					implicitArgIndex,
 					implicitArgType,
 					invocationTypes,
-					argumentCount,
 					returnTypeIndex,
 					hasImplicitArgument,
 				)
@@ -3036,7 +3004,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			implicitArgIndex,
 			implicitArgType,
 			invocationTypes,
-			argumentCount,
 			returnTypeIndex,
 			hasImplicitArgument,
 		)
@@ -3058,7 +3025,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					implicitArgIndex,
 					implicitArgType,
 					invocationTypes,
-					argumentCount,
 					returnTypeIndex,
 					hasImplicitArgument,
 				)
@@ -3160,12 +3126,13 @@ func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTyp
 			continue
 		}
 
-		parameterType := invocationTypes.ParameterTypes[index]
-		if parameterType == nil {
+		valueType := invocationTypes.ArgumentTypes[index]
+
+		// Resource-typed values are always used along with the move (<-) unary-operator.
+		// And the unary move operator already does the transfer.
+		// Therefore, do not perform a redundant transfer for resource-types.
+		if !valueType.IsResourceType() {
 			c.emitTransfer()
-		} else {
-			valueType := invocationTypes.ArgumentTypes[index]
-			c.emitTransferIfNotResourceAndConvert(valueType, parameterType)
 		}
 	}
 }
@@ -3190,24 +3157,26 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 	return typeArgs
 }
 
-func (c *Compiler[_, _]) loadArgumentTypes(invocationTypes sema.InvocationExpressionTypes) []uint16 {
-	argumentTypes := invocationTypes.ArgumentTypes
-	count := len(argumentTypes)
+func (c *Compiler[_, _]) loadTypes(types []sema.Type) []uint16 {
+	count := len(types)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of type arguments: %d", count))
 	}
 
-	var argTypes []uint16
+	var typeIndices []uint16
 	if count > 0 {
 		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
-		argTypes = make([]uint16, 0, count)
+		typeIndices = make([]uint16, 0, count)
 
-		for _, argumentType := range argumentTypes {
-			argTypes = append(argTypes, c.getOrAddType(argumentType))
+		for _, typ := range types {
+			if typ == nil {
+				continue
+			}
+			typeIndices = append(typeIndices, c.getOrAddType(typ))
 		}
 	}
 
-	return argTypes
+	return typeIndices
 }
 
 func typeFunctionType(ty sema.Type) sema.Type {
@@ -4372,15 +4341,19 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 		constructorName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
 		c.emitGlobalLoad(constructorName)
 
+		enumRawType := compositeType.EnumRawType
+
 		indexBigInt := big.NewInt(int64(index))
 		c.emitIntegerConstant(
 			indexBigInt,
-			compositeType.EnumRawType,
+			enumRawType,
 		)
 
+		argumentTypes := c.loadTypes([]sema.Type{enumRawType})
 		returnTypeIndex := c.getOrAddType(compositeType)
+
 		c.emit(opcode.InstructionInvoke{
-			ArgCount:   1,
+			ArgTypes:   argumentTypes,
 			ReturnType: returnTypeIndex,
 		})
 

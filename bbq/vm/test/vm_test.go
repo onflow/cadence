@@ -11831,3 +11831,108 @@ func TestInitializerFunctionType(t *testing.T) {
 	metaType = result.(interpreter.TypeValue)
 	assert.Equal(t, common.TypeID("view fun():S.test.T"), metaType.Type.ID())
 }
+
+func TestFunctionParameterContravariance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("optional parameter via function variable", func(t *testing.T) {
+		t.Parallel()
+
+		vmInstance, err := CompileAndPrepareToInvoke(t,
+			`
+              fun test(): UInt8? {
+                  let f: fun(Int): UInt8? = funcWithOptionalParam
+                  return f(4)
+              }
+
+              fun funcWithOptionalParam(_ a: Int?): UInt8? {
+                  return a.map(fun (_ n: Int): UInt8 {
+                      return UInt8(n)
+                  })
+              }
+            `,
+			CompilerAndVMOptions{},
+		)
+		require.NoError(t, err)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		require.IsType(t, &interpreter.SomeValue{}, result)
+		innerValue := result.(*interpreter.SomeValue).InnerValue()
+		assert.Equal(t, interpreter.UInt8Value(4), innerValue)
+	})
+
+	t.Run("multiple parameters", func(t *testing.T) {
+		t.Parallel()
+
+		vmInstance, err := CompileAndPrepareToInvoke(t,
+			`
+              fun test(): Bool {
+                  let f: fun(Int, String): Bool = actualFunc
+                  return f(1, "hello")
+              }
+
+              fun actualFunc(_ a: Int?, _ b: String?): Bool {
+                  return a != nil && b != nil
+              }
+            `,
+			CompilerAndVMOptions{},
+		)
+		require.NoError(t, err)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		assert.Equal(t, interpreter.TrueValue, result)
+	})
+
+	t.Run("nested optional", func(t *testing.T) {
+		t.Parallel()
+
+		vmInstance, err := CompileAndPrepareToInvoke(t,
+			`
+              fun test(): Bool {
+                  let f: fun(Int): Bool = actualFunc
+                  return f(4)
+              }
+
+              fun actualFunc(_ a: Int??): Bool {
+                  return a != nil
+              }
+            `,
+			CompilerAndVMOptions{},
+		)
+		require.NoError(t, err)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		assert.Equal(t, interpreter.TrueValue, result)
+	})
+
+	t.Run("same types, no boxing needed", func(t *testing.T) {
+		t.Parallel()
+
+		vmInstance, err := CompileAndPrepareToInvoke(t,
+			`
+              fun test(): Int {
+                  let f: fun(Int): Int = identity
+                  return f(42)
+              }
+
+              fun identity(_ a: Int): Int {
+                  return a
+              }
+            `,
+			CompilerAndVMOptions{},
+		)
+		require.NoError(t, err)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+}
