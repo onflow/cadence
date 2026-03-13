@@ -2835,7 +2835,7 @@ func (c *Compiler[_, _]) emitInvocation(
 	argTypes = c.addImplicitArgumentTyped(implicitArgIndex, implicitArgType, argTypes)
 	paramTypes := c.loadTypes(invocationTypes.ParameterTypes)
 
-	c.emit(opcode.InstructionInvokeTyped{
+	c.emit(opcode.InstructionInvoke{
 		TypeArgs:               typeArgs,
 		ArgTypes:               argTypes,
 		ParamTypes:             paramTypes,
@@ -4341,15 +4341,19 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 		constructorName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
 		c.emitGlobalLoad(constructorName)
 
+		enumRawType := compositeType.EnumRawType
+
 		indexBigInt := big.NewInt(int64(index))
 		c.emitIntegerConstant(
 			indexBigInt,
-			compositeType.EnumRawType,
+			enumRawType,
 		)
 
+		argumentTypes := c.loadTypes([]sema.Type{enumRawType})
 		returnTypeIndex := c.getOrAddType(compositeType)
+
 		c.emit(opcode.InstructionInvoke{
-			ArgCount:   1,
+			ArgTypes:   argumentTypes,
 			ReturnType: returnTypeIndex,
 		})
 

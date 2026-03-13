@@ -143,7 +143,7 @@ const (
 	// Invocations
 
 	Invoke
-	InvokeTyped
+	_
 	_
 	_
 	_

@@ -365,32 +365,6 @@
 # Invocation instructions
 
 - name: "invoke"
-  description: |
-    Pops the function and arguments off the stack, invokes the function with the arguments,
-    and then pushes the result back on to the stack.
-    This instruction is only passes the argument count. If the argument types are needed, use `invokeTyped`.
-  operands:
-    - name: "typeArgs"
-      type: "typeIndices"
-    - name: "argCount"
-      type: "size"
-    - name: "returnType"
-      type: "typeIndex"
-    - name: "hasImplicitArgument"
-      type: "bool"
-  valueEffects:
-    pop:
-      - name: "arguments"
-        # TODO: count
-      - name: "function"
-        type: "function"
-    push:
-      - name: "result"
-        type: "value"
-  controlEffects:
-    - call:
-
-- name: "invokeTyped"
   description:
     Pops the function and arguments off the stack, invokes the function with the arguments,
     and then pushes the result back on to the stack.
