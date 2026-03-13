@@ -454,8 +454,6 @@ var Account_StorageTypeLimitedToPathsFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&ReferenceType{
 			Type: Account_StorageType,
-			// NOTE: manually fixed because the code generator does not yet
-			// support entitlements on reference return types (see gen/main.go).
 			Authorization: newEntitlementAccess(
 				[]Type{StorageType},
 				Conjunction,

@@ -931,14 +931,7 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 				},
 				Elts: []dst.Expr{
 					goKeyValue("Type", borrowType),
-					// TODO: add support for parsing entitlements
-					goKeyValue(
-						"Authorization",
-						&dst.Ident{
-							Name: "UnauthorizedAccess",
-							Path: semaPath,
-						},
-					),
+					goKeyValue("Authorization", authorizationExpr(t.Authorization)),
 				},
 			},
 		}
@@ -1908,6 +1901,73 @@ func accessExpr(access ast.Access) dst.Expr {
 
 	default:
 		panic(fmt.Errorf("unsupported access: %#+v\n", access))
+	}
+}
+
+func authorizationExpr(authorization ast.Authorization) dst.Expr {
+	if authorization == nil {
+		return &dst.Ident{
+			Name: "UnauthorizedAccess",
+			Path: semaPath,
+		}
+	}
+
+	switch authorization := authorization.(type) {
+	case ast.EntitlementSet:
+		entitlements := authorization.Entitlements()
+
+		entitlementExprs := make([]dst.Expr, 0, len(entitlements))
+
+		for _, nominalType := range entitlements {
+			entitlementExpr := typeExpr(nominalType, nil)
+			entitlementExprs = append(entitlementExprs, entitlementExpr)
+		}
+
+		var setKind dst.Expr
+
+		switch authorization.Separator() {
+		case ast.Conjunction:
+			setKind = &dst.Ident{
+				Name: "Conjunction",
+				Path: semaPath,
+			}
+		case ast.Disjunction:
+			setKind = &dst.Ident{
+				Name: "Disjunction",
+				Path: semaPath,
+			}
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		args := []dst.Expr{
+			&dst.CompositeLit{
+				Type: &dst.ArrayType{
+					Elt: &dst.Ident{
+						Name: "Type",
+						Path: semaPath,
+					},
+				},
+				Elts: entitlementExprs,
+			},
+			setKind,
+		}
+
+		for _, arg := range args {
+			arg.Decorations().Before = dst.NewLine
+			arg.Decorations().After = dst.NewLine
+		}
+
+		return &dst.CallExpr{
+			Fun: &dst.Ident{
+				Name: "newEntitlementAccess",
+				Path: semaPath,
+			},
+			Args: args,
+		}
+
+	default:
+		panic(fmt.Errorf("unsupported authorization: %#+v\n", authorization))
 	}
 }
 
