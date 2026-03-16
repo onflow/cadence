@@ -4558,20 +4558,20 @@ func TestInterpretNestedStorageReferenceCasting(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		//var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		//assert.ErrorAs(t, err, &forceCastTypeMismatchError)
-		//
-		//assert.Equal(
-		//	t,
-		//	common.TypeID("&[auth(S.test.E2)&Int]"),
-		//	forceCastTypeMismatchError.ExpectedType.ID(),
-		//)
-		//
-		//assert.Equal(
-		//	t,
-		//	common.TypeID("&[&Int]"),
-		//	forceCastTypeMismatchError.ActualType.ID(),
-		//)
+		var storedValueTypeMismatchError *interpreter.StoredValueTypeMismatchError
+		assert.ErrorAs(t, err, &storedValueTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("[auth(S.test.E2)&Int]"),
+			storedValueTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("[&Int]"),
+			storedValueTypeMismatchError.ActualType.ID(),
+		)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -4603,20 +4603,20 @@ func TestInterpretNestedStorageReferenceCasting(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		//var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		//assert.ErrorAs(t, err, &forceCastTypeMismatchError)
-		//
-		//assert.Equal(
-		//	t,
-		//	common.TypeID("&{String:auth(S.test.E2)&Int}"),
-		//	forceCastTypeMismatchError.ExpectedType.ID(),
-		//)
-		//
-		//assert.Equal(
-		//	t,
-		//	common.TypeID("&{String:&Int}"),
-		//	forceCastTypeMismatchError.ActualType.ID(),
-		//)
+		var storedValueTypeMismatchError *interpreter.StoredValueTypeMismatchError
+		assert.ErrorAs(t, err, &storedValueTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("{String:auth(S.test.E2)&Int}"),
+			storedValueTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("{String:&Int}"),
+			storedValueTypeMismatchError.ActualType.ID(),
+		)
 	})
 }
 
@@ -5194,19 +5194,19 @@ func TestInterpretNestedEphemeralReferenceAsAnyStructCasting(t *testing.T) {
 		_, err = inter.Invoke("testDownCastingParam")
 		RequireError(t, err)
 
-		var invalidReferenceConversionError *interpreter.InvalidReferenceConversionError
-		assert.ErrorAs(t, err, &invalidReferenceConversionError)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 
 		assert.Equal(
 			t,
-			"E",
-			invalidReferenceConversionError.ExpectedAuthorization.String(),
+			common.TypeID("auth(S.test.E)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
 		)
 
 		assert.Equal(
 			t,
-			sema.UnauthorizedAccess,
-			invalidReferenceConversionError.ActualAuthorization,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
 		)
 	})
 }

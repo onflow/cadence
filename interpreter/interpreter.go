@@ -2436,8 +2436,9 @@ func convert(
 				},
 			)
 
-		// TODO
-		//case *StorageReferenceValue:
+		// TODO:
+		// case *SomeValue:
+		// case *StorageReferenceValue:
 
 		default:
 			return value
