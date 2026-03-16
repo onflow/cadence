@@ -2357,6 +2357,15 @@ func convert(
 			}
 
 			oldArraySemaType := context.SemaTypeFromStaticType(oldArrayStaticType)
+
+			// Skip conversion if the type does not contain references (nothing to strip).
+			// If the declared element type is non-reference (e.g. `[AnyStruct]`) but a runtime
+			// element is a reference, that reference must have been stored after an earlier
+			// assignment to `AnyStruct`, so entitlements were already stripped then.
+			if !oldArraySemaType.IsOrContainsReferenceType() {
+				return value
+			}
+
 			newArraySemaType := semaTypeWithStrippedEntitlements(context, oldArraySemaType).(sema.ArrayType)
 			newArrayStaticType := ConvertSemaToStaticType(context, newArraySemaType).(ArrayStaticType)
 			targetElementType := newArraySemaType.ElementType(false)
@@ -2402,6 +2411,15 @@ func convert(
 			}
 
 			oldDictionarySemaType := context.SemaTypeFromStaticType(oldDictStaticType)
+
+			// Skip conversion if the type does not contain references (nothing to strip).
+			// If the declared key/value types are non-reference (e.g: `{Strng: AnyStruct}`)
+			// but a runtime vaalue is a reference, that reference must have been stored after
+			// an earlier assignment to `AnyStruct`, so entitlements were already stripped then.
+			if !oldDictionarySemaType.IsOrContainsReferenceType() {
+				return value
+			}
+
 			newDictionarySemaType := semaTypeWithStrippedEntitlements(context, oldDictionarySemaType).(*sema.DictionaryType)
 			newDictionaryStaticType := ConvertSemaToStaticType(context, newDictionarySemaType).(*DictionaryStaticType)
 
