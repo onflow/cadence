@@ -1245,14 +1245,14 @@ func DecodeNewClosure(ip *uint16, code []byte) (i InstructionNewClosure) {
 
 // InstructionInvoke
 //
-// Pops the function and arguments off the stack, invokes the function with the arguments,
-// and then pushes the result back on to the stack.
-// This instruction is only passes the argument count. If the argument types are needed, use `invokeTyped`.
+// Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack. This instruction is a variant of `invoke` that includes the argument types.
 type InstructionInvoke struct {
-	TypeArgs            []uint16
-	ArgCount            uint16
-	ReturnType          uint16
-	HasImplicitArgument bool
+	TypeArgs               []uint16
+	ArgTypes               []uint16
+	ParamTypes             []uint16
+	ReturnType             uint16
+	HasImplicitArgument    bool
+	SkipArgumentConversion bool
 }
 
 var _ Instruction = InstructionInvoke{}
@@ -1272,11 +1272,15 @@ func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
 	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
+	printfUInt16ArrayArgument(sb, "argTypes", i.ArgTypes, colorize)
+	sb.WriteByte(' ')
+	printfUInt16ArrayArgument(sb, "paramTypes", i.ParamTypes, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "returnType", i.ReturnType, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "skipArgumentConversion", i.SkipArgumentConversion, colorize)
 }
 
 func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
@@ -1287,91 +1291,34 @@ func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
 	sb.WriteByte(' ')
 	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
 	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
+	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, types)
+	sb.WriteByte(' ')
+	printfTypeArrayArgument(sb, "paramTypes", i.ParamTypes, colorize, types)
 	sb.WriteByte(' ')
 	printfTypeArgument(sb, "returnType", types[i.ReturnType], colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "skipArgumentConversion", i.SkipArgumentConversion, colorize)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16Array(code, i.TypeArgs)
-	emitUint16(code, i.ArgCount)
+	emitUint16Array(code, i.ArgTypes)
+	emitUint16Array(code, i.ParamTypes)
 	emitUint16(code, i.ReturnType)
 	emitBool(code, i.HasImplicitArgument)
+	emitBool(code, i.SkipArgumentConversion)
 }
 
 func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 	i.TypeArgs = decodeUint16Array(ip, code)
-	i.ArgCount = decodeUint16(ip, code)
-	i.ReturnType = decodeUint16(ip, code)
-	i.HasImplicitArgument = decodeBool(ip, code)
-	return i
-}
-
-// InstructionInvokeTyped
-//
-// Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack. This instruction is a variant of `invoke` that includes the argument types.
-type InstructionInvokeTyped struct {
-	TypeArgs            []uint16
-	ArgTypes            []uint16
-	ReturnType          uint16
-	HasImplicitArgument bool
-}
-
-var _ Instruction = InstructionInvokeTyped{}
-
-func (InstructionInvokeTyped) Opcode() Opcode {
-	return InvokeTyped
-}
-
-func (i InstructionInvokeTyped) String() string {
-	var sb strings.Builder
-	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb, false)
-	return sb.String()
-}
-
-func (i InstructionInvokeTyped) OperandsString(sb *strings.Builder, colorize bool) {
-	sb.WriteByte(' ')
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
-	sb.WriteByte(' ')
-	printfUInt16ArrayArgument(sb, "argTypes", i.ArgTypes, colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "returnType", i.ReturnType, colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
-}
-
-func (i InstructionInvokeTyped) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.DecodedConstant,
-	types []interpreter.StaticType,
-	functionNames []string,
-	colorize bool) {
-	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
-	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, types)
-	sb.WriteByte(' ')
-	printfTypeArgument(sb, "returnType", types[i.ReturnType], colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
-}
-
-func (i InstructionInvokeTyped) Encode(code *[]byte) {
-	emitOpcode(code, i.Opcode())
-	emitUint16Array(code, i.TypeArgs)
-	emitUint16Array(code, i.ArgTypes)
-	emitUint16(code, i.ReturnType)
-	emitBool(code, i.HasImplicitArgument)
-}
-
-func DecodeInvokeTyped(ip *uint16, code []byte) (i InstructionInvokeTyped) {
-	i.TypeArgs = decodeUint16Array(ip, code)
 	i.ArgTypes = decodeUint16Array(ip, code)
+	i.ParamTypes = decodeUint16Array(ip, code)
 	i.ReturnType = decodeUint16(ip, code)
 	i.HasImplicitArgument = decodeBool(ip, code)
+	i.SkipArgumentConversion = decodeBool(ip, code)
 	return i
 }
 
@@ -3370,8 +3317,6 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeNewClosure(ip, code)
 	case Invoke:
 		return DecodeInvoke(ip, code)
-	case InvokeTyped:
-		return DecodeInvokeTyped(ip, code)
 	case GetMethod:
 		return DecodeGetMethod(ip, code)
 	case GetMethodDynamic:

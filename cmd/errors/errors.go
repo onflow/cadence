@@ -1749,5 +1749,10 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
+		{"sema.WildcardAddressImportError",
+			&sema.WildcardAddressImportError{
+				Range: placeholderRange,
+			},
+		},
 	}
 }

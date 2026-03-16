@@ -39,7 +39,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 
 	txLocation := common.TransactionLocation{1}
 	const txCode = `
-	  import 0x1
+	  import ContractA from 0x1
 
 	  access(all) let y = "test" as! String
 	`
@@ -158,8 +158,8 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 			{
 				location: txLocation,
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 39, Line: 4, Column: 23},
-					EndPos:   ast.Position{Offset: 55, Line: 4, Column: 39},
+					StartPos: ast.Position{Offset: 54, Line: 4, Column: 23},
+					EndPos:   ast.Position{Offset: 70, Line: 4, Column: 39},
 				},
 			},
 		},
@@ -500,7 +500,7 @@ func TestCyclicImports(t *testing.T) {
 		Name:    "Foo",
 	}
 	const fooContractCode = `
-        import 0x2
+        import Bar from 0x2
         access(all) contract Foo {}
 	`
 
@@ -510,7 +510,7 @@ func TestCyclicImports(t *testing.T) {
 		Name:    "Bar",
 	}
 	const barContractCode = `
-        import 0x1
+        import Foo from 0x1
         access(all) contract Bar {}
 	`
 

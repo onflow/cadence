@@ -3256,10 +3256,11 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		RequireError(t, err)
 
 		if *compile {
-			require.ErrorContains(t, err, "invalid transfer of value: expected `String`, got `Int`")
-		} else {
 			var transferTypeError *interpreter.ValueTransferTypeError
 			require.ErrorAs(t, err, &transferTypeError)
+		} else {
+			var argumentTypeError *interpreter.InvalidArgumentTypeError
+			require.ErrorAs(t, err, &argumentTypeError)
 		}
 
 	})
@@ -7329,22 +7330,9 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 			return accountCode, nil
 		},
 		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-			require.Empty(t, identifiers)
 			require.IsType(t, common.AddressLocation{}, location)
 
-			return []ResolvedLocation{
-				{
-					Location: common.AddressLocation{
-						Address: location.(common.AddressLocation).Address,
-						Name:    "Test",
-					},
-					Identifiers: []ast.Identifier{
-						{
-							Identifier: "Test",
-						},
-					},
-				},
-			}, nil
+			return MultipleIdentifierLocationResolver(identifiers, location)
 		},
 		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
@@ -7387,7 +7375,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	// Use the Test contract
 
 	script1 := []byte(`
-      import 0x42
+      import Test from 0x42
 
       access(all) fun main() {
           // Check stored data
@@ -7451,7 +7439,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	// Use the new Test contract
 
 	script2 := []byte(`
-      import 0x42
+      import Test from 0x42
 
       access(all) fun main() {
           // Existing data is still available and the same as before
@@ -14141,22 +14129,9 @@ func TestRuntimeInvalidReferenceCast(t *testing.T) {
 			return accountCode, nil
 		},
 		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-			require.Empty(t, identifiers)
 			require.IsType(t, common.AddressLocation{}, location)
 
-			return []ResolvedLocation{
-				{
-					Location: common.AddressLocation{
-						Address: location.(common.AddressLocation).Address,
-						Name:    "Test",
-					},
-					Identifiers: []ast.Identifier{
-						{
-							Identifier: "Test",
-						},
-					},
-				},
-			}, nil
+			return MultipleIdentifierLocationResolver(identifiers, location)
 		},
 		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
@@ -14206,7 +14181,7 @@ func TestRuntimeInvalidReferenceCast(t *testing.T) {
 	_, err = runtime.ExecuteScript(
 		Script{
 			Source: []byte(`
-              import 0x42
+              import Test from 0x42
 
               access(all) fun main() {
                   Test.run()

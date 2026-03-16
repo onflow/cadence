@@ -383,20 +383,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 	t.Run("Type confusion", func(t *testing.T) {
 
-		var check checkFunc
-		if *compile {
-			check = expectFailure("invalid argument at index 0: expected type `Bool`, got `Int`",
-				2,
-				2,
-			)
-		} else {
-			check = expectFailure(
-				"invalid transfer of value: expected `Int`, got `Bool`",
-				1,
-				1,
-			)
-		}
-
 		const declaredValueName = `injectedValue`
 		test(t, testCase{
 			contract: `
@@ -413,7 +399,11 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				Kind:  common.DeclarationKindValue,
 				Value: interpreter.TrueValue,
 			},
-			check: check,
+			check: expectFailure(
+				"invalid transfer of value: expected `Int`, got `Bool`",
+				1,
+				1,
+			),
 		})
 	})
 }
