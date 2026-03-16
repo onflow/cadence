@@ -2396,8 +2396,7 @@ func convert(
 		case *DictionaryValue:
 			// When assigning container values to AnyStruct, strip entitlements from nested references
 			// but preserve the type structure (e.g. {String: auth(E2)&Int} -> {String: &Int}, not {String: AnyStruct}).
-			dictValue := value
-			oldDictStaticType, ok := dictValue.StaticType(context).(*DictionaryStaticType)
+			oldDictStaticType, ok := value.StaticType(context).(*DictionaryStaticType)
 			if !ok {
 				return value
 			}
@@ -2409,7 +2408,7 @@ func convert(
 			targetKeyType := newDictionarySemaType.KeyType
 			targetValueType := newDictionarySemaType.ValueType
 
-			dictionary := dictValue.dictionary
+			dictionary := value.dictionary
 			iterator, err := dictionary.ReadOnlyIterator()
 			if err != nil {
 				panic(errors.NewExternalError(err))
