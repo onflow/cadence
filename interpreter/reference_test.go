@@ -5088,6 +5088,41 @@ func TestInterpretNestedEphemeralReferenceAsAnyStructCasting(t *testing.T) {
 		)
 	})
 
+	t.Run("inside optional", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let authRef: auth(E2) &Int = &1
+                let optionalRef: auth(E2) &Int? = authRef
+
+                let optionalAsAnyStruct: AnyStruct = optionalRef
+
+                let downCastedOptional = optionalAsAnyStruct as! auth(E2) &Int?
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("(auth(S.test.E2)&Int)?"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
 	t.Run("function returning reference", func(t *testing.T) {
 		t.Parallel()
 

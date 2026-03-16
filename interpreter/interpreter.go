@@ -2460,8 +2460,10 @@ func convert(
 			)
 
 		// TODO:
-		// case *SomeValue:
 		// case *StorageReferenceValue:
+
+		// No Need to handle `SomeValue` here, since this `convert` function
+		// peels the optionals/some-values at the top.
 
 		default:
 			return value
