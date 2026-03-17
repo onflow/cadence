@@ -2163,23 +2163,29 @@ func convertStaticType(
 func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) sema.Type {
 	switch t := typ.(type) {
 	case *sema.ReferenceType:
+		newReferencedType := semaTypeWithStrippedEntitlements(gauge, t.Type)
 		return sema.NewReferenceType(
 			gauge,
 			sema.UnauthorizedAccess,
-			semaTypeWithStrippedEntitlements(gauge, t.Type),
+			newReferencedType,
 		)
 	case *sema.VariableSizedType:
-		return sema.NewVariableSizedType(gauge, semaTypeWithStrippedEntitlements(gauge, t.Type))
+		newElementType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewVariableSizedType(gauge, newElementType)
 	case *sema.ConstantSizedType:
-		return sema.NewConstantSizedType(gauge, semaTypeWithStrippedEntitlements(gauge, t.Type), t.Size)
+		newElementType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewConstantSizedType(gauge, newElementType, t.Size)
 	case *sema.DictionaryType:
+		newKeyType := semaTypeWithStrippedEntitlements(gauge, t.KeyType)
+		newValueType := semaTypeWithStrippedEntitlements(gauge, t.ValueType)
 		return sema.NewDictionaryType(
 			gauge,
-			semaTypeWithStrippedEntitlements(gauge, t.KeyType),
-			semaTypeWithStrippedEntitlements(gauge, t.ValueType),
+			newKeyType,
+			newValueType,
 		)
 	case *sema.OptionalType:
-		return sema.NewOptionalType(gauge, semaTypeWithStrippedEntitlements(gauge, t.Type))
+		newInnerType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewOptionalType(gauge, newInnerType)
 	default:
 		return typ
 	}
@@ -2378,12 +2384,8 @@ func convert(
 		case *ArrayValue:
 			// When assigning container values to AnyStruct, strip entitlements from nested references
 			// but preserve the type structure (e.g. [auth(E2)&Int] -> [&Int], not [AnyStruct]).
-			oldArrayStaticType, ok := value.StaticType(context).(ArrayStaticType)
-			if !ok {
-				return value
-			}
 
-			oldArraySemaType := context.SemaTypeFromStaticType(oldArrayStaticType)
+			oldArraySemaType := MustSemaTypeOfValue(value, context)
 
 			// Skip conversion if the type does not contain references (nothing to strip).
 			// If the declared element type is non-reference (e.g. `[AnyStruct]`) but a runtime
@@ -2424,7 +2426,7 @@ func convert(
 					}
 
 					elemValue := MustConvertStoredValue(context, element)
-					actualElementType := context.SemaTypeFromStaticType(elemValue.StaticType(context))
+					actualElementType := MustSemaTypeOfValue(elemValue, context)
 
 					return ConvertAndBox(
 						context,
@@ -2438,12 +2440,8 @@ func convert(
 		case *DictionaryValue:
 			// When assigning container values to AnyStruct, strip entitlements from nested references
 			// but preserve the type structure (e.g. {String: auth(E2)&Int} -> {String: &Int}, not {String: AnyStruct}).
-			oldDictStaticType, ok := value.StaticType(context).(*DictionaryStaticType)
-			if !ok {
-				return value
-			}
 
-			oldDictionarySemaType := context.SemaTypeFromStaticType(oldDictStaticType)
+			oldDictionarySemaType := MustSemaTypeOfValue(value, context)
 
 			// Skip conversion if the type does not contain references (nothing to strip).
 			// If the declared key/value types are non-reference (e.g: `{Strng: AnyStruct}`)
@@ -2489,8 +2487,8 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					val := MustConvertStoredValue(context, v)
 
-					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
-					valueType := context.SemaTypeFromStaticType(val.StaticType(context))
+					keyType := MustSemaTypeOfValue(key, context)
+					valueType := MustSemaTypeOfValue(val, context)
 
 					convertedKey := ConvertAndBox(context, key, keyType, targetKeyType)
 					convertedValue := ConvertAndBox(context, val, valueType, targetValueType)
