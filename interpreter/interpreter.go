@@ -2335,16 +2335,31 @@ func convert(
 
 	case sema.AnyStructType:
 
-		// Assigning/casting to `AnyStruct` should strip-off all entitlements.
-		targetAuthorization := UnauthorizedAccess
-		targetBorrowType := sema.AnyStructType
-
 		switch value := value.(type) {
 		case *EphemeralReferenceValue:
+			targetBorrowType := semaTypeWithStrippedEntitlements(context, value.BorrowedType)
+
+			// Assigning/casting to `AnyStruct` should strip-off all entitlements.
+			targetAuthorization := UnauthorizedAccess
+
 			return NewEphemeralReferenceValue(
 				context,
 				targetAuthorization,
 				value.Value,
+				targetBorrowType,
+			)
+
+		case *StorageReferenceValue:
+			targetBorrowType := semaTypeWithStrippedEntitlements(context, value.BorrowedType)
+
+			// Assigning/casting to `AnyStruct` should strip-off all entitlements.
+			targetAuthorization := UnauthorizedAccess
+
+			return NewStorageReferenceValue(
+				context,
+				targetAuthorization,
+				value.TargetStorageAddress,
+				value.TargetPath,
 				targetBorrowType,
 			)
 
@@ -2458,9 +2473,6 @@ func convert(
 					return convertedKey, convertedValue
 				},
 			)
-
-		// TODO:
-		// case *StorageReferenceValue:
 
 		// No Need to handle `SomeValue` here, since this `convert` function
 		// peels the optionals/some-values at the top.

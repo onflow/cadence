@@ -15985,7 +15985,14 @@ func TestCyclicReferenceValue(t *testing.T) {
 
 		expected := cadence.NewArray([]cadence.Value{
 			cadence.NewArray([]cadence.Value{
-				nil,
+				cadence.NewArray([]cadence.Value{
+					nil,
+				}).WithType(&cadence.VariableSizedArrayType{
+					ElementType: &cadence.ReferenceType{
+						Authorization: cadence.Unauthorized{},
+						Type:          cadence.AnyStructType,
+					},
+				}),
 			}).WithType(&cadence.VariableSizedArrayType{
 				ElementType: &cadence.ReferenceType{
 					Authorization: cadence.Unauthorized{},
@@ -16006,10 +16013,10 @@ func TestCyclicReferenceValue(t *testing.T) {
 			expected,
 			[]byte{
 				// language=json, format=json-cdc
-				// {"value":[{"value":[null],"type":"Array"}],"type":"Array"}
+				// {"value":[{"value":[{"value":[null],"type":"Array"}],"type":"Array"}],"type":"Array"}
 				//
 				// language=edn, format=ccf
-				// 130([139(142([false, 137(39)])), [130([139(142([false, 137(39)])), [null]])]])
+				// 130([139(142([false, 137(39)])), [130([139(142([false, 137(39)])), [[130([139(142([false, 137(39)])), [null]])]]])]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -16049,6 +16056,27 @@ func TestCyclicReferenceValue(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleType,
 				// AnyStruct type ID (39)
 				0x18, 0x27,
+
+				// data
+				// array, 1 items follow
+				0x81,
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// tag
+				0xd8, ccf.CBORTagReferenceType,
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+
 				// array, 1 items follow
 				0x81,
 				// nil

@@ -5158,38 +5158,20 @@ func TestInterpretNestedEphemeralReferenceAsAnyStructCasting(t *testing.T) {
 		_, err = inter.Invoke("testCastingInvocationResult")
 		RequireError(t, err)
 
-		if *compile {
-			var invalidReferenceConversionError *interpreter.InvalidReferenceConversionError
-			assert.ErrorAs(t, err, &invalidReferenceConversionError)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 
-			assert.Equal(
-				t,
-				"E",
-				invalidReferenceConversionError.ExpectedAuthorization.String(),
-			)
+		assert.Equal(
+			t,
+			common.TypeID("auth(S.test.E)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
 
-			assert.Equal(
-				t,
-				sema.UnauthorizedAccess,
-				invalidReferenceConversionError.ActualAuthorization,
-			)
-
-		} else {
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			assert.ErrorAs(t, err, &forceCastTypeMismatchError)
-
-			assert.Equal(
-				t,
-				common.TypeID("auth(S.test.E)&Int"),
-				forceCastTypeMismatchError.ExpectedType.ID(),
-			)
-
-			assert.Equal(
-				t,
-				common.TypeID("&Int"),
-				forceCastTypeMismatchError.ActualType.ID(),
-			)
-		}
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
 	})
 
 	t.Run("function with reference parameter", func(t *testing.T) {
@@ -5263,36 +5245,70 @@ func TestInterpretNestedStorageReferenceAsAnyStructCasting(t *testing.T) {
             entitlement E1
             entitlement E2
 
-            fun test() {
-                let value: [auth(E2) &Int] = [&1]
+            fun setup() {
+                account.storage.save(1, to: /storage/innerValue)
+                let innerValue = account.storage.borrow<auth(E1) &Int>(from: /storage/innerValue)!
+
+                let value: [auth(E1) &Int] = [innerValue]
                 account.storage.save(value as AnyStruct, to: /storage/value)
-                let authArrayRef = account.storage.borrow<auth(E1) &[auth(E2) &Int]>(from: /storage/value)!
+            }
+
+            fun borrowAsAuthRef() {
+                // Borrowing should fail, since the inner reference's entitlements got stripped off,
+                // when the value got assigned to 'AnyStruct' during saving to storage.
+                let authArrayRef = account.storage.borrow<auth(E2) &[auth(E1) &Int]>(from: /storage/value)!
 
                 let arrayRef: AnyStruct = authArrayRef
+                let downCastedAuthArrayRef = arrayRef as! &[auth(E1) &Int]
+            }
 
-                let downCastedAuthArrayRef = arrayRef as! &[auth(E2) &Int]
+            fun borrowAsNonAuthRef() {
+                let authArrayRef = account.storage.borrow<auth(E2) &[&Int]>(from: /storage/value)!
+                let arrayRef: AnyStruct = authArrayRef
+                let downCastedAuthArrayRef = arrayRef as! &[auth(E1) &Int]
             }`,
 			sema.Config{},
 		)
 
-		_, err := inter.Invoke("test")
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		// Borrow the reference giving entitlements to the element-type.
+		_, err = inter.Invoke("borrowAsAuthRef")
 		RequireError(t, err)
 
-		// TODO:
-		//var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		//assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+		var storedValueTypeMismatchError *interpreter.StoredValueTypeMismatchError
+		assert.ErrorAs(t, err, &storedValueTypeMismatchError)
 
-		//assert.Equal(
-		//	t,
-		//	common.TypeID("&[auth(S.test.E2)&Int]"),
-		//	forceCastTypeMismatchError.ExpectedType.ID(),
-		//)
-		//
-		//assert.Equal(
-		//	t,
-		//	common.TypeID("&[&Int]"),
-		//	forceCastTypeMismatchError.ActualType.ID(),
-		//)
+		assert.Equal(
+			t,
+			common.TypeID("[auth(S.test.E1)&Int]"),
+			storedValueTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("[&Int]"),
+			storedValueTypeMismatchError.ActualType.ID(),
+		)
+
+		// Borrow the reference without entitlements in the element-type.
+		// Then cast it down to gain entitlements.
+		_, err = inter.Invoke("borrowAsNonAuthRef")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[auth(S.test.E1)&Int]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("&[&Int]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -5309,35 +5325,67 @@ func TestInterpretNestedStorageReferenceAsAnyStructCasting(t *testing.T) {
             entitlement E1
             entitlement E2
 
-            fun test() {
+            fun setup() {
                 let value: {String: auth(E2) &Int} = {"one": &1}
                 account.storage.save(value as AnyStruct, to: /storage/value)
-                let authArrayRef = account.storage.borrow<auth(E1) &{String: auth(E2) &Int}>(from: /storage/value)!
+            }
 
-                let arrayRef: AnyStruct = authArrayRef
+            fun borrowAsAuthRef() {
+                // Borrowing should fail, since the inner reference's entitlements got stripped off,
+                // when the value got assigned to 'AnyStruct' during saving to storage.
+                let dictRef = account.storage.borrow<&{String: auth(E2) &Int}>(from: /storage/value)!
 
-                let downCastedAuthArrayRef = arrayRef as! &{String: auth(E2) &Int}
+                let dictRefAsAnyStruct: AnyStruct = dictRef
+
+                let downCastedAuthDictRef = dictRefAsAnyStruct as! &{String: auth(E2) &Int}
+            }
+
+            fun borrowAsNonAuthRef() {
+                let dictRef = account.storage.borrow<&{String: &Int}>(from: /storage/value)!
+                let dictRefAsAnyStruct: AnyStruct = dictRef
+                let downCastedAuthDictRef = dictRefAsAnyStruct as! &{String: auth(E2) &Int}
             }`,
 			sema.Config{},
 		)
 
-		_, err := inter.Invoke("test")
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		// Borrow the reference with entitlements in the element-type.
+		_, err = inter.Invoke("borrowAsAuthRef")
 		RequireError(t, err)
 
-		// TODO:
-		//var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		//assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+		var storedValueTypeMismatchError *interpreter.StoredValueTypeMismatchError
+		assert.ErrorAs(t, err, &storedValueTypeMismatchError)
 
-		//assert.Equal(
-		//	t,
-		//	common.TypeID("&{String:auth(S.test.E2)&Int}"),
-		//	forceCastTypeMismatchError.ExpectedType.ID(),
-		//)
-		//
-		//assert.Equal(
-		//	t,
-		//	common.TypeID("&{String:&Int}"),
-		//	forceCastTypeMismatchError.ActualType.ID(),
-		//)
+		assert.Equal(
+			t,
+			common.TypeID("{String:auth(S.test.E2)&Int}"),
+			storedValueTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("{String:&Int}"),
+			storedValueTypeMismatchError.ActualType.ID(),
+		)
+
+		// Borrow the reference without entitlements in the element-type.
+		// Then cast it down to gain entitlements.
+		_, err = inter.Invoke("borrowAsNonAuthRef")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:auth(S.test.E2)&Int}"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&Int}"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
 	})
 }
