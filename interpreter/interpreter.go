@@ -2342,6 +2342,12 @@ func convert(
 			// Assigning/casting to `AnyStruct` should strip-off all entitlements.
 			targetAuthorization := UnauthorizedAccess
 
+			// If there is no change in the entitlements, then no need to create a new value.
+			if targetBorrowType.Equal(value.BorrowedType) &&
+				targetAuthorization == value.Authorization {
+				return value
+			}
+
 			return NewEphemeralReferenceValue(
 				context,
 				targetAuthorization,
@@ -2354,6 +2360,12 @@ func convert(
 
 			// Assigning/casting to `AnyStruct` should strip-off all entitlements.
 			targetAuthorization := UnauthorizedAccess
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if targetBorrowType.Equal(value.BorrowedType) &&
+				targetAuthorization == value.Authorization {
+				return value
+			}
 
 			return NewStorageReferenceValue(
 				context,
@@ -2382,6 +2394,12 @@ func convert(
 			}
 
 			newArraySemaType := semaTypeWithStrippedEntitlements(context, oldArraySemaType).(sema.ArrayType)
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if newArraySemaType.Equal(oldArraySemaType) {
+				return value
+			}
+
 			newArrayStaticType := ConvertSemaToStaticType(context, newArraySemaType).(ArrayStaticType)
 			targetElementType := newArraySemaType.ElementType(false)
 
@@ -2436,6 +2454,12 @@ func convert(
 			}
 
 			newDictionarySemaType := semaTypeWithStrippedEntitlements(context, oldDictionarySemaType).(*sema.DictionaryType)
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if newDictionarySemaType.Equal(oldDictionarySemaType) {
+				return value
+			}
+
 			newDictionaryStaticType := ConvertSemaToStaticType(context, newDictionarySemaType).(*DictionaryStaticType)
 
 			targetKeyType := newDictionarySemaType.KeyType
