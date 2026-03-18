@@ -2068,95 +2068,6 @@ func ConvertAndBox(
 	return BoxOptional(context, value, targetType)
 }
 
-// Produces the `valueStaticType` argument into a new static type that conforms
-// to the specification of the `targetSemaType`. At the moment, this means that the
-// authorization of any reference types in `valueStaticType` are changed to match the
-// authorization of any equivalently-positioned reference types in `targetSemaType`.
-func convertStaticType(
-	gauge common.MemoryGauge,
-	valueStaticType StaticType,
-	targetSemaType sema.Type,
-) StaticType {
-	switch valueStaticType := valueStaticType.(type) {
-	case *ReferenceStaticType:
-		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
-			return NewReferenceStaticType(
-				gauge,
-				ConvertSemaAccessToStaticAuthorization(gauge, targetReferenceType.Authorization),
-				valueStaticType.ReferencedType,
-			)
-		}
-
-	case *OptionalStaticType:
-		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
-			return NewOptionalStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.Type,
-					targetOptionalType.Type,
-				),
-			)
-		}
-
-	case *DictionaryStaticType:
-		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
-			return NewDictionaryStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.KeyType,
-					targetDictionaryType.KeyType,
-				),
-				convertStaticType(
-					gauge,
-					valueStaticType.ValueType,
-					targetDictionaryType.ValueType,
-				),
-			)
-		}
-
-	case *VariableSizedStaticType:
-		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
-			return NewVariableSizedStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.Type,
-					targetArrayType.Type,
-				),
-			)
-		}
-
-	case *ConstantSizedStaticType:
-		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
-			return NewConstantSizedStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.Type,
-					targetArrayType.Type,
-				),
-				valueStaticType.Size,
-			)
-		}
-
-	case *CapabilityStaticType:
-		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
-			return NewCapabilityStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.BorrowType,
-					targetCapabilityType.BorrowType,
-				),
-			)
-		}
-	}
-
-	return valueStaticType
-}
-
 // semaTypeWithStrippedEntitlements returns a copy of the given sema type with all
 // reference authorizations set to UnauthorizedAccess. Used when assigning to AnyStruct
 // so that the result preserves the type structure (e.g. [&Int] not [AnyStruct]).
@@ -2514,7 +2425,7 @@ func convert(
 		if arrayValue, isArray := value.(*ArrayValue); isArray && !valueType.Equal(unwrappedTargetType) {
 
 			oldArrayStaticType := arrayValue.StaticType(context)
-			arrayStaticType := convertStaticType(context, oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
+			arrayStaticType := applyTargetTypeAuthorization(context, oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
 
 			if oldArrayStaticType.Equal(arrayStaticType) {
 				return value
@@ -2554,7 +2465,7 @@ func convert(
 		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
 
 			oldDictStaticType := dictValue.StaticType(context)
-			dictStaticType := convertStaticType(context, oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
+			dictStaticType := applyTargetTypeAuthorization(context, oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
 
 			if oldDictStaticType.Equal(dictStaticType) {
 				return value
@@ -2607,7 +2518,7 @@ func convert(
 			switch capability := value.(type) {
 			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
-				borrowType := convertStaticType(context, valueBorrowType, targetBorrowType)
+				borrowType := applyTargetTypeAuthorization(context, valueBorrowType, targetBorrowType)
 				if capability.isInvalid() {
 					return NewInvalidCapabilityValue(context, capability.address, borrowType)
 				}
