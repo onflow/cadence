@@ -150,6 +150,8 @@ func ExportMeteredType(
 			return cadence.BlockType
 		case sema.StringType:
 			return cadence.StringType
+		case sema.StringBuilderType:
+			return cadence.StringBuilderType
 		case sema.StorageCapabilityControllerType:
 			return cadence.StorageCapabilityControllerType
 		case sema.AccountCapabilityControllerType:

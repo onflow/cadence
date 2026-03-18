@@ -4508,6 +4508,7 @@ var AllBuiltinTypes = common.Concat(
 		DeploymentResultType,
 		HashableStructType,
 		&InclusiveRangeType{},
+		StringBuilderType,
 		StructStringerType,
 	},
 )

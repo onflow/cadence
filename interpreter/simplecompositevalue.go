@@ -48,7 +48,7 @@ type SimpleCompositeValue struct {
 	// privateFields is a property bag to carry internal data
 	// that are not visible to cadence users.
 	// TODO: any better way to pass down information?
-	privateFields map[string]Value
+	privateFields map[string]any
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -318,16 +318,16 @@ func (v *SimpleCompositeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v *SimpleCompositeValue) WithPrivateField(key string, value Value) *SimpleCompositeValue {
+func (v *SimpleCompositeValue) WithPrivateField(key string, value any) *SimpleCompositeValue {
 	if v.privateFields == nil {
-		v.privateFields = make(map[string]Value)
+		v.privateFields = make(map[string]any)
 	}
 
 	v.privateFields[key] = value
 	return v
 }
 
-func (v *SimpleCompositeValue) PrivateField(key string) Value {
+func (v *SimpleCompositeValue) PrivateField(key string) any {
 	if v.privateFields == nil {
 		return nil
 	}
