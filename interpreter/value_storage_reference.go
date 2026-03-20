@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"sync"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -33,6 +35,9 @@ type StorageReferenceValue struct {
 	TargetPath           PathValue
 	TargetStorageAddress common.Address
 	Authorization        Authorization
+
+	staticType     StaticType
+	staticTypeOnce sync.Once
 }
 
 var _ Value = &StorageReferenceValue{}
@@ -102,13 +107,15 @@ func (v *StorageReferenceValue) MeteredString(
 }
 
 func (v *StorageReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	self := v.MustReferencedValue(context)
+	v.staticTypeOnce.Do(func() {
+		v.staticType = NewReferenceStaticType(
+			context,
+			v.Authorization,
+			ConvertSemaToStaticType(context, v.BorrowedType),
+		)
+	})
 
-	return NewReferenceStaticType(
-		context,
-		v.Authorization,
-		self.StaticType(context),
-	)
+	return v.staticType
 }
 
 func (v *StorageReferenceValue) GetAuthorization() Authorization {
@@ -138,16 +145,25 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 	}
 
 	if v.BorrowedType != nil {
-		staticType := referenced.StaticType(context)
-
-		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
-			semaType := context.SemaTypeFromStaticType(staticType)
-
+		valueType := MustSemaTypeOfValue(referenced, context)
+		if !sema.IsSubType(valueType, v.BorrowedType) {
 			return nil, &StoredValueTypeMismatchError{
 				ExpectedType: v.BorrowedType,
-				ActualType:   semaType,
+				ActualType:   valueType,
 			}
 		}
+
+		// The dereferenced value must always comply to the borrowed type.
+		// For e.g: If the reference borrowed was with fewer entitlements than the actual
+		// entitlements present in the value (references can be temporarily stored in storage),
+		// then the excess entitlements needs to be stripped off before returning.
+		// Therefore, always convert to the borrow type when dereferencing.
+		referenced = ConvertAndBox(
+			context,
+			referenced,
+			valueType,
+			v.BorrowedType,
+		)
 	}
 
 	return &referenced, nil
@@ -184,18 +200,24 @@ func (v *StorageReferenceValue) MustReferencedValue(
 	return *referencedValue
 }
 
-func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
+func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 	referencedValue := v.MustReferencedValue(context)
 
 	var member Value
 
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
-		member = memberAccessibleValue.GetMember(context, name)
+		member = memberAccessibleValue.GetMember(context, name, memberKind)
 	}
 
 	if member == nil {
 		// NOTE: Must call the `GetMethod` of the `StorageReferenceValue`, not of the referenced-value.
-		member = context.GetMethod(v, name)
+		member = GetMember(
+			context,
+			v,
+			name,
+			memberKind,
+			nil,
+		)
 	}
 
 	// If the member is a function, it is always a bound-function.

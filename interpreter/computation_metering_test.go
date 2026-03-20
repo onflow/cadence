@@ -2614,7 +2614,7 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 
 		fields := []interpreter.CompositeField{
 			{
-				Name:  "rawValue",
+				Name:  sema.EnumRawValueFieldName,
 				Value: interpreter.NewUnmeteredUInt8Value(42),
 			},
 		}
@@ -2655,8 +2655,8 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 		require.True(t, ok)
 
 		require.Equal(t,
-			enumValue.GetMember(inter, "rawValue"),
-			transferredComposite.GetMember(inter, "rawValue"),
+			enumValue.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField),
+			transferredComposite.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField),
 		)
 	})
 
@@ -2701,7 +2701,7 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 
 		fields := []interpreter.CompositeField{
 			{
-				Name:  "rawValue",
+				Name:  sema.EnumRawValueFieldName,
 				Value: rawValue,
 			},
 		}
@@ -2744,8 +2744,8 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 		require.True(t, ok)
 
 		require.Equal(t,
-			enumValue.GetMember(inter, "rawValue"),
-			transferredComposite.GetMember(inter, "rawValue"),
+			enumValue.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField),
+			transferredComposite.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField),
 		)
 	})
 }

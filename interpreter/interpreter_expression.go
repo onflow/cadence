@@ -224,7 +224,8 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 			interpreter.checkIndexedValue(indexedType, target)
 			value := target.GetKey(interpreter, transferredIndexingValue)
 
-			// If the indexing value is a reference, then return a reference for the resulting value.
+			// Return a reference, if the element is accessed via a reference.
+			// This is pre-computed at the checker.
 			if indexExpressionTypes.ReturnReference {
 				expectedType := indexExpressionTypes.ResultType
 
@@ -234,6 +235,14 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 					value,
 					expectedType,
 				)
+			} else {
+				// When accessing an element, the underlying container's element type may differ
+				// from the reference's element type.
+				// For example, when the static type is `[Int?]`, but the container's run-time type is `[Int]`,
+				// then it stores `Int` elements, but the result of type of the access is `Int`. Box the value to match.
+				if _, isOptional := indexExpressionTypes.ResultType.(*sema.OptionalType); isOptional {
+					value = BoxOptional(interpreter, value, indexExpressionTypes.ResultType)
+				}
 			}
 
 			return value, nil
@@ -266,6 +275,8 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 		panic(errors.NewUnreachableError())
 	}
 
+	memberKind := memberAccessInfo.Member.DeclarationKind
+
 	return getterSetter{
 		target: target,
 		get: func(allowMissing bool) (Value, *PlaceholderValue) {
@@ -291,7 +302,12 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 			if isNestedResourceMove {
 				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, identifier)
 			} else {
-				resultValue = getMember(interpreter, target, identifier)
+				resultValue = getMember(
+					interpreter,
+					target,
+					identifier,
+					memberKind,
+				)
 			}
 
 			if resultValue == nil && !allowMissing {
@@ -404,7 +420,7 @@ func CheckMemberAccessTargetType(
 
 			// Convert target static type to sema type, if not done already
 			if targetSemaType == nil {
-				targetSemaType = MustConvertStaticToSemaType(targetStaticType, context)
+				targetSemaType = context.SemaTypeFromStaticType(targetStaticType)
 			}
 
 			panic(&MemberAccessTypeError{
@@ -418,7 +434,7 @@ func CheckMemberAccessTargetType(
 
 		// Convert target static type to sema type, if not done already
 		if targetSemaType == nil {
-			targetSemaType = MustConvertStaticToSemaType(targetStaticType, context)
+			targetSemaType = context.SemaTypeFromStaticType(targetStaticType)
 		}
 
 		panic(&MemberAccessTypeError{
@@ -449,7 +465,7 @@ func CheckIndexedType(
 	indexedValueStaticType := indexedValue.StaticType(context)
 
 	if !IsSubTypeOfSemaType(context, indexedValueStaticType, indexedType) {
-		indexedValueSemaType := MustConvertStaticToSemaType(indexedValueStaticType, context)
+		indexedValueSemaType := context.SemaTypeFromStaticType(indexedValueStaticType)
 		panic(&IndexedTypeError{
 			ExpectedType: indexedType,
 			ActualType:   indexedValueSemaType,
@@ -1341,25 +1357,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		// if the value itself has a mapped entitlement type in its authorization
-		// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
-		// substitution must also be performed on its entitlements
-		//
-		// we do this here (as opposed to in `IsSubTypeOfSemaType`) because casting is the only way that
-		// an entitlement can "traverse the boundary", so to speak, between runtime and static types, and
-		// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
-		// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
-		// so we don't substitute them.
-
-		// if the target is anystruct or anyresource we want to preserve optionals
-		unboxedExpectedType := sema.UnwrapOptionalType(expectedType)
-		if !(unboxedExpectedType == sema.AnyStructType || unboxedExpectedType == sema.AnyResourceType) {
-			// otherwise dynamic cast now always unboxes optionals
-			value = Unbox(value)
-		}
-
-		valueStaticType := value.StaticType(interpreter)
-		valueSemaType := interpreter.SemaTypeFromStaticType(valueStaticType)
+		value, valueSemaType := interpreter.castValueAndValueType(expectedType, value)
 
 		isSubType := sema.IsSubType(valueSemaType, expectedType)
 
@@ -1402,6 +1400,75 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func (interpreter *Interpreter) castValueAndValueType(targetType sema.Type, value Value) (Value, sema.Type) {
+	// (for VM, see vm.castValueAndValueType)
+
+	// if the value itself has a mapped entitlement type in its authorization
+	// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
+	// substitution must also be performed on its entitlements
+	//
+	// we do this here (as opposed to in `IsSubTypeOfSemaType`) because casting is the only way that
+	// an entitlement can "traverse the boundary", so to speak, between runtime and static types, and
+	// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
+	// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
+	// so we don't substitute them.
+
+	// If the target is `AnyStruct` or `AnyResource` we want to preserve optionals
+	unboxedExpectedType := sema.UnwrapOptionalType(targetType)
+	if !(unboxedExpectedType == sema.AnyStructType ||
+		unboxedExpectedType == sema.AnyResourceType) {
+		// otherwise dynamic cast now always unboxes optionals
+		value = Unbox(value)
+	}
+
+	valueSemaType := MustSemaTypeOfValue(value, interpreter)
+
+	// If the value is specifically a storage reference,
+	// and the target type is a reference,
+	// then we report the value as a storage reference with the target type's borrow type
+	// (but keep the same authorization and target storage address/path).
+	//
+	// This allows storage references to be cast to different reference types,
+	// which is valid, as the storage reference's targeted value can also
+	// be replaced by a value of a different type.
+	//
+	// It is important we perform a type check of the storage reference's borrow type
+	// against the targeted value's type each time we use the reference (dereference it).
+
+	if storageReference, ok := value.(*StorageReferenceValue); ok {
+		if referenceTargetType, ok := targetType.(*sema.ReferenceType); ok &&
+			!storageReference.BorrowedType.Equal(referenceTargetType.Type) {
+
+			// Require the target type to not be or have an authorized reference in its type tree
+
+			hasAuthorizedReference := !targetType.Walk(func(ty sema.Type) bool {
+				if referenceType, ok := ty.(*sema.ReferenceType); ok &&
+					referenceType.Authorization != sema.UnauthorizedAccess {
+
+					// stop iteration
+					return false
+				}
+
+				// continue iteration
+				return true
+			})
+
+			if !hasAuthorizedReference {
+				value = NewStorageReferenceValue(
+					interpreter,
+					storageReference.Authorization,
+					storageReference.TargetStorageAddress,
+					storageReference.TargetPath,
+					referenceTargetType.Type,
+				)
+				valueSemaType = MustSemaTypeOfValue(value, interpreter)
+			}
+		}
+	}
+
+	return value, valueSemaType
 }
 
 func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpression) Value {
@@ -1608,17 +1675,12 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
 	// Instead, we create an implicit constructor argument containing a reference to the base.
 
-	// within the constructor, the attachment's base and self references should be fully entitled,
-	// as the constructor of the attachment is only callable by the owner of the base
-	baseType := MustSemaTypeOfValue(base, interpreter).(sema.EntitlementSupportingType)
-	baseAccess := baseType.SupportedEntitlements().Access()
-	auth := ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
-
+	// within the constructor, base is unauthorized (unlike self, which remains fully entitled)
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
 
 	baseValue := NewEphemeralReferenceValue(
 		interpreter,
-		auth,
+		UnauthorizedAccess,
 		base,
 		MustSemaTypeOfValue(base, interpreter).(*sema.CompositeType),
 	)

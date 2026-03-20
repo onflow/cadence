@@ -1209,3 +1209,122 @@ func TestCheckImportAlias(t *testing.T) {
 	})
 
 }
+
+func TestCheckWildcardAddressImport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("wildcard address import", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              import 0x1
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+						return []sema.ResolvedLocation{
+							{
+								Location:    location,
+								Identifiers: identifiers,
+							},
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.WildcardAddressImportError{}, errs[0])
+	})
+
+	t.Run("qualified address import", func(t *testing.T) {
+
+		t.Parallel()
+
+		importedAddress := common.MustBytesToAddress([]byte{0x1})
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+              access(all) fun test(): Int {
+                  return 1
+              }
+
+              access(all) let Foo = test()
+            `,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: importedAddress,
+					Name:    "Foo",
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+              import Foo from 0x1
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: importedAddress,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("wildcard non-address import", func(t *testing.T) {
+
+		t.Parallel()
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+              access(all) let x = 1
+            `,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+              import "imported"
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+}

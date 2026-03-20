@@ -1803,7 +1803,7 @@ func CompositeLikeConstructorType(
 	argumentLabels []string,
 ) {
 
-	constructorFunctionType = CompositeConstructorFunctionType(compositeType)
+	constructorFunctionType = compositeType.ConstructorFunctionType()
 
 	// TODO: support multiple overloaded initializers
 
@@ -1815,8 +1815,6 @@ func CompositeLikeConstructorType(
 			FunctionDeclaration.
 			ParameterList.
 			EffectiveArgumentLabels()
-
-		constructorFunctionType.Parameters = compositeType.ConstructorParameters
 
 		// NOTE: Don't use `constructorFunctionType`, as it has a return type.
 		//   The initializer itself has a `Void` return type.
@@ -1832,14 +1830,6 @@ func CompositeLikeConstructorType(
 	}
 
 	return constructorFunctionType, argumentLabels
-}
-
-func CompositeConstructorFunctionType(compositeType *CompositeType) *FunctionType {
-	return &FunctionType{
-		Purity:               compositeType.ConstructorPurity,
-		IsConstructor:        true,
-		ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
-	}
 }
 
 func (checker *Checker) defaultMembersAndOrigins(
@@ -2493,8 +2483,9 @@ func (checker *Checker) checkSpecialFunction(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
+		// within the constructor, base is unauthorized (unlike self, which remains fully entitled)
 		checker.declareBaseValue(
-			fnAccess,
+			UnauthorizedAccess,
 			attachmentType.baseType,
 			attachmentType,
 			attachmentType.baseTypeDocString)

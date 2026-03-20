@@ -944,17 +944,27 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 		declaration.Range,
 	)
 
+	initializerFuncType := compositeType.ConstructorFunctionType()
+
 	hasInit := false
 	for _, member := range desugaredMembers {
-		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok && member.Kind == common.DeclarationKindInitializer {
+		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok &&
+			member.Kind == common.DeclarationKindInitializer {
 			hasInit = true
+
+			// Set the initializer function type in the elaboration.
+			d.elaboration.SetFunctionDeclarationFunctionType(
+				member.FunctionDeclaration,
+				initializerFuncType,
+			)
+
 			break
 		}
 	}
 
 	if !hasInit {
 		membersDesugared = true
-		d.addEmptyInitializer(compositeType, &desugaredMembers)
+		d.addEmptyInitializer(initializerFuncType, &desugaredMembers)
 	}
 
 	// Optimization: If none of the existing members got updated or,
@@ -1044,10 +1054,20 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		declaration.Range,
 	)
 
+	initializerFuncType := compositeType.ConstructorFunctionType()
+
 	hasInit := false
 	for _, member := range desugaredMembers {
-		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok && member.Kind == common.DeclarationKindInitializer {
+		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok &&
+			member.Kind == common.DeclarationKindInitializer {
 			hasInit = true
+
+			// Set the initializer function type in the elaboration.
+			d.elaboration.SetFunctionDeclarationFunctionType(
+				member.FunctionDeclaration,
+				initializerFuncType,
+			)
+
 			break
 		}
 	}
@@ -1060,7 +1080,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		if compositeType.Kind == common.CompositeKindEnum {
 			// generate enum initializer
 			enumInitializer := newEnumInitializer(d.memoryGauge, compositeType, d.elaboration)
-			enumInitializerFuncType := newEnumInitializerFuncType(compositeType.EnumRawType)
+			enumInitializerFuncType := newEnumInitializerFuncType(compositeType)
 			d.elaboration.SetFunctionDeclarationFunctionType(enumInitializer.FunctionDeclaration, enumInitializerFuncType)
 			desugaredMembers = append(desugaredMembers, enumInitializer)
 
@@ -1071,11 +1091,11 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 				declaration.Members.EnumCases(),
 				d.elaboration,
 			)
-			enumLookupFuncType := newEnumLookupFuncType(d.memoryGauge, compositeType)
+			enumLookupFuncType := sema.EnumLookupFunctionType(compositeType)
 			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
 			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
 		} else {
-			d.addEmptyInitializer(compositeType, &desugaredMembers)
+			d.addEmptyInitializer(initializerFuncType, &desugaredMembers)
 		}
 	}
 
@@ -1661,7 +1681,8 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 
 	// Always add empty initializer for transactions.
 	// To be updated later by compilation.
-	d.addEmptyInitializer(compositeType, &members)
+	initializerFuncType := compositeType.ConstructorFunctionType()
+	d.addEmptyInitializer(initializerFuncType, &members)
 
 	compositeDecl := ast.NewCompositeDeclaration(
 		d.memoryGauge,
@@ -1803,11 +1824,10 @@ func newEmptyInitializer(memoryGauge common.MemoryGauge) *ast.SpecialFunctionDec
 }
 
 // Add an empty initializer
-func (d *Desugar) addEmptyInitializer(compositeType *sema.CompositeType, members *[]ast.Declaration) {
+func (d *Desugar) addEmptyInitializer(initializerFuncType *sema.FunctionType, members *[]ast.Declaration) {
 	emptyInitializer := newEmptyInitializer(d.memoryGauge)
 	*members = append(*members, emptyInitializer)
 
-	initializerFuncType := sema.CompositeConstructorFunctionType(compositeType)
 	d.elaboration.SetFunctionDeclarationFunctionType(emptyInitializer.FunctionDeclaration, initializerFuncType)
 }
 
@@ -1941,16 +1961,16 @@ func newEnumInitializer(
 	)
 }
 
-func newEnumInitializerFuncType(rawValueType sema.Type) *sema.FunctionType {
+func newEnumInitializerFuncType(enumType *sema.CompositeType) *sema.FunctionType {
 	return sema.NewSimpleFunctionType(
 		sema.FunctionPurityImpure,
 		[]sema.Parameter{
 			{
 				Identifier:     sema.EnumRawValueFieldName,
-				TypeAnnotation: sema.NewTypeAnnotation(rawValueType),
+				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
 			},
 		},
-		sema.VoidTypeAnnotation,
+		sema.NewTypeAnnotation(enumType),
 	)
 }
 
@@ -2124,24 +2144,6 @@ func newEnumLookup(
 		),
 		ast.EmptyPosition,
 		"",
-	)
-}
-
-func newEnumLookupFuncType(
-	gauge common.MemoryGauge,
-	enumType *sema.CompositeType,
-) *sema.FunctionType {
-	return sema.NewSimpleFunctionType(
-		sema.FunctionPurityImpure,
-		[]sema.Parameter{
-			{
-				Identifier:     sema.EnumRawValueFieldName,
-				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
-			},
-		},
-		sema.NewTypeAnnotation(
-			sema.NewOptionalType(gauge, enumType),
-		),
 	)
 }
 

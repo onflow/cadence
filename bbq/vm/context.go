@@ -340,14 +340,16 @@ func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
 ) interpreter.FunctionValue {
+
+	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
+		value = storageReference.MustReferencedValue(c).(interpreter.MemberAccessibleValue)
+	}
+
 	staticType := value.StaticType(c)
 
 	semaType := c.SemaTypeFromStaticType(staticType)
 
-	var location common.Location
-	if locatedType, ok := semaType.(sema.LocatedType); ok {
-		location = locatedType.GetLocation()
-	}
+	location := typeLocation(semaType)
 
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, name)
 
@@ -377,6 +379,17 @@ func (c *Context) GetMethod(
 		method,
 		base,
 	)
+}
+
+func typeLocation(semaType sema.Type) common.Location {
+	switch semaType := semaType.(type) {
+	case sema.LocatedType:
+		return semaType.GetLocation()
+	case *sema.ReferenceType:
+		return typeLocation(semaType.Type)
+	default:
+		return nil
+	}
 }
 
 func (c *Context) GetFunction(
@@ -436,6 +449,10 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 }
 
 func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
+	if staticType == nil {
+		return nil
+	}
+
 	typeCacheKey := commons.NewTypeCacheKeyFromStaticType(staticType)
 	semaType, ok := c.semaTypeCache[typeCacheKey]
 	if ok {
@@ -443,7 +460,7 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	}
 
 	// TODO: avoid the sema-type conversion
-	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
+	semaType = interpreter.MustConvertStaticToSemaType(staticType, c) //nolint:staticcheck
 
 	if c.semaTypeCache == nil {
 		c.semaTypeCache = make(map[commons.TypeCacheKey]sema.Type)
@@ -469,7 +486,6 @@ func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
 			storageReference,
 			referencedValue,
 		)
-		return boundFunction
 	}
 
 	return member
@@ -551,7 +567,7 @@ func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorizati
 		return semaAccess, nil
 	}
 
-	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c)
+	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c) //nolint:staticcheck
 	if err != nil {
 		return nil, err
 	}

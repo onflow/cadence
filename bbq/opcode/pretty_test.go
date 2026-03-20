@@ -100,7 +100,8 @@ func TestPrettyInstructionWithResolvableOperands(t *testing.T) {
 
 		instruction := opcode.InstructionInvoke{
 			TypeArgs:   []uint16{0, 1},
-			ArgCount:   2,
+			ArgTypes:   []uint16{0, 1},
+			ParamTypes: []uint16{0, 1},
 			ReturnType: 1,
 		}
 
@@ -110,7 +111,14 @@ func TestPrettyInstructionWithResolvableOperands(t *testing.T) {
 					interpreter.PrimitiveStaticTypeInt,
 					interpreter.PrimitiveStaticTypeString,
 				},
-				ArgCount:   2,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+					interpreter.PrimitiveStaticTypeString,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+					interpreter.PrimitiveStaticTypeString,
+				},
 				ReturnType: interpreter.PrimitiveStaticTypeString,
 			},
 			instruction.Pretty(program),
@@ -246,6 +254,12 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		{opcode.InstructionLoop{}, opcode.PrettyInstructionLoop{}},
 		{opcode.InstructionStatement{}, opcode.PrettyInstructionStatement{}},
 		{opcode.InstructionSetAttachmentBase{}, opcode.PrettyInstructionSetAttachmentBase{}},
+		{
+			opcode.InstructionBoxOptional{TargetType: 1},
+			opcode.PrettyInstructionBoxOptional{
+				TargetType: interpreter.PrimitiveStaticTypeString,
+			},
+		},
 
 		// Instructions with non-resolvable operands only
 		{
@@ -283,6 +297,19 @@ func TestPrettyInstructionMapping(t *testing.T) {
 			},
 			opcode.PrettyInstructionGetMethod{
 				Method:       7,
+				ReceiverType: interpreter.PrimitiveStaticTypeString,
+			},
+		},
+		{
+			opcode.InstructionGetMethodDynamic{
+				MethodName:   1,
+				ReceiverType: 1,
+			},
+			opcode.PrettyInstructionGetMethodDynamic{
+				MethodName: constant.DecodedConstant{
+					Data: "myOtherField",
+					Kind: constant.String,
+				},
 				ReceiverType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
@@ -548,7 +575,8 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		{
 			opcode.InstructionInvoke{
 				TypeArgs:   []uint16{0, 1},
-				ArgCount:   2,
+				ArgTypes:   []uint16{0, 1},
+				ParamTypes: []uint16{0, 1},
 				ReturnType: 1,
 			},
 			opcode.PrettyInstructionInvoke{
@@ -556,21 +584,11 @@ func TestPrettyInstructionMapping(t *testing.T) {
 					interpreter.PrimitiveStaticTypeInt,
 					interpreter.PrimitiveStaticTypeString,
 				},
-				ArgCount:   2,
-				ReturnType: interpreter.PrimitiveStaticTypeString,
-			},
-		},
-		{
-			opcode.InstructionInvokeTyped{
-				TypeArgs:   []uint16{1},
-				ArgTypes:   []uint16{0, 1},
-				ReturnType: 1,
-			},
-			opcode.PrettyInstructionInvokeTyped{
-				TypeArgs: []interpreter.StaticType{
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
 					interpreter.PrimitiveStaticTypeString,
 				},
-				ArgTypes: []interpreter.StaticType{
+				ParamTypes: []interpreter.StaticType{
 					interpreter.PrimitiveStaticTypeInt,
 					interpreter.PrimitiveStaticTypeString,
 				},
