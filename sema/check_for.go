@@ -156,7 +156,14 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 		// Case (a): Element type is a container type.
 		// Then the loop-var must also be a reference type.
 		if referencedIterableElementType.ContainFieldsOrElements() {
-			return checker.getDescendantReferenceType(referencedIterableElementType, UnauthorizedAccess)
+			return checker.getDescendantReferenceType(referencedIterableElementType, UnauthorizedAccess, referenceType.Authorization)
+		}
+
+		// Case (a'): Element type is a reference type.
+		// Intersect the outer (container) reference's authorization
+		// with the inner (element) reference's authorization.
+		if _, isRef := referencedIterableElementType.(*ReferenceType); isRef {
+			return checker.getDescendantReferenceType(referencedIterableElementType, UnauthorizedAccess, referenceType.Authorization)
 		}
 
 		// Case (b): Element type is a primitive type.

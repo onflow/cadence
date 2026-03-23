@@ -79,6 +79,20 @@ func NewStorageReferenceValue(
 	)
 }
 
+func (v *StorageReferenceValue) WithAuthorizationAndBorrowedType(
+	context ReferenceCreationContext,
+	auth Authorization,
+	borrowedType sema.Type,
+) ReferenceValue {
+	return NewStorageReferenceValue(
+		context,
+		auth,
+		v.TargetStorageAddress,
+		v.TargetPath,
+		borrowedType,
+	)
+}
+
 func (*StorageReferenceValue) IsValue() {}
 
 func (v *StorageReferenceValue) Accept(context ValueVisitContext, visitor Visitor) {

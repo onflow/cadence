@@ -91,19 +91,29 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
+//
+// When the descendant is already a reference, the outer reference's authorization
+// is intersected with the inner reference's authorization. This prevents authorization
+// escalation when accessing references stored in referenced containers.
+// e.g.: auth(E, F) &[auth(F, G) &T] → auth(F) &T (intersection of {E,F} and {F,G})
 func (checker *Checker) getDescendantReferenceType(
 	descendantType Type,
 	authorization Access,
+	outerAuthorization Access,
 ) Type {
 	switch typ := descendantType.(type) {
 	case *OptionalType:
-		innerType := checker.getDescendantReferenceType(typ.Type, authorization)
+		innerType := checker.getDescendantReferenceType(typ.Type, authorization, outerAuthorization)
 		return NewOptionalType(checker.memoryGauge, innerType)
 
 	case *ReferenceType:
-		// If the descendant is already a reference,
-		// then the resulting type should be the same.
-		return typ
+		// Intersect the outer reference's authorization with the inner reference's authorization.
+		// This prevents gaining authorization through nested reference access.
+		intersected := IntersectAccess(outerAuthorization, typ.Authorization)
+		if intersected.Equal(typ.Authorization) {
+			return typ
+		}
+		return NewReferenceType(checker.memoryGauge, intersected, typ.Type)
 
 	default:
 		return NewReferenceType(checker.memoryGauge, authorization, typ)
@@ -380,7 +390,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
 		}
 
-		resultingType = checker.getDescendantReferenceType(resultingType, authorization)
+		// For non-reference elements, `authorization` is used as the wrapping authorization.
+		// For reference elements, the outer reference's raw authorization is intersected
+		// with the inner reference's authorization (note: mapped access fields cannot have
+		// reference types, so `authorization` and outer auth differ only for non-mapped fields).
+		outerRef, _ := MaybeReferenceType(accessedType)
+		resultingType = checker.getDescendantReferenceType(resultingType, authorization, outerRef.Authorization)
 		returnReference = true
 	}
 

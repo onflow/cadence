@@ -84,6 +84,19 @@ func NewEphemeralReferenceValue(
 	return NewUnmeteredEphemeralReferenceValue(context, authorization, value, borrowedType)
 }
 
+func (v *EphemeralReferenceValue) WithAuthorizationAndBorrowedType(
+	context ReferenceCreationContext,
+	auth Authorization,
+	borrowedType sema.Type,
+) ReferenceValue {
+	return NewEphemeralReferenceValue(
+		context,
+		auth,
+		v.Value,
+		borrowedType,
+	)
+}
+
 func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) Accept(context ValueVisitContext, visitor Visitor) {
