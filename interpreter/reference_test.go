@@ -3164,16 +3164,13 @@ func TestInterpretOptionalReference(t *testing.T) {
 
 		value, err := inter.Invoke("present")
 		require.NoError(t, err)
-		require.Equal(
-			t,
-			&interpreter.EphemeralReferenceValue{
-				Value:         interpreter.NewUnmeteredIntValueFromInt64(1),
-				BorrowedType:  sema.IntType,
-				Authorization: interpreter.UnauthorizedAccess,
-			},
-			value,
-		)
 
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		referenceValue := value.(*interpreter.EphemeralReferenceValue)
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), referenceValue.Value)
+		require.Equal(t, sema.IntType, referenceValue.BorrowedType)
+		require.Equal(t, interpreter.UnauthorizedAccess, referenceValue.Authorization)
 	})
 
 	t.Run("absent", func(t *testing.T) {
@@ -4086,4 +4083,834 @@ func TestInterpretDereferenceGetType(t *testing.T) {
 		},
 		getLogs(),
 	)
+}
+
+func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let authArrayRef: auth(E1) &[auth(E2) &Int] = &[&1]
+
+                let arrayRef: &[&Int] = authArrayRef
+
+                let downCastedAuthArrayRef = arrayRef as! &[auth(E2) &Int]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[auth(S.test.E2)&Int]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&Int]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("interface array type narrowing", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that type narrowing (interface -> concrete) works for nested references.
+		// If we have an array of `&S` borrowed as `[&{SI}]`, we should be able to
+		// downcast to `&[&S]` to see the actual concrete element types.
+		inter := parseCheckAndPrepare(t, `
+            struct interface SI {}
+            struct S: SI {}
+
+            fun test() {
+                let s = S()
+
+                // Create array with concrete reference elements
+                let arrayRef: &[&S] = &[&s]
+
+                // Assign to array type with interface element type
+                let interfaceArrayRef: &[&{SI}] = arrayRef
+
+                // Type narrowing: downcast to see concrete element types.
+                // Should succeed because only interface type is narrowed, and NO attempt to gain entitlements.
+                interfaceArrayRef as! &[&S]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("interface array type narrowing with entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that type narrowing (interface -> concrete) works for nested references.
+		// If we have an array of `&S` borrowed as `[&{SI}]`, we should be able to
+		// downcast to `&[&S]` to see the actual concrete element types.
+		inter := parseCheckAndPrepare(t, `
+            struct interface SI {}
+            struct S: SI {}
+
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let s = S()
+
+                // Create array with concrete reference elements
+                let arrayRef: auth(E2) &[auth(E2) &S] = &[&s]
+
+                // Assign to array type with interface element type
+                let interfaceArrayRef: &[&{SI}] = arrayRef
+
+                // Type narrowing: downcast to see concrete element types, and gain entitlements.
+                // Should fail because of the attempt to gain entitlements.
+                interfaceArrayRef as! &[auth(E2) &S]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[auth(S.test.E2)&S.test.S]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&S.test.S]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array to &AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let authArrayRef: auth(E1) &[auth(E2) &Int] = &[&1]
+
+                let arrayRef: &AnyStruct = authArrayRef
+
+                let downCastedAuthArrayRef = arrayRef as! &[auth(E2) &Int]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let authDictionaryRef: auth(E1) &{String: auth(E2) &Int} = &{"one": &1}
+
+                let dictionaryRef: &{String: &Int} = authDictionaryRef
+
+                // Should fail because of the attempt to gain entitlements.
+                let downCastedAuthDictionaryRef = dictionaryRef as! &{String: auth(E2) &Int}
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:auth(S.test.E2)&Int}"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&Int}"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("interface dictionary type narrowing", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that type narrowing works for dictionary value types.
+		inter := parseCheckAndPrepare(t, `
+            struct interface SI {}
+            struct S: SI {}
+
+            fun test() {
+                let s = S()
+
+                // Create dictionary with concrete reference values
+                let dictRef: &{String: &S} = &{"key": &s}
+
+                // Assign to interface dictionary type
+                let interfaceDictRef: &{String: &{SI}} = dictRef
+
+                // Type narrowing: downcast to see concrete value types.
+                // Should succeed because only interface type is narrowed, and NO attempt to gain entitlements.
+                interfaceDictRef as! &{String: &S}
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("interface dictionary type narrowing with entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that type narrowing works for dictionary value types.
+		inter := parseCheckAndPrepare(t, `
+            struct interface SI {}
+            struct S: SI {}
+
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let s = S()
+
+                // Create dictionary with concrete reference values
+                let dictRef: auth(E1) &{String: auth(E2) &S} = &{"key": &s}
+
+                // Assign to interface dictionary type
+                let interfaceDictRef: &{String: &{SI}} = dictRef
+
+                // Type narrowing: downcast to see concrete value types, and gain entitlements
+                // Should fail because of the attempt to gain entitlements.
+                interfaceDictRef as! &{String: auth(E2) &S}
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:auth(S.test.E2)&S.test.S}"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&S.test.S}"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("dictionary to &AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let authDictionaryRef: auth(E1) &{String: auth(E2) &Int} = &{"one": &1}
+
+                let dictionaryRef: &AnyStruct = authDictionaryRef
+
+                // Should fail because of the attempt to gain entitlements.
+                let downCastedAuthDictionaryRef = dictionaryRef as! &{String: auth(E2) &Int}
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("function returning reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun authRefReturningFunc():auth(E) &Int {
+                return &1
+            }
+
+            fun testCasting() {
+                let refReturningFunc: (fun():&Int) = authRefReturningFunc
+                let downCastedAuthRefReturningFunc = refReturningFunc as! (fun():auth(E) &Int)
+            }
+
+            fun testInvoking() {
+                let refReturningFunc: (fun():&Int) = authRefReturningFunc
+                refReturningFunc()
+            }
+
+            fun testCastingInvocationResult() {
+                let refReturningFunc: (fun():&Int) = authRefReturningFunc
+                refReturningFunc() as! auth(E) &Int
+            }
+        `)
+
+		_, err := inter.Invoke("testCasting")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testInvoking")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testCastingInvocationResult")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("auth(S.test.E)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("function with reference parameter", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun refParamFunc(_ a: &Int) {}
+
+            fun tryDownCasting(_ a: &Int) {
+                let authA = a as! auth(E) &Int
+            }
+
+            fun testCasting() {
+                let authRefParamFunc: fun(auth(E) &Int) = refParamFunc
+                let downCastedRefParamFunc = authRefParamFunc as! fun(&Int)
+            }
+
+            fun testInvoking() {
+                let authRefParamFunc: fun(auth(E) &Int) = refParamFunc
+                authRefParamFunc(&1 as auth(E) &Int)
+            }
+
+            fun testDownCastingParam() {
+                let authRefParamFunc: fun(auth(E) &Int) = tryDownCasting
+                authRefParamFunc(&1 as auth(E) &Int)
+            }
+        `)
+
+		_, err := inter.Invoke("testCasting")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testInvoking")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testDownCastingParam")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("auth(S.test.E)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+}
+
+func TestInterpretNestedStorageReferenceCasting(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(
+			t,
+			address,
+			true,
+			nil,
+			`
+            entitlement E
+
+            fun test() {
+                account.storage.save(1, to: /storage/value)
+                let authRef = account.storage.borrow<auth(E) &Int>(from: /storage/value)!
+
+                let ref: &Int = authRef
+
+                let downCastedAuthRef = ref as! auth(E) &Int
+            }`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("auth(S.test.E)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(
+			t,
+			address,
+			true,
+			nil,
+			`
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let value: [auth(E2) &Int] = [&1]
+                account.storage.save(value as AnyStruct, to: /storage/value)
+                let authArrayRef = account.storage.borrow<auth(E1) &[auth(E2) &Int]>(from: /storage/value)!
+
+                let arrayRef: &[&Int] = authArrayRef
+
+                let downCastedAuthArrayRef = arrayRef as! &[auth(E2) &Int]
+            }`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[auth(S.test.E2)&Int]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&Int]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(
+			t,
+			address,
+			true,
+			nil,
+			`
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let value: {String: auth(E2) &Int} = {"one": &1}
+                account.storage.save(value as AnyStruct, to: /storage/value)
+                let authArrayRef = account.storage.borrow<auth(E1) &{String: auth(E2) &Int}>(from: /storage/value)!
+
+                let arrayRef: &{String: &Int} = authArrayRef
+
+                let downCastedAuthArrayRef = arrayRef as! &{String: auth(E2) &Int}
+            }`,
+			sema.Config{},
+		)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:auth(S.test.E2)&Int}"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&Int}"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+}
+
+// TestInterpretNestedEphemeralReferenceMutation tests that converted ephemeral
+// references point to the same underlying container, not a copy.
+// This is a regression test for an issue where converting a reference like
+// `auth(E1) &[auth(E2) &T]` to `&[&T]` would create a copy of the inner array.
+func TestInterpretNestedEphemeralReferenceMutation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array append with matching entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that mutations through a converted reference are visible in the original.
+		// Use a simpler case without nested reference types to avoid entitlement issues.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun test(): Int {
+                let array: [Int] = [1]
+                let authArrayRef: auth(E, Mutate) &[Int] = &array
+
+                // Convert to a reference with fewer entitlements
+                let arrayRef: auth(Mutate) &[Int] = authArrayRef
+
+                // Append through the converted reference
+                arrayRef.append(2)
+
+                // The original array should have length 2
+                return array.length
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			result,
+		)
+	})
+
+	t.Run("dictionary insert with matching entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun test(): Int {
+                let dict: {String: Int} = {"one": 1}
+                let authDictRef: auth(E, Mutate, Insert) &{String: Int} = &dict
+
+                // Convert to a reference with fewer entitlements
+                let dictRef: auth(Mutate) &{String: Int} = authDictRef
+
+                // Insert through the converted reference
+                dictRef["two"] = 2
+
+                // The original dictionary should have 2 keys
+                return dict.length
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			result,
+		)
+	})
+
+	t.Run("nested reference array - same container identity", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that converting a reference to an array of references
+		// doesn't create a copy - both references point to the same array.
+		// Mutations that match the actual array type should work.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test(): Int {
+                var intVal1: Int = 1
+                var intVal2: Int = 2
+                let ref1: auth(E2) &Int = &intVal1
+                let ref2: auth(E2) &Int = &intVal2
+
+                let array: [auth(E2) &Int] = [ref1]
+                let authArrayRef: auth(E1, Mutate) &[auth(E2) &Int] = &array
+
+                // Convert to a reference with fewer entitlements on outer reference
+                let arrayRef: auth(Mutate) &[auth(E2) &Int] = authArrayRef
+
+                // Append through the converted reference (element type matches)
+                arrayRef.append(ref2)
+
+                // The original array should have length 2
+                return array.length
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			result,
+		)
+	})
+}
+
+func TestInterpretReferenceElementBoxing(t *testing.T) {
+
+	t.Parallel()
+
+	sType := &interpreter.CompositeStaticType{
+		Location:            TestLocation,
+		QualifiedIdentifier: "S",
+		TypeID:              TestLocation.TypeID(nil, "S"),
+	}
+
+	t.Run("array, primitive element", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): Type {
+              let array: [Int] = [1, 2]
+              let ref: &[Int?] = &array
+              return ref[0].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("array, struct element", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+
+          fun test(): Type {
+              let array: [S] = [S(), S()]
+              let ref: &[S?] = &array
+              return ref[0].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewReferenceStaticType(nil,
+						interpreter.UnauthorizedAccess,
+						sType,
+					),
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("dictionary, primitive value", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): Type {
+              let dict: {String: Int} = {"a": 1}
+              let ref: &{String: Int?} = &dict
+              return ref["a"].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Dictionary access returns V?, so for &{String: Int?} the result is Int??.
+		// The underlying dict returns Some(1), which needs to be boxed to Some(Some(1))
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("dictionary, struct value", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+
+          fun test(): Type {
+              let dict: {String: S} = {"a": S()}
+              let ref: &{String: S?} = &dict
+              return ref["a"].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.NewReferenceStaticType(
+							nil,
+							interpreter.UnauthorizedAccess,
+							sType,
+						),
+					),
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("array, nested primitive element", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): Type {
+              let array: [Int] = [1, 2]
+              let ref: &[Int??] = &array
+              return ref[0].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+			},
+			result,
+		)
+	})
+
+	t.Run("dictionary, nested primitive element", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): Type {
+              let dict: {String: Int} = {"a": 1}
+              let ref: &{String: Int??} = &dict
+              return ref["a"].getType()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Dictionary access returns V??, so for &{String: Int??} the result is Int???.
+		// The underlying dict returns Some(Some(1)), which needs to be boxed to Some(Some(Some(1)))
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TypeValue{
+				Type: interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.NewOptionalStaticType(
+							nil,
+							interpreter.PrimitiveStaticTypeInt,
+						),
+					),
+				),
+			},
+			result,
+		)
+	})
+
 }

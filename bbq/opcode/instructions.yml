@@ -365,30 +365,6 @@
 # Invocation instructions
 
 - name: "invoke"
-  description: |
-    Pops the function and arguments off the stack, invokes the function with the arguments,
-    and then pushes the result back on to the stack.
-    This instruction is only passes the argument count. If the argument types are needed, use `invokeTyped`.
-  operands:
-    - name: "typeArgs"
-      type: "typeIndices"
-    - name: "argCount"
-      type: "size"
-    - name: "returnType"
-      type: "typeIndex"
-  valueEffects:
-    pop:
-      - name: "arguments"
-        # TODO: count
-      - name: "function"
-        type: "function"
-    push:
-      - name: "result"
-        type: "value"
-  controlEffects:
-    - call:
-
-- name: "invokeTyped"
   description:
     Pops the function and arguments off the stack, invokes the function with the arguments,
     and then pushes the result back on to the stack.
@@ -398,8 +374,14 @@
       type: "typeIndices"
     - name: "argTypes"
       type: "typeIndices"
+    - name: "paramTypes"
+      type: "typeIndices"
     - name: "returnType"
       type: "typeIndex"
+    - name: "hasImplicitArgument"
+      type: "bool"
+    - name: "skipArgumentConversion"
+      type: "bool"
   valueEffects:
     pop:
       - name: "arguments"
@@ -419,6 +401,25 @@
   operands:
     - name: "method"
       type: globalIndex
+    - name: "receiverType"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "receiver"
+        type: "value"
+    push:
+      - name: "method"
+        type: "function"
+
+
+- name: "getMethodDynamic"
+  description: |
+    Pops a value off the stack, the receiver,
+    and then pushes the value of the method with the given name onto the stack.
+    Methods are looked-up dynamically at runtime.
+  operands:
+    - name: "methodName"
+      type: "constantIndex"
     - name: "receiverType"
       type: "typeIndex"
   valueEffects:
@@ -487,6 +488,21 @@
         type: "value"
     push:
       - name: "optional"
+        type: "value"
+
+- name: "boxOptional"
+  description: |
+    Pops a value off the stack, boxes it into an optional if needed to match the target type,
+    and then pushes it back on to the stack.
+  operands:
+    - name: "targetType"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
         type: "value"
 
 # Conversion instructions

@@ -66,7 +66,7 @@ func init() {
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachStoredFunctionName,
-			sema.Account_StorageTypeForEachPublicFunctionType,
+			sema.Account_StorageTypeForEachStoredFunctionType,
 			interpreter.NativeAccountStorageIterateFunction(nil, common.PathDomainStorage, sema.StoragePathType),
 		),
 	)

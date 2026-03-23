@@ -2328,7 +2328,7 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
     `)
 
 	actual := inter.GetGlobal("test").(*interpreter.CompositeValue).
-		GetMember(inter, "foo")
+		GetMember(inter, "foo", common.DeclarationKindField)
 	AssertValuesEqual(
 		t,
 		inter,
@@ -7687,7 +7687,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		valueCreationContext,
 		interpreter.UnauthorizedAccess,
 		arrayValue,
-		interpreter.MustConvertStaticToSemaType(arrayStaticType, inter),
+		inter.SemaTypeFromStaticType(arrayStaticType),
 	)
 
 	_, err = inter.Invoke("test", ref)
@@ -9007,7 +9007,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 	require.NoError(t, err)
 
 	i := inter.GetGlobal("C").(interpreter.MemberAccessibleValue).
-		GetMember(inter, "i")
+		GetMember(inter, "i", common.DeclarationKindField)
 
 	require.IsType(t,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -12119,18 +12119,15 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	variable := inter.GetGlobal("ref")
-	require.NotNil(t, variable)
+	value := inter.GetGlobal("ref")
+	require.NotNil(t, value)
 
-	require.Equal(
-		t,
-		&interpreter.EphemeralReferenceValue{
-			Value:         interpreter.NewUnmeteredIntValueFromInt64(2),
-			BorrowedType:  sema.IntType,
-			Authorization: interpreter.UnauthorizedAccess,
-		},
-		variable,
-	)
+	require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+	referenceValue := value.(*interpreter.EphemeralReferenceValue)
+
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), referenceValue.Value)
+	require.Equal(t, sema.IntType, referenceValue.BorrowedType)
+	require.Equal(t, interpreter.UnauthorizedAccess, referenceValue.Authorization)
 }
 
 func TestInterpretNilCoalesceAnyResourceAndPanic(t *testing.T) {
@@ -13082,12 +13079,20 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 		)
 		require.NotNil(t, storageMap)
 
+		fooType := inter.SemaTypeFromStaticType(
+			&interpreter.CompositeStaticType{
+				Location:            TestLocation,
+				TypeID:              TestLocation.TypeID(nil, "Foo"),
+				QualifiedIdentifier: "Foo",
+			},
+		)
+
 		ref := interpreter.NewStorageReferenceValue(
 			nil,
 			interpreter.UnauthorizedAccess,
 			address,
 			path,
-			nil,
+			fooType,
 		)
 
 		result, err := inter.Invoke("update", ref)
@@ -13115,7 +13120,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 			interpreter.UnauthorizedAccess,
 			address,
 			path,
-			nil,
+			fooType,
 		)
 
 		result, err = inter.Invoke("updateAgain", ref)
@@ -14662,6 +14667,7 @@ func TestInterpretContainerMutationCheckThroughReference(t *testing.T) {
 	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	var containerReadError *interpreter.ContainerReadError
-	require.ErrorAs(t, err, &containerReadError)
+	var containerMutationErr *interpreter.ContainerMutationError
+	require.ErrorAs(t, err, &containerMutationErr)
+
 }
