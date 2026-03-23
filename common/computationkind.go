@@ -231,7 +231,7 @@ const (
 	_
 	_
 	// atree array
-	_
+	ComputationKindAtreeArraySingleSlabConstruction
 	ComputationKindAtreeArrayBatchConstruction
 	ComputationKindAtreeArrayGet
 	ComputationKindAtreeArraySet
@@ -252,6 +252,7 @@ const (
 	_
 	_
 	ComputationKindAtreeMapConstruction
+	ComputationKindAtreeMapSingleSlabConstruction
 	ComputationKindAtreeMapBatchConstruction
 	ComputationKindAtreeMapHas
 	ComputationKindAtreeMapGet

@@ -83,6 +83,12 @@ func (s *ConjunctiveEntitlementSet) Separator() Separator {
 	return Conjunction
 }
 
+func (s *ConjunctiveEntitlementSet) Walk(walkChild func(Element)) {
+	for _, entitlement := range s.Elements {
+		walkChild(entitlement)
+	}
+}
+
 func (s *ConjunctiveEntitlementSet) CheckEqual(
 	other Authorization,
 	c TypeEqualityChecker,
@@ -122,6 +128,12 @@ func (s *DisjunctiveEntitlementSet) Separator() Separator {
 	return Disjunction
 }
 
+func (s *DisjunctiveEntitlementSet) Walk(walkChild func(Element)) {
+	for _, entitlement := range s.Elements {
+		walkChild(entitlement)
+	}
+}
+
 func (s *DisjunctiveEntitlementSet) CheckEqual(
 	other Authorization,
 	c TypeEqualityChecker,
@@ -144,6 +156,7 @@ func (s *DisjunctiveEntitlementSet) String() string {
 type Authorization interface {
 	fmt.Stringer
 	isAuthorization()
+	Walk(walkChild func(Element))
 	CheckEqual(Authorization, TypeEqualityChecker, HasPosition) error
 }
 
@@ -255,6 +268,12 @@ func (a *MappedAccess) MarshalJSON() ([]byte, error) {
 		Range: NewUnmeteredRangeFromPositioned(a),
 		Alias: (*Alias)(a),
 	})
+}
+
+func (a *MappedAccess) Walk(walkChild func(Element)) {
+	if a.EntitlementMap != nil {
+		walkChild(a.EntitlementMap)
+	}
 }
 
 func (a *MappedAccess) CheckEqual(other Authorization, c TypeEqualityChecker, pos HasPosition) error {

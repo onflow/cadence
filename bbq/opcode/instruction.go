@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-//go:generate go run ./gen/main.go instructions.yml instructions.go
+//go:generate go run ./gen/main.go instructions.yml instructions.go pretty_instructions.go
 
 package opcode
 
@@ -34,18 +34,28 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
+// ProgramForInstructions represents a program that can resolve instruction operands.
+// This is defined as an interface to avoid circular dependency with the bbq package.
+type ProgramForInstructions interface {
+	GetConstants() []constant.DecodedConstant
+	GetTypes() []interpreter.StaticType
+	GetFunctionName(index uint16) string
+}
+
 type Instruction interface {
 	Encode(code *[]byte)
 	String() string
 	OperandsString(sb *strings.Builder, colorize bool)
 	ResolvedOperandsString(
 		sb *strings.Builder,
-		constants []constant.DecodedConstant,
-		types []interpreter.StaticType,
-		functionNames []string,
+		program ProgramForInstructions,
 		colorize bool,
 	)
 	Opcode() Opcode
+	// Pretty converts this instruction to its pretty form with resolved operands.
+	// Pretty instructions are for debugging and display purposes only, not for runtime execution.
+	// They are useful for human-readable instruction dumps, analysis tools, debugging, and testing.
+	Pretty(program ProgramForInstructions) PrettyInstruction
 }
 
 func emitOpcode(code *[]byte, opcode Opcode) {
@@ -366,6 +376,41 @@ func printfFunctionNameArgument(
 		functionName = colorizeArgumentValue(functionName)
 	}
 	_, _ = fmt.Fprintf(sb, "%s:%s", argumentName, functionName)
+}
+
+func resolveTypeIndices(indices []uint16, types []interpreter.StaticType) []interpreter.StaticType {
+	if len(indices) == 0 {
+		return nil
+	}
+
+	result := make([]interpreter.StaticType, len(indices))
+	for i, index := range indices {
+		result[i] = types[index]
+	}
+	return result
+}
+
+func printfPrettyTypeArrayArgument(
+	sb *strings.Builder,
+	argumentName string,
+	types []interpreter.StaticType,
+	colorize bool,
+) {
+	if colorize {
+		argumentName = colorizeArgumentName(argumentName)
+	}
+	fmt.Fprintf(sb, "%s:[", argumentName)
+	for i, typ := range types {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		formattedType := strconv.Quote(typ.String())
+		if colorize {
+			formattedType = colorizeArgumentValue(formattedType)
+		}
+		sb.WriteString(formattedType)
+	}
+	sb.WriteByte(']')
 }
 
 func colorizeArgumentName(argumentName string) string {

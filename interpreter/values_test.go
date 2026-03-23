@@ -3004,6 +3004,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 
 				return true
 			},
+			false,
 		)
 
 		var updates []update
@@ -3134,6 +3135,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 
 				return true
 			},
+			false,
 		)
 
 		var removes []cadence.Value

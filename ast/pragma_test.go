@@ -130,3 +130,29 @@ func TestPragmaDeclaration_String(t *testing.T) {
 		)
 	})
 }
+
+func TestPragmaDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "pragma"},
+	}
+
+	decl := &PragmaDeclaration{
+		Expression: expr,
+	}
+
+	var visited []Element
+	decl.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expr,
+		},
+		visited,
+	)
+
+}

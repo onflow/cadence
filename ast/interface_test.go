@@ -301,3 +301,41 @@ resource interface AB {
 
 	})
 }
+
+func TestInterfaceDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	field := &FieldDeclaration{
+		Identifier: Identifier{Identifier: "field"},
+		TypeAnnotation: &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "String"},
+			},
+		},
+	}
+
+	function := &FunctionDeclaration{
+		Identifier: Identifier{Identifier: "function"},
+	}
+
+	decl := &InterfaceDeclaration{
+		Members: NewUnmeteredMembers([]Declaration{
+			field,
+			function,
+		}),
+	}
+
+	var visited []Element
+	decl.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			field,
+			function,
+		},
+		visited,
+	)
+}

@@ -63,6 +63,18 @@ func (l *TypeParameterList) IsEmpty() bool {
 	return l == nil || len(l.TypeParameters) == 0
 }
 
+func (l *TypeParameterList) Walk(walkChild func(Element)) {
+	if l.IsEmpty() {
+		return
+	}
+
+	for _, typeParameter := range l.TypeParameters {
+		if typeParameter.TypeBound != nil {
+			walkChild(typeParameter.TypeBound)
+		}
+	}
+}
+
 func (l *TypeParameterList) Doc() prettier.Doc {
 
 	if len(l.TypeParameters) == 0 {

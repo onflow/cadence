@@ -1018,6 +1018,11 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
+		{"sema.InvalidDictionaryIndexBindingError",
+			&sema.InvalidDictionaryIndexBindingError{
+				Range: placeholderRange,
+			},
+		},
 		{"sema.InvalidDictionaryKeyTypeError",
 			&sema.InvalidDictionaryKeyTypeError{
 				Type:  placeholderSemaType,

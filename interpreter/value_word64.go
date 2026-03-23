@@ -479,6 +479,7 @@ func (v Word64Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -500,4 +501,13 @@ func (v Word64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Word64Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Word64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Word64Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

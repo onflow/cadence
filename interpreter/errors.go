@@ -1645,6 +1645,25 @@ func (e *InvalidReferenceConversionError) SetLocationRange(locationRange Locatio
 	e.LocationRange = locationRange
 }
 
+// StorableCopyError
+type StorableCopyError struct {
+	storableType string
+}
+
+var _ errors.InternalError = &StorableCopyError{}
+
+func NewStorableCopyError(storableType string) *StorableCopyError {
+	return &StorableCopyError{
+		storableType: storableType,
+	}
+}
+
+func (*StorableCopyError) IsInternalError() {}
+
+func (e *StorableCopyError) Error() string {
+	return fmt.Sprintf("cannot call CopyNonRefSimple for storable %q", e.storableType)
+}
+
 // InvalidArgumentTypeError
 type InvalidArgumentTypeError struct {
 	ExpectedType sema.Type

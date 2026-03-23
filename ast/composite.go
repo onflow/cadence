@@ -353,9 +353,10 @@ func (*FieldDeclaration) ElementType() ElementType {
 	return ElementTypeFieldDeclaration
 }
 
-func (d *FieldDeclaration) Walk(_ func(Element)) {
-	// NO-OP
-	// TODO: walk type
+func (d *FieldDeclaration) Walk(walkChild func(Element)) {
+	if d.TypeAnnotation != nil {
+		walkChild(d.TypeAnnotation)
+	}
 }
 
 func (*FieldDeclaration) isDeclaration() {}

@@ -130,6 +130,33 @@ func TestExpressionStatement_String(t *testing.T) {
 	})
 }
 
+func TestExpressionStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	stmt := &ExpressionStatement{
+		Expression: expr,
+	}
+
+	var visited []Element
+	stmt.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expr,
+		},
+		visited,
+	)
+
+}
+
 func TestReturnStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -236,6 +263,50 @@ func TestReturnStatement_String(t *testing.T) {
 			"return",
 			stmt.String(),
 		)
+	})
+}
+
+func TestReturnStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IntegerExpression{
+			PositiveLiteral: []byte("42"),
+			Base:            10,
+		}
+
+		stmt := &ReturnStatement{
+			Expression: expr,
+		}
+
+		var visited []Element
+		stmt.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				expr,
+			},
+			visited,
+		)
+	})
+
+	t.Run("without expression", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &ReturnStatement{}
+
+		var visited []Element
+		stmt.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Empty(t, visited)
 	})
 }
 
@@ -568,6 +639,64 @@ func TestIfStatement_String(t *testing.T) {
 	})
 }
 
+func TestIfStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without else", func(t *testing.T) {
+		t.Parallel()
+
+		test := &BoolExpression{Value: true}
+		thenBlock := &Block{Statements: []Statement{}}
+
+		stmt := &IfStatement{
+			Test: test,
+			Then: thenBlock,
+		}
+
+		var visited []Element
+		stmt.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				test,
+				thenBlock,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with else", func(t *testing.T) {
+		t.Parallel()
+
+		test := &BoolExpression{Value: true}
+		thenBlock := &Block{Statements: []Statement{}}
+		elseBlock := &Block{Statements: []Statement{}}
+
+		stmt := &IfStatement{
+			Test: test,
+			Then: thenBlock,
+			Else: elseBlock,
+		}
+
+		var visited []Element
+		stmt.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				test,
+				thenBlock,
+				elseBlock,
+			},
+			visited,
+		)
+	})
+}
+
 func TestWhileStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -698,6 +827,33 @@ func TestWhileStatement_String(t *testing.T) {
 			stmt.String(),
 		)
 	})
+}
+
+func TestWhileStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	test := &BoolExpression{Value: true}
+
+	block := &Block{}
+
+	stmt := &WhileStatement{
+		Test:  test,
+		Block: block,
+	}
+
+	var visited []Element
+	stmt.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			test,
+			block,
+		},
+		visited,
+	)
 }
 
 func TestForStatement_MarshalJSON(t *testing.T) {
@@ -991,6 +1147,34 @@ func TestForStatement_String(t *testing.T) {
 	})
 }
 
+func TestForStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	value := &ArrayExpression{
+		Values: []Expression{},
+	}
+	block := &Block{}
+
+	stmt := &ForStatement{
+		Value: value,
+		Block: block,
+	}
+
+	var visited []Element
+	stmt.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			value,
+			block,
+		},
+		visited,
+	)
+}
+
 func TestAssignmentStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -1155,6 +1339,38 @@ func TestAssignmentStatement_String(t *testing.T) {
 	})
 }
 
+func TestAssignmentStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	target := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "x"},
+	}
+
+	value := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	stmt := &AssignmentStatement{
+		Target: target,
+		Value:  value,
+	}
+
+	var visited []Element
+	stmt.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			target,
+			value,
+		},
+		visited,
+	)
+}
+
 func TestSwapStatement_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
@@ -1289,6 +1505,36 @@ func TestSwapStatement_String(t *testing.T) {
 			stmt.String(),
 		)
 	})
+}
+
+func TestSwapStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	left := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "x"},
+	}
+	right := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "y"},
+	}
+
+	stmt := &SwapStatement{
+		Left:  left,
+		Right: right,
+	}
+
+	var visited []Element
+	stmt.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			left,
+			right,
+		},
+		visited,
+	)
 }
 
 func TestEmitStatement_MarshalJSON(t *testing.T) {
@@ -1478,6 +1724,33 @@ func TestEmitStatement_String(t *testing.T) {
 			stmt.String(),
 		)
 	})
+}
+
+func TestEmitStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	invocation := &InvocationExpression{
+		InvokedExpression: &IdentifierExpression{
+			Identifier: Identifier{Identifier: "MyEvent"},
+		},
+	}
+
+	stmt := &EmitStatement{
+		InvocationExpression: invocation,
+	}
+
+	var visited []Element
+	stmt.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			invocation,
+		},
+		visited,
+	)
 }
 
 func TestSwitchStatement_MarshalJSON(t *testing.T) {
@@ -1841,4 +2114,67 @@ func TestSwitchStatement_String(t *testing.T) {
 			stmt.String(),
 		)
 	})
+}
+
+func TestSwitchStatement_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &IdentifierExpression{
+		Identifier: Identifier{Identifier: "x"},
+	}
+
+	case1Expr := &IntegerExpression{
+		PositiveLiteral: []byte("1"),
+		Base:            10,
+	}
+	case1Statements := []Statement{
+		&ExpressionStatement{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{Identifier: "y"},
+			},
+		},
+	}
+
+	case2Expr := &IntegerExpression{
+		PositiveLiteral: []byte("2"),
+		Base:            10,
+	}
+	case2Statements := []Statement{
+		&ExpressionStatement{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{Identifier: "z"},
+			},
+		},
+	}
+
+	stmt := &SwitchStatement{
+		Expression: expr,
+		Cases: []*SwitchCase{
+			{
+				Expression: case1Expr,
+				Statements: case1Statements,
+			},
+			{
+				Expression: case2Expr,
+				Statements: case2Statements,
+			},
+		},
+	}
+
+	var visited []Element
+	stmt.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			expr,
+			case1Expr,
+			case1Statements[0],
+			case2Expr,
+			case2Statements[0],
+		},
+		visited,
+	)
 }

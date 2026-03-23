@@ -60,6 +60,14 @@ func (Uint64AtreeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (Uint64AtreeValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Uint64AtreeValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}
+
 func Uint64AtreeValueHashInput(v atree.Value, scratch []byte) ([]byte, error) {
 	binary.BigEndian.PutUint64(scratch[:], uint64(v.(Uint64AtreeValue)))
 	return scratch[:8], nil

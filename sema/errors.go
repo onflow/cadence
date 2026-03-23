@@ -1139,6 +1139,28 @@ func (*InvalidNativeModifierError) SecondaryError() string {
 		"remove the modifier or use a function declaration"
 }
 
+// InvalidDictionaryIndexBindingError
+
+type InvalidDictionaryIndexBindingError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidDictionaryIndexBindingError{}
+var _ errors.UserError = &InvalidDictionaryIndexBindingError{}
+var _ errors.SecondaryError = &InvalidDictionaryIndexBindingError{}
+
+func (*InvalidDictionaryIndexBindingError) isSemanticError() {}
+
+func (*InvalidDictionaryIndexBindingError) IsUserError() {}
+
+func (*InvalidDictionaryIndexBindingError) Error() string {
+	return "index binding is not supported for dictionary iteration"
+}
+
+func (*InvalidDictionaryIndexBindingError) SecondaryError() string {
+	return "use 'for key in dictionary' instead of 'for index, key in dictionary'"
+}
+
 // NativeFunctionWithImplementationError
 
 type NativeFunctionWithImplementationError struct {

@@ -175,6 +175,7 @@ func (v NilValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -204,4 +205,13 @@ func (NilValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
 
 func (v NilValue) InnerValueType(_ ValueStaticTypeContext) sema.Type {
 	return sema.NeverType
+}
+
+func (NilValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v NilValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

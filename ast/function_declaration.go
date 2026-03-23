@@ -141,8 +141,15 @@ func (d *FunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 }
 
 func (d *FunctionDeclaration) Walk(walkChild func(Element)) {
-	// TODO: walk parameters
-	// TODO: walk return type
+	if d.TypeParameterList != nil {
+		d.TypeParameterList.Walk(walkChild)
+	}
+	if d.ParameterList != nil {
+		d.ParameterList.Walk(walkChild)
+	}
+	if d.ReturnTypeAnnotation != nil {
+		walkChild(d.ReturnTypeAnnotation)
+	}
 	if d.FunctionBlock != nil {
 		walkChild(d.FunctionBlock)
 	}

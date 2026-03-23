@@ -1311,16 +1311,6 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if needsStoreTo || !isResourceKinded {
-		// Use non-readonly iterator here because iterated
-		// value can be removed if remove parameter is true.
-		iterator, err := v.dictionary.Iterator(
-			StringAtreeValueComparator,
-			StringAtreeValueHashInput,
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
 		elementCount := v.dictionary.Count()
 
 		elementOverhead, dataUse, metaDataUse := common.NewAtreeMapMemoryUsages(elementCount, 0)
@@ -1331,89 +1321,147 @@ func (v *CompositeValue) Transfer(
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(elementCount, 0)
 		common.UseMemory(context, elementMemoryUse)
 
-		func() {
-			seed := v.dictionary.Seed()
+		digesterBuilder := atree.NewDefaultDigesterBuilder()
 
-			if TracingEnabled {
-				startTime := time.Now()
+		// We need to check enum data because the raw type for enum is an integer subtype.
+		// Large Int or UInt values can be stored in a separate slab which isn't copyable.
 
-				defer func() {
-					valueID := dictionary.ValueID().String()
-					typeID := string(v.TypeID())
+		canCopyNonRefSimple := v.dictionary.CanCopyNonRefSimple()
 
-					context.ReportAtreeNewMapFromBatchDataTrace(
-						valueID,
-						typeID,
-						seed,
-						time.Since(startTime),
-					)
-				}()
-			}
+		if canCopyNonRefSimple {
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeMapBatchConstruction,
-					Intensity: uint64(count),
-				},
-			)
+			func() {
 
-			common.UseComputation(
-				context,
-				common.ComputationUsage{
-					Kind:      common.ComputationKindAtreeMapReadIteration,
-					Intensity: uint64(count),
-				},
-			)
+				if TracingEnabled {
+					startTime := time.Now()
 
-			dictionary, err = atree.NewMapFromBatchData(
-				context.Storage(),
-				address,
-				atree.NewDefaultDigesterBuilder(),
-				v.dictionary.Type(),
+					defer func() {
+						valueID := dictionary.ValueID().String()
+						typeID := string(v.TypeID())
+						seed := v.dictionary.Seed()
+
+						context.ReportAtreeNewMapSingleSlabTrace(
+							valueID,
+							typeID,
+							seed,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapSingleSlabConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				copiedDictionary, err := v.dictionary.CopyNonRefSimple(address, digesterBuilder)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				dictionary = copiedDictionary
+
+			}()
+
+		} else {
+
+			// Use non-readonly iterator here because iterated
+			// value can be removed if remove parameter is true.
+			iterator, err := v.dictionary.Iterator(
 				StringAtreeValueComparator,
 				StringAtreeValueHashInput,
-				seed,
-				func() (atree.Value, atree.Value, error) {
-
-					// Computation was already metered above
-
-					atreeKey, atreeValue, err := iterator.Next()
-					if err != nil {
-						return nil, nil, err
-					}
-					if atreeKey == nil || atreeValue == nil {
-						return nil, nil, nil
-					}
-
-					// NOTE: key is stringAtreeValue
-					// and does not need to be converted or copied
-
-					value := MustConvertStoredValue(context, atreeValue)
-					// the base of an attachment is not stored in the atree, so in order to make the
-					// transfer happen properly, we set the base value here if this field is an attachment
-					if compositeValue, ok := value.(*CompositeValue); ok &&
-						compositeValue.Kind == common.CompositeKindAttachment {
-
-						compositeValue.SetBaseValue(context, v)
-					}
-
-					value = value.Transfer(
-						context,
-						address,
-						remove,
-						nil,
-						preventTransfer,
-						false, // value is an element of parent container because it is returned from iterator.
-					)
-
-					return atreeKey, value, nil
-				},
 			)
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
-		}()
+
+			func() {
+				seed := v.dictionary.Seed()
+
+				if TracingEnabled {
+					startTime := time.Now()
+
+					defer func() {
+						valueID := dictionary.ValueID().String()
+						typeID := string(v.TypeID())
+
+						context.ReportAtreeNewMapFromBatchDataTrace(
+							valueID,
+							typeID,
+							seed,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapBatchConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapReadIteration,
+						Intensity: uint64(count),
+					},
+				)
+
+				dictionary, err = atree.NewMapFromBatchData(
+					context.Storage(),
+					address,
+					digesterBuilder,
+					v.dictionary.Type(),
+					StringAtreeValueComparator,
+					StringAtreeValueHashInput,
+					seed,
+					func() (atree.Value, atree.Value, error) {
+
+						// Computation was already metered above
+
+						atreeKey, atreeValue, err := iterator.Next()
+						if err != nil {
+							return nil, nil, err
+						}
+						if atreeKey == nil || atreeValue == nil {
+							return nil, nil, nil
+						}
+
+						// NOTE: key is stringAtreeValue
+						// and does not need to be converted or copied
+
+						value := MustConvertStoredValue(context, atreeValue)
+						// the base of an attachment is not stored in the atree, so in order to make the
+						// transfer happen properly, we set the base value here if this field is an attachment
+						if compositeValue, ok := value.(*CompositeValue); ok &&
+							compositeValue.Kind == common.CompositeKindAttachment {
+
+							compositeValue.SetBaseValue(context, v)
+						}
+
+						value = value.Transfer(
+							context,
+							address,
+							remove,
+							nil,
+							preventTransfer,
+							false, // value is an element of parent container because it is returned from iterator.
+						)
+
+						return atreeKey, value, nil
+					},
+				)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+			}()
+		}
 
 		if remove {
 
@@ -1425,7 +1473,7 @@ func (v *CompositeValue) Transfer(
 				},
 			)
 
-			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
+			err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 				RemoveReferencedSlab(context, nameStorable)
 				RemoveReferencedSlab(context, valueStorable)
 			})
