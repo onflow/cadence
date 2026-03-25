@@ -5133,6 +5133,47 @@ func TestInterpretNestedEphemeralReferenceAsAnyStructCasting(t *testing.T) {
 		)
 	})
 
+	t.Run("deep nested array", func(t *testing.T) {
+		t.Parallel()
+
+		// 3-level nesting via AnyStruct intermediate.
+		// Upcast strips entitlements, AnyStruct erases the type,
+		// then downcast tries to recover inner entitlements. Must fail.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun test() {
+                let innerArray: [auth(E) &Int] = [&1 as auth(E) &Int]
+                let outerRef: auth(E) &[auth(E) &Int] = &innerArray as auth(E) &[auth(E) &Int]
+                let topArray: [auth(E) &[auth(E) &Int]] = [outerRef]
+
+                let restricted: &[auth(E) &[auth(E) &Int]] = &topArray
+                let any: AnyStruct = restricted
+
+                // Should fail: inner auth(E) was stripped
+                any as! &[&[auth(E) &Int]]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&[auth(S.test.E)&Int]]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&[&Int]]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
 	t.Run("array to [AnyStruct]", func(t *testing.T) {
 		t.Parallel()
 
@@ -5269,6 +5310,46 @@ func TestInterpretNestedEphemeralReferenceAsAnyStructCasting(t *testing.T) {
 		assert.Equal(
 			t,
 			common.TypeID("{String:&Int}"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("deep nested dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		// 3-level nesting with dictionary: {String: auth(E) &{String: auth(E) &Int}}
+		// stripped to &{String: &{String: &Int}}, then via AnyStruct, downcast must fail.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun test() {
+                let innerDict: {String: auth(E) &Int} = {"a": &1 as auth(E) &Int}
+                let outerRef: auth(E) &{String: auth(E) &Int} = &innerDict as auth(E) &{String: auth(E) &Int}
+                let topDict: {String: auth(E) &{String: auth(E) &Int}} = {"x": outerRef}
+
+                let restricted: &{String: auth(E) &{String: auth(E) &Int}} = &topDict
+                let any: AnyStruct = restricted
+
+                // Should fail: inner auth(E) was stripped
+                any as! &{String: &{String: auth(E) &Int}}
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&{String:auth(S.test.E)&Int}}"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&{String:&Int}}"),
 			forceCastTypeMismatchError.ActualType.ID(),
 		)
 	})
