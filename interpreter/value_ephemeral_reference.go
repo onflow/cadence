@@ -184,7 +184,8 @@ func applyBorrowTypeAuthorization(
 			// Use the actual referenced type as the inner type, but with the borrow type's authorization,
 			// instead of the actual referenced type's authorization.
 			borrowAuth := ConvertSemaAccessToStaticAuthorization(gauge, borrowRef.Authorization)
-			return NewReferenceStaticType(gauge, borrowAuth, actual.ReferencedType)
+			innerType := applyBorrowTypeAuthorization(gauge, actual.ReferencedType, borrowRef.Type)
+			return NewReferenceStaticType(gauge, borrowAuth, innerType)
 		}
 	}
 
