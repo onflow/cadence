@@ -2147,7 +2147,8 @@ func applyTargetTypeAuthorization(
 
 		if borrowRef, ok := targetType.(*sema.ReferenceType); ok {
 			borrowAuth := ConvertSemaAccessToStaticAuthorization(gauge, borrowRef.Authorization)
-			return NewReferenceStaticType(gauge, borrowAuth, actual.ReferencedType)
+			innerType := applyTargetTypeAuthorization(gauge, actual.ReferencedType, borrowRef.Type)
+			return NewReferenceStaticType(gauge, borrowAuth, innerType)
 		}
 
 	case *CapabilityStaticType:
