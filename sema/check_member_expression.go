@@ -109,15 +109,75 @@ func (checker *Checker) getDescendantReferenceType(
 	case *ReferenceType:
 		// Intersect the outer reference's authorization with the inner reference's authorization.
 		// This prevents gaining authorization through nested reference access.
+		// Also recursively intersect any references within the referenced type,
+		// using the effective (intersected) authorization — not the original outer.
+		// This cascades: if the top-level intersection strips auth,
+		// inner references are also stripped accordingly.
 		intersected := IntersectAccess(outerAuthorization, typ.Authorization)
-		if intersected.Equal(typ.Authorization) {
+		innerType := intersectReferenceAuthorizationsInType(checker.memoryGauge, typ.Type, intersected)
+		if intersected.Equal(typ.Authorization) && innerType == typ.Type {
 			return typ
 		}
-		return NewReferenceType(checker.memoryGauge, intersected, typ.Type)
+		return NewReferenceType(checker.memoryGauge, intersected, innerType)
 
 	default:
-		return NewReferenceType(checker.memoryGauge, authorization, typ)
+		// Recursively intersect any references within the element type
+		// before wrapping in a reference.
+		innerType := intersectReferenceAuthorizationsInType(checker.memoryGauge, typ, outerAuthorization)
+		return NewReferenceType(checker.memoryGauge, authorization, innerType)
 
+	}
+}
+
+// intersectReferenceAuthorizationsInType recursively traverses a type and intersects
+// all inner reference type authorizations with outerAuthorization.
+// Returns the original type unchanged if no intersection was applied.
+func intersectReferenceAuthorizationsInType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	outerAuthorization Access,
+) Type {
+	switch t := typ.(type) {
+	case *ReferenceType:
+		intersected := IntersectAccess(outerAuthorization, t.Authorization)
+		// Cascade: use the effective (intersected) auth for inner recursion
+		innerType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, intersected)
+		if intersected.Equal(t.Authorization) && innerType == t.Type {
+			return t
+		}
+		return NewReferenceType(memoryGauge, intersected, innerType)
+
+	case *OptionalType:
+		innerType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		if innerType == t.Type {
+			return t
+		}
+		return NewOptionalType(memoryGauge, innerType)
+
+	case *VariableSizedType:
+		elementType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		if elementType == t.Type {
+			return t
+		}
+		return NewVariableSizedType(memoryGauge, elementType)
+
+	case *ConstantSizedType:
+		elementType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		if elementType == t.Type {
+			return t
+		}
+		return NewConstantSizedType(memoryGauge, elementType, t.Size)
+
+	case *DictionaryType:
+		keyType := intersectReferenceAuthorizationsInType(memoryGauge, t.KeyType, outerAuthorization)
+		valueType := intersectReferenceAuthorizationsInType(memoryGauge, t.ValueType, outerAuthorization)
+		if keyType == t.KeyType && valueType == t.ValueType {
+			return t
+		}
+		return NewDictionaryType(memoryGauge, keyType, valueType)
+
+	default:
+		return typ
 	}
 }
 
