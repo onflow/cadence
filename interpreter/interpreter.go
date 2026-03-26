@@ -2140,16 +2140,22 @@ func applyTargetTypeAuthorization(
 		// Use the actual referenced type as the inner type, but with the borrow type's authorization,
 		// instead of the actual referenced type's authorization.
 
+		var targetReferencedType sema.Type
+		var targetAuth Authorization
+
 		if targetType == sema.AnyStructType {
 			// `AnyStruct` must be treated as unauthorized.
-			return NewReferenceStaticType(gauge, UnauthorizedAccess, actual.ReferencedType)
+			targetAuth = UnauthorizedAccess
+			targetReferencedType = sema.AnyStructType
+		} else if borrowRef, ok := targetType.(*sema.ReferenceType); ok {
+			targetReferencedType = borrowRef.Type
+			targetAuth = ConvertSemaAccessToStaticAuthorization(gauge, borrowRef.Authorization)
+		} else {
+			break
 		}
 
-		if borrowRef, ok := targetType.(*sema.ReferenceType); ok {
-			borrowAuth := ConvertSemaAccessToStaticAuthorization(gauge, borrowRef.Authorization)
-			innerType := applyTargetTypeAuthorization(gauge, actual.ReferencedType, borrowRef.Type)
-			return NewReferenceStaticType(gauge, borrowAuth, innerType)
-		}
+		innerType := applyTargetTypeAuthorization(gauge, actual.ReferencedType, targetReferencedType)
+		return NewReferenceStaticType(gauge, targetAuth, innerType)
 
 	case *CapabilityStaticType:
 		var targetBorrowType sema.Type
