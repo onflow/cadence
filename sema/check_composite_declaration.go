@@ -404,6 +404,7 @@ func (checker *Checker) declareCompositeLikeNestedTypes(
 				default:
 					checker.declareCompositeLikeConstructor(
 						nestedCompositeDeclaration,
+						nestedCompositeType,
 						nestedConstructorType,
 						nestedConstructorArgumentLabels,
 					)
@@ -997,6 +998,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 	default:
 		checker.declareCompositeLikeConstructor(
 			declaration,
+			compositeType,
 			constructorType,
 			constructorArgumentLabels,
 		)
@@ -1005,6 +1007,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 
 func (checker *Checker) declareCompositeLikeConstructor(
 	declaration ast.CompositeLikeDeclaration,
+	compositeType *CompositeType,
 	constructorType *FunctionType,
 	constructorArgumentLabels []string,
 ) {
@@ -1023,8 +1026,9 @@ func (checker *Checker) declareCompositeLikeConstructor(
 	_, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               declaration.DeclarationIdentifier().Identifier,
 		ty:                       constructorType,
+		containerType:            compositeType,
 		docString:                declaration.DeclarationDocString(),
-		access:                   checker.accessFromAstAccess(declaration.DeclarationAccess()),
+		access:                   compositeType.ConstructorAccess,
 		kind:                     declaration.DeclarationKind(),
 		pos:                      declaration.DeclarationIdentifier().Pos,
 		isConstant:               true,

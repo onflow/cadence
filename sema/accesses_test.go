@@ -2778,4 +2778,103 @@ func TestCheckInitializerAccessControl(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	// Lexical lookup tests (S() instead of C.S())
+
+	t.Run("struct, access(self) init, lexical S() from contract function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(self) init() {}
+				}
+
+				access(all) fun test(): S {
+					return S()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("struct, access(contract) init, lexical S() from contract function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(contract) init() {}
+				}
+
+				access(all) fun test(): S {
+					return S()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource, access(self) init, lexical R() from contract function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(self) init() {}
+				}
+
+				access(all) fun test(): @R {
+					return <- create R()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("resource, access(contract) init, lexical R() from contract function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(contract) init() {}
+				}
+
+				access(all) fun test(): @R {
+					return <- create R()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
 }
