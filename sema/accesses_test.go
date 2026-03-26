@@ -2727,4 +2727,55 @@ func TestCheckInitializerAccessControl(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 		assert.IsType(t, &sema.InvalidResourceCreationError{}, errs[1])
 	})
+
+	// No access modifier on init — should behave like the composite's access
+
+	t.Run("struct, no access modifier on init, C.S() from outside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					init() {}
+				}
+			}
+
+			access(all) fun test(): C.S {
+				return C.S()
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource, no access modifier on init, C.R() from inside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					init() {}
+				}
+
+				access(all) fun test(): @R {
+					return <- create R()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
 }

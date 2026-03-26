@@ -1205,11 +1205,17 @@ func (checker *Checker) initializerAccess(
 	// TODO: support multiple overloaded initializers
 	if len(initializers) > 0 {
 		firstInitializer := initializers[0]
-		initAccess := checker.accessFromAstAccess(firstInitializer.DeclarationAccess())
+		astAccess := firstInitializer.DeclarationAccess()
 
-		// Use the initializer's access if it is more restrictive than the composite's access
-		if !initAccess.PermitsAccess(compositeAccess) {
-			return initAccess
+		// Only consider the initializer's access if it is explicitly specified.
+		// An unspecified access defaults to the composite's access.
+		if astAccess != ast.AccessNotSpecified {
+			initAccess := checker.accessFromAstAccess(astAccess)
+
+			// Use the initializer's access if it is more restrictive than the composite's access
+			if !initAccess.PermitsAccess(compositeAccess) {
+				return initAccess
+			}
 		}
 	}
 
