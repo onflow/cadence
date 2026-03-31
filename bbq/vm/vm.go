@@ -1619,50 +1619,57 @@ func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 
 func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 	context := vm.context
-	value := vm.pop()
+	originalValue := vm.pop()
 
 	targetTypeIndex := ins.TargetType
 	targetType := vm.loadType(targetTypeIndex)
 
-	value, valueType := castValueAndValueType(context, targetType, value)
+	castedValue, castedValueType := castValueAndValueType(context, targetType, originalValue)
 
-	isSubType := context.IsSubType(valueType, targetType)
+	isSubType := context.IsSubType(castedValueType, targetType)
 
-	var result Value
+	var result interpreter.OptionalValue
 	if isSubType {
-		valueTypeIndex := ins.ValueType
-		staticValueType := vm.loadType(valueTypeIndex)
 
-		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
+		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box.
+		// If the value used for casting (castedValue) is the same as the original value,
+		// then we expect the value to match the static value type.
+		// Otherwise, the value used for casting already underwent a conversion,
+		// so we expect the value to match the value sema type of the conversion.
+		if castedValue == originalValue {
+			valueTypeIndex := ins.ValueType
+			staticValueType := vm.loadType(valueTypeIndex)
+			castedValue = ConvertAndBoxWithValidation(context, castedValue, staticValueType, targetType)
+		} else {
+			castedValue = ConvertAndBoxWithValidation(context, castedValue, castedValueType, targetType)
+		}
 
 		result = interpreter.NewSomeValueNonCopying(
 			context.MemoryGauge,
-			result,
+			castedValue,
 		)
 	} else {
-		result = interpreter.Nil
+		result = interpreter.NilOptionalValue
 	}
 
 	vm.push(result)
 }
 
 func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
-	value := vm.pop()
+	originalValue := vm.pop()
 
 	targetTypeIndex := ins.TargetType
 	targetType := vm.loadType(targetTypeIndex)
 
 	context := vm.context
 
-	value, valueType := castValueAndValueType(context, targetType, value)
+	castedValue, castedValueType := castValueAndValueType(context, targetType, originalValue)
 
-	isSubType := context.IsSubType(valueType, targetType)
+	isSubType := context.IsSubType(castedValueType, targetType)
 
-	var result Value
 	if !isSubType {
 		targetSemaType := context.SemaTypeFromStaticType(targetType)
-		valueSemaType := context.SemaTypeFromStaticType(valueType)
+		valueSemaType := context.SemaTypeFromStaticType(castedValueType)
 
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType: targetSemaType,
@@ -1670,12 +1677,20 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 		})
 	}
 
-	valueTypeIndex := ins.ValueType
-	staticValueType := vm.loadType(valueTypeIndex)
+	// The force cast may upcast to an optional type, e.g. `1 as! Int?`, so box.
+	// If the value used for casting (castedValue) is the same as the original value,
+	// then we expect the value to match the static value type.
+	// Otherwise, the value used for casting already underwent a conversion,
+	// so we expect the value to match the value sema type of the conversion.
+	if castedValue == originalValue {
+		valueTypeIndex := ins.ValueType
+		staticValueType := vm.loadType(valueTypeIndex)
+		castedValue = ConvertAndBoxWithValidation(context, castedValue, staticValueType, targetType)
+	} else {
+		castedValue = ConvertAndBoxWithValidation(context, castedValue, castedValueType, targetType)
+	}
 
-	// The force cast may upcast to an optional type, e.g. `1 as! Int?`, so box
-	result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
-	vm.push(result)
+	vm.push(castedValue)
 }
 
 func castValueAndValueType(context *Context, targetType bbq.StaticType, value Value) (Value, bbq.StaticType) {

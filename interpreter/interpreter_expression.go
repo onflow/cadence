@@ -1350,16 +1350,16 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 }
 
 func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingExpression) Value {
-	value := interpreter.evalExpression(expression.Expression)
+	originalValue := interpreter.evalExpression(expression.Expression)
 
 	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
-	expectedType := castingExpressionTypes.TargetType
+	targetType := castingExpressionTypes.TargetType
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		value, valueSemaType := interpreter.castValueAndValueType(expectedType, value)
+		castedValue, castedValueType := interpreter.castValueAndValueType(targetType, originalValue)
 
-		isSubType := sema.IsSubType(valueSemaType, expectedType)
+		isSubType := sema.IsSubType(castedValueType, targetType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
@@ -1370,8 +1370,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		case ast.OperationForceCast:
 			if !isSubType {
 				panic(&ForceCastTypeMismatchError{
-					ExpectedType: expectedType,
-					ActualType:   valueSemaType,
+					ExpectedType: targetType,
+					ActualType:   castedValueType,
 				})
 			}
 
@@ -1379,23 +1379,31 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			panic(errors.NewUnreachableError())
 		}
 
-		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		staticValueType := castingExpressionTypes.StaticValueType
-		value = ConvertAndBoxWithValidation(interpreter, value, staticValueType, expectedType)
+		// The failable/force cast may upcast to an optional type, e.g. `1 as? Int?`, so box.
+		// If the value used for casting (castedValue) is the same as the original value,
+		// then we expect the value to match the static value type.
+		// Otherwise, the value used for casting already underwent a conversion,
+		// so we expect the value to match the value sema type of the conversion.
+		if castedValue == originalValue {
+			staticValueType := castingExpressionTypes.StaticValueType
+			castedValue = ConvertAndBoxWithValidation(interpreter, castedValue, staticValueType, targetType)
+		} else {
+			castedValue = ConvertAndBoxWithValidation(interpreter, castedValue, castedValueType, targetType)
+		}
 
 		if expression.Operation == ast.OperationFailableCast {
 			// Failable casting is a resource invalidation
-			interpreter.invalidateResource(value)
+			interpreter.invalidateResource(castedValue)
 
-			value = NewSomeValueNonCopying(interpreter, value)
+			castedValue = NewSomeValueNonCopying(interpreter, castedValue)
 		}
 
-		return value
+		return castedValue
 
 	case ast.OperationCast:
 		staticValueType := castingExpressionTypes.StaticValueType
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
-		return ConvertAndBoxWithValidation(interpreter, value, staticValueType, expectedType)
+		return ConvertAndBoxWithValidation(interpreter, originalValue, staticValueType, targetType)
 
 	default:
 		panic(errors.NewUnreachableError())
