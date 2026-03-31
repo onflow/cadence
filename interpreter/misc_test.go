@@ -14693,11 +14693,20 @@ func TestInterpretStorageReferenceFailableCastToUnrelated(t *testing.T) {
           }
       }
 
-      fun test(): Int? {
+      fun save() {
           account.storage.save(S(), to: /storage/s)
+      }
+
+      fun testFailable(): Int? {
           let x: &{I1} = account.storage.borrow<&{I1}>(from: /storage/s)!
           let y = x as? &{I2}
           return y?.val
+      }
+
+      fun testForce(): Int {
+          let x: &{I1} = account.storage.borrow<&{I1}>(from: /storage/s)!
+          let y = x as! &{I2}
+          return y.val
       }
     `
 
@@ -14751,7 +14760,10 @@ func TestInterpretStorageReferenceFailableCastToUnrelated(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	result, err := inter.Invoke("test")
+	_, err = inter.Invoke("save")
+	require.NoError(t, err)
+
+	result, err := inter.Invoke("testFailable")
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -14761,4 +14773,11 @@ func TestInterpretStorageReferenceFailableCastToUnrelated(t *testing.T) {
 		result,
 	)
 
+	result, err = inter.Invoke("testForce")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		result,
+	)
 }

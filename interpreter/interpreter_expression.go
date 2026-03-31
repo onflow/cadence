@@ -1357,9 +1357,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		castedValue, valueSemaType := interpreter.castValueAndValueType(targetType, originalValue)
+		castedValue, castedValueType := interpreter.castValueAndValueType(targetType, originalValue)
 
-		isSubType := sema.IsSubType(valueSemaType, targetType)
+		isSubType := sema.IsSubType(castedValueType, targetType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
@@ -1371,7 +1371,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			if !isSubType {
 				panic(&ForceCastTypeMismatchError{
 					ExpectedType: targetType,
-					ActualType:   valueSemaType,
+					ActualType:   castedValueType,
 				})
 			}
 
@@ -1379,7 +1379,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			panic(errors.NewUnreachableError())
 		}
 
-		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box.
+		// The failable/force cast may upcast to an optional type, e.g. `1 as? Int?`, so box.
 		// If the value used for casting (castedValue) is the same as the original value,
 		// then we expect the value to match the static value type.
 		// Otherwise, the value used for casting already underwent a conversion,
@@ -1388,7 +1388,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			staticValueType := castingExpressionTypes.StaticValueType
 			castedValue = ConvertAndBoxWithValidation(interpreter, castedValue, staticValueType, targetType)
 		} else {
-			castedValue = ConvertAndBoxWithValidation(interpreter, castedValue, valueSemaType, targetType)
+			castedValue = ConvertAndBoxWithValidation(interpreter, castedValue, castedValueType, targetType)
 		}
 
 		if expression.Operation == ast.OperationFailableCast {
