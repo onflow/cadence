@@ -42,3 +42,21 @@ func ConvertAndBoxWithValidation(
 		targetSemaType,
 	)
 }
+
+// ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary.
+// Here `staticValueType` is the statically known type of the value, not the dynamic type of the value.
+func ConvertAndBox(
+	context *Context,
+	value Value,
+	staticValueType, targetType bbq.StaticType,
+) Value {
+	valueSemaType := context.SemaTypeFromStaticType(staticValueType)
+	targetSemaType := context.SemaTypeFromStaticType(targetType)
+
+	return interpreter.ConvertAndBox(
+		context,
+		value,
+		valueSemaType,
+		targetSemaType,
+	)
+}

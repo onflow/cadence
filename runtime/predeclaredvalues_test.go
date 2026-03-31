@@ -602,7 +602,14 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					return arg.Plus(invocation.InvocationContext, arg)
 				},
 			)
-			bValue.Fields["c"] = function
+			bValue.FunctionMemberGetter = func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+				switch name {
+				case "c":
+					return function
+				default:
+					return nil
+				}
+			}
 		}
 
 		test(t,

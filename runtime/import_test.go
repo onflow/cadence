@@ -307,7 +307,7 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
     `
 
 	const updatedFooContract = `
-        import 0x0000000000000001
+        import Foo, Bar from 0x0000000000000001
         access(all) contract Foo {}
     `
 
@@ -323,10 +323,12 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := RequireCheckerErrors(t, checkerErr, 1)
+	errs := RequireCheckerErrors(t, checkerErr, 2)
 
-	// Direct cycle, by importing `Foo` in `Foo`
+	// Direct cycle: Foo imports itself
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
+	// Indirect cycle: Foo imports Bar, which imports Foo
+	require.IsType(t, &sema.ImportedProgramError{}, errs[1])
 }
 
 func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
@@ -400,7 +402,7 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 	}
 
 	const fooContract = `
-        import 0x0000000000000001
+        import Foo from 0x0000000000000001
         access(all) contract Foo {}
     `
 
