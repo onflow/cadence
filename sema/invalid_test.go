@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
@@ -320,4 +321,116 @@ func TestCheckInvalidRemove(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+}
+
+func TestCheckInvalidTypeDefensiveCheckWithImportedError(t *testing.T) {
+
+	t.Parallel()
+
+	// Check a program that has errors.
+	// The exported value `x` will have an invalid type
+	// because of the undeclared identifier `z`
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+          access(all) let x = z
+        `,
+		ParseAndCheckOptions{
+			Location: common.StringLocation("imported"),
+		},
+	)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+
+	xVar, ok := importedChecker.Elaboration.GetGlobalValue("x")
+	require.True(t, ok)
+	assert.True(t, xVar.Type.IsInvalidType())
+	assert.True(t, importedChecker.Elaboration.HasErrors)
+
+	// Import the program with errors.
+	// Using the imported value `x` (which has an invalid type)
+	// must NOT panic, because the invalid type came from the imported program.
+	_, err = ParseAndCheckWithOptions(t,
+		`
+          import x from "imported"
+          access(all) let y = x
+        `,
+		ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	// No panic, no errors in the importing program
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidTypeDefensiveCheckWithTransitiveImportedError(t *testing.T) {
+
+	t.Parallel()
+
+	// Check a program that has errors.
+	// The exported value `x` will have an invalid type
+	// because of the undeclared identifier `z`
+	checkerC, err := ParseAndCheckWithOptions(t,
+		`
+          access(all) let x = z
+        `,
+		ParseAndCheckOptions{
+			Location: common.StringLocation("imported"),
+		},
+	)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+
+	xVar, ok := checkerC.Elaboration.GetGlobalValue("x")
+	require.True(t, ok)
+	assert.True(t, xVar.Type.IsInvalidType())
+	assert.True(t, checkerC.Elaboration.HasErrors)
+
+	// Program B imports C (which has errors)
+	checkerB, err := ParseAndCheckWithOptions(t,
+		`
+          import x from "C"
+          access(all) let y = x
+        `,
+		ParseAndCheckOptions{
+			Location: common.StringLocation("B"),
+			CheckerConfig: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: checkerC.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	// B has no local errors, but transitively imported a program with errors
+	require.True(t, checkerB.Elaboration.HasErrors)
+
+	// Program A imports B.
+	// Using the imported value `y` (which has an invalid type transitively from C)
+	// must NOT panic.
+	_, err = ParseAndCheckWithOptions(t,
+		`
+          import y from "B"
+          access(all) let z = y
+        `,
+		ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: checkerB.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
 }

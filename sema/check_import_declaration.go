@@ -248,6 +248,10 @@ func (checker *Checker) importResolvedLocation(
 		allImported[imported] = struct{}{}
 	}
 
+	if imp.HasErrors() {
+		checker.importedProgramHadErrors = true
+	}
+
 	// Attempt to import the requested value declarations
 
 	allValueElements := imp.AllValueElements()
