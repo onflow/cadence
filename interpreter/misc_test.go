@@ -14671,3 +14671,78 @@ func TestInterpretContainerMutationCheckThroughReference(t *testing.T) {
 	require.ErrorAs(t, err, &containerMutationErr)
 
 }
+
+func TestInterpretStorageReferenceFailableCastToUnrelated(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      // unrelated structs
+      struct interface I1 {}
+
+      struct interface I2 {}
+
+      // struct conforms to unrelated struct interfaces
+      struct S: I1, I2 {}
+
+      fun test() {
+          account.storage.save(S(), to: /storage/s)
+          let x: &{I1} = account.storage.borrow<&{I1}>(from: /storage/s)!
+          let y = x as? &{I2}
+      }
+    `
+
+	// `account: auth(...) &Account`
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name: "account",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: stdlib.NewAccountReferenceValue(
+			NoOpFunctionCreationContext{},
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.FullyEntitledAccountAccess,
+		),
+		Kind: common.DeclarationKindConstant,
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				AccountHandler: func(
+					context interpreter.AccountCreationContext,
+					address interpreter.AddressValue,
+				) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+}
