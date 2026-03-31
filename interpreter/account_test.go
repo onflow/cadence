@@ -1698,3 +1698,379 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, interpreter.FalseValue, areEqual)
 }
+
+func TestInterpretAccountStorageLimitedToPaths(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("load allowed", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {
+				let n: Int
+				init(n: Int) { self.n = n }
+			}
+
+			fun setup() {
+				account.storage.save(S(n: 1), to: /storage/a)
+				account.storage.save(S(n: 2), to: /storage/b)
+			}
+
+			fun test(): Int? {
+				let limited = account.storage.limitedToPaths([/storage/a])
+				let s = limited.load<S>(from: /storage/a)
+				return s?.n
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.SomeValue{}, value)
+		innerValue := value.(*interpreter.SomeValue).InnerValue()
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), innerValue)
+	})
+
+	t.Run("load disallowed", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {
+				let n: Int
+				init(n: Int) { self.n = n }
+			}
+
+			fun setup() {
+				account.storage.save(S(n: 1), to: /storage/a)
+				account.storage.save(S(n: 2), to: /storage/b)
+			}
+
+			fun test(): Int? {
+				let limited = account.storage.limitedToPaths([/storage/a])
+				let s = limited.load<S>(from: /storage/b)
+				return s?.n
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.Nil, value)
+	})
+
+	t.Run("save disallowed", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {}
+
+			fun test() {
+				let limited = account.storage.limitedToPaths([/storage/a])
+				limited.save(S(), to: /storage/b)
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var pathNotAllowedError *interpreter.PathNotAllowedError
+		require.ErrorAs(t, err, &pathNotAllowedError)
+	})
+
+	t.Run("save allowed", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
+			struct S {}
+
+			fun test() {
+				let limited = account.storage.limitedToPaths([/storage/a])
+				limited.save(S(), to: /storage/a)
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Len(t, getAccountValues(), 1)
+	})
+
+	t.Run("borrow disallowed", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {
+				let n: Int
+				init(n: Int) { self.n = n }
+			}
+
+			fun setup() {
+				account.storage.save(S(n: 1), to: /storage/a)
+			}
+
+			fun test(): Int? {
+				let limited = account.storage.limitedToPaths([/storage/b])
+				let ref = limited.borrow<&S>(from: /storage/a)
+				return ref?.n
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.Nil, value)
+	})
+
+	t.Run("copy disallowed", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {
+				let n: Int
+				init(n: Int) { self.n = n }
+			}
+
+			fun setup() {
+				account.storage.save(S(n: 1), to: /storage/a)
+			}
+
+			fun test(): Int? {
+				let limited = account.storage.limitedToPaths([/storage/b])
+				let s = limited.copy<S>(from: /storage/a)
+				return s?.n
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.Nil, value)
+	})
+
+	t.Run("check disallowed", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {}
+
+			fun setup() {
+				account.storage.save(S(), to: /storage/a)
+			}
+
+			fun test(): Bool {
+				let limited = account.storage.limitedToPaths([/storage/b])
+				return limited.check<S>(from: /storage/a)
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.FalseValue, value)
+	})
+
+	t.Run("check allowed", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {}
+
+			fun setup() {
+				account.storage.save(S(), to: /storage/a)
+			}
+
+			fun test(): Bool {
+				let limited = account.storage.limitedToPaths([/storage/a])
+				return limited.check<S>(from: /storage/a)
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.TrueValue, value)
+	})
+
+	t.Run("type disallowed", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {}
+
+			fun setup() {
+				account.storage.save(S(), to: /storage/a)
+			}
+
+			fun test(): Type? {
+				let limited = account.storage.limitedToPaths([/storage/b])
+				return limited.type(at: /storage/a)
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.Nil, value)
+	})
+
+	t.Run("forEachStored limited", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {}
+
+			fun setup() {
+				account.storage.save(S(), to: /storage/a)
+				account.storage.save(S(), to: /storage/b)
+				account.storage.save(S(), to: /storage/c)
+			}
+
+			fun test(): Int {
+				let limited = account.storage.limitedToPaths([/storage/a, /storage/c])
+				var count = 0
+				limited.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					count = count + 1
+					return true
+				})
+				return count
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), value)
+	})
+
+	t.Run("nested limitedToPaths (intersection)", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {}
+
+			fun setup() {
+				account.storage.save(S(), to: /storage/a)
+				account.storage.save(S(), to: /storage/b)
+				account.storage.save(S(), to: /storage/c)
+			}
+
+			fun test(): Int {
+				let limited = account.storage.limitedToPaths([/storage/a, /storage/b, /storage/c])
+				let nested = limited.limitedToPaths([/storage/b])
+				var count = 0
+				nested.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					count = count + 1
+					return true
+				})
+				return count
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), value)
+	})
+
+	t.Run("empty paths blocks all", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address, true, nil, `
+			struct S {}
+
+			fun setup() {
+				account.storage.save(S(), to: /storage/a)
+				account.storage.save(S(), to: /storage/b)
+			}
+
+			fun testLoad(): S? {
+				let limited = account.storage.limitedToPaths([])
+				return limited.load<S>(from: /storage/a)
+			}
+
+			fun testCheck(): Bool {
+				let limited = account.storage.limitedToPaths([])
+				return limited.check<S>(from: /storage/a)
+			}
+
+			fun testForEach(): Int {
+				let limited = account.storage.limitedToPaths([])
+				var count = 0
+				limited.forEachStored(fun (path: StoragePath, type: Type): Bool {
+					count = count + 1
+					return true
+				})
+				return count
+			}
+
+			fun testSave() {
+				let limited = account.storage.limitedToPaths([])
+				limited.save(S(), to: /storage/c)
+			}
+		`, sema.Config{})
+
+		_, err := inter.Invoke("setup")
+		require.NoError(t, err)
+
+		loadResult, err := inter.Invoke("testLoad")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.Nil, loadResult)
+
+		checkResult, err := inter.Invoke("testCheck")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.FalseValue, checkResult)
+
+		forEachResult, err := inter.Invoke("testForEach")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(0), forEachResult)
+
+		_, err = inter.Invoke("testSave")
+		RequireError(t, err)
+
+		var pathNotAllowedError *interpreter.PathNotAllowedError
+		require.ErrorAs(t, err, &pathNotAllowedError)
+	})
+}

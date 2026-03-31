@@ -159,6 +159,12 @@ struct Account {
         /// Otherwise, iteration aborts.
         access(all)
         fun forEachStored(_ function: fun (StoragePath, Type): Bool)
+
+        /// Returns a new reference to this account's storage that only allows
+        /// access to the given paths. Operations on any other path behave as if
+        /// nothing is stored there. Saving to a non-allowed path aborts.
+        access(Storage)
+        fun limitedToPaths(_ paths: [Path]): auth(Storage) &Account.Storage
     }
 
     access(all)

@@ -418,6 +418,7 @@ func newAccountStorageValue(
 		addressValue,
 		newStorageUsedGetFunction(handler, addressValue),
 		newStorageCapacityGetFunction(handler, addressValue),
+		nil, // no path restrictions (unlimited storage)
 	)
 }
 

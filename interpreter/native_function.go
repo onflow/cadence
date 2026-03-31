@@ -275,6 +275,9 @@ func GetAccountTypePrivateAddressValue(receiver Value) AddressValue {
 	simpleCompositeValue := AssertValueOfType[*SimpleCompositeValue](receiver)
 
 	addressMetaInfo := simpleCompositeValue.PrivateField(AccountTypePrivateAddressFieldName)
-	address := AssertValueOfType[AddressValue](addressMetaInfo)
+	address, ok := addressMetaInfo.(AddressValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 	return address
 }
