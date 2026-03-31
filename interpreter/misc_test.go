@@ -14672,6 +14672,116 @@ func TestInterpretContainerMutationCheckThroughReference(t *testing.T) {
 
 }
 
+func TestInterpretFailableCastToUnrelated(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      // unrelated structs
+      struct interface I1 {}
+
+      struct interface I2 {
+          let val: Int
+      }
+
+      // struct conforms to unrelated struct interfaces
+      struct S: I1, I2 {
+          let val: Int
+
+          init() {
+              self.val = 2
+          }
+      }
+
+      fun testFailable(): Int? {
+          let x: {I1} = S()
+          let y = x as? {I2}
+          return y?.val
+      }
+
+      fun testForce(): Int {
+          let x: {I1} = S()
+          let y = x as! {I2}
+          return y.val
+      }
+    `
+
+	inter := parseCheckAndPrepare(t, code)
+
+	result, err := inter.Invoke("testFailable")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		),
+		result,
+	)
+
+	result, err = inter.Invoke("testForce")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		result,
+	)
+}
+
+func TestInterpretEphemeralReferenceFailableCastToUnrelated(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      // unrelated structs
+      struct interface I1 {}
+
+      struct interface I2 {
+          let val: Int
+      }
+
+      // struct conforms to unrelated struct interfaces
+      struct S: I1, I2 {
+          let val: Int
+
+          init() {
+              self.val = 2
+          }
+      }
+
+      fun testFailable(): Int? {
+          let x: &{I1} = &S()
+          let y = x as? &{I2}
+          return y?.val
+      }
+
+      fun testForce(): Int {
+          let x: &{I1} = &S()
+          let y = x as! &{I2}
+          return y.val
+      }
+    `
+
+	inter := parseCheckAndPrepare(t, code)
+
+	result, err := inter.Invoke("testFailable")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		),
+		result,
+	)
+
+	result, err = inter.Invoke("testForce")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		result,
+	)
+}
+
 func TestInterpretStorageReferenceFailableCastToUnrelated(t *testing.T) {
 
 	t.Parallel()
