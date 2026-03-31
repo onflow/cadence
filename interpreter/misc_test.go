@@ -14680,15 +14680,24 @@ func TestInterpretStorageReferenceFailableCastToUnrelated(t *testing.T) {
       // unrelated structs
       struct interface I1 {}
 
-      struct interface I2 {}
+      struct interface I2 {
+          let val: Int
+      }
 
       // struct conforms to unrelated struct interfaces
-      struct S: I1, I2 {}
+      struct S: I1, I2 {
+          let val: Int
 
-      fun test() {
+          init() {
+              self.val = 2
+          }
+      }
+
+      fun test(): Int? {
           account.storage.save(S(), to: /storage/s)
           let x: &{I1} = account.storage.borrow<&{I1}>(from: /storage/s)!
           let y = x as? &{I2}
+          return y?.val
       }
     `
 
@@ -14742,7 +14751,14 @@ func TestInterpretStorageReferenceFailableCastToUnrelated(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	_, err = inter.Invoke("test")
+	result, err := inter.Invoke("test")
 	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		),
+		result,
+	)
 
 }
