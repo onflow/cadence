@@ -1729,7 +1729,7 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	// against the targeted value's type each time we use the reference (dereference it).
 
 	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
-		if referenceTargetType, ok := targetType.(*interpreter.ReferenceStaticType); ok {
+		if referenceTargetType, ok := unboxedExpectedType.(*interpreter.ReferenceStaticType); ok {
 
 			borrowType := context.SemaTypeFromStaticType(referenceTargetType.ReferencedType)
 
@@ -1737,7 +1737,7 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 
 				// Require the target type to not be or have an authorized reference in its type tree
 
-				hasAuthorizedReference := !targetType.Walk(func(ty interpreter.StaticType) bool {
+				hasAuthorizedReference := !unboxedExpectedType.Walk(func(ty interpreter.StaticType) bool {
 					if referenceType, ok := ty.(*interpreter.ReferenceStaticType); ok &&
 						referenceType.Authorization != interpreter.UnauthorizedAccess {
 
