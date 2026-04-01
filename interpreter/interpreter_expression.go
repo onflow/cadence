@@ -1446,12 +1446,12 @@ func (interpreter *Interpreter) castValueAndValueType(targetType sema.Type, valu
 	// against the targeted value's type each time we use the reference (dereference it).
 
 	if storageReference, ok := value.(*StorageReferenceValue); ok {
-		if referenceTargetType, ok := targetType.(*sema.ReferenceType); ok &&
+		if referenceTargetType, ok := unboxedExpectedType.(*sema.ReferenceType); ok &&
 			!storageReference.BorrowedType.Equal(referenceTargetType.Type) {
 
 			// Require the target type to not be or have an authorized reference in its type tree
 
-			hasAuthorizedReference := !targetType.Walk(func(ty sema.Type) bool {
+			hasAuthorizedReference := !unboxedExpectedType.Walk(func(ty sema.Type) bool {
 				if referenceType, ok := ty.(*sema.ReferenceType); ok &&
 					referenceType.Authorization != sema.UnauthorizedAccess {
 
