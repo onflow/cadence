@@ -4993,3 +4993,28 @@ func TestInterpretReferenceElementBoxing(t *testing.T) {
 	})
 
 }
+
+func TestInterpretStorageResourceBorrowAsAnyResourceAndCastToOptionalInterface(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _, _ := testAccount(t, address, true, nil, `
+        resource interface Receiver { }
+
+        resource Collection: Receiver { }
+
+        fun test() {
+            account.storage.save(<-create Collection(), to: /storage/collection)
+
+            let ref = account.storage.borrow<&AnyResource>(from: /storage/collection)
+            let receiverRef = ref as! &{Receiver}?
+        }
+    `,
+		sema.Config{},
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+}
