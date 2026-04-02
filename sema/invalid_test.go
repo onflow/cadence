@@ -358,6 +358,9 @@ func TestCheckInvalidTypeDefensiveCheckWithImportedError(t *testing.T) {
 		ParseAndCheckOptions{
 			CheckerConfig: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+					// NOTE: always return the elaboration, even if there have been checking errors for the imported program.
+					// In the runtime, the import handler of the checking environment returns the errors.
+					// See test TestRuntimeImportContractWithErrors
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
 					}, nil
