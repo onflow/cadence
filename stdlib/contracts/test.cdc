@@ -239,7 +239,11 @@ contract Test {
         access(all)
         let computationUsed: UInt64
 
-        init(status: ResultStatus, error: Error?, computationUsed: UInt64) {
+        init(
+        	status: ResultStatus,
+        	error: Error?,
+        	computationUsed: UInt64
+        ) {
             self.status = status
             self.error = error
             self.computationUsed = computationUsed
