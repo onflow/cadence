@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -506,4 +507,89 @@ func TestRuntimeContractImport(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+}
+
+func TestRuntimeImportContractWithErrors(t *testing.T) {
+
+	t.Parallel()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	rt := NewTestRuntime()
+
+	// Contract code with an error: `z` is not declared.
+	// The exported value `x` will have an invalid type.
+	contractCode := []byte(`
+        access(all) contract Foo {
+            access(all) let x: Int
+            init() {
+                self.x = z
+            }
+        }
+    `)
+
+	// Script that imports the broken contract
+	script := []byte(`
+        import Foo from 0x01
+
+        access(all) fun main() {}
+    `)
+
+	accountCodes := map[Location][]byte{}
+
+	// Inject the broken contract code directly
+	fooLocation := common.AddressLocation{
+		Address: addressValue,
+		Name:    "Foo",
+	}
+	accountCodes[fooLocation] = contractCode
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	scriptLocation := nextScriptLocation()
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  scriptLocation,
+			UseVM:     *compile,
+		},
+	)
+	RequireError(t, err)
+
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+	assert.Equal(t, scriptLocation, checkerErr.Location)
+
+	errs := RequireCheckerErrors(t, checkerErr, 1)
+
+	var importedProgramErr *sema.ImportedProgramError
+	require.ErrorAs(t, errs[0], &importedProgramErr)
+	assert.Equal(t, fooLocation, importedProgramErr.Location)
 }
