@@ -174,6 +174,9 @@ func (v UFix64Value) SaturatingMul(gauge common.Gauge, other UFix64Value) (UFix6
 }
 
 func (v UFix64Value) Div(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
+	if other == 0 {
+		panic(DivisionByZeroError{})
+	}
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(other))
