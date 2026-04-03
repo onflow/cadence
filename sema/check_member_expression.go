@@ -387,8 +387,53 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	return accessedType, resultingType, member, isOptional
 }
 
-// isReadableMember returns true if the given member can be read from
-// in the current location of the checker, along with the authorization with which the result can be used
+// isReadableVariable returns true if the given variable can be read
+// in the current location of the checker.
+// Only applicable for variables with a ContainerType (e.g. constructor variables).
+func (checker *Checker) isReadableVariable(variable *Variable) bool {
+
+	if checker.Config.AccessCheckMode.IsReadableAccess(variable.Access) {
+		return true
+	}
+
+	switch access := variable.Access.(type) {
+	case PrimitiveAccess:
+		if checker.containerTypes[variable.ContainerType] {
+			return true
+		}
+
+		switch ast.PrimitiveAccess(access) {
+		case ast.AccessContract:
+			// If the variable allows access from the containing contract,
+			// check if the current location is contained in the variable's contract
+
+			contractType := containingContractKindedType(variable.ContainerType)
+			if checker.containerTypes[contractType] {
+				return true
+			}
+
+		case ast.AccessAccount:
+			// If the variable allows access from the containing account,
+			// check if the current location is the same as the variable's container location
+
+			if locatedType, ok := variable.ContainerType.(LocatedType); ok {
+				location := locatedType.GetLocation()
+				if common.LocationsInSameAccount(checker.Location, location) {
+					return true
+				}
+
+				memberAccountAccessHandler := checker.Config.MemberAccountAccessHandler
+				if memberAccountAccessHandler != nil {
+					return memberAccountAccessHandler(checker, location)
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// isReadableMember returns true if the given member can be read from in the current location of the checker
 func (checker *Checker) isReadableMember(accessedType Type, member *Member) bool {
 
 	// TODO: check if this is correct
@@ -416,14 +461,16 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member) bool
 			// If the member allows access from the containing account,
 			// check if the current location is the same as the member's container location
 
-			location := member.ContainerType.(LocatedType).GetLocation()
-			if common.LocationsInSameAccount(checker.Location, location) {
-				return true
-			}
+			if locatedType, ok := member.ContainerType.(LocatedType); ok {
+				location := locatedType.GetLocation()
+				if common.LocationsInSameAccount(checker.Location, location) {
+					return true
+				}
 
-			memberAccountAccessHandler := checker.Config.MemberAccountAccessHandler
-			if memberAccountAccessHandler != nil {
-				return memberAccountAccessHandler(checker, location)
+				memberAccountAccessHandler := checker.Config.MemberAccountAccessHandler
+				if memberAccountAccessHandler != nil {
+					return memberAccountAccessHandler(checker, location)
+				}
 			}
 		}
 

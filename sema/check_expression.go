@@ -30,6 +30,20 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 		return InvalidType
 	}
 
+	// Check access for constructor variables
+	if variable.ContainerType != nil {
+		if !checker.isReadableVariable(variable) {
+			checker.report(
+				&InvalidAccessError{
+					Name:              variable.Identifier,
+					RestrictingAccess: variable.Access,
+					DeclarationKind:   variable.DeclarationKind,
+					Range:             ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+				},
+			)
+		}
+	}
+
 	valueType := variable.Type
 
 	if valueType.IsResourceType() {

@@ -5132,6 +5132,7 @@ type CompositeType struct {
 	ExplicitInterfaceConformances    []*InterfaceType
 	Kind                             common.CompositeKind
 	cachedIdentifiersLock            sync.RWMutex
+	ConstructorAccess                Access
 	ConstructorPurity                FunctionPurity
 	HasComputedMembers               bool
 	// Only applicable for native composite types
