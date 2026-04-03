@@ -4464,6 +4464,46 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 		)
 	})
 
+	t.Run("deep nested array", func(t *testing.T) {
+		t.Parallel()
+
+		// 3-level nesting: [auth(E) &[auth(E) &Int]]
+		// Upcast to &[&[&Int]], then try to downcast to &[&[auth(E) &Int]].
+		// The inner auth(E) should be stripped by the upcast. Downcast must fail.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun test() {
+                let innerArray: [auth(E) &Int] = [&1 as auth(E) &Int]
+                let outerRef: auth(E) &[auth(E) &Int] = &innerArray as auth(E) &[auth(E) &Int]
+                let topArray: [auth(E) &[auth(E) &Int]] = [outerRef]
+
+                let restricted: &[&[&Int]] = &topArray
+
+                // Should fail: inner auth(E) was stripped by the upcast to &[&[&Int]]
+                restricted as! &[&[auth(E) &Int]]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&[auth(S.test.E)&Int]]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&[&[&Int]]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
 	t.Run("interface array type narrowing", func(t *testing.T) {
 		t.Parallel()
 
@@ -4592,6 +4632,45 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 		assert.Equal(
 			t,
 			common.TypeID("&{String:&Int}"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("deep nested dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		// 3-level nesting with dictionary: {String: auth(E) &{String: auth(E) &Int}}
+		// stripped to &{String: &{String: &Int}}, then via AnyStruct, downcast must fail.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun test() {
+                let innerDict: {String: auth(E) &Int} = {"a": &1 as auth(E) &Int}
+                let outerRef: auth(E) &{String: auth(E) &Int} = &innerDict as auth(E) &{String: auth(E) &Int}
+                let topDict: {String: auth(E) &{String: auth(E) &Int}} = {"x": outerRef}
+
+                let restricted: &{String: &{String: &Int}} = &topDict
+
+                // Should fail: inner auth(E) was stripped
+                restricted as! &{String: &{String: auth(E) &Int}}
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&{String:auth(S.test.E)&Int}}"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&{String:&{String:&Int}}"),
 			forceCastTypeMismatchError.ActualType.ID(),
 		)
 	})
@@ -5254,4 +5333,29 @@ func TestInterpretReferenceElementBoxing(t *testing.T) {
 		)
 	})
 
+}
+
+func TestInterpretStorageResourceBorrowAsAnyResourceAndCastToOptionalInterface(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _, _ := testAccount(t, address, true, nil, `
+        resource interface Receiver { }
+
+        resource Collection: Receiver { }
+
+        fun test() {
+            account.storage.save(<-create Collection(), to: /storage/collection)
+
+            let ref = account.storage.borrow<&AnyResource>(from: /storage/collection)
+            let receiverRef = ref as! &{Receiver}?
+        }
+    `,
+		sema.Config{},
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
 }

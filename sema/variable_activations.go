@@ -262,6 +262,7 @@ func (a *VariableActivations) Depth() int {
 
 type variableDeclaration struct {
 	ty                       Type
+	containerType            Type
 	identifier               string
 	docString                string
 	argumentLabels           []string
@@ -305,6 +306,7 @@ func (a *VariableActivations) declare(declaration variableDeclaration) (*Variabl
 		IsConstant:      declaration.isConstant,
 		ActivationDepth: depth,
 		Type:            declaration.ty,
+		ContainerType:   declaration.containerType,
 		Pos:             &declaration.pos,
 		ArgumentLabels:  declaration.argumentLabels,
 		DocString:       declaration.docString,

@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -2314,4 +2315,566 @@ func TestCheckAccountAccess(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCheckInitializerAccessControl(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct, access(contract) init, construct from outside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(contract) init() {}
+				}
+			}
+
+			access(all) fun test(): C.S {
+				return C.S()
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("struct, access(contract) init, construct from inside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(contract) init() {}
+				}
+
+				access(all) fun test(): S {
+					return S()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct, access(all) init, construct from outside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(all) init() {}
+				}
+			}
+
+			access(all) fun test(): C.S {
+				return C.S()
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct, access(self) init, construct from outside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(self) init() {}
+				}
+			}
+
+			access(all) fun test(): C.S {
+				return C.S()
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("struct, access(account) init, construct from outside account", func(t *testing.T) {
+		t.Parallel()
+
+		importedChecker, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(account) init() {}
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t, `
+			import C from "imported"
+
+			access(all) fun test(): C.S {
+				return C.S()
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("struct, access(account) init, construct from inside account", func(t *testing.T) {
+		t.Parallel()
+
+		importedChecker, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(account) init() {}
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t, `
+			import C from "imported"
+
+			access(all) fun test(): C.S {
+				return C.S()
+			}
+		`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource, access(all) init, construct from outside contract", func(t *testing.T) {
+		t.Parallel()
+
+		importedChecker, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(all) init() {}
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t, `
+			import C from "imported"
+
+			access(all) fun test(): @C.R {
+				return <- create C.R()
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidResourceCreationError{}, errs[0])
+	})
+
+	t.Run("resource, access(all) init, construct from inside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(all) init() {}
+				}
+
+				access(all) fun test(): @R {
+					return <- create R()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource, access(contract) init, construct from inside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(contract) init() {}
+				}
+
+				access(all) fun test(): @R {
+					return <- create R()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource, access(contract) init, construct from outside contract", func(t *testing.T) {
+		t.Parallel()
+
+		importedChecker, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(contract) init() {}
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t, `
+			import C from "imported"
+
+			access(all) fun test(): @C.R {
+				return <- create C.R()
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		// Both InvalidAccessError (from member access) and InvalidResourceCreationError
+		// (from create expression) are reported
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidResourceCreationError{}, errs[1])
+	})
+
+	t.Run("resource, access(account) init, construct from inside account", func(t *testing.T) {
+		t.Parallel()
+
+		importedChecker, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(account) init() {}
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t, `
+			import C from "imported"
+
+			access(all) fun test(): @C.R {
+				return <- create C.R()
+			}
+		`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		// Even from the same account, resource creation is only allowed
+		// from within the declaring contract
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidResourceCreationError{}, errs[0])
+	})
+
+	t.Run("resource, access(account) init, construct from outside account", func(t *testing.T) {
+		t.Parallel()
+
+		importedChecker, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(account) init() {}
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t, `
+			import C from "imported"
+
+			access(all) fun test(): @C.R {
+				return <- create C.R()
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		// Both InvalidAccessError (from member access) and InvalidResourceCreationError
+		// (from create expression) are reported
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidResourceCreationError{}, errs[1])
+	})
+
+	// No access modifier on init — should behave like the composite's access
+
+	t.Run("struct, no access modifier on init, C.S() from outside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					init() {}
+				}
+			}
+
+			access(all) fun test(): C.S {
+				return C.S()
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource, no access modifier on init, C.R() from inside contract", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					init() {}
+				}
+
+				access(all) fun test(): @R {
+					return <- create R()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	// Lexical lookup tests (S() instead of C.S())
+
+	t.Run("struct, access(self) init, lexical S() from contract function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(self) init() {}
+				}
+
+				access(all) fun test(): S {
+					return S()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("struct, access(contract) init, lexical S() from contract function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) struct S {
+					access(contract) init() {}
+				}
+
+				access(all) fun test(): S {
+					return S()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource, access(self) init, lexical R() from contract function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(self) init() {}
+				}
+
+				access(all) fun test(): @R {
+					return <- create R()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("resource, access(contract) init, lexical R() from contract function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+			access(all) contract C {
+				access(all) resource R {
+					access(contract) init() {}
+				}
+
+				access(all) fun test(): @R {
+					return <- create R()
+				}
+			}
+		`,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
 }

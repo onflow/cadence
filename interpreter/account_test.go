@@ -1422,11 +1422,12 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
                  return ref.foo
               }
 
-              fun invalidBorrowS(): &S2? {
+              fun invalidBorrowS(): Int {
                   let s = S()
                   account.storage.save(s, to: /storage/another_s)
-                  let borrowedS = account.storage.borrow<&AnyStruct>(from: /storage/another_s)
-                  return borrowedS as! &S2?
+                  let borrowedAny = account.storage.borrow<&AnyStruct>(from: /storage/another_s)
+                  let borrowedS = borrowedAny as! &S2?
+                  return borrowedS!.foo
               }
             `, sema.Config{})
 
@@ -1534,8 +1535,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("invalidBorrowS")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 	})
 }

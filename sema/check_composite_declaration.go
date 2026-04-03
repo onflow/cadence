@@ -404,6 +404,7 @@ func (checker *Checker) declareCompositeLikeNestedTypes(
 				default:
 					checker.declareCompositeLikeConstructor(
 						nestedCompositeDeclaration,
+						nestedCompositeType,
 						nestedConstructorType,
 						nestedConstructorArgumentLabels,
 					)
@@ -826,6 +827,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		initializers := members.Initializers()
 		compositeType.ConstructorParameters = checker.initializerParameters(initializers)
 		compositeType.ConstructorPurity = checker.initializerPurity(compositeKind, initializers)
+		compositeType.ConstructorAccess = checker.initializerAccess(declaration, initializers)
 
 		// Declare nested declarations' members
 
@@ -874,11 +876,18 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 				compositeType.DefaultDestroyEvent = defaultEventComposite
 			}
 
+			// Use the nested composite's constructor access for the member.
+			// This ensures that if the initializer has a more restrictive access
+			// than the composite declaration itself, the constructor is not accessible
+			// from locations that should not be able to call the initializer.
+			nestedCompositeType := checker.Elaboration.CompositeDeclarationType(nestedCompositeDeclaration)
+			memberAccess := nestedCompositeType.ConstructorAccess
+
 			declarationMembers.Set(
 				nestedCompositeDeclarationVariable.Identifier,
 				&Member{
 					Identifier:            identifier,
-					Access:                checker.accessFromAstAccess(nestedCompositeDeclaration.DeclarationAccess()),
+					Access:                memberAccess,
 					ContainerType:         compositeType,
 					TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
 					DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
@@ -989,6 +998,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 	default:
 		checker.declareCompositeLikeConstructor(
 			declaration,
+			compositeType,
 			constructorType,
 			constructorArgumentLabels,
 		)
@@ -997,6 +1007,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 
 func (checker *Checker) declareCompositeLikeConstructor(
 	declaration ast.CompositeLikeDeclaration,
+	compositeType *CompositeType,
 	constructorType *FunctionType,
 	constructorArgumentLabels []string,
 ) {
@@ -1015,8 +1026,9 @@ func (checker *Checker) declareCompositeLikeConstructor(
 	_, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               declaration.DeclarationIdentifier().Identifier,
 		ty:                       constructorType,
+		containerType:            compositeType,
 		docString:                declaration.DeclarationDocString(),
-		access:                   checker.accessFromAstAccess(declaration.DeclarationAccess()),
+		access:                   compositeType.ConstructorAccess,
 		kind:                     declaration.DeclarationKind(),
 		pos:                      declaration.DeclarationIdentifier().Pos,
 		isConstant:               true,
@@ -1185,6 +1197,33 @@ func (checker *Checker) initializerPurity(
 
 	// a composite with no initializer is view because it runs no code
 	return FunctionPurityView
+}
+
+func (checker *Checker) initializerAccess(
+	compositeDeclaration ast.CompositeLikeDeclaration,
+	initializers []*ast.SpecialFunctionDeclaration,
+) Access {
+	// Default to the composite declaration's access
+	compositeAccess := checker.accessFromAstAccess(compositeDeclaration.DeclarationAccess())
+
+	// TODO: support multiple overloaded initializers
+	if len(initializers) > 0 {
+		firstInitializer := initializers[0]
+		astAccess := firstInitializer.DeclarationAccess()
+
+		// Only consider the initializer's access if it is explicitly specified.
+		// An unspecified access defaults to the composite's access.
+		if astAccess != ast.AccessNotSpecified {
+			initAccess := checker.accessFromAstAccess(astAccess)
+
+			// Use the initializer's access if it is more restrictive than the composite's access
+			if !initAccess.PermitsAccess(compositeAccess) {
+				return initAccess
+			}
+		}
+	}
+
+	return compositeAccess
 }
 
 func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []Parameter {

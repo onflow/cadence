@@ -26,6 +26,9 @@ import (
 type Variable struct {
 	// Type is the type of the variable
 	Type Type
+	// ContainerType is the type that contains this variable declaration.
+	// Only set for constructor variables of composite types.
+	ContainerType Type
 	// Pos is the position where the variable was declared
 	Pos        *ast.Position
 	Identifier string
