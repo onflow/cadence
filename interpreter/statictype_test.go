@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -921,17 +922,143 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 	})
 }
 
-func TestPrimitiveStaticTypeCount(t *testing.T) {
+func TestPrimitiveStaticTypeValues(t *testing.T) {
 	t.Parallel()
 
-	// This asserts that the total number of types in the PrimitiveStaticType enum has not changed,
-	// in order to prevent adding new types into the enum in the middle.
-	// However, it is possible to safely change the size of this enum by only appending new types the end,
-	// (before the PrimitiveStaticType_Count of course).
-	// Only update this test if you are certain your change to this enum was to append new types to the end.
-	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(152), byte(PrimitiveStaticType_Count))
-	})
+	// Ensure that the values of the PrimitiveStaticType enum are not accidentally changed,
+	// e.g. by adding a new value in between or by changing an existing value.
+
+	expectedValues := map[PrimitiveStaticType]uint{
+		PrimitiveStaticTypeUnknown:                        0,
+		PrimitiveStaticTypeVoid:                           1,
+		PrimitiveStaticTypeAny:                            2,
+		PrimitiveStaticTypeNever:                          3,
+		PrimitiveStaticTypeAnyStruct:                      4,
+		PrimitiveStaticTypeAnyResource:                    5,
+		PrimitiveStaticTypeBool:                           6,
+		PrimitiveStaticTypeAddress:                        7,
+		PrimitiveStaticTypeString:                         8,
+		PrimitiveStaticTypeCharacter:                      9,
+		PrimitiveStaticTypeMetaType:                       10,
+		PrimitiveStaticTypeBlock:                          11,
+		PrimitiveStaticTypeAnyResourceAttachment:          12,
+		PrimitiveStaticTypeAnyStructAttachment:            13,
+		PrimitiveStaticTypeHashableStruct:                 14,
+		PrimitiveStaticTypeStorable:                       15,
+		PrimitiveStaticTypeInvalid:                        16,
+		PrimitiveStaticTypeNumber:                         18,
+		PrimitiveStaticTypeSignedNumber:                   19,
+		PrimitiveStaticTypeInteger:                        24,
+		PrimitiveStaticTypeSignedInteger:                  25,
+		PrimitiveStaticTypeFixedSizeUnsignedInteger:       26,
+		PrimitiveStaticTypeFixedPoint:                     30,
+		PrimitiveStaticTypeSignedFixedPoint:               31,
+		PrimitiveStaticTypeInt:                            36,
+		PrimitiveStaticTypeInt8:                           37,
+		PrimitiveStaticTypeInt16:                          38,
+		PrimitiveStaticTypeInt32:                          39,
+		PrimitiveStaticTypeInt64:                          40,
+		PrimitiveStaticTypeInt128:                         41,
+		PrimitiveStaticTypeInt256:                         42,
+		PrimitiveStaticTypeUInt:                           44,
+		PrimitiveStaticTypeUInt8:                          45,
+		PrimitiveStaticTypeUInt16:                         46,
+		PrimitiveStaticTypeUInt32:                         47,
+		PrimitiveStaticTypeUInt64:                         48,
+		PrimitiveStaticTypeUInt128:                        49,
+		PrimitiveStaticTypeUInt256:                        50,
+		PrimitiveStaticTypeWord8:                          53,
+		PrimitiveStaticTypeWord16:                         54,
+		PrimitiveStaticTypeWord32:                         55,
+		PrimitiveStaticTypeWord64:                         56,
+		PrimitiveStaticTypeWord128:                        57,
+		PrimitiveStaticTypeWord256:                        58,
+		PrimitiveStaticTypeFix64:                          64,
+		PrimitiveStaticTypeFix128:                         65,
+		PrimitiveStaticTypeUFix64:                         72,
+		PrimitiveStaticTypeUFix128:                        73,
+		PrimitiveStaticTypePath:                           76,
+		PrimitiveStaticTypeCapability:                     77,
+		PrimitiveStaticTypeStoragePath:                    78,
+		PrimitiveStaticTypeCapabilityPath:                 79,
+		PrimitiveStaticTypePublicPath:                     80,
+		PrimitiveStaticTypePrivatePath:                    81,
+		PrimitiveStaticTypeAuthAccount:                    90,
+		PrimitiveStaticTypePublicAccount:                  91,
+		PrimitiveStaticTypeDeployedContract:               92,
+		PrimitiveStaticTypeAuthAccountContracts:           93,
+		PrimitiveStaticTypePublicAccountContracts:         94,
+		PrimitiveStaticTypeAuthAccountKeys:                95,
+		PrimitiveStaticTypePublicAccountKeys:              96,
+		PrimitiveStaticTypeAccountKey:                     97,
+		PrimitiveStaticTypeAuthAccountInbox:               98,
+		PrimitiveStaticTypeStorageCapabilityController:    99,
+		PrimitiveStaticTypeAccountCapabilityController:    100,
+		PrimitiveStaticTypeAuthAccountStorageCapabilities: 101,
+		PrimitiveStaticTypeAuthAccountAccountCapabilities: 102,
+		PrimitiveStaticTypeAuthAccountCapabilities:        103,
+		PrimitiveStaticTypePublicAccountCapabilities:      104,
+		PrimitiveStaticTypeAccount:                        105,
+		PrimitiveStaticTypeAccount_Contracts:              106,
+		PrimitiveStaticTypeAccount_Keys:                   107,
+		PrimitiveStaticTypeAccount_Inbox:                  108,
+		PrimitiveStaticTypeAccount_StorageCapabilities:    109,
+		PrimitiveStaticTypeAccount_AccountCapabilities:    110,
+		PrimitiveStaticTypeAccount_Capabilities:           111,
+		PrimitiveStaticTypeAccount_Storage:                112,
+		PrimitiveStaticTypeMutate:                         118,
+		PrimitiveStaticTypeInsert:                         119,
+		PrimitiveStaticTypeRemove:                         120,
+		PrimitiveStaticTypeIdentity:                       121,
+		PrimitiveStaticTypeStorage:                        125,
+		PrimitiveStaticTypeSaveValue:                      126,
+		PrimitiveStaticTypeLoadValue:                      127,
+		PrimitiveStaticTypeCopyValue:                      128,
+		PrimitiveStaticTypeBorrowValue:                    129,
+		PrimitiveStaticTypeContracts:                      130,
+		PrimitiveStaticTypeAddContract:                    131,
+		PrimitiveStaticTypeUpdateContract:                 132,
+		PrimitiveStaticTypeRemoveContract:                 133,
+		PrimitiveStaticTypeKeys:                           134,
+		PrimitiveStaticTypeAddKey:                         135,
+		PrimitiveStaticTypeRevokeKey:                      136,
+		PrimitiveStaticTypeInbox:                          137,
+		PrimitiveStaticTypePublishInboxCapability:         138,
+		PrimitiveStaticTypeUnpublishInboxCapability:       139,
+		PrimitiveStaticTypeClaimInboxCapability:           140,
+		PrimitiveStaticTypeCapabilities:                   141,
+		PrimitiveStaticTypeStorageCapabilities:            142,
+		PrimitiveStaticTypeAccountCapabilities:            143,
+		PrimitiveStaticTypePublishCapability:              144,
+		PrimitiveStaticTypeUnpublishCapability:            145,
+		PrimitiveStaticTypeGetStorageCapabilityController:   146,
+		PrimitiveStaticTypeIssueStorageCapabilityController: 147,
+		PrimitiveStaticTypeGetAccountCapabilityController:   148,
+		PrimitiveStaticTypeIssueAccountCapabilityController: 149,
+		PrimitiveStaticTypeCapabilitiesMapping:              150,
+		PrimitiveStaticTypeAccountMapping:                   151,
+		PrimitiveStaticType_Count:                           152,
+	}
+
+	// Check all expected values.
+	for typ, expectedValue := range expectedValues {
+		require.Equal(t, expectedValue, uint(typ), "value mismatch for %s", typ)
+	}
+
+	// Check that no new named values have been added
+	// without updating the expected values above.
+	// If a placeholder `_` is replaced with a new named value,
+	// its String() representation will no longer be a numeric fallback.
+	for i := uint(0); i < uint(PrimitiveStaticType_Count); i++ {
+		typ := PrimitiveStaticType(i)
+		if _, ok := expectedValues[typ]; ok {
+			continue
+		}
+		require.True(t,
+			strings.HasPrefix(typ.String(), "PrimitiveStaticType("),
+			"unexpected named value %s (%d): update expectedValues", typ, i,
+		)
+	}
 }
 
 func TestStaticTypeConversion(t *testing.T) {
