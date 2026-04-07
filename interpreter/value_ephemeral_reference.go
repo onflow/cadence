@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"sync"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -33,6 +35,11 @@ type EphemeralReferenceValue struct {
 	// BorrowedType is the T in &T
 	BorrowedType  sema.Type
 	Authorization Authorization
+
+	// Referenced value cannot change.
+	// Hence, it's safe to store the static-type.
+	staticType     StaticType
+	staticTypeOnce sync.Once
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -112,11 +119,78 @@ func (v *EphemeralReferenceValue) MeteredString(
 }
 
 func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	return NewReferenceStaticType(
-		context,
-		v.Authorization,
-		v.Value.StaticType(context),
-	)
+	// Compute a static type that:
+	// 1. Preserves the actual type structure (to allow type narrowing, e.g., &{RI} -> &R)
+	// 2. Uses the borrow type's authorization (to prevent entitlement escalation)
+	//
+	// For example:
+	// - Actual: [auth(E) &T], Borrow: [&T] -> Static: [&T] (authorization from borrow type)
+	// - Actual: [&R], Borrow: [&{RI}] -> Static: [&R] (type narrowing preserved)
+
+	v.staticTypeOnce.Do(func() {
+		actualStaticType := v.Value.StaticType(context)
+		innerStaticType := applyBorrowTypeAuthorization(
+			context,
+			actualStaticType,
+			v.BorrowedType,
+		)
+
+		v.staticType = NewReferenceStaticType(
+			context,
+			v.Authorization,
+			innerStaticType,
+		)
+	})
+
+	return v.staticType
+}
+
+// applyBorrowTypeAuthorization returns a static type that preserves the
+// actual type structure but uses the borrow type's authorization for references.
+// This prevents entitlement escalation while allowing type narrowing.
+func applyBorrowTypeAuthorization(
+	gauge common.MemoryGauge,
+	actualStaticType StaticType,
+	borrowSemaType sema.Type,
+) StaticType {
+	switch actual := actualStaticType.(type) {
+	case *VariableSizedStaticType:
+		if borrowArray, ok := borrowSemaType.(*sema.VariableSizedType); ok {
+			elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowArray.Type)
+			return NewVariableSizedStaticType(gauge, elementType)
+		}
+
+	case *ConstantSizedStaticType:
+		if borrowArray, ok := borrowSemaType.(*sema.ConstantSizedType); ok {
+			elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowArray.Type)
+			return NewConstantSizedStaticType(gauge, elementType, actual.Size)
+		}
+
+	case *DictionaryStaticType:
+		if borrowDict, ok := borrowSemaType.(*sema.DictionaryType); ok {
+			keyType := applyBorrowTypeAuthorization(gauge, actual.KeyType, borrowDict.KeyType)
+			valueType := applyBorrowTypeAuthorization(gauge, actual.ValueType, borrowDict.ValueType)
+			return NewDictionaryStaticType(gauge, keyType, valueType)
+		}
+
+	case *OptionalStaticType:
+		if borrowOptional, ok := borrowSemaType.(*sema.OptionalType); ok {
+			innerType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowOptional.Type)
+			return NewOptionalStaticType(gauge, innerType)
+		}
+
+	case *ReferenceStaticType:
+		if borrowRef, ok := borrowSemaType.(*sema.ReferenceType); ok {
+			// Use the actual referenced type as the inner type, but with the borrow type's authorization,
+			// instead of the actual referenced type's authorization.
+			borrowAuth := ConvertSemaAccessToStaticAuthorization(gauge, borrowRef.Authorization)
+			innerType := applyBorrowTypeAuthorization(gauge, actual.ReferencedType, borrowRef.Type)
+			return NewReferenceStaticType(gauge, borrowAuth, innerType)
+		}
+	}
+
+	// For all other cases, return the actual type unchanged
+	return actualStaticType
 }
 
 func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
@@ -131,16 +205,22 @@ func (v *EphemeralReferenceValue) ReferencedValue(_ ValueStaticTypeContext, _ bo
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
+func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 	var result Value
 
 	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, name)
+		result = memberAccessibleValue.GetMember(context, name, memberKind)
 	}
 
 	if result == nil {
 		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
-		result = context.GetMethod(v, name)
+		return GetMember(
+			context,
+			v,
+			name,
+			memberKind,
+			nil,
+		)
 	}
 
 	return result

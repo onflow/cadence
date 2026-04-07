@@ -641,13 +641,14 @@ func (i PrettyInstructionNewClosure) String() string {
 // PrettyInstructionInvoke
 //
 // Pretty form of InstructionInvoke with resolved operands.
-// Pops the function and arguments off the stack, invokes the function with the arguments,
-// and then pushes the result back on to the stack.
-// This instruction is only passes the argument count. If the argument types are needed, use `invokeTyped`.
+// Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack. This instruction is a variant of `invoke` that includes the argument types.
 type PrettyInstructionInvoke struct {
-	TypeArgs   []interpreter.StaticType
-	ArgCount   uint16
-	ReturnType interpreter.StaticType
+	TypeArgs               []interpreter.StaticType
+	ArgTypes               []interpreter.StaticType
+	ParamTypes             []interpreter.StaticType
+	ReturnType             interpreter.StaticType
+	HasImplicitArgument    bool
+	SkipArgumentConversion bool
 }
 
 var _ PrettyInstruction = PrettyInstructionInvoke{}
@@ -662,37 +663,15 @@ func (i PrettyInstructionInvoke) String() string {
 	sb.WriteByte(' ')
 	printfPrettyTypeArrayArgument(&sb, "typeArgs", i.TypeArgs, false)
 	sb.WriteByte(' ')
-	printfArgument(&sb, "argCount", i.ArgCount, false)
-	sb.WriteByte(' ')
-	printfTypeArgument(&sb, "returnType", i.ReturnType, false)
-	return sb.String()
-}
-
-// PrettyInstructionInvokeTyped
-//
-// Pretty form of InstructionInvokeTyped with resolved operands.
-// Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack. This instruction is a variant of `invoke` that includes the argument types.
-type PrettyInstructionInvokeTyped struct {
-	TypeArgs   []interpreter.StaticType
-	ArgTypes   []interpreter.StaticType
-	ReturnType interpreter.StaticType
-}
-
-var _ PrettyInstruction = PrettyInstructionInvokeTyped{}
-
-func (PrettyInstructionInvokeTyped) Opcode() Opcode {
-	return InvokeTyped
-}
-
-func (i PrettyInstructionInvokeTyped) String() string {
-	var sb strings.Builder
-	sb.WriteString(i.Opcode().String())
-	sb.WriteByte(' ')
-	printfPrettyTypeArrayArgument(&sb, "typeArgs", i.TypeArgs, false)
-	sb.WriteByte(' ')
 	printfPrettyTypeArrayArgument(&sb, "argTypes", i.ArgTypes, false)
 	sb.WriteByte(' ')
+	printfPrettyTypeArrayArgument(&sb, "paramTypes", i.ParamTypes, false)
+	sb.WriteByte(' ')
 	printfTypeArgument(&sb, "returnType", i.ReturnType, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "hasImplicitArgument", i.HasImplicitArgument, false)
+	sb.WriteByte(' ')
+	printfArgument(&sb, "skipArgumentConversion", i.SkipArgumentConversion, false)
 	return sb.String()
 }
 
@@ -717,6 +696,33 @@ func (i PrettyInstructionGetMethod) String() string {
 	sb.WriteString(i.Opcode().String())
 	sb.WriteByte(' ')
 	printfArgument(&sb, "method", i.Method, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "receiverType", i.ReceiverType, false)
+	return sb.String()
+}
+
+// PrettyInstructionGetMethodDynamic
+//
+// Pretty form of InstructionGetMethodDynamic with resolved operands.
+// Pops a value off the stack, the receiver,
+// and then pushes the value of the method with the given name onto the stack.
+// Methods are looked-up dynamically at runtime.
+type PrettyInstructionGetMethodDynamic struct {
+	MethodName   constant.DecodedConstant
+	ReceiverType interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionGetMethodDynamic{}
+
+func (PrettyInstructionGetMethodDynamic) Opcode() Opcode {
+	return GetMethodDynamic
+}
+
+func (i PrettyInstructionGetMethodDynamic) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfConstantArgument(&sb, "methodName", i.MethodName, false)
 	sb.WriteByte(' ')
 	printfTypeArgument(&sb, "receiverType", i.ReceiverType, false)
 	return sb.String()
@@ -808,6 +814,29 @@ func (PrettyInstructionWrap) Opcode() Opcode {
 
 func (i PrettyInstructionWrap) String() string {
 	return i.Opcode().String()
+}
+
+// PrettyInstructionBoxOptional
+//
+// Pretty form of InstructionBoxOptional with resolved operands.
+// Pops a value off the stack, boxes it into an optional if needed to match the target type,
+// and then pushes it back on to the stack.
+type PrettyInstructionBoxOptional struct {
+	TargetType interpreter.StaticType
+}
+
+var _ PrettyInstruction = PrettyInstructionBoxOptional{}
+
+func (PrettyInstructionBoxOptional) Opcode() Opcode {
+	return BoxOptional
+}
+
+func (i PrettyInstructionBoxOptional) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "targetType", i.TargetType, false)
+	return sb.String()
 }
 
 // PrettyInstructionTransfer

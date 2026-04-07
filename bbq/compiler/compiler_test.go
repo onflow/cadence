@@ -129,12 +129,14 @@ func TestCompileRecursionFib(t *testing.T) {
 				},
 			},
 			opcode.PrettyInstructionSubtract{},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType:  interpreter.PrimitiveStaticTypeInt,
-				TargetType: interpreter.PrimitiveStaticTypeInt,
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
 				ReturnType: interpreter.PrimitiveStaticTypeInt,
 			},
 			// fib(n - 2)
@@ -147,12 +149,14 @@ func TestCompileRecursionFib(t *testing.T) {
 				},
 			},
 			opcode.PrettyInstructionSubtract{},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType:  interpreter.PrimitiveStaticTypeInt,
-				TargetType: interpreter.PrimitiveStaticTypeInt,
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
 				ReturnType: interpreter.PrimitiveStaticTypeInt,
 			},
 			opcode.PrettyInstructionAdd{},
@@ -3463,12 +3467,14 @@ func TestCompileMethodInvocation(t *testing.T) {
 					ReceiverType: fooType,
 				},
 				opcode.PrettyInstructionTrue{},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeBool,
-					TargetType: interpreter.PrimitiveStaticTypeBool,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeBool,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeBool,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeVoid,
 				},
 				opcode.PrettyInstructionDrop{},
@@ -3996,8 +4002,14 @@ func TestCompileDefaultFunction(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: xIndex},
 			// NOTE: no transfer or convert of argument
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
-				ReturnType: interpreter.PrimitiveStaticTypeInt,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ReturnType:             interpreter.PrimitiveStaticTypeInt,
+				SkipArgumentConversion: true,
 			},
 
 			// return
@@ -4108,12 +4120,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -4227,12 +4241,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -4340,12 +4356,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -4486,12 +4504,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -4552,13 +4572,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
-					ReturnType: interpreter.PrimitiveStaticTypeNever,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					}, ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
 				// Drop since it's a statement-expression
@@ -4728,12 +4749,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -4965,12 +4988,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -5117,13 +5142,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
-					ReturnType: interpreter.PrimitiveStaticTypeNever,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					}, ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 				opcode.PrettyInstructionDrop{},
 
@@ -5172,12 +5198,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 				opcode.PrettyInstructionDrop{},
@@ -6185,12 +6213,14 @@ func TestCompileTransaction(t *testing.T) {
 					Kind: constant.String,
 				},
 			},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType:  interpreter.PrimitiveStaticTypeString,
-				TargetType: interpreter.PrimitiveStaticTypeString,
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeString,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeString,
+				},
 				ReturnType: interpreter.PrimitiveStaticTypeNever,
 			},
 
@@ -6254,12 +6284,14 @@ func TestCompileTransaction(t *testing.T) {
 					Kind: constant.String,
 				},
 			},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType:  interpreter.PrimitiveStaticTypeString,
-				TargetType: interpreter.PrimitiveStaticTypeString,
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeString,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeString,
+				},
 				ReturnType: interpreter.PrimitiveStaticTypeNever,
 			},
 
@@ -6522,12 +6554,14 @@ func TestCompileReturns(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 				opcode.PrettyInstructionDrop{},
@@ -6616,12 +6650,14 @@ func TestCompileReturns(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 				opcode.PrettyInstructionDrop{},
@@ -6686,12 +6722,14 @@ func TestCompileReturns(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 				opcode.PrettyInstructionDrop{},
@@ -6773,12 +6811,14 @@ func TestCompileFunctionExpression(t *testing.T) {
 					Kind: constant.Int,
 				},
 			},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType:  interpreter.PrimitiveStaticTypeInt,
-				TargetType: interpreter.PrimitiveStaticTypeInt,
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
 				ReturnType: interpreter.PrimitiveStaticTypeInt,
 			},
 			opcode.PrettyInstructionAdd{},
@@ -6891,12 +6931,14 @@ func TestCompileInnerFunction(t *testing.T) {
 					Kind: constant.Int,
 				},
 			},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType:  interpreter.PrimitiveStaticTypeInt,
-				TargetType: interpreter.PrimitiveStaticTypeInt,
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
 				ReturnType: interpreter.PrimitiveStaticTypeInt,
 			},
 			opcode.PrettyInstructionAdd{},
@@ -8025,14 +8067,16 @@ func TestCompileArgument(t *testing.T) {
 			opcode.PrettyInstructionStatement{},
 			opcode.PrettyInstructionGetGlobal{Global: 0},
 			opcode.PrettyInstructionGetLocal{Local: xIndex},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType: interpreter.PrimitiveStaticTypeInt,
-				TargetType: &interpreter.OptionalStaticType{
-					Type: interpreter.PrimitiveStaticTypeInt,
-				},
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					&interpreter.OptionalStaticType{
+						Type: interpreter.PrimitiveStaticTypeInt,
+					},
+				},
 				ReturnType: interpreter.PrimitiveStaticTypeVoid,
 			},
 			opcode.PrettyInstructionDrop{},
@@ -9513,12 +9557,14 @@ func TestCompileEnum(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetGlobal{Global: testLookupGlobalIndex},
 				opcode.PrettyInstructionGetLocal{Local: rawValueIndex},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeUInt8,
-					TargetType: interpreter.PrimitiveStaticTypeUInt8,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount: 1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeUInt8,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeUInt8,
+					},
 					ReturnType: &interpreter.OptionalStaticType{
 						Type: testType,
 					},
@@ -9540,7 +9586,9 @@ func TestCompileEnum(t *testing.T) {
 				},
 			},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeUInt8,
+				},
 				ReturnType: testType,
 			},
 			opcode.PrettyInstructionReturnValue{},
@@ -9558,7 +9606,9 @@ func TestCompileEnum(t *testing.T) {
 				},
 			},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeUInt8,
+				},
 				ReturnType: testType,
 			},
 			opcode.PrettyInstructionReturnValue{},
@@ -9576,7 +9626,9 @@ func TestCompileEnum(t *testing.T) {
 				},
 			},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeUInt8,
+				},
 				ReturnType: testType,
 			},
 			opcode.PrettyInstructionReturnValue{},
@@ -9660,22 +9712,20 @@ func TestCompileOptionalArgument(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetGlobal{Global: 1},
 				opcode.PrettyInstructionTrue{},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeBool,
-					TargetType: interpreter.PrimitiveStaticTypeBool,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionGetConstant{
 					Constant: constant.DecodedConstant{
 						Data: interpreter.NewUnmeteredStringValue("hello"),
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
-				opcode.PrettyInstructionInvokeTyped{
+				opcode.PrettyInstructionTransfer{},
+				opcode.PrettyInstructionInvoke{
 					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeBool,
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
 						interpreter.PrimitiveStaticTypeBool,
 						interpreter.PrimitiveStaticTypeString,
 					},
@@ -9687,12 +9737,12 @@ func TestCompileOptionalArgument(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetGlobal{Global: 1},
 				opcode.PrettyInstructionFalse{},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeBool,
-					TargetType: interpreter.PrimitiveStaticTypeBool,
-				},
-				opcode.PrettyInstructionInvokeTyped{
+				opcode.PrettyInstructionTransfer{},
+				opcode.PrettyInstructionInvoke{
 					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeBool,
+					},
+					ParamTypes: []interpreter.StaticType{
 						interpreter.PrimitiveStaticTypeBool,
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeVoid,
@@ -9803,10 +9853,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 
 				// Contract code
 				opcode.PrettyInstructionGetConstant{
@@ -9824,10 +9871,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 					},
 					AccessedType: interpreter.PrimitiveStaticTypeString,
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  uint8ArrayType,
-					TargetType: uint8ArrayType,
-				},
+				opcode.PrettyInstructionTransfer{},
 
 				// Message: "Optional arg"
 				opcode.PrettyInstructionGetConstant{
@@ -9838,11 +9882,15 @@ func TestCompileOptionalArgument(t *testing.T) {
 				},
 				opcode.PrettyInstructionTransfer{},
 
-				opcode.PrettyInstructionInvokeTyped{
+				opcode.PrettyInstructionInvoke{
 					ArgTypes: []interpreter.StaticType{
 						interpreter.PrimitiveStaticTypeString,
 						uint8ArrayType,
 						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+						uint8ArrayType,
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeDeployedContract,
 				},
@@ -11231,12 +11279,14 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -11379,12 +11429,14 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -11483,12 +11535,14 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -11621,12 +11675,14 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -11730,12 +11786,14 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 						Kind: constant.String,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeString,
-					TargetType: interpreter.PrimitiveStaticTypeString,
-				},
+				opcode.PrettyInstructionTransfer{},
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   1,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeString,
+					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
 
@@ -11826,6 +11884,11 @@ func TestCompileAttachments(t *testing.T) {
 			ReferencedType: aType,
 		}
 
+		sRefType := &interpreter.ReferenceStaticType{
+			Authorization:  interpreter.UnauthorizedAccess,
+			ReferencedType: sType,
+		}
+
 		assert.Equal(t,
 			[]opcode.PrettyInstruction{
 				// STATEMENT: var s = S()
@@ -11850,10 +11913,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.PrettyInstructionGetLocal{Local: sTmpLocalIndex},
 				// create a reference to s and store locally
 				opcode.PrettyInstructionNewRef{
-					Type: &interpreter.ReferenceStaticType{
-						Authorization:  interpreter.UnauthorizedAccess,
-						ReferencedType: sType,
-					},
+					Type:       sRefType,
 					IsImplicit: false,
 				},
 				opcode.PrettyInstructionSetLocal{
@@ -11869,16 +11929,20 @@ func TestCompileAttachments(t *testing.T) {
 						Kind: constant.Int,
 					},
 				},
-				opcode.PrettyInstructionTransferAndConvert{
-					ValueType:  interpreter.PrimitiveStaticTypeInt,
-					TargetType: interpreter.PrimitiveStaticTypeInt,
-				},
+				opcode.PrettyInstructionTransfer{},
 				// get s reference
 				opcode.PrettyInstructionGetLocal{Local: sRefLocalIndex},
 				// invoke A constructor with &s as arg, puts A on stack
 				opcode.PrettyInstructionInvoke{
-					ArgCount:   2,
-					ReturnType: aType,
+					ArgTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeInt,
+						sRefType,
+					},
+					ParamTypes: []interpreter.StaticType{
+						interpreter.PrimitiveStaticTypeInt,
+					},
+					ReturnType:          aType,
+					HasImplicitArgument: true,
 				},
 				// get s back on stack
 				opcode.PrettyInstructionGetLocal{Local: sTmpLocalIndex},
@@ -12054,6 +12118,60 @@ func TestCompileImportEnumCase(t *testing.T) {
 	)
 }
 
+func TestDynamicMethodInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      struct interface SI {
+          fun answer(): Int
+      }
+
+      fun answer(_ si: {SI}): Int {
+          return si.answer()
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 4)
+
+	const (
+		siIndex = iota
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: siIndex},
+			opcode.InstructionGetMethodDynamic{
+				MethodName:   0,
+				ReceiverType: 2,
+			},
+			opcode.InstructionInvoke{ReturnType: 1},
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.DecodedConstant{
+			{
+				Data: "answer",
+				Kind: constant.RawString,
+			},
+		},
+		program.Constants,
+	)
+}
+
 func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 
 	t.Parallel()
@@ -12101,12 +12219,12 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 			opcode.PrettyInstructionJumpIfNil{Target: 11},
 			opcode.PrettyInstructionGetLocal{Local: tempIndex},
 			opcode.PrettyInstructionUnwrap{},
-			opcode.PrettyInstructionGetField{
-				FieldName: constant.DecodedConstant{
+			opcode.PrettyInstructionGetMethodDynamic{
+				MethodName: constant.DecodedConstant{
 					Data: "answer",
 					Kind: constant.RawString,
 				},
-				AccessedType: interpreter.NewIntersectionStaticType(
+				ReceiverType: interpreter.NewIntersectionStaticType(
 					nil,
 					[]*interpreter.InterfaceStaticType{
 						siType,
@@ -12141,7 +12259,6 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 		},
 		program.Constants,
 	)
-
 }
 
 func TestCompileInjectedContract(t *testing.T) {
@@ -12277,12 +12394,14 @@ func TestCompileInjectedContract(t *testing.T) {
 				},
 				AccessedType: bStaticType,
 			},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType:  interpreter.PrimitiveStaticTypeInt,
-				TargetType: interpreter.PrimitiveStaticTypeInt,
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
 				ReturnType: interpreter.PrimitiveStaticTypeInt,
 			},
 			opcode.PrettyInstructionTransferAndConvert{
@@ -12597,12 +12716,14 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 				},
 				AccessedType: fooABCType,
 			},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType:  interpreter.PrimitiveStaticTypeInt,
-				TargetType: interpreter.PrimitiveStaticTypeInt,
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
 				ReturnType: fooABCResourceDestroyedType,
 			},
 
@@ -12622,20 +12743,30 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 					},
 				),
 			},
-			opcode.PrettyInstructionTransferAndConvert{
-				ValueType:  interpreter.PrimitiveStaticTypeInt,
-				TargetType: interpreter.PrimitiveStaticTypeInt,
-			},
+			opcode.PrettyInstructionTransfer{},
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   1,
+				ArgTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
 				ReturnType: barXYZResourceDestroyedType,
 			},
 
 			// Invoke `collectEvents` with the above event.
 			// `collectEvents(...)`
 			opcode.PrettyInstructionInvoke{
-				ArgCount:   2,
-				ReturnType: interpreter.PrimitiveStaticTypeVoid,
+				ArgTypes: []interpreter.StaticType{
+					fooABCResourceDestroyedType,
+					barXYZResourceDestroyedType,
+				},
+				ParamTypes: []interpreter.StaticType{
+					fooABCResourceDestroyedType,
+					barXYZResourceDestroyedType,
+				},
+				ReturnType:             interpreter.PrimitiveStaticTypeVoid,
+				SkipArgumentConversion: true,
 			},
 			opcode.PrettyInstructionDrop{},
 
@@ -13444,4 +13575,64 @@ func TestCompileBoundFunctionClosure(t *testing.T) {
 		},
 		prettyInstructions(functions[getAnswerDirectFuncIndex].Code, program),
 	)
+}
+
+func TestConstructorAsFunction(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      contract C {
+          struct S {}
+      }
+
+      fun test() {
+          var s = C.S
+          s()
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 8)
+
+	testFunction := functions[0]
+
+	assert.Equal(t, "test", testFunction.Name)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+
+			// Load receiver: constructor value
+			// Ideally this is not needed.
+			// See the TODO in `compileMemberAccess` method in compiler.
+			opcode.InstructionGetGlobal{Global: 0},
+			opcode.InstructionDrop{},
+
+			// Load constructor function `C.S`
+			opcode.InstructionGetGlobal{Global: 5},
+
+			// Assign to variable `s`.
+			opcode.InstructionTransferAndConvert{ValueType: 1, TargetType: 1},
+			opcode.InstructionSetLocal{Local: 0, IsTempVar: false},
+
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionInvoke{ReturnType: 2},
+			opcode.InstructionDrop{},
+
+			opcode.InstructionReturn{},
+		},
+		testFunction.Code,
+	)
+
+	assert.Empty(t, program.Constants)
+
 }
