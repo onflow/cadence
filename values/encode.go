@@ -34,16 +34,18 @@ import (
 // To be able to encode/decode such semantically different values,
 // we define custom CBOR tags.
 
+// CCF uses CBOR tag numbers 128-255, which are unassigned by [IANA]
+// (https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml).
+//
+
+const CBORTagBase = 128
+
 // !!! *WARNING* !!!
 //
 // Only add new fields to encoded structs by
 // appending new fields with the next highest key.
 //
 // DO *NOT* REPLACE EXISTING FIELDS!
-
-const CBORTagBase = 128
-
-// !!! *WARNING* !!!
 //
 // Only add new types by:
 // - replacing existing placeholders (`_`) with new types

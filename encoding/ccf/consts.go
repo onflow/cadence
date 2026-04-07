@@ -26,6 +26,9 @@ import (
 // CCF uses CBOR tag numbers 128-255, which are unassigned by [IANA]
 // (https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml).
 //
+
+const CBORTagBase = 128
+
 // !!! *WARNING* !!!
 //
 // CCF Codec *MUST* comply with CCF Specifications.  Relevant changes
@@ -49,7 +52,7 @@ import (
 
 const (
 	// CBOR tag numbers (128-135) for root objects (131-135 are reserved)
-	CBORTagTypeDef = 128 + iota
+	CBORTagTypeDef = CBORTagBase + iota
 	CBORTagTypeDefAndValue
 	CBORTagTypeAndValue
 	_
