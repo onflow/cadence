@@ -1058,7 +1058,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
-              import 0x1
+              import x, y from 0x1
 
               let b = log("b")
               let a = log("a")
