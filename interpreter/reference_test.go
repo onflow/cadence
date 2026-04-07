@@ -4554,24 +4554,36 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
             }
         `)
 
+		// Cast the function type to a more specific one, to gain entitlements.
+		// This should fail.
 		_, err := inter.Invoke("testCasting")
-		require.NoError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+		assert.Equal(
+			t,
+			common.TypeID("fun():auth(S.test.E)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun():&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
 
+		// Invoke the super-type function as-is.
 		_, err = inter.Invoke("testInvoking")
 		require.NoError(t, err)
 
+		// Invoke the super-type function as-is, and try to gain entitlements on the returned result.
+		// This should fail.
 		_, err = inter.Invoke("testCastingInvocationResult")
 		RequireError(t, err)
-
-		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
-
 		assert.Equal(
 			t,
 			common.TypeID("auth(S.test.E)&Int"),
 			forceCastTypeMismatchError.ExpectedType.ID(),
 		)
-
 		assert.Equal(
 			t,
 			common.TypeID("&Int"),
@@ -4607,6 +4619,8 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
             }
         `)
 
+		// Cast the function type to a broader type, to lose entitlements.
+		// This should pass.
 		_, err := inter.Invoke("testCasting")
 		require.NoError(t, err)
 

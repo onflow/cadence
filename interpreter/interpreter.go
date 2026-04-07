@@ -2072,7 +2072,7 @@ func ConvertAndBox(
 // actual type structure but uses the target type's authorization for references.
 // This prevents entitlement escalation while allowing type narrowing.
 func applyTargetTypeAuthorization(
-	gauge common.MemoryGauge,
+	typeConverter TypeConverter,
 	actualStaticType StaticType,
 	targetType sema.Type,
 ) StaticType {
@@ -2088,8 +2088,8 @@ func applyTargetTypeAuthorization(
 			break
 		}
 
-		elementType := applyTargetTypeAuthorization(gauge, actual.Type, targetElementType)
-		return NewVariableSizedStaticType(gauge, elementType)
+		elementType := applyTargetTypeAuthorization(typeConverter, actual.Type, targetElementType)
+		return NewVariableSizedStaticType(typeConverter, elementType)
 
 	case *ConstantSizedStaticType:
 		var targetElementType sema.Type
@@ -2102,8 +2102,8 @@ func applyTargetTypeAuthorization(
 			break
 		}
 
-		elementType := applyTargetTypeAuthorization(gauge, actual.Type, targetElementType)
-		return NewConstantSizedStaticType(gauge, elementType, actual.Size)
+		elementType := applyTargetTypeAuthorization(typeConverter, actual.Type, targetElementType)
+		return NewConstantSizedStaticType(typeConverter, elementType, actual.Size)
 
 	case *DictionaryStaticType:
 		var targetKeyType, targetValueType sema.Type
@@ -2118,9 +2118,9 @@ func applyTargetTypeAuthorization(
 			break
 		}
 
-		keyType := applyTargetTypeAuthorization(gauge, actual.KeyType, targetKeyType)
-		valueType := applyTargetTypeAuthorization(gauge, actual.ValueType, targetValueType)
-		return NewDictionaryStaticType(gauge, keyType, valueType)
+		keyType := applyTargetTypeAuthorization(typeConverter, actual.KeyType, targetKeyType)
+		valueType := applyTargetTypeAuthorization(typeConverter, actual.ValueType, targetValueType)
+		return NewDictionaryStaticType(typeConverter, keyType, valueType)
 
 	case *OptionalStaticType:
 		var targetInnerType sema.Type
@@ -2133,8 +2133,8 @@ func applyTargetTypeAuthorization(
 			break
 		}
 
-		innerType := applyTargetTypeAuthorization(gauge, actual.Type, targetInnerType)
-		return NewOptionalStaticType(gauge, innerType)
+		innerType := applyTargetTypeAuthorization(typeConverter, actual.Type, targetInnerType)
+		return NewOptionalStaticType(typeConverter, innerType)
 
 	case *ReferenceStaticType:
 		// Use the actual referenced type as the inner type, but with the borrow type's authorization,
@@ -2149,13 +2149,13 @@ func applyTargetTypeAuthorization(
 			targetReferencedType = sema.AnyStructType
 		} else if borrowRef, ok := targetType.(*sema.ReferenceType); ok {
 			targetReferencedType = borrowRef.Type
-			targetAuth = ConvertSemaAccessToStaticAuthorization(gauge, borrowRef.Authorization)
+			targetAuth = ConvertSemaAccessToStaticAuthorization(typeConverter, borrowRef.Authorization)
 		} else {
 			break
 		}
 
-		innerType := applyTargetTypeAuthorization(gauge, actual.ReferencedType, targetReferencedType)
-		return NewReferenceStaticType(gauge, targetAuth, innerType)
+		innerType := applyTargetTypeAuthorization(typeConverter, actual.ReferencedType, targetReferencedType)
+		return NewReferenceStaticType(typeConverter, targetAuth, innerType)
 
 	case *CapabilityStaticType:
 		var targetBorrowType sema.Type
@@ -2169,15 +2169,41 @@ func applyTargetTypeAuthorization(
 		}
 
 		borrowType := applyTargetTypeAuthorization(
-			gauge,
+			typeConverter,
 			actual.BorrowType,
 			targetBorrowType,
 		)
 
 		return NewCapabilityStaticType(
-			gauge,
+			typeConverter,
 			borrowType,
 		)
+	case FunctionStaticType:
+		if targetFuncType, isFuncType := targetType.(*sema.FunctionType); isFuncType {
+			newReturnType := applyTargetTypeAuthorization(
+				typeConverter,
+				actual.ReturnType(typeConverter),
+				targetFuncType.ReturnTypeAnnotation.Type,
+			)
+
+			newSemaReturnType := typeConverter.SemaTypeFromStaticType(newReturnType)
+
+			return NewFunctionStaticType(
+				typeConverter,
+				&sema.FunctionType{
+					Purity:                   actual.Purity,
+					ReturnTypeAnnotation:     sema.NewTypeAnnotation(newSemaReturnType),
+					Arity:                    actual.Arity,
+					ArgumentExpressionsCheck: actual.ArgumentExpressionsCheck,
+					TypeArgumentsCheck:       actual.TypeArgumentsCheck,
+					Members:                  actual.Members,
+					TypeParameters:           actual.TypeParameters,
+					Parameters:               actual.Parameters,
+					IsConstructor:            actual.IsConstructor,
+					TypeFunctionType:         actual.TypeFunctionType,
+				},
+			)
+		}
 	}
 
 	// For all other cases, return the actual type unchanged
@@ -2710,9 +2736,37 @@ func convert(
 		default:
 			panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 		}
+
+	case *sema.FunctionType:
+		if funcValue, isFunc := value.(FunctionValue); isFunc && !valueType.Equal(unwrappedTargetType) {
+			oldFuncStaticType := funcValue.StaticType(context)
+			newFuncStaticType := applyTargetTypeAuthorization(context, oldFuncStaticType, unwrappedTargetType).(FunctionStaticType)
+
+			if oldFuncStaticType.Equal(newFuncStaticType) {
+				return value
+			}
+
+			return context.NewFunctionWithType(funcValue, newFuncStaticType)
+		}
 	}
 
 	return value
+}
+
+func (interpreter *Interpreter) NewFunctionWithType(funcValue FunctionValue, funcStaticType FunctionStaticType) FunctionValue {
+	return NewWrappedFunctionValue(
+		interpreter,
+		funcValue,
+		NewStaticHostFunctionValue(
+			interpreter,
+			funcStaticType.FunctionType,
+			func(invocation Invocation) Value {
+				// No need to convert the results here.
+				// Wrapper function invocation already does that (at the invocation).
+				return funcValue.Invoke(invocation)
+			},
+		),
+	)
 }
 
 // isReferenceConversionNotRedundant checks whether the conversion is not redundant.

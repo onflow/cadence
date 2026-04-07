@@ -579,3 +579,42 @@ func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorizati
 
 	return semaAccess, nil
 }
+
+// NewFunctionWithType Returns a new function instance of same kind (compiled/native/bound),
+// but with the given function type.
+// This preferred over creating a new wrapper function kind, since all places in VM
+// that handles function types already handle these known functions.
+// Introducing a new kind of wrapper function means, that would need to be handled
+// everywhere, which could be error-prone.
+func (c *Context) NewFunctionWithType(
+	funcValue interpreter.FunctionValue,
+	funcStaticType interpreter.FunctionStaticType,
+) interpreter.FunctionValue {
+
+	switch funcValue := funcValue.(type) {
+	case *CompiledFunctionValue:
+		return &CompiledFunctionValue{
+			Function:   funcValue.Function,
+			Executable: funcValue.Executable,
+			Type:       funcStaticType,
+			Upvalues:   funcValue.Upvalues,
+		}
+	case *NativeFunctionValue:
+		return &NativeFunctionValue{
+			Name:         funcValue.Name,
+			Function:     funcValue.Function,
+			functionType: funcStaticType.FunctionType,
+			fields:       funcValue.fields,
+		}
+	case *BoundFunctionValue:
+		method := c.NewFunctionWithType(funcValue.Method, funcStaticType).(FunctionValue)
+		return &BoundFunctionValue{
+			ReceiverReference: funcValue.ReceiverReference,
+			Method:            method,
+			functionType:      funcStaticType.FunctionType,
+			Base:              funcValue.Base,
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
