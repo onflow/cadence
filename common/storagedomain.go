@@ -37,6 +37,9 @@ import (
 // DO *NOT* REPLACE EXISTING STORAGEDOMAIN!
 // DO *NOT* REMOVE EXISTING STORAGEDOMAIN!
 // DO *NOT* INSERT NEW STORAGEDOMAIN IN BETWEEN!
+
+//go:generate stringer -type=StorageDomain -trimprefix=StorageDomain
+
 type StorageDomain uint8
 
 const (
@@ -68,7 +71,10 @@ const (
 	// records active account capability controller IDs
 	StorageDomainAccountCapability
 
-	// Append new StorageDomain here (if needed).
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	StorageDomain_Count
 )
 
 var AllStorageDomains = []StorageDomain{
