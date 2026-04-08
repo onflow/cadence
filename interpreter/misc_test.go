@@ -2328,7 +2328,7 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
     `)
 
 	actual := inter.GetGlobal("test").(*interpreter.CompositeValue).
-		GetMember(inter, "foo")
+		GetMember(inter, "foo", common.DeclarationKindField)
 	AssertValuesEqual(
 		t,
 		inter,
@@ -7687,7 +7687,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		valueCreationContext,
 		interpreter.UnauthorizedAccess,
 		arrayValue,
-		interpreter.MustConvertStaticToSemaType(arrayStaticType, inter),
+		inter.SemaTypeFromStaticType(arrayStaticType),
 	)
 
 	_, err = inter.Invoke("test", ref)
@@ -9007,7 +9007,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 	require.NoError(t, err)
 
 	i := inter.GetGlobal("C").(interpreter.MemberAccessibleValue).
-		GetMember(inter, "i")
+		GetMember(inter, "i", common.DeclarationKindField)
 
 	require.IsType(t,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -12119,18 +12119,15 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	variable := inter.GetGlobal("ref")
-	require.NotNil(t, variable)
+	value := inter.GetGlobal("ref")
+	require.NotNil(t, value)
 
-	require.Equal(
-		t,
-		&interpreter.EphemeralReferenceValue{
-			Value:         interpreter.NewUnmeteredIntValueFromInt64(2),
-			BorrowedType:  sema.IntType,
-			Authorization: interpreter.UnauthorizedAccess,
-		},
-		variable,
-	)
+	require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+	referenceValue := value.(*interpreter.EphemeralReferenceValue)
+
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), referenceValue.Value)
+	require.Equal(t, sema.IntType, referenceValue.BorrowedType)
+	require.Equal(t, interpreter.UnauthorizedAccess, referenceValue.Authorization)
 }
 
 func TestInterpretNilCoalesceAnyResourceAndPanic(t *testing.T) {
@@ -13082,12 +13079,20 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 		)
 		require.NotNil(t, storageMap)
 
+		fooType := inter.SemaTypeFromStaticType(
+			&interpreter.CompositeStaticType{
+				Location:            TestLocation,
+				TypeID:              TestLocation.TypeID(nil, "Foo"),
+				QualifiedIdentifier: "Foo",
+			},
+		)
+
 		ref := interpreter.NewStorageReferenceValue(
 			nil,
 			interpreter.UnauthorizedAccess,
 			address,
 			path,
-			nil,
+			fooType,
 		)
 
 		result, err := inter.Invoke("update", ref)
@@ -13115,7 +13120,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 			interpreter.UnauthorizedAccess,
 			address,
 			path,
-			nil,
+			fooType,
 		)
 
 		result, err = inter.Invoke("updateAgain", ref)
@@ -14662,6 +14667,227 @@ func TestInterpretContainerMutationCheckThroughReference(t *testing.T) {
 	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	var containerReadError *interpreter.ContainerReadError
-	require.ErrorAs(t, err, &containerReadError)
+	var containerMutationErr *interpreter.ContainerMutationError
+	require.ErrorAs(t, err, &containerMutationErr)
+
+}
+
+func TestInterpretFailableCastToUnrelated(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      // unrelated structs
+      struct interface I1 {}
+
+      struct interface I2 {
+          let val: Int
+      }
+
+      // struct conforms to unrelated struct interfaces
+      struct S: I1, I2 {
+          let val: Int
+
+          init() {
+              self.val = 2
+          }
+      }
+
+      fun testFailable(): Int? {
+          let x: {I1} = S()
+          let y = x as? {I2}
+          return y?.val
+      }
+
+      fun testForce(): Int {
+          let x: {I1} = S()
+          let y = x as! {I2}
+          return y.val
+      }
+    `
+
+	inter := parseCheckAndPrepare(t, code)
+
+	result, err := inter.Invoke("testFailable")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		),
+		result,
+	)
+
+	result, err = inter.Invoke("testForce")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		result,
+	)
+}
+
+func TestInterpretEphemeralReferenceFailableCastToUnrelated(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      // unrelated structs
+      struct interface I1 {}
+
+      struct interface I2 {
+          let val: Int
+      }
+
+      // struct conforms to unrelated struct interfaces
+      struct S: I1, I2 {
+          let val: Int
+
+          init() {
+              self.val = 2
+          }
+      }
+
+      fun testFailable(): Int? {
+          let x: &{I1} = &S()
+          let y = x as? &{I2}
+          return y?.val
+      }
+
+      fun testForce(): Int {
+          let x: &{I1} = &S()
+          let y = x as! &{I2}
+          return y.val
+      }
+    `
+
+	inter := parseCheckAndPrepare(t, code)
+
+	result, err := inter.Invoke("testFailable")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		),
+		result,
+	)
+
+	result, err = inter.Invoke("testForce")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		result,
+	)
+}
+
+func TestInterpretStorageReferenceFailableCastToUnrelated(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      // unrelated structs
+      struct interface I1 {}
+
+      struct interface I2 {
+          let val: Int
+      }
+
+      // struct conforms to unrelated struct interfaces
+      struct S: I1, I2 {
+          let val: Int
+
+          init() {
+              self.val = 2
+          }
+      }
+
+      fun save() {
+          account.storage.save(S(), to: /storage/s)
+      }
+
+      fun testFailable(): Int? {
+          let x: &{I1} = account.storage.borrow<&{I1}>(from: /storage/s)!
+          let y = x as? &{I2}
+          return y?.val
+      }
+
+      fun testForce(): Int {
+          let x: &{I1} = account.storage.borrow<&{I1}>(from: /storage/s)!
+          let y = x as! &{I2}
+          return y.val
+      }
+    `
+
+	// `account: auth(...) &Account`
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name: "account",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: stdlib.NewAccountReferenceValue(
+			NoOpFunctionCreationContext{},
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.FullyEntitledAccountAccess,
+		),
+		Kind: common.DeclarationKindConstant,
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				AccountHandler: func(
+					context interpreter.AccountCreationContext,
+					address interpreter.AddressValue,
+				) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("save")
+	require.NoError(t, err)
+
+	result, err := inter.Invoke("testFailable")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		),
+		result,
+	)
+
+	result, err = inter.Invoke("testForce")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		result,
+	)
 }

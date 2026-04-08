@@ -43,6 +43,7 @@ const (
 	MemoryKindStorageReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
+	MemoryKindWrappedFunctionValue
 	MemoryKindHostFunctionValue
 	MemoryKindBoundFunctionValue
 	MemoryKindBigInt

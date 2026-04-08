@@ -9,7 +9,7 @@ require (
 	github.com/bits-and-blooms/bitset v1.24.4
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/dave/dst v0.27.3
-	github.com/fxamacker/cbor/v2 v2.9.1-0.20251019205732-39888e6be013
+	github.com/fxamacker/cbor/v2 v2.9.2-0.20260331174317-a78e92ec038e
 	github.com/goccy/go-yaml v1.18.0
 	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5
 	github.com/itchyny/gojq v0.12.17
@@ -18,7 +18,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/leanovate/gopter v0.2.11
 	github.com/logrusorgru/aurora/v4 v4.0.0
-	github.com/onflow/atree v0.13.0
+	github.com/onflow/atree v0.15.0
 	github.com/onflow/crypto v0.25.3
 	github.com/onflow/fixed-point v0.1.1
 	github.com/rivo/uniseg v0.4.7

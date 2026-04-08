@@ -158,7 +158,7 @@ func NewAccount(
 		sema.AccountReferenceType,
 	)
 
-	payerValue := payer.GetMember(context, sema.AccountTypeAddressFieldName)
+	payerValue := payer.GetMember(context, sema.AccountTypeAddressFieldName, common.DeclarationKindField)
 	if payerValue == nil {
 		panic(errors.NewUnexpectedError("payer address is not set"))
 	}
@@ -2705,7 +2705,7 @@ func NewHashAlgorithmFromValue(
 ) sema.HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
 
-	rawValue := hashAlgoValue.GetMember(context, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetMember(context, sema.EnumRawValueFieldName, common.DeclarationKindField)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
@@ -3943,7 +3943,7 @@ func unrecordStorageCapabilityController(
 }
 
 func getStorageCapabilityControllerIDsIterator(
-	context interpreter.StorageContext,
+	context interpreter.ValueIteratorContext,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
 ) (
@@ -3961,7 +3961,7 @@ func getStorageCapabilityControllerIDsIterator(
 
 	count = uint64(capabilityIDSet.Count())
 	nextCapabilityID = func() (uint64, bool) {
-		keyValue := iterator.NextKey(context)
+		keyValue := iterator.Next(context)
 		if keyValue == nil {
 			return 0, false
 		}
@@ -4415,7 +4415,7 @@ func getCheckedCapabilityController(
 	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
 
 	controllerBorrowType, ok :=
-		interpreter.MustConvertStaticToSemaType(controllerBorrowStaticType, context).(*sema.ReferenceType)
+		context.SemaTypeFromStaticType(controllerBorrowStaticType).(*sema.ReferenceType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -4684,7 +4684,7 @@ func AccountCapabilitiesGet(
 	}
 
 	capabilityBorrowType, ok :=
-		interpreter.MustConvertStaticToSemaType(capabilityStaticBorrowType, invocationContext).(*sema.ReferenceType)
+		invocationContext.SemaTypeFromStaticType(capabilityStaticBorrowType).(*sema.ReferenceType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}

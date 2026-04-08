@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
@@ -1042,32 +1041,9 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{0x1}}, nil
 			},
-			OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-				require.Empty(t, identifiers)
-				require.IsType(t, common.AddressLocation{}, location)
-
-				return []ResolvedLocation{
-					{
-						Location: common.AddressLocation{
-							Address: location.(common.AddressLocation).Address,
-							Name:    "TestImport",
-						},
-						Identifiers: []ast.Identifier{
-							{
-								Identifier: "TestImport",
-							},
-						},
-					},
-				}, nil
-			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCodes[location], nil
-			},
-			OnGetAccountContractNames: func(address common.Address) (names []string, err error) {
-				if address == common.MustBytesToAddress([]byte{0x1}) {
-					return []string{"Test"}, nil
-				}
-				return []string{"TestImport"}, nil
 			},
 			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
@@ -1137,7 +1113,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		const oldCode = `
-		    import 0x2
+		    import TestImport from 0x2
 
 		    access(all) contract Test {
 
@@ -1165,7 +1141,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		const newCode = `
-			import 0x3
+			import TestImport from 0x3
 
 			access(all) contract Test {
 

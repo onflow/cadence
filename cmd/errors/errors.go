@@ -1028,6 +1028,11 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
+		{"sema.InvalidDictionaryIndexBindingError",
+			&sema.InvalidDictionaryIndexBindingError{
+				Range: placeholderRange,
+			},
+		},
 		{"sema.InvalidDictionaryKeyTypeError",
 			&sema.InvalidDictionaryKeyTypeError{
 				Type:  placeholderSemaType,
@@ -1756,6 +1761,11 @@ func generateErrors() []namedError {
 		},
 		{"sema.UnsupportedResourceForLoopError",
 			&sema.UnsupportedResourceForLoopError{
+				Range: placeholderRange,
+			},
+		},
+		{"sema.WildcardAddressImportError",
+			&sema.WildcardAddressImportError{
 				Range: placeholderRange,
 			},
 		},

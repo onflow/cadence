@@ -101,17 +101,14 @@ func (checker *Checker) declareImportDeclaration(
 		return
 	}
 
-	// 1) If the import is just for an address (e.g. `import 0x01`) without specifying any contracts, AND
-	// 2) If the imported address is same as the address of the account to which the current contract is deploying,
-	// Then this could create a cycle, as soon the current contract is deployed.
-	// e.g:
-	//    import 0x01
-	//    access(all) contract Foo {}
-	//
+	// Wildcard imports from address locations are not allowed.
+	// Users must specify which contracts they want to import,
+	// e.g. `import MyContract from 0x1` instead of `import 0x1`.
 
 	if len(identifiers) == 0 {
-		if currentProgramLocation, ok := checker.Location.(common.AddressLocation); ok {
-			if importLocation, ok := declaration.Location.(common.AddressLocation); ok {
+		if importLocation, ok := declaration.Location.(common.AddressLocation); ok {
+
+			if currentProgramLocation, ok := checker.Location.(common.AddressLocation); ok {
 				if currentProgramLocation.Address == importLocation.Address {
 					checker.report(
 						&CyclicImportsError{
@@ -119,10 +116,16 @@ func (checker *Checker) declareImportDeclaration(
 							Range:    locationRange,
 						},
 					)
-
-					return
 				}
 			}
+
+			checker.report(
+				&WildcardAddressImportError{
+					Range: locationRange,
+				},
+			)
+
+			return
 		}
 	}
 
@@ -246,6 +249,10 @@ func (checker *Checker) importResolvedLocation(
 			)
 		}
 		allImported[imported] = struct{}{}
+	}
+
+	if imp.HasErrors() {
+		checker.importedProgramHadErrors = true
 	}
 
 	// Attempt to import the requested value declarations

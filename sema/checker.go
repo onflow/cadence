@@ -125,6 +125,7 @@ type Checker struct {
 	inCreate                           bool
 	isChecked                          bool
 	inAssignment                       bool
+	importedProgramHadErrors           bool
 	parent                             ast.Element
 }
 
@@ -311,6 +312,7 @@ func (checker *Checker) Check() error {
 		}
 
 		checker.Elaboration.setIsChecking(false)
+		checker.Elaboration.HasErrors = len(checker.errors) > 0 || checker.importedProgramHadErrors
 		checker.isChecked = true
 
 		checker.resources.Reclaim()
@@ -2630,6 +2632,7 @@ func (checker *Checker) checkErrorsForInvalidExpressionTypes(actualType Type, ex
 	// before checking for an invalid type, which is more expensive.
 
 	if len(checker.errors) == 0 &&
+		!checker.importedProgramHadErrors &&
 		(actualType.IsInvalidType() || (expectedType != nil && expectedType.IsInvalidType())) {
 
 		panic(errors.NewUnexpectedError("invalid type produced without error"))

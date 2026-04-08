@@ -88,7 +88,7 @@ const (
 	Deref
 	Transfer
 	Convert
-	_
+	BoxOptional
 	_
 	_
 
@@ -132,6 +132,7 @@ const (
 	GetIndex
 	RemoveIndex
 	GetMethod
+	GetMethodDynamic
 	GetTypeIndex
 	SetTypeIndex
 	RemoveTypeIndex
@@ -142,7 +143,7 @@ const (
 	// Invocations
 
 	Invoke
-	InvokeTyped
+	_
 	_
 	_
 	_

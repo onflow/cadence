@@ -1356,13 +1356,14 @@ func (i InstructionNewClosure) Pretty(program ProgramForInstructions) PrettyInst
 
 // InstructionInvoke
 //
-// Pops the function and arguments off the stack, invokes the function with the arguments,
-// and then pushes the result back on to the stack.
-// This instruction is only passes the argument count. If the argument types are needed, use `invokeTyped`.
+// Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack. This instruction is a variant of `invoke` that includes the argument types.
 type InstructionInvoke struct {
-	TypeArgs   []uint16
-	ArgCount   uint16
-	ReturnType uint16
+	TypeArgs               []uint16
+	ArgTypes               []uint16
+	ParamTypes             []uint16
+	ReturnType             uint16
+	HasImplicitArgument    bool
+	SkipArgumentConversion bool
 }
 
 var _ Instruction = InstructionInvoke{}
@@ -1382,9 +1383,15 @@ func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
 	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
+	printfUInt16ArrayArgument(sb, "argTypes", i.ArgTypes, colorize)
+	sb.WriteByte(' ')
+	printfUInt16ArrayArgument(sb, "paramTypes", i.ParamTypes, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "returnType", i.ReturnType, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "skipArgumentConversion", i.SkipArgumentConversion, colorize)
 }
 
 func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
@@ -1393,94 +1400,45 @@ func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
 	sb.WriteByte(' ')
 	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, program.GetTypes())
 	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
+	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, program.GetTypes())
+	sb.WriteByte(' ')
+	printfTypeArrayArgument(sb, "paramTypes", i.ParamTypes, colorize, program.GetTypes())
 	sb.WriteByte(' ')
 	printfTypeArgument(sb, "returnType", program.GetTypes()[i.ReturnType], colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "hasImplicitArgument", i.HasImplicitArgument, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "skipArgumentConversion", i.SkipArgumentConversion, colorize)
 }
 
 func (i InstructionInvoke) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16Array(code, i.TypeArgs)
-	emitUint16(code, i.ArgCount)
+	emitUint16Array(code, i.ArgTypes)
+	emitUint16Array(code, i.ParamTypes)
 	emitUint16(code, i.ReturnType)
+	emitBool(code, i.HasImplicitArgument)
+	emitBool(code, i.SkipArgumentConversion)
 }
 
 func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 	i.TypeArgs = decodeUint16Array(ip, code)
-	i.ArgCount = decodeUint16(ip, code)
+	i.ArgTypes = decodeUint16Array(ip, code)
+	i.ParamTypes = decodeUint16Array(ip, code)
 	i.ReturnType = decodeUint16(ip, code)
+	i.HasImplicitArgument = decodeBool(ip, code)
+	i.SkipArgumentConversion = decodeBool(ip, code)
 	return i
 }
 
 func (i InstructionInvoke) Pretty(program ProgramForInstructions) PrettyInstruction {
 	return PrettyInstructionInvoke{
-		TypeArgs:   resolveTypeIndices(i.TypeArgs, program.GetTypes()),
-		ArgCount:   i.ArgCount,
-		ReturnType: program.GetTypes()[i.ReturnType],
-	}
-}
-
-// InstructionInvokeTyped
-//
-// Pops the function and arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack. This instruction is a variant of `invoke` that includes the argument types.
-type InstructionInvokeTyped struct {
-	TypeArgs   []uint16
-	ArgTypes   []uint16
-	ReturnType uint16
-}
-
-var _ Instruction = InstructionInvokeTyped{}
-
-func (InstructionInvokeTyped) Opcode() Opcode {
-	return InvokeTyped
-}
-
-func (i InstructionInvokeTyped) String() string {
-	var sb strings.Builder
-	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb, false)
-	return sb.String()
-}
-
-func (i InstructionInvokeTyped) OperandsString(sb *strings.Builder, colorize bool) {
-	sb.WriteByte(' ')
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
-	sb.WriteByte(' ')
-	printfUInt16ArrayArgument(sb, "argTypes", i.ArgTypes, colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "returnType", i.ReturnType, colorize)
-}
-
-func (i InstructionInvokeTyped) ResolvedOperandsString(sb *strings.Builder,
-	program ProgramForInstructions,
-	colorize bool) {
-	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, program.GetTypes())
-	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "argTypes", i.ArgTypes, colorize, program.GetTypes())
-	sb.WriteByte(' ')
-	printfTypeArgument(sb, "returnType", program.GetTypes()[i.ReturnType], colorize)
-}
-
-func (i InstructionInvokeTyped) Encode(code *[]byte) {
-	emitOpcode(code, i.Opcode())
-	emitUint16Array(code, i.TypeArgs)
-	emitUint16Array(code, i.ArgTypes)
-	emitUint16(code, i.ReturnType)
-}
-
-func DecodeInvokeTyped(ip *uint16, code []byte) (i InstructionInvokeTyped) {
-	i.TypeArgs = decodeUint16Array(ip, code)
-	i.ArgTypes = decodeUint16Array(ip, code)
-	i.ReturnType = decodeUint16(ip, code)
-	return i
-}
-
-func (i InstructionInvokeTyped) Pretty(program ProgramForInstructions) PrettyInstruction {
-	return PrettyInstructionInvokeTyped{
-		TypeArgs:   resolveTypeIndices(i.TypeArgs, program.GetTypes()),
-		ArgTypes:   resolveTypeIndices(i.ArgTypes, program.GetTypes()),
-		ReturnType: program.GetTypes()[i.ReturnType],
+		TypeArgs:               resolveTypeIndices(i.TypeArgs, program.GetTypes()),
+		ArgTypes:               resolveTypeIndices(i.ArgTypes, program.GetTypes()),
+		ParamTypes:             resolveTypeIndices(i.ParamTypes, program.GetTypes()),
+		ReturnType:             program.GetTypes()[i.ReturnType],
+		HasImplicitArgument:    i.HasImplicitArgument,
+		SkipArgumentConversion: i.SkipArgumentConversion,
 	}
 }
 
@@ -1537,6 +1495,64 @@ func DecodeGetMethod(ip *uint16, code []byte) (i InstructionGetMethod) {
 func (i InstructionGetMethod) Pretty(program ProgramForInstructions) PrettyInstruction {
 	return PrettyInstructionGetMethod{
 		Method:       i.Method,
+		ReceiverType: program.GetTypes()[i.ReceiverType],
+	}
+}
+
+// InstructionGetMethodDynamic
+//
+// Pops a value off the stack, the receiver,
+// and then pushes the value of the method with the given name onto the stack.
+// Methods are looked-up dynamically at runtime.
+type InstructionGetMethodDynamic struct {
+	MethodName   uint16
+	ReceiverType uint16
+}
+
+var _ Instruction = InstructionGetMethodDynamic{}
+
+func (InstructionGetMethodDynamic) Opcode() Opcode {
+	return GetMethodDynamic
+}
+
+func (i InstructionGetMethodDynamic) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionGetMethodDynamic) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "methodName", i.MethodName, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "receiverType", i.ReceiverType, colorize)
+}
+
+func (i InstructionGetMethodDynamic) ResolvedOperandsString(sb *strings.Builder,
+	program ProgramForInstructions,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "methodName", program.GetConstants()[i.MethodName], colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "receiverType", program.GetTypes()[i.ReceiverType], colorize)
+}
+
+func (i InstructionGetMethodDynamic) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.MethodName)
+	emitUint16(code, i.ReceiverType)
+}
+
+func DecodeGetMethodDynamic(ip *uint16, code []byte) (i InstructionGetMethodDynamic) {
+	i.MethodName = decodeUint16(ip, code)
+	i.ReceiverType = decodeUint16(ip, code)
+	return i
+}
+
+func (i InstructionGetMethodDynamic) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionGetMethodDynamic{
+		MethodName:   program.GetConstants()[i.MethodName],
 		ReceiverType: program.GetTypes()[i.ReceiverType],
 	}
 }
@@ -1697,6 +1713,55 @@ func (i InstructionWrap) Encode(code *[]byte) {
 
 func (i InstructionWrap) Pretty(program ProgramForInstructions) PrettyInstruction {
 	return PrettyInstructionWrap{}
+}
+
+// InstructionBoxOptional
+//
+// Pops a value off the stack, boxes it into an optional if needed to match the target type,
+// and then pushes it back on to the stack.
+type InstructionBoxOptional struct {
+	TargetType uint16
+}
+
+var _ Instruction = InstructionBoxOptional{}
+
+func (InstructionBoxOptional) Opcode() Opcode {
+	return BoxOptional
+}
+
+func (i InstructionBoxOptional) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionBoxOptional) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "targetType", i.TargetType, colorize)
+}
+
+func (i InstructionBoxOptional) ResolvedOperandsString(sb *strings.Builder,
+	program ProgramForInstructions,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "targetType", program.GetTypes()[i.TargetType], colorize)
+}
+
+func (i InstructionBoxOptional) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.TargetType)
+}
+
+func DecodeBoxOptional(ip *uint16, code []byte) (i InstructionBoxOptional) {
+	i.TargetType = decodeUint16(ip, code)
+	return i
+}
+
+func (i InstructionBoxOptional) Pretty(program ProgramForInstructions) PrettyInstruction {
+	return PrettyInstructionBoxOptional{
+		TargetType: program.GetTypes()[i.TargetType],
+	}
 }
 
 // InstructionTransfer
@@ -3558,10 +3623,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeNewClosure(ip, code)
 	case Invoke:
 		return DecodeInvoke(ip, code)
-	case InvokeTyped:
-		return DecodeInvokeTyped(ip, code)
 	case GetMethod:
 		return DecodeGetMethod(ip, code)
+	case GetMethodDynamic:
+		return DecodeGetMethodDynamic(ip, code)
 	case Dup:
 		return InstructionDup{}
 	case Drop:
@@ -3572,6 +3637,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionUnwrap{}
 	case Wrap:
 		return InstructionWrap{}
+	case BoxOptional:
+		return DecodeBoxOptional(ip, code)
 	case Transfer:
 		return InstructionTransfer{}
 	case TransferAndConvert:

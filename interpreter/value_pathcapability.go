@@ -167,16 +167,25 @@ func (v *PathCapabilityValue) newCheckFunction(
 	)
 }
 
-func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, name string) Value {
-	switch name {
-	case sema.CapabilityTypeAddressFieldName:
-		return v.address
+func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 
-	case sema.CapabilityTypeIDFieldName:
-		return InvalidCapabilityID
-	}
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			switch name {
+			case sema.CapabilityTypeAddressFieldName:
+				return v.address
 
-	return context.GetMethod(v, name)
+			case sema.CapabilityTypeIDFieldName:
+				return InvalidCapabilityID
+			}
+
+			return nil
+		},
+	)
 }
 
 func (v *PathCapabilityValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -272,6 +281,7 @@ func (v *PathCapabilityValue) Transfer(
 		v.DeepRemove(context, true)
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -310,6 +320,15 @@ func (v *PathCapabilityValue) AddressPath() AddressPath {
 	}
 }
 
+func (*PathCapabilityValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v *PathCapabilityValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
+}
+
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
 	// encodedPathCapabilityValueAddressFieldKey    uint64 = 0
@@ -337,7 +356,7 @@ func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, values.CBORTagPathCapabilityValue, //nolint:staticcheck
+		0xd8, byte(values.CBORTagPathCapabilityValue), //nolint:staticcheck
 		// array, 3 items follow
 		0x83,
 	})

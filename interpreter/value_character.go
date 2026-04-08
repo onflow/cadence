@@ -229,6 +229,7 @@ func (v CharacterValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -252,14 +253,30 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(context MemberAccessibleContext, name string) Value {
-	switch name {
-	case sema.CharacterTypeUtf8FieldName:
-		common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
-		return ByteSliceToByteArrayValue(context, []byte(v.Str))
-	}
+func (v CharacterValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			switch name {
+			case sema.CharacterTypeUtf8FieldName:
+				common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
+				return ByteSliceToByteArrayValue(context, []byte(v.Str))
+			}
+			return nil
+		},
+	)
+}
 
-	return context.GetMethod(v, name)
+func (CharacterValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v CharacterValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 var NativeCharacterValueToStringFunction = NativeFunction(

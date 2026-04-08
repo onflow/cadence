@@ -179,6 +179,8 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(transferContext, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
+	// For example, if this function doesn't use shallow copy the other should do the same.
 	return v
 }
 
@@ -207,11 +209,24 @@ func (v *AccountCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
+func (*AccountCapabilityControllerValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v *AccountCapabilityControllerValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
+}
+
 type deletionCheckedFunctionValue struct {
 	FunctionValue
 }
 
-func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string) (result Value) {
+func (v *AccountCapabilityControllerValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -226,21 +241,29 @@ func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	// NOTE: check if controller is already deleted
 	v.CheckDeleted()
 
-	switch name {
-	case sema.AccountCapabilityControllerTypeTagFieldName:
-		return v.GetTag(context)
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			switch name {
+			case sema.AccountCapabilityControllerTypeTagFieldName:
+				return v.GetTag(context)
 
-	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
-		return v.CapabilityID
+			case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
+				return v.CapabilityID
 
-	case sema.AccountCapabilityControllerTypeBorrowTypeFieldName:
-		return NewTypeValue(context, v.BorrowType)
+			case sema.AccountCapabilityControllerTypeBorrowTypeFieldName:
+				return NewTypeValue(context, v.BorrowType)
 
-	case sema.AccountCapabilityControllerTypeCapabilityFieldName:
-		return v.GetCapability(context)
-	}
+			case sema.AccountCapabilityControllerTypeCapabilityFieldName:
+				return v.GetCapability(context)
+			}
 
-	return context.GetMethod(v, name)
+			return nil
+		},
+	)
 }
 
 func (v *AccountCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

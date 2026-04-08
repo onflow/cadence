@@ -113,8 +113,14 @@ func (v PathValue) MeteredString(
 	return v.String()
 }
 
-func (v PathValue) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v PathValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 var NativePathValueToStringFunction = NativeFunction(
@@ -274,6 +280,7 @@ func (v PathValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -299,4 +306,13 @@ func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (PathValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (PathValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v PathValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

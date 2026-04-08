@@ -529,8 +529,14 @@ func (v Word256Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	)
 }
 
-func (v Word256Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Word256Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Word256Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -585,6 +591,7 @@ func (v Word256Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -606,4 +613,13 @@ func (v Word256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Word256Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Word256Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Word256Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

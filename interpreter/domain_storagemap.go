@@ -374,10 +374,8 @@ func (s *DomainStorageMap) ReadOnlyLoadedValueIterator() DomainStorageMapIterato
 	}
 
 	return DomainStorageMapIterator{
-		mapIterator: mapLoadedValueIterator{
-			MapLoadedValueIterator: mapIterator,
-		},
-		storage: s.orderedMap.Storage,
+		mapIterator: mapIterator,
+		storage:     s.orderedMap.Storage,
 	}
 }
 
@@ -458,24 +456,4 @@ func (i DomainStorageMapIterator) NextValue(gauge common.Gauge) Value {
 	}
 
 	return MustConvertStoredValue(gauge, v)
-}
-
-type mapLoadedValueIterator struct {
-	*atree.MapLoadedValueIterator
-}
-
-var _ atree.MapIterator = mapLoadedValueIterator{}
-
-func (i mapLoadedValueIterator) CanMutate() bool {
-	return false
-}
-
-func (i mapLoadedValueIterator) NextKey() (atree.Value, error) {
-	key, _, err := i.Next()
-	return key, err
-}
-
-func (i mapLoadedValueIterator) NextValue() (atree.Value, error) {
-	_, value, err := i.Next()
-	return value, err
 }

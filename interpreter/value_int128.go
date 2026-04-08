@@ -700,8 +700,14 @@ func (v Int128Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewInt128ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int128Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Int128Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Int128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -752,6 +758,7 @@ func (v Int128Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -773,4 +780,13 @@ func (v Int128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Int128Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Int128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Int128Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

@@ -207,6 +207,7 @@ var (
 	BoundFunctionValueMemoryUsage               = NewConstantMemoryUsage(MemoryKindBoundFunctionValue)
 	HostFunctionValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindHostFunctionValue)
 	InterpretedFunctionValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindInterpretedFunctionValue)
+	WrappedFunctionValueMemoryUsage             = NewConstantMemoryUsage(MemoryKindWrappedFunctionValue)
 	CapabilityValueMemoryUsage                  = NewConstantMemoryUsage(MemoryKindCapabilityValue)
 	EphemeralReferenceValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
 	StorageReferenceValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)

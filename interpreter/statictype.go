@@ -52,6 +52,18 @@ type StaticType interface {
 	Precedence() ast.TypePrecedence
 	ID() TypeID
 	IsDeprecated() bool
+	// Walk calls the given function for this type and every type it is composed of.
+	// If the function returns false, the walk is stopped entirely.
+	Walk(visit func(ty StaticType) bool) bool
+}
+
+// WalkStaticType calls the given function for the given type and every type it is composed of.
+// If the function returns false, the walk is stopped entirely.
+func WalkStaticType(t StaticType, visit func(ty StaticType) bool) bool {
+	if t == nil {
+		return true
+	}
+	return t.Walk(visit)
 }
 
 type TypeID = common.TypeID
@@ -188,6 +200,10 @@ func (*CompositeStaticType) IsDeprecated() bool {
 	return false
 }
 
+func (t *CompositeStaticType) Walk(visit func(ty StaticType) bool) bool {
+	return visit(t)
+}
+
 // InterfaceStaticType
 
 type InterfaceStaticType struct {
@@ -275,6 +291,10 @@ func (*InterfaceStaticType) IsDeprecated() bool {
 	return false
 }
 
+func (t *InterfaceStaticType) Walk(visit func(ty StaticType) bool) bool {
+	return visit(t)
+}
+
 // ArrayStaticType
 
 type ArrayStaticType interface {
@@ -357,6 +377,13 @@ func (t *VariableSizedStaticType) IsDeprecated() bool {
 	return t.Type.IsDeprecated()
 }
 
+func (t *VariableSizedStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
+}
+
 // InclusiveRangeStaticType
 
 type InclusiveRangeStaticType struct {
@@ -414,6 +441,13 @@ func (t InclusiveRangeStaticType) ID() TypeID {
 
 func (t InclusiveRangeStaticType) IsDeprecated() bool {
 	return t.ElementType.IsDeprecated()
+}
+
+func (t InclusiveRangeStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.ElementType.Walk(visit)
 }
 
 func (t InclusiveRangeStaticType) BaseType() StaticType {
@@ -512,6 +546,13 @@ func (t *ConstantSizedStaticType) IsDeprecated() bool {
 	return t.Type.IsDeprecated()
 }
 
+func (t *ConstantSizedStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
+}
+
 // DictionaryStaticType
 
 type DictionaryStaticType struct {
@@ -587,6 +628,16 @@ func (t *DictionaryStaticType) IsDeprecated() bool {
 		t.ValueType.IsDeprecated()
 }
 
+func (t *DictionaryStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if !t.KeyType.Walk(visit) {
+		return false
+	}
+	return t.ValueType.Walk(visit)
+}
+
 // OptionalStaticType
 
 type OptionalStaticType struct {
@@ -646,6 +697,13 @@ func (t *OptionalStaticType) ID() TypeID {
 
 func (t *OptionalStaticType) IsDeprecated() bool {
 	return t.Type.IsDeprecated()
+}
+
+func (t *OptionalStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
 }
 
 var NilStaticType = &OptionalStaticType{
@@ -757,6 +815,18 @@ func (t *IntersectionStaticType) IsDeprecated() bool {
 	}
 
 	return false
+}
+
+func (t *IntersectionStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	for _, interfaceType := range t.Types {
+		if !interfaceType.Walk(visit) {
+			return false
+		}
+	}
+	return true
 }
 
 // Authorization
@@ -1034,6 +1104,13 @@ func (t *ReferenceStaticType) IsDeprecated() bool {
 	return t.ReferencedType.IsDeprecated()
 }
 
+func (t *ReferenceStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.ReferencedType.Walk(visit)
+}
+
 // CapabilityStaticType
 
 type CapabilityStaticType struct {
@@ -1109,6 +1186,16 @@ func (t *CapabilityStaticType) IsDeprecated() bool {
 		return false
 	}
 	return t.BorrowType.IsDeprecated()
+}
+
+func (t *CapabilityStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if t.BorrowType != nil {
+		return t.BorrowType.Walk(visit)
+	}
+	return true
 }
 
 func (t *CapabilityStaticType) BaseType() StaticType {
@@ -1331,6 +1418,7 @@ func ConvertSemaTransactionToStaticTransactionType(
 	)
 }
 
+// Deprecated: Use TypeConverter.SemaAccessFromStaticAuthorization instead.
 // ConvertStaticAuthorizationToSemaAccess converts authorization of static-types
 // to the sema-type representation of the same.
 //
@@ -1623,6 +1711,10 @@ func (t FunctionStaticType) ID() TypeID {
 
 func (FunctionStaticType) IsDeprecated() bool {
 	return false
+}
+
+func (t FunctionStaticType) Walk(visit func(ty StaticType) bool) bool {
+	return visit(t)
 }
 
 // TypeParameter
