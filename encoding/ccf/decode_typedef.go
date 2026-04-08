@@ -203,7 +203,7 @@ func (d *Decoder) decodeTypeDef(
 	}
 
 	switch tagNum {
-	case CBORTagStructType:
+	case uint64(CBORTagStructType):
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredStructType(
 				d.gauge,
@@ -215,7 +215,7 @@ func (d *Decoder) decodeTypeDef(
 		}
 		return d.decodeCompositeType(types, ctr)
 
-	case CBORTagResourceType:
+	case uint64(CBORTagResourceType):
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredResourceType(
 				d.gauge,
@@ -227,7 +227,7 @@ func (d *Decoder) decodeTypeDef(
 		}
 		return d.decodeCompositeType(types, ctr)
 
-	case CBORTagEventType:
+	case uint64(CBORTagEventType):
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredEventType(
 				d.gauge,
@@ -239,7 +239,7 @@ func (d *Decoder) decodeTypeDef(
 		}
 		return d.decodeCompositeType(types, ctr)
 
-	case CBORTagContractType:
+	case uint64(CBORTagContractType):
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredContractType(
 				d.gauge,
@@ -251,7 +251,7 @@ func (d *Decoder) decodeTypeDef(
 		}
 		return d.decodeCompositeType(types, ctr)
 
-	case CBORTagEnumType:
+	case uint64(CBORTagEnumType):
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredEnumType(
 				d.gauge,
@@ -264,7 +264,7 @@ func (d *Decoder) decodeTypeDef(
 		}
 		return d.decodeCompositeType(types, ctr)
 
-	case CBORTagAttachmentType:
+	case uint64(CBORTagAttachmentType):
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredAttachmentType(
 				d.gauge,
@@ -277,7 +277,7 @@ func (d *Decoder) decodeTypeDef(
 		}
 		return d.decodeCompositeType(types, ctr)
 
-	case CBORTagStructInterfaceType:
+	case uint64(CBORTagStructInterfaceType):
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredStructInterfaceType(
 				d.gauge,
@@ -289,7 +289,7 @@ func (d *Decoder) decodeTypeDef(
 		}
 		return d.decodeInterfaceType(types, ctr)
 
-	case CBORTagResourceInterfaceType:
+	case uint64(CBORTagResourceInterfaceType):
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredResourceInterfaceType(
 				d.gauge,
@@ -301,7 +301,7 @@ func (d *Decoder) decodeTypeDef(
 		}
 		return d.decodeInterfaceType(types, ctr)
 
-	case CBORTagContractInterfaceType:
+	case uint64(CBORTagContractInterfaceType):
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredContractInterfaceType(
 				d.gauge,

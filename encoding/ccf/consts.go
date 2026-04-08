@@ -50,9 +50,12 @@ const CBORTagBase = 128
 // group of tags in this range have reserved space available,
 // there is no need to append new tag numbers in 232-255.
 
+//go:generate stringer -type=CBORTag -trimprefix=CBORTag
+type CBORTag byte
+
 const (
 	// CBOR tag numbers (128-135) for root objects (131-135 are reserved)
-	CBORTagTypeDef = CBORTagBase + iota
+	CBORTagTypeDef CBORTag = CBORTagBase + iota
 	CBORTagTypeDefAndValue
 	CBORTagTypeAndValue
 	_
@@ -170,6 +173,11 @@ const (
 	_
 	_
 	_
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	CBORTag_Count
 )
 
 type entitlementSetKind uint64
