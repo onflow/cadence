@@ -62,7 +62,7 @@ type CBORTag byte
 
 const (
 	CBORTagVoidValue CBORTag = CBORTagBase + iota
-	_                // DO *NOT* REPLACE. Previously used for dictionary values
+	_                        // DO *NOT* REPLACE. Previously used for dictionary values
 	CBORTagSomeValue
 	CBORTagAddressValue
 	CBORTagCompositeValue

@@ -17299,9 +17299,9 @@ func TestHasMsgPrefix(t *testing.T) {
 		{name: "not CCF", msg: []byte{'a', 'b', 'c', 'd', 'e'}, expected: false},
 		{name: "not CCF", msg: []byte{0x1a, 0x00, 0x0f, 0x42, 0x40}, expected: false},
 		{name: "not CCF", msg: []byte{0xd8, 0x01, 0x82, 0x00, 0x00}, expected: false},
-		{name: "not implemented", msg: []byte{0xd8, byte(byte(ccf.CBORTagTypeDef)), 0x82, 0x00, 0x00}, expected: false},
-		{name: "ccf-typedef-and-value-message", msg: []byte{0xd8, byte(byte(ccf.CBORTagTypeDefAndValue)), 0x82, 0x00, 0x00}, expected: true},
-		{name: "ccf-type-and-value-message", msg: []byte{0xd8, byte(byte(ccf.CBORTagTypeAndValue)), 0x82, 0xd8, byte(byte(ccf.CBORTagSimpleType)), 0x18, 0x32, 0xf6}, expected: true},
+		{name: "not implemented", msg: []byte{0xd8, byte(ccf.CBORTagTypeDef), 0x82, 0x00, 0x00}, expected: false},
+		{name: "ccf-typedef-and-value-message", msg: []byte{0xd8, byte(ccf.CBORTagTypeDefAndValue), 0x82, 0x00, 0x00}, expected: true},
+		{name: "ccf-type-and-value-message", msg: []byte{0xd8, byte(ccf.CBORTagTypeAndValue), 0x82, 0xd8, byte(ccf.CBORTagSimpleType), 0x18, 0x32, 0xf6}, expected: true},
 	}
 
 	for _, tc := range testCases {
