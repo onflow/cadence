@@ -482,8 +482,14 @@ func (v UInt32Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	)
 }
 
-func (v UInt32Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v UInt32Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v UInt32Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -540,6 +546,7 @@ func (v UInt32Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -561,4 +568,13 @@ func (v UInt32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (UInt32Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (UInt32Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UInt32Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

@@ -65,7 +65,7 @@ func HasMsgPrefix(msg []byte) bool {
 	// - ccf-type-and-valu8e-message
 
 	return msg[0] == 0xd8 && // 0xd8 is major type 6, semantic tag
-		(msg[1] == CBORTagTypeDefAndValue || msg[1] == CBORTagTypeAndValue) &&
+		(msg[1] == byte(CBORTagTypeDefAndValue) || msg[1] == byte(CBORTagTypeAndValue)) &&
 		msg[2] == 0x82 // 0x82 is CBOR array head of 2 elements
 }
 
@@ -276,11 +276,11 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 	}
 
 	switch tagNum {
-	case CBORTagTypeDefAndValue:
+	case uint64(CBORTagTypeDefAndValue):
 		// Decode ccf-typedef-and-value-message.
 		return d.decodeTypeDefAndValue()
 
-	case CBORTagTypeAndValue:
+	case uint64(CBORTagTypeAndValue):
 		// Decode ccf-type-and-value-message.
 		return d.decodeTypeAndValue(newCadenceTypeByCCFTypeID())
 
@@ -589,7 +589,7 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 			return nil, err
 
 		default:
-			err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
+			err := decodeCBORTagWithKnownNumber(d.dec, uint64(CBORTagTypeAndValue))
 			if err != nil {
 				return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %w", t.ID(), t, err)
 			}
@@ -1536,7 +1536,7 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 	}
 
 	if nextType == cbor.TagType {
-		err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
+		err := decodeCBORTagWithKnownNumber(d.dec, uint64(CBORTagTypeAndValue))
 		if err != nil {
 			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %w", typ.ID(), typ, err)
 		}
@@ -1604,64 +1604,64 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 
 	switch tagNum {
 
-	case CBORTagTypeValueRef:
+	case uint64(CBORTagTypeValueRef):
 		return d.decodeTypeRef(visited)
 
-	case CBORTagSimpleTypeValue:
+	case uint64(CBORTagSimpleTypeValue):
 		return d.decodeSimpleTypeID()
 
-	case CBORTagOptionalTypeValue:
+	case uint64(CBORTagOptionalTypeValue):
 		return d.decodeOptionalType(visited, d.decodeTypeValue)
 
-	case CBORTagVarsizedArrayTypeValue:
+	case uint64(CBORTagVarsizedArrayTypeValue):
 		return d.decodeVarSizedArrayType(visited, d.decodeTypeValue)
 
-	case CBORTagConstsizedArrayTypeValue:
+	case uint64(CBORTagConstsizedArrayTypeValue):
 		return d.decodeConstantSizedArrayType(visited, d.decodeTypeValue)
 
-	case CBORTagDictTypeValue:
+	case uint64(CBORTagDictTypeValue):
 		return d.decodeDictType(visited, d.decodeTypeValue)
 
-	case CBORTagInclusiveRangeTypeValue:
+	case uint64(CBORTagInclusiveRangeTypeValue):
 		return d.decodeInclusiveRangeType(visited, d.decodeTypeValue)
 
-	case CBORTagCapabilityTypeValue:
+	case uint64(CBORTagCapabilityTypeValue):
 		return d.decodeCapabilityType(visited, d.decodeNullableTypeValue)
 
-	case CBORTagReferenceTypeValue:
+	case uint64(CBORTagReferenceTypeValue):
 		return d.decodeReferenceType(visited, d.decodeTypeValue, false)
 
-	case CBORTagIntersectionTypeValue:
+	case uint64(CBORTagIntersectionTypeValue):
 		return d.decodeIntersectionType(visited, d.decodeTypeValue)
 
-	case CBORTagFunctionTypeValue:
+	case uint64(CBORTagFunctionTypeValue):
 		return d.decodeFunctionTypeValue(visited)
 
-	case CBORTagStructTypeValue:
+	case uint64(CBORTagStructTypeValue):
 		return d.decodeStructTypeValue(visited)
 
-	case CBORTagResourceTypeValue:
+	case uint64(CBORTagResourceTypeValue):
 		return d.decodeResourceTypeValue(visited)
 
-	case CBORTagEventTypeValue:
+	case uint64(CBORTagEventTypeValue):
 		return d.decodeEventTypeValue(visited)
 
-	case CBORTagContractTypeValue:
+	case uint64(CBORTagContractTypeValue):
 		return d.decodeContractTypeValue(visited)
 
-	case CBORTagEnumTypeValue:
+	case uint64(CBORTagEnumTypeValue):
 		return d.decodeEnumTypeValue(visited)
 
-	case CBORTagAttachmentTypeValue:
+	case uint64(CBORTagAttachmentTypeValue):
 		return d.decodeAttachmentTypeValue(visited)
 
-	case CBORTagStructInterfaceTypeValue:
+	case uint64(CBORTagStructInterfaceTypeValue):
 		return d.decodeStructInterfaceTypeValue(visited)
 
-	case CBORTagResourceInterfaceTypeValue:
+	case uint64(CBORTagResourceInterfaceTypeValue):
 		return d.decodeResourceInterfaceTypeValue(visited)
 
-	case CBORTagContractInterfaceTypeValue:
+	case uint64(CBORTagContractInterfaceTypeValue):
 		return d.decodeContractInterfaceTypeValue(visited)
 
 	default:

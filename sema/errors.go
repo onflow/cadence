@@ -1139,6 +1139,28 @@ func (*InvalidNativeModifierError) SecondaryError() string {
 		"remove the modifier or use a function declaration"
 }
 
+// InvalidDictionaryIndexBindingError
+
+type InvalidDictionaryIndexBindingError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidDictionaryIndexBindingError{}
+var _ errors.UserError = &InvalidDictionaryIndexBindingError{}
+var _ errors.SecondaryError = &InvalidDictionaryIndexBindingError{}
+
+func (*InvalidDictionaryIndexBindingError) isSemanticError() {}
+
+func (*InvalidDictionaryIndexBindingError) IsUserError() {}
+
+func (*InvalidDictionaryIndexBindingError) Error() string {
+	return "index binding is not supported for dictionary iteration"
+}
+
+func (*InvalidDictionaryIndexBindingError) SecondaryError() string {
+	return "use 'for key in dictionary' instead of 'for index, key in dictionary'"
+}
+
 // NativeFunctionWithImplementationError
 
 type NativeFunctionWithImplementationError struct {
@@ -7043,6 +7065,34 @@ func (*DuplicateImportError) SecondaryError() string {
 }
 
 func (*DuplicateImportError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
+
+// WildcardAddressImportError
+
+type WildcardAddressImportError struct {
+	ast.Range
+}
+
+var _ SemanticError = &WildcardAddressImportError{}
+var _ errors.UserError = &WildcardAddressImportError{}
+var _ errors.SecondaryError = &WildcardAddressImportError{}
+var _ errors.HasDocumentationLink = &WildcardAddressImportError{}
+
+func (*WildcardAddressImportError) isSemanticError() {}
+
+func (*WildcardAddressImportError) IsUserError() {}
+
+func (*WildcardAddressImportError) Error() string {
+	return "wildcard import of address is not allowed"
+}
+
+func (*WildcardAddressImportError) SecondaryError() string {
+	return "specify which contracts you want to import, " +
+		"e.g. `import MyContract from 0x1`"
+}
+
+func (*WildcardAddressImportError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 

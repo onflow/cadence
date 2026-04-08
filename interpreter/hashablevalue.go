@@ -53,6 +53,8 @@ func newHashInputProvider(gauge common.Gauge) atree.HashInputProvider {
 
 // HashInputType is a type flag that is included in the hash input for a value,
 // i.e., it should be included in the result of HashableValue.HashInput.
+//
+//go:generate stringer -type=HashInputType -trimprefix=HashInputType
 type HashInputType byte
 
 const (

@@ -77,22 +77,22 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 
 	switch typ := typ.(type) {
 	case *cadence.StructType:
-		cborTagNum = CBORTagStructType
+		cborTagNum = uint64(CBORTagStructType)
 
 	case *cadence.ResourceType:
-		cborTagNum = CBORTagResourceType
+		cborTagNum = uint64(CBORTagResourceType)
 
 	case *cadence.EventType:
-		cborTagNum = CBORTagEventType
+		cborTagNum = uint64(CBORTagEventType)
 
 	case *cadence.ContractType:
-		cborTagNum = CBORTagContractType
+		cborTagNum = uint64(CBORTagContractType)
 
 	case *cadence.EnumType:
-		cborTagNum = CBORTagEnumType
+		cborTagNum = uint64(CBORTagEnumType)
 
 	case *cadence.AttachmentType:
-		cborTagNum = CBORTagAttachmentType
+		cborTagNum = uint64(CBORTagAttachmentType)
 
 	default:
 		panic(cadenceErrors.NewUnexpectedError("unexpected composite type %s (%T)", typ.ID(), typ))
@@ -244,13 +244,13 @@ func (e *Encoder) encodeInterfaceType(typ cadence.InterfaceType, tids ccfTypeIDB
 
 	switch typ := typ.(type) {
 	case *cadence.StructInterfaceType:
-		cborTagNum = CBORTagStructInterfaceType
+		cborTagNum = uint64(CBORTagStructInterfaceType)
 
 	case *cadence.ResourceInterfaceType:
-		cborTagNum = CBORTagResourceInterfaceType
+		cborTagNum = uint64(CBORTagResourceInterfaceType)
 
 	case *cadence.ContractInterfaceType:
-		cborTagNum = CBORTagContractInterfaceType
+		cborTagNum = uint64(CBORTagContractInterfaceType)
 
 	default:
 		panic(cadenceErrors.NewUnexpectedError("unexpected interface type %s (%T)", typ.ID(), typ))

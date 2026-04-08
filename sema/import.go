@@ -28,6 +28,7 @@ type Import interface {
 	AllValueElements() *StringImportElementOrderedMap
 	AllTypeElements() *StringImportElementOrderedMap
 	IsChecking() bool
+	HasErrors() bool
 }
 
 // ImportElement
@@ -74,6 +75,10 @@ func (i ElaborationImport) IsChecking() bool {
 	return i.Elaboration.IsChecking()
 }
 
+func (i ElaborationImport) HasErrors() bool {
+	return i.Elaboration.HasErrors
+}
+
 // VirtualImport
 
 type VirtualImport struct {
@@ -90,5 +95,9 @@ func (i VirtualImport) AllTypeElements() *StringImportElementOrderedMap {
 }
 
 func (VirtualImport) IsChecking() bool {
+	return false
+}
+
+func (VirtualImport) HasErrors() bool {
 	return false
 }

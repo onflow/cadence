@@ -73,6 +73,14 @@ func (NonStorable) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (NonStorable) CanCopyNonRefSimple() bool {
+	return false
+}
+
+func (NonStorable) CopyNonRefSimple() (atree.Storable, error) {
+	return nil, NewStorableCopyError("NonStorable")
+}
+
 // Value is the Cadence value hierarchy which is heavily tied to the interpreter and persistent storage,
 // and has lots of implementation details.
 //
@@ -154,7 +162,7 @@ type TypeIndexableValue interface {
 
 type MemberAccessibleValue interface {
 	Value
-	GetMember(context MemberAccessibleContext, name string) Value
+	GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value
 	RemoveMember(context ValueTransferContext, name string) Value
 	// SetMember returns whether a value previously existed with this name.
 	SetMember(context ValueTransferContext, name string, value Value) bool

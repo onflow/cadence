@@ -145,28 +145,35 @@ func (v *IDCapabilityValue) MeteredString(
 	)
 }
 
-func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, name string) Value {
-	switch name {
-	case sema.CapabilityTypeAddressFieldName:
-		return v.address
+func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			switch name {
+			case sema.CapabilityTypeAddressFieldName:
+				return v.address
 
-	case sema.CapabilityTypeIDFieldName:
-		return v.ID
-	}
-
-	return context.GetMethod(v, name)
+			case sema.CapabilityTypeIDFieldName:
+				return v.ID
+			}
+			return nil
+		},
+	)
 }
 
 func (v *IDCapabilityValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+		borrowType, _ := context.SemaTypeFromStaticType(v.BorrowType).(*sema.ReferenceType)
 		return capabilityBorrowFunction(context, v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
-		borrowType, _ := MustConvertStaticToSemaType(v.BorrowType, context).(*sema.ReferenceType)
+		borrowType, _ := context.SemaTypeFromStaticType(v.BorrowType).(*sema.ReferenceType)
 		return capabilityCheckFunction(context, v, v.address, v.ID, borrowType)
 	}
 
@@ -242,6 +249,8 @@ func (v *IDCapabilityValue) Transfer(
 		v.DeepRemove(context, true)
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
+	// For example, if this function doesn't use shallow copy the other should do the same.
 	return v
 }
 
@@ -269,4 +278,13 @@ func (v *IDCapabilityValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
 		v.address,
 	}
+}
+
+func (IDCapabilityValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v *IDCapabilityValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

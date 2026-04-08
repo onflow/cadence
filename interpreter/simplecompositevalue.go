@@ -118,7 +118,7 @@ func (v *SimpleCompositeValue) StaticType(_ ValueStaticTypeContext) StaticType {
 func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool {
 	// Check type is importable
 	staticType := v.StaticType(context)
-	semaType := MustConvertStaticToSemaType(staticType, context)
+	semaType := context.SemaTypeFromStaticType(staticType)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
@@ -139,21 +139,28 @@ func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool
 	return importable
 }
 
-func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string) Value {
-	value, ok := v.Fields[name]
-	if ok {
-		return value
-	}
+func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			value, ok := v.Fields[name]
+			if ok {
+				return value
+			}
 
-	computeField := v.ComputeField
-	if computeField != nil {
-		value = computeField(name, context)
-		if value != nil {
-			return value
-		}
-	}
-
-	return context.GetMethod(v, name)
+			computeField := v.ComputeField
+			if computeField != nil {
+				value = computeField(name, context)
+				if value != nil {
+					return value
+				}
+			}
+			return nil
+		},
+	)
 }
 
 func (v *SimpleCompositeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {

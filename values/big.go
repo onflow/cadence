@@ -116,10 +116,16 @@ func UnsignedBigIntToSizedBigEndianBytes(bigInt *big.Int, sizeInBytes uint) []by
 
 func BigEndianBytesToSignedBigInt(b []byte) *big.Int {
 	// Check for special cases of 0 and 1
-	if len(b) == 1 && b[0] == 0 {
+	switch len(b) {
+	case 0:
 		return big.NewInt(0)
-	} else if len(b) == 1 && b[0] <= 0x7f {
-		return big.NewInt(int64(b[0]))
+	case 1:
+		zerothByte := b[0]
+		if zerothByte == 0 {
+			return big.NewInt(0)
+		} else if zerothByte <= 0x7f {
+			return big.NewInt(int64(zerothByte))
+		}
 	}
 
 	// Check if number is negative (high bit set)

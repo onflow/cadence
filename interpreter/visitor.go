@@ -63,6 +63,7 @@ type Visitor interface {
 	VisitInterpretedFunctionValue(context ValueVisitContext, value *InterpretedFunctionValue)
 	VisitHostFunctionValue(context ValueVisitContext, value *HostFunctionValue)
 	VisitBoundFunctionValue(context ValueVisitContext, value BoundFunctionValue)
+	VisitWrappedFunctionValue(context ValueVisitContext, value WrappedFunctionValue)
 	VisitStorageCapabilityControllerValue(context ValueVisitContext, v *StorageCapabilityControllerValue)
 	VisitAccountCapabilityControllerValue(context ValueVisitContext, v *AccountCapabilityControllerValue)
 }
@@ -112,6 +113,7 @@ type EmptyVisitor struct {
 	InterpretedFunctionValueVisitor         func(context ValueVisitContext, value *InterpretedFunctionValue)
 	HostFunctionValueVisitor                func(context ValueVisitContext, value *HostFunctionValue)
 	BoundFunctionValueVisitor               func(context ValueVisitContext, value BoundFunctionValue)
+	WrappedFunctionValueVisitor             func(context ValueVisitContext, value WrappedFunctionValue)
 	StorageCapabilityControllerValueVisitor func(context ValueVisitContext, value *StorageCapabilityControllerValue)
 	AccountCapabilityControllerValueVisitor func(context ValueVisitContext, value *AccountCapabilityControllerValue)
 }
@@ -464,6 +466,14 @@ func (v EmptyVisitor) VisitHostFunctionValue(context ValueVisitContext, value *H
 
 func (v EmptyVisitor) VisitBoundFunctionValue(context ValueVisitContext, value BoundFunctionValue) {
 	visitor := v.BoundFunctionValueVisitor
+	if visitor == nil {
+		return
+	}
+	visitor(context, value)
+}
+
+func (v EmptyVisitor) VisitWrappedFunctionValue(context ValueVisitContext, value WrappedFunctionValue) {
+	visitor := v.WrappedFunctionValueVisitor
 	if visitor == nil {
 		return
 	}

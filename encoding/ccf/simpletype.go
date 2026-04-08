@@ -28,6 +28,8 @@ import (
 // Simple type ID is a compact representation of a type
 // which doesn't need additional information.
 
+// !!! *WARNING* !!!
+//
 // IMPORTANT:
 //
 // Don't change existing simple type IDs.

@@ -204,6 +204,9 @@ type Elaboration struct {
 	isChecking                         bool
 	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
 	IsRecovered bool
+	// HasErrors is true if the checker that produced this elaboration had errors,
+	// either directly or transitively from imported programs.
+	HasErrors bool
 }
 
 func NewElaboration(gauge common.MemoryGauge) *Elaboration {
