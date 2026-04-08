@@ -1450,16 +1450,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
-			// If there's a default implementation, then skip explicitly/separately
-			// running the conditions of that functions.
-			// Because the conditions also get executed when the default implementation is executed.
-			// This works because:
-			// 	- `code.Functions` only contains default implementations.
-			//	- There is always only one default implementation (cannot override by other interfaces).
-			if code.Functions.Contains(name) {
-				continue
-			}
-
 			fn, ok := functions.Get(name)
 			// If there is a wrapper, there MUST be a body.
 			if !ok {
@@ -1853,11 +1843,22 @@ func (interpreter *Interpreter) defaultFunctions(
 			continue
 		}
 
+		// Create function value with body only (no conditions).
+		// Conditions are applied separately via the condition wrapper,
+		// so they are enforced regardless of whether the default function
+		// is used as-is or overridden by a conforming type.
+		functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 		functions.Set(
 			name,
-			interpreter.compositeFunction(
-				functionDeclaration,
+			NewInterpretedFunctionValue(
+				interpreter,
+				functionDeclaration.ParameterList,
+				functionType,
 				lexicalScope,
+				nil, // beforeStatements — conditions handled by wrapper
+				nil, // preConditions — conditions handled by wrapper
+				functionDeclaration.FunctionBlock.Block.Statements,
+				nil, // postConditions — conditions handled by wrapper
 			),
 		)
 	}
@@ -2701,10 +2702,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 ) FunctionWrapper {
 
 	if declaration.FunctionBlock == nil ||
-		declaration.FunctionBlock.HasStatements() {
-		// If there's a default implementation (i.e: has statements),
-		// then skip explicitly/separately running the conditions of that functions.
-		// Because the conditions also get executed when the default implementation is executed.
+		!declaration.FunctionBlock.HasConditions() {
 		return nil
 	}
 
