@@ -2178,32 +2178,41 @@ func applyTargetTypeAuthorization(
 			typeConverter,
 			borrowType,
 		)
+
 	case FunctionStaticType:
-		if targetFuncType, isFuncType := targetType.(*sema.FunctionType); isFuncType {
-			newReturnType := applyTargetTypeAuthorization(
-				typeConverter,
-				actual.ReturnType(typeConverter),
-				targetFuncType.ReturnTypeAnnotation.Type,
-			)
+		var targetReturnType sema.Type
 
-			newSemaReturnType := typeConverter.SemaTypeFromStaticType(newReturnType)
-
-			return NewFunctionStaticType(
-				typeConverter,
-				&sema.FunctionType{
-					Purity:                   actual.Purity,
-					ReturnTypeAnnotation:     sema.NewTypeAnnotation(newSemaReturnType),
-					Arity:                    actual.Arity,
-					ArgumentExpressionsCheck: actual.ArgumentExpressionsCheck,
-					TypeArgumentsCheck:       actual.TypeArgumentsCheck,
-					Members:                  actual.Members,
-					TypeParameters:           actual.TypeParameters,
-					Parameters:               actual.Parameters,
-					IsConstructor:            actual.IsConstructor,
-					TypeFunctionType:         actual.TypeFunctionType,
-				},
-			)
+		if targetType == sema.AnyStructType {
+			targetReturnType = sema.AnyStructType
+		} else if targetFuncType, isFuncType := targetType.(*sema.FunctionType); isFuncType {
+			targetReturnType = targetFuncType.ReturnTypeAnnotation.Type
+		} else {
+			break
 		}
+
+		newReturnType := applyTargetTypeAuthorization(
+			typeConverter,
+			actual.ReturnType(typeConverter),
+			targetReturnType,
+		)
+
+		newSemaReturnType := typeConverter.SemaTypeFromStaticType(newReturnType)
+
+		return NewFunctionStaticType(
+			typeConverter,
+			&sema.FunctionType{
+				Purity:                   actual.Purity,
+				ReturnTypeAnnotation:     sema.NewTypeAnnotation(newSemaReturnType),
+				Arity:                    actual.Arity,
+				ArgumentExpressionsCheck: actual.ArgumentExpressionsCheck,
+				TypeArgumentsCheck:       actual.TypeArgumentsCheck,
+				Members:                  actual.Members,
+				TypeParameters:           actual.TypeParameters,
+				Parameters:               actual.Parameters,
+				IsConstructor:            actual.IsConstructor,
+				TypeFunctionType:         actual.TypeFunctionType,
+			},
+		)
 	}
 
 	// For all other cases, return the actual type unchanged
@@ -2239,6 +2248,22 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 	case *sema.OptionalType:
 		newInnerType := semaTypeWithStrippedEntitlements(gauge, t.Type)
 		return sema.NewOptionalType(gauge, newInnerType)
+
+	case *sema.FunctionType:
+		newReturnType := semaTypeWithStrippedEntitlements(gauge, t.ReturnTypeAnnotation.Type)
+		return &sema.FunctionType{
+			Purity:                   t.Purity,
+			ReturnTypeAnnotation:     sema.NewTypeAnnotation(newReturnType),
+			Arity:                    t.Arity,
+			ArgumentExpressionsCheck: t.ArgumentExpressionsCheck,
+			TypeArgumentsCheck:       t.TypeArgumentsCheck,
+			Members:                  t.Members,
+			TypeParameters:           t.TypeParameters,
+			Parameters:               t.Parameters,
+			IsConstructor:            t.IsConstructor,
+			TypeFunctionType:         t.TypeFunctionType,
+		}
+
 	default:
 		return typ
 	}
@@ -2548,6 +2573,19 @@ func convert(
 					return convertedKey, convertedValue
 				},
 			)
+
+		case FunctionValue:
+			oldFuncSemaType := MustSemaTypeOfValue(value, context)
+			newFuncSemaType := semaTypeWithStrippedEntitlements(context, oldFuncSemaType).(*sema.FunctionType)
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if newFuncSemaType.Equal(oldFuncSemaType) {
+				return value
+			}
+
+			newFuncStaticType := ConvertSemaToStaticType(context, newFuncSemaType).(FunctionStaticType)
+
+			return context.NewFunctionWithType(value, newFuncStaticType)
 
 		// No Need to handle `SomeValue` here, since this `convert` function
 		// peels the optionals/some-values at the top.
