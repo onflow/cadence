@@ -21,17 +21,23 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
+
+	"github.com/onflow/cadence/bbq/commons"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
+	"github.com/onflow/cadence/bbq/vm/test"
 )
 
 func TestInterpretReturnType(t *testing.T) {
@@ -205,33 +211,12 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	value := interpreter.NewUnmeteredUIntValueFromUint64(42)
 
-	test := inter.GetGlobal("test").(interpreter.FunctionValue)
-
-	invocation := interpreter.NewInvocation(
-		inter,
-		nil,
-		nil,
-		[]interpreter.Value{value},
-		[]sema.Type{sema.IntType},
-		nil,
-		sema.IntType,
-		interpreter.LocationRange{},
-	)
-
-	_, err := interpreter.InvokeFunction(
-		inter,
-		test,
-		invocation,
-	)
+	// Intentionally passing wrong type of value
+	_, err := inter.InvokeUncheckedForTestingOnly("test", value) //nolint:staticcheck
 	RequireError(t, err)
 
-	if *compile {
-		var internalErr errors.InternalError
-		require.ErrorAs(t, err, &internalErr)
-	} else {
-		var memberAccessTypeError *interpreter.MemberAccessTypeError
-		require.ErrorAs(t, err, &memberAccessTypeError)
-	}
+	var memberAccessTypeError *interpreter.MemberAccessTypeError
+	require.ErrorAs(t, err, &memberAccessTypeError)
 }
 
 func TestInterpretInvocationReturnTypeValidation(t *testing.T) {
@@ -370,4 +355,508 @@ func TestInterpretInvocationOnTypeConfusedValue(t *testing.T) {
 
 	var memberAccessTypeError *interpreter.MemberAccessTypeError
 	require.ErrorAs(t, err, &memberAccessTypeError)
+}
+
+func TestInterpretInvocationReferenceAuthorizationReturnValueTypeCheck(t *testing.T) {
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _, _ := testAccount(
+		t,
+		address,
+		true,
+		nil,
+		`
+            struct interface SI {
+                fun foo(): &[Int] {
+                    pre { true }
+                }
+            }
+
+            struct S: SI {
+
+                fun foo(): auth(Mutate) &[Int] {
+                    return &[]
+                }
+            }
+
+            fun testS() {
+                let s = S()
+                let ref = s.foo()
+            }
+
+            fun testSI() {
+                let si: {SI} = S()
+                let ref = si.foo()
+            }
+
+            fun testSIDowncast() {
+                let si: {SI} = S()
+                si.foo() as! auth(Mutate) &[Int]
+            }
+        `,
+		sema.Config{},
+	)
+
+	_, err := inter.Invoke("testS")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testSI")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testSIDowncast")
+	RequireError(t, err)
+
+	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+	assert.Equal(t,
+		common.TypeID("auth(Mutate)&[Int]"),
+		forceCastTypeMismatchErr.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("&[Int]"),
+		forceCastTypeMismatchErr.ActualType.ID(),
+	)
+}
+
+func TestInterpretFunctionParameterContravariance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("optional parameter via function variable", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): UInt8? {
+                let f: fun(Int): UInt8? = funcWithOptionalParam
+                return f(4)
+            }
+
+            fun funcWithOptionalParam(_ a: Int?): UInt8? {
+                return a.map(fun (_ n: Int): UInt8 {
+                    return UInt8(n)
+                })
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.IsType(t, &interpreter.SomeValue{}, result)
+		innerValue := result.(*interpreter.SomeValue).InnerValue()
+		assert.Equal(t, interpreter.UInt8Value(4), innerValue)
+	})
+
+	t.Run("multiple parameters", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): [Type] {
+                let f: fun(Int, String): [Type] = actualFunc
+                return f(1, "hello")
+            }
+
+            fun actualFunc(_ a: Int?, _ b: String?): [Type] {
+                return [
+                    a.getType(),
+                    b.getType()
+                ]
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeMetaType,
+				),
+				common.ZeroAddress,
+				interpreter.NewTypeValue(
+					inter,
+					interpreter.NewOptionalStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+				interpreter.NewTypeValue(
+					inter,
+					interpreter.NewOptionalStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeString,
+					),
+				),
+			),
+			result,
+		)
+	})
+
+	t.Run("nested optional", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Type {
+                let f: fun(Int): Type = actualFunc
+                return f(4)
+            }
+
+            fun actualFunc(_ a: Int??): Type {
+                return a.getType()
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t,
+			interpreter.NewTypeValue(
+				inter,
+				interpreter.NewOptionalStaticType(
+					inter,
+					interpreter.NewOptionalStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+					),
+				),
+			),
+			result,
+		)
+	})
+
+	t.Run("same types, no boxing needed", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(): Int {
+                let f: fun(Int): Int = identity
+                return f(42)
+            }
+
+            fun identity(_ a: Int): Int {
+                return a
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+
+	t.Run("reference type parameter", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(
+			t,
+			`
+            fun test() {
+                let funcWithAuthReferenceParam: fun(auth(Mutate) &Int) = funcWithNonAuthReferenceParam
+                funcWithAuthReferenceParam(&4 as auth(Mutate) &Int)
+            }
+
+            fun funcWithNonAuthReferenceParam(_ ref: &Int) {
+                let any: AnyStruct = ref
+                let authRef = any as! auth(Mutate) &Int
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+		assert.Equal(t,
+			common.TypeID("auth(Mutate)&Int"),
+			forceCastTypeMismatchErr.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchErr.ActualType.ID(),
+		)
+	})
+
+	t.Run("optional parameter in generic function", func(t *testing.T) {
+		t.Parallel()
+
+		// Scenario:
+		//
+		// struct interface {
+		//    fun(_ a: T)
+		// }
+		//
+		// struct {
+		//    fun(_ a: T?) {}
+		// }
+		//
+		// Usage:
+		//   var si: {SI} = S()
+		//   si.genericFunction<Int>(4)
+		//
+		// This should invoke the `genericFunction` implementation from struct `S`,
+		// which has a generic-optional parameter type at runtime.
+
+		const methodName = "genericFunction"
+
+		// Use `nil`/built-in location, since the vm currently
+		// only allows injecting builtin values.
+		var location common.Location = nil
+
+		typeParameter := &sema.TypeParameter{
+			Name: "T",
+		}
+
+		// Interface type `SI`
+
+		// Interface method type `fun(_ a: T)`.
+		// Note the parameter type is `T`.
+		interfaceMethodType := &sema.FunctionType{
+			TypeParameters: []*sema.TypeParameter{
+				typeParameter,
+			},
+			Parameters: []sema.Parameter{
+				{
+					Identifier: "a",
+					Label:      sema.ArgumentLabelNotRequired,
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.GenericType{
+							TypeParameter: typeParameter,
+						},
+					),
+				},
+			},
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+		}
+
+		structInterfaceType := &sema.InterfaceType{
+			Location:      location,
+			Identifier:    "SI",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &sema.StringMemberOrderedMap{},
+		}
+
+		structInterfaceType.Members.Set(methodName, sema.NewUnmeteredPublicFunctionMember(
+			structInterfaceType,
+			methodName,
+			interfaceMethodType,
+			"",
+		))
+
+		// Concrete type `S`
+
+		// Concrete method type `fun(_ a: T?)`
+		// Note the parameter type is optional `T?`.
+		concreteMethodType := &sema.FunctionType{
+			TypeParameters: []*sema.TypeParameter{
+				typeParameter,
+			},
+			Parameters: []sema.Parameter{
+				{
+					Identifier: "a",
+					Label:      sema.ArgumentLabelNotRequired,
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.OptionalType{
+							Type: &sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						},
+					),
+				},
+			},
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+		}
+
+		structType := &sema.CompositeType{
+			Location:   location,
+			Identifier: "S",
+			Kind:       common.CompositeKindStructure,
+			Members:    &sema.StringMemberOrderedMap{},
+			ExplicitInterfaceConformances: []*sema.InterfaceType{
+				structInterfaceType,
+			},
+		}
+
+		structType.Members.Set(methodName, sema.NewUnmeteredPublicFunctionMember(
+			structType,
+			methodName,
+			concreteMethodType,
+			"",
+		))
+
+		structStaticType := interpreter.NewCompositeStaticTypeComputeTypeID(
+			nil,
+			location,
+			structType.Identifier,
+		)
+
+		// Declare Types
+		baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+		baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+			Name: structInterfaceType.Identifier,
+			Type: structInterfaceType,
+			Kind: common.DeclarationKindStructureInterface,
+		})
+		baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+			Name: structType.Identifier,
+			Type: structType,
+			Kind: common.DeclarationKindStructure,
+		})
+
+		// Concrete function value
+
+		methodInvoked := false
+
+		function := func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			methodInvoked = true
+			assert.Len(t, args, 1)
+
+			var expectedArg interpreter.Value
+			if *compile {
+				// Currently, VM does not resolve type-parameters at runtime.
+				// Therefore, it takes the statically known parameter type, which is `Int`.
+				// So the argument does not get boxed.
+				// TODO: Update the assert once the type-parameter resolving is
+				// supported for invocations in the VM.
+				expectedArg = interpreter.NewUnmeteredIntValueFromInt64(4)
+			} else {
+				expectedArg = interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredIntValueFromInt64(4),
+				)
+			}
+			assert.Equal(t, expectedArg, args[0])
+
+			return interpreter.Void
+		}
+
+		var functionValue interpreter.FunctionValue
+		if *compile {
+			functionValue = vm.NewNativeFunctionValue(methodName, concreteMethodType, function)
+		} else {
+			functionValue = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(concreteMethodType, function)
+		}
+
+		compositeTypeHandler := func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			if typeID == "S" {
+				return structType
+			}
+
+			return nil
+		}
+
+		interfaceTypeHandler := func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			if typeID == "SI" {
+				return structInterfaceType
+			}
+
+			return nil
+		}
+
+		const code = `
+            fun test(si: {SI}) {
+			    // The interface function has an 'Int' parameter,
+			    // whereas the actual runtime value (concrete method) has an optional 'Int?' parameter.
+			    si.genericFunction<Int>(4)
+		    }
+        `
+
+		var invokable Invokable
+
+		if *compile {
+			programs := CompiledPrograms{}
+			program := ParseCheckAndCompileCodeWithOptions(t,
+				code,
+				location,
+				ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseTypeActivation
+							},
+						},
+					},
+				},
+				programs,
+			)
+
+			vmConfig := test.PrepareVMConfig(t, nil, nil)
+
+			vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
+				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+				functionVariable := &interpreter.SimpleVariable{}
+				functionVariable.InitializeWithValue(functionValue)
+				activation.Set(
+					commons.TypeQualifiedName(structType, methodName),
+					functionVariable,
+				)
+
+				return activation
+			}
+
+			vmConfig.CompositeTypeHandler = compositeTypeHandler
+			vmConfig.InterfaceTypeHandler = interfaceTypeHandler
+
+			programVM := vm.NewVM(
+				location,
+				program,
+				vmConfig,
+			)
+
+			invokable = test_utils.NewVMInvokable(programVM, programs[location].DesugaredElaboration)
+
+		} else {
+			var err error
+			invokable, err = parseCheckAndPrepareWithOptions(t,
+				code,
+				ParseCheckAndInterpretOptions{
+					InterpreterConfig: &interpreter.Config{
+						Storage:              NewUnmeteredInMemoryStorage(),
+						CompositeTypeHandler: compositeTypeHandler,
+						InterfaceTypeHandler: interfaceTypeHandler,
+					},
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseTypeActivation
+							},
+						},
+					},
+				},
+			)
+			require.NoError(t, err)
+		}
+
+		// Construct an instance from struct `S`, and pass it as an argument.
+
+		structValue := interpreter.NewSimpleCompositeValue(
+			nil,
+			structType.ID(),
+			structStaticType,
+			nil,
+			nil,
+			nil,
+			func(name string, context interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+				if name == methodName {
+					return functionValue
+				}
+
+				return nil
+			},
+			nil,
+			nil,
+		)
+
+		_, err := invokable.Invoke("test", structValue)
+		require.NoError(t, err)
+		require.True(t, methodInvoked)
+	})
 }
