@@ -23,6 +23,8 @@ import (
 	"math/big"
 
 	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/errors"
 )
 
 // Cadence needs to encode different kinds of objects in CBOR, for instance,
@@ -244,9 +246,19 @@ func MaybeLargeImmutableStorable(
 	atree.Storable,
 	error,
 ) {
+	storableSize := storable.ByteSize()
 
-	if storable.ByteSize() < maxInlineSize {
+	if storableSize < maxInlineSize {
 		return storable, nil
+	}
+
+	if storableSize > atree.MaxStorableSizeInStorableSlab() {
+		return nil, errors.NewDefaultUserError(
+			"storable size exceeds limit for StorableSlab: storable type %T, size %d bytes, max size %d bytes",
+			storable,
+			storableSize,
+			atree.MaxStorableSizeInStorableSlab(),
+		)
 	}
 
 	return atree.NewStorableSlab(storage, address, storable)
