@@ -290,7 +290,7 @@ func (UFix64Value) ChildStorables() []atree.Storable {
 func (v UFix64Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUFix64Value,
+		0xd8, byte(CBORTagUFix64Value),
 	})
 	if err != nil {
 		return err

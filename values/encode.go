@@ -57,8 +57,11 @@ const CBORTagBase = 128
 // DO *NOT* REPLACE EXISTING TYPES!
 // DO *NOT* ADD NEW TYPES IN BETWEEN!
 
+//go:generate stringer -type=CBORTag -trimprefix=CBORTag
+type CBORTag byte
+
 const (
-	CBORTagVoidValue = CBORTagBase + iota
+	CBORTagVoidValue CBORTag = CBORTagBase + iota
 	_                // DO *NOT* REPLACE. Previously used for dictionary values
 	CBORTagSomeValue
 	CBORTagAddressValue
