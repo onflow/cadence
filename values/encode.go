@@ -261,5 +261,5 @@ func MaybeLargeImmutableStorable(
 		)
 	}
 
-	return atree.NewStorableSlab(storage, address, storable)
+	return atree.NewStorableSlab(storage, address, storable, storableSize)
 }
