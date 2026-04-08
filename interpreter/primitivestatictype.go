@@ -268,6 +268,10 @@ func (PrimitiveStaticType) isStaticType() {}
 
 func (PrimitiveStaticType) isConformingStaticType() {}
 
+func (t PrimitiveStaticType) Walk(visit func(ty StaticType) bool) bool {
+	return visit(t)
+}
+
 func (PrimitiveStaticType) Precedence() ast.TypePrecedence {
 	return ast.TypePrecedencePrimary
 }

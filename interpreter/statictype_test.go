@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -921,17 +922,145 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 	})
 }
 
-func TestPrimitiveStaticTypeCount(t *testing.T) {
+func TestPrimitiveStaticTypeValues(t *testing.T) {
 	t.Parallel()
 
-	// This asserts that the total number of types in the PrimitiveStaticType enum has not changed,
-	// in order to prevent adding new types into the enum in the middle.
-	// However, it is possible to safely change the size of this enum by only appending new types the end,
-	// (before the PrimitiveStaticType_Count of course).
-	// Only update this test if you are certain your change to this enum was to append new types to the end.
-	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(153), byte(PrimitiveStaticType_Count))
-	})
+	// Ensure that the values of the PrimitiveStaticType enum are not accidentally changed,
+	// e.g. by adding a new value in between or by changing an existing value.
+
+	expectedValues := map[PrimitiveStaticType]uint{
+		PrimitiveStaticTypeUnknown:                          0,
+		PrimitiveStaticTypeVoid:                             1,
+		PrimitiveStaticTypeAny:                              2,
+		PrimitiveStaticTypeNever:                            3,
+		PrimitiveStaticTypeAnyStruct:                        4,
+		PrimitiveStaticTypeAnyResource:                      5,
+		PrimitiveStaticTypeBool:                             6,
+		PrimitiveStaticTypeAddress:                          7,
+		PrimitiveStaticTypeString:                           8,
+		PrimitiveStaticTypeCharacter:                        9,
+		PrimitiveStaticTypeMetaType:                         10,
+		PrimitiveStaticTypeBlock:                            11,
+		PrimitiveStaticTypeAnyResourceAttachment:            12,
+		PrimitiveStaticTypeAnyStructAttachment:              13,
+		PrimitiveStaticTypeHashableStruct:                   14,
+		PrimitiveStaticTypeStorable:                         15,
+		PrimitiveStaticTypeInvalid:                          16,
+		PrimitiveStaticTypeNumber:                           18,
+		PrimitiveStaticTypeSignedNumber:                     19,
+		PrimitiveStaticTypeInteger:                          24,
+		PrimitiveStaticTypeSignedInteger:                    25,
+		PrimitiveStaticTypeFixedSizeUnsignedInteger:         26,
+		PrimitiveStaticTypeFixedPoint:                       30,
+		PrimitiveStaticTypeSignedFixedPoint:                 31,
+		PrimitiveStaticTypeInt:                              36,
+		PrimitiveStaticTypeInt8:                             37,
+		PrimitiveStaticTypeInt16:                            38,
+		PrimitiveStaticTypeInt32:                            39,
+		PrimitiveStaticTypeInt64:                            40,
+		PrimitiveStaticTypeInt128:                           41,
+		PrimitiveStaticTypeInt256:                           42,
+		PrimitiveStaticTypeUInt:                             44,
+		PrimitiveStaticTypeUInt8:                            45,
+		PrimitiveStaticTypeUInt16:                           46,
+		PrimitiveStaticTypeUInt32:                           47,
+		PrimitiveStaticTypeUInt64:                           48,
+		PrimitiveStaticTypeUInt128:                          49,
+		PrimitiveStaticTypeUInt256:                          50,
+		PrimitiveStaticTypeWord8:                            53,
+		PrimitiveStaticTypeWord16:                           54,
+		PrimitiveStaticTypeWord32:                           55,
+		PrimitiveStaticTypeWord64:                           56,
+		PrimitiveStaticTypeWord128:                          57,
+		PrimitiveStaticTypeWord256:                          58,
+		PrimitiveStaticTypeFix64:                            64,
+		PrimitiveStaticTypeFix128:                           65,
+		PrimitiveStaticTypeUFix64:                           72,
+		PrimitiveStaticTypeUFix128:                          73,
+		PrimitiveStaticTypePath:                             76,
+		PrimitiveStaticTypeCapability:                       77,
+		PrimitiveStaticTypeStoragePath:                      78,
+		PrimitiveStaticTypeCapabilityPath:                   79,
+		PrimitiveStaticTypePublicPath:                       80,
+		PrimitiveStaticTypePrivatePath:                      81,
+		PrimitiveStaticTypeAuthAccount:                      90,
+		PrimitiveStaticTypePublicAccount:                    91,
+		PrimitiveStaticTypeDeployedContract:                 92,
+		PrimitiveStaticTypeAuthAccountContracts:             93,
+		PrimitiveStaticTypePublicAccountContracts:           94,
+		PrimitiveStaticTypeAuthAccountKeys:                  95,
+		PrimitiveStaticTypePublicAccountKeys:                96,
+		PrimitiveStaticTypeAccountKey:                       97,
+		PrimitiveStaticTypeAuthAccountInbox:                 98,
+		PrimitiveStaticTypeStorageCapabilityController:      99,
+		PrimitiveStaticTypeAccountCapabilityController:      100,
+		PrimitiveStaticTypeAuthAccountStorageCapabilities:   101,
+		PrimitiveStaticTypeAuthAccountAccountCapabilities:   102,
+		PrimitiveStaticTypeAuthAccountCapabilities:          103,
+		PrimitiveStaticTypePublicAccountCapabilities:        104,
+		PrimitiveStaticTypeAccount:                          105,
+		PrimitiveStaticTypeAccount_Contracts:                106,
+		PrimitiveStaticTypeAccount_Keys:                     107,
+		PrimitiveStaticTypeAccount_Inbox:                    108,
+		PrimitiveStaticTypeAccount_StorageCapabilities:      109,
+		PrimitiveStaticTypeAccount_AccountCapabilities:      110,
+		PrimitiveStaticTypeAccount_Capabilities:             111,
+		PrimitiveStaticTypeAccount_Storage:                  112,
+		PrimitiveStaticTypeMutate:                           118,
+		PrimitiveStaticTypeInsert:                           119,
+		PrimitiveStaticTypeRemove:                           120,
+		PrimitiveStaticTypeIdentity:                         121,
+		PrimitiveStaticTypeStorage:                          125,
+		PrimitiveStaticTypeSaveValue:                        126,
+		PrimitiveStaticTypeLoadValue:                        127,
+		PrimitiveStaticTypeCopyValue:                        128,
+		PrimitiveStaticTypeBorrowValue:                      129,
+		PrimitiveStaticTypeContracts:                        130,
+		PrimitiveStaticTypeAddContract:                      131,
+		PrimitiveStaticTypeUpdateContract:                   132,
+		PrimitiveStaticTypeRemoveContract:                   133,
+		PrimitiveStaticTypeKeys:                             134,
+		PrimitiveStaticTypeAddKey:                           135,
+		PrimitiveStaticTypeRevokeKey:                        136,
+		PrimitiveStaticTypeInbox:                            137,
+		PrimitiveStaticTypePublishInboxCapability:           138,
+		PrimitiveStaticTypeUnpublishInboxCapability:         139,
+		PrimitiveStaticTypeClaimInboxCapability:             140,
+		PrimitiveStaticTypeCapabilities:                     141,
+		PrimitiveStaticTypeStorageCapabilities:              142,
+		PrimitiveStaticTypeAccountCapabilities:              143,
+		PrimitiveStaticTypePublishCapability:                144,
+		PrimitiveStaticTypeUnpublishCapability:              145,
+		PrimitiveStaticTypeGetStorageCapabilityController:   146,
+		PrimitiveStaticTypeIssueStorageCapabilityController: 147,
+		PrimitiveStaticTypeGetAccountCapabilityController:   148,
+		PrimitiveStaticTypeIssueAccountCapabilityController: 149,
+		PrimitiveStaticTypeCapabilitiesMapping:              150,
+		PrimitiveStaticTypeAccountMapping:                   151,
+		PrimitiveStaticTypeStringBuilder:                    152,
+		PrimitiveStaticType_Count:                           153,
+	}
+
+	// Check all expected values.
+	for typ, expectedValue := range expectedValues {
+		require.Equal(t, expectedValue, uint(typ), "value mismatch for %s", typ)
+	}
+
+	// Check that no new named values have been added
+	// without updating the expected values above.
+	// If a placeholder `_` is replaced with a new named value,
+	// its String() representation will no longer be a numeric fallback.
+	// NOTE: This requires the stringer-generated file to be up to date (CI runs go generate).
+	for i := uint(0); i < uint(PrimitiveStaticType_Count); i++ {
+		typ := PrimitiveStaticType(i)
+		if _, ok := expectedValues[typ]; ok {
+			continue
+		}
+		require.True(t,
+			strings.HasPrefix(typ.String(), "PrimitiveStaticType("),
+			"unexpected named value %s (%d): update expectedValues", typ, i,
+		)
+	}
 }
 
 func TestStaticTypeConversion(t *testing.T) {
@@ -1784,11 +1913,11 @@ func (s staticTypeConversionHandler) MeterMemory(_ common.MemoryUsage) error {
 }
 
 func (s staticTypeConversionHandler) SemaTypeFromStaticType(staticType StaticType) sema.Type {
-	return MustConvertStaticToSemaType(staticType, s)
+	return MustConvertStaticToSemaType(staticType, s) //nolint:staticcheck
 }
 
 func (s staticTypeConversionHandler) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
-	return ConvertStaticAuthorizationToSemaAccess(auth, s)
+	return ConvertStaticAuthorizationToSemaAccess(auth, s) //nolint:staticcheck
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {
@@ -2772,4 +2901,368 @@ func TestStaticType_IsDeprecated(t *testing.T) {
 	for _, testCase := range tests {
 		test(testCase)
 	}
+}
+
+func TestWalkStaticType(t *testing.T) {
+	t.Parallel()
+
+	collect := func(ty StaticType) []StaticType {
+		var visited []StaticType
+		WalkStaticType(ty, func(ty StaticType) bool {
+			visited = append(visited, ty)
+			return true
+		})
+		return visited
+	}
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t,
+			[]StaticType(nil),
+			collect(nil),
+		)
+	})
+
+	t.Run("PrimitiveStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := PrimitiveStaticTypeInt
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("CompositeStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &CompositeStaticType{
+			TypeID: "S.test.S",
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("InterfaceStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InterfaceStaticType{
+			TypeID: "S.test.I",
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("VariableSizedStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		elementType := PrimitiveStaticTypeString
+
+		ty := &VariableSizedStaticType{
+			Type: elementType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				elementType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("ConstantSizedStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		elementType := PrimitiveStaticTypeBool
+
+		ty := &ConstantSizedStaticType{
+			Type: elementType,
+			Size: 3,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				elementType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("DictionaryStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		keyType := PrimitiveStaticTypeString
+		valueType := PrimitiveStaticTypeInt
+
+		ty := &DictionaryStaticType{
+			KeyType:   keyType,
+			ValueType: valueType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				keyType,
+				valueType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("OptionalStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		innerType := PrimitiveStaticTypeInt
+
+		ty := &OptionalStaticType{
+			Type: innerType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				innerType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("IntersectionStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		interface1 := &InterfaceStaticType{TypeID: "S.test.I1"}
+		interface2 := &InterfaceStaticType{TypeID: "S.test.I2"}
+
+		ty := &IntersectionStaticType{
+			Types: []*InterfaceStaticType{
+				interface1,
+				interface2,
+			},
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				interface1,
+				interface2,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("ReferenceStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		referencedType := PrimitiveStaticTypeInt
+
+		ty := &ReferenceStaticType{
+			Authorization:  UnauthorizedAccess,
+			ReferencedType: referencedType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				referencedType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("CapabilityStaticType, without borrow type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &CapabilityStaticType{}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("CapabilityStaticType, with borrow type", func(t *testing.T) {
+		t.Parallel()
+
+		referencedType := PrimitiveStaticTypeInt
+
+		borrowType := &ReferenceStaticType{
+			Authorization:  UnauthorizedAccess,
+			ReferencedType: referencedType,
+		}
+
+		ty := &CapabilityStaticType{
+			BorrowType: borrowType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				borrowType,
+				referencedType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("FunctionStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		ty := FunctionStaticType{
+			FunctionType: &sema.FunctionType{},
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("InclusiveRangeStaticType", func(t *testing.T) {
+		t.Parallel()
+
+		elementType := PrimitiveStaticTypeInt
+
+		ty := InclusiveRangeStaticType{
+			ElementType: elementType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				elementType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		// {String: &(Int?)}
+
+		innerType := PrimitiveStaticTypeInt
+		referencedType := &OptionalStaticType{
+			Type: innerType,
+		}
+		referenceType := &ReferenceStaticType{
+			Authorization:  UnauthorizedAccess,
+			ReferencedType: referencedType,
+		}
+		keyType := PrimitiveStaticTypeString
+		ty := &DictionaryStaticType{
+			KeyType:   keyType,
+			ValueType: referenceType,
+		}
+
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				keyType,
+				referenceType,
+				referencedType,
+				innerType,
+			},
+			collect(ty),
+		)
+	})
+
+	t.Run("stop at root", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalStaticType{
+			Type: PrimitiveStaticTypeInt,
+		}
+
+		var visited []StaticType
+		result := WalkStaticType(ty, func(ty StaticType) bool {
+			visited = append(visited, ty)
+			// stop immediately, without visiting the child type
+			return false
+		})
+		assert.False(t, result)
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+			},
+			visited,
+		)
+	})
+
+	t.Run("stop at child", func(t *testing.T) {
+		t.Parallel()
+
+		// &(Int?)
+		innerType := PrimitiveStaticTypeInt
+		referencedType := &OptionalStaticType{
+			Type: innerType,
+		}
+		ty := &ReferenceStaticType{
+			Authorization:  UnauthorizedAccess,
+			ReferencedType: referencedType,
+		}
+
+		var visited []StaticType
+		result := WalkStaticType(ty, func(ty StaticType) bool {
+			visited = append(visited, ty)
+			// stop when we reach the referenced type (OptionalStaticType)
+			return ty != referencedType
+		})
+
+		assert.False(t, result)
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				referencedType,
+			},
+			visited,
+		)
+	})
+
+	t.Run("stop mid-dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		// {String: Int}
+		keyType := PrimitiveStaticTypeString
+		valueType := PrimitiveStaticTypeInt
+		ty := &DictionaryStaticType{
+			KeyType:   keyType,
+			ValueType: valueType,
+		}
+
+		var visited []StaticType
+		result := WalkStaticType(ty, func(ty StaticType) bool {
+			visited = append(visited, ty)
+			// stop after visiting key type
+			return ty != keyType
+		})
+
+		assert.False(t, result)
+		assert.Equal(t,
+			[]StaticType{
+				ty,
+				keyType,
+			},
+			visited,
+		)
+	})
 }

@@ -81,11 +81,11 @@ func TestEncodeVoid(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// void type ID (50)
 			0x18, 0x32,
 			// nil
@@ -158,13 +158,13 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// never type ID (42)
 				0x18, 0x2a,
 				// nil
@@ -183,13 +183,13 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (big number)
@@ -212,15 +212,15 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// never type ID (42)
 				0x18, 0x2a,
 				// nil
@@ -239,15 +239,15 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (big number)
@@ -270,17 +270,17 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// never type ID (42)
 				0x18, 0x2a,
 				// nil
@@ -299,17 +299,17 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (big number)
@@ -339,7 +339,7 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -350,7 +350,7 @@ func TestEncodeOptional(t *testing.T) {
 				// cadence-type-id: "S.test.Foo"
 				// fields: [["a", OptionalType(IntType)], ["b", OptionalType(OptionalType(IntType))], ["c", OptionalType(OptionalType(OptionalType(IntType)))]]
 				// tag
-				0xd8, ccf.CBORTagStructType,
+				0xd8, byte(ccf.CBORTagStructType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -372,9 +372,9 @@ func TestEncodeOptional(t *testing.T) {
 				// a
 				0x61,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// field 1
@@ -385,11 +385,11 @@ func TestEncodeOptional(t *testing.T) {
 				// b
 				0x62,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// field 2
@@ -400,13 +400,13 @@ func TestEncodeOptional(t *testing.T) {
 				// c
 				0x63,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 
@@ -414,7 +414,7 @@ func TestEncodeOptional(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 3 items follow
@@ -446,7 +446,7 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -457,7 +457,7 @@ func TestEncodeOptional(t *testing.T) {
 				// cadence-type-id: "S.test.Foo"
 				// fields: [["a", OptionalType(IntType)], ["b", OptionalType(OptionalType(IntType))], ["c", OptionalType(OptionalType(OptionalType(IntType)))]]
 				// tag
-				0xd8, ccf.CBORTagStructType,
+				0xd8, byte(ccf.CBORTagStructType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -479,9 +479,9 @@ func TestEncodeOptional(t *testing.T) {
 				// a
 				0x61,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// field 1
@@ -492,11 +492,11 @@ func TestEncodeOptional(t *testing.T) {
 				// b
 				0x62,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// field 2
@@ -507,13 +507,13 @@ func TestEncodeOptional(t *testing.T) {
 				// c
 				0x63,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 
@@ -521,7 +521,7 @@ func TestEncodeOptional(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 3 items follow
@@ -565,7 +565,7 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -576,7 +576,7 @@ func TestEncodeOptional(t *testing.T) {
 				// cadence-type-id: "S.test.Foo"
 				// fields: [["a", OptionalType(IntType)], ["b", OptionalType(OptionalType(IntType))], ["c", OptionalType(OptionalType(OptionalType(IntType)))]]
 				// tag
-				0xd8, ccf.CBORTagStructType,
+				0xd8, byte(ccf.CBORTagStructType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -598,9 +598,9 @@ func TestEncodeOptional(t *testing.T) {
 				// a
 				0x61,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 				// field 1
@@ -611,11 +611,11 @@ func TestEncodeOptional(t *testing.T) {
 				// b
 				0x62,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 				// field 2
@@ -626,13 +626,13 @@ func TestEncodeOptional(t *testing.T) {
 				// c
 				0x63,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 
@@ -640,7 +640,7 @@ func TestEncodeOptional(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 3 items follow
@@ -672,7 +672,7 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -683,7 +683,7 @@ func TestEncodeOptional(t *testing.T) {
 				// cadence-type-id: "S.test.Foo"
 				// fields: [["a", OptionalType(AnyStructType)], ["b", OptionalType(OptionalType(AnyStructType))], ["c", OptionalType(OptionalType(OptionalType(AnyStructType)))]]
 				// tag
-				0xd8, ccf.CBORTagStructType,
+				0xd8, byte(ccf.CBORTagStructType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -705,9 +705,9 @@ func TestEncodeOptional(t *testing.T) {
 				// a
 				0x61,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 				// field 1
@@ -718,11 +718,11 @@ func TestEncodeOptional(t *testing.T) {
 				// b
 				0x62,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 				// field 2
@@ -733,13 +733,13 @@ func TestEncodeOptional(t *testing.T) {
 				// c
 				0x63,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 
@@ -747,20 +747,20 @@ func TestEncodeOptional(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 3 items follow
 				0x83,
 				// field 0
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (big num)
@@ -771,13 +771,13 @@ func TestEncodeOptional(t *testing.T) {
 				0x01,
 				// field 1
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (big num)
@@ -788,13 +788,13 @@ func TestEncodeOptional(t *testing.T) {
 				0x02,
 				// field 2
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (big num)
@@ -837,7 +837,7 @@ func TestEncodeOptional(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -848,7 +848,7 @@ func TestEncodeOptional(t *testing.T) {
 				// cadence-type-id: "S.test.Foo"
 				// fields: [["a", OptionalType(AnyStructType)], ["b", OptionalType(OptionalType(AnyStructType))], ["c", OptionalType(OptionalType(OptionalType(AnyStructType)))]]
 				// tag
-				0xd8, ccf.CBORTagStructType,
+				0xd8, byte(ccf.CBORTagStructType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -870,9 +870,9 @@ func TestEncodeOptional(t *testing.T) {
 				// a
 				0x61,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 				// field 1
@@ -883,11 +883,11 @@ func TestEncodeOptional(t *testing.T) {
 				// b
 				0x62,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 				// field 2
@@ -898,13 +898,13 @@ func TestEncodeOptional(t *testing.T) {
 				// c
 				0x63,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 
@@ -913,7 +913,7 @@ func TestEncodeOptional(t *testing.T) {
 				// cadence-type-id: "S.test.FooStruct"
 				// fields: [["bar", IntType]]
 				// tag
-				0xd8, ccf.CBORTagStructType,
+				0xd8, byte(ccf.CBORTagStructType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -937,7 +937,7 @@ func TestEncodeOptional(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 
@@ -945,18 +945,18 @@ func TestEncodeOptional(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 3 items follow
 				0x83,
 				// field 0
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (big num)
@@ -967,11 +967,11 @@ func TestEncodeOptional(t *testing.T) {
 				0x01,
 				// field 1
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (big num)
@@ -982,11 +982,11 @@ func TestEncodeOptional(t *testing.T) {
 				0x02,
 				// field 2
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 1 bytes follow
 				0x41,
 				// 1
@@ -1021,11 +1021,11 @@ func TestEncodeBool(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Bool type ID (0)
 				0x00,
 				// true
@@ -1044,11 +1044,11 @@ func TestEncodeBool(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Bool type ID (0)
 				0x00,
 				// false
@@ -1078,11 +1078,11 @@ func TestEncodeCharacter(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Character type ID (2)
 				0x02,
 				// UTF-8 string, 1 bytes follow
@@ -1103,11 +1103,11 @@ func TestEncodeCharacter(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Character type ID (2)
 				0x02,
 				// UTF-8 string, 1 bytes follow
@@ -1136,11 +1136,11 @@ func TestEncodeString(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 				// UTF-8 string, 0 bytes follow
@@ -1159,11 +1159,11 @@ func TestEncodeString(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 				// UTF-8 string, 3 bytes follow
@@ -1191,11 +1191,11 @@ func TestEncodeAddress(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Address type ID (3)
 			0x03,
 			// bytes, 8 bytes follow
@@ -1223,11 +1223,11 @@ func TestEncodeInt(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (negative big number)
@@ -1250,11 +1250,11 @@ func TestEncodeInt(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (positive big number)
@@ -1275,11 +1275,11 @@ func TestEncodeInt(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (positive big number)
@@ -1302,11 +1302,11 @@ func TestEncodeInt(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (negative big number)
@@ -1332,11 +1332,11 @@ func TestEncodeInt(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// tag (positive big number)
@@ -1371,11 +1371,11 @@ func TestEncodeInt8(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int8 type ID (5)
 				0x05,
 				// -128
@@ -1394,11 +1394,11 @@ func TestEncodeInt8(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int8 type ID (5)
 				0x05,
 				// 0
@@ -1417,11 +1417,11 @@ func TestEncodeInt8(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int8 type ID (5)
 				0x05,
 				// 127
@@ -1448,11 +1448,11 @@ func TestEncodeInt16(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int16 type ID (6)
 				0x06,
 				// -32768
@@ -1471,11 +1471,11 @@ func TestEncodeInt16(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int16 type ID (6)
 				0x06,
 				// 0
@@ -1494,11 +1494,11 @@ func TestEncodeInt16(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int16 type ID (6)
 				0x06,
 				// 32767
@@ -1525,11 +1525,11 @@ func TestEncodeInt32(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int32 type ID (7)
 				0x07,
 				// -2147483648
@@ -1548,11 +1548,11 @@ func TestEncodeInt32(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int32 type ID (7)
 				0x07,
 				// 0
@@ -1571,11 +1571,11 @@ func TestEncodeInt32(t *testing.T) {
 				//
 				// language=cbor, format=ccf, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int32 type ID (7)
 				0x07,
 				// 2147483647
@@ -1602,11 +1602,11 @@ func TestEncodeInt64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int64 type ID (8)
 				0x08,
 				// -9223372036854775808
@@ -1625,11 +1625,11 @@ func TestEncodeInt64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int64 type ID (8)
 				0x08,
 				// 0
@@ -1648,11 +1648,11 @@ func TestEncodeInt64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int64 type ID (8)
 				0x08,
 				// 9223372036854775807
@@ -1679,11 +1679,11 @@ func TestEncodeInt128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int128 type ID (9)
 				0x09,
 				// tag big num
@@ -1707,11 +1707,11 @@ func TestEncodeInt128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int128 type ID (9)
 				0x09,
 				// tag big num
@@ -1732,11 +1732,11 @@ func TestEncodeInt128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int128 type ID (9)
 				0x09,
 				// tag big num
@@ -1768,11 +1768,11 @@ func TestEncodeInt256(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int256 type ID (10)
 				0x0a,
 				// tag big num
@@ -1798,11 +1798,11 @@ func TestEncodeInt256(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int256 type ID (10)
 				0x0a,
 				// tag big num
@@ -1823,11 +1823,11 @@ func TestEncodeInt256(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int256 type ID (10)
 				0x0a,
 				// tag big num
@@ -1861,11 +1861,11 @@ func TestEncodeUInt(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt type ID (11)
 				0x0b,
 				// tag big num
@@ -1886,11 +1886,11 @@ func TestEncodeUInt(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt type ID (11)
 				0x0b,
 				// tag big num
@@ -1913,11 +1913,11 @@ func TestEncodeUInt(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt type ID (11)
 				0x0b,
 				// tag big num
@@ -1952,11 +1952,11 @@ func TestEncodeUInt8(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt8 type ID (12)
 				0x0c,
 				// 0
@@ -1975,11 +1975,11 @@ func TestEncodeUInt8(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt8 type ID (12)
 				0x0c,
 				// 255
@@ -2006,11 +2006,11 @@ func TestEncodeUInt16(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt16 type ID (13)
 				0x0d,
 				// 0
@@ -2029,11 +2029,11 @@ func TestEncodeUInt16(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt16 type ID (13)
 				0x0d,
 				// 65535
@@ -2060,11 +2060,11 @@ func TestEncodeUInt32(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt32 type ID (14)
 				0x0e,
 				// 0
@@ -2083,11 +2083,11 @@ func TestEncodeUInt32(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt32 type ID (14)
 				0x0e,
 				// 4294967295
@@ -2114,11 +2114,11 @@ func TestEncodeUInt64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt64 type ID (15)
 				0x0f,
 				// 0
@@ -2137,11 +2137,11 @@ func TestEncodeUInt64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt64 type ID (15)
 				0x0f,
 				// 18446744073709551615
@@ -2168,11 +2168,11 @@ func TestEncodeUInt128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt128 type ID (16)
 				0x10,
 				// tag (big num)
@@ -2193,11 +2193,11 @@ func TestEncodeUInt128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt128 type ID (16)
 				0x10,
 				// tag (big num)
@@ -2229,11 +2229,11 @@ func TestEncodeUInt256(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt256 type ID (17)
 				0x11,
 				// tag (big num)
@@ -2254,11 +2254,11 @@ func TestEncodeUInt256(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt256 type ID (17)
 				0x11,
 				// tag (big num)
@@ -2292,11 +2292,11 @@ func TestEncodeWord8(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word8 type ID (18)
 				0x12,
 				// 0
@@ -2315,11 +2315,11 @@ func TestEncodeWord8(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word8 type ID (18)
 				0x12,
 				// 255
@@ -2346,11 +2346,11 @@ func TestEncodeWord16(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word16 type ID (19)
 				0x13,
 				// 0
@@ -2369,11 +2369,11 @@ func TestEncodeWord16(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word16 type ID (19)
 				0x13,
 				// 65535
@@ -2400,11 +2400,11 @@ func TestEncodeWord32(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word32 type ID (20)
 				0x14,
 				// 0
@@ -2423,11 +2423,11 @@ func TestEncodeWord32(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word32 type ID (20)
 				0x14,
 				// 4294967295
@@ -2454,11 +2454,11 @@ func TestEncodeWord64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word64 type ID (21)
 				0x15,
 				// 0
@@ -2477,11 +2477,11 @@ func TestEncodeWord64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word64 type ID (21)
 				0x15,
 				// 18446744073709551615
@@ -2508,11 +2508,11 @@ func TestEncodeWord128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word128 type ID (52)
 				0x18, 0x34,
 				// tag (big num)
@@ -2533,11 +2533,11 @@ func TestEncodeWord128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word128 type ID (52)
 				0x18, 0x34,
 				// tag (big num)
@@ -2567,11 +2567,11 @@ func TestDecodeWord128Invalid(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Word128 type ID (52)
 			0x18, 0x34,
 			// Invalid type
@@ -2607,11 +2607,11 @@ func TestEncodeWord256(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word256 type ID (53)
 				0x18, 0x35,
 				// tag (big num)
@@ -2632,11 +2632,11 @@ func TestEncodeWord256(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Word256 type ID (53)
 				0x18, 0x35,
 				// tag (big num)
@@ -2668,11 +2668,11 @@ func TestDecodeWord256Invalid(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Word256 type ID (53)
 			0x18, 0x35,
 			// Invalid type
@@ -2710,11 +2710,11 @@ func TestEncodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Fix64 type ID (22)
 				0x16,
 				// 0
@@ -2733,11 +2733,11 @@ func TestEncodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Fix64 type ID (22)
 				0x16,
 				// 78900123010
@@ -2756,11 +2756,11 @@ func TestEncodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Fix64 type ID (22)
 				0x16,
 				// 123405600000
@@ -2779,11 +2779,11 @@ func TestEncodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Fix64 type ID (22)
 				0x16,
 				// -1234500678900
@@ -2817,11 +2817,11 @@ func TestEncodeFix128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Fix128 type ID (99)
 				0x18, 0x63,
 				// array, 2 elements follow
@@ -2844,11 +2844,11 @@ func TestEncodeFix128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Fix128 type ID (99)
 				0x18, 0x63,
 				// array, 2 elements follow
@@ -2871,11 +2871,11 @@ func TestEncodeFix128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Fix128 type ID (99)
 				0x18, 0x63,
 				// array, 2 elements follow
@@ -2898,11 +2898,11 @@ func TestEncodeFix128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Fix128 type ID (99)
 				0x18, 0x63,
 				// array, 2 elements follow
@@ -2933,11 +2933,11 @@ func TestEncodeUFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// 0
@@ -2956,11 +2956,11 @@ func TestEncodeUFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// 78900123010
@@ -2979,11 +2979,11 @@ func TestEncodeUFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// 123405600000
@@ -3017,11 +3017,11 @@ func TestEncodeUFix128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix128 type ID (101)
 				0x18, 0x65,
 				// array, 2 elements follow
@@ -3044,11 +3044,11 @@ func TestEncodeUFix128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix128 type ID (101)
 				0x18, 0x65,
 				// array, 2 elements follow
@@ -3071,11 +3071,11 @@ func TestEncodeUFix128(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix128 type ID (101)
 				0x18, 0x65,
 				// array, 2 elements follow
@@ -3108,14 +3108,14 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []int
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// array data without inlined type
@@ -3141,18 +3141,18 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type constant-sized [3]int
 			// tag
-			0xd8, ccf.CBORTagConstsizedArrayType,
+			0xd8, byte(ccf.CBORTagConstsizedArrayType),
 			// array, 2 items follow
 			0x82,
 			// number of elements
 			0x03,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// array data without inlined type definition
@@ -3196,14 +3196,14 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []int
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// array data without inlined type definition
@@ -3253,16 +3253,16 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type [[]int]
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// array data without inlined type definition
@@ -3321,7 +3321,7 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -3332,7 +3332,7 @@ func TestEncodeArray(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// fields: [["bar", int type]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -3354,7 +3354,7 @@ func TestEncodeArray(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 
@@ -3362,9 +3362,9 @@ func TestEncodeArray(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// [S.test.Foo{1}, S.test.Foo{2}, S.test.Foo{3}]
@@ -3428,7 +3428,7 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -3439,7 +3439,7 @@ func TestEncodeArray(t *testing.T) {
 			// cadence-type-id: "S.test.Fooo"
 			// fields: [["bar", int type], ["baz", any type]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -3461,7 +3461,7 @@ func TestEncodeArray(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -3472,7 +3472,7 @@ func TestEncodeArray(t *testing.T) {
 			// baz
 			0x62, 0x61, 0x7a,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 
@@ -3480,9 +3480,9 @@ func TestEncodeArray(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// [S.test.Foo{1, 1}, S.test.Foo{2, "a"}, S.test.Foo{3, true}]
@@ -3498,11 +3498,11 @@ func TestEncodeArray(t *testing.T) {
 			// 1
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// tag (big num)
@@ -3521,11 +3521,11 @@ func TestEncodeArray(t *testing.T) {
 			// 2
 			0x02,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// text string, 1 byte
@@ -3542,11 +3542,11 @@ func TestEncodeArray(t *testing.T) {
 			// 3
 			0x03,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Bool type ID (0)
 			0x00,
 			// true
@@ -3571,14 +3571,14 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type ([]AnyStruct)
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 			// array data with inlined type because static array element type is abstract (AnyStruct)
@@ -3586,11 +3586,11 @@ func TestEncodeArray(t *testing.T) {
 			0x83,
 			// element 0 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// tag (big num)
@@ -3601,11 +3601,11 @@ func TestEncodeArray(t *testing.T) {
 			0x01,
 			// element 1 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// text string, length 1
@@ -3614,11 +3614,11 @@ func TestEncodeArray(t *testing.T) {
 			0x61,
 			// element 2 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Bool type ID (0)
 			0x00,
 			// true
@@ -3643,14 +3643,14 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type ([]Integer)
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Number type ID (43)
 			0x18, 0x2b,
 			// array data with inlined type because static array element type is abstract (Number)
@@ -3658,33 +3658,33 @@ func TestEncodeArray(t *testing.T) {
 			0x83,
 			// element 0 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int8 type ID (5)
 			0x05,
 			// 1
 			0x01,
 			// element 1 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int16 type ID (6)
 			0x06,
 			// 2
 			0x02,
 			// element 2 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int32 type ID (7)
 			0x07,
 			// 3
@@ -3713,7 +3713,7 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definition
@@ -3724,7 +3724,7 @@ func TestEncodeArray(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// fields: [["bar", int type]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -3746,7 +3746,7 @@ func TestEncodeArray(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 
@@ -3755,9 +3755,9 @@ func TestEncodeArray(t *testing.T) {
 			0x82,
 			// type ([]AnyStruct)
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 			// array data with inlined type because static array element type is abstract (AnyStruct)
@@ -3765,11 +3765,11 @@ func TestEncodeArray(t *testing.T) {
 			0x82,
 			// element 0 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// tag (big num)
@@ -3780,11 +3780,11 @@ func TestEncodeArray(t *testing.T) {
 			0x01,
 			// element 1 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// S.test.Foo{1}
@@ -3830,7 +3830,7 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -3841,7 +3841,7 @@ func TestEncodeArray(t *testing.T) {
 			// id: []byte{}
 			// cadence-type-id: "S.test.Bar"
 			// tag
-			0xd8, ccf.CBORTagResourceInterfaceType,
+			0xd8, byte(ccf.CBORTagResourceInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -3858,7 +3858,7 @@ func TestEncodeArray(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// fields: [["bar", int type]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -3882,7 +3882,7 @@ func TestEncodeArray(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// type definition 2:
@@ -3891,7 +3891,7 @@ func TestEncodeArray(t *testing.T) {
 			// cadence-type-id: "S.test.Fooo"
 			// fields: [["bar", int type], ["baz", any type]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -3915,7 +3915,7 @@ func TestEncodeArray(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -3926,7 +3926,7 @@ func TestEncodeArray(t *testing.T) {
 			// baz
 			0x62, 0x61, 0x7a,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 
@@ -3934,20 +3934,20 @@ func TestEncodeArray(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 2 item follow
 			0x82,
 			// element 0 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -3963,11 +3963,11 @@ func TestEncodeArray(t *testing.T) {
 			0x01,
 			// element 1 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 2
@@ -3982,11 +3982,11 @@ func TestEncodeArray(t *testing.T) {
 			// 2
 			0x02,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// text string, 1 byte
@@ -4026,7 +4026,7 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -4038,7 +4038,7 @@ func TestEncodeArray(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// fields: [["bar", int type]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -4060,7 +4060,7 @@ func TestEncodeArray(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// type definition 1
@@ -4069,7 +4069,7 @@ func TestEncodeArray(t *testing.T) {
 			// cadence-type-id: "S.test.FooStruct"
 			// fields: [["a", string type], ["b", foo resource type]]
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -4093,7 +4093,7 @@ func TestEncodeArray(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// field 1
@@ -4104,7 +4104,7 @@ func TestEncodeArray(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 
@@ -4112,9 +4112,9 @@ func TestEncodeArray(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -4192,7 +4192,7 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -4204,7 +4204,7 @@ func TestEncodeArray(t *testing.T) {
 			// cadence-type-id: "S.test.FooStruct"
 			// fields: [["a", int type]]
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -4226,7 +4226,7 @@ func TestEncodeArray(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// type definition 1
@@ -4234,7 +4234,7 @@ func TestEncodeArray(t *testing.T) {
 			// id: []byte{1}
 			// cadence-type-id: "S.test.FooStructInterface"
 			// tag
-			0xd8, ccf.CBORTagStructInterfaceType,
+			0xd8, byte(ccf.CBORTagStructInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -4252,9 +4252,9 @@ func TestEncodeArray(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -4263,11 +4263,11 @@ func TestEncodeArray(t *testing.T) {
 			0x82,
 			// element 0 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 1 items follow
@@ -4280,11 +4280,11 @@ func TestEncodeArray(t *testing.T) {
 			0x01,
 			// element 1 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 1 items follow
@@ -4337,7 +4337,7 @@ func TestEncodeArray(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -4349,7 +4349,7 @@ func TestEncodeArray(t *testing.T) {
 			// cadence-type-id: "S.test.FooContract"
 			// fields: [["a", int type]]
 			// tag
-			0xd8, ccf.CBORTagContractType,
+			0xd8, byte(ccf.CBORTagContractType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -4371,7 +4371,7 @@ func TestEncodeArray(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// type definition 1
@@ -4379,7 +4379,7 @@ func TestEncodeArray(t *testing.T) {
 			// id: []byte{1}
 			// cadence-type-id: "S.test.FooContractInterface"
 			// tag
-			0xd8, ccf.CBORTagContractInterfaceType,
+			0xd8, byte(ccf.CBORTagContractInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -4396,9 +4396,9 @@ func TestEncodeArray(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -4407,11 +4407,11 @@ func TestEncodeArray(t *testing.T) {
 			0x82,
 			// element 0 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 1 items follow
@@ -4424,11 +4424,11 @@ func TestEncodeArray(t *testing.T) {
 			0x01,
 			// element 1 (inline type and value)
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 1 items follow
@@ -4478,20 +4478,20 @@ func TestEncodeDictionary(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type (map[string]int)
 			// tag
-			0xd8, ccf.CBORTagDictType,
+			0xd8, byte(ccf.CBORTagDictType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// array, 6 items follow
@@ -4539,20 +4539,20 @@ func TestEncodeDictionary(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type (map[string]int)
 			// tag
-			0xd8, ccf.CBORTagDictType,
+			0xd8, byte(ccf.CBORTagDictType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// array data without inlined type definition
@@ -4667,28 +4667,28 @@ func TestEncodeDictionary(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type (map[string]map[string, int])
 			// tag
-			0xd8, ccf.CBORTagDictType,
+			0xd8, byte(ccf.CBORTagDictType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagDictType,
+			0xd8, byte(ccf.CBORTagDictType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// array data without inlined type definition
@@ -4809,7 +4809,7 @@ func TestEncodeDictionary(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definition
@@ -4820,7 +4820,7 @@ func TestEncodeDictionary(t *testing.T) {
 				// cadence-type-id: "S.test.Foo"
 				// fields: [["bar", int type]]
 				// tag
-				0xd8, ccf.CBORTagResourceType,
+				0xd8, byte(ccf.CBORTagResourceType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -4842,7 +4842,7 @@ func TestEncodeDictionary(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 
@@ -4850,15 +4850,15 @@ func TestEncodeDictionary(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagDictType,
+				0xd8, byte(ccf.CBORTagDictType),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 6 items follow
@@ -4943,41 +4943,41 @@ func TestEncodeDictionary(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type (map[AnyStruct]AnyStruct)
 			// tag
-			0xd8, ccf.CBORTagDictType,
+			0xd8, byte(ccf.CBORTagDictType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 			// array data without inlined type definition
 			// array, 6 items follow
 			0x86,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Bool type ID (0)
 			0x00,
 			// true
 			0xf5,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// tag (big num)
@@ -4987,11 +4987,11 @@ func TestEncodeDictionary(t *testing.T) {
 			// 3
 			0x03,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// text, 1 byte follows
@@ -4999,11 +4999,11 @@ func TestEncodeDictionary(t *testing.T) {
 			// c
 			0x63,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// tag (big num)
@@ -5013,11 +5013,11 @@ func TestEncodeDictionary(t *testing.T) {
 			// 2
 			0x02,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// tag (big num)
@@ -5025,11 +5025,11 @@ func TestEncodeDictionary(t *testing.T) {
 			// bytes, 0 bytes follow
 			0x40,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// tag (big num)
@@ -5106,20 +5106,20 @@ func TestEncodeSortedDictionary(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type (map[string]int)
 			// tag
-			0xd8, ccf.CBORTagDictType,
+			0xd8, byte(ccf.CBORTagDictType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// array data without inlined type definition
@@ -5255,7 +5255,7 @@ func TestEncodeResource(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -5266,7 +5266,7 @@ func TestEncodeResource(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// 2 fields: [["bar", type(int)], ["uuid", type(uint64)]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -5288,7 +5288,7 @@ func TestEncodeResource(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -5299,7 +5299,7 @@ func TestEncodeResource(t *testing.T) {
 			// uuid
 			0x75, 0x75, 0x69, 0x64,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Uint type ID (15)
 			0x0f,
 
@@ -5307,7 +5307,7 @@ func TestEncodeResource(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 2 items follow
@@ -5372,7 +5372,7 @@ func TestEncodeResource(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -5383,7 +5383,7 @@ func TestEncodeResource(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// 2 fields: [["bar", type(int)], ["uuid", type(uint64)]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -5405,7 +5405,7 @@ func TestEncodeResource(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -5416,7 +5416,7 @@ func TestEncodeResource(t *testing.T) {
 			// uuid
 			0x75, 0x75, 0x69, 0x64,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Uint type ID (15)
 			0x0f,
 
@@ -5424,7 +5424,7 @@ func TestEncodeResource(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 2 items follow
@@ -5511,7 +5511,7 @@ func TestEncodeResource(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -5523,7 +5523,7 @@ func TestEncodeResource(t *testing.T) {
 			// cadence-type-id: "S.test.Bar"
 			// 2 fields: [["x", type(int)], ["uuid", type(uint64)], ]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -5545,7 +5545,7 @@ func TestEncodeResource(t *testing.T) {
 			// x
 			0x78,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -5556,7 +5556,7 @@ func TestEncodeResource(t *testing.T) {
 			// uuid
 			0x75, 0x75, 0x69, 0x64,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Uint64 type ID (15)
 			0x0f,
 
@@ -5565,7 +5565,7 @@ func TestEncodeResource(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// 2 fields: [["bar", type ref(1)], ["uuid", type(uint64)]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -5589,7 +5589,7 @@ func TestEncodeResource(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// type definition ID (0)
 			// bytes, 0 bytes follow
 			0x40,
@@ -5601,7 +5601,7 @@ func TestEncodeResource(t *testing.T) {
 			// uuid
 			0x75, 0x75, 0x69, 0x64,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Uint64 type ID (15)
 			0x0f,
 
@@ -5609,7 +5609,7 @@ func TestEncodeResource(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -5660,7 +5660,7 @@ func TestEncodeStruct(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -5671,7 +5671,7 @@ func TestEncodeStruct(t *testing.T) {
 			// cadence-type-id: "S.test.FooStruct"
 			// 0 fields: []
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -5689,7 +5689,7 @@ func TestEncodeStruct(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 0 items follow
@@ -5731,7 +5731,7 @@ func TestEncodeStruct(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -5742,7 +5742,7 @@ func TestEncodeStruct(t *testing.T) {
 			// cadence-type-id: "S.test.FooStruct"
 			// 2 fields: [["a", type(int)], ["b", type(string)]]
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -5764,7 +5764,7 @@ func TestEncodeStruct(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -5775,7 +5775,7 @@ func TestEncodeStruct(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 
@@ -5783,7 +5783,7 @@ func TestEncodeStruct(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 2 items follow
@@ -5826,7 +5826,7 @@ func TestEncodeStruct(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -5838,7 +5838,7 @@ func TestEncodeStruct(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// fields: [["bar", int type]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -5860,7 +5860,7 @@ func TestEncodeStruct(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 
@@ -5869,7 +5869,7 @@ func TestEncodeStruct(t *testing.T) {
 			// cadence-type-id: "S.test.FooStruct"
 			// 2 fields: [["a", type(int)], ["b", type(string)]]
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -5893,7 +5893,7 @@ func TestEncodeStruct(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// field 1
@@ -5904,7 +5904,7 @@ func TestEncodeStruct(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// type reference ID (1)
 			// bytes, 0 bytes follow
 			0x40,
@@ -5913,7 +5913,7 @@ func TestEncodeStruct(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -5964,14 +5964,14 @@ func TestEncodeInclusiveRange(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type (InclusiveRange<Int256>)
 			// tag
-			0xd8, ccf.CBORTagInclusiveRangeType,
+			0xd8, byte(ccf.CBORTagInclusiveRangeType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int256 type ID (10)
 			0x0a,
 			// array data without inlined type definition
@@ -6016,14 +6016,14 @@ func TestEncodeInclusiveRange(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type (InclusiveRange<Int8>)
 			// tag
-			0xd8, ccf.CBORTagInclusiveRangeType,
+			0xd8, byte(ccf.CBORTagInclusiveRangeType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int8 type ID (5)
 			0x05,
 			// array data without inlined type definition
@@ -6082,7 +6082,7 @@ func TestEncodeEvent(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -6093,7 +6093,7 @@ func TestEncodeEvent(t *testing.T) {
 			// cadence-type-id: "S.test.FooEvent"
 			// 2 fields: [["a", type(int)], ["b", type(string)]]
 			// tag
-			0xd8, ccf.CBORTagEventType,
+			0xd8, byte(ccf.CBORTagEventType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6115,7 +6115,7 @@ func TestEncodeEvent(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -6126,7 +6126,7 @@ func TestEncodeEvent(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 
@@ -6134,7 +6134,7 @@ func TestEncodeEvent(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 2 items follow
@@ -6199,7 +6199,7 @@ func TestEncodeEvent(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -6210,7 +6210,7 @@ func TestEncodeEvent(t *testing.T) {
 			// cadence-type-id: "S.test.FooEvent"
 			// 2 fields: [["a", type(int)], ["b", type(anystruct)]]
 			// tag
-			0xd8, ccf.CBORTagEventType,
+			0xd8, byte(ccf.CBORTagEventType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6232,7 +6232,7 @@ func TestEncodeEvent(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -6243,7 +6243,7 @@ func TestEncodeEvent(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 			// struct type:
@@ -6251,7 +6251,7 @@ func TestEncodeEvent(t *testing.T) {
 			// cadence-type-id: "S.test.FooStruct"
 			// 1 fields: [["c", type(string)]]
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6275,7 +6275,7 @@ func TestEncodeEvent(t *testing.T) {
 			// c
 			0x63,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 
@@ -6283,7 +6283,7 @@ func TestEncodeEvent(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 2 items follow
@@ -6295,11 +6295,11 @@ func TestEncodeEvent(t *testing.T) {
 			// 1
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -6352,7 +6352,7 @@ func TestEncodeEvent(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -6364,7 +6364,7 @@ func TestEncodeEvent(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// fields: [["bar", int type]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6386,7 +6386,7 @@ func TestEncodeEvent(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 
@@ -6395,7 +6395,7 @@ func TestEncodeEvent(t *testing.T) {
 			// cadence-type-id: "S.test.FooEvent"
 			// 2 fields: [["a", type(int)], ["b", type(string)]]
 			// tag
-			0xd8, ccf.CBORTagEventType,
+			0xd8, byte(ccf.CBORTagEventType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6419,7 +6419,7 @@ func TestEncodeEvent(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// field 1
@@ -6430,7 +6430,7 @@ func TestEncodeEvent(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 
@@ -6438,7 +6438,7 @@ func TestEncodeEvent(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -6517,7 +6517,7 @@ func TestEncodeContract(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -6528,7 +6528,7 @@ func TestEncodeContract(t *testing.T) {
 			// cadence-type-id: "S.test.FooContract"
 			// 2 fields: [["a", type(int)], ["b", type(string)]]
 			// tag
-			0xd8, ccf.CBORTagContractType,
+			0xd8, byte(ccf.CBORTagContractType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6550,7 +6550,7 @@ func TestEncodeContract(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -6561,7 +6561,7 @@ func TestEncodeContract(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 
@@ -6569,7 +6569,7 @@ func TestEncodeContract(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 2 items follow
@@ -6634,7 +6634,7 @@ func TestEncodeContract(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -6645,7 +6645,7 @@ func TestEncodeContract(t *testing.T) {
 			// cadence-type-id: "S.test.FooStruct"
 			// 1 fields: [["c", type(string)]]
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6667,7 +6667,7 @@ func TestEncodeContract(t *testing.T) {
 			// c
 			0x63,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// contract type:
@@ -6675,7 +6675,7 @@ func TestEncodeContract(t *testing.T) {
 			// cadence-type-id: "S.test.FooContract"
 			// 2 fields: [["a", type(int)], ["b", type(string)]]
 			// tag
-			0xd8, ccf.CBORTagContractType,
+			0xd8, byte(ccf.CBORTagContractType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6699,7 +6699,7 @@ func TestEncodeContract(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -6710,7 +6710,7 @@ func TestEncodeContract(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 
@@ -6718,7 +6718,7 @@ func TestEncodeContract(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -6732,11 +6732,11 @@ func TestEncodeContract(t *testing.T) {
 			// 1
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 byte follow
 			0x40,
 			// array, 1 item follows
@@ -6787,7 +6787,7 @@ func TestEncodeContract(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -6799,7 +6799,7 @@ func TestEncodeContract(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// fields: [["bar", int type]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6821,7 +6821,7 @@ func TestEncodeContract(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 
@@ -6830,7 +6830,7 @@ func TestEncodeContract(t *testing.T) {
 			// cadence-type-id: "S.test.FooContract"
 			// 2 fields: [["a", type(int)], ["b", type(string)]]
 			// tag
-			0xd8, ccf.CBORTagContractType,
+			0xd8, byte(ccf.CBORTagContractType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6854,7 +6854,7 @@ func TestEncodeContract(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// field 1
@@ -6865,7 +6865,7 @@ func TestEncodeContract(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 
@@ -6873,7 +6873,7 @@ func TestEncodeContract(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -6931,7 +6931,7 @@ func TestEncodeEnum(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -6942,7 +6942,7 @@ func TestEncodeEnum(t *testing.T) {
 			// cadence-type-id: "S.test.FooEnum"
 			// 1 fields: [["raw", type(uint8)]]
 			// tag
-			0xd8, ccf.CBORTagEnumType,
+			0xd8, byte(ccf.CBORTagEnumType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -6964,7 +6964,7 @@ func TestEncodeEnum(t *testing.T) {
 			// raw
 			0x72, 0x61, 0x77,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// UInt8 type ID (12)
 			0x0c,
 
@@ -6972,7 +6972,7 @@ func TestEncodeEnum(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 1 items follow
@@ -7011,7 +7011,7 @@ func TestEncodeAttachment(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -7022,7 +7022,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// cadence-type-id: "S.test.FooAttachment"
 			// 0 fields
 			// tag
-			0xd8, ccf.CBORTagAttachmentType,
+			0xd8, byte(ccf.CBORTagAttachmentType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -7041,7 +7041,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 0 items follow
@@ -7079,7 +7079,7 @@ func TestEncodeAttachment(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -7090,7 +7090,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// cadence-type-id: "S.test.FooAttachment"
 			// 1 fields: [["i", type(uint8)]]
 			// tag
-			0xd8, ccf.CBORTagAttachmentType,
+			0xd8, byte(ccf.CBORTagAttachmentType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -7112,7 +7112,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// raw
 			0x69,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// UInt8 type ID (12)
 			0x0c,
 
@@ -7120,7 +7120,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 1 items follow
@@ -7180,7 +7180,7 @@ func TestEncodeAttachment(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -7192,7 +7192,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// cadence-type-id: "S.test.FooStruct"
 			// fields: [["bar", int type]]
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -7214,7 +7214,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 
@@ -7223,7 +7223,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// cadence-type-id: "S.test.FooAttachment"
 			// 2 fields: [["a", type(int)], ["b", 136(h'')]]
 			// tag
-			0xd8, ccf.CBORTagAttachmentType,
+			0xd8, byte(ccf.CBORTagAttachmentType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -7247,7 +7247,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// field 1
@@ -7258,7 +7258,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// b
 			0x62,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// type reference ID (0)
 			// bytes, 0 bytes follow
 			0x40,
@@ -7267,7 +7267,7 @@ func TestEncodeAttachment(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 bytes follow
 			0x41,
 			// 1
@@ -7380,7 +7380,7 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -7391,7 +7391,7 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// cadence-type-id: "S.test.Stats"
 				// 2 fields: [["sum", type(int)], ["count", type(int)]]
 				// tag
-				0xd8, ccf.CBORTagResourceType,
+				0xd8, byte(ccf.CBORTagResourceType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -7413,7 +7413,7 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// sum
 				0x73, 0x75, 0x6d,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// field 1
@@ -7424,14 +7424,14 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// count
 				0x63, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// resource interface type:
 				// id: []byte{1}
 				// cadence-type-id: "S.test.HasSum"
 				// tag
-				0xd8, ccf.CBORTagResourceInterfaceType,
+				0xd8, byte(ccf.CBORTagResourceInterfaceType),
 				// array, 2 items follow
 				0x82,
 				// id
@@ -7448,7 +7448,7 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// id: []byte{2}
 				// cadence-type-id: "S.test.HasCount"
 				// tag
-				0xd8, ccf.CBORTagResourceInterfaceType,
+				0xd8, byte(ccf.CBORTagResourceInterfaceType),
 				// array, 2 items follow
 				0x82,
 				// id
@@ -7466,19 +7466,19 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayType,
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
 				// tag
-				0xd8, ccf.CBORTagIntersectionType,
+				0xd8, byte(ccf.CBORTagIntersectionType),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 1 byte follows
 				0x41,
 				// 1
 				0x01,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 1 byte follows
 				0x41,
 				// 2
@@ -7487,11 +7487,11 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// array, 1 item follows
 				0x81,
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 byte follows
 				0x40,
 				// array, 2 items follow
@@ -7594,7 +7594,7 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -7605,7 +7605,7 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// cadence-type-id: "S.test.Stats"
 				// 2 fields: [["sum", type(int)], ["count", type(int)]]
 				// tag
-				0xd8, ccf.CBORTagResourceType,
+				0xd8, byte(ccf.CBORTagResourceType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -7627,7 +7627,7 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// sum
 				0x73, 0x75, 0x6d,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// field 1
@@ -7638,14 +7638,14 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// count
 				0x63, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// resource interface type:
 				// id: []byte{1}
 				// cadence-type-id: "S.test.HasSum"
 				// tag
-				0xd8, ccf.CBORTagResourceInterfaceType,
+				0xd8, byte(ccf.CBORTagResourceInterfaceType),
 				// array, 2 items follow
 				0x82,
 				// id
@@ -7662,7 +7662,7 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// id: []byte{2}
 				// cadence-type-id: "S.test.HasCount"
 				// tag
-				0xd8, ccf.CBORTagResourceInterfaceType,
+				0xd8, byte(ccf.CBORTagResourceInterfaceType),
 				// array, 2 items follow
 				0x82,
 				// id
@@ -7680,19 +7680,19 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayType,
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
 				// tag
-				0xd8, ccf.CBORTagIntersectionType,
+				0xd8, byte(ccf.CBORTagIntersectionType),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 1 byte follows
 				0x41,
 				// 1
 				0x01,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 1 byte follows
 				0x41,
 				// 2
@@ -7701,11 +7701,11 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				// array, 1 item follows
 				0x81,
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 byte follows
 				0x40,
 				// array, 2 items follow
@@ -7766,20 +7766,20 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []&String
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// nil
 			0xf6,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// array data without inlined type
@@ -7834,18 +7834,18 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []&String
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessType,
+			0xd8, byte(ccf.CBORTagEntitlementSetAuthorizationAccessType),
 			// array, 2 items follow
 			0x82,
 			// element 0: kind (Conjunction)
@@ -7862,7 +7862,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// "foo"
 			0x66, 0x6f, 0x6f,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// array data without inlined type
@@ -7917,18 +7917,18 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []&String
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessType,
+			0xd8, byte(ccf.CBORTagEntitlementSetAuthorizationAccessType),
 			// array, 2 items follow
 			0x82,
 			// element 0: kind (Disjunction)
@@ -7945,7 +7945,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// "foo"
 			0x66, 0x6f, 0x6f,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// array data without inlined type
@@ -7986,24 +7986,24 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []&String
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagEntitlementMapAuthorizationAccessType,
+			0xd8, byte(ccf.CBORTagEntitlementMapAuthorizationAccessType),
 			// text, 3 bytes follow
 			0x63,
 			// "foo"
 			0x66, 0x6f, 0x6f,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// array data without inlined type
@@ -8038,22 +8038,22 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []&String?
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// nil
 			0xf6,
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// array data without inlined type
@@ -8106,28 +8106,28 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type {string: &Int128?}
 			// tag
-			0xd8, ccf.CBORTagDictType,
+			0xd8, byte(ccf.CBORTagDictType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// string type ID (1)
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// nil
 			0xf6,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int128 type ID (9)
 			0x09,
 			// array data without inlined type
@@ -8164,31 +8164,31 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []&AnyStruct
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// nil
 			0xf6,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 			// array data without inlined type
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// string type ID (1)
 			0x01,
 			// text, 1 byte follow
@@ -8196,11 +8196,11 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// "a"
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// UInt8 type ID (12)
 			0x0c,
 			// 1
@@ -8233,7 +8233,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -8244,7 +8244,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// fields: [["a", StringType]
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -8266,7 +8266,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 
@@ -8274,15 +8274,15 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0x82,
 			// type []&S.test.Foo
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// nil
 			0xf6,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 byte follows
 			0x40,
 			// array data without inlined type
@@ -8326,7 +8326,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -8337,7 +8337,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// fields: [["a", StringType]
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -8359,7 +8359,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// a
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 
@@ -8367,26 +8367,26 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			0x82,
 			// type []&AnyStruct
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// nil
 			0xf6,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// string type ID (1)
 			0x01,
 			// text, 1 byte follow
@@ -8394,11 +8394,11 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// "a"
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 byte follows
 			0x40,
 			// array, 1 item follows
@@ -8431,32 +8431,32 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// nil
 			0xf6,
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 			// array data
 			// array, 3 items follow
 			0x83,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// string, 1 byte follows
@@ -8464,13 +8464,13 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// "a"
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// string, 1 byte follows
@@ -8503,32 +8503,32 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// nil
 			0xf6,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 			// array data
 			// array, 3 items follow
 			0x83,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// string, 1 byte follows
@@ -8536,13 +8536,13 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// "a"
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// string, 1 byte follows
@@ -8576,34 +8576,34 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// nil
 			0xf6,
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// AnyStruct type ID (39)
 			0x18, 0x27,
 			// array data
 			// array, 3 items follow
 			0x83,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// string, 1 byte follows
@@ -8611,13 +8611,13 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// "a"
 			0x61,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// string, 1 byte follows
@@ -8666,15 +8666,15 @@ func TestEncodeSimpleTypes(t *testing.T) {
 
 		err := encoder.EncodeRawBytes([]byte{
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 elements follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Meta type ID (41)
 			0x18, 0x29,
 			// tag
-			0xd8, ccf.CBORTagSimpleTypeValue,
+			0xd8, byte(ccf.CBORTagSimpleTypeValue),
 		})
 		require.NoError(t, err)
 
@@ -8847,17 +8847,17 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagOptionalTypeValue,
+				0xd8, byte(ccf.CBORTagOptionalTypeValue),
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 			},
@@ -8886,19 +8886,19 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagOptionalTypeValue,
+				0xd8, byte(ccf.CBORTagOptionalTypeValue),
 				// tag
-				0xd8, ccf.CBORTagOptionalTypeValue,
+				0xd8, byte(ccf.CBORTagOptionalTypeValue),
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 			},
@@ -8924,17 +8924,17 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayTypeValue,
+				0xd8, byte(ccf.CBORTagVarsizedArrayTypeValue),
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 			},
@@ -8962,21 +8962,21 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagConstsizedArrayTypeValue,
+				0xd8, byte(ccf.CBORTagConstsizedArrayTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// 3
 				0x03,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 			},
@@ -9004,23 +9004,23 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagDictTypeValue,
+				0xd8, byte(ccf.CBORTagDictTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -9047,17 +9047,17 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagInclusiveRangeTypeValue,
+				0xd8, byte(ccf.CBORTagInclusiveRangeTypeValue),
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 			},
@@ -9087,15 +9087,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagStructTypeValue,
+				0xd8, byte(ccf.CBORTagStructTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -9145,15 +9145,15 @@ func TestEncodeType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 elements follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Meta type ID (41)
 			0x18, 0x29,
 			// tag
-			0xd8, ccf.CBORTagStructTypeValue,
+			0xd8, byte(ccf.CBORTagStructTypeValue),
 			// array, 5 elements follow
 			0x85,
 			// bytes, 0 bytes follow
@@ -9174,7 +9174,7 @@ func TestEncodeType(t *testing.T) {
 			// foo
 			0x66, 0x6f, 0x6f,
 			// tag
-			0xd8, ccf.CBORTagSimpleTypeValue,
+			0xd8, byte(ccf.CBORTagSimpleTypeValue),
 			// Int type (4)
 			0x04,
 			// array, 2 elements follow
@@ -9184,7 +9184,7 @@ func TestEncodeType(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleTypeValue,
+			0xd8, byte(ccf.CBORTagSimpleTypeValue),
 			// Int type (4)
 			0x04,
 			// initializers
@@ -9203,7 +9203,7 @@ func TestEncodeType(t *testing.T) {
 			// bar
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleTypeValue,
+			0xd8, byte(ccf.CBORTagSimpleTypeValue),
 			// Int type (4)
 			0x04,
 			// array, 3 elements follow
@@ -9217,7 +9217,7 @@ func TestEncodeType(t *testing.T) {
 			// bax
 			0x62, 0x61, 0x7a,
 			// tag
-			0xd8, ccf.CBORTagSimpleTypeValue,
+			0xd8, byte(ccf.CBORTagSimpleTypeValue),
 			// String type (1)
 			0x01,
 		}
@@ -9267,15 +9267,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagStructTypeValue,
+				0xd8, byte(ccf.CBORTagStructTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -9296,7 +9296,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 2 elements follow
@@ -9306,7 +9306,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -9325,7 +9325,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -9339,7 +9339,7 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -9413,15 +9413,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -9442,7 +9442,7 @@ func TestEncodeType(t *testing.T) {
 				// foo1
 				0x66, 0x6f, 0x6f, 0x31,
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 1 bytes follow
@@ -9477,7 +9477,7 @@ func TestEncodeType(t *testing.T) {
 				// aaa
 				0x61, 0x61, 0x61,
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// CCF type ID
@@ -9528,15 +9528,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -9557,7 +9557,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -9576,7 +9576,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -9590,7 +9590,7 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -9626,15 +9626,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (42)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagContractTypeValue,
+				0xd8, byte(ccf.CBORTagContractTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -9655,7 +9655,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -9674,7 +9674,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -9688,7 +9688,7 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -9724,15 +9724,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagStructInterfaceTypeValue,
+				0xd8, byte(ccf.CBORTagStructInterfaceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -9753,7 +9753,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -9772,7 +9772,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -9786,7 +9786,7 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -9822,15 +9822,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagResourceInterfaceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceInterfaceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -9851,7 +9851,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -9870,7 +9870,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -9884,7 +9884,7 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -9920,15 +9920,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagContractInterfaceTypeValue,
+				0xd8, byte(ccf.CBORTagContractInterfaceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -9949,7 +9949,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -9968,7 +9968,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -9982,7 +9982,7 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -10016,15 +10016,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagEventTypeValue,
+				0xd8, byte(ccf.CBORTagEventTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -10045,7 +10045,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -10064,7 +10064,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -10078,7 +10078,7 @@ func TestEncodeType(t *testing.T) {
 				// baz
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -10115,15 +10115,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagEnumTypeValue,
+				0xd8, byte(ccf.CBORTagEnumTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -10133,7 +10133,7 @@ func TestEncodeType(t *testing.T) {
 				// S.test.E
 				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x45,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type ID (1)
 				0x01,
 				// fields
@@ -10146,7 +10146,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -10165,7 +10165,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -10179,7 +10179,7 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -10216,15 +10216,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagAttachmentTypeValue,
+				0xd8, byte(ccf.CBORTagAttachmentTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -10234,7 +10234,7 @@ func TestEncodeType(t *testing.T) {
 				// S.test.A
 				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x41,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type ID (1)
 				0x01,
 				// fields
@@ -10247,7 +10247,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -10266,7 +10266,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -10280,7 +10280,7 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -10326,15 +10326,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagAttachmentTypeValue,
+				0xd8, byte(ccf.CBORTagAttachmentTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -10345,7 +10345,7 @@ func TestEncodeType(t *testing.T) {
 				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x41,
 				// base type
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 1 bytes follow
@@ -10369,7 +10369,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// string type
 				0x01,
 				// initializers
@@ -10385,7 +10385,7 @@ func TestEncodeType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -10404,7 +10404,7 @@ func TestEncodeType(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 3 elements follow
@@ -10418,7 +10418,7 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -10445,21 +10445,21 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagReferenceTypeValue,
+				0xd8, byte(ccf.CBORTagReferenceTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// nil
 				0xf6,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type ID (4)
 				0x04,
 			},
@@ -10490,19 +10490,19 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagReferenceTypeValue,
+				0xd8, byte(ccf.CBORTagReferenceTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
+				0xd8, byte(ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// element 0: kind (conjunction)
@@ -10518,7 +10518,7 @@ func TestEncodeType(t *testing.T) {
 				// "foo"
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type ID (4)
 				0x04,
 			},
@@ -10558,19 +10558,19 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagReferenceTypeValue,
+				0xd8, byte(ccf.CBORTagReferenceTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
+				0xd8, byte(ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// element 0: kind (disjuction)
@@ -10586,7 +10586,7 @@ func TestEncodeType(t *testing.T) {
 				// "foo"
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type ID (4)
 				0x04,
 			},
@@ -10625,25 +10625,25 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagReferenceTypeValue,
+				0xd8, byte(ccf.CBORTagReferenceTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagEntitlementMapAuthorizationAccessTypeValue,
+				0xd8, byte(ccf.CBORTagEntitlementMapAuthorizationAccessTypeValue),
 				// text, 3 bytes follow
 				0x63,
 				// "foo"
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type ID (4)
 				0x04,
 			},
@@ -10668,15 +10668,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// HashableStruct type (97)
 				0x18, 0x61,
 			},
@@ -10709,15 +10709,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagFunctionTypeValue,
+				0xd8, byte(ccf.CBORTagFunctionTypeValue),
 				// array, 4 elements follow
 				0x84,
 				// array, 1 elements follow
@@ -10729,7 +10729,7 @@ func TestEncodeType(t *testing.T) {
 				// "T"
 				0x54,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// AnyStruct type (39)
 				0x18, 0x27,
 				// array, 1 elements follow
@@ -10745,11 +10745,11 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type ID (4)
 				0x04,
 				// Purity 1
@@ -10783,15 +10783,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagFunctionTypeValue,
+				0xd8, byte(ccf.CBORTagFunctionTypeValue),
 				// array, 4 elements follow
 				0x84,
 				// array, 1 elements follow
@@ -10817,11 +10817,11 @@ func TestEncodeType(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type ID (4)
 				0x04,
 				// purity 0
@@ -10847,15 +10847,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagCapabilityTypeValue,
+				0xd8, byte(ccf.CBORTagCapabilityTypeValue),
 				// array, 1 element follows
 				0x81,
 				// null
@@ -10883,19 +10883,19 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagCapabilityTypeValue,
+				0xd8, byte(ccf.CBORTagCapabilityTypeValue),
 				// array, 1 element follows
 				0x81,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type ID (4)
 				0x04,
 			},
@@ -10915,15 +10915,15 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagIntersectionTypeValue,
+				0xd8, byte(ccf.CBORTagIntersectionTypeValue),
 				// array, 0 element follows
 				0x80,
 			}
@@ -10949,15 +10949,15 @@ func TestEncodeType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 elements follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Meta type ID (41)
 			0x18, 0x29,
 			// tag
-			0xd8, ccf.CBORTagIntersectionTypeValue,
+			0xd8, byte(ccf.CBORTagIntersectionTypeValue),
 			// array, 0 element follows
 			0x80,
 		}
@@ -10991,19 +10991,19 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagIntersectionTypeValue,
+				0xd8, byte(ccf.CBORTagIntersectionTypeValue),
 				// array, 1 element follows
 				0x81,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type ID (1)
 				0x01,
 			},
@@ -11041,23 +11041,23 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagIntersectionTypeValue,
+				0xd8, byte(ccf.CBORTagIntersectionTypeValue),
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type ID (1)
 				0x01,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 			},
@@ -11112,20 +11112,20 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagIntersectionTypeValue,
+				0xd8, byte(ccf.CBORTagIntersectionTypeValue),
 				// 3 sorted types
 				// array, 3 element follows
 				0x83,
 				// tag
-				0xd8, ccf.CBORTagStructInterfaceTypeValue,
+				0xd8, byte(ccf.CBORTagStructInterfaceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// CCF type ID
@@ -11144,7 +11144,7 @@ func TestEncodeType(t *testing.T) {
 				// array, 0 element follows
 				0x80,
 				// tag
-				0xd8, ccf.CBORTagStructInterfaceTypeValue,
+				0xd8, byte(ccf.CBORTagStructInterfaceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// CCF type ID
@@ -11165,7 +11165,7 @@ func TestEncodeType(t *testing.T) {
 				// array, 0 element follows
 				0x80,
 				// tag
-				0xd8, ccf.CBORTagStructInterfaceTypeValue,
+				0xd8, byte(ccf.CBORTagStructInterfaceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// CCF type ID
@@ -11229,11 +11229,11 @@ func TestEncodeType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// nil
@@ -11262,11 +11262,11 @@ func TestEncodeCapability(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagCapabilityType,
+				0xd8, byte(ccf.CBORTagCapabilityType),
 				// array, 1 element follows
 				0x81,
 				// null
@@ -11323,7 +11323,7 @@ func TestEncodeCapability(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -11334,7 +11334,7 @@ func TestEncodeCapability(t *testing.T) {
 				// cadence-type-id: "S.test.FooStruct"
 				// fields: [["bar", IntType]]
 				// tag
-				0xd8, ccf.CBORTagStructType,
+				0xd8, byte(ccf.CBORTagStructType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -11356,16 +11356,16 @@ func TestEncodeCapability(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayType,
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
 				// tag
-				0xd8, ccf.CBORTagCapabilityType,
+				0xd8, byte(ccf.CBORTagCapabilityType),
 				// array, 1 element follows
 				0x81,
 				// null
@@ -11373,15 +11373,15 @@ func TestEncodeCapability(t *testing.T) {
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagCapabilityType,
+				0xd8, byte(ccf.CBORTagCapabilityType),
 				// array, 1 elements follow
 				0x81,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// array, 2 elements follow
@@ -11395,15 +11395,15 @@ func TestEncodeCapability(t *testing.T) {
 				0x18, 0x2a,
 
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagCapabilityType,
+				0xd8, byte(ccf.CBORTagCapabilityType),
 				// array, 1 elements follow
 				0x81,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 byte follows
 				0x40,
 				// array, 2 elements follow
@@ -11435,15 +11435,15 @@ func TestEncodeCapability(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagCapabilityType,
+				0xd8, byte(ccf.CBORTagCapabilityType),
 				// array, 1 element follows
 				0x81,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// array, 2 elements follow
@@ -11485,17 +11485,17 @@ func TestEncodeCapability(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayType,
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
 				// tag
-				0xd8, ccf.CBORTagCapabilityType,
+				0xd8, byte(ccf.CBORTagCapabilityType),
 				// array, 1 element follows
 				0x81,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// array, 2 elements follow
@@ -11553,11 +11553,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 1230000000
@@ -11576,11 +11576,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 1203000000
@@ -11599,11 +11599,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 1200300000
@@ -11622,11 +11622,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 1200030000
@@ -11645,11 +11645,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 1200003000
@@ -11668,11 +11668,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 1200000300
@@ -11691,11 +11691,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 1200000030
@@ -11714,11 +11714,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 12030000000
@@ -11738,11 +11738,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 9223372036810000000
@@ -11761,11 +11761,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 9223372036910000000
@@ -11788,11 +11788,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// -9223372036810000000
@@ -11811,11 +11811,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// -9223372036910000000
@@ -11838,11 +11838,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 9223372036854775807
@@ -11861,11 +11861,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// 9223372036854775808
@@ -11888,11 +11888,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// -9223372036854775808
@@ -11911,11 +11911,11 @@ func TestDecodeFix64(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// fix64 type ID (22)
 				0x16,
 				// -9223372036854775809
@@ -11984,7 +11984,7 @@ func TestExportRecursiveType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definition
@@ -11995,7 +11995,7 @@ func TestExportRecursiveType(t *testing.T) {
 			// cadence-type-id: "S.test.Foo"
 			// 1 fields: [["foo", optional(type ref id(0))]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -12017,9 +12017,9 @@ func TestExportRecursiveType(t *testing.T) {
 			// foo
 			0x66, 0x6f, 0x6f,
 			// tag
-			0xd8, ccf.CBORTagOptionalType,
+			0xd8, byte(ccf.CBORTagOptionalType),
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 
@@ -12027,7 +12027,7 @@ func TestExportRecursiveType(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 1 items follow
@@ -12077,15 +12077,15 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 4 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -12106,9 +12106,9 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagOptionalTypeValue,
+				0xd8, byte(ccf.CBORTagOptionalTypeValue),
 				// tag
-				0xd8, ccf.CBORTagTypeValueRef,
+				0xd8, byte(ccf.CBORTagTypeValueRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// initializers
@@ -12150,15 +12150,15 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagStructTypeValue,
+				0xd8, byte(ccf.CBORTagStructTypeValue),
 				// array, 4 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -12188,9 +12188,9 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				// "aaa"
 				0x61, 0x61, 0x61,
 				// tag
-				0xd8, ccf.CBORTagOptionalTypeValue,
+				0xd8, byte(ccf.CBORTagOptionalTypeValue),
 				// tag
-				0xd8, ccf.CBORTagTypeValueRef,
+				0xd8, byte(ccf.CBORTagTypeValueRef),
 				// bytes, 0 byte follows,
 				0x40,
 			},
@@ -12235,15 +12235,15 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagStructTypeValue,
+				0xd8, byte(ccf.CBORTagStructTypeValue),
 				// array, 4 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -12264,9 +12264,9 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				// "aa"
 				0x61, 0x61,
 				// tag
-				0xd8, ccf.CBORTagOptionalTypeValue,
+				0xd8, byte(ccf.CBORTagOptionalTypeValue),
 				// tag
-				0xd8, ccf.CBORTagTypeValueRef,
+				0xd8, byte(ccf.CBORTagTypeValueRef),
 				// bytes, 0 byte follows
 				0x40,
 				// initializers
@@ -12285,9 +12285,9 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				// "aaa"
 				0x61, 0x61, 0x61,
 				// tag
-				0xd8, ccf.CBORTagOptionalTypeValue,
+				0xd8, byte(ccf.CBORTagOptionalTypeValue),
 				// tag
-				0xd8, ccf.CBORTagTypeValueRef,
+				0xd8, byte(ccf.CBORTagTypeValueRef),
 				// bytes, 0 byte follows,
 				0x40,
 			},
@@ -12355,15 +12355,15 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -12384,7 +12384,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				// foo1
 				0x66, 0x6f, 0x6f, 0x31,
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 1 bytes follow
@@ -12410,7 +12410,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				// foo2
 				0x66, 0x6f, 0x6f, 0x32,
 				// tag
-				0xd8, ccf.CBORTagTypeValueRef,
+				0xd8, byte(ccf.CBORTagTypeValueRef),
 				// bytes, 1 bytes follow
 				0x41,
 				// 1
@@ -12431,9 +12431,9 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				// bbb
 				0x62, 0x62, 0x62,
 				// tag
-				0xd8, ccf.CBORTagOptionalTypeValue,
+				0xd8, byte(ccf.CBORTagOptionalTypeValue),
 				// tag
-				0xd8, ccf.CBORTagTypeValueRef,
+				0xd8, byte(ccf.CBORTagTypeValueRef),
 				// bytes, 1 bytes follow
 				0x41,
 				// 1
@@ -12449,7 +12449,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 				// aaa
 				0x61, 0x61, 0x61,
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// CCF type ID
@@ -12494,11 +12494,11 @@ func TestEncodePath(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// StoragePath type ID (26)
 				0x18, 0x1a,
 				// array, 2 elements follow
@@ -12531,11 +12531,11 @@ func TestEncodePath(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// PrivatePath type ID (28)
 				0x18, 0x1c,
 				// array, 2 elements follow
@@ -12568,11 +12568,11 @@ func TestEncodePath(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// PublicPath type ID (27)
 				0x18, 0x1b,
 				// array, 2 elements follow
@@ -12617,13 +12617,13 @@ func TestEncodePath(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayType,
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// StoragePath type ID (26)
 				0x18, 0x1a,
 				// array, 3 elements follow
@@ -12689,24 +12689,24 @@ func TestEncodePath(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayType,
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Path type ID (24)
 				0x18, 0x18,
 				// array, 3 elements follow
 				0x83,
 				// element 0: storage path
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// StoragePath type ID (26)
 				0x18, 0x1a,
 				// array, 2 elements follow
@@ -12719,11 +12719,11 @@ func TestEncodePath(t *testing.T) {
 				0x66, 0x6f, 0x6f,
 				// element 1: private path
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// PrivatePath type ID (28)
 				0x18, 0x1c,
 				// array, 2 elements follow
@@ -12736,11 +12736,11 @@ func TestEncodePath(t *testing.T) {
 				0x62, 0x61, 0x72,
 				// element 2: public path
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// PublicPath type ID (27)
 				0x18, 0x1b,
 				// array, 2 elements follow
@@ -12791,7 +12791,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definition
@@ -12802,7 +12802,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			// cadence-type-id: ""
 			// 0 field
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -12819,7 +12819,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 0 items follow
@@ -12850,7 +12850,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definition
@@ -12861,7 +12861,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			// cadence-type-id: "I"
 			// 0 field
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -12880,7 +12880,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 0 items follow
@@ -12911,7 +12911,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -12922,7 +12922,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			// cadence-type-id: "N.PublicKey"
 			// 0 field
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -12941,7 +12941,7 @@ func TestDecodeInvalidType(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 bytes follow
 			0x40,
 			// array, 0 items follow
@@ -13070,15 +13070,15 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagStructTypeValue,
+				0xd8, byte(ccf.CBORTagStructTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -13114,15 +13114,15 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagStructInterfaceTypeValue,
+				0xd8, byte(ccf.CBORTagStructInterfaceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -13158,15 +13158,15 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagResourceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -13202,15 +13202,15 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagResourceInterfaceTypeValue,
+				0xd8, byte(ccf.CBORTagResourceInterfaceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -13246,15 +13246,15 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagContractTypeValue,
+				0xd8, byte(ccf.CBORTagContractTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -13290,15 +13290,15 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagContractInterfaceTypeValue,
+				0xd8, byte(ccf.CBORTagContractInterfaceTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -13335,15 +13335,15 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagEnumTypeValue,
+				0xd8, byte(ccf.CBORTagEnumTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -13379,15 +13379,15 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagEventTypeValue,
+				0xd8, byte(ccf.CBORTagEventTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -13462,11 +13462,11 @@ func TestExportFunctionValue(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 elements follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Function type ID (51)
 			0x18, 0x33,
 			// array, 4 elements follow
@@ -13478,7 +13478,7 @@ func TestExportFunctionValue(t *testing.T) {
 			0x80,
 			// element 2: return type
 			// tag
-			0xd8, ccf.CBORTagSimpleTypeValue,
+			0xd8, byte(ccf.CBORTagSimpleTypeValue),
 			// Void type ID (50)
 			0x18, 0x32,
 			// element 3: purity
@@ -13510,7 +13510,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -13521,7 +13521,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.f919ee77447b7497.FlowFees.FeesDeducted"
 				// 3 fields: [["amount", type(ufix64)], ["executionEffort", type(ufix64)], ["inclusionEffort", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 elements follow
 				0x83,
 				// id
@@ -13543,7 +13543,7 @@ func TestDeployedEvents(t *testing.T) {
 				// amount
 				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// field 1
@@ -13554,7 +13554,7 @@ func TestDeployedEvents(t *testing.T) {
 				// inclusionEffort
 				0x69, 0x6e, 0x63, 0x6c, 0x75, 0x73, 0x69, 0x6f, 0x6e, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// field 2
@@ -13565,7 +13565,7 @@ func TestDeployedEvents(t *testing.T) {
 				// executionEffort
 				0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 
@@ -13573,7 +13573,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 3 items follow
@@ -13598,7 +13598,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -13609,7 +13609,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.f919ee77447b7497.FlowFees.TokensWithdrawn"
 				// 1 field: [["amount", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 element follows
 				0x83,
 				// id
@@ -13631,7 +13631,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "amount"
 				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 
@@ -13639,7 +13639,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 1 items follow
@@ -13660,7 +13660,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -13672,7 +13672,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.8624b52f9ddcd04a.FlowIDTableStaking.DelegatorRewardsPaid"
 				// 3 field: [["nodeID", type(string)], ["delegatorID", type(uint32)], ["amount", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 element follows
 				0x83,
 				// id
@@ -13694,7 +13694,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "nodeID"
 				0x6e, 0x6f, 0x64, 0x65, 0x49, 0x44,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 				// field 1
@@ -13705,7 +13705,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "delegatorID"
 				0x64, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x6f, 0x72, 0x49, 0x44,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UInt32 type ID (14)
 				0x0e,
 				// field 2
@@ -13716,7 +13716,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "amount"
 				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 
@@ -13724,7 +13724,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 3 items follow
@@ -13751,7 +13751,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -13762,7 +13762,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.8624b52f9ddcd04a.FlowIDTableStaking.EpochTotalRewardsPaid"
 				// 4 field: [["total", type(ufix64)], ["minted", type(ufix64)], ["fromFees", type(ufix64)], ["feesBurned", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 element follows
 				0x83,
 				// id
@@ -13784,7 +13784,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "total"
 				0x74, 0x6f, 0x74, 0x61, 0x6c,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// field 1
@@ -13795,7 +13795,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "fromFees"
 				0x66, 0x72, 0x6f, 0x6d, 0x46, 0x65, 0x65, 0x73,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// field 2
@@ -13806,7 +13806,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "minted"
 				0x6d, 0x69, 0x6e, 0x74, 0x65, 0x64,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// field 3
@@ -13817,7 +13817,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "feesBurned"
 				0x66, 0x65, 0x65, 0x73, 0x42, 0x75, 0x72, 0x6e, 0x65, 0x64,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 
@@ -13825,7 +13825,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 4 items follow
@@ -13852,7 +13852,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -13863,7 +13863,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.8624b52f9ddcd04a.FlowIDTableStaking.NewWeeklyPayout"
 				// 1 field: [["newPayout", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 element follows
 				0x83,
 				// id
@@ -13885,7 +13885,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "newPayout"
 				0x6e, 0x65, 0x77, 0x50, 0x61, 0x79, 0x6f, 0x75, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 
@@ -13893,7 +13893,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 1 items follow
@@ -13914,7 +13914,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -13925,7 +13925,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.8624b52f9ddcd04a.FlowIDTableStaking.RewardsPaid"
 				// 2 field: [["nodeID", type(string)], ["amount", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 element follows
 				0x83,
 				// id
@@ -13947,7 +13947,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "nodeID"
 				0x6e, 0x6f, 0x64, 0x65, 0x49, 0x44,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 				// field 1
@@ -13958,7 +13958,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "amount"
 				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 
@@ -13966,7 +13966,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 2 items follow
@@ -13991,7 +13991,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -14002,7 +14002,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.1654653399040a61.FlowToken.TokensDeposited"
 				// 2 field: [["to", type(optional(address))], ["amount", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 element follows
 				0x83,
 				// id
@@ -14024,7 +14024,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "amount"
 				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// field 1
@@ -14035,9 +14035,9 @@ func TestDeployedEvents(t *testing.T) {
 				// "to"
 				0x74, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Address type ID (3)
 				0x03,
 
@@ -14045,7 +14045,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 2 items follow
@@ -14068,7 +14068,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -14079,7 +14079,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.1654653399040a61.FlowToken.TokensDeposited"
 				// 2 field: [["to", type(optional(address))], ["amount", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 element follows
 				0x83,
 				// id
@@ -14101,7 +14101,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "amount"
 				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// field 1
@@ -14112,9 +14112,9 @@ func TestDeployedEvents(t *testing.T) {
 				// "to"
 				0x74, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Address type ID (3)
 				0x03,
 
@@ -14122,7 +14122,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 2 items follow
@@ -14147,7 +14147,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -14158,7 +14158,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.1654653399040a61.FlowToken.TokensMinted"
 				// 1 field: [["amount", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 element follows
 				0x83,
 				// id
@@ -14180,7 +14180,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "amount"
 				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 
@@ -14188,7 +14188,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 1 items follow
@@ -14209,7 +14209,7 @@ func TestDeployedEvents(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 element follows
 				0x82,
 				// element 0: type definitions
@@ -14220,7 +14220,7 @@ func TestDeployedEvents(t *testing.T) {
 				// cadence-type-id: "A.1654653399040a61.FlowToken.TokensWithdrawn"
 				// 2 field: [["from", type(optional(address))], ["amount", type(ufix64)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 element follows
 				0x83,
 				// id
@@ -14242,7 +14242,7 @@ func TestDeployedEvents(t *testing.T) {
 				// "amount"
 				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// UFix64 type ID (23)
 				0x17,
 				// field 1
@@ -14253,9 +14253,9 @@ func TestDeployedEvents(t *testing.T) {
 				// "from"
 				0x66, 0x72, 0x6f, 0x6d,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Address type ID (3)
 				0x03,
 
@@ -14263,7 +14263,7 @@ func TestDeployedEvents(t *testing.T) {
 				// array, 2 element follows
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 2 items follow
@@ -14724,11 +14724,11 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 				// true
@@ -14743,11 +14743,11 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 1 items follow
@@ -14768,7 +14768,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -14779,7 +14779,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// cadence-type-id: "S.test.FooEvent"
 				// 2 fields: [["a", type(int)], ["b", type(string)]]
 				// tag
-				0xd8, ccf.CBORTagEventType,
+				0xd8, byte(ccf.CBORTagEventType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -14801,7 +14801,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// a
 				0x61,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// field 1
@@ -14812,7 +14812,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// b
 				0x62,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 				// struct type:
@@ -14820,7 +14820,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// cadence-type-id: "S.test.FooStruct"
 				// 2 fields: [["a", type(int)], ["b", type(string)]]
 				// tag
-				0xd8, ccf.CBORTagStructType,
+				0xd8, byte(ccf.CBORTagStructType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -14844,7 +14844,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// a
 				0x61,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// field 1
@@ -14855,7 +14855,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// b
 				0x62,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 
@@ -14863,7 +14863,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 2 items follow
@@ -14888,7 +14888,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// nil
@@ -14905,7 +14905,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// nil
@@ -14913,7 +14913,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Bool type ID (0)
 				0x00,
 				// true
@@ -14928,7 +14928,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// array, 1 items follow
@@ -14938,7 +14938,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Bool type ID (0)
 				0x00,
 				// true
@@ -14953,11 +14953,11 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagOptionalType,
+				0xd8, byte(ccf.CBORTagOptionalType),
 				// nil
 				0xf6,
 				// nil
@@ -14972,12 +14972,12 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type constant-sized [1]nil
 				// tag
-				0xd8, ccf.CBORTagConstsizedArrayType,
+				0xd8, byte(ccf.CBORTagConstsizedArrayType),
 				// array, 2 items follow
 				0x82,
 				// number of elements
@@ -15003,12 +15003,12 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type []nil
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayType,
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
 				// null
 				0xf6,
 				// array data without inlined type definition
@@ -15030,18 +15030,18 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type (map[nil]int)
 				// tag
-				0xd8, ccf.CBORTagDictType,
+				0xd8, byte(ccf.CBORTagDictType),
 				// array, 2 items follow
 				0x82,
 				// null
 				0xf6,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// array data without inlined type definition
@@ -15067,16 +15067,16 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type (map[int]nil)
 				// tag
-				0xd8, ccf.CBORTagDictType,
+				0xd8, byte(ccf.CBORTagDictType),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 				// null
@@ -15104,12 +15104,12 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type (InclusiveRange<nil>)
 				// tag
-				0xd8, ccf.CBORTagInclusiveRangeType,
+				0xd8, byte(ccf.CBORTagInclusiveRangeType),
 				// null
 				0xf6,
 				// array data without inlined type definition
@@ -15143,14 +15143,14 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type (InclusiveRange<Int>)
 				// tag
-				0xd8, ccf.CBORTagInclusiveRangeType,
+				0xd8, byte(ccf.CBORTagInclusiveRangeType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// primitive type where array was expected
@@ -15183,14 +15183,14 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type (InclusiveRange<Int>)
 				// tag
-				0xd8, ccf.CBORTagInclusiveRangeType,
+				0xd8, byte(ccf.CBORTagInclusiveRangeType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int type ID (4)
 				0x04,
 				// array data without inlined type definition
@@ -15218,14 +15218,14 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type (InclusiveRange<Int8>)
 				// tag
-				0xd8, ccf.CBORTagInclusiveRangeType,
+				0xd8, byte(ccf.CBORTagInclusiveRangeType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int8 type ID (5)
 				0x05,
 				// array data without inlined type definition
@@ -15251,14 +15251,14 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type (InclusiveRange<Int8>)
 				// tag
-				0xd8, ccf.CBORTagInclusiveRangeType,
+				0xd8, byte(ccf.CBORTagInclusiveRangeType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int8 type ID (5)
 				0x05,
 				// array data without inlined type definition
@@ -15284,14 +15284,14 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// type (InclusiveRange<Int8>)
 				// tag
-				0xd8, ccf.CBORTagInclusiveRangeType,
+				0xd8, byte(ccf.CBORTagInclusiveRangeType),
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Int8 type ID (5)
 				0x05,
 				// array data without inlined type definition
@@ -15317,7 +15317,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeDefAndValue,
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
 				// array, 2 items follow
 				0x82,
 				// element 0: type definitions
@@ -15328,7 +15328,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// cadence-type-id: "S.test.FooStruct"
 				// 2 fields: [["a", nil], ["b", type(string)]]
 				// tag
-				0xd8, ccf.CBORTagStructType,
+				0xd8, byte(ccf.CBORTagStructType),
 				// array, 3 items follow
 				0x83,
 				// id
@@ -15359,7 +15359,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// b
 				0x62,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// String type ID (1)
 				0x01,
 
@@ -15367,7 +15367,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagTypeRef,
+				0xd8, byte(ccf.CBORTagTypeRef),
 				// bytes, 0 bytes follow
 				0x40,
 				// array, 2 items follow
@@ -15392,15 +15392,15 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagOptionalTypeValue,
+				0xd8, byte(ccf.CBORTagOptionalTypeValue),
 				// null
 				0xf6,
 			},
@@ -15413,15 +15413,15 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagConstsizedArrayTypeValue,
+				0xd8, byte(ccf.CBORTagConstsizedArrayTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// 3
@@ -15438,15 +15438,15 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayTypeValue,
+				0xd8, byte(ccf.CBORTagVarsizedArrayTypeValue),
 				// null
 				0xf6,
 			},
@@ -15459,21 +15459,21 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagDictTypeValue,
+				0xd8, byte(ccf.CBORTagDictTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// null
 				0xf6,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -15486,19 +15486,19 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagDictTypeValue,
+				0xd8, byte(ccf.CBORTagDictTypeValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// null
@@ -15513,15 +15513,15 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagInclusiveRangeTypeValue,
+				0xd8, byte(ccf.CBORTagInclusiveRangeTypeValue),
 				// null
 				0xf6,
 			},
@@ -15534,15 +15534,15 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagStructTypeValue,
+				0xd8, byte(ccf.CBORTagStructTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -15580,7 +15580,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// bar
 				0x62, 0x61, 0x72,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// array, 1 element follows
@@ -15596,7 +15596,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -15609,15 +15609,15 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 elements follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagStructTypeValue,
+				0xd8, byte(ccf.CBORTagStructTypeValue),
 				// array, 5 elements follow
 				0x85,
 				// bytes, 0 bytes follow
@@ -15638,7 +15638,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// foo
 				0x66, 0x6f, 0x6f,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// Int type (4)
 				0x04,
 				// initializers
@@ -15671,7 +15671,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// bax
 				0x62, 0x61, 0x7a,
 				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
+				0xd8, byte(ccf.CBORTagSimpleTypeValue),
 				// String type (1)
 				0x01,
 			},
@@ -15685,19 +15685,19 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagIntersectionTypeValue,
+				0xd8, byte(ccf.CBORTagIntersectionTypeValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagStructTypeValue,
+				0xd8, byte(ccf.CBORTagStructTypeValue),
 				// array, 5 items follow
 				0x85,
 				// ccf type ID
@@ -15732,11 +15732,11 @@ func TestDecodeInvalidData(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// Bool type ID (0)
 				0x00,
 				// true
@@ -15846,13 +15846,13 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// array, 4 items follow
 			0x84,
 			// tag
-			0xd8, ccf.CBORTagStructInterfaceType,
+			0xd8, byte(ccf.CBORTagStructInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// CCF type ID
@@ -15864,7 +15864,7 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 			// "S.LocationA.Interface"
 			0x53, 0x2e, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x41, 0x2e, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 items follow
 			0x83,
 			// CCF type ID
@@ -15886,13 +15886,13 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 			// "field"
 			0x66, 0x69, 0x65, 0x6c, 0x64,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follow
 			0x41,
 			// 3
 			0x03,
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 item follows
 			0x83,
 			// CCF type ID
@@ -15909,7 +15909,7 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 			// array, 0 item follows
 			0x80,
 			// tag
-			0xd8, ccf.CBORTagStructType,
+			0xd8, byte(ccf.CBORTagStructType),
 			// array, 3 item follows
 			0x83,
 			// CCF type ID
@@ -15932,17 +15932,17 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 			// "field"
 			0x66, 0x69, 0x65, 0x6c, 0x64,
 			// tag
-			0xd8, ccf.CBORTagIntersectionType,
+			0xd8, byte(ccf.CBORTagIntersectionType),
 			// array, 1 item follows
 			0x81,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 byte follows
 			0x40,
 			// array, 2 item follows
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 1
@@ -15952,11 +15952,11 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 			// array, 1 item follows
 			0x81,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 item follows
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 2
@@ -16014,20 +16014,20 @@ func TestCyclicReferenceValue(t *testing.T) {
 				//
 				// language=cbor, format=ccf
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// static type
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayType,
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
 				// tag
-				0xd8, ccf.CBORTagReferenceType,
+				0xd8, byte(ccf.CBORTagReferenceType),
 				// array, 2 items follow
 				0x82,
 				// nil
 				0xf6,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 
@@ -16035,19 +16035,19 @@ func TestCyclicReferenceValue(t *testing.T) {
 				// array, 1 items follow
 				0x81,
 				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
+				0xd8, byte(ccf.CBORTagTypeAndValue),
 				// array, 2 items follow
 				0x82,
 				// tag
-				0xd8, ccf.CBORTagVarsizedArrayType,
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
 				// tag
-				0xd8, ccf.CBORTagReferenceType,
+				0xd8, byte(ccf.CBORTagReferenceType),
 				// array, 2 items follow
 				0x82,
 				// nil
 				0xf6,
 				// tag
-				0xd8, ccf.CBORTagSimpleType,
+				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 				// array, 1 items follow
@@ -16112,18 +16112,18 @@ func TestSortEntitlementSet(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []&String
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessType,
+			0xd8, byte(ccf.CBORTagEntitlementSetAuthorizationAccessType),
 			// array, 2 items follow
 			0x82,
 			// element 0: kind (Conjunction)
@@ -16140,7 +16140,7 @@ func TestSortEntitlementSet(t *testing.T) {
 			// "bar"
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// array data without inlined type
@@ -16210,18 +16210,18 @@ func TestSortEntitlementSet(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// type []&String
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagReferenceType,
+			0xd8, byte(ccf.CBORTagReferenceType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessType,
+			0xd8, byte(ccf.CBORTagEntitlementSetAuthorizationAccessType),
 			// array, 2 items follow
 			0x82,
 			// element 0: kind (Conjunction)
@@ -16238,7 +16238,7 @@ func TestSortEntitlementSet(t *testing.T) {
 			// "foo"
 			0x66, 0x6f, 0x6f,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// String type ID (1)
 			0x01,
 			// array data without inlined type
@@ -16290,19 +16290,19 @@ func TestSortEntitlementSet(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 elements follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Meta type ID (41)
 			0x18, 0x29,
 			// tag
-			0xd8, ccf.CBORTagReferenceTypeValue,
+			0xd8, byte(ccf.CBORTagReferenceTypeValue),
 			// array, 2 elements follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
+			0xd8, byte(ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue),
 			// array, 2 elements follow
 			0x82,
 			// element 0: kind (conjunction)
@@ -16318,7 +16318,7 @@ func TestSortEntitlementSet(t *testing.T) {
 			// "bar"
 			0x62, 0x61, 0x72,
 			// tag
-			0xd8, ccf.CBORTagSimpleTypeValue,
+			0xd8, byte(ccf.CBORTagSimpleTypeValue),
 			// String type ID (1)
 			0x01,
 		}
@@ -16367,19 +16367,19 @@ func TestSortEntitlementSet(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 elements follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Meta type ID (41)
 			0x18, 0x29,
 			// tag
-			0xd8, ccf.CBORTagReferenceTypeValue,
+			0xd8, byte(ccf.CBORTagReferenceTypeValue),
 			// array, 2 elements follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
+			0xd8, byte(ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue),
 			// array, 2 elements follow
 			0x82,
 			// element 0: kind (conjunction)
@@ -16395,7 +16395,7 @@ func TestSortEntitlementSet(t *testing.T) {
 			// "foo"
 			0x66, 0x6f, 0x6f,
 			// tag
-			0xd8, ccf.CBORTagSimpleTypeValue,
+			0xd8, byte(ccf.CBORTagSimpleTypeValue),
 			// String type ID (1)
 			0x01,
 		}
@@ -16518,7 +16518,7 @@ func TestSortOptions(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -16529,7 +16529,7 @@ func TestSortOptions(t *testing.T) {
 			// cadence-type-id: "S.test.Stats"
 			// 2 fields: [["count", type(int)], ["sum", type(int)]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -16551,7 +16551,7 @@ func TestSortOptions(t *testing.T) {
 			// count
 			0x63, 0x6f, 0x75, 0x6e, 0x74,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -16562,14 +16562,14 @@ func TestSortOptions(t *testing.T) {
 			// sum
 			0x73, 0x75, 0x6d,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// resource interface type:
 			// id: []byte{1}
 			// cadence-type-id: "S.test.HasSum"
 			// tag
-			0xd8, ccf.CBORTagResourceInterfaceType,
+			0xd8, byte(ccf.CBORTagResourceInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -16586,7 +16586,7 @@ func TestSortOptions(t *testing.T) {
 			// id: []byte{2}
 			// cadence-type-id: "S.test.HasCount"
 			// tag
-			0xd8, ccf.CBORTagResourceInterfaceType,
+			0xd8, byte(ccf.CBORTagResourceInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -16604,19 +16604,19 @@ func TestSortOptions(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagIntersectionType,
+			0xd8, byte(ccf.CBORTagIntersectionType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 2
 			0x02,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 1
@@ -16625,11 +16625,11 @@ func TestSortOptions(t *testing.T) {
 			// array, 1 item follows
 			0x81,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 byte follows
 			0x40,
 			// array, 2 items follow
@@ -16707,7 +16707,7 @@ func TestSortOptions(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -16718,7 +16718,7 @@ func TestSortOptions(t *testing.T) {
 			// cadence-type-id: "S.test.Stats"
 			// 2 fields: [["sum", type(int)], ["count", type(int)]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -16740,7 +16740,7 @@ func TestSortOptions(t *testing.T) {
 			// sum
 			0x73, 0x75, 0x6d,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -16751,14 +16751,14 @@ func TestSortOptions(t *testing.T) {
 			// count
 			0x63, 0x6f, 0x75, 0x6e, 0x74,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// resource interface type:
 			// id: []byte{1}
 			// cadence-type-id: "S.test.HasSum"
 			// tag
-			0xd8, ccf.CBORTagResourceInterfaceType,
+			0xd8, byte(ccf.CBORTagResourceInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -16775,7 +16775,7 @@ func TestSortOptions(t *testing.T) {
 			// id: []byte{2}
 			// cadence-type-id: "S.test.HasCount"
 			// tag
-			0xd8, ccf.CBORTagResourceInterfaceType,
+			0xd8, byte(ccf.CBORTagResourceInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -16793,19 +16793,19 @@ func TestSortOptions(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagIntersectionType,
+			0xd8, byte(ccf.CBORTagIntersectionType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 2
 			0x02,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 1
@@ -16814,11 +16814,11 @@ func TestSortOptions(t *testing.T) {
 			// array, 1 item follows
 			0x81,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 byte follows
 			0x40,
 			// array, 2 items follow
@@ -16896,7 +16896,7 @@ func TestSortOptions(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -16907,7 +16907,7 @@ func TestSortOptions(t *testing.T) {
 			// cadence-type-id: "S.test.Stats"
 			// 2 fields: [["count", type(int)], ["sum", type(int)]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -16929,7 +16929,7 @@ func TestSortOptions(t *testing.T) {
 			// count
 			0x63, 0x6f, 0x75, 0x6e, 0x74,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -16940,14 +16940,14 @@ func TestSortOptions(t *testing.T) {
 			// sum
 			0x73, 0x75, 0x6d,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// resource interface type:
 			// id: []byte{1}
 			// cadence-type-id: "S.test.HasSum"
 			// tag
-			0xd8, ccf.CBORTagResourceInterfaceType,
+			0xd8, byte(ccf.CBORTagResourceInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -16964,7 +16964,7 @@ func TestSortOptions(t *testing.T) {
 			// id: []byte{2}
 			// cadence-type-id: "S.test.HasCount"
 			// tag
-			0xd8, ccf.CBORTagResourceInterfaceType,
+			0xd8, byte(ccf.CBORTagResourceInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -16982,19 +16982,19 @@ func TestSortOptions(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagIntersectionType,
+			0xd8, byte(ccf.CBORTagIntersectionType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 1
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 2
@@ -17003,11 +17003,11 @@ func TestSortOptions(t *testing.T) {
 			// array, 1 item follows
 			0x81,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 byte follows
 			0x40,
 			// array, 2 items follow
@@ -17085,7 +17085,7 @@ func TestSortOptions(t *testing.T) {
 			//
 			// language=cbor, format=ccf
 			// tag
-			0xd8, ccf.CBORTagTypeDefAndValue,
+			0xd8, byte(ccf.CBORTagTypeDefAndValue),
 			// array, 2 items follow
 			0x82,
 			// element 0: type definitions
@@ -17096,7 +17096,7 @@ func TestSortOptions(t *testing.T) {
 			// cadence-type-id: "S.test.Stats"
 			// 2 fields: [["sum", type(int)], ["count", type(int)]]
 			// tag
-			0xd8, ccf.CBORTagResourceType,
+			0xd8, byte(ccf.CBORTagResourceType),
 			// array, 3 items follow
 			0x83,
 			// id
@@ -17118,7 +17118,7 @@ func TestSortOptions(t *testing.T) {
 			// sum
 			0x73, 0x75, 0x6d,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// field 1
@@ -17129,14 +17129,14 @@ func TestSortOptions(t *testing.T) {
 			// count
 			0x63, 0x6f, 0x75, 0x6e, 0x74,
 			// tag
-			0xd8, ccf.CBORTagSimpleType,
+			0xd8, byte(ccf.CBORTagSimpleType),
 			// Int type ID (4)
 			0x04,
 			// resource interface type:
 			// id: []byte{1}
 			// cadence-type-id: "S.test.HasSum"
 			// tag
-			0xd8, ccf.CBORTagResourceInterfaceType,
+			0xd8, byte(ccf.CBORTagResourceInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -17153,7 +17153,7 @@ func TestSortOptions(t *testing.T) {
 			// id: []byte{2}
 			// cadence-type-id: "S.test.HasCount"
 			// tag
-			0xd8, ccf.CBORTagResourceInterfaceType,
+			0xd8, byte(ccf.CBORTagResourceInterfaceType),
 			// array, 2 items follow
 			0x82,
 			// id
@@ -17171,19 +17171,19 @@ func TestSortOptions(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagVarsizedArrayType,
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
 			// tag
-			0xd8, ccf.CBORTagIntersectionType,
+			0xd8, byte(ccf.CBORTagIntersectionType),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 1
 			0x01,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 1 byte follows
 			0x41,
 			// 2
@@ -17192,11 +17192,11 @@ func TestSortOptions(t *testing.T) {
 			// array, 1 item follows
 			0x81,
 			// tag
-			0xd8, ccf.CBORTagTypeAndValue,
+			0xd8, byte(ccf.CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, ccf.CBORTagTypeRef,
+			0xd8, byte(ccf.CBORTagTypeRef),
 			// bytes, 0 byte follows
 			0x40,
 			// array, 2 items follow
@@ -17300,9 +17300,9 @@ func TestHasMsgPrefix(t *testing.T) {
 		{name: "not CCF", msg: []byte{'a', 'b', 'c', 'd', 'e'}, expected: false},
 		{name: "not CCF", msg: []byte{0x1a, 0x00, 0x0f, 0x42, 0x40}, expected: false},
 		{name: "not CCF", msg: []byte{0xd8, 0x01, 0x82, 0x00, 0x00}, expected: false},
-		{name: "not implemented", msg: []byte{0xd8, ccf.CBORTagTypeDef, 0x82, 0x00, 0x00}, expected: false},
-		{name: "ccf-typedef-and-value-message", msg: []byte{0xd8, ccf.CBORTagTypeDefAndValue, 0x82, 0x00, 0x00}, expected: true},
-		{name: "ccf-type-and-value-message", msg: []byte{0xd8, ccf.CBORTagTypeAndValue, 0x82, 0xd8, ccf.CBORTagSimpleType, 0x18, 0x32, 0xf6}, expected: true},
+		{name: "not implemented", msg: []byte{0xd8, byte(ccf.CBORTagTypeDef), 0x82, 0x00, 0x00}, expected: false},
+		{name: "ccf-typedef-and-value-message", msg: []byte{0xd8, byte(ccf.CBORTagTypeDefAndValue), 0x82, 0x00, 0x00}, expected: true},
+		{name: "ccf-type-and-value-message", msg: []byte{0xd8, byte(ccf.CBORTagTypeAndValue), 0x82, 0xd8, byte(ccf.CBORTagSimpleType), 0x18, 0x32, 0xf6}, expected: true},
 	}
 
 	for _, tc := range testCases {
@@ -17331,15 +17331,15 @@ func TestDecodeFunctionTypeBackwardCompatibility(t *testing.T) {
 		//
 		// language=cbor, format=ccf
 		// tag
-		0xd8, ccf.CBORTagTypeAndValue,
+		0xd8, byte(ccf.CBORTagTypeAndValue),
 		// array, 2 elements follow
 		0x82,
 		// tag
-		0xd8, ccf.CBORTagSimpleType,
+		0xd8, byte(ccf.CBORTagSimpleType),
 		// Meta type ID (41)
 		0x18, 0x29,
 		// tag
-		0xd8, ccf.CBORTagFunctionTypeValue,
+		0xd8, byte(ccf.CBORTagFunctionTypeValue),
 		// array, 3 elements follow
 		0x83,
 		// element 0: type parameters
@@ -17350,7 +17350,7 @@ func TestDecodeFunctionTypeBackwardCompatibility(t *testing.T) {
 		0x80,
 		// element 2: return type
 		// tag
-		0xd8, ccf.CBORTagSimpleTypeValue,
+		0xd8, byte(ccf.CBORTagSimpleTypeValue),
 		// Void type ID (50)
 		0x18, 0x32,
 	}

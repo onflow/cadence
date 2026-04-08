@@ -57,34 +57,34 @@ func (d *Decoder) decodeInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type,
 	}
 
 	switch tagNum {
-	case CBORTagSimpleType:
+	case uint64(CBORTagSimpleType):
 		return d.decodeSimpleTypeID()
 
-	case CBORTagOptionalType:
+	case uint64(CBORTagOptionalType):
 		return d.decodeOptionalType(types, d.decodeInlineType)
 
-	case CBORTagVarsizedArrayType:
+	case uint64(CBORTagVarsizedArrayType):
 		return d.decodeVarSizedArrayType(types, d.decodeInlineType)
 
-	case CBORTagConstsizedArrayType:
+	case uint64(CBORTagConstsizedArrayType):
 		return d.decodeConstantSizedArrayType(types, d.decodeInlineType)
 
-	case CBORTagDictType:
+	case uint64(CBORTagDictType):
 		return d.decodeDictType(types, d.decodeInlineType)
 
-	case CBORTagInclusiveRangeType:
+	case uint64(CBORTagInclusiveRangeType):
 		return d.decodeInclusiveRangeType(types, d.decodeInlineType)
 
-	case CBORTagReferenceType:
+	case uint64(CBORTagReferenceType):
 		return d.decodeReferenceType(types, d.decodeInlineType, true)
 
-	case CBORTagIntersectionType:
+	case uint64(CBORTagIntersectionType):
 		return d.decodeIntersectionType(types, d.decodeInlineType)
 
-	case CBORTagCapabilityType:
+	case uint64(CBORTagCapabilityType):
 		return d.decodeCapabilityType(types, d.decodeNullableInlineType)
 
-	case CBORTagTypeRef:
+	case uint64(CBORTagTypeRef):
 		return d.decodeTypeRef(types)
 
 	default:
@@ -413,10 +413,10 @@ func (d *Decoder) decodeAuthorization(isType bool) (cadence.Authorization, error
 		if isType {
 
 			switch tagNum {
-			case CBORTagEntitlementSetAuthorizationAccessType:
+			case uint64(CBORTagEntitlementSetAuthorizationAccessType):
 				return d.decodeEntitlementSetAuthorization()
 
-			case CBORTagEntitlementMapAuthorizationAccessType:
+			case uint64(CBORTagEntitlementMapAuthorizationAccessType):
 				return d.decodeEntitlementMapAuthorization()
 
 			default:
@@ -426,10 +426,10 @@ func (d *Decoder) decodeAuthorization(isType bool) (cadence.Authorization, error
 		} else {
 
 			switch tagNum {
-			case CBORTagEntitlementSetAuthorizationAccessTypeValue:
+			case uint64(CBORTagEntitlementSetAuthorizationAccessTypeValue):
 				return d.decodeEntitlementSetAuthorization()
 
-			case CBORTagEntitlementMapAuthorizationAccessTypeValue:
+			case uint64(CBORTagEntitlementMapAuthorizationAccessTypeValue):
 				return d.decodeEntitlementMapAuthorization()
 
 			default:

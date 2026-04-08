@@ -550,7 +550,7 @@ func PrepareExternalInvocationArgumentsWithValidation(
 		}
 	}
 
-	var convertAndBox = convertAndBox
+	var convertAndBox = ConvertAndBox
 	if validateConvertAndBox {
 		convertAndBox = ConvertAndBoxWithValidation
 	}
@@ -1577,6 +1577,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				var self Value = value
 				if declaration.Kind() == common.CompositeKindAttachment {
+					if !invocation.HasImplicitArgument {
+						panic(&InvalidAttachmentConstructorError{
+							LocationRange: invocation.LocationRange,
+						})
+					}
 
 					attachmentType := MustSemaTypeOfValue(value, invocationContext).(*sema.CompositeType)
 					// Self's type in the constructor is fully entitled, since
@@ -2003,7 +2008,7 @@ func ConvertAndBoxWithValidation(
 		}
 	}
 
-	result := convertAndBox(
+	result := ConvertAndBox(
 		context,
 		transferredValue,
 		valueType,
@@ -2052,8 +2057,8 @@ func TransferIfNotResourceAndConvert(
 	)
 }
 
-// convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func convertAndBox(
+// ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
+func ConvertAndBox(
 	context ValueConversionContext,
 	value Value,
 	valueType sema.Type,
@@ -2147,15 +2152,6 @@ func convertStaticType(
 				),
 			)
 		}
-	}
-
-	// If the target type is optional but the value type is not,
-	// wrap the value type in an optional
-	if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
-		return NewOptionalStaticType(
-			gauge,
-			convertStaticType(gauge, valueStaticType, targetOptionalType.Type),
-		)
 	}
 
 	return valueStaticType
@@ -2350,8 +2346,8 @@ func convert(
 					}
 
 					value := MustConvertStoredValue(context, element)
-					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
-					return convertAndBox(context, value, valueType, targetElementType)
+					valueType := MustSemaTypeOfValue(value, context)
+					return convert(context, value, valueType, targetElementType)
 				},
 			)
 		}
@@ -2395,11 +2391,11 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					value := MustConvertStoredValue(context, v)
 
-					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
-					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
+					keyType := MustSemaTypeOfValue(key, context)
+					valueType := MustSemaTypeOfValue(value, context)
 
-					convertedKey := convertAndBox(context, key, keyType, targetKeyType)
-					convertedValue := convertAndBox(context, value, valueType, targetValueType)
+					convertedKey := convert(context, key, keyType, targetKeyType)
+					convertedValue := convert(context, value, valueType, targetValueType)
 
 					return convertedKey, convertedValue
 				},
@@ -2452,6 +2448,13 @@ func convert(
 					unwrappedTargetType,
 					targetAuthorization,
 				)
+
+				// Do NOT recursively convert the inner value.
+				// Keep the reference pointing to the same underlying value.
+				// Entitlement stripping for nested elements happens lazily
+				// when they are accessed (via CreateReferenceValue/ConvertAndBoxWithValidation).
+				// The EphemeralReferenceValue.StaticType() method uses BorrowedType
+				// to prevent entitlement escalation via downcasting.
 				return NewEphemeralReferenceValue(
 					context,
 					targetAuthorization,
@@ -2522,10 +2525,10 @@ func checkTargetIsLessPermissive(
 	switch valueType := valueType.(type) {
 	case *sema.ReferenceType:
 		actualAuthorization := valueType.Authorization
-		if !sema.PermitsAccess(unwrappedTargetType.Authorization, actualAuthorization) {
+		if !sema.PermitsAccess(targetSemaAuthorization, actualAuthorization) {
 			panic(&InvalidReferenceConversionError{
-				Expected: targetSemaAuthorization,
-				Actual:   actualAuthorization,
+				ExpectedAuthorization: targetSemaAuthorization,
+				ActualAuthorization:   actualAuthorization,
 			})
 		}
 	default:
@@ -2536,14 +2539,14 @@ func checkTargetIsLessPermissive(
 		// This is needed to preserve the entitlements when being assigned to `AnyStruct`.
 		actualAuthorization := ref.GetAuthorization()
 		if !PermitsAccess(context, targetAuthorization, actualAuthorization) {
-			actualSemaAuthorization, err := ConvertStaticAuthorizationToSemaAccess(actualAuthorization, context)
+			actualSemaAuthorization, err := context.SemaAccessFromStaticAuthorization(actualAuthorization)
 			if err != nil {
 				panic(err)
 			}
 
 			panic(&InvalidReferenceConversionError{
-				Expected: targetSemaAuthorization,
-				Actual:   actualSemaAuthorization,
+				ExpectedAuthorization: targetSemaAuthorization,
+				ActualAuthorization:   actualSemaAuthorization,
 			})
 		}
 	}
@@ -2731,100 +2734,104 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 		}
 
 		// Condition wrapper is a static function.
-		return NewStaticHostFunctionValue(
+		return NewWrappedFunctionValue(
 			interpreter,
-			functionType,
-			func(invocation Invocation) Value {
-				// Start a new activation record.
-				// Lexical scope: use the function declaration's activation record,
-				// not the current one (which would be dynamic scope)
-				interpreter.activations.PushNewWithParent(lexicalScope)
-				defer interpreter.activations.Pop()
+			inner,
+			NewStaticHostFunctionValue(
+				interpreter,
+				functionType,
+				func(invocation Invocation) Value {
+					// Start a new activation record.
+					// Lexical scope: use the function declaration's activation record,
+					// not the current one (which would be dynamic scope)
+					interpreter.activations.PushNewWithParent(lexicalScope)
+					defer interpreter.activations.Pop()
 
-				if declaration.ParameterList != nil {
-					interpreter.bindParameterArguments(
-						declaration.ParameterList,
-						invocation.Arguments,
-					)
-				}
-
-				if invocation.Self != nil {
-					interpreter.declareSelfVariable(*invocation.Self)
-				}
-				if invocation.Base != nil {
-					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
-				}
-
-				// NOTE: It is important to wrap the invocation in a function,
-				//  so the inner function isn't invoked here
-
-				body := func() StatementResult {
-
-					// Pre- and post-condition wrappers "re-declare" the same
-					// parameters as are used in the actual body of the function,
-					// see the use of bindParameterArguments at the start of this function wrapper.
-					//
-					// When these parameters are given resource-kinded arguments,
-					// this can trick the resource analysis into believing that these
-					// resources exist in multiple variables at once
-					// (one for each condition wrapper + the function itself).
-					//
-					// This is not the case, however, as execution of the pre- and post-conditions
-					// occurs strictly before and after execution of the body respectively.
-					//
-					// To prevent the analysis from reporting a false positive here,
-					// when we enter the body of the wrapped function,
-					// we invalidate any resources that were assigned to parameters by the precondition block,
-					// and then restore them after execution of the wrapped function,
-					// for use by the post-condition block.
-
-					type argumentVariable struct {
-						variable Variable
-						value    ResourceKindedValue
+					if declaration.ParameterList != nil {
+						interpreter.bindParameterArguments(
+							declaration.ParameterList,
+							invocation.Arguments,
+						)
 					}
 
-					var argumentVariables []argumentVariable
-					for _, argument := range invocation.Arguments {
-						resourceKindedValue := interpreter.resourceForValidation(argument)
-						if resourceKindedValue == nil {
-							continue
+					if invocation.Self != nil {
+						interpreter.declareSelfVariable(*invocation.Self)
+					}
+					if invocation.Base != nil {
+						interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
+					}
+
+					// NOTE: It is important to wrap the invocation in a function,
+					//  so the inner function isn't invoked here
+
+					body := func() StatementResult {
+
+						// Pre- and post-condition wrappers "re-declare" the same
+						// parameters as are used in the actual body of the function,
+						// see the use of bindParameterArguments at the start of this function wrapper.
+						//
+						// When these parameters are given resource-kinded arguments,
+						// this can trick the resource analysis into believing that these
+						// resources exist in multiple variables at once
+						// (one for each condition wrapper + the function itself).
+						//
+						// This is not the case, however, as execution of the pre- and post-conditions
+						// occurs strictly before and after execution of the body respectively.
+						//
+						// To prevent the analysis from reporting a false positive here,
+						// when we enter the body of the wrapped function,
+						// we invalidate any resources that were assigned to parameters by the precondition block,
+						// and then restore them after execution of the wrapped function,
+						// for use by the post-condition block.
+
+						type argumentVariable struct {
+							variable Variable
+							value    ResourceKindedValue
 						}
 
-						argumentVariables = append(
-							argumentVariables,
-							argumentVariable{
-								variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
-								value:    resourceKindedValue,
-							},
-						)
+						var argumentVariables []argumentVariable
+						for _, argument := range invocation.Arguments {
+							resourceKindedValue := interpreter.resourceForValidation(argument)
+							if resourceKindedValue == nil {
+								continue
+							}
 
-						interpreter.invalidateResource(resourceKindedValue)
+							argumentVariables = append(
+								argumentVariables,
+								argumentVariable{
+									variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
+									value:    resourceKindedValue,
+								},
+							)
+
+							interpreter.invalidateResource(resourceKindedValue)
+						}
+
+						// NOTE: It is important to actually return the value returned
+						//   from the inner function, otherwise it is lost
+
+						returnValue := inner.Invoke(invocation)
+
+						// Restore the resources which were temporarily invalidated
+						// before execution of the inner function
+
+						for _, argumentVariable := range argumentVariables {
+							value := argumentVariable.value
+							interpreter.invalidateResource(value)
+							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
+						}
+						return ReturnResult{Value: returnValue}
 					}
 
-					// NOTE: It is important to actually return the value returned
-					//   from the inner function, otherwise it is lost
-
-					returnValue := inner.Invoke(invocation)
-
-					// Restore the resources which were temporarily invalidated
-					// before execution of the inner function
-
-					for _, argumentVariable := range argumentVariables {
-						value := argumentVariable.value
-						interpreter.invalidateResource(value)
-						interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
-					}
-					return ReturnResult{Value: returnValue}
-				}
-
-				return interpreter.visitFunctionBody(
-					beforeStatements,
-					preConditions,
-					body,
-					rewrittenPostConditions,
-					functionType.ReturnTypeAnnotation.Type,
-				)
-			},
+					return interpreter.visitFunctionBody(
+						beforeStatements,
+						preConditions,
+						body,
+						rewrittenPostConditions,
+						functionType.ReturnTypeAnnotation.Type,
+					)
+				},
+			),
 		)
 	}
 }
@@ -5734,7 +5741,12 @@ func GetAccessOfMember(context ValueStaticTypeContext, self Value, identifier st
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 // May return nil if the member does not exist.
-func getMember(context MemberAccessibleContext, self Value, identifier string) Value {
+func getMember(
+	context MemberAccessibleContext,
+	self Value,
+	identifier string,
+	memberKind common.DeclarationKind,
+) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members
 	// or is a built-in type that has members (`MemberAccessibleValue`),
@@ -5742,7 +5754,7 @@ func getMember(context MemberAccessibleContext, self Value, identifier string) V
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, identifier)
+		result = memberAccessibleValue.GetMember(context, identifier, memberKind)
 	}
 	if result == nil {
 		result = getBuiltinFunctionMember(context, self, identifier)
@@ -5752,6 +5764,29 @@ func getMember(context MemberAccessibleContext, self Value, identifier string) V
 	// For example, when a composite field is initialized with a force-assignment, the field's value is read.
 
 	return result
+}
+
+func GetMember(
+	context MemberAccessibleContext,
+	value MemberAccessibleValue,
+	memberName string,
+	memberKind common.DeclarationKind,
+	nonFunctionMemberGetter func() Value,
+) Value {
+	switch memberKind {
+	case common.DeclarationKindFunction:
+		return context.GetMethod(value, memberName)
+	default:
+		// The default case is used for nonFunctionMemberGetter because,
+		// constructors have the declaration kind as struct/resource/etc.
+		// And they are captured in the value as "nested variables".
+		// nonFunctionMemberGetter is responsible for handling them appropriately
+		// (Note: it is only needed for composite values)
+		if nonFunctionMemberGetter == nil {
+			return nil
+		}
+		return nonFunctionMemberGetter()
+	}
 }
 
 func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, identifier string) FunctionValue {
@@ -5866,26 +5901,6 @@ func checkContainerMutation(
 
 	if !IsSubType(context, actualElementType, elementType) {
 		panic(&ContainerMutationError{
-			ExpectedType: context.SemaTypeFromStaticType(elementType),
-			ActualType:   MustSemaTypeOfValue(element, context),
-		})
-	}
-}
-
-func checkContainerRead(
-	context ValueStaticTypeContext,
-	elementType StaticType,
-	element Value,
-) {
-	_, ok := element.(*StorageReferenceValue)
-	if !ok {
-		return
-	}
-
-	actualElementType := element.StaticType(context)
-
-	if !IsSubType(context, actualElementType, elementType) {
-		panic(&ContainerReadError{
 			ExpectedType: context.SemaTypeFromStaticType(elementType),
 			ActualType:   MustSemaTypeOfValue(element, context),
 		})
@@ -6678,7 +6693,7 @@ func (interpreter *Interpreter) DefaultDestroyEvents(resourceValue *CompositeVal
 }
 
 func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) sema.Type {
-	return MustConvertStaticToSemaType(staticType, interpreter)
+	return MustConvertStaticToSemaType(staticType, interpreter) //nolint:staticcheck
 }
 
 func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
@@ -6699,7 +6714,7 @@ func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
 }
 
 func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
-	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
+	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter) //nolint:staticcheck
 }
 
 func StorageReference(
