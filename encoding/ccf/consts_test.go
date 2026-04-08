@@ -103,8 +103,9 @@ func TestCCFCBORTagValues(t *testing.T) {
 		if _, ok := expectedValues[tag]; ok {
 			continue
 		}
-		if !strings.HasPrefix(tag.String(), "CBORTag(") {
-			t.Errorf("unexpected named value %s (%d): update expectedValues", tag, i)
-		}
+		require.True(t,
+			strings.HasPrefix(tag.String(), "CBORTag("),
+			"unexpected named value %s (%d): update expectedValues", tag, i,
+		)
 	}
 }

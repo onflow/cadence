@@ -1049,6 +1049,7 @@ func TestPrimitiveStaticTypeValues(t *testing.T) {
 	// without updating the expected values above.
 	// If a placeholder `_` is replaced with a new named value,
 	// its String() representation will no longer be a numeric fallback.
+	// NOTE: This requires the stringer-generated file to be up to date (CI runs go generate).
 	for i := uint(0); i < uint(PrimitiveStaticType_Count); i++ {
 		typ := PrimitiveStaticType(i)
 		if _, ok := expectedValues[typ]; ok {
