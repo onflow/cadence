@@ -464,6 +464,7 @@ func (checker *Checker) importElements(
 				isConstant:               true,
 				argumentLabels:           element.ArgumentLabels,
 				allowOuterScopeShadowing: false,
+				docString:                element.DocString,
 			})
 			checker.report(err)
 		})
