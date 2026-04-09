@@ -396,7 +396,7 @@ var (
 				Or(AccountCapabilityControllerTypeTag).
 				Or(HashableStructTypeTag).
 				Or(InclusiveRangeTypeTag).
-			Or(StringBuilderTypeTag)
+				Or(StringBuilderTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
