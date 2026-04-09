@@ -146,9 +146,9 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 	value := interpreter.visitVariableDeclaration(declaration, true)
 
-	if someValue, ok := value.(*SomeValue); ok {
-
-		innerValue := someValue.InnerValue()
+	switch value := value.(type) {
+	case *SomeValue:
+		innerValue := value.InnerValue()
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
@@ -159,11 +159,16 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		)
 
 		return interpreter.visitBlock(thenBlock)
-	} else if elseBlock != nil {
-		return interpreter.visitBlock(elseBlock)
-	}
 
-	return nil
+	case NilValue:
+		if elseBlock != nil {
+			return interpreter.visitBlock(elseBlock)
+		}
+		return nil
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (interpreter *Interpreter) VisitGuardStatement(statement *ast.GuardStatement) StatementResult {
@@ -201,21 +206,24 @@ func (interpreter *Interpreter) visitGuardStatementWithVariableDeclaration(
 
 	value := interpreter.visitVariableDeclaration(declaration, true)
 
-	someValue, ok := value.(*SomeValue)
-	if !ok {
-		// Execute else block if value is nil
+	switch value := value.(type) {
+	case *SomeValue:
+		innerValue := value.InnerValue()
+
+		// Guard declares variable in current scope (no activation push/pop)
+		interpreter.declareVariable(
+			declaration.Identifier.Identifier,
+			innerValue,
+		)
+
+		return nil
+
+	case NilValue:
 		return interpreter.visitBlock(elseBlock)
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
-
-	innerValue := someValue.InnerValue()
-
-	// Guard declares variable in current scope (no activation push/pop)
-	interpreter.declareVariable(
-		declaration.Identifier.Identifier,
-		innerValue,
-	)
-
-	return nil
 }
 
 func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) StatementResult {
