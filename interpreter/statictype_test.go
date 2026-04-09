@@ -1037,7 +1037,8 @@ func TestPrimitiveStaticTypeValues(t *testing.T) {
 		PrimitiveStaticTypeIssueAccountCapabilityController: 149,
 		PrimitiveStaticTypeCapabilitiesMapping:              150,
 		PrimitiveStaticTypeAccountMapping:                   151,
-		PrimitiveStaticType_Count:                           152,
+		PrimitiveStaticTypeStringBuilder:                    152,
+		PrimitiveStaticType_Count:                           153,
 	}
 
 	// Check all expected values.
@@ -1602,6 +1603,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "Identity",
 			semaType:   sema.IdentityType,
 			staticType: PrimitiveStaticTypeIdentity,
+		},
+		{
+			name:       "StringBuilder",
+			semaType:   sema.StringBuilderType,
+			staticType: PrimitiveStaticTypeStringBuilder,
 		},
 
 		{

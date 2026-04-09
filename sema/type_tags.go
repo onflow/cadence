@@ -228,6 +228,7 @@ const (
 	functionTypeMask
 	hashableStructMask
 	inclusiveRangeTypeMask
+	stringBuilderTypeMask
 
 	invalidTypeMask
 )
@@ -351,6 +352,7 @@ var (
 	IntersectionTypeTag                = newTypeTagFromUpperMask(intersectionTypeMask)
 	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
 	InclusiveRangeTypeTag              = newTypeTagFromUpperMask(inclusiveRangeTypeMask)
+	StringBuilderTypeTag               = newTypeTagFromUpperMask(stringBuilderTypeMask)
 	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
 	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
 	AnyResourceAttachmentTypeTag       = newTypeTagFromUpperMask(anyResourceAttachmentMask)
@@ -393,7 +395,8 @@ var (
 				Or(StorageCapabilityControllerTypeTag).
 				Or(AccountCapabilityControllerTypeTag).
 				Or(HashableStructTypeTag).
-				Or(InclusiveRangeTypeTag)
+				Or(InclusiveRangeTypeTag).
+				Or(StringBuilderTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
@@ -722,6 +725,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	case fixedSizeUnsignedIntegerTypeMask:
 		return FixedSizeUnsignedIntegerType
+
+	case stringBuilderTypeMask:
+		return StringBuilderType
 
 	default:
 		return nil

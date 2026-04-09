@@ -8784,6 +8784,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		ccf.SimpleTypeCapabilitiesMapping:              cadence.CapabilitiesMappingType,
 		ccf.SimpleTypeAccountMapping:                   cadence.AccountMappingType,
 		ccf.SimpleTypeStorable:                         cadence.StorableType,
+		ccf.SimpleTypeStringBuilder:                    cadence.StringBuilderType,
 	}
 
 	var missingTests []string
