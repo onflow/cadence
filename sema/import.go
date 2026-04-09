@@ -37,6 +37,7 @@ type ImportElement struct {
 	ArgumentLabels  []string
 	DeclarationKind common.DeclarationKind
 	Access          Access
+	DocString       string
 }
 
 // ElaborationImport
@@ -55,6 +56,7 @@ func variablesToImportElements(f func(func(name string, variable *Variable))) *S
 			Access:          variable.Access,
 			Type:            variable.Type,
 			ArgumentLabels:  variable.ArgumentLabels,
+			DocString:       variable.DocString,
 		})
 	})
 
