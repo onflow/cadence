@@ -216,6 +216,7 @@ var (
 	PublishedValueMemoryUsage                   = NewConstantMemoryUsage(MemoryKindPublishedValue)
 	StorageCapabilityControllerValueMemoryUsage = NewConstantMemoryUsage(MemoryKindStorageCapabilityControllerValue)
 	AccountCapabilityControllerValueMemoryUsage = NewConstantMemoryUsage(MemoryKindAccountCapabilityControllerValue)
+	StringBuilderMemoryUsage                    = NewConstantMemoryUsage(MemoryKindStringBuilder)
 
 	// Static Types
 

@@ -51,6 +51,7 @@ const (
 	MemoryKindPublishedValue
 	MemoryKindStorageCapabilityControllerValue
 	MemoryKindAccountCapabilityControllerValue
+	MemoryKindStringBuilder
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab

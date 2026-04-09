@@ -256,6 +256,7 @@ const (
 	PrimitiveStaticTypeIssueAccountCapabilityController
 	PrimitiveStaticTypeCapabilitiesMapping
 	PrimitiveStaticTypeAccountMapping
+	PrimitiveStaticTypeStringBuilder
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -399,7 +400,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeGetAccountCapabilityController,
 		PrimitiveStaticTypeIssueAccountCapabilityController,
 		PrimitiveStaticTypeCapabilitiesMapping,
-		PrimitiveStaticTypeAccountMapping:
+		PrimitiveStaticTypeAccountMapping,
+		PrimitiveStaticTypeStringBuilder:
 		return UnknownElementSize
 
 	case PrimitiveStaticTypeAuthAccount,
@@ -712,6 +714,9 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypeAccountMapping:
 		return sema.AccountMappingType
 
+	case PrimitiveStaticTypeStringBuilder:
+		return sema.StringBuilderType
+
 	case PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
 		// deprecated, but needed for migration purposes
 		return sema.FullyEntitledAccountReferenceType
@@ -986,6 +991,9 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeCapabilitiesMapping
 	case sema.AccountMappingType:
 		typ = PrimitiveStaticTypeAccountMapping
+
+	case sema.StringBuilderType:
+		typ = PrimitiveStaticTypeStringBuilder
 	}
 
 	switch t.(type) {
