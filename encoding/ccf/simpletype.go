@@ -28,6 +28,8 @@ import (
 // Simple type ID is a compact representation of a type
 // which doesn't need additional information.
 
+// !!! *WARNING* !!!
+//
 // IMPORTANT:
 //
 // Don't change existing simple type IDs.
@@ -152,6 +154,8 @@ const ( // Cadence simple type IDs
 
 	SimpleTypeStorable
 
+	SimpleTypeStringBuilder
+
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
 	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
@@ -275,6 +279,8 @@ func initSimpleTypeIDBiMap() (m *bimap.BiMap[cadence.PrimitiveType, SimpleType])
 	m.Insert(cadence.IssueAccountCapabilityControllerType, SimpleTypeIssueAccountCapabilityController)
 	m.Insert(cadence.CapabilitiesMappingType, SimpleTypeCapabilitiesMapping)
 	m.Insert(cadence.AccountMappingType, SimpleTypeAccountMapping)
+
+	m.Insert(cadence.StringBuilderType, SimpleTypeStringBuilder)
 
 	return
 }

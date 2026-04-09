@@ -53,6 +53,10 @@ var valueConstructorFunctions = []BuiltinFunction{
 		Name: sema.StringType.Name,
 		Type: sema.StringFunctionType,
 	},
+	{
+		Name: sema.StringBuilderType.Name,
+		Type: sema.StringBuilderFunctionType,
+	},
 }
 
 func init() {

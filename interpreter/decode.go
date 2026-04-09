@@ -248,141 +248,141 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 				d.inlinedExtraData,
 			)
 
-		case values.CBORTagVoidValue:
+		case uint64(values.CBORTagVoidValue):
 			err := d.decoder.Skip()
 			if err != nil {
 				return nil, err
 			}
 			storable = VoidStorable
 
-		case values.CBORTagStringValue:
+		case uint64(values.CBORTagStringValue):
 			storable, err = d.decodeStringValue()
 			if err != nil {
 				return nil, err
 			}
 
-		case values.CBORTagCharacterValue:
+		case uint64(values.CBORTagCharacterValue):
 			storable, err = d.decodeCharacter()
 			if err != nil {
 				return nil, err
 			}
 
-		case values.CBORTagSomeValue:
+		case uint64(values.CBORTagSomeValue):
 			storable, err = d.decodeSome()
 
-		case values.CBORTagSomeValueWithNestedLevels:
+		case uint64(values.CBORTagSomeValueWithNestedLevels):
 			storable, err = d.decodeSomeWithNestedLevels()
 
-		case values.CBORTagAddressValue:
+		case uint64(values.CBORTagAddressValue):
 			storable, err = d.decodeAddress()
 
 		// Int*
 
-		case values.CBORTagIntValue:
+		case uint64(values.CBORTagIntValue):
 			storable, err = d.decodeInt()
 
-		case values.CBORTagInt8Value:
+		case uint64(values.CBORTagInt8Value):
 			storable, err = d.decodeInt8()
 
-		case values.CBORTagInt16Value:
+		case uint64(values.CBORTagInt16Value):
 			storable, err = d.decodeInt16()
 
-		case values.CBORTagInt32Value:
+		case uint64(values.CBORTagInt32Value):
 			storable, err = d.decodeInt32()
 
-		case values.CBORTagInt64Value:
+		case uint64(values.CBORTagInt64Value):
 			storable, err = d.decodeInt64()
 
-		case values.CBORTagInt128Value:
+		case uint64(values.CBORTagInt128Value):
 			storable, err = d.decodeInt128()
 
-		case values.CBORTagInt256Value:
+		case uint64(values.CBORTagInt256Value):
 			storable, err = d.decodeInt256()
 
 		// UInt*
 
-		case values.CBORTagUIntValue:
+		case uint64(values.CBORTagUIntValue):
 			storable, err = d.decodeUInt()
 
-		case values.CBORTagUInt8Value:
+		case uint64(values.CBORTagUInt8Value):
 			storable, err = d.decodeUInt8()
 
-		case values.CBORTagUInt16Value:
+		case uint64(values.CBORTagUInt16Value):
 			storable, err = d.decodeUInt16()
 
-		case values.CBORTagUInt32Value:
+		case uint64(values.CBORTagUInt32Value):
 			storable, err = d.decodeUInt32()
 
-		case values.CBORTagUInt64Value:
+		case uint64(values.CBORTagUInt64Value):
 			storable, err = d.decodeUInt64()
 
-		case values.CBORTagUInt128Value:
+		case uint64(values.CBORTagUInt128Value):
 			storable, err = d.decodeUInt128()
 
-		case values.CBORTagUInt256Value:
+		case uint64(values.CBORTagUInt256Value):
 			storable, err = d.decodeUInt256()
 
 		// Word*
 
-		case values.CBORTagWord8Value:
+		case uint64(values.CBORTagWord8Value):
 			storable, err = d.decodeWord8()
 
-		case values.CBORTagWord16Value:
+		case uint64(values.CBORTagWord16Value):
 			storable, err = d.decodeWord16()
 
-		case values.CBORTagWord32Value:
+		case uint64(values.CBORTagWord32Value):
 			storable, err = d.decodeWord32()
 
-		case values.CBORTagWord64Value:
+		case uint64(values.CBORTagWord64Value):
 			storable, err = d.decodeWord64()
 
-		case values.CBORTagWord128Value:
+		case uint64(values.CBORTagWord128Value):
 			storable, err = d.decodeWord128()
 
-		case values.CBORTagWord256Value:
+		case uint64(values.CBORTagWord256Value):
 			storable, err = d.decodeWord256()
 
 		// Fix*
 
-		case values.CBORTagFix64Value:
+		case uint64(values.CBORTagFix64Value):
 			storable, err = d.decodeFix64()
-		case values.CBORTagFix128Value:
+		case uint64(values.CBORTagFix128Value):
 			storable, err = d.decodeFix128()
 
 		// UFix*
 
-		case values.CBORTagUFix64Value:
+		case uint64(values.CBORTagUFix64Value):
 			storable, err = d.decodeUFix64()
-		case values.CBORTagUFix128Value:
+		case uint64(values.CBORTagUFix128Value):
 			storable, err = d.decodeUFix128()
 
 		// Storage
 
-		case values.CBORTagPathValue:
+		case uint64(values.CBORTagPathValue):
 			storable, err = d.decodePath()
 
-		case values.CBORTagCapabilityValue:
+		case uint64(values.CBORTagCapabilityValue):
 			storable, err = d.decodeCapability()
 
-		case values.CBORTagPublishedValue:
+		case uint64(values.CBORTagPublishedValue):
 			storable, err = d.decodePublishedValue()
 
-		case values.CBORTagTypeValue:
+		case uint64(values.CBORTagTypeValue):
 			storable, err = d.decodeType()
 
-		case values.CBORTagStorageCapabilityControllerValue:
+		case uint64(values.CBORTagStorageCapabilityControllerValue):
 			storable, err = d.decodeStorageCapabilityController()
 
-		case values.CBORTagAccountCapabilityControllerValue:
+		case uint64(values.CBORTagAccountCapabilityControllerValue):
 			storable, err = d.decodeAccountCapabilityController()
 
-		case values.CBORTagPathCapabilityValue: //nolint:staticcheck
+		case uint64(values.CBORTagPathCapabilityValue): //nolint:staticcheck
 			storable, err = d.decodePathCapability()
 
-		case values.CBORTagPathLinkValue: //nolint:staticcheck
+		case uint64(values.CBORTagPathLinkValue): //nolint:staticcheck
 			storable, err = d.decodePathLink()
 
-		case values.CBORTagAccountLinkValue: //nolint:staticcheck
+		case uint64(values.CBORTagAccountLinkValue): //nolint:staticcheck
 			storable, err = d.decodeAccountLink()
 
 		default:
@@ -1168,7 +1168,7 @@ func (d StorableDecoder) decodeCapability() (*IDCapabilityValue, error) {
 			err,
 		)
 	}
-	if num != values.CBORTagAddressValue {
+	if num != uint64(values.CBORTagAddressValue) {
 		return nil, errors.NewUnexpectedError(
 			"invalid capability address: wrong tag %d",
 			num,
@@ -1259,7 +1259,7 @@ func (d StorableDecoder) decodeStorageCapabilityController() (*StorageCapability
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid storage capability controller target path encoding: %w", err)
 	}
-	if num != values.CBORTagPathValue {
+	if num != uint64(values.CBORTagPathValue) {
 		return nil, errors.NewUnexpectedError(
 			"invalid storage capability controller target path encoding: expected CBOR tag %d, got %d",
 			values.CBORTagPathValue,
@@ -1362,7 +1362,7 @@ func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid published value recipient encoding: %w", err)
 	}
-	if num != values.CBORTagAddressValue {
+	if num != uint64(values.CBORTagAddressValue) {
 		return nil, errors.NewUnexpectedError(
 			"invalid published value recipient encoding: expected CBOR tag %d, got %d",
 			values.CBORTagAddressValue,
@@ -1468,7 +1468,7 @@ func (d StorableDecoder) decodePathCapability() (*PathCapabilityValue, error) {
 			err,
 		)
 	}
-	if num != values.CBORTagAddressValue {
+	if num != uint64(values.CBORTagAddressValue) {
 		return nil, errors.NewUnexpectedError(
 			"invalid capability address: wrong tag %d",
 			num,
@@ -1552,7 +1552,7 @@ func (d StorableDecoder) decodePathLink() (PathLinkValue, error) {
 	if err != nil {
 		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
 	}
-	if num != values.CBORTagPathValue {
+	if num != uint64(values.CBORTagPathValue) {
 		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: expected CBOR tag %d, got %d", values.CBORTagPathValue, num)
 	}
 	pathValue, err := d.decodePath()
@@ -1621,37 +1621,37 @@ func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	}
 
 	switch number {
-	case values.CBORTagPrimitiveStaticType:
+	case uint64(values.CBORTagPrimitiveStaticType):
 		return d.decodePrimitiveStaticType()
 
-	case values.CBORTagOptionalStaticType:
+	case uint64(values.CBORTagOptionalStaticType):
 		return d.decodeOptionalStaticType()
 
-	case values.CBORTagCompositeStaticType:
+	case uint64(values.CBORTagCompositeStaticType):
 		return d.decodeCompositeStaticType()
 
-	case values.CBORTagInterfaceStaticType:
+	case uint64(values.CBORTagInterfaceStaticType):
 		return d.decodeInterfaceStaticType()
 
-	case values.CBORTagVariableSizedStaticType:
+	case uint64(values.CBORTagVariableSizedStaticType):
 		return d.decodeVariableSizedStaticType()
 
-	case values.CBORTagConstantSizedStaticType:
+	case uint64(values.CBORTagConstantSizedStaticType):
 		return d.decodeConstantSizedStaticType()
 
-	case values.CBORTagReferenceStaticType:
+	case uint64(values.CBORTagReferenceStaticType):
 		return d.decodeReferenceStaticType()
 
-	case values.CBORTagDictionaryStaticType:
+	case uint64(values.CBORTagDictionaryStaticType):
 		return d.decodeDictionaryStaticType()
 
-	case values.CBORTagIntersectionStaticType:
+	case uint64(values.CBORTagIntersectionStaticType):
 		return d.decodeIntersectionStaticType()
 
-	case values.CBORTagCapabilityStaticType:
+	case uint64(values.CBORTagCapabilityStaticType):
 		return d.decodeCapabilityStaticType()
 
-	case values.CBORTagInclusiveRangeStaticType:
+	case uint64(values.CBORTagInclusiveRangeStaticType):
 		return d.decodeInclusiveRangeStaticType()
 
 	default:
@@ -1867,25 +1867,25 @@ func (d TypeDecoder) decodeStaticAuthorization() (Authorization, error) {
 		return nil, err
 	}
 	switch number {
-	case values.CBORTagUnauthorizedStaticAuthorization:
+	case uint64(values.CBORTagUnauthorizedStaticAuthorization):
 		err := d.decoder.DecodeNil()
 		if err != nil {
 			return nil, err
 		}
 		return UnauthorizedAccess, nil
-	case values.CBORTagInaccessibleStaticAuthorization:
+	case uint64(values.CBORTagInaccessibleStaticAuthorization):
 		err := d.decoder.DecodeNil()
 		if err != nil {
 			return nil, err
 		}
 		return InaccessibleAccess, nil
-	case values.CBORTagEntitlementMapStaticAuthorization:
+	case uint64(values.CBORTagEntitlementMapStaticAuthorization):
 		typeID, err := d.decoder.DecodeString()
 		if err != nil {
 			return nil, err
 		}
 		return NewEntitlementMapAuthorization(d.memoryGauge, common.TypeID(typeID)), nil
-	case values.CBORTagEntitlementSetStaticAuthorization:
+	case uint64(values.CBORTagEntitlementSetStaticAuthorization):
 		const expectedLength = encodedSetAuthorizationStaticTypeLength
 
 		arraySize, err := d.decoder.DecodeArrayHead()
@@ -2164,7 +2164,7 @@ func (d TypeDecoder) decodeIntersectionStaticType() (StaticType, error) {
 				)
 			}
 
-			if number != values.CBORTagInterfaceStaticType {
+			if number != uint64(values.CBORTagInterfaceStaticType) {
 				return nil, errors.NewUnexpectedError(
 					"invalid intersection static type intersection encoding: expected CBOR tag %d, got %d",
 					values.CBORTagInterfaceStaticType,
@@ -2286,13 +2286,13 @@ func DecodeTypeInfo(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge)
 		}
 
 		switch tag {
-		case values.CBORTagConstantSizedStaticType:
+		case uint64(values.CBORTagConstantSizedStaticType):
 			return d.decodeConstantSizedStaticType()
-		case values.CBORTagVariableSizedStaticType:
+		case uint64(values.CBORTagVariableSizedStaticType):
 			return d.decodeVariableSizedStaticType()
-		case values.CBORTagDictionaryStaticType:
+		case uint64(values.CBORTagDictionaryStaticType):
 			return d.decodeDictionaryStaticType()
-		case values.CBORTagCompositeValue:
+		case uint64(values.CBORTagCompositeValue):
 			return d.decodeCompositeTypeInfo()
 		default:
 			return nil, errors.NewUnexpectedError("invalid type info CBOR tag: %d", tag)
@@ -2349,19 +2349,19 @@ func (d LocationDecoder) DecodeLocation() (common.Location, error) {
 	}
 
 	switch number {
-	case values.CBORTagAddressLocation:
+	case uint64(values.CBORTagAddressLocation):
 		return d.decodeAddressLocation()
 
-	case values.CBORTagStringLocation:
+	case uint64(values.CBORTagStringLocation):
 		return d.decodeStringLocation()
 
-	case values.CBORTagIdentifierLocation:
+	case uint64(values.CBORTagIdentifierLocation):
 		return d.decodeIdentifierLocation()
 
-	case values.CBORTagTransactionLocation:
+	case uint64(values.CBORTagTransactionLocation):
 		return d.decodeTransactionLocation()
 
-	case values.CBORTagScriptLocation:
+	case uint64(values.CBORTagScriptLocation):
 		return d.decodeScriptLocation()
 
 	default:

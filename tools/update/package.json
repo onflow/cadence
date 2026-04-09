@@ -3,10 +3,10 @@
     "axios": "^1.1.0",
     "executive": "^1.6.3",
     "js-yaml": "^4.1.0",
-    "octokit": "^2.0.7",
+    "octokit": "^5.0.5",
     "prompts": "^2.4.2",
     "semver": "^7.3.8",
-    "yargs": "^17.6.0"
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@tsconfig/node16": "^1.0.3",

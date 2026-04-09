@@ -314,6 +314,7 @@ func newTransactionResult(context interpreter.InvocationContext, result *Transac
 		[]interpreter.Value{
 			status,
 			errValue,
+			interpreter.NewUnmeteredUInt64Value(result.ComputationUsed),
 		},
 	)
 
