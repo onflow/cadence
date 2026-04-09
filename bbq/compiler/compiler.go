@@ -1526,59 +1526,60 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 }
 
 func (c *Compiler[_, _]) VisitGuardStatement(statement *ast.GuardStatement) (_ struct{}) {
-	// TODO: is this necessary?
-	c.compilePotentiallyInheritedCode(statement, func() {
 
-		var elseJump int
+	// No need for compilePotentiallyInheritedCode,
+	// as only if-statements are the result of desugaring of conditions.
 
-		switch test := statement.Test.(type) {
-		case ast.Expression:
-			c.compileExpression(test)
-			elseJump = c.emitUndefinedJumpIfFalse()
+	var elseJump int
 
-		case *ast.VariableDeclaration:
+	switch test := statement.Test.(type) {
+	case ast.Expression:
+		c.compileExpression(test)
+		elseJump = c.emitUndefinedJumpIfFalse()
 
-			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
-			c.compileVariableDeclaration(test, varDeclTypes, true)
+	case *ast.VariableDeclaration:
 
-			tempIndex := c.currentFunction.generateLocalIndex()
-			c.emitSetTempLocal(tempIndex)
+		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
+		c.compileVariableDeclaration(test, varDeclTypes, true)
 
-			// Test: check if the optional is nil,
-			// and jump to the else branch if it is
-			c.emitGetLocal(tempIndex)
-			elseJump = c.emitUndefinedJumpIfNil()
+		tempIndex := c.currentFunction.generateLocalIndex()
+		c.emitSetTempLocal(tempIndex)
 
-			// Not nil: unwrap the optional and declare the variable
-			c.emitGetLocal(tempIndex)
-			c.emit(opcode.InstructionUnwrap{})
+		// Test: check if the optional is nil,
+		// and jump to the else branch if it is
+		c.emitGetLocal(tempIndex)
+		elseJump = c.emitUndefinedJumpIfNil()
 
-			// Declare the variable *after* unwrapping the optional,
-			// in *current* scope (no additional scope push)
-			name := test.Identifier.Identifier
-			c.emitDeclareLocal(name)
+		// Not nil: unwrap the optional and declare the variable
+		c.emitGetLocal(tempIndex)
+		c.emit(opcode.InstructionUnwrap{})
 
-		default:
-			panic(errors.NewUnreachableError())
-		}
+		// Declare the variable *after* unwrapping the optional,
+		// in *current* scope (no additional scope push)
+		name := test.Identifier.Identifier
+		c.emitDeclareLocal(name)
 
-		// Jump past the else block (normal flow when condition succeeds)
-		endJump := c.emitUndefinedJump()
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
-		// Else block: compile and patch the elseJump to here
-		c.patchJumpHere(elseJump)
-		c.compileBlock(
-			statement.Else,
-			common.DeclarationKindUnknown,
-			nil,
-		)
+	// Jump past the else block (normal flow when condition succeeds)
+	endJump := c.emitUndefinedJump()
 
-		// Defensive return: Ensure control flow does not continue after the else block
-		c.emit(opcode.InstructionUnreachable{})
+	// Else block: compile and patch the elseJump to here
+	c.patchJumpHere(elseJump)
+	c.compileBlock(
+		statement.Else,
+		common.DeclarationKindUnknown,
+		nil,
+	)
 
-		// Patch the endJump to continue after the else block
-		c.patchJumpHere(endJump)
-	})
+	// Defensive return: Ensure control flow does not continue after the else block
+	c.emit(opcode.InstructionUnreachable{})
+
+	// Patch the endJump to continue after the else block
+	c.patchJumpHere(endJump)
+
 	return
 }
 
