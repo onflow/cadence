@@ -200,6 +200,7 @@ const (
 	MemoryKindSwitchStatement
 	MemoryKindWhileStatement
 	MemoryKindRemoveStatement
+	MemoryKindGuardStatement
 
 	MemoryKindBooleanExpression
 	MemoryKindVoidExpression

@@ -89,7 +89,8 @@ func _() {
 	_ = x[Loop-117]
 	_ = x[Statement-118]
 	_ = x[TemplateString-119]
-	_ = x[OpcodeMax-120]
+	_ = x[Unreachable-120]
+	_ = x[OpcodeMax-121]
 }
 
 const (
@@ -102,7 +103,7 @@ const (
 	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueCloseUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndexGetMethodGetMethodDynamicGetTypeIndexSetTypeIndexRemoveTypeIndexSetAttachmentBase"
 	_Opcode_name_7 = "GetFieldLocalInvoke"
 	_Opcode_name_8 = "DropDup"
-	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementTemplateStringOpcodeMax"
+	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementTemplateStringUnreachableOpcodeMax"
 )
 
 var (
@@ -115,7 +116,7 @@ var (
 	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 59, 68, 77, 85, 96, 104, 112, 120, 131, 140, 156, 168, 180, 195, 212}
 	_Opcode_index_7 = [...]uint8{0, 13, 19}
 	_Opcode_index_8 = [...]uint8{0, 4, 7}
-	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 46, 55, 59, 68, 82, 91}
+	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 46, 55, 59, 68, 82, 93, 102}
 )
 
 func (i Opcode) String() string {
@@ -146,7 +147,7 @@ func (i Opcode) String() string {
 	case 104 <= i && i <= 105:
 		i -= 104
 		return _Opcode_name_8[_Opcode_index_8[i]:_Opcode_index_8[i+1]]
-	case 112 <= i && i <= 120:
+	case 112 <= i && i <= 121:
 		i -= 112
 		return _Opcode_name_9[_Opcode_index_9[i]:_Opcode_index_9[i+1]]
 	default:

@@ -5484,3 +5484,58 @@ func (e *MissingClosingParenInFunctionTypeError) SuggestFixes(code string) []err
 		},
 	}
 }
+
+// MissingElseInGuardStatementError is reported when the 'else' keyword is missing in a guard statement.
+type MissingElseInGuardStatementError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingElseInGuardStatementError{}
+var _ errors.UserError = &MissingElseInGuardStatementError{}
+var _ errors.SecondaryError = &MissingElseInGuardStatementError{}
+var _ errors.HasDocumentationLink = &MissingElseInGuardStatementError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingElseInGuardStatementError{}
+
+func (*MissingElseInGuardStatementError) isParseError() {}
+
+func (*MissingElseInGuardStatementError) IsUserError() {}
+
+func (e *MissingElseInGuardStatementError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingElseInGuardStatementError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingElseInGuardStatementError) Error() string {
+	return expectedButGotToken(
+		"expected 'else' after guard test",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingElseInGuardStatementError) SecondaryError() string {
+	return "an 'else' block is required in a guard statement"
+}
+
+func (e *MissingElseInGuardStatementError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert 'else' keyword",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: keywordInsertion(KeywordElse, e.GotToken.Type),
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (*MissingElseInGuardStatementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#guard"
+}
