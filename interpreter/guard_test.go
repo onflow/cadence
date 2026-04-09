@@ -903,6 +903,89 @@ func TestInterpretGuardStatementComplexConditions(t *testing.T) {
 		})
 	})
 
+	t.Run("nested guards", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			fun test(a: Int?, b: Int?): Int {
+				guard let x = a else {
+					guard let y = b else {
+						return 0
+					}
+					return y
+				}
+				guard let y = b else {
+					return x
+				}
+				return x + y
+			}
+		`)
+
+		t.Run("both some", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"test",
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+				value,
+			)
+		})
+
+		t.Run("first nil, second some", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"test",
+				interpreter.Nil,
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				value,
+			)
+		})
+
+		t.Run("first some, second nil", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"test",
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.Nil,
+			)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				value,
+			)
+		})
+
+		t.Run("both nil", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"test",
+				interpreter.Nil,
+				interpreter.Nil,
+			)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				value,
+			)
+		})
+	})
+
 	t.Run("chained guards", func(t *testing.T) {
 		t.Parallel()
 
