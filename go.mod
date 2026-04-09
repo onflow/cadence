@@ -18,7 +18,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/leanovate/gopter v0.2.11
 	github.com/logrusorgru/aurora/v4 v4.0.0
-	github.com/onflow/atree v0.15.0
+	github.com/onflow/atree v0.15.1-0.20260409001256-e0ec3b3fdc84
 	github.com/onflow/crypto v0.25.3
 	github.com/onflow/fixed-point v0.1.1
 	github.com/rivo/uniseg v0.4.7
@@ -62,5 +62,3 @@ require (
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/onflow/atree => github.com/onflow/atree-internal v0.15.1-0.20260408234020-9490dde1879e
