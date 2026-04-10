@@ -250,9 +250,10 @@ func MaybeLargeImmutableStorable(
 	error,
 ) {
 
-	if storable.ByteSize() < maxInlineSize {
+	byteSize := storable.ByteSize()
+	if byteSize < maxInlineSize {
 		return storable, nil
 	}
 
-	return atree.NewStorableSlab(storage, address, storable)
+	return atree.NewStorableSlab(storage, address, storable, byteSize)
 }
