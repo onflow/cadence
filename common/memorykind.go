@@ -51,6 +51,7 @@ const (
 	MemoryKindPublishedValue
 	MemoryKindStorageCapabilityControllerValue
 	MemoryKindAccountCapabilityControllerValue
+	MemoryKindStringBuilder
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
@@ -199,6 +200,7 @@ const (
 	MemoryKindSwitchStatement
 	MemoryKindWhileStatement
 	MemoryKindRemoveStatement
+	MemoryKindGuardStatement
 
 	MemoryKindBooleanExpression
 	MemoryKindVoidExpression

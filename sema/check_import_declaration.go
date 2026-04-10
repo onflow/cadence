@@ -251,6 +251,10 @@ func (checker *Checker) importResolvedLocation(
 		allImported[imported] = struct{}{}
 	}
 
+	if imp.HasErrors() {
+		checker.importedProgramHadErrors = true
+	}
+
 	// Attempt to import the requested value declarations
 
 	allValueElements := imp.AllValueElements()
@@ -460,6 +464,7 @@ func (checker *Checker) importElements(
 				isConstant:               true,
 				argumentLabels:           element.ArgumentLabels,
 				allowOuterScopeShadowing: false,
+				docString:                element.DocString,
 			})
 			checker.report(err)
 		})

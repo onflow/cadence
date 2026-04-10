@@ -125,6 +125,7 @@ type Checker struct {
 	inCreate                           bool
 	isChecked                          bool
 	inAssignment                       bool
+	importedProgramHadErrors           bool
 	parent                             ast.Element
 }
 
@@ -311,6 +312,7 @@ func (checker *Checker) Check() error {
 		}
 
 		checker.Elaboration.setIsChecking(false)
+		checker.Elaboration.HasErrors = len(checker.errors) > 0 || checker.importedProgramHadErrors
 		checker.isChecked = true
 
 		checker.resources.Reclaim()
@@ -1775,7 +1777,7 @@ func (checker *Checker) checkResourceFieldNesting(
 // under the assumption that the checked expression might not be evaluated.
 // That means that resource invalidation and returns are not definite,
 // but only potential
-func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
+func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) (Type, *ReturnInfo) {
 	functionActivation := checker.functionActivations.Current()
 
 	initialReturnInfo := functionActivation.ReturnInfo
@@ -1807,7 +1809,7 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		nil,
 	)
 
-	return result
+	return result, temporaryReturnInfo
 }
 
 func (checker *Checker) ResetErrors() {
@@ -2630,6 +2632,7 @@ func (checker *Checker) checkErrorsForInvalidExpressionTypes(actualType Type, ex
 	// before checking for an invalid type, which is more expensive.
 
 	if len(checker.errors) == 0 &&
+		!checker.importedProgramHadErrors &&
 		(actualType.IsInvalidType() || (expectedType != nil && expectedType.IsInvalidType())) {
 
 		panic(errors.NewUnexpectedError("invalid type produced without error"))

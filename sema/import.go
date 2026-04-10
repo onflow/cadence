@@ -28,6 +28,7 @@ type Import interface {
 	AllValueElements() *StringImportElementOrderedMap
 	AllTypeElements() *StringImportElementOrderedMap
 	IsChecking() bool
+	HasErrors() bool
 }
 
 // ImportElement
@@ -36,6 +37,7 @@ type ImportElement struct {
 	ArgumentLabels  []string
 	DeclarationKind common.DeclarationKind
 	Access          Access
+	DocString       string
 }
 
 // ElaborationImport
@@ -54,6 +56,7 @@ func variablesToImportElements(f func(func(name string, variable *Variable))) *S
 			Access:          variable.Access,
 			Type:            variable.Type,
 			ArgumentLabels:  variable.ArgumentLabels,
+			DocString:       variable.DocString,
 		})
 	})
 
@@ -72,6 +75,10 @@ func (i ElaborationImport) IsChecking() bool {
 	return i.Elaboration.IsChecking()
 }
 
+func (i ElaborationImport) HasErrors() bool {
+	return i.Elaboration.HasErrors
+}
+
 // VirtualImport
 
 type VirtualImport struct {
@@ -88,5 +95,9 @@ func (i VirtualImport) AllTypeElements() *StringImportElementOrderedMap {
 }
 
 func (VirtualImport) IsChecking() bool {
+	return false
+}
+
+func (VirtualImport) HasErrors() bool {
 	return false
 }
