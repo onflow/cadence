@@ -88,7 +88,8 @@ type ScriptResult struct {
 }
 
 type TransactionResult struct {
-	Error error
+	Error           error
+	ComputationUsed uint64
 }
 
 type Account struct {
