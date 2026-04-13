@@ -23,6 +23,8 @@ import (
 	"math/big"
 
 	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/errors"
 )
 
 // Cadence needs to encode different kinds of objects in CBOR, for instance,
@@ -34,16 +36,18 @@ import (
 // To be able to encode/decode such semantically different values,
 // we define custom CBOR tags.
 
+// CCF uses CBOR tag numbers 128-255, which are unassigned by [IANA]
+// (https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml).
+//
+
+const CBORTagBase = 128
+
 // !!! *WARNING* !!!
 //
 // Only add new fields to encoded structs by
 // appending new fields with the next highest key.
 //
 // DO *NOT* REPLACE EXISTING FIELDS!
-
-const CBORTagBase = 128
-
-// !!! *WARNING* !!!
 //
 // Only add new types by:
 // - replacing existing placeholders (`_`) with new types
@@ -55,9 +59,12 @@ const CBORTagBase = 128
 // DO *NOT* REPLACE EXISTING TYPES!
 // DO *NOT* ADD NEW TYPES IN BETWEEN!
 
+//go:generate stringer -type=CBORTag -trimprefix=CBORTag
+type CBORTag byte
+
 const (
-	CBORTagVoidValue = CBORTagBase + iota
-	_                // DO *NOT* REPLACE. Previously used for dictionary values
+	CBORTagVoidValue CBORTag = CBORTagBase + iota
+	_                        // DO *NOT* REPLACE. Previously used for dictionary values
 	CBORTagSomeValue
 	CBORTagAddressValue
 	CBORTagCompositeValue
@@ -244,10 +251,20 @@ func MaybeLargeImmutableStorable(
 	atree.Storable,
 	error,
 ) {
-
-	if storable.ByteSize() < maxInlineSize {
+	byteSize := storable.ByteSize()
+	if byteSize < maxInlineSize {
 		return storable, nil
 	}
 
-	return atree.NewStorableSlab(storage, address, storable)
+	maxStorableSizeInStorableSlab := atree.MaxStorableSizeInStorableSlab()
+	if byteSize > maxStorableSizeInStorableSlab {
+		return nil, errors.NewDefaultUserError(
+			"storable size exceeds limit for StorableSlab: storable type %T, size %d bytes, max size %d bytes",
+			storable,
+			byteSize,
+			maxStorableSizeInStorableSlab,
+		)
+	}
+
+	return atree.NewStorableSlab(storage, address, storable, byteSize)
 }

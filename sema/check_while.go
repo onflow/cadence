@@ -31,7 +31,7 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) (_ st
 	// That means that resource invalidations and
 	// returns are not definite, but only potential.
 
-	_ = checker.checkPotentiallyUnevaluated(func() Type {
+	_, _ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.Current().WithLoop(func() {
 			checker.checkBlock(statement.Block)
 		})

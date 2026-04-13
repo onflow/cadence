@@ -133,6 +133,7 @@ var StringType = PrimitiveType(interpreter.PrimitiveStaticTypeString)
 var CharacterType = PrimitiveType(interpreter.PrimitiveStaticTypeCharacter)
 var MetaType = PrimitiveType(interpreter.PrimitiveStaticTypeMetaType)
 var BlockType = PrimitiveType(interpreter.PrimitiveStaticTypeBlock)
+var StringBuilderType = PrimitiveType(interpreter.PrimitiveStaticTypeStringBuilder)
 var StorableType = PrimitiveType(interpreter.PrimitiveStaticTypeStorable)
 
 var NumberType = PrimitiveType(interpreter.PrimitiveStaticTypeNumber)
