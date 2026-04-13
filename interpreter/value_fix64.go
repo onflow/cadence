@@ -307,6 +307,10 @@ func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue)
 		})
 	}
 
+	if o == 0 {
+		panic(&DivisionByZeroError{})
+	}
+
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
 
@@ -334,6 +338,10 @@ func (v Fix64Value) SaturatingDiv(context NumberValueArithmeticContext, other Nu
 			LeftType:     v.StaticType(context),
 			RightType:    other.StaticType(context),
 		})
+	}
+
+	if o == 0 {
+		panic(&DivisionByZeroError{})
 	}
 
 	a := new(big.Int).SetInt64(int64(v))

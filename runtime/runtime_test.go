@@ -14445,16 +14445,16 @@ func TestRuntimeEntitlementEscalationViaStorageReference(t *testing.T) {
 
 	RequireError(t, err)
 
-	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
-	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+	var storedValueTypeMismatchError *interpreter.StoredValueTypeMismatchError
+	require.ErrorAs(t, err, &storedValueTypeMismatchError)
 
 	assert.Equal(t,
-		common.TypeID("&[auth(Storage)&Account]"),
-		forceCastTypeMismatchErr.ExpectedType.ID(),
+		common.TypeID("[auth(Storage)&Account]"),
+		storedValueTypeMismatchError.ExpectedType.ID(),
 	)
 	assert.Equal(t,
-		common.TypeID("&AnyStruct"),
-		forceCastTypeMismatchErr.ActualType.ID(),
+		common.TypeID("[&Account]"),
+		storedValueTypeMismatchError.ActualType.ID(),
 	)
 }
 

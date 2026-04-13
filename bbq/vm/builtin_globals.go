@@ -281,6 +281,14 @@ func init() {
 		),
 	)
 
+	registerBuiltinFunction(
+		NewNativeFunctionValue(
+			sema.StringBuilderType.String(),
+			sema.StringBuilderFunctionType,
+			interpreter.NativeStringBuilderConstructor,
+		),
+	)
+
 	// Register type-bound functions that are common to many types.
 	registerBuiltinCommonTypeBoundFunctions()
 

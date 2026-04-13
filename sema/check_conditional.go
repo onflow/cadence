@@ -53,19 +53,8 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) (_ struct{}
 				checker.enterValueScope()
 				defer checker.leaveValueScope(thenElement.EndPosition, true)
 
-				if castingExpression, ok := test.Value.(*ast.CastingExpression); ok &&
-					castingExpression.Operation == ast.OperationFailableCast {
+				checker.recordBindingFailableCast(test)
 
-					castingTypes := checker.Elaboration.CastingExpressionTypes(castingExpression)
-					leftHandType := castingTypes.StaticValueType
-					if leftHandType.IsResourceType() {
-						checker.recordResourceInvalidation(
-							castingExpression.Expression,
-							leftHandType,
-							ResourceInvalidationKindMoveDefinite,
-						)
-					}
-				}
 				checker.declareVariableDeclaration(test, declarationType)
 
 				checker.checkBlock(thenElement)
@@ -78,6 +67,73 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) (_ struct{}
 				return nil
 			},
 		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	return
+}
+
+func (checker *Checker) recordBindingFailableCast(test *ast.VariableDeclaration) {
+	castingExpression, ok := test.Value.(*ast.CastingExpression)
+	if !ok || castingExpression.Operation != ast.OperationFailableCast {
+		return
+	}
+
+	castingTypes := checker.Elaboration.CastingExpressionTypes(castingExpression)
+	leftHandType := castingTypes.StaticValueType
+	if leftHandType.IsResourceType() {
+		checker.recordResourceInvalidation(
+			castingExpression.Expression,
+			leftHandType,
+			ResourceInvalidationKindMoveDefinite,
+		)
+	}
+}
+
+func (checker *Checker) VisitGuardStatement(statement *ast.GuardStatement) (_ struct{}) {
+
+	elseBlock := statement.Else
+
+	switch test := statement.Test.(type) {
+	case ast.Expression:
+		checker.VisitExpression(test, statement, BoolType)
+
+		_, returnInfo := checker.checkPotentiallyUnevaluated(func() Type {
+			checker.checkBlock(statement.Else)
+			return nil
+		})
+
+		// Validate that the else block definitely exits (return, halt, break, or continue)
+		if !returnInfo.IsUnreachable() {
+			checker.report(
+				&GuardStatementElseBlockMustExitError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, elseBlock),
+				},
+			)
+		}
+
+	case *ast.VariableDeclaration:
+		declarationType := checker.visitVariableDeclarationValues(test, true)
+
+		_, returnInfo := checker.checkPotentiallyUnevaluated(func() Type {
+			checker.checkBlock(statement.Else)
+			return nil
+		})
+
+		// Validate that the else block definitely exits (return, halt, break, or continue)
+		if !returnInfo.IsUnreachable() {
+			checker.report(
+				&GuardStatementElseBlockMustExitError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, elseBlock),
+				},
+			)
+		}
+
+		checker.recordBindingFailableCast(test)
+
+		checker.declareVariableDeclaration(test, declarationType)
 
 	default:
 		panic(errors.NewUnreachableError())
