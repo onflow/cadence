@@ -3775,7 +3775,7 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
-	t.Run("auth element type, auth element value, index access", func(t *testing.T) {
+	t.Run("auth element type, unauth outer ref, auth element value, index access", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -3786,8 +3786,32 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
                 let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
                 let arrayRef = &array as &[auth(Mutate) &S]
 
-                // arrayRef[0] is of type 'auth(Mutate) &S'.
-                // Should return the reference as-is
+                // arrayRef[0] is of type '&S' (intersection of UnauthorizedAccess and auth(Mutate) = UnauthorizedAccess).
+                // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                let authRef = arrayRef[0] as! auth(Mutate) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("auth element type, auth outer ref, auth element value, index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as auth(Mutate) &[auth(Mutate) &S]
+
+                // arrayRef[0] is of type 'auth(Mutate) &S' (intersection of auth(Mutate) and auth(Mutate) = auth(Mutate)).
+                // Should return the reference with the intersected authorization.
                 let authRef: auth(Mutate) &S = arrayRef[0]
             }
         `)
@@ -3796,7 +3820,7 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("auth element type, auth element value, in loop", func(t *testing.T) {
+	t.Run("auth element type, unauth outer ref, auth element value, in loop", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -3807,10 +3831,35 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
                 let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
                 let arrayRef = &array as &[auth(Mutate) &S]
 
-                for unauthSRef in arrayRef {
-                    // arrayRef[0] is of type 'auth(Mutate) &S'.
-                    // Should return the reference as-is
-                    let authRef: auth(Mutate) &S = unauthSRef
+                for sRef in arrayRef {
+                    // sRef is of type '&S' (intersection of UnauthorizedAccess and auth(Mutate) = UnauthorizedAccess).
+                    // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                    let authRef = sRef as! auth(Mutate) &S
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("auth element type, auth outer ref, auth element value, in loop", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+
+            fun test() {
+                var s = S()
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as auth(Mutate) &[auth(Mutate) &S]
+
+                for sRef in arrayRef {
+                    // sRef is of type 'auth(Mutate) &S' (intersection of auth(Mutate) and auth(Mutate) = auth(Mutate)).
+                    let authRef: auth(Mutate) &S = sRef
                 }
             }
         `)
@@ -3844,7 +3893,7 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("auth element type, auth element value, attachment", func(t *testing.T) {
+	t.Run("auth element type, unauth outer ref, auth element value, attachment", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -3862,7 +3911,40 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
                 let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
                 let arrayRef = &array as &[auth(Mutate) &S]
 
+                // arrayRef[0] is of type '&S' (intersection strips auth).
+                // Attachment should NOT get any entitlements.
                 let attachmentRef = arrayRef[0][A] as! auth(Mutate) &A?
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("auth element type, auth outer ref, auth element value, attachment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                access(Mutate) fun foo() {}
+            }
+
+            attachment A for S {
+                access(Mutate) fun bar() {}
+            }
+
+            fun test() {
+                let s = attach A() to S()
+
+                let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
+                let arrayRef = &array as auth(Mutate) &[auth(Mutate) &S]
+
+                // arrayRef[0] is of type 'auth(Mutate) &S' (intersection preserves auth).
+                // Attachment should get the same entitlements.
+                let attachmentRef: auth(Mutate) &A? = arrayRef[0][A]
             }
         `)
 
@@ -3973,7 +4055,7 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
 		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
-	t.Run("auth member type, auth member value, member expression", func(t *testing.T) {
+	t.Run("auth member type, unauth outer ref, auth member value, member expression", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -3991,8 +4073,38 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
                 var outer = Outer()
                 let outerRef = &outer as &Outer
 
-                // outerRef.inner is of type 'auth(Mutate) &S'.
-                // Should return the reference as-is
+                // outerRef.inner is of type '&S' (intersection of UnauthorizedAccess and auth(Mutate) = UnauthorizedAccess).
+                // Shouldn't be possible to cast to 'auth(Mutate) &S'
+                let authRef = outerRef.inner as! auth(Mutate) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("auth member type, auth outer ref, auth member value, member expression", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct Outer {
+                let inner: auth(Mutate) &S
+                init() {
+                    var s = S()
+                    self.inner = &s as auth(Mutate) &S
+                }
+            }
+
+            struct S {}
+
+            fun test() {
+                var outer = Outer()
+                let outerRef = &outer as auth(Mutate) &Outer
+
+                // outerRef.inner: intersection of auth(Mutate) and auth(Mutate) = auth(Mutate).
                 let authRef: auth(Mutate) &S = outerRef.inner
             }
         `)
@@ -4001,7 +4113,74 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("auth member type, auth member value, attachment", func(t *testing.T) {
+	t.Run("auth member type, partial outer auth, intersection preserved", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            struct Outer {
+                let inner: auth(F, G) &S
+                init() {
+                    var s = S()
+                    self.inner = &s as auth(F, G) &S
+                }
+            }
+
+            struct S {}
+
+            fun test() {
+                var outer = Outer()
+                let outerRef = &outer as auth(E, F) &Outer
+
+                // Intersection: auth(E, F) ∩ auth(F, G) = auth(F).
+                // Force cast to auth(F) should succeed.
+                let ref = outerRef.inner as! auth(F) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("auth member type, partial outer auth, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            struct Outer {
+                let inner: auth(F, G) &S
+                init() {
+                    var s = S()
+                    self.inner = &s as auth(F, G) &S
+                }
+            }
+
+            struct S {}
+
+            fun test() {
+                var outer = Outer()
+                let outerRef = &outer as auth(E, F) &Outer
+
+                // Intersection: auth(E, F) ∩ auth(F, G) = auth(F).
+                // Force cast to auth(F, G) should FAIL — only auth(F) available.
+                let ref = outerRef.inner as! auth(F, G) &S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("auth member type, unauth outer ref, auth member value, attachment", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -4025,14 +4204,176 @@ func TestInterpretCompositeNestedAuthReferencesAccess(t *testing.T) {
                 var outer = Outer()
                 let outerRef = &outer as &Outer
 
-                // outerRef.inner is of type 'auth(Mutate) &S'.
-                // Attachment should get the same entitlements.
-                let attachmentRef: auth(Mutate) &A? = outerRef.inner[A]
+                // outerRef.inner is of type '&S' (intersection strips auth).
+                // Attachment should NOT get any entitlements.
+                let attachmentRef = outerRef.inner[A] as! auth(Mutate) &A?
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+}
+
+func TestInterpretNestedReferenceAuthorizationIntersection(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array, partial intersection, runtime auth correct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            fun test() {
+                var s = 1
+                let array: [auth(F, G) &Int] = [&s as auth(F, G) &Int]
+                let arrayRef = &array as auth(E, F) &[auth(F, G) &Int]
+
+                // Intersection: auth(E, F) ∩ auth(F, G) = auth(F).
+                let ref = arrayRef[0]
+
+                // Force cast to auth(F) should succeed
+                let fRef = ref as! auth(F) &Int
             }
         `)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("array, partial intersection, escalation prevented at runtime", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            fun test() {
+                var s = 1
+                let array: [auth(F, G) &Int] = [&s as auth(F, G) &Int]
+                let arrayRef = &array as auth(E, F) &[auth(F, G) &Int]
+
+                // Intersection: auth(E, F) ∩ auth(F, G) = auth(F).
+                let ref = arrayRef[0]
+
+                // Force cast to auth(F, G) should FAIL — only auth(F) is available
+                let fgRef = ref as! auth(F, G) &Int
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("array, unauth outer, runtime escalation prevented via failable cast", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun test(): Bool {
+                var s = 1
+                let array: [auth(E) &Int] = [&s as auth(E) &Int]
+                let arrayRef = &array as &[auth(E) &Int]
+
+                // Intersection: UnauthorizedAccess ∩ auth(E) = UnauthorizedAccess.
+                let ref = arrayRef[0]
+
+                // Failable cast to auth(E) should fail
+                let authRef = ref as? auth(E) &Int
+                return authRef == nil
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.TrueValue, result)
+	})
+
+	t.Run("dictionary, partial intersection, runtime auth correct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            fun test() {
+                var s = 1
+                let dict: {String: auth(F, G) &Int} = {"a": &s as auth(F, G) &Int}
+                let dictRef = &dict as auth(E, F) &{String: auth(F, G) &Int}
+
+                // Intersection: auth(E, F) ∩ auth(F, G) = auth(F).
+                let ref = dictRef["a"]!
+
+                // Force cast to auth(F) should succeed
+                let fRef = ref as! auth(F) &Int
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("for-loop, partial intersection", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            fun test() {
+                var s = 1
+                let array: [auth(F, G) &Int] = [&s as auth(F, G) &Int]
+                let arrayRef = &array as auth(E, F) &[auth(F, G) &Int]
+
+                for ref in arrayRef {
+                    // Intersection: auth(E, F) ∩ auth(F, G) = auth(F).
+                    let fRef = ref as! auth(F) &Int
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("for-loop, partial intersection, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            fun test() {
+                var s = 1
+                let array: [auth(F, G) &Int] = [&s as auth(F, G) &Int]
+                let arrayRef = &array as auth(E, F) &[auth(F, G) &Int]
+
+                for ref in arrayRef {
+                    // Intersection: auth(E, F) ∩ auth(F, G) = auth(F).
+                    // Force cast to auth(F, G) should FAIL.
+                    let fgRef = ref as! auth(F, G) &Int
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 }
 

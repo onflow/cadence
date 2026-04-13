@@ -14445,17 +14445,14 @@ func TestRuntimeEntitlementEscalationViaStorageReference(t *testing.T) {
 
 	RequireError(t, err)
 
-	var storedValueTypeMismatchError *interpreter.StoredValueTypeMismatchError
-	require.ErrorAs(t, err, &storedValueTypeMismatchError)
+	// The checker now catches this: accessing `.storage.borrow` on an unauthorized
+	// `&Account` (intersection of unauthorized outer and auth(Storage) inner = unauthorized).
+	// Previously, the inner auth was preserved and the error was a runtime ForceCastTypeMismatchError.
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
 
-	assert.Equal(t,
-		common.TypeID("[auth(Storage)&Account]"),
-		storedValueTypeMismatchError.ExpectedType.ID(),
-	)
-	assert.Equal(t,
-		common.TypeID("[&Account]"),
-		storedValueTypeMismatchError.ActualType.ID(),
-	)
+	var invalidAccessErr *sema.InvalidAccessError
+	require.ErrorAs(t, err, &invalidAccessErr)
 }
 
 func TestRuntimeBaseDowncastAfterContractUpgrade(t *testing.T) {

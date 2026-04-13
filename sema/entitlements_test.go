@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -7218,6 +7219,1434 @@ func TestCheckNestedReferenceMemberAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidMappingAccessMemberTypeError{}, errs[0])
+	})
+}
+
+func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
+
+	t.Parallel()
+
+	// Arrays: basic intersection
+
+	t.Run("array, unauth outer, auth inner", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let array: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let arrayRef: &[auth(E) &Int] =
+                  &array as &[auth(E) &Int]
+
+              // Unauthorized ∩ auth(E) = unauthorized
+              let ref: &Int = arrayRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, unauth outer, auth inner, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let array: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let arrayRef: &[auth(E) &Int] =
+                  &array as &[auth(E) &Int]
+
+              // Unauthorized ∩ auth(E) = unauthorized.
+              // Cannot assign &Int to auth(E) &Int.
+              let ref: auth(E) &Int = arrayRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array, matching entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let array: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let arrayRef: auth(E) &[auth(E) &Int] =
+                  &array as auth(E) &[auth(E) &Int]
+
+              // auth(E) ∩ auth(E) = auth(E)
+              let ref: auth(E) &Int = arrayRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, partial intersection", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          fun test() {
+              let array: [auth(F, G) &Int] = [&1 as auth(F, G) &Int]
+              let arrayRef: auth(E, F) &[auth(F, G) &Int] =
+                  &array as auth(E, F) &[auth(F, G) &Int]
+
+              // auth(E, F) ∩ auth(F, G) = auth(F)
+              let ref: auth(F) &Int = arrayRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, partial intersection, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          fun test() {
+              let array: [auth(F, G) &Int] = [&1 as auth(F, G) &Int]
+              let arrayRef: auth(E, F) &[auth(F, G) &Int] =
+                  &array as auth(E, F) &[auth(F, G) &Int]
+
+              // auth(E, F) ∩ auth(F, G) = auth(F).
+              // Cannot assign auth(F) &Int to auth(F, G) &Int.
+              let ref: auth(F, G) &Int = arrayRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.F,S.test.G)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.F)&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array, disjoint entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let array: [auth(F) &Int] = [&1 as auth(F) &Int]
+              let arrayRef: auth(E) &[auth(F) &Int] =
+                  &array as auth(E) &[auth(F) &Int]
+
+              // auth(E) ∩ auth(F) = empty
+              let ref: &Int = arrayRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, disjoint entitlements, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let array: [auth(F) &Int] = [&1 as auth(F) &Int]
+              let arrayRef: auth(E) &[auth(F) &Int] =
+                  &array as auth(E) &[auth(F) &Int]
+
+              // auth(E) ∩ auth(F) = empty.
+              // Cannot assign &Int to auth(F) &Int.
+              let ref: auth(F) &Int = arrayRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.F)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Arrays: recursive intersection
+
+	t.Run("array, nested container, unauth outer, inner references intersected", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let outer: [[auth(E) &Int]] = [inner]
+              let outerRef: &[[auth(E) &Int]] =
+                  &outer as &[[auth(E) &Int]]
+
+              // Unauthorized outer: inner auth(E) references are also intersected.
+              // Unauthorized ∩ auth(E) = unauthorized.
+              let ref: &[&Int] = outerRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, nested container, unauth outer, inner references intersected, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let outer: [[auth(E) &Int]] = [inner]
+              let outerRef: &[[auth(E) &Int]] =
+                  &outer as &[[auth(E) &Int]]
+
+              // Inner auth(E) is stripped by unauthorized outer.
+              // Cannot assign &[&Int] to &[auth(E) &Int].
+              let ref: &[auth(E) &Int] = outerRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("&[auth(S.test.E)&Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[&Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array, nested container, auth outer, inner references preserved", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let outer: [[auth(E) &Int]] = [inner]
+              let outerRef: auth(E) &[[auth(E) &Int]] =
+                  &outer as auth(E) &[[auth(E) &Int]]
+
+              // auth(E) ∩ auth(E) = auth(E): inner references preserved.
+              let ref: &[auth(E) &Int] = outerRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, nested container, partial intersection of inner references", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let inner: [auth(E, F) &Int] = [&1 as auth(E, F) &Int]
+              let outer: [[auth(E, F) &Int]] = [inner]
+              let outerRef: auth(E) &[[auth(E, F) &Int]] =
+                  &outer as auth(E) &[[auth(E, F) &Int]]
+
+              // auth(E) ∩ auth(E, F) = auth(E)
+              let ref: &[auth(E) &Int] = outerRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, nested container, partial intersection of inner references, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let inner: [auth(E, F) &Int] = [&1 as auth(E, F) &Int]
+              let outer: [[auth(E, F) &Int]] = [inner]
+              let outerRef: auth(E) &[[auth(E, F) &Int]] =
+                  &outer as auth(E) &[[auth(E, F) &Int]]
+
+              // auth(E) ∩ auth(E, F) = auth(E).
+              // Cannot assign &[auth(E) &Int] to &[auth(E, F) &Int].
+              let ref: &[auth(E, F) &Int] = outerRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("&[auth(S.test.E,S.test.F)&Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[auth(S.test.E)&Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array, nested reference, cascading intersection, all empty", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let array: [auth(F) &[auth(E) &Int]] = [
+                  &inner as auth(F) &[auth(E) &Int]
+              ]
+              let arrayRef: auth(E) &[auth(F) &[auth(E) &Int]] =
+                  &array as auth(E) &[auth(F) &[auth(E) &Int]]
+
+              // Top-level: auth(E) ∩ auth(F) = empty.
+              // Cascades: empty ∩ auth(E) = empty.
+              let ref: &[&Int] = arrayRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, nested reference, cascading intersection, narrowing", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          fun test() {
+              let inner: [auth(F, G) &Int] = [&1 as auth(F, G) &Int]
+              let array: [auth(E, F) &[auth(F, G) &Int]] = [
+                  &inner as auth(E, F) &[auth(F, G) &Int]
+              ]
+              let arrayRef: auth(E, F, G) &[auth(E, F) &[auth(F, G) &Int]] =
+                  &array as auth(E, F, G) &[auth(E, F) &[auth(F, G) &Int]]
+
+              // Top-level: auth(E, F, G) ∩ auth(E, F) = auth(E, F).
+              // Cascades: auth(E, F) ∩ auth(F, G) = auth(F).
+              let ref: auth(E, F) &[auth(F) &Int] = arrayRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, nested reference, cascading intersection, narrowing, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          fun test() {
+              let inner: [auth(F, G) &Int] = [&1 as auth(F, G) &Int]
+              let array: [auth(E, F) &[auth(F, G) &Int]] = [
+                  &inner as auth(E, F) &[auth(F, G) &Int]
+              ]
+              let arrayRef: auth(E, F, G) &[auth(E, F) &[auth(F, G) &Int]] =
+                  &array as auth(E, F, G) &[auth(E, F) &[auth(F, G) &Int]]
+
+              // Top-level: auth(E, F, G) ∩ auth(E, F) = auth(E, F).
+              // Cascades: auth(E, F) ∩ auth(F, G) = auth(F).
+              // Cannot assign auth(E, F) &[auth(F) &Int] to auth(E, F) &[auth(F, G) &Int].
+              let ref: auth(E, F) &[auth(F, G) &Int] = arrayRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E,S.test.F)&[auth(S.test.F,S.test.G)&Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E,S.test.F)&[auth(S.test.F)&Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Dictionaries: basic intersection
+
+	t.Run("dictionary, unauth outer, auth inner", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let dict: {String: auth(E) &Int} = {"a": &1 as auth(E) &Int}
+              let dictRef: &{String: auth(E) &Int} =
+                  &dict as &{String: auth(E) &Int}
+
+              // Unauthorized ∩ auth(E) = unauthorized
+              let ref: (&Int)? = dictRef["a"]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, unauth outer, auth inner, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let dict: {String: auth(E) &Int} = {"a": &1 as auth(E) &Int}
+              let dictRef: &{String: auth(E) &Int} =
+                  &dict as &{String: auth(E) &Int}
+
+              // Unauthorized ∩ auth(E) = unauthorized.
+              // Cannot assign (&Int)? to (auth(E) &Int)?.
+              let ref: (auth(E) &Int)? = dictRef["a"]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("(auth(S.test.E)&Int)?"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("(&Int)?"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("dictionary, matching entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let dict: {String: auth(E) &Int} = {"a": &1 as auth(E) &Int}
+              let dictRef: auth(E) &{String: auth(E) &Int} =
+                  &dict as auth(E) &{String: auth(E) &Int}
+
+              // auth(E) ∩ auth(E) = auth(E)
+              let ref: (auth(E) &Int)? = dictRef["a"]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, partial intersection", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          fun test() {
+              let dict: {String: auth(F, G) &Int} = {"a": &1 as auth(F, G) &Int}
+              let dictRef: auth(E, F) &{String: auth(F, G) &Int} =
+                  &dict as auth(E, F) &{String: auth(F, G) &Int}
+
+              // auth(E, F) ∩ auth(F, G) = auth(F)
+              let ref: (auth(F) &Int)? = dictRef["a"]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, partial intersection, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          fun test() {
+              let dict: {String: auth(F, G) &Int} = {"a": &1 as auth(F, G) &Int}
+              let dictRef: auth(E, F) &{String: auth(F, G) &Int} =
+                  &dict as auth(E, F) &{String: auth(F, G) &Int}
+
+              // auth(E, F) ∩ auth(F, G) = auth(F).
+              // Cannot assign (auth(F) &Int)? to (auth(F, G) &Int)?.
+              let ref: (auth(F, G) &Int)? = dictRef["a"]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("(auth(S.test.F,S.test.G)&Int)?"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("(auth(S.test.F)&Int)?"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("dictionary, disjoint entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let dict: {String: auth(F) &Int} = {"a": &1 as auth(F) &Int}
+              let dictRef: auth(E) &{String: auth(F) &Int} =
+                  &dict as auth(E) &{String: auth(F) &Int}
+
+              // auth(E) ∩ auth(F) = empty
+              let ref: (&Int)? = dictRef["a"]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, disjoint entitlements, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let dict: {String: auth(F) &Int} = {"a": &1 as auth(F) &Int}
+              let dictRef: auth(E) &{String: auth(F) &Int} =
+                  &dict as auth(E) &{String: auth(F) &Int}
+
+              // auth(E) ∩ auth(F) = empty.
+              // Cannot assign (&Int)? to (auth(F) &Int)?.
+              let ref: (auth(F) &Int)? = dictRef["a"]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("(auth(S.test.F)&Int)?"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("(&Int)?"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Dictionaries: recursive intersection
+
+	t.Run("dictionary, nested container, unauth outer, inner references intersected", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let inner: {String: auth(E) &Int} = {"a": &1 as auth(E) &Int}
+              let outer: {String: {String: auth(E) &Int}} = {"x": inner}
+              let outerRef: &{String: {String: auth(E) &Int}} =
+                  &outer as &{String: {String: auth(E) &Int}}
+
+              // Unauthorized outer: inner auth(E) references are also intersected.
+              // Unauthorized ∩ auth(E) = unauthorized.
+              let ref: (&{String: &Int})? = outerRef["x"]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, nested container, unauth outer, inner references intersected, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let inner: {String: auth(E) &Int} = {"a": &1 as auth(E) &Int}
+              let outer: {String: {String: auth(E) &Int}} = {"x": inner}
+              let outerRef: &{String: {String: auth(E) &Int}} =
+                  &outer as &{String: {String: auth(E) &Int}}
+
+              // Inner auth(E) is stripped by unauthorized outer.
+              // Cannot assign (&{String: &Int})? to (&{String: auth(E) &Int})?.
+              let ref: (&{String: auth(E) &Int})? = outerRef["x"]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("(&{String:auth(S.test.E)&Int})?"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("(&{String:&Int})?"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("dictionary, nested container, auth outer, inner references preserved", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let inner: {String: auth(E) &Int} = {"a": &1 as auth(E) &Int}
+              let outer: {String: {String: auth(E) &Int}} = {"x": inner}
+              let outerRef: auth(E) &{String: {String: auth(E) &Int}} =
+                  &outer as auth(E) &{String: {String: auth(E) &Int}}
+
+              // auth(E) ∩ auth(E) = auth(E): inner references preserved.
+              let ref: (&{String: auth(E) &Int})? = outerRef["x"]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, nested container, partial intersection of inner references", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let inner: {String: auth(E, F) &Int} = {"a": &1 as auth(E, F) &Int}
+              let outer: {String: {String: auth(E, F) &Int}} = {"x": inner}
+              let outerRef: auth(E) &{String: {String: auth(E, F) &Int}} =
+                  &outer as auth(E) &{String: {String: auth(E, F) &Int}}
+
+              // auth(E) ∩ auth(E, F) = auth(E)
+              let ref: (&{String: auth(E) &Int})? = outerRef["x"]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, nested container, partial intersection of inner references, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let inner: {String: auth(E, F) &Int} = {"a": &1 as auth(E, F) &Int}
+              let outer: {String: {String: auth(E, F) &Int}} = {"x": inner}
+              let outerRef: auth(E) &{String: {String: auth(E, F) &Int}} =
+                  &outer as auth(E) &{String: {String: auth(E, F) &Int}}
+
+              // auth(E) ∩ auth(E, F) = auth(E).
+              // Cannot assign (&{String: auth(E) &Int})? to (&{String: auth(E, F) &Int})?.
+              let ref: (&{String: auth(E, F) &Int})? = outerRef["x"]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("(&{String:auth(S.test.E,S.test.F)&Int})?"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("(&{String:auth(S.test.E)&Int})?"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("dictionary, nested reference, cascading intersection, all empty", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let dict: {String: auth(F) &[auth(E) &Int]} = {
+                  "a": &inner as auth(F) &[auth(E) &Int]
+              }
+              let dictRef: auth(E) &{String: auth(F) &[auth(E) &Int]} =
+                  &dict as auth(E) &{String: auth(F) &[auth(E) &Int]}
+
+              // Top-level: auth(E) ∩ auth(F) = empty.
+              // Cascades: empty ∩ auth(E) = empty.
+              let ref: (&[&Int])? = dictRef["a"]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, nested reference, cascading intersection, narrowing", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          fun test() {
+              let inner: [auth(F, G) &Int] = [&1 as auth(F, G) &Int]
+              let dict: {String: auth(E, F) &[auth(F, G) &Int]} = {
+                  "a": &inner as auth(E, F) &[auth(F, G) &Int]
+              }
+              let dictRef: auth(E, F, G) &{String: auth(E, F) &[auth(F, G) &Int]} =
+                  &dict as auth(E, F, G) &{String: auth(E, F) &[auth(F, G) &Int]}
+
+              // Top-level: auth(E, F, G) ∩ auth(E, F) = auth(E, F).
+              // Cascades: auth(E, F) ∩ auth(F, G) = auth(F).
+              let ref: (auth(E, F) &[auth(F) &Int])? = dictRef["a"]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, nested reference, cascading intersection, narrowing, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          fun test() {
+              let inner: [auth(F, G) &Int] = [&1 as auth(F, G) &Int]
+              let dict: {String: auth(E, F) &[auth(F, G) &Int]} = {
+                  "a": &inner as auth(E, F) &[auth(F, G) &Int]
+              }
+              let dictRef: auth(E, F, G) &{String: auth(E, F) &[auth(F, G) &Int]} =
+                  &dict as auth(E, F, G) &{String: auth(E, F) &[auth(F, G) &Int]}
+
+              // Top-level: auth(E, F, G) ∩ auth(E, F) = auth(E, F).
+              // Cascades: auth(E, F) ∩ auth(F, G) = auth(F).
+              // Cannot assign (auth(E, F) &[auth(F) &Int])? to (auth(E, F) &[auth(F, G) &Int])?.
+              let ref: (auth(E, F) &[auth(F, G) &Int])? = dictRef["a"]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("(auth(S.test.E,S.test.F)&[auth(S.test.F,S.test.G)&Int])?"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("(auth(S.test.E,S.test.F)&[auth(S.test.F)&Int])?"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("dictionary, nested reference, cascading intersection, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let dict: {String: auth(F) &[auth(E) &Int]} = {
+                  "a": &inner as auth(F) &[auth(E) &Int]
+              }
+              let dictRef: auth(E) &{String: auth(F) &[auth(E) &Int]} =
+                  &dict as auth(E) &{String: auth(F) &[auth(E) &Int]}
+
+              // Cascading gives (&[&Int])?, not (&[auth(E) &Int])?.
+              let ref: (&[auth(E) &Int])? = dictRef["a"]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("(&[auth(S.test.E)&Int])?"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("(&[&Int])?"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Composites: basic intersection
+
+	t.Run("composite, unauth outer, auth inner", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          struct S {
+              let x: auth(E) &Int
+              init() {
+                  self.x = &1 as auth(E) &Int
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: &S = &s as &S
+
+              // Unauthorized ∩ auth(E) = unauthorized
+              let ref: &Int = sRef.x
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, unauth outer, auth inner, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          struct S {
+              let x: auth(E) &Int
+              init() {
+                  self.x = &1 as auth(E) &Int
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: &S = &s as &S
+
+              // Unauthorized ∩ auth(E) = unauthorized.
+              // Cannot assign &Int to auth(E) &Int.
+              let ref: auth(E) &Int = sRef.x
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("composite, matching entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          struct S {
+              let x: auth(E) &Int
+              init() {
+                  self.x = &1 as auth(E) &Int
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E) &S =
+                  &s as auth(E) &S
+
+              // auth(E) ∩ auth(E) = auth(E)
+              let ref: auth(E) &Int = sRef.x
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, partial intersection", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          struct S {
+              let x: auth(F, G) &Int
+              init() {
+                  self.x = &1 as auth(F, G) &Int
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E, F) &S =
+                  &s as auth(E, F) &S
+
+              // auth(E, F) ∩ auth(F, G) = auth(F)
+              let ref: auth(F) &Int = sRef.x
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, partial intersection, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          struct S {
+              let x: auth(F, G) &Int
+              init() {
+                  self.x = &1 as auth(F, G) &Int
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E, F) &S =
+                  &s as auth(E, F) &S
+
+              // auth(E, F) ∩ auth(F, G) = auth(F).
+              // Cannot assign auth(F) &Int to auth(F, G) &Int.
+              let ref: auth(F, G) &Int = sRef.x
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.F,S.test.G)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.F)&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("composite, disjoint entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          struct S {
+              let x: auth(F) &Int
+              init() {
+                  self.x = &1 as auth(F) &Int
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E) &S =
+                  &s as auth(E) &S
+
+              // auth(E) ∩ auth(F) = empty
+              let ref: &Int = sRef.x
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, disjoint entitlements, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          struct S {
+              let x: auth(F) &Int
+              init() {
+                  self.x = &1 as auth(F) &Int
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E) &S =
+                  &s as auth(E) &S
+
+              // auth(E) ∩ auth(F) = empty.
+              // Cannot assign &Int to auth(F) &Int.
+              let ref: auth(F) &Int = sRef.x
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.F)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Composites: recursive intersection
+
+	t.Run("composite, nested container, unauth outer, inner references intersected", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          struct S {
+              let items: [auth(E) &Int]
+              init() {
+                  self.items = [&1 as auth(E) &Int]
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: &S = &s as &S
+
+              // Unauthorized outer: inner auth(E) references are also intersected.
+              // Unauthorized ∩ auth(E) = unauthorized.
+              let ref: &[&Int] = sRef.items
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, nested container, unauth outer, inner references intersected, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          struct S {
+              let items: [auth(E) &Int]
+              init() {
+                  self.items = [&1 as auth(E) &Int]
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: &S = &s as &S
+
+              // Inner auth(E) is stripped by unauthorized outer.
+              // Cannot assign &[&Int] to &[auth(E) &Int].
+              let ref: &[auth(E) &Int] = sRef.items
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("&[auth(S.test.E)&Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[&Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("composite, nested container, auth outer, inner references preserved", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          struct S {
+              let items: [auth(E) &Int]
+              init() {
+                  self.items = [&1 as auth(E) &Int]
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E) &S =
+                  &s as auth(E) &S
+
+              // auth(E) ∩ auth(E) = auth(E): inner references preserved.
+              let ref: &[auth(E) &Int] = sRef.items
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, nested container, partial intersection of inner references", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          struct S {
+              let items: [auth(E, F) &Int]
+              init() {
+                  self.items = [&1 as auth(E, F) &Int]
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E) &S =
+                  &s as auth(E) &S
+
+              // auth(E) ∩ auth(E, F) = auth(E)
+              let ref: &[auth(E) &Int] = sRef.items
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, nested container, partial intersection of inner references, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          struct S {
+              let items: [auth(E, F) &Int]
+              init() {
+                  self.items = [&1 as auth(E, F) &Int]
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E) &S =
+                  &s as auth(E) &S
+
+              // auth(E) ∩ auth(E, F) = auth(E).
+              // Cannot assign &[auth(E) &Int] to &[auth(E, F) &Int].
+              let ref: &[auth(E, F) &Int] = sRef.items
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("&[auth(S.test.E,S.test.F)&Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[auth(S.test.E)&Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("composite, nested reference, cascading intersection, all empty", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          struct S {
+              let inner: auth(F) &[auth(E) &Int]
+              init() {
+                  let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+                  self.inner = &inner as auth(F) &[auth(E) &Int]
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E) &S =
+                  &s as auth(E) &S
+
+              // Top-level: auth(E) ∩ auth(F) = empty.
+              // Cascades: empty ∩ auth(E) = empty.
+              let ref: &[&Int] = sRef.inner
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, nested reference, cascading intersection, narrowing", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          struct S {
+              let inner: auth(E, F) &[auth(F, G) &Int]
+              init() {
+                  let inner: [auth(F, G) &Int] = [&1 as auth(F, G) &Int]
+                  self.inner = &inner as auth(E, F) &[auth(F, G) &Int]
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E, F, G) &S =
+                  &s as auth(E, F, G) &S
+
+              // Top-level: auth(E, F, G) ∩ auth(E, F) = auth(E, F).
+              // Cascades: auth(E, F) ∩ auth(F, G) = auth(F).
+              let ref: auth(E, F) &[auth(F) &Int] = sRef.inner
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, nested reference, cascading intersection, narrowing, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+          entitlement G
+
+          struct S {
+              let inner: auth(E, F) &[auth(F, G) &Int]
+              init() {
+                  let inner: [auth(F, G) &Int] = [&1 as auth(F, G) &Int]
+                  self.inner = &inner as auth(E, F) &[auth(F, G) &Int]
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E, F, G) &S =
+                  &s as auth(E, F, G) &S
+
+              // Top-level: auth(E, F, G) ∩ auth(E, F) = auth(E, F).
+              // Cascades: auth(E, F) ∩ auth(F, G) = auth(F).
+              // Cannot assign auth(E, F) &[auth(F) &Int] to auth(E, F) &[auth(F, G) &Int].
+              let ref: auth(E, F) &[auth(F, G) &Int] = sRef.inner
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E,S.test.F)&[auth(S.test.F,S.test.G)&Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E,S.test.F)&[auth(S.test.F)&Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("composite, nested reference, cascading intersection, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          struct S {
+              let inner: auth(F) &[auth(E) &Int]
+              init() {
+                  let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+                  self.inner = &inner as auth(F) &[auth(E) &Int]
+              }
+          }
+
+          fun test() {
+              var s = S()
+              let sRef: auth(E) &S =
+                  &s as auth(E) &S
+
+              // Cascading gives &[&Int], not &[auth(E) &Int].
+              let ref: &[auth(E) &Int] = sRef.inner
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("&[auth(S.test.E)&Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[&Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// For-loop
+
+	t.Run("for-loop, auth outer, auth inner", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let array: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let arrayRef: auth(E) &[auth(E) &Int] =
+                  &array as auth(E) &[auth(E) &Int]
+
+              for ref in arrayRef {
+                  // auth(E) ∩ auth(E) = auth(E)
+                  let r: auth(E) &Int = ref
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("for-loop, unauth outer, auth inner", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let array: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let arrayRef: &[auth(E) &Int] =
+                  &array as &[auth(E) &Int]
+
+              for ref in arrayRef {
+                  // Unauthorized ∩ auth(E) = unauthorized
+                  let r: &Int = ref
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("for-loop, unauth outer, auth inner, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          entitlement E
+
+          fun test() {
+              let array: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let arrayRef: &[auth(E) &Int] =
+                  &array as &[auth(E) &Int]
+
+              for ref in arrayRef {
+                  // Unauthorized ∩ auth(E) = unauthorized.
+                  // Cannot assign &Int to auth(E) &Int.
+                  let r: auth(E) &Int = ref
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
 	})
 }
 

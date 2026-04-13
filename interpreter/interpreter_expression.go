@@ -1580,9 +1580,10 @@ func CreateReferenceValue(
 				CheckInvalidatedResourceOrResourceReference(value, context)
 
 				// During implicit reference creation (e.g: member/index access on a reference),
-				// if the value is already a reference then return the same reference.
-				// However, we need to make sure that this reference is actually a subtype of the resultType,
-				// since the checker may not be aware that we are "short-circuiting" in this case.
+				// if the value is already a reference, we need to create a new reference
+				// with the target type's authorization (which is the intersection of
+				// the outer and inner authorizations, computed by the checker).
+				// This prevents authorization escalation via runtime type checks/casts.
 				valueType := MustSemaTypeOfValue(value, context)
 				if !sema.IsSubType(valueType, targetType) {
 					panic(&InvalidMemberReferenceError{
@@ -1591,22 +1592,14 @@ func CreateReferenceValue(
 					})
 				}
 
-				// Need to convert the value to the target type,
-				// to ensure entitlements are being granted as desired.
-				// For e.g: when getting an element from an array of type `&[&T]`,
-				// and if the actual runtime value of the element contains entitlements (i.e: `auth(Mutate) &T`),
-				// then the entitlements needs to be stripped-off, to avoid entitlement escalations.
-				return ConvertAndBoxWithValidation(
-					context,
-					value,
-					valueType,
-					targetType,
-				)
-			} else {
-				panic(&NestedReferenceError{
-					Value: value,
-				})
+				// Create a new reference of the same kind with the intersected authorization.
+				auth := ConvertSemaAccessToStaticAuthorization(context, targetType.Authorization)
+				return value.WithAuthorizationAndBorrowedType(context, auth, targetType.Type)
 			}
+
+			panic(&NestedReferenceError{
+				Value: value,
+			})
 		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional.
