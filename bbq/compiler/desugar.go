@@ -56,11 +56,10 @@ type Desugar struct {
 }
 
 type inheritedFunction struct {
-	interfaceType            *sema.InterfaceType
-	functionDecl             *ast.FunctionDeclaration
-	rewrittenConditions      sema.PostConditionsRewrite
-	elaboration              *DesugaredElaboration
-	hasDefaultImplementation bool
+	interfaceType       *sema.InterfaceType
+	functionDecl        *ast.FunctionDeclaration
+	rewrittenConditions sema.PostConditionsRewrite
+	elaboration         *DesugaredElaboration
 }
 
 type inheritedEvent struct {
@@ -427,19 +426,9 @@ func (d *Desugar) desugarPreConditions(
 
 	desugaredConditions := make([]ast.Statement, 0)
 
-	functionHasImpl := d.functionHasImplementation(funcBlock)
-
 	// Desugar inherited pre-conditions
 	inheritedFuncs := d.inheritedFuncsWithConditions[enclosingFuncName]
 	for _, inheritedFunc := range inheritedFuncs {
-		if functionHasImpl && inheritedFunc.hasDefaultImplementation {
-			// If the current function has an implementation AND the inherited function
-			// also has an implementation, then the inherited function is considered to
-			// be overwritten.
-			// Thus, the inherited condition also considered overwritten, and hence do not include it.
-			continue
-		}
-
 		inheritedPreConditions := inheritedFunc.functionDecl.FunctionBlock.PreConditions
 		if inheritedPreConditions == nil {
 			continue
@@ -477,13 +466,6 @@ func (d *Desugar) desugarPreConditions(
 	return nil
 }
 
-func (d *Desugar) functionHasImplementation(funcBlock *ast.FunctionBlock) bool {
-	// Current function has an implementations only if it:
-	// 1) Is not an inherited function (i.e: implementation must not be an inherited one), AND
-	// 2) The function has statements.
-	return !d.isInheritedFunction && funcBlock.HasStatements()
-}
-
 func (d *Desugar) desugarPostConditions(
 	enclosingFuncName string,
 	funcBlock *ast.FunctionBlock,
@@ -510,21 +492,12 @@ func (d *Desugar) desugarPostConditions(
 		}
 	}
 
-	functionHasImpl := d.functionHasImplementation(funcBlock)
-
 	// Desugar inherited post-conditions
 	inheritedFuncs, ok := d.inheritedFuncsWithConditions[enclosingFuncName]
 	if ok && len(inheritedFuncs) > 0 {
 		// Must be added in reverse order.
 		for i := len(inheritedFuncs) - 1; i >= 0; i-- {
 			inheritedFunc := inheritedFuncs[i]
-			if functionHasImpl && inheritedFunc.hasDefaultImplementation {
-				// If the current function has an implementation AND the inherited function
-				// also has an implementation, then the inherited function is considered to
-				// be overwritten.
-				// Thus, the inherited condition also considered overwritten, and hence do not include it.
-				continue
-			}
 
 			inheritedFunctionBlock := inheritedFunc.functionDecl.FunctionBlock
 
@@ -1161,11 +1134,10 @@ func (d *Desugar) inheritedFunctionsWithConditionsAndEvents(compositeType sema.C
 		}
 
 		funcs = append(funcs, &inheritedFunction{
-			interfaceType:            interfaceType,
-			functionDecl:             functionDecl,
-			rewrittenConditions:      rewrittenConditions,
-			elaboration:              elaboration,
-			hasDefaultImplementation: functionBlock.HasStatements(),
+			interfaceType:       interfaceType,
+			functionDecl:        functionDecl,
+			rewrittenConditions: rewrittenConditions,
+			elaboration:         elaboration,
 		})
 		inheritedFunctions[name] = funcs
 	}
