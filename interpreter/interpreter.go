@@ -4459,6 +4459,7 @@ func defineBaseFunctions(activation *VariableActivation) {
 	defineConverterFunctions(activation)
 	defineRuntimeTypeConstructorFunctions(activation)
 	defineStringFunction(activation)
+	defineStringBuilderFunction(activation)
 }
 
 type converterFunction struct {
@@ -4899,6 +4900,10 @@ func defineBaseValue(activation *VariableActivation, name string, value Value) {
 
 func defineStringFunction(activation *VariableActivation) {
 	defineBaseValue(activation, sema.StringType.String(), stringFunction)
+}
+
+func defineStringBuilderFunction(activation *VariableActivation) {
+	defineBaseValue(activation, sema.StringBuilderType.String(), stringBuilderFunction)
 }
 
 func IsSubType(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {

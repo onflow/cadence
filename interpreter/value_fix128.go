@@ -633,6 +633,8 @@ func handleFixedpointError(err error) {
 		panic(&OverflowError{})
 	case fix.NegativeOverflowError:
 		panic(&UnderflowError{})
+	case fix.DivisionByZeroError:
+		panic(&DivisionByZeroError{})
 	default:
 		panic(err)
 	}

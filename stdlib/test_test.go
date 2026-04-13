@@ -1131,7 +1131,8 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 
                 let transactionResult = Test.TransactionResult(
                     status: Test.ResultStatus.succeeded,
-                    error: nil
+                    error: nil,
+                    computationUsed: 0
                 )
 
                 return successful.test(transactionResult)
@@ -1143,7 +1144,8 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 
                 let transactionResult = Test.TransactionResult(
                     status: Test.ResultStatus.failed,
-                    error: Test.Error("Exceeded Limit")
+                    error: Test.Error("Exceeded Limit"),
+                    computationUsed: 0
                 )
 
                 return successful.test(transactionResult)
@@ -1245,7 +1247,8 @@ func TestTestBeFailedMatcher(t *testing.T) {
 
                 let transactionResult = Test.TransactionResult(
                     status: Test.ResultStatus.failed,
-                    error: Test.Error("Exceeding limit")
+                    error: Test.Error("Exceeding limit"),
+                    computationUsed: 0
                 )
 
                 return failed.test(transactionResult)
@@ -1257,7 +1260,8 @@ func TestTestBeFailedMatcher(t *testing.T) {
 
                 let transactionResult = Test.TransactionResult(
                     status: Test.ResultStatus.succeeded,
-                    error: nil
+                    error: nil,
+                    computationUsed: 0
                 )
 
                 return failed.test(transactionResult)
@@ -1367,7 +1371,8 @@ func TestTestAssertErrorMatcher(t *testing.T) {
             fun testMatch() {
                 let result = Test.TransactionResult(
                     status: Test.ResultStatus.failed,
-                    error: Test.Error("computation exceeding limit")
+                    error: Test.Error("computation exceeding limit"),
+                    computationUsed: 0
                 )
 
                 Test.assertError(result, errorMessage: "exceeding limit")
@@ -1377,7 +1382,8 @@ func TestTestAssertErrorMatcher(t *testing.T) {
             fun testNoMatch() {
                 let result = Test.TransactionResult(
                     status: Test.ResultStatus.failed,
-                    error: Test.Error("computation exceeding memory")
+                    error: Test.Error("computation exceeding memory"),
+                    computationUsed: 0
                 )
 
                 Test.assertError(result, errorMessage: "exceeding limit")
@@ -1387,7 +1393,8 @@ func TestTestAssertErrorMatcher(t *testing.T) {
             fun testNoError() {
                 let result = Test.TransactionResult(
                     status: Test.ResultStatus.succeeded,
-                    error: nil
+                    error: nil,
+                    computationUsed: 0
                 )
 
                 Test.assertError(result, errorMessage: "exceeding limit")
