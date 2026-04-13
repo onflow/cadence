@@ -2068,93 +2068,154 @@ func ConvertAndBox(
 	return BoxOptional(context, value, targetType)
 }
 
-// Produces the `valueStaticType` argument into a new static type that conforms
-// to the specification of the `targetSemaType`. At the moment, this means that the
-// authorization of any reference types in `valueStaticType` are changed to match the
-// authorization of any equivalently-positioned reference types in `targetSemaType`.
-func convertStaticType(
+// applyTargetTypeAuthorization returns a static type that preserves the
+// actual type structure but uses the target type's authorization for references.
+// This prevents entitlement escalation while allowing type narrowing.
+func applyTargetTypeAuthorization(
 	gauge common.MemoryGauge,
-	valueStaticType StaticType,
-	targetSemaType sema.Type,
+	actualStaticType StaticType,
+	targetType sema.Type,
 ) StaticType {
-	switch valueStaticType := valueStaticType.(type) {
-	case *ReferenceStaticType:
-		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
-			return NewReferenceStaticType(
-				gauge,
-				ConvertSemaAccessToStaticAuthorization(gauge, targetReferenceType.Authorization),
-				valueStaticType.ReferencedType,
-			)
-		}
-
-	case *OptionalStaticType:
-		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
-			return NewOptionalStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.Type,
-					targetOptionalType.Type,
-				),
-			)
-		}
-
-	case *DictionaryStaticType:
-		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
-			return NewDictionaryStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.KeyType,
-					targetDictionaryType.KeyType,
-				),
-				convertStaticType(
-					gauge,
-					valueStaticType.ValueType,
-					targetDictionaryType.ValueType,
-				),
-			)
-		}
-
+	switch actual := actualStaticType.(type) {
 	case *VariableSizedStaticType:
-		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
-			return NewVariableSizedStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.Type,
-					targetArrayType.Type,
-				),
-			)
+		var targetElementType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetElementType = sema.AnyStructType
+		} else if borrowArray, ok := targetType.(*sema.VariableSizedType); ok {
+			targetElementType = borrowArray.Type
+		} else {
+			break
 		}
+
+		elementType := applyTargetTypeAuthorization(gauge, actual.Type, targetElementType)
+		return NewVariableSizedStaticType(gauge, elementType)
 
 	case *ConstantSizedStaticType:
-		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
-			return NewConstantSizedStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.Type,
-					targetArrayType.Type,
-				),
-				valueStaticType.Size,
-			)
+		var targetElementType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetElementType = sema.AnyStructType
+		} else if borrowArray, ok := targetType.(*sema.ConstantSizedType); ok {
+			targetElementType = borrowArray.Type
+		} else {
+			break
 		}
+
+		elementType := applyTargetTypeAuthorization(gauge, actual.Type, targetElementType)
+		return NewConstantSizedStaticType(gauge, elementType, actual.Size)
+
+	case *DictionaryStaticType:
+		var targetKeyType, targetValueType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetKeyType = sema.AnyStructType
+			targetValueType = sema.AnyStructType
+		} else if borrowDict, ok := targetType.(*sema.DictionaryType); ok {
+			targetKeyType = borrowDict.KeyType
+			targetValueType = borrowDict.ValueType
+		} else {
+			break
+		}
+
+		keyType := applyTargetTypeAuthorization(gauge, actual.KeyType, targetKeyType)
+		valueType := applyTargetTypeAuthorization(gauge, actual.ValueType, targetValueType)
+		return NewDictionaryStaticType(gauge, keyType, valueType)
+
+	case *OptionalStaticType:
+		var targetInnerType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetInnerType = sema.AnyStructType
+		} else if borrowOptional, ok := targetType.(*sema.OptionalType); ok {
+			targetInnerType = borrowOptional.Type
+		} else {
+			break
+		}
+
+		innerType := applyTargetTypeAuthorization(gauge, actual.Type, targetInnerType)
+		return NewOptionalStaticType(gauge, innerType)
+
+	case *ReferenceStaticType:
+		// Use the actual referenced type as the inner type, but with the borrow type's authorization,
+		// instead of the actual referenced type's authorization.
+
+		var targetReferencedType sema.Type
+		var targetAuth Authorization
+
+		if targetType == sema.AnyStructType {
+			// `AnyStruct` must be treated as unauthorized.
+			targetAuth = UnauthorizedAccess
+			targetReferencedType = sema.AnyStructType
+		} else if borrowRef, ok := targetType.(*sema.ReferenceType); ok {
+			targetReferencedType = borrowRef.Type
+			targetAuth = ConvertSemaAccessToStaticAuthorization(gauge, borrowRef.Authorization)
+		} else {
+			break
+		}
+
+		innerType := applyTargetTypeAuthorization(gauge, actual.ReferencedType, targetReferencedType)
+		return NewReferenceStaticType(gauge, targetAuth, innerType)
 
 	case *CapabilityStaticType:
-		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
-			return NewCapabilityStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.BorrowType,
-					targetCapabilityType.BorrowType,
-				),
-			)
+		var targetBorrowType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetBorrowType = sema.AnyStructType
+		} else if targetCapabilityType, isCapabilityType := targetType.(*sema.CapabilityType); isCapabilityType {
+			targetBorrowType = targetCapabilityType.BorrowType
+		} else {
+			break
 		}
+
+		borrowType := applyTargetTypeAuthorization(
+			gauge,
+			actual.BorrowType,
+			targetBorrowType,
+		)
+
+		return NewCapabilityStaticType(
+			gauge,
+			borrowType,
+		)
 	}
 
-	return valueStaticType
+	// For all other cases, return the actual type unchanged
+	return actualStaticType
+}
+
+// semaTypeWithStrippedEntitlements returns a copy of the given sema type with all
+// reference authorizations set to UnauthorizedAccess. Used when assigning to AnyStruct
+// so that the result preserves the type structure (e.g. [&Int] not [AnyStruct]).
+func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) sema.Type {
+	switch t := typ.(type) {
+	case *sema.ReferenceType:
+		newReferencedType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewReferenceType(
+			gauge,
+			sema.UnauthorizedAccess,
+			newReferencedType,
+		)
+	case *sema.VariableSizedType:
+		newElementType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewVariableSizedType(gauge, newElementType)
+	case *sema.ConstantSizedType:
+		newElementType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewConstantSizedType(gauge, newElementType, t.Size)
+	case *sema.DictionaryType:
+		newKeyType := semaTypeWithStrippedEntitlements(gauge, t.KeyType)
+		newValueType := semaTypeWithStrippedEntitlements(gauge, t.ValueType)
+		return sema.NewDictionaryType(
+			gauge,
+			newKeyType,
+			newValueType,
+		)
+	case *sema.OptionalType:
+		newInnerType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewOptionalType(gauge, newInnerType)
+	default:
+		return typ
+	}
 }
 
 func convert(
@@ -2304,6 +2365,170 @@ func convert(
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUFix64(context, value)
 		}
+
+	case sema.AnyStructType:
+
+		switch value := value.(type) {
+		case *EphemeralReferenceValue:
+			targetBorrowType := semaTypeWithStrippedEntitlements(context, value.BorrowedType)
+
+			// Assigning/casting to `AnyStruct` should strip-off all entitlements.
+			targetAuthorization := UnauthorizedAccess
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if targetBorrowType.Equal(value.BorrowedType) &&
+				targetAuthorization == value.Authorization {
+				return value
+			}
+
+			return NewEphemeralReferenceValue(
+				context,
+				targetAuthorization,
+				value.Value,
+				targetBorrowType,
+			)
+
+		case *StorageReferenceValue:
+			targetBorrowType := semaTypeWithStrippedEntitlements(context, value.BorrowedType)
+
+			// Assigning/casting to `AnyStruct` should strip-off all entitlements.
+			targetAuthorization := UnauthorizedAccess
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if targetBorrowType.Equal(value.BorrowedType) &&
+				targetAuthorization == value.Authorization {
+				return value
+			}
+
+			return NewStorageReferenceValue(
+				context,
+				targetAuthorization,
+				value.TargetStorageAddress,
+				value.TargetPath,
+				targetBorrowType,
+			)
+
+		case *ArrayValue:
+			// When assigning container values to AnyStruct, strip entitlements from nested references
+			// but preserve the type structure (e.g. [auth(E2)&Int] -> [&Int], not [AnyStruct]).
+
+			oldArraySemaType := MustSemaTypeOfValue(value, context)
+
+			// Skip conversion if the type does not contain references (nothing to strip).
+			// If the declared element type is non-reference (e.g. `[AnyStruct]`) but a runtime
+			// element is a reference, that reference must have been stored after an earlier
+			// assignment to `AnyStruct`, so entitlements were already stripped then.
+			if !oldArraySemaType.IsOrContainsReferenceType() {
+				return value
+			}
+
+			newArraySemaType := semaTypeWithStrippedEntitlements(context, oldArraySemaType).(sema.ArrayType)
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if newArraySemaType.Equal(oldArraySemaType) {
+				return value
+			}
+
+			newArrayStaticType := ConvertSemaToStaticType(context, newArraySemaType).(ArrayStaticType)
+			targetElementType := newArraySemaType.ElementType(false)
+
+			array := value.array
+			iterator, err := array.ReadOnlyIterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+			return NewArrayValueWithIterator(
+				context,
+				newArrayStaticType,
+				value.GetOwner(),
+				array.Count(),
+				func() Value {
+					element, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+
+					if element == nil {
+						return nil
+					}
+
+					elemValue := MustConvertStoredValue(context, element)
+					actualElementType := MustSemaTypeOfValue(elemValue, context)
+
+					return ConvertAndBox(
+						context,
+						elemValue,
+						actualElementType,
+						targetElementType,
+					)
+				},
+			)
+
+		case *DictionaryValue:
+			// When assigning container values to AnyStruct, strip entitlements from nested references
+			// but preserve the type structure (e.g. {String: auth(E2)&Int} -> {String: &Int}, not {String: AnyStruct}).
+
+			oldDictionarySemaType := MustSemaTypeOfValue(value, context)
+
+			// Skip conversion if the type does not contain references (nothing to strip).
+			// If the declared key/value types are non-reference (e.g: `{Strng: AnyStruct}`)
+			// but a runtime vaalue is a reference, that reference must have been stored after
+			// an earlier assignment to `AnyStruct`, so entitlements were already stripped then.
+			if !oldDictionarySemaType.IsOrContainsReferenceType() {
+				return value
+			}
+
+			newDictionarySemaType := semaTypeWithStrippedEntitlements(context, oldDictionarySemaType).(*sema.DictionaryType)
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if newDictionarySemaType.Equal(oldDictionarySemaType) {
+				return value
+			}
+
+			newDictionaryStaticType := ConvertSemaToStaticType(context, newDictionarySemaType).(*DictionaryStaticType)
+
+			targetKeyType := newDictionarySemaType.KeyType
+			targetValueType := newDictionarySemaType.ValueType
+
+			dictionary := value.dictionary
+			iterator, err := dictionary.ReadOnlyIterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			return newDictionaryValueWithIterator(
+				context,
+				newDictionaryStaticType,
+				dictionary.Count(),
+				dictionary.Seed(),
+				common.Address(dictionary.Address()),
+				func() (Value, Value) {
+					k, v, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+					if k == nil || v == nil {
+						return nil, nil
+					}
+
+					key := MustConvertStoredValue(context, k)
+					val := MustConvertStoredValue(context, v)
+
+					keyType := MustSemaTypeOfValue(key, context)
+					valueType := MustSemaTypeOfValue(val, context)
+
+					convertedKey := ConvertAndBox(context, key, keyType, targetKeyType)
+					convertedValue := ConvertAndBox(context, val, valueType, targetValueType)
+					return convertedKey, convertedValue
+				},
+			)
+
+		// No Need to handle `SomeValue` here, since this `convert` function
+		// peels the optionals/some-values at the top.
+
+		default:
+			return value
+		}
 	}
 
 	switch unwrappedTargetType := unwrappedTargetType.(type) {
@@ -2316,7 +2541,7 @@ func convert(
 		if arrayValue, isArray := value.(*ArrayValue); isArray && !valueType.Equal(unwrappedTargetType) {
 
 			oldArrayStaticType := arrayValue.StaticType(context)
-			arrayStaticType := convertStaticType(context, oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
+			arrayStaticType := applyTargetTypeAuthorization(context, oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
 
 			if oldArrayStaticType.Equal(arrayStaticType) {
 				return value
@@ -2356,7 +2581,7 @@ func convert(
 		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
 
 			oldDictStaticType := dictValue.StaticType(context)
-			dictStaticType := convertStaticType(context, oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
+			dictStaticType := applyTargetTypeAuthorization(context, oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
 
 			if oldDictStaticType.Equal(dictStaticType) {
 				return value
@@ -2409,7 +2634,7 @@ func convert(
 			switch capability := value.(type) {
 			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
-				borrowType := convertStaticType(context, valueBorrowType, targetBorrowType)
+				borrowType := applyTargetTypeAuthorization(context, valueBorrowType, targetBorrowType)
 				if capability.isInvalid() {
 					return NewInvalidCapabilityValue(context, capability.address, borrowType)
 				}

@@ -129,7 +129,7 @@ func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) Sta
 
 	v.staticTypeOnce.Do(func() {
 		actualStaticType := v.Value.StaticType(context)
-		innerStaticType := applyBorrowTypeAuthorization(
+		innerStaticType := applyTargetTypeAuthorization(
 			context,
 			actualStaticType,
 			v.BorrowedType,
@@ -143,54 +143,6 @@ func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) Sta
 	})
 
 	return v.staticType
-}
-
-// applyBorrowTypeAuthorization returns a static type that preserves the
-// actual type structure but uses the borrow type's authorization for references.
-// This prevents entitlement escalation while allowing type narrowing.
-func applyBorrowTypeAuthorization(
-	gauge common.MemoryGauge,
-	actualStaticType StaticType,
-	borrowSemaType sema.Type,
-) StaticType {
-	switch actual := actualStaticType.(type) {
-	case *VariableSizedStaticType:
-		if borrowArray, ok := borrowSemaType.(*sema.VariableSizedType); ok {
-			elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowArray.Type)
-			return NewVariableSizedStaticType(gauge, elementType)
-		}
-
-	case *ConstantSizedStaticType:
-		if borrowArray, ok := borrowSemaType.(*sema.ConstantSizedType); ok {
-			elementType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowArray.Type)
-			return NewConstantSizedStaticType(gauge, elementType, actual.Size)
-		}
-
-	case *DictionaryStaticType:
-		if borrowDict, ok := borrowSemaType.(*sema.DictionaryType); ok {
-			keyType := applyBorrowTypeAuthorization(gauge, actual.KeyType, borrowDict.KeyType)
-			valueType := applyBorrowTypeAuthorization(gauge, actual.ValueType, borrowDict.ValueType)
-			return NewDictionaryStaticType(gauge, keyType, valueType)
-		}
-
-	case *OptionalStaticType:
-		if borrowOptional, ok := borrowSemaType.(*sema.OptionalType); ok {
-			innerType := applyBorrowTypeAuthorization(gauge, actual.Type, borrowOptional.Type)
-			return NewOptionalStaticType(gauge, innerType)
-		}
-
-	case *ReferenceStaticType:
-		if borrowRef, ok := borrowSemaType.(*sema.ReferenceType); ok {
-			// Use the actual referenced type as the inner type, but with the borrow type's authorization,
-			// instead of the actual referenced type's authorization.
-			borrowAuth := ConvertSemaAccessToStaticAuthorization(gauge, borrowRef.Authorization)
-			innerType := applyBorrowTypeAuthorization(gauge, actual.ReferencedType, borrowRef.Type)
-			return NewReferenceStaticType(gauge, borrowAuth, innerType)
-		}
-	}
-
-	// For all other cases, return the actual type unchanged
-	return actualStaticType
 }
 
 func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
