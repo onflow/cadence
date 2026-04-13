@@ -665,6 +665,6 @@ func (NoOpStringContext) SemaAccessFromStaticAuthorization(Authorization) (sema.
 	panic(errors.NewUnreachableError())
 }
 
-func (c NoOpStringContext) NewFunctionWithType(_ FunctionValue, _ FunctionStaticType) FunctionValue {
+func (NoOpStringContext) NewFunctionWithType(_ FunctionValue, _ FunctionStaticType) FunctionValue {
 	panic(errors.NewUnreachableError())
 }
