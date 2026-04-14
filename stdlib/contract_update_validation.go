@@ -16,6 +16,38 @@
  * limitations under the License.
  */
 
+// Package-level note on the ContractUpdateValidator's security model and scope:
+//
+// The ContractUpdateValidator enforces upgrade safety on contract update transactions
+// (account.contracts.update()). Its purpose is narrow and deliberate: ensure that
+// already-stored on-chain data remains deserializable after an update. It is a storage
+// compatibility check, not a general-purpose interface freeze.
+//
+// What the validator enforces (storage compatibility):
+//   - Field types cannot change — serialized data is type-bound; a mismatch corrupts storage.
+//   - Nested composite/interface declarations cannot be removed — orphaned stored data would
+//     have no matching type at deserialization time.
+//   - Interface conformances cannot be removed — removing a conformance would invalidate
+//     type assumptions baked into stored collections (e.g., [{I}] containing {T: I} values).
+//   - Enum cases cannot be removed or reordered — enum values are stored as ordinals; any
+//     reordering silently changes their meaning.
+//
+// What the validator intentionally does NOT enforce (deployer discretion):
+//   - Access modifiers on fields (e.g., access(self) → access(all)): access control is not
+//     a storage property. The runtime enforces the access rules present in the current
+//     chain-state code at execution time. If a deployer chooses to widen access, that is
+//     a deliberate decision they make as the contract owner. Users who rely on a contract's
+//     access guarantees must trust the deployer, as they would on any upgradeable platform.
+//   - Field mutability (let → var): the let/var distinction is a Cadence semantic constraint
+//     enforced at compile time against the current code; it is not encoded in the storage
+//     layout and does not affect deserialization.
+//   - Function signatures, event definitions, code logic: none of these affect storage layout.
+//
+// Threat model: protect the protocol from data corruption caused by type-incompatible
+// updates. The validator is not a substitute for user-level trust in contract deployers.
+//
+// See also: https://cadence-lang.org/docs/language/contract-updatability
+
 package stdlib
 
 import (
@@ -385,6 +417,9 @@ func checkFields(
 	}
 }
 
+// checkField verifies that a field's declared type is unchanged between contract versions.
+// Only the type is checked — access modifiers and mutability (let/var) are out of scope;
+// see the package-level comment for the validator's threat model.
 func (validator *ContractUpdateValidator) checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration) {
 	err := oldField.TypeAnnotation.Type.CheckEqual(newField.TypeAnnotation.Type, validator)
 	if err != nil {
