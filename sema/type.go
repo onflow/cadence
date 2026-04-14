@@ -4179,8 +4179,9 @@ func (t *FunctionType) IsInvalidType() bool {
 	return t.ReturnTypeAnnotation.Type.IsInvalidType()
 }
 
-func (*FunctionType) IsOrContainsReferenceType() bool {
-	return false
+func (t *FunctionType) IsOrContainsReferenceType() bool {
+	returnType := t.ReturnTypeAnnotation.Type
+	return returnType.IsOrContainsReferenceType()
 }
 
 func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {

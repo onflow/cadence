@@ -5863,6 +5863,71 @@ func TestInterpretNestedEphemeralReferenceAsAnyStructCasting(t *testing.T) {
 			forceCastTypeMismatchError.ActualType.ID(),
 		)
 	})
+
+	t.Run("function returning reference to AnyStruct, nested in an array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            fun authRefReturningFunc():auth(E) &Int {
+                return &1
+            }
+
+            fun testCasting() {
+                let anyStruct: AnyStruct = [authRefReturningFunc]
+                let downCastedAuthRefReturningFunc = anyStruct as! [fun():auth(E) &Int]
+            }
+
+            fun testInvoking() {
+                let anyStruct: AnyStruct = [authRefReturningFunc]
+                let refReturningFuncs = anyStruct as! [fun():&Int]
+                refReturningFuncs[0]()
+            }
+
+            fun testCastingInvocationResult() {
+                let anyStruct: AnyStruct = [authRefReturningFunc]
+                let refReturningFuncs = anyStruct as! [fun():&Int]
+                refReturningFuncs[0]() as! auth(E) &Int
+            }
+        `)
+
+		// Cast the function type to a more specific one, to gain entitlements.
+		// This should fail.
+		_, err := inter.Invoke("testCasting")
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+		assert.Equal(
+			t,
+			common.TypeID("[fun():auth(S.test.E)&Int]"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("[fun():&Int]"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+
+		// Invoke the super-type function as-is.
+		_, err = inter.Invoke("testInvoking")
+		require.NoError(t, err)
+
+		// Invoke the super-type function as-is, and try to gain entitlements on the returned result.
+		// This should fail.
+		_, err = inter.Invoke("testCastingInvocationResult")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+		assert.Equal(
+			t,
+			common.TypeID("auth(S.test.E)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
 }
 
 func TestInterpretNestedStorageReferenceAsAnyStructCasting(t *testing.T) {
