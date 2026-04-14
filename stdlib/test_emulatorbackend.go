@@ -48,6 +48,8 @@ type testEmulatorBackendType struct {
 	eventsFunctionType                 *sema.FunctionType
 	resetFunctionType                  *sema.FunctionType
 	moveTimeFunctionType               *sema.FunctionType
+	freezeTimeFunctionType             *sema.FunctionType
+	unfreezeTimeFunctionType           *sema.FunctionType
 	createSnapshotFunctionType         *sema.FunctionType
 	loadSnapshotFunctionType           *sema.FunctionType
 	getAccountFunctionType             *sema.FunctionType
@@ -109,6 +111,16 @@ func newTestEmulatorBackendType(
 	moveTimeFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeMoveTimeFunctionName,
+	)
+
+	freezeTimeFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeFreezeTimeFunctionName,
+	)
+
+	unfreezeTimeFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeUnfreezeTimeFunctionName,
 	)
 
 	createSnapshotFunctionType := interfaceFunctionType(
@@ -204,6 +216,18 @@ func newTestEmulatorBackendType(
 		),
 		sema.NewUnmeteredPublicFunctionMember(
 			compositeType,
+			testEmulatorBackendTypeFreezeTimeFunctionName,
+			freezeTimeFunctionType,
+			testEmulatorBackendTypeFreezeTimeFunctionDocString,
+		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeUnfreezeTimeFunctionName,
+			unfreezeTimeFunctionType,
+			testEmulatorBackendTypeUnfreezeTimeFunctionDocString,
+		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
 			testEmulatorBackendTypeCreateSnapshotFunctionName,
 			createSnapshotFunctionType,
 			testEmulatorBackendTypeCreateSnapshotFunctionDocString,
@@ -238,6 +262,8 @@ func newTestEmulatorBackendType(
 		eventsFunctionType:                 eventsFunctionType,
 		resetFunctionType:                  resetFunctionType,
 		moveTimeFunctionType:               moveTimeFunctionType,
+		freezeTimeFunctionType:             freezeTimeFunctionType,
+		unfreezeTimeFunctionType:           unfreezeTimeFunctionType,
 		createSnapshotFunctionType:         createSnapshotFunctionType,
 		loadSnapshotFunctionType:           loadSnapshotFunctionType,
 		getAccountFunctionType:             getAccountFunctionType,
@@ -760,6 +786,58 @@ func (t *testEmulatorBackendType) newMoveTimeFunction(
 	)
 }
 
+// 'Emulator.freezeTime' function
+
+const testEmulatorBackendTypeFreezeTimeFunctionName = "freezeTime"
+
+const testEmulatorBackendTypeFreezeTimeFunctionDocString = `
+Freezes the clock of the blockchain so that time stops advancing automatically.
+While frozen, moveTime still works and offsets the frozen timestamp, but the
+clock no longer tracks real elapsed time.
+`
+
+func (t *testEmulatorBackendType) newFreezeTimeFunction(
+	inter *interpreter.Interpreter,
+	emulatorBackend interpreter.MemberAccessibleValue,
+	blockchain Blockchain,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewUnmeteredBoundHostFunctionValue(
+		inter,
+		emulatorBackend,
+		t.freezeTimeFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			blockchain.FreezeTime()
+			return interpreter.Void
+		},
+	)
+}
+
+// 'Emulator.unfreezeTime' function
+
+const testEmulatorBackendTypeUnfreezeTimeFunctionName = "unfreezeTime"
+
+const testEmulatorBackendTypeUnfreezeTimeFunctionDocString = `
+Unfreezes the clock of the blockchain, allowing time to advance automatically
+again. The clock does not snap back to real time; it continues counting from
+wherever the frozen timestamp was left.
+`
+
+func (t *testEmulatorBackendType) newUnfreezeTimeFunction(
+	inter *interpreter.Interpreter,
+	emulatorBackend interpreter.MemberAccessibleValue,
+	blockchain Blockchain,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewUnmeteredBoundHostFunctionValue(
+		inter,
+		emulatorBackend,
+		t.unfreezeTimeFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			blockchain.UnfreezeTime()
+			return interpreter.Void
+		},
+	)
+}
+
 // 'Emulator.createSnapshot' function
 
 const testEmulatorBackendTypeCreateSnapshotFunctionName = "createSnapshot"
@@ -851,6 +929,8 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		testEmulatorBackendTypeEventsFunctionName:                 t.newEventsFunction(inter, emulatorBackend, blockchain),
 		testEmulatorBackendTypeResetFunctionName:                  t.newResetFunction(inter, emulatorBackend, blockchain),
 		testEmulatorBackendTypeMoveTimeFunctionName:               t.newMoveTimeFunction(inter, emulatorBackend, blockchain),
+		testEmulatorBackendTypeFreezeTimeFunctionName:             t.newFreezeTimeFunction(inter, emulatorBackend, blockchain),
+		testEmulatorBackendTypeUnfreezeTimeFunctionName:           t.newUnfreezeTimeFunction(inter, emulatorBackend, blockchain),
 		testEmulatorBackendTypeCreateSnapshotFunctionName:         t.newCreateSnapshotFunction(inter, emulatorBackend, blockchain),
 		testEmulatorBackendTypeLoadSnapshotFunctionName:           t.newLoadSnapshotFunction(inter, emulatorBackend, blockchain),
 		testEmulatorBackendTypeGetAccountFunctionName:             t.newGetAccountFunction(inter, emulatorBackend, blockchain),

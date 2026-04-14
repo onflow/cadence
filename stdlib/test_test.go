@@ -2940,6 +2940,8 @@ type mockedBlockchain struct {
 	events             func(context TestFrameworkEventsContext, eventType interpreter.StaticType) interpreter.Value
 	reset              func(uint64)
 	moveTime           func(int64)
+	freezeTime         func()
+	unfreezeTime       func()
 	createSnapshot     func(string) error
 	loadSnapshot       func(string) error
 }
@@ -3058,6 +3060,22 @@ func (m mockedBlockchain) MoveTime(timeDelta int64) {
 	}
 
 	m.moveTime(timeDelta)
+}
+
+func (m mockedBlockchain) FreezeTime() {
+	if m.freezeTime == nil {
+		panic("'FreezeTime' is not implemented")
+	}
+
+	m.freezeTime()
+}
+
+func (m mockedBlockchain) UnfreezeTime() {
+	if m.unfreezeTime == nil {
+		panic("'UnfreezeTime' is not implemented")
+	}
+
+	m.unfreezeTime()
 }
 
 func (m mockedBlockchain) CreateSnapshot(name string) error {
