@@ -141,22 +141,20 @@ func init() {
 						context,
 						arrayRefType,
 						elementType,
-						func(err error) {
-							// TODO:
-							panic(err)
-						},
 					)
 				},
 				func(
 					context interpreter.NativeFunctionContext,
 					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
 					receiver Value,
 					args []Value,
 				) Value {
 					array := interpreter.AssertValueOfType[*interpreter.ArrayValue](receiver)
 					funcValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
+					accessedType := interpreter.MustSemaTypeOfValue(receiver, context)
 
-					return array.Filter(context, funcValue, true)
+					return array.Filter(context, funcValue, accessedType)
 				},
 			),
 		)
@@ -186,13 +184,16 @@ func init() {
 				func(
 					context interpreter.NativeFunctionContext,
 					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
 					receiver Value,
 					args []Value,
 				) Value {
 					array := interpreter.AssertValueOfType[*interpreter.ArrayValue](receiver)
 					funcValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
 
-					return array.Map(context, funcValue, true)
+					accessedType := interpreter.MustSemaTypeOfValue(receiver, context)
+
+					return array.Map(context, funcValue, accessedType)
 				},
 			),
 		)
