@@ -28,7 +28,9 @@ var BuiltinTypes = common.Concat[sema.Type](
 	sema.AllBuiltinTypes,
 	[]sema.Type{
 		&sema.ConstantSizedType{},
+		&sema.ReferenceType{Type: &sema.ConstantSizedType{}},
 		&sema.VariableSizedType{},
+		&sema.ReferenceType{Type: &sema.VariableSizedType{}},
 		&sema.DictionaryType{},
 		&sema.FunctionType{},
 		&sema.OptionalType{},
@@ -82,7 +84,16 @@ func TypeQualifier(typ sema.Type) string {
 	case *sema.OptionalType:
 		return TypeQualifierOptional
 	case *sema.ReferenceType:
+		// Special case: Some methods are defined on the array type,
+		// but are also defined for references to arrays.
+		switch typ.Type.(type) {
+		case *sema.ConstantSizedType:
+			return TypeQualifierArrayConstantSizedRef
+		case *sema.VariableSizedType:
+			return TypeQualifierArrayVariableSizedRef
+		}
 		return TypeQualifier(typ.Type)
+
 	case *sema.IntersectionType:
 		// TODO: Revisit. Probably this is not needed here?
 		return TypeQualifier(typ.Types[0])
