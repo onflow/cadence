@@ -25,18 +25,23 @@ import (
 
 type BeforeExtractor struct {
 	ExpressionExtractor *ast.ExpressionExtractor
-	report              func(error)
 	memoryGauge         common.MemoryGauge
+	report              func(error)
 }
 
-func NewBeforeExtractor(memoryGauge common.MemoryGauge, report func(error)) *BeforeExtractor {
+func NewBeforeExtractor(
+	memoryGauge common.MemoryGauge,
+	identifierPrefix string,
+	report func(error),
+) *BeforeExtractor {
 	beforeExtractor := &BeforeExtractor{
-		report:      report,
 		memoryGauge: memoryGauge,
+		report:      report,
 	}
 	expressionExtractor := &ast.ExpressionExtractor{
 		InvocationExtractor: beforeExtractor,
 		FunctionExtractor:   beforeExtractor,
+		IdentifierPrefix:    identifierPrefix,
 		MemoryGauge:         memoryGauge,
 	}
 	beforeExtractor.ExpressionExtractor = expressionExtractor

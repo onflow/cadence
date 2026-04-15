@@ -371,7 +371,7 @@ func (v UInt16Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeUInt16 (1 byte)
 // - uint16 value encoded in big-endian (2 bytes)
-func (v UInt16Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v UInt16Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUInt16)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
 	return scratch[:3]
@@ -481,8 +481,14 @@ func (v UInt16Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	)
 }
 
-func (v UInt16Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v UInt16Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v UInt16Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -516,7 +522,7 @@ func (UInt16Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v UInt16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -539,6 +545,7 @@ func (v UInt16Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -560,4 +567,13 @@ func (v UInt16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (UInt16Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (UInt16Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UInt16Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

@@ -52,7 +52,7 @@ build-commands: ./cmd/parse/parse ./cmd/parse/parse.wasm ./cmd/check/check ./cmd
 build-tools: build-analysis build-get-contracts build-compatibility-check
 
 .PHONY: test-tools
-test-tools: test-analysis test-compatibility-check
+test-tools: test-analysis test-compatibility-check test-subtype-gen
 
 ## Analysis tool
 
@@ -80,6 +80,12 @@ build-compatibility-check:
 test-compatibility-check:
 	(cd ./tools/compatibility-check && go test .)
 
+## Subtyping generator tool
+
+.PHONY: test-subtype-gen
+test-subtype-gen:
+	(cd ./tools/subtype-gen && go test .)
+
 # Testing
 
 TEST_PKGS := $(shell go list ./... | grep -Ev '/cmd|/analysis|/tools')
@@ -87,7 +93,7 @@ COVER_PKGS := $(shell echo $(TEST_PKGS) | tr ' ' ',')
 
 .PHONY: test
 test: test-with-compiler test-with-tracing
-	go test $(TEST_PKGS)
+	go test -tags compare_subtyping $(TEST_PKGS)
 
 .PHONY: test-with-tracing
 test-with-tracing:
@@ -101,7 +107,7 @@ ci-with-tracing: test-with-tracing test-with-compiler-and-tracing
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	go test -coverprofile=coverage.txt -covermode=atomic -race -coverpkg $(COVER_PKGS) $(TEST_PKGS)
+	go test -tags compare_subtyping -coverprofile=coverage.txt -covermode=atomic -race -coverpkg $(COVER_PKGS) $(TEST_PKGS)
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 

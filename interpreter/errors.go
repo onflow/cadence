@@ -752,6 +752,31 @@ func (e *UseBeforeInitializationError) SetLocationRange(locationRange LocationRa
 	e.LocationRange = locationRange
 }
 
+// IndexedTypeError
+type IndexedTypeError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.InternalError = &IndexedTypeError{}
+var _ HasLocationRange = &IndexedTypeError{}
+
+func (*IndexedTypeError) IsInternalError() {}
+
+func (e *IndexedTypeError) Error() string {
+	return fmt.Sprintf(
+		"%s invalid indexed type: expected `%s`, got `%s`",
+		errors.InternalErrorMessagePrefix,
+		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
+	)
+}
+
+func (e *IndexedTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // MemberAccessTypeError
 type MemberAccessTypeError struct {
 	ExpectedType sema.Type
@@ -1198,6 +1223,27 @@ func (e *InvalidAttachmentOperationTargetError) SetLocationRange(locationRange L
 	e.LocationRange = locationRange
 }
 
+// InvalidAttachmentConstructorError
+type InvalidAttachmentConstructorError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidAttachmentConstructorError{}
+var _ HasLocationRange = &InvalidAttachmentConstructorError{}
+
+func (*InvalidAttachmentConstructorError) IsInternalError() {}
+
+func (e *InvalidAttachmentConstructorError) Error() string {
+	return fmt.Sprintf(
+		"%s attachment constructor can only be called from an attach expression",
+		errors.InternalErrorMessagePrefix,
+	)
+}
+
+func (e *InvalidAttachmentConstructorError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // RecursiveTransferError
 type RecursiveTransferError struct {
 	LocationRange
@@ -1491,5 +1537,159 @@ func (e *CallStackLimitExceededError) Error() string {
 }
 
 func (e *CallStackLimitExceededError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// StoredValueTypeMismatchError
+type StoredValueTypeMismatchError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = &StoredValueTypeMismatchError{}
+var _ HasLocationRange = &StoredValueTypeMismatchError{}
+
+func (*StoredValueTypeMismatchError) IsUserError() {}
+
+func (e *StoredValueTypeMismatchError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"stored value type mismatch: expected type `%s`, got `%s`",
+		expected,
+		actual,
+	)
+}
+
+func (e *StoredValueTypeMismatchError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// InvalidResourceTransferError
+type InvalidResourceTransferError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidResourceTransferError{}
+var _ HasLocationRange = &InvalidResourceTransferError{}
+
+func (*InvalidResourceTransferError) IsInternalError() {}
+
+func (*InvalidResourceTransferError) Error() string {
+	return fmt.Sprintf(
+		"%s invalid transfer of a resource value",
+		errors.InternalErrorMessagePrefix,
+	)
+}
+
+func (e *InvalidResourceTransferError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// InvalidBaseTypeError
+type InvalidBaseTypeError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidBaseTypeError{}
+var _ HasLocationRange = &InvalidBaseTypeError{}
+
+func (*InvalidBaseTypeError) IsInternalError() {}
+
+func (e *InvalidBaseTypeError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"%s invalid base type: expected `%s`, got `%s`",
+		errors.InternalErrorMessagePrefix,
+		expected,
+		actual,
+	)
+}
+
+func (e *InvalidBaseTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// InvalidReferenceConversionError
+type InvalidReferenceConversionError struct {
+	ExpectedAuthorization sema.Access
+	ActualAuthorization   sema.Access
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidReferenceConversionError{}
+var _ HasLocationRange = &InvalidReferenceConversionError{}
+
+func (*InvalidReferenceConversionError) IsInternalError() {}
+
+func (e *InvalidReferenceConversionError) Error() string {
+	return fmt.Sprintf(
+		"%s invalid reference conversion error: expect entitlements `%s`, found `%s`",
+		errors.InternalErrorMessagePrefix,
+		e.ExpectedAuthorization,
+		e.ActualAuthorization,
+	)
+}
+
+func (e *InvalidReferenceConversionError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// StorableCopyError
+type StorableCopyError struct {
+	storableType string
+}
+
+var _ errors.InternalError = &StorableCopyError{}
+
+func NewStorableCopyError(storableType string) *StorableCopyError {
+	return &StorableCopyError{
+		storableType: storableType,
+	}
+}
+
+func (*StorableCopyError) IsInternalError() {}
+
+func (e *StorableCopyError) Error() string {
+	return fmt.Sprintf("cannot call CopyNonRefSimple for storable %q", e.storableType)
+}
+
+// InvalidArgumentTypeError
+type InvalidArgumentTypeError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = &InvalidArgumentTypeError{}
+var _ HasLocationRange = &InvalidArgumentTypeError{}
+
+func (*InvalidArgumentTypeError) IsUserError() {}
+
+func (e *InvalidArgumentTypeError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"%s invalid transfer of value: expected `%s`, got `%s`",
+		errors.InternalErrorMessagePrefix,
+		expected,
+		actual,
+	)
+}
+
+func (e *InvalidArgumentTypeError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }

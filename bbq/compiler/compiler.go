@@ -80,7 +80,7 @@ type Compiler[E, T any] struct {
 	currentPosition     bbq.Position
 
 	// Cache alike for compiledTypes and constants in the pool.
-	typesInPool     map[sema.TypeID]uint16
+	typesInPool     map[commons.TypeCacheKey]uint16
 	constantsInPool map[constantUniqueKey]*DecodedConstant
 
 	codeGen CodeGen[E]
@@ -105,6 +105,10 @@ type Compiler[E, T any] struct {
 	// this table maps a global from its address qualified name to its original un-aliased typename
 	// used mainly for exporting imports for linking
 	globalRemoveAddressTable map[string]string
+
+	addedImports map[common.Location]struct{}
+
+	isInheritedCode bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
@@ -192,7 +196,7 @@ func newCompiler[E, T any](
 		location:             location,
 		Globals:              make(map[string]bbq.Global),
 		importedGlobals:      importedGlobals,
-		typesInPool:          make(map[sema.TypeID]uint16),
+		typesInPool:          make(map[commons.TypeCacheKey]uint16),
 		constantsInPool:      make(map[constantUniqueKey]*DecodedConstant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
@@ -200,6 +204,7 @@ func newCompiler[E, T any](
 		codeGen:             codeGen,
 		typeGen:             typeGen,
 		postConditionsIndex: -1,
+		addedImports:        make(map[common.Location]struct{}),
 	}
 }
 
@@ -374,6 +379,7 @@ func (c *Compiler[E, _]) newFunction(
 	functionTypeIndex := c.getOrAddType(functionType)
 
 	return newFunction[E](
+		c.Config.MemoryGauge,
 		c.currentFunction,
 		name,
 		qualifiedName,
@@ -608,8 +614,12 @@ func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = inheritedElaboration
 
+		prevIsInheritedCode := c.isInheritedCode
+		c.isInheritedCode = true
+
 		defer func() {
 			c.DesugaredElaboration = prevElaboration
+			c.isInheritedCode = prevIsInheritedCode
 		}()
 	}
 
@@ -720,6 +730,16 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 			panic(errors.NewUnexpectedError("wrong global type found for contract %s", contract.Name))
 		}
 	}
+
+	if c.Config.PeepholeOptimizationsEnabled {
+		optimizer := NewPeepholeOptimizer(c)
+
+		for i, function := range functions {
+			functions[i].Code = optimizer.Optimize(function.Code)
+		}
+	}
+
+	common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQProgramMemoryUsage)
 
 	return &bbq.Program[E, T]{
 		Functions: functions,
@@ -951,6 +971,15 @@ func (c *Compiler[_, _]) exportConstants() []constant.DecodedConstant {
 
 	count := len(c.constants)
 	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
+		common.UseMemory(
+			c.Config.MemoryGauge,
+			common.NewMemoryUsage(
+				common.MemoryKindCompilerBBQConstant,
+				uint64(count),
+			),
+		)
+
 		constants = make([]constant.DecodedConstant, 0, count)
 		for _, c := range c.constants {
 			constants = append(
@@ -971,7 +1000,10 @@ func (c *Compiler[_, T]) exportTypes() []T {
 }
 
 func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
-	globals := make([]bbq.Global, len(c.Globals))
+	globalsCount := len(c.Globals)
+
+	common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(globalsCount))
+	globals := make([]bbq.Global, globalsCount)
 
 	for _, global := range c.Globals { //nolint:maprange
 		index := int(global.GetGlobalInfo().Index)
@@ -1009,6 +1041,15 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 
 	count := len(c.usedImportedGlobals)
 	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
+		common.UseMemory(
+			c.Config.MemoryGauge,
+			common.NewMemoryUsage(
+				common.MemoryKindCompilerBBQImport,
+				uint64(count),
+			),
+		)
+
 		exportedImports = make([]bbq.Import, 0, count)
 		for _, importedGlobal := range c.usedImportedGlobals {
 			name := c.removeAlias(importedGlobal.GetGlobalInfo().Name)
@@ -1028,7 +1069,9 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 
 	count := len(c.functions)
 	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
 		functions = make([]bbq.Function[E], 0, count)
+
 		for _, function := range c.functions {
 			newFunction := c.newBBQFunction(function)
 			functions = append(
@@ -1056,6 +1099,7 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 }
 
 func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
+	common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQFunctionMemoryUsage)
 	return bbq.Function[E]{
 		Name:           function.name,
 		QualifiedName:  function.qualifiedName,
@@ -1072,6 +1116,15 @@ func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
 
 	count := len(c.globalVariables)
 	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
+		common.UseMemory(
+			c.Config.MemoryGauge,
+			common.NewMemoryUsage(
+				common.MemoryKindCompilerBBQVariable,
+				uint64(count),
+			),
+		)
+
 		globalVariables = make([]bbq.Variable[E], 0, count)
 
 		for _, variable := range c.globalVariables {
@@ -1126,6 +1179,7 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 		location := contractType.GetLocation()
 		name := contractType.GetIdentifier()
 
+		common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQContractMemoryUsage)
 		contract := bbq.Contract{
 			Name:     name,
 			Location: location,
@@ -1292,7 +1346,12 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 				// Must transfer and convert, so that `result` variable gets the
 				// correct converted value.
 				returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
-				c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+				if !returnTypes.PassWithoutTransferOrConvert {
+					c.emitTransferIfNotResourceAndConvert(
+						returnTypes.ValueType,
+						returnTypes.ReturnType,
+					)
+				}
 
 				c.emitSetLocal(tempResultVar.index)
 			} else {
@@ -1309,7 +1368,13 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 			// (1.b)
 			// If there are no post conditions, return then-and-there.
 			returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
-			c.emitTransferAndConvertAndReturnValue(returnTypes.ReturnType)
+			if !returnTypes.PassWithoutTransferOrConvert {
+				c.emitTransferIfNotResourceAndConvert(
+					returnTypes.ValueType,
+					returnTypes.ReturnType,
+				)
+			}
+			c.emit(opcode.InstructionReturnValue{})
 		}
 	} else {
 		// (2) Empty return
@@ -1351,6 +1416,13 @@ func (c *Compiler[_, _]) emitGetLocal(localIndex uint16) {
 func (c *Compiler[_, _]) emitSetLocal(localIndex uint16) {
 	c.emit(opcode.InstructionSetLocal{
 		Local: localIndex,
+	})
+}
+
+func (c *Compiler[_, _]) emitSetTempLocal(localIndex uint16) {
+	c.emit(opcode.InstructionSetLocal{
+		Local:     localIndex,
+		IsTempVar: true,
 	})
 }
 
@@ -1404,7 +1476,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			c.compileVariableDeclaration(test, varDeclTypes, true)
 
 			tempIndex := c.currentFunction.generateLocalIndex()
-			c.emitSetLocal(tempIndex)
+			c.emitSetTempLocal(tempIndex)
 
 			// Test: check if the optional is nil,
 			// and jump to the else branch if it is
@@ -1416,7 +1488,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			c.emit(opcode.InstructionUnwrap{})
 
 			// Declare the variable *after* unwrapping the optional,
-			// in a new scope
+			// in a *new* scope
 			c.currentFunction.locals.PushNewWithCurrent()
 			additionalThenScope = true
 			name := test.Identifier.Identifier
@@ -1450,6 +1522,64 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			c.patchJumpHere(elseJump)
 		}
 	})
+	return
+}
+
+func (c *Compiler[_, _]) VisitGuardStatement(statement *ast.GuardStatement) (_ struct{}) {
+
+	// No need for compilePotentiallyInheritedCode,
+	// as only if-statements are the result of desugaring of conditions.
+
+	var elseJump int
+
+	switch test := statement.Test.(type) {
+	case ast.Expression:
+		c.compileExpression(test)
+		elseJump = c.emitUndefinedJumpIfFalse()
+
+	case *ast.VariableDeclaration:
+
+		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
+		c.compileVariableDeclaration(test, varDeclTypes, true)
+
+		tempIndex := c.currentFunction.generateLocalIndex()
+		c.emitSetTempLocal(tempIndex)
+
+		// Test: check if the optional is nil,
+		// and jump to the else branch if it is
+		c.emitGetLocal(tempIndex)
+		elseJump = c.emitUndefinedJumpIfNil()
+
+		// Not nil: unwrap the optional and declare the variable
+		c.emitGetLocal(tempIndex)
+		c.emit(opcode.InstructionUnwrap{})
+
+		// Declare the variable *after* unwrapping the optional,
+		// in *current* scope (no additional scope push)
+		name := test.Identifier.Identifier
+		c.emitDeclareLocal(name)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	// Jump past the else block (normal flow when condition succeeds)
+	endJump := c.emitUndefinedJump()
+
+	// Else block: compile and patch the elseJump to here
+	c.patchJumpHere(elseJump)
+	c.compileBlock(
+		statement.Else,
+		common.DeclarationKindUnknown,
+		nil,
+	)
+
+	// Defensive return: Ensure control flow does not continue after the else block
+	c.emit(opcode.InstructionUnreachable{})
+
+	// Patch the endJump to continue after the else block
+	c.patchJumpHere(endJump)
+
 	return
 }
 
@@ -1491,9 +1621,8 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	// Get an iterator to the resulting value, and store it in a local index.
 	c.emit(opcode.InstructionIterator{})
 	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
-	c.emit(opcode.InstructionSetLocal{
-		Local: iteratorLocalIndex,
-	})
+	c.emitSetLocal(iteratorLocalIndex)
+
 	// Push the iterator local index to the active iterators.
 	c.currentFunction.activeIteratorLocalIndices = append(
 		c.currentFunction.activeIteratorLocalIndices,
@@ -1513,7 +1642,10 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 		indexLocal = c.emitDeclareLocal(index.Identifier)
 	}
 
-	entryLocal := c.currentFunction.declareLocal(statement.Identifier.Identifier)
+	entryLocal := c.currentFunction.declareLocal(
+		c.Config.MemoryGauge,
+		statement.Identifier.Identifier,
+	)
 
 	testOffset := c.codeGen.Offset()
 	controlFlow := c.pushControlFlow(testOffset)
@@ -1572,7 +1704,8 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 		// If a reference is taken to the value, then do not transfer.
 	} else {
-		c.mustEmitTransferAndConvert(loopVarType)
+		// TODO: Can the valueType be different?
+		c.mustEmitTransferAndConvert(loopVarType, loopVarType)
 	}
 
 	// Store it (next entry) in a local var.
@@ -1611,7 +1744,16 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 			invocationExpression := statement.InvocationExpression
 			arguments := invocationExpression.Arguments
 			invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(invocationExpression)
-			c.compileArguments(arguments, invocationTypes)
+
+			// Instead of compiling arguments as usual (via compileArguments),
+			// only convert the arguments and don't transfer them.
+
+			for index, argument := range arguments {
+				c.compileExpression(argument.Expression)
+				argumentType := invocationTypes.ArgumentTypes[index]
+				parameterType := invocationTypes.ParameterTypes[index]
+				c.emitConvert(argumentType, parameterType)
+			}
 
 			argCount := len(arguments)
 			if argCount >= math.MaxUint16 {
@@ -1634,7 +1776,7 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
 	c.compileExpression(statement.Expression)
 	localIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(localIndex)
+	c.emitSetTempLocal(localIndex)
 
 	// Pass an invalid start offset to pushControlFlow to indicate that this is a switch statement,
 	// which does not allow jumps to the start (i.e., no continue statements).
@@ -1697,7 +1839,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 
 		// Value can be nil only for synthetic-result variable.
 		if declaration.Value == nil {
-			c.currentFunction.declareLocal(name)
+			c.currentFunction.declareLocal(c.Config.MemoryGauge, name)
 			return
 		}
 
@@ -1730,11 +1872,14 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 	firstValue := declaration.Value
 	secondValue := declaration.SecondValue
 
-	firstValueTransferType := varDeclTypes.TargetType
+	firstValueType := varDeclTypes.ValueType
+	firstValueTargetType := varDeclTypes.TargetType
+	secondValueType := varDeclTypes.SecondValueType
+
 	if isOptionalBinding {
 		// In optional binding, the first-value is optional-typed.
-		firstValueTransferType = &sema.OptionalType{
-			Type: firstValueTransferType,
+		firstValueTargetType = &sema.OptionalType{
+			Type: firstValueTargetType,
 		}
 	}
 
@@ -1749,7 +1894,7 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 				transfer.Operation == ast.TransferOperationInternalNoTransfer)
 
 		if needTransferAndConvert {
-			c.mustEmitTransferAndConvert(firstValueTransferType)
+			c.mustEmitTransferAndConvert(firstValueType, firstValueTargetType)
 		}
 
 		return
@@ -1762,18 +1907,17 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 	// The middle expression (i.e: the first value), and its sub expressions,
 	// must only be evaluated only once.
 
-	firstValueType := varDeclTypes.ValueType
 	switch firstValue := firstValue.(type) {
 	case *ast.IdentifierExpression:
 		c.compileExpression(firstValue)
 
 		// Need to transfer the value "out",
 		// before the second value is being assigned
-		c.mustEmitTransferAndConvert(firstValueTransferType)
+		c.mustEmitTransferAndConvert(firstValueType, firstValueTargetType)
 
 		// Evaluate and transfer second value.
 		c.compileExpression(secondValue)
-		c.mustEmitTransferAndConvert(firstValueType)
+		c.mustEmitTransferAndConvert(secondValueType, firstValueType)
 
 		// Store second value in first value's variable.
 		c.emitVariableStore(firstValue.Identifier.Identifier)
@@ -1782,7 +1926,7 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		// Evaluate the first value's parent once, and store in a temp-local.
 		c.compileExpression(firstValue.Expression)
 		memberExprParentLocal := c.currentFunction.generateLocalIndex()
-		c.emitSetLocal(memberExprParentLocal)
+		c.emitSetTempLocal(memberExprParentLocal)
 
 		// Evaluate the first value. i.e: Get the member value.
 		// Transfer and leave it on the stack.
@@ -1790,13 +1934,13 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		c.compileMemberAccess(firstValue)
 		// Need to transfer the value "out",
 		// before the second value is being assigned
-		c.mustEmitTransferAndConvert(firstValueTransferType)
+		c.mustEmitTransferAndConvert(firstValueType, firstValueTargetType)
 
 		// Evaluate and transfer second value.
 		// The first value becomes the target.
 		c.emitGetLocal(memberExprParentLocal)
 		c.compileExpression(secondValue)
-		c.mustEmitTransferAndConvert(firstValueType)
+		c.mustEmitTransferAndConvert(secondValueType, firstValueType)
 
 		// Assign the second value to the first value's field.
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(firstValue)
@@ -1815,28 +1959,40 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		// First evaluate the sub-expressions of index expression once, and store them in temp-locals.
 		c.compileExpression(firstValue.TargetExpression)
 		indexExprTargetLocal := c.currentFunction.generateLocalIndex()
-		c.emitSetLocal(indexExprTargetLocal)
+		c.emitSetTempLocal(indexExprTargetLocal)
 
 		c.compileExpression(firstValue.IndexingExpression)
 		indexExprIndexLocal := c.currentFunction.generateLocalIndex()
-		c.emitSetLocal(indexExprIndexLocal)
+		c.emitSetTempLocal(indexExprIndexLocal)
 
 		// Evaluate the first value . i.e: index expression.
 		// Transfer and leave it on the stack.
 		c.emitGetLocal(indexExprTargetLocal)
 		c.emitGetLocal(indexExprIndexLocal)
-		c.compileIndexAccess(firstValue)
+		c.emitIndexKeyTransferAndConvert(firstValue)
+		const pushPlaceholderValue = false
+		c.compileIndexAccessWithTransferredIndex(firstValue, pushPlaceholderValue)
+
 		// Need to transfer the value "out",
 		// before the second value is being assigned
-		c.mustEmitTransferAndConvert(firstValueTransferType)
+		c.mustEmitTransferAndConvert(firstValueType, firstValueTargetType)
 
 		// Evaluate and transfer second value.
 		// The first value becomes the target.
 		c.emitGetLocal(indexExprTargetLocal)
 		c.emitGetLocal(indexExprIndexLocal)
 		c.compileExpression(secondValue)
-		c.mustEmitTransferAndConvert(firstValueType)
-		c.emit(opcode.InstructionSetIndex{})
+		c.mustEmitTransferAndConvert(secondValueType, firstValueType)
+
+		indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(firstValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		indexedType := c.getOrAddType(indexExpressionTypes.IndexedType)
+
+		c.emit(opcode.InstructionSetIndex{
+			IndexedType: indexedType,
+		})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -1874,19 +2030,14 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 
 		// The return here is the assignment to the global variable.
 		// Therefore, always transfer the value.
-		c.mustEmitTransferAndConvert(varDeclTypes.TargetType)
+		c.mustEmitTransferAndConvert(varDeclTypes.ValueType, varDeclTypes.TargetType)
 
 		c.emit(opcode.InstructionReturnValue{})
 	}()
 }
 
-func (c *Compiler[_, _]) emitTransferAndConvertAndReturnValue(returnType sema.Type) {
-	c.emitTransferIfNotResourceAndConvert(returnType)
-	c.emit(opcode.InstructionReturnValue{})
-}
-
 func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
-	local := c.currentFunction.declareLocal(name)
+	local := c.currentFunction.declareLocal(c.Config.MemoryGauge, name)
 	c.emitSetLocal(local.index)
 	return local
 }
@@ -1896,6 +2047,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 	c.compileAssignment(
 		statement.Target,
 		statement.Value,
+		assignmentTypes.ValueType,
 		assignmentTypes.TargetType,
 	)
 	return
@@ -1904,18 +2056,18 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 func (c *Compiler[_, _]) compileAssignment(
 	target ast.Expression,
 	value ast.Expression,
-	targetType sema.Type,
+	valueType, targetType sema.Type,
 ) {
 	switch target := target.(type) {
 	case *ast.IdentifierExpression:
 		c.compileExpression(value)
-		c.mustEmitTransferAndConvert(targetType)
+		c.mustEmitTransferAndConvert(valueType, targetType)
 		c.emitVariableStore(target.Identifier.Identifier)
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
 		c.compileExpression(value)
-		c.mustEmitTransferAndConvert(targetType)
+		c.mustEmitTransferAndConvert(valueType, targetType)
 		constant := c.addRawStringConst(target.Identifier.Identifier)
 
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(target)
@@ -1936,9 +2088,17 @@ func (c *Compiler[_, _]) compileAssignment(
 		c.emitIndexKeyTransferAndConvert(target)
 
 		c.compileExpression(value)
-		c.mustEmitTransferAndConvert(targetType)
+		c.mustEmitTransferAndConvert(valueType, targetType)
 
-		c.emit(opcode.InstructionSetIndex{})
+		indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(target)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		indexedType := c.getOrAddType(indexExpressionTypes.IndexedType)
+
+		c.emit(opcode.InstructionSetIndex{
+			IndexedType: indexedType,
+		})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -1956,27 +2116,68 @@ func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ str
 	// Evaluate the left side (target and key)
 
 	leftTargetIndex := c.compileSwapTarget(statement.Left)
-	leftKeyIndex := c.compileSwapKey(statement.Left)
+	leftTransferredKeyIndex := c.compileSwapKey(statement.Left)
 
 	// Evaluate the right side (target and key)
 
 	rightTargetIndex := c.compileSwapTarget(statement.Right)
-	rightKeyIndex := c.compileSwapKey(statement.Right)
+	rightTransferredKeyIndex := c.compileSwapKey(statement.Right)
 
 	// Get left and right values
 
-	leftValueIndex := c.compileSwapGet(
+	var (
+		leftValueIndex                            uint16
+		leftPlaceholderValueIndex                 uint16
+		leftEmittedRemoveIndexWithPushPlaceholder bool
+	)
+	leftValueIndex, leftEmittedRemoveIndexWithPushPlaceholder = c.compileSwapGet(
 		statement.Left,
 		leftTargetIndex,
-		leftKeyIndex,
-		rightType,
+		leftTransferredKeyIndex,
+		&leftPlaceholderValueIndex,
 	)
-	rightValueIndex := c.compileSwapGet(
+	rightValueIndex, _ := c.compileSwapGet(
 		statement.Right,
 		rightTargetIndex,
-		rightKeyIndex,
-		leftType,
+		rightTransferredKeyIndex,
+		nil,
 	)
+
+	// Handle swapping a value with itself, e.g. `a[i] <-> a[i]`:
+	//
+	// If getting the right value results in the placeholder we just set in the left,
+	// then set the left value back to the left target.
+
+	var sameResourceJump int
+	if leftEmittedRemoveIndexWithPushPlaceholder {
+		c.emitGetLocal(rightValueIndex)
+		c.emitGetLocal(leftPlaceholderValueIndex)
+		c.emit(opcode.InstructionSame{})
+		elseJump := c.emitUndefinedJumpIfFalse()
+
+		c.compileSwapSet(
+			statement.Left,
+			leftTargetIndex,
+			leftTransferredKeyIndex,
+			leftValueIndex,
+		)
+
+		sameResourceJump = c.emitUndefinedJump()
+		c.patchJumpHere(elseJump)
+	}
+
+	// Not swapping a value with itself.
+	//
+	// Set right value to left target,
+	// and left value to right target
+
+	c.emitGetLocal(rightValueIndex)
+	c.mustEmitTransferAndConvert(rightType, leftType)
+	c.emitSetLocal(rightValueIndex)
+
+	c.emitGetLocal(leftValueIndex)
+	c.mustEmitTransferAndConvert(leftType, rightType)
+	c.emitSetLocal(leftValueIndex)
 
 	// Set right value to left target,
 	// and left value to right target
@@ -1986,15 +2187,19 @@ func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ str
 	c.compileSwapSet(
 		statement.Left,
 		leftTargetIndex,
-		leftKeyIndex,
+		leftTransferredKeyIndex,
 		rightValueIndex,
 	)
 	c.compileSwapSet(
 		statement.Right,
 		rightTargetIndex,
-		rightKeyIndex,
+		rightTransferredKeyIndex,
 		leftValueIndex,
 	)
+
+	if leftEmittedRemoveIndexWithPushPlaceholder {
+		c.patchJumpHere(sameResourceJump)
+	}
 
 	return
 }
@@ -2012,7 +2217,7 @@ func (c *Compiler[_, _]) compileSwapTarget(sideExpression ast.Expression) (targe
 	}
 
 	targetLocalIndex = c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(targetLocalIndex)
+	c.emitSetTempLocal(targetLocalIndex)
 
 	return
 }
@@ -2026,13 +2231,14 @@ func (c *Compiler[_, _]) compileSwapKey(sideExpression ast.Expression) (keyLocal
 	case *ast.IndexExpression:
 		// If the side is an index expression, compile the indexing expression
 		c.compileExpression(sideExpression.IndexingExpression)
+		c.emitIndexKeyTransferAndConvert(sideExpression)
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
 	keyLocalIndex = c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(keyLocalIndex)
+	c.emitSetTempLocal(keyLocalIndex)
 
 	return
 }
@@ -2040,9 +2246,12 @@ func (c *Compiler[_, _]) compileSwapKey(sideExpression ast.Expression) (keyLocal
 func (c *Compiler[_, _]) compileSwapGet(
 	sideExpression ast.Expression,
 	targetIndex uint16,
-	keyIndex uint16,
-	targetType sema.Type,
-) (valueIndex uint16) {
+	transferredKeyIndex uint16,
+	placeHolderValueIndex *uint16,
+) (
+	valueIndex uint16,
+	emittedRemoveIndexWithPushPlaceholder bool,
+) {
 
 	switch sideExpression := sideExpression.(type) {
 	case *ast.IdentifierExpression:
@@ -2063,17 +2272,21 @@ func (c *Compiler[_, _]) compileSwapGet(
 
 	case *ast.IndexExpression:
 		c.emitGetLocal(targetIndex)
-		c.emitGetLocal(keyIndex)
-		c.compileIndexAccess(sideExpression)
+		c.emitGetLocal(transferredKeyIndex)
+		pushPlaceholderValue := placeHolderValueIndex != nil
+		emittedRemoveIndexWithPushPlaceholder = c.compileIndexAccessWithTransferredIndex(sideExpression, pushPlaceholderValue)
+		if emittedRemoveIndexWithPushPlaceholder {
+			// We need to keep the inserted placeholder value, if any
+			*placeHolderValueIndex = c.currentFunction.generateLocalIndex()
+			c.emitSetLocal(*placeHolderValueIndex)
+		}
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	c.mustEmitTransferAndConvert(targetType)
-
 	valueIndex = c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(valueIndex)
+	c.emitSetTempLocal(valueIndex)
 
 	return
 }
@@ -2081,7 +2294,7 @@ func (c *Compiler[_, _]) compileSwapGet(
 func (c *Compiler[_, _]) compileSwapSet(
 	sideExpression ast.Expression,
 	targetIndex uint16,
-	keyIndex uint16,
+	transferredKeyIndex uint16,
 	valueIndex uint16,
 ) {
 	switch sideExpression := sideExpression.(type) {
@@ -2111,10 +2324,18 @@ func (c *Compiler[_, _]) compileSwapSet(
 
 	case *ast.IndexExpression:
 		c.emitGetLocal(targetIndex)
-		c.emitGetLocal(keyIndex)
-		c.emitIndexKeyTransferAndConvert(sideExpression)
+		c.emitGetLocal(transferredKeyIndex)
 		c.emitGetLocal(valueIndex)
-		c.emit(opcode.InstructionSetIndex{})
+
+		indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(sideExpression)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		indexedType := c.getOrAddType(indexExpressionTypes.IndexedType)
+
+		c.emit(opcode.InstructionSetIndex{
+			IndexedType: indexedType,
+		})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2128,7 +2349,10 @@ func (c *Compiler[_, _]) emitIndexKeyTransferAndConvert(indexExpression *ast.Ind
 	}
 
 	indexedType := indexExpressionTypes.IndexedType
-	c.emitTransferIfNotResourceAndConvert(indexedType.IndexingType())
+	c.emitTransferIfNotResourceAndConvert(
+		indexExpressionTypes.IndexingType,
+		indexedType.IndexingType(),
+	)
 }
 
 func (c *Compiler[_, _]) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
@@ -2180,73 +2404,167 @@ func (c *Compiler[_, _]) emitIntegerConstant(
 	integerType sema.Type,
 ) {
 	constantKind := constant.FromSemaType(integerType)
+	memoryGauge := c.Config.MemoryGauge
 
 	var data constant.ConstantData
 
 	switch constantKind {
 	case constant.Int:
-		data = interpreter.NewUnmeteredIntValueFromBigInt(value)
+		memoryUsage := common.NewBigIntMemoryUsage(
+			common.BigIntByteLength(value),
+		)
+		data = interpreter.NewIntValueFromBigInt(
+			memoryGauge,
+			memoryUsage,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Int8:
-		data = interpreter.NewUnmeteredInt8Value(int8(value.Int64()))
+		data = interpreter.NewInt8Value(
+			memoryGauge,
+			func() int8 {
+				return int8(value.Int64())
+			},
+		)
 
 	case constant.Int16:
-		data = interpreter.NewUnmeteredInt16Value(int16(value.Int64()))
+		data = interpreter.NewInt16Value(
+			memoryGauge,
+			func() int16 {
+				return int16(value.Int64())
+			},
+		)
 
 	case constant.Int32:
-		data = interpreter.NewUnmeteredInt32Value(int32(value.Int64()))
+		data = interpreter.NewInt32Value(
+			memoryGauge,
+			func() int32 {
+				return int32(value.Int64())
+			},
+		)
 
 	case constant.Int64:
-		data = interpreter.NewUnmeteredInt64Value(value.Int64())
+		data = interpreter.NewInt64Value(memoryGauge, value.Int64)
 
 	case constant.Int128:
-		data = interpreter.NewUnmeteredInt128ValueFromBigInt(value)
+		data = interpreter.NewInt128ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Int256:
-		data = interpreter.NewUnmeteredInt256ValueFromBigInt(value)
+		data = interpreter.NewInt256ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.UInt:
-		data = interpreter.NewUnmeteredUIntValueFromBigInt(value)
+		memoryUsage := common.NewBigIntMemoryUsage(
+			common.BigIntByteLength(value),
+		)
+		data = interpreter.NewUIntValueFromBigInt(
+			memoryGauge,
+			memoryUsage,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.UInt8:
-		data = interpreter.NewUnmeteredUInt8Value(uint8(value.Uint64()))
+		data = interpreter.NewUInt8Value(
+			memoryGauge,
+			func() uint8 {
+				return uint8(value.Uint64())
+			},
+		)
 
 	case constant.UInt16:
-		data = interpreter.NewUnmeteredUInt16Value(uint16(value.Uint64()))
+		data = interpreter.NewUInt16Value(
+			memoryGauge,
+			func() uint16 {
+				return uint16(value.Uint64())
+			},
+		)
 
 	case constant.UInt32:
-		data = interpreter.NewUnmeteredUInt32Value(uint32(value.Uint64()))
+		data = interpreter.NewUInt32Value(
+			memoryGauge,
+			func() uint32 {
+				return uint32(value.Uint64())
+			},
+		)
 
 	case constant.UInt64:
-		data = interpreter.NewUnmeteredUInt64Value(value.Uint64())
+		data = interpreter.NewUInt64Value(memoryGauge, value.Uint64)
 
 	case constant.UInt128:
-		data = interpreter.NewUnmeteredUInt128ValueFromBigInt(value)
+		data = interpreter.NewUInt128ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.UInt256:
-		data = interpreter.NewUnmeteredUInt256ValueFromBigInt(value)
+		data = interpreter.NewUInt256ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Word8:
-		data = interpreter.NewUnmeteredWord8Value(uint8(value.Uint64()))
+		data = interpreter.NewWord8Value(
+			memoryGauge,
+			func() uint8 {
+				return uint8(value.Uint64())
+			},
+		)
 
 	case constant.Word16:
-		data = interpreter.NewUnmeteredWord16Value(uint16(value.Uint64()))
+		data = interpreter.NewWord16Value(
+			memoryGauge,
+			func() uint16 {
+				return uint16(value.Uint64())
+			},
+		)
 
 	case constant.Word32:
-		data = interpreter.NewUnmeteredWord32Value(uint32(value.Uint64()))
+		data = interpreter.NewWord32Value(
+			memoryGauge,
+			func() uint32 {
+				return uint32(value.Uint64())
+			},
+		)
 
 	case constant.Word64:
-		data = interpreter.NewUnmeteredWord64Value(value.Uint64())
+		data = interpreter.NewWord64Value(memoryGauge, value.Uint64)
 
 	case constant.Word128:
-		data = interpreter.NewUnmeteredWord128ValueFromBigInt(value)
+		data = interpreter.NewWord128ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Word256:
-		data = interpreter.NewUnmeteredWord256ValueFromBigInt(value)
+		data = interpreter.NewWord256ValueFromBigInt(
+			memoryGauge,
+			func() *big.Int {
+				return value
+			},
+		)
 
 	case constant.Address:
 		data = interpreter.NewAddressValueFromBytes(
-			c.Config.MemoryGauge,
+			memoryGauge,
 			func() []byte {
 				return value.Bytes()
 			},
@@ -2294,36 +2612,38 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 	var constantValue interpreter.Value
 	var constantKind constant.Kind
 
+	memoryGauge := c.Config.MemoryGauge
+
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
 		constantKind = constant.Fix64
-		constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
+		constantValue = interpreter.NewFix64Value(memoryGauge, value.Int64)
 
 	case sema.UFix64Type:
 		constantKind = constant.UFix64
-		constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
+		constantValue = interpreter.NewUFix64Value(memoryGauge, value.Uint64)
 
 	case sema.Fix128Type:
 		constantKind = constant.Fix128
 		constantValue = interpreter.NewFix128ValueFromBigInt(
-			c.Config.MemoryGauge,
+			memoryGauge,
 			value,
 		)
 
 	case sema.UFix128Type:
 		constantKind = constant.UFix128
 		constantValue = interpreter.NewUFix128ValueFromBigInt(
-			c.Config.MemoryGauge,
+			memoryGauge,
 			value,
 		)
 
 	case sema.FixedPointType:
 		if expression.Negative {
 			constantKind = constant.Fix64
-			constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
+			constantValue = interpreter.NewFix64Value(memoryGauge, value.Int64)
 		} else {
 			constantKind = constant.UFix64
-			constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
+			constantValue = interpreter.NewUFix64Value(memoryGauge, value.Uint64)
 		}
 	default:
 		panic(errors.NewUnreachableError())
@@ -2356,18 +2676,17 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 
 	elementExpectedType := arrayTypes.ArrayType.ElementType(false)
 
-	for _, expression := range array.Values {
+	for index, expression := range array.Values {
 		c.compileExpression(expression)
-		c.emitTransferIfNotResourceAndConvert(elementExpectedType)
+		elementActualType := arrayTypes.ArgumentTypes[index]
+		c.emitTransferIfNotResourceAndConvert(elementActualType, elementExpectedType)
 	}
 
-	c.emit(
-		opcode.InstructionNewArray{
-			Type:       typeIndex,
-			Size:       uint16(size),
-			IsResource: arrayTypes.ArrayType.IsResourceType(),
-		},
-	)
+	c.emit(opcode.InstructionNewArray{
+		Type:       typeIndex,
+		Size:       uint16(size),
+		IsResource: arrayTypes.ArrayType.IsResourceType(),
+	})
 
 	return
 }
@@ -2384,20 +2703,19 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 		panic(errors.NewDefaultUserError("invalid dictionary expression"))
 	}
 
-	for _, entry := range dictionary.Entries {
+	for index, entry := range dictionary.Entries {
+		entryType := dictionaryTypes.EntryTypes[index]
 		c.compileExpression(entry.Key)
-		c.emitTransferIfNotResourceAndConvert(dictionaryType.KeyType)
+		c.emitTransferIfNotResourceAndConvert(entryType.KeyType, dictionaryType.KeyType)
 		c.compileExpression(entry.Value)
-		c.emitTransferIfNotResourceAndConvert(dictionaryType.ValueType)
+		c.emitTransferIfNotResourceAndConvert(entryType.ValueType, dictionaryType.ValueType)
 	}
 
-	c.emit(
-		opcode.InstructionNewDictionary{
-			Type:       typeIndex,
-			Size:       uint16(size),
-			IsResource: dictionaryType.IsResourceType(),
-		},
-	)
+	c.emit(opcode.InstructionNewDictionary{
+		Type:       typeIndex,
+		Size:       uint16(size),
+		IsResource: dictionaryType.IsResourceType(),
+	})
 
 	return
 }
@@ -2444,12 +2762,28 @@ func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 	})
 }
 
-func (c *Compiler[_, _]) emitMethodLoad(name string) {
+func (c *Compiler[_, _]) emitMethodLoad(
+	name string,
+	receiverType sema.Type,
+) {
 	// we might need to antialias part of this name
 	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
+
+	receiverTypeIndex := c.getOrAddType(receiverType)
+
 	c.emit(opcode.InstructionGetMethod{
-		Method: global.GetGlobalInfo().Index,
+		Method:       global.GetGlobalInfo().Index,
+		ReceiverType: receiverTypeIndex,
+	})
+}
+
+func (c *Compiler[_, _]) emitDynamicMethodLoad(methodName string, receiverType sema.Type) {
+	funcNameConstant := c.addRawStringConst(methodName)
+	receiverTypeIndex := c.getOrAddType(receiverType)
+	c.emit(opcode.InstructionGetMethodDynamic{
+		MethodName:   funcNameConstant.index,
+		ReceiverType: receiverTypeIndex,
 	})
 }
 
@@ -2476,19 +2810,29 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 
 func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	expression *ast.InvocationExpression,
-	implicitArgIndex uint16,
+	implicitArgIndex *uint16,
 	implicitArgType sema.Type,
 ) (_ struct{}) {
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
+
+	returnTypeIndex := c.getOrAddType(invocationTypes.ReturnType)
 
 	argumentCount := len(expression.Arguments)
 	if argumentCount >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of arguments"))
 	}
 
+	hasImplicitArgument := implicitArgIndex != nil
+
 	invokedExpr := expression.InvokedExpression
 
+	// Ideally we should no longer have a need to special-case member-expressions.
+	// Because when invokedExpr is compiled normally via `c.compileExpression(invokedExpr)`,
+	// `compileMemberAccess` will load the function-value onto the stack.
+	// And the `emitInvocation` below will invoke the loaded value.
+	// The special-cased `compileMethodInvocation` also does pretty much the same.
+	// TODO: Remove the special handling of member-expressions.
 	if memberExpression, isMemberExpr := expression.InvokedExpression.(*ast.MemberExpression); isMemberExpr {
 		memberInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(memberExpression)
 		if !ok {
@@ -2503,7 +2847,10 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				memberInfo,
 				memberExpression,
 				invocationTypes,
-				uint16(argumentCount),
+				implicitArgIndex,
+				implicitArgType,
+				returnTypeIndex,
+				hasImplicitArgument,
 			)
 			return
 		}
@@ -2517,34 +2864,70 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	// Load function value
 	c.compileExpression(invokedExpr)
 
+	c.emitInvocation(
+		expression,
+		implicitArgIndex,
+		implicitArgType,
+		invocationTypes,
+		returnTypeIndex,
+		hasImplicitArgument,
+	)
+
+	return
+}
+
+func (c *Compiler[_, _]) emitInvocation(
+	expression *ast.InvocationExpression,
+	implicitArgIndex *uint16,
+	implicitArgType sema.Type,
+	invocationTypes sema.InvocationExpressionTypes,
+	returnTypeIndex uint16,
+	hasImplicitArgument bool,
+) {
 	// Compile arguments
 	c.compileArguments(expression.Arguments, invocationTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
-	if implicitArgType != nil {
-		// Add the implicit argument to the end of the argument list, if it exists.
-		// Used in attachments, the attachment constructor/init expects an implicit argument:
-		// a reference to the base value used to set base.
-		// This hides the base argument away from the user.
-		typeArgs = append(typeArgs, c.getOrAddType(implicitArgType))
-		argumentCount += 1
-		if argumentCount >= math.MaxUint16 {
-			panic(errors.NewDefaultUserError("invalid number of arguments"))
-		}
-		// Load implicit argument from locals
-		// Base is at the back of the argument list, only for attachment initialization.
-		c.emitGetLocal(implicitArgIndex)
-	}
+
+	argTypes := c.loadTypes(invocationTypes.ArgumentTypes)
+	argTypes = c.addImplicitArgumentTyped(implicitArgIndex, implicitArgType, argTypes)
+	paramTypes := c.loadTypes(invocationTypes.ParameterTypes)
 
 	c.emit(opcode.InstructionInvoke{
-		TypeArgs: typeArgs,
-		ArgCount: uint16(argumentCount),
+		TypeArgs:               typeArgs,
+		ArgTypes:               argTypes,
+		ParamTypes:             paramTypes,
+		ReturnType:             returnTypeIndex,
+		HasImplicitArgument:    hasImplicitArgument,
+		SkipArgumentConversion: invocationTypes.PassArgumentsWithoutTransferOrConvert,
 	})
-	return
+}
+
+func (c *Compiler[_, _]) addImplicitArgumentTyped(
+	implicitArgIndex *uint16,
+	implicitArgType sema.Type,
+	argTypes []uint16,
+) []uint16 {
+	if implicitArgIndex == nil {
+		return argTypes
+	}
+
+	// Add the implicit argument to the end of the argument list, if it exists.
+	// Used in attachments, the attachment constructor/init expects an implicit argument:
+	// a reference to the base value used to set base.
+	// This hides the base argument away from the user.
+
+	// Load implicit argument from locals
+	// Base is at the back of the argument list, only for attachment initialization.
+	c.emitGetLocal(*implicitArgIndex)
+
+	argTypes = append(argTypes, c.getOrAddType(implicitArgType))
+
+	return argTypes
 }
 
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	c.visitInvocationExpressionWithImplicitArgument(expression, 0, nil)
+	c.visitInvocationExpressionWithImplicitArgument(expression, nil, nil)
 
 	return
 }
@@ -2555,7 +2938,6 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 func (c *Compiler[_, _]) maybeApplyAddressQualifierToFunctionName(
 	functionName string,
 	accessedType sema.Type,
-	typeQualifiedName string,
 ) string {
 	// check if this function is location qualified by checking globalRemoveAddressTable
 	addressQualifiedFuncName := commons.QualifiedName(
@@ -2567,7 +2949,11 @@ func (c *Compiler[_, _]) maybeApplyAddressQualifierToFunctionName(
 			return addressQualifiedFuncName
 		}
 	}
-	return typeQualifiedName
+
+	return commons.TypeQualifiedName(
+		accessedType,
+		functionName,
+	)
 }
 
 func (c *Compiler[_, _]) compileMethodInvocation(
@@ -2575,20 +2961,18 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	memberInfo sema.MemberAccessInfo,
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
-	argumentCount uint16,
+	implicitArgIndex *uint16,
+	implicitArgType sema.Type,
+	returnTypeIndex uint16,
+	hasImplicitArgument bool,
 ) {
-	var funcName string
+	funcName := invokedExpr.Identifier.Identifier
 
 	invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 	if invocationType.IsConstructor {
-
 		funcName = c.maybeApplyAddressQualifierToFunctionName(
-			invokedExpr.Identifier.Identifier,
+			funcName,
 			memberInfo.AccessedType,
-			commons.TypeQualifiedName(
-				memberInfo.AccessedType,
-				invokedExpr.Identifier.Identifier,
-			),
 		)
 
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
@@ -2596,31 +2980,39 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		// Load function value
 		c.emitGlobalLoad(funcName)
 
-		// Compile arguments
-		c.compileArguments(expression.Arguments, invocationTypes)
+		c.emitInvocation(
+			expression,
+			implicitArgIndex,
+			implicitArgType,
+			invocationTypes,
+			returnTypeIndex,
+			hasImplicitArgument,
+		)
 
-		typeArgs := c.loadTypeArguments(invocationTypes)
-
-		c.emit(opcode.InstructionInvoke{
-			TypeArgs: typeArgs,
-			ArgCount: argumentCount,
-		})
 		return
 	}
 
-	isOptional := memberInfo.IsOptional
+	if implicitArgIndex != nil {
+		panic(errors.NewUnexpectedError("implicit arguments can only be present for constructor invocations"))
+	}
 
-	typeArgs := c.loadTypeArguments(invocationTypes)
+	isOptional := memberInfo.IsOptional
 
 	// Invocations into the interface code, such as default functions and inherited conditions,
 	// that were synthetically added at the desugar phase, must be static calls.
 	isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
 
+	// If the function is accessed via optional-chaining,
+	// then the target type is the inner type of the optional.
+	accessedType := memberInfo.AccessedType
+	if isOptional {
+		accessedType = sema.UnwrapOptionalType(accessedType)
+	}
+
 	// Any invocation on restricted-types must be dynamic
 	if !isInterfaceInheritedFuncCall &&
-		isDynamicMethodInvocation(memberInfo.AccessedType) {
+		isDynamicMethodInvocation(accessedType) {
 
-		funcName = invokedExpr.Identifier.Identifier
 		if len(funcName) >= math.MaxUint16 {
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
@@ -2632,16 +3024,15 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// Get the method as a bound function.
 				// withOptionalChaining evaluates the target expression and leave the value on stack.
 				// i.e: the receiver is already loaded.
-				c.compileMemberAccess(invokedExpr)
+				c.emitDynamicMethodLoad(funcName, accessedType)
 
-				// Compile arguments
-				c.compileArguments(expression.Arguments, invocationTypes)
-
-				c.emit(
-					opcode.InstructionInvoke{
-						TypeArgs: typeArgs,
-						ArgCount: argumentCount,
-					},
+				c.emitInvocation(
+					expression,
+					implicitArgIndex,
+					implicitArgType,
+					invocationTypes,
+					returnTypeIndex,
+					hasImplicitArgument,
 				)
 			},
 			true,
@@ -2650,21 +3041,10 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		return
 	}
 
-	// If the function is accessed via optional-chaining,
-	// then the target type is the inner type of the optional.
-	accessedType := memberInfo.AccessedType
-	if isOptional {
-		accessedType = sema.UnwrapOptionalType(accessedType)
-	}
-
 	// Load function value.
 	funcName = c.maybeApplyAddressQualifierToFunctionName(
-		invokedExpr.Identifier.Identifier,
+		funcName,
 		accessedType,
-		commons.TypeQualifiedName(
-			accessedType,
-			invokedExpr.Identifier.Identifier,
-		),
 	)
 
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
@@ -2676,11 +3056,15 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		// Compile as static-function call.
 		// No receiver is loaded.
 		c.emitGlobalLoad(funcName)
-		c.compileArguments(expression.Arguments, invocationTypes)
-		c.emit(opcode.InstructionInvoke{
-			TypeArgs: typeArgs,
-			ArgCount: argumentCount,
-		})
+
+		c.emitInvocation(
+			expression,
+			implicitArgIndex,
+			implicitArgType,
+			invocationTypes,
+			returnTypeIndex,
+			hasImplicitArgument,
+		)
 	} else {
 		c.withOptionalChaining(
 			invokedExpr.Expression,
@@ -2692,18 +3076,16 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 				// Get the method as a bound function.
 				// This is needed to capture the implicit reference that's get created by bound functions.
-				c.emitMethodLoad(funcName)
+				c.emitMethodLoad(funcName, accessedType)
 
-				// Compile arguments
-				c.compileArguments(expression.Arguments, invocationTypes)
-
-				c.emit(opcode.InstructionInvoke{
-					TypeArgs: typeArgs,
-
-					// Argument count does not include the receiver,
-					// since receiver is already captured by the bound-function.
-					ArgCount: argumentCount,
-				})
+				c.emitInvocation(
+					expression,
+					implicitArgIndex,
+					implicitArgType,
+					invocationTypes,
+					returnTypeIndex,
+					hasImplicitArgument,
+				)
 			},
 			true,
 		)
@@ -2745,7 +3127,7 @@ func (c *Compiler[_, _]) compileOptionalChainingNilJump(
 	}
 
 	tempIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(tempIndex)
+	c.emitSetTempLocal(tempIndex)
 
 	// If the value is nil, return nil. by jumping to the instruction where nil is returned.
 	c.emitGetLocal(tempIndex)
@@ -2786,9 +3168,8 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 		return isDynamicMethodInvocation(typ.Type)
 	case *sema.OptionalType:
 		return isDynamicMethodInvocation(typ.Type)
-	case *sema.IntersectionType:
-		return true
-	case *sema.InterfaceType:
+	case *sema.IntersectionType,
+		*sema.InterfaceType:
 		return true
 	default:
 		return false
@@ -2799,15 +3180,17 @@ func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTyp
 	for index, argument := range arguments {
 		c.compileExpression(argument.Expression)
 
-		if invocationTypes.SkipArgumentsTransfer {
+		if invocationTypes.PassArgumentsWithoutTransferOrConvert {
 			continue
 		}
 
-		parameterType := invocationTypes.ParameterTypes[index]
-		if parameterType == nil {
+		valueType := invocationTypes.ArgumentTypes[index]
+
+		// Resource-typed values are always used along with the move (<-) unary-operator.
+		// And the unary move operator already does the transfer.
+		// Therefore, do not perform a redundant transfer for resource-types.
+		if !valueType.IsResourceType() {
 			c.emitTransfer()
-		} else {
-			c.emitTransferIfNotResourceAndConvert(parameterType)
 		}
 	}
 }
@@ -2821,6 +3204,7 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 
 	var typeArgs []uint16
 	if typeArgsCount > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(typeArgsCount))
 		typeArgs = make([]uint16, 0, typeArgsCount)
 
 		typeArguments.Foreach(func(key *sema.TypeParameter, typeParam sema.Type) {
@@ -2829,6 +3213,28 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 	}
 
 	return typeArgs
+}
+
+func (c *Compiler[_, _]) loadTypes(types []sema.Type) []uint16 {
+	count := len(types)
+	if count >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid number of type arguments: %d", count))
+	}
+
+	var typeIndices []uint16
+	if count > 0 {
+		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
+		typeIndices = make([]uint16, 0, count)
+
+		for _, typ := range types {
+			if typ == nil {
+				continue
+			}
+			typeIndices = append(typeIndices, c.getOrAddType(typ))
+		}
+	}
+
+	return typeIndices
 }
 
 func typeFunctionType(ty sema.Type) sema.Type {
@@ -2893,9 +3299,7 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 // has evaluated and the value is pushed onto the stack.
 func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
-	identifier := expression.Identifier.Identifier
-
-	constant := c.addRawStringConst(identifier)
+	memberName := expression.Identifier.Identifier
 
 	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
@@ -2904,20 +3308,59 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
+		memberNameConstant := c.addRawStringConst(memberName)
 		c.emit(opcode.InstructionRemoveField{
-			FieldName: constant.index,
+			FieldName: memberNameConstant.index,
 		})
 	} else {
 		accessedType := memberAccessInfo.AccessedType
 		if memberAccessInfo.IsOptional {
 			accessedType = sema.UnwrapOptionalType(accessedType)
 		}
-		accessedTypeIndex := c.getOrAddType(accessedType)
 
-		c.emit(opcode.InstructionGetField{
-			FieldName:    constant.index,
-			AccessedType: accessedTypeIndex,
-		})
+		memberKind := memberAccessInfo.Member.DeclarationKind
+
+		switch memberKind {
+		case common.DeclarationKindField:
+			accessedTypeIndex := c.getOrAddType(accessedType)
+			memberNameConstant := c.addRawStringConst(memberName)
+			c.emit(opcode.InstructionGetField{
+				FieldName:    memberNameConstant.index,
+				AccessedType: accessedTypeIndex,
+			})
+
+		case common.DeclarationKindFunction:
+			if isDynamicMethodInvocation(accessedType) {
+				c.emitDynamicMethodLoad(memberName, accessedType)
+			} else {
+				memberName = c.maybeApplyAddressQualifierToFunctionName(
+					memberName,
+					accessedType,
+				)
+				c.emitMethodLoad(memberName, accessedType)
+			}
+
+		default:
+			// Treat all other memberKinds (i.e: enum. struct, resource, etc.), as functions,
+			// because they are all constructors.
+
+			memberType, ok := memberAccessInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
+			if !ok || !memberType.IsConstructor {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Drop the receiver. It's not needed.
+			// Constructors are invoked as static functions.
+			// TODO: Avoid loading the receiver for constructors.
+			c.emit(opcode.InstructionDrop{})
+
+			memberName = c.maybeApplyAddressQualifierToFunctionName(
+				memberName,
+				accessedType,
+			)
+			// Load function value
+			c.emitGlobalLoad(memberName)
+		}
 	}
 
 	// Return a reference, if the member is accessed via a reference.
@@ -2934,45 +3377,72 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
 	c.compileExpression(expression.TargetExpression)
 
-	if attachmentType, ok := c.DesugaredElaboration.AttachmentAccessTypes(expression); ok {
+	if attachmentAccessTypes, ok := c.DesugaredElaboration.AttachmentAccessTypes(expression); ok {
+		indexedType := c.getOrAddType(attachmentAccessTypes.BaseType)
+		indexingType := c.getOrAddType(attachmentAccessTypes.AttachmentType)
 		c.emit(opcode.InstructionGetTypeIndex{
-			Type: c.getOrAddType(attachmentType),
+			IndexedType:  indexedType,
+			IndexingType: indexingType,
 		})
 	} else {
 		c.compileExpression(expression.IndexingExpression)
-
-		c.compileIndexAccess(expression)
+		c.emitIndexKeyTransferAndConvert(expression)
+		const pushPlaceholderValue = false
+		c.compileIndexAccessWithTransferredIndex(expression, pushPlaceholderValue)
 	}
 
 	return
 }
 
-// compileIndexAccess compiles the index access, i.e. RemoveIndex or GetIndex.
-// It assumes the target and indexing/key expressions are already compiled on the stack.
-func (c *Compiler[_, _]) compileIndexAccess(expression *ast.IndexExpression) {
-	c.emitIndexKeyTransferAndConvert(expression)
-
-	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
-	if isNestedResourceMove {
-		c.emit(opcode.InstructionRemoveIndex{})
-	} else {
-		c.emit(opcode.InstructionGetIndex{})
-	}
-
+// compileIndexAccessWithTransferredIndex compiles the index access, i.e. RemoveIndex or GetIndex.
+// It assumes the target and transferred indexing/key expressions are already compiled on the stack.
+func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(
+	expression *ast.IndexExpression,
+	pushPlaceholderValue bool,
+) (
+	emittedRemoveIndexWithPushPlaceholder bool,
+) {
 	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	// Return a reference, if the element is accessed via a reference.
-	// This is pre-computed at the checker.
-	if indexExpressionTypes.ReturnReference {
-		index := c.getOrAddType(indexExpressionTypes.ResultType)
-		c.emit(opcode.InstructionNewRef{
-			Type:       index,
-			IsImplicit: true,
+	indexedType := c.getOrAddType(indexExpressionTypes.IndexedType)
+
+	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
+	if isNestedResourceMove {
+		c.emit(opcode.InstructionRemoveIndex{
+			IndexedType:     indexedType,
+			PushPlaceholder: pushPlaceholderValue,
 		})
+		emittedRemoveIndexWithPushPlaceholder = pushPlaceholderValue
+	} else {
+		c.emit(opcode.InstructionGetIndex{
+			IndexedType: indexedType,
+		})
+
+		// Return a reference, if the element is accessed via a reference.
+		// This is pre-computed at the checker.
+		if indexExpressionTypes.ReturnReference {
+			index := c.getOrAddType(indexExpressionTypes.ResultType)
+			c.emit(opcode.InstructionNewRef{
+				Type:       index,
+				IsImplicit: true,
+			})
+		} else if _, isOptional := indexExpressionTypes.ResultType.(*sema.OptionalType); isOptional {
+			// When accessing an element, the underlying container's element type may differ
+			// from the reference's element type.
+			// For example, when the static type is `[Int?]`, but the container's run-time type is `[Int]`,
+			// then it stores `Int` elements, but the result type of the access is `Int?`.
+			// Box the value to match.
+			resultType := c.getOrAddType(indexExpressionTypes.ResultType)
+			c.emit(opcode.InstructionBoxOptional{
+				TargetType: resultType,
+			})
+		}
 	}
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitConditionalExpression(expression *ast.ConditionalExpression) (_ struct{}) {
@@ -3023,12 +3493,22 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
+		binaryExpressionTypes := c.DesugaredElaboration.BinaryExpressionTypes(expression)
+
 		// Duplicate the value for the nil equality check.
 		c.emit(opcode.InstructionDup{})
 		elseJump := c.emitUndefinedJumpIfNil()
 
 		// Then branch
 		c.emit(opcode.InstructionUnwrap{})
+		leftResultType := binaryExpressionTypes.LeftType
+		optionalType, ok := leftResultType.(*sema.OptionalType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		leftResultType = optionalType.Type
+
+		c.emitConvert(leftResultType, binaryExpressionTypes.ResultType)
 		thenJump := c.emitUndefinedJump()
 
 		// Else branch
@@ -3037,6 +3517,7 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 		// as it is not needed for the 'else' path.
 		c.emit(opcode.InstructionDrop{})
 		c.compileExpression(expression.Right)
+		c.emitConvert(binaryExpressionTypes.RightType, binaryExpressionTypes.ResultType)
 
 		// End
 		c.patchJumpHere(thenJump)
@@ -3213,21 +3694,25 @@ func (c *Compiler[_, _]) VisitCastingExpression(expression *ast.CastingExpressio
 	c.compileExpression(expression.Expression)
 
 	castingTypes := c.DesugaredElaboration.CastingExpressionTypes(expression)
-	index := c.getOrAddType(castingTypes.TargetType)
+	targetTypeIndex := c.getOrAddType(castingTypes.TargetType)
+	valueTypeIndex := c.getOrAddType(castingTypes.StaticValueType)
 
 	var castInstruction opcode.Instruction
 	switch expression.Operation {
 	case ast.OperationCast:
 		castInstruction = opcode.InstructionSimpleCast{
-			Type: index,
+			TargetType: targetTypeIndex,
+			ValueType:  valueTypeIndex,
 		}
 	case ast.OperationFailableCast:
 		castInstruction = opcode.InstructionFailableCast{
-			Type: index,
+			TargetType: targetTypeIndex,
+			ValueType:  valueTypeIndex,
 		}
 	case ast.OperationForceCast:
 		castInstruction = opcode.InstructionForceCast{
-			Type: index,
+			TargetType: targetTypeIndex,
+			ValueType:  valueTypeIndex,
 		}
 	default:
 		panic(errors.NewUnreachableError())
@@ -3348,15 +3833,17 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	// otherwise, base is declared as the second parameter after self.
 	c.declareParameters(parameterList, false, false)
 
+	memoryGauge := c.Config.MemoryGauge
+
 	var base *local
 	// must do this before declaring self
 	if kind == common.CompositeKindAttachment {
 		// base is provided as an argument at the end of the argument list implicitly
-		base = c.currentFunction.declareLocal(sema.BaseIdentifier)
+		base = c.currentFunction.declareLocal(memoryGauge, sema.BaseIdentifier)
 	}
 
 	// Declare `self`
-	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
+	self := c.currentFunction.declareLocal(memoryGauge, sema.SelfIdentifier)
 
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
@@ -3459,19 +3946,25 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		})
 	}
 
-	c.emitSetLocal(self.index)
+	// Avoid emitting a redundant set-local/get-local if the initializer has no body,
+	// or if the return value is already in `self` (for non-attachment types).
+	if !declaration.FunctionDeclaration.FunctionBlock.IsEmpty() ||
+		returnLocalIndex != self.index {
 
-	// emit for the statements in `init()` body.
-	c.compileFunctionBlock(
-		declaration.FunctionDeclaration.FunctionBlock,
-		declaration.Kind,
+		c.emitSetLocal(self.index)
 
-		// The return type of the initializer is the type itself.
-		enclosingType,
-	)
+		// emit for the statements in `init()` body.
+		c.compileFunctionBlock(
+			declaration.FunctionDeclaration.FunctionBlock,
+			declaration.Kind,
 
-	// Constructor should return the created the struct. i.e: return `self`
-	c.emitGetLocal(returnLocalIndex)
+			// The return type of the initializer is the type itself.
+			enclosingType,
+		)
+
+		// Constructor should return the created the struct. i.e: return `self`
+		c.emitGetLocal(returnLocalIndex)
+	}
 
 	// No need to transfer, since the type is same as the constructed value, for initializers.
 	c.emit(opcode.InstructionReturnValue{})
@@ -3526,7 +4019,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		// (i.e: doesn't rely on where this function is located in the AST; doesn't inherit from other functions, etc.).
 		declaration = c.desugar.DesugarInnerFunction(declaration)
 
-		innerFunctionLocal = c.currentFunction.declareLocal(identifier)
+		innerFunctionLocal = c.currentFunction.declareLocal(c.Config.MemoryGauge, identifier)
 	}
 
 	if parameterCount >= math.MaxUint16 {
@@ -3738,7 +4231,7 @@ func (c *Compiler[_, _]) createGlobalAlias(location common.Location, name string
 	// if alias exists or we want to force qualify (e.g. for aliased methods)
 	if ok || forceQualify {
 		// we want a table pointing from the alias -> address qualifier (Foo1 -> A.0001.Foo)
-		addressQualifiedName := string(location.TypeID(nil, name))
+		addressQualifiedName := string(location.TypeID(c.Config.MemoryGauge, name))
 		// check if alias exists in case of force qualification
 		if ok {
 			c.globalAliasTable[alias] = addressQualifiedName
@@ -3753,6 +4246,11 @@ func (c *Compiler[_, _]) createGlobalAlias(location common.Location, name string
 func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location, aliases map[string]string) {
 	// Built-in location has no program.
 	if location == nil {
+		return
+	}
+
+	// If the imports are already added for this location, then no need to add again.
+	if _, ok := c.addedImports[location]; ok {
 		return
 	}
 
@@ -3791,6 +4289,8 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		qualifiedName := c.createGlobalAlias(location, function.QualifiedName, aliases, len(aliases) > 0)
 		c.addImportedGlobal(location, function.QualifiedName, qualifiedName)
 	}
+
+	c.addedImports[location] = struct{}{}
 
 	// Recursively add transitive imports.
 	for _, impt := range importedProgram.Imports {
@@ -3850,7 +4350,7 @@ func (c *Compiler[_, _]) VisitTransactionDeclaration(declaration *ast.Transactio
 			modifiedParamName := commons.TransactionGeneratedParamPrefix +
 				parameter.Identifier.Identifier
 
-			local := c.currentFunction.declareLocal(modifiedParamName)
+			local := c.currentFunction.declareLocal(c.Config.MemoryGauge, modifiedParamName)
 			c.emitGetLocal(local.index)
 
 			global := c.findGlobal(parameter.Identifier.Identifier)
@@ -3899,15 +4399,22 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 		constructorName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
 		c.emitGlobalLoad(constructorName)
 
+		enumRawType := compositeType.EnumRawType
+
 		indexBigInt := big.NewInt(int64(index))
 		c.emitIntegerConstant(
 			indexBigInt,
-			compositeType.EnumRawType,
+			enumRawType,
 		)
 
+		argumentTypes := c.loadTypes([]sema.Type{enumRawType})
+		returnTypeIndex := c.getOrAddType(compositeType)
+
 		c.emit(opcode.InstructionInvoke{
-			ArgCount: 1,
+			ArgTypes:   argumentTypes,
+			ReturnType: returnTypeIndex,
 		})
+
 		// NOTE: Do not transfer, as that creates a copy of the enum case value,
 		// which does not match the interpreter's behavior.
 		c.emit(opcode.InstructionReturnValue{})
@@ -3948,10 +4455,15 @@ func (c *Compiler[_, _]) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMa
 func (c *Compiler[_, _]) VisitRemoveStatement(statement *ast.RemoveStatement) (_ struct{}) {
 	// load base onto stack
 	c.compileExpression(statement.Value)
+
 	// remove attachment from base
-	nominalType := c.DesugaredElaboration.AttachmentRemoveTypes(statement)
+	attachmentRemoveTypes := c.DesugaredElaboration.AttachmentRemoveTypes(statement)
+	attachmentTypeIndex := c.getOrAddType(attachmentRemoveTypes.AttachmentType)
+	baseTypeIndex := c.getOrAddType(attachmentRemoveTypes.BaseType)
+
 	c.emit(opcode.InstructionRemoveTypeIndex{
-		Type: c.getOrAddType(nominalType),
+		IndexedType:  baseTypeIndex,
+		IndexingType: attachmentTypeIndex,
 	})
 	return
 }
@@ -3965,29 +4477,31 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.compileExpression(expression.Base)
 	// store base locally
 	baseLocalIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(baseLocalIndex)
+	c.emitSetTempLocal(baseLocalIndex)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
-	baseTyp, ok := baseType.(sema.EntitlementSupportingType)
-	if !ok {
-		// simulates defensive check in interpreter
-		panic(errors.NewUnreachableError())
-	}
-	baseAccess := baseTyp.SupportedEntitlements().Access()
-	refType := &sema.ReferenceType{
-		Type:          baseTyp,
-		Authorization: baseAccess,
-	}
+
+	// within the constructor, base is unauthorized (unlike self, which remains fully entitled)
+	refType := sema.NewReferenceType(
+		c.Config.MemoryGauge,
+		sema.UnauthorizedAccess,
+		baseType,
+	)
+
 	// create reference to base to pass as implicit arg
 	c.emit(opcode.InstructionNewRef{
 		Type:       c.getOrAddType(refType),
 		IsImplicit: false,
 	})
 	refLocalIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(refLocalIndex)
+	c.emitSetTempLocal(refLocalIndex)
 
 	// create the attachment
-	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, refLocalIndex, baseType)
+	c.visitInvocationExpressionWithImplicitArgument(
+		expression.Attachment,
+		&refLocalIndex,
+		refType,
+	)
 	// attachment on stack
 
 	// base back on stack
@@ -3995,13 +4509,18 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 
 	// add attachment value as a member of transferred base
 	// returns the result
+
+	indexedType := c.getOrAddType(baseType)
+	indexingType := c.getOrAddType(attachmentType)
+
 	c.emit(opcode.InstructionSetTypeIndex{
-		Type: c.getOrAddType(attachmentType),
+		IndexedType:  indexedType,
+		IndexingType: indexingType,
 	})
 	return
 }
 
-func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
+func (c *Compiler[_, _]) mustEmitTransferAndConvert(valueType, targetType sema.Type) {
 
 	//lastInstruction := c.codeGen.LastInstruction()
 
@@ -4054,9 +4573,12 @@ func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
 	//	return
 	//}
 
-	typeIndex := c.getOrAddType(targetType)
+	valueTypeIndex := c.getOrAddType(valueType)
+	targetTypeIndex := c.getOrAddType(targetType)
+
 	c.emit(opcode.InstructionTransferAndConvert{
-		Type: typeIndex,
+		ValueType:  valueTypeIndex,
+		TargetType: targetTypeIndex,
 	})
 }
 
@@ -4065,8 +4587,9 @@ func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
 // i.e: If
 //   - Resource: Convert only.
 //   - Non-Resource: Transfer and convert.
-func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(targetType sema.Type) {
-	typeIndex := c.getOrAddType(targetType)
+func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(valueType, targetType sema.Type) {
+	valueTypeIndex := c.getOrAddType(valueType)
+	targetTypeIndex := c.getOrAddType(targetType)
 
 	// Resource-typed values are always used along with the move (<-) unary-operator.
 	// And the unary move operator already does the transfer.
@@ -4074,13 +4597,15 @@ func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(targetType sema.Typ
 	// Only perform the conversion (e.g: boxing, etc.).
 	if targetType.IsResourceType() {
 		c.emit(opcode.InstructionConvert{
-			Type: typeIndex,
+			ValueType:  valueTypeIndex,
+			TargetType: targetTypeIndex,
 		})
 		return
 	}
 
 	c.emit(opcode.InstructionTransferAndConvert{
-		Type: typeIndex,
+		ValueType:  valueTypeIndex,
+		TargetType: targetTypeIndex,
 	})
 }
 
@@ -4088,19 +4613,37 @@ func (c *Compiler[_, _]) emitTransfer() {
 	c.emit(opcode.InstructionTransfer{})
 }
 
+func (c *Compiler[_, _]) emitConvert(valueType, targetType sema.Type) {
+	valueTypeIndex := c.getOrAddType(valueType)
+	targetTypeIndex := c.getOrAddType(targetType)
+
+	c.emit(opcode.InstructionConvert{
+		ValueType:  valueTypeIndex,
+		TargetType: targetTypeIndex,
+	})
+}
+
 func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
-	typeID := ty.ID()
-
-	// Optimization: Re-use types in the pool.
-	index, ok := c.typesInPool[typeID]
-
-	if !ok {
-		staticType := interpreter.ConvertSemaToStaticType(c.Config.MemoryGauge, ty)
-		data := c.typeGen.CompileType(staticType)
-		index = c.addCompiledType(ty, data)
-		c.typesInPool[typeID] = index
+	// When compiling an inherited code, if we come across a concrete contract type,
+	// then use a reference-type to it.
+	// An inherited code can never refer to the currently compiling contract (i.e: circular imports),
+	// so it's always safe to treat an inherited contract-variable type as a reference type.
+	if c.isInheritedCode {
+		ty = sema.ImportedType(c.Config.MemoryGauge, ty)
 	}
 
+	// Optimization: Re-use types in the pool.
+	cacheKey := commons.NewTypeCacheKeyFromType(ty)
+	index, ok := c.typesInPool[cacheKey]
+	if ok {
+		return index
+	}
+
+	staticType := interpreter.ConvertSemaToStaticType(c.Config.MemoryGauge, ty)
+	data := c.typeGen.CompileType(staticType)
+	index = c.addCompiledType(ty, data)
+
+	c.typesInPool[cacheKey] = index
 	return index
 }
 
@@ -4116,22 +4659,24 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 }
 
 func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declareReceiver bool, declareBase bool) {
+	memoryGauge := c.Config.MemoryGauge
+
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
-		c.currentFunction.declareLocal(sema.SelfIdentifier)
+		c.currentFunction.declareLocal(memoryGauge, sema.SelfIdentifier)
 	}
 
 	if declareBase {
 		// Declare base receiver as `base`
 		// Always at index one of params.
-		c.currentFunction.declareLocal(sema.BaseIdentifier)
+		c.currentFunction.declareLocal(memoryGauge, sema.BaseIdentifier)
 	}
 
 	if paramList != nil {
 		for _, parameter := range paramList.Parameters {
 			parameterName := parameter.Identifier.Identifier
-			c.currentFunction.declareLocal(parameterName)
+			c.currentFunction.declareLocal(memoryGauge, parameterName)
 		}
 	}
 }
@@ -4142,12 +4687,16 @@ func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = stmtElaboration
 
-		preIsInheritedCode := c.currentInheritedConditionParamBinding
+		prevIsInheritedCode := c.isInheritedCode
+		c.isInheritedCode = true
+
+		prevInheritedConditionParamBinding := c.currentInheritedConditionParamBinding
 		c.currentInheritedConditionParamBinding = c.inheritedConditionParamBindings[statement]
 
 		defer func() {
 			c.DesugaredElaboration = prevElaboration
-			c.currentInheritedConditionParamBinding = preIsInheritedCode
+			c.currentInheritedConditionParamBinding = prevInheritedConditionParamBinding
+			c.isInheritedCode = prevIsInheritedCode
 		}()
 	}
 	f()
@@ -4167,6 +4716,8 @@ func (c *Compiler[_, _]) emitCloseUpvalue(localIndex uint16) {
 }
 
 func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
+	common.UseMemory(c.Config.MemoryGauge, common.CompilerInstructionMemoryUsage)
+
 	// Get the index of the instruction to be emitted.
 	// This is the offset before emitting the current instruction.
 	instructionIndex := c.codeGen.Offset()

@@ -1,0 +1,11 @@
+rules:
+  - super: FunctionType
+    predicate:
+      forAll:
+        source: sub.TypeParameters
+        target: super.TypeParameters
+        predicate:
+          deepEquals:
+            source: source.TypeBound
+            target: target.TypeBound
+

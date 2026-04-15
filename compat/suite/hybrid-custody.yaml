@@ -1,0 +1,7 @@
+description: Hybrid Custody
+maintainers:
+url: https://github.com/onflow/hybrid-custody.git
+branch: main
+cadence_tests:
+- path: .
+  command: flow test test/*.cdc

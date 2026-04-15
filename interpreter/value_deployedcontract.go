@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -61,7 +62,17 @@ func NewDeployedContractValue(
 		address,
 		name,
 	)
-	deployedContract.Fields[sema.DeployedContractTypePublicTypesFunctionName] = publicTypesFuncValue
+
+	// `sema.DeployedContractType` has the following members as function-members.
+	// Therefore, include them as functions in the value as well.
+	deployedContract.FunctionMemberGetter = func(name string, _ MemberAccessibleContext) FunctionValue {
+		switch name {
+		case sema.DeployedContractTypePublicTypesFunctionName:
+			return publicTypesFuncValue
+		default:
+			return nil
+		}
+	}
 
 	return deployedContract
 }
@@ -69,43 +80,45 @@ func NewDeployedContractValue(
 func NewNativeDeployedContractPublicTypesFunctionValue(
 	addressPointer *common.Address,
 	name *StringValue,
-	publicTypes *ArrayValue,
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
 		var address common.Address
 		if addressPointer == nil {
-			// the vm does not provide any arguments
+			// VM does not provide address
 			deployedContract := AssertValueOfType[*SimpleCompositeValue](receiver)
 
 			addressFieldValue := deployedContract.GetMember(
 				context,
 				sema.DeployedContractTypeAddressFieldName,
+				common.DeclarationKindField,
 			)
 			address = common.Address(AssertValueOfType[AddressValue](addressFieldValue))
 
 			nameFieldValue := deployedContract.GetMember(
 				context,
 				sema.DeployedContractTypeNameFieldName,
+				common.DeclarationKindField,
 			)
 			name = AssertValueOfType[*StringValue](nameFieldValue)
 		} else {
+			// Interpreter provides address and name
 			address = *addressPointer
+			if name == nil {
+				panic(errors.NewUnreachableError())
+			}
 		}
 
-		if publicTypes == nil {
-			publicTypes = DeployedContractPublicTypes(
-				context,
-				address,
-				name,
-			)
-		}
-
-		return publicTypes
+		return DeployedContractPublicTypes(
+			context,
+			address,
+			name,
+		)
 	}
 }
 
@@ -115,15 +128,12 @@ func newInterpreterDeployedContractPublicTypesFunctionValue(
 	addressValue AddressValue,
 	name *StringValue,
 ) FunctionValue {
-	// public types only need to be computed once per contract
-	var publicTypes *ArrayValue
-
 	address := addressValue.ToAddress()
 	return NewBoundHostFunctionValue(
 		context,
 		self,
 		sema.DeployedContractTypePublicTypesFunctionType,
-		NewNativeDeployedContractPublicTypesFunctionValue(&address, name, publicTypes),
+		NewNativeDeployedContractPublicTypesFunctionValue(&address, name),
 	)
 }
 

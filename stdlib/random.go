@@ -110,6 +110,7 @@ func NativeRevertibleRandomFunction(generator RandomGenerator) interpreter.Nativ
 	return func(
 		context interpreter.NativeFunctionContext,
 		typeArguments interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {

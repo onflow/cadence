@@ -71,7 +71,7 @@ func init() {
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryValue := receiver.(*interpreter.DictionaryValue)
 				dictionaryType := dictionaryValue.SemaType(context)
-				return sema.DictionaryRemoveFunctionType(dictionaryType)
+				return sema.DictionaryForEachKeyFunctionType(dictionaryType)
 			},
 			interpreter.NativeDictionaryForEachKeyFunction,
 		),

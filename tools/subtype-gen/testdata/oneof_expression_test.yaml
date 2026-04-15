@@ -1,0 +1,13 @@
+rules:
+  - super: NumberType
+    predicate:
+      or:
+        - equals:
+            source: sub
+            target:
+              oneOf: [NumberType, SignedNumberType]
+        - subtype:
+            sub: sub
+            super:
+              oneOf: [IntegerType, FixedPointType]
+

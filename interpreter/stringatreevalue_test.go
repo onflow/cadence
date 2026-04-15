@@ -34,7 +34,7 @@ func TestLargeStringAtreeValueInSeparateSlab(t *testing.T) {
 	// Ensure that StringAtreeValue handles the case where it is stored in a separate slab,
 	// when the string is very large
 
-	storage := NewInMemoryStorage(nil)
+	storage := NewInMemoryStorage(nil, nil)
 
 	inter, err := NewInterpreter(
 		nil,

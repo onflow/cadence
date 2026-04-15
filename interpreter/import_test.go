@@ -47,6 +47,7 @@ func newAddLogFunction(logs *[]string) interpreter.NativeFunction {
 	return func(
 		_ interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		arguments []interpreter.Value,
 	) interpreter.Value {
@@ -133,7 +134,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 						interpreter.NewStaticHostFunctionValue(
 							inter,
 							&sema.FunctionType{
-								ReturnTypeAnnotation: sema.UIntTypeAnnotation,
+								ReturnTypeAnnotation: sema.UInt64TypeAnnotation,
 							},
 							func(invocation interpreter.Invocation) interpreter.Value {
 								return interpreter.NewUnmeteredUInt64Value(42)
@@ -291,7 +292,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -422,7 +423,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 
 	rConstructor := subInterpreter.Globals.Get("R").GetValue(inter)
 
-	_, err = inter.Invoke("test", rConstructor)
+	_, err = inter.InvokeUncheckedForTestingOnly("test", rConstructor)
 	RequireError(t, err)
 
 	var resourceConstructionError *interpreter.ResourceConstructionError
@@ -472,7 +473,7 @@ func TestInterpretImportWithAlias(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           import a as a1 from 0x1
@@ -586,7 +587,7 @@ func TestInterpretImportAliasGetType(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           import Foo as Bar from 0x1
@@ -709,7 +710,7 @@ func TestInterpretImportTypeEquality(t *testing.T) {
 	// and imports bar from 0x2,
 	// and uses bar to return Baz (i.e., Foo)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           import Foo as Baz from 0x1
@@ -833,7 +834,7 @@ func TestInterpretImportAliasOtherMember(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
 		import MyContract as TheirContract from 0x1
@@ -1057,7 +1058,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
-              import 0x1
+              import x, y from 0x1
 
               let b = log("b")
               let a = log("a")

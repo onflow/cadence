@@ -368,7 +368,7 @@ func (v Word256Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord256 (1 byte)
 // - big int encoded in big endian (n bytes)
-func (v Word256Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Word256Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
@@ -529,8 +529,14 @@ func (v Word256Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	)
 }
 
-func (v Word256Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Word256Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Word256Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -562,7 +568,7 @@ func (Word256Value) IsStorable() bool {
 	return true
 }
 
-func (v Word256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Word256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -585,6 +591,7 @@ func (v Word256Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -606,4 +613,13 @@ func (v Word256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Word256Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Word256Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Word256Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

@@ -34,7 +34,7 @@ var _ atree.ComparableStorable = StringAtreeValue("")
 func (v StringAtreeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (
 	atree.Storable,
 	error,
@@ -75,8 +75,12 @@ func (v StringAtreeValue) ID() string {
 	return string(v)
 }
 
-func (v StringAtreeValue) Copy() atree.Storable {
-	return v
+func (StringAtreeValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v StringAtreeValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
 }
 
 func StringAtreeValueHashInput(v atree.Value, _ []byte) ([]byte, error) {

@@ -1,0 +1,16 @@
+rules:
+  - super: ComplexType
+    predicate:
+      and:
+        - mustType:
+            source: sub
+            type: IntersectionType
+        # The `not` operator will make this exit-early if matches.
+        - not:
+            equals:
+              source: sub.LegacyType
+              target:
+                oneOf: [nil, AnyResourceType, AnyStructType, AnyType]
+        - mustType:
+            source: sub.LegacyType
+            type: CompositeType

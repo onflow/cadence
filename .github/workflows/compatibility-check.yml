@@ -24,9 +24,6 @@ on:
       # We want to check the compatibility of the entitlements refactor
       - 'feature/entitlements-refactor'
 
-env:
-  GO_VERSION: '1.24'
-
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base || github.run_id }}
   cancel-in-progress: true

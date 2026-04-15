@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"sync"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -33,6 +35,9 @@ type StorageReferenceValue struct {
 	TargetPath           PathValue
 	TargetStorageAddress common.Address
 	Authorization        Authorization
+
+	staticType     StaticType
+	staticTypeOnce sync.Once
 }
 
 var _ Value = &StorageReferenceValue{}
@@ -74,6 +79,20 @@ func NewStorageReferenceValue(
 	)
 }
 
+func (v *StorageReferenceValue) WithAuthorizationAndBorrowedType(
+	context ReferenceCreationContext,
+	auth Authorization,
+	borrowedType sema.Type,
+) ReferenceValue {
+	return NewStorageReferenceValue(
+		context,
+		auth,
+		v.TargetStorageAddress,
+		v.TargetPath,
+		borrowedType,
+	)
+}
+
 func (*StorageReferenceValue) IsValue() {}
 
 func (v *StorageReferenceValue) Accept(context ValueVisitContext, visitor Visitor) {
@@ -102,18 +121,15 @@ func (v *StorageReferenceValue) MeteredString(
 }
 
 func (v *StorageReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	referencedValue, err := v.dereference(context)
-	if err != nil {
-		panic(err)
-	}
+	v.staticTypeOnce.Do(func() {
+		v.staticType = NewReferenceStaticType(
+			context,
+			v.Authorization,
+			ConvertSemaToStaticType(context, v.BorrowedType),
+		)
+	})
 
-	self := *referencedValue
-
-	return NewReferenceStaticType(
-		context,
-		v.Authorization,
-		self.StaticType(context),
-	)
+	return v.staticType
 }
 
 func (v *StorageReferenceValue) GetAuthorization() Authorization {
@@ -143,16 +159,25 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 	}
 
 	if v.BorrowedType != nil {
-		staticType := referenced.StaticType(context)
-
-		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
-			semaType := context.SemaTypeFromStaticType(staticType)
-
-			return nil, &ForceCastTypeMismatchError{
+		valueType := MustSemaTypeOfValue(referenced, context)
+		if !sema.IsSubType(valueType, v.BorrowedType) {
+			return nil, &StoredValueTypeMismatchError{
 				ExpectedType: v.BorrowedType,
-				ActualType:   semaType,
+				ActualType:   valueType,
 			}
 		}
+
+		// The dereferenced value must always comply to the borrowed type.
+		// For e.g: If the reference borrowed was with fewer entitlements than the actual
+		// entitlements present in the value (references can be temporarily stored in storage),
+		// then the excess entitlements needs to be stripped off before returning.
+		// Therefore, always convert to the borrow type when dereferencing.
+		referenced = ConvertAndBox(
+			context,
+			referenced,
+			valueType,
+			v.BorrowedType,
+		)
 	}
 
 	return &referenced, nil
@@ -163,7 +188,7 @@ func (v *StorageReferenceValue) ReferencedValue(context ValueStaticTypeContext, 
 	if err == nil {
 		return referencedValue
 	}
-	if forceCastErr, ok := err.(*ForceCastTypeMismatchError); ok {
+	if forceCastErr, ok := err.(*StoredValueTypeMismatchError); ok {
 		if errorOnFailedDereference {
 			// relay the type mismatch error with a dereference error context
 			panic(&DereferenceError{
@@ -176,7 +201,7 @@ func (v *StorageReferenceValue) ReferencedValue(context ValueStaticTypeContext, 
 	panic(err)
 }
 
-func (v *StorageReferenceValue) mustReferencedValue(
+func (v *StorageReferenceValue) MustReferencedValue(
 	context ValueStaticTypeContext,
 ) Value {
 	referencedValue := v.ReferencedValue(context, true)
@@ -189,8 +214,8 @@ func (v *StorageReferenceValue) mustReferencedValue(
 	return *referencedValue
 }
 
-func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
-	referencedValue := v.mustReferencedValue(context)
+func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	referencedValue := v.MustReferencedValue(context)
 
 	var member Value
 
@@ -206,12 +231,18 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name 
 	// Next, look up the member on the referenced value
 
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
-		member = memberAccessibleValue.GetMember(context, name)
+		member = memberAccessibleValue.GetMember(context, name, memberKind)
 	}
 
 	if member == nil {
 		// NOTE: Must call the `GetMethod` of the `StorageReferenceValue`, not of the referenced-value.
-		member = context.GetMethod(v, name)
+		member = GetMember(
+			context,
+			v,
+			name,
+			memberKind,
+			nil,
+		)
 	}
 
 	// If the member is a function, it is always a bound-function.
@@ -243,19 +274,18 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name 
 }
 
 func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	referencedValue := v.mustReferencedValue(context)
-	return getReferenceValueMethod(context, v, referencedValue, name)
-
+	referencedValue := v.MustReferencedValue(context)
+	return getBuiltinFunctionMember(context, referencedValue, name)
 }
 
 func (v *StorageReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return self.(MemberAccessibleValue).RemoveMember(context, name)
 }
 
 func (v *StorageReferenceValue) SetMember(context ValueTransferContext, name string, value Value) bool {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return setMember(
 		context,
@@ -265,29 +295,48 @@ func (v *StorageReferenceValue) SetMember(context ValueTransferContext, name str
 	)
 }
 
-func (v *StorageReferenceValue) GetKey(context ValueComparisonContext, key Value) Value {
-	self := v.mustReferencedValue(context)
+func (v *StorageReferenceValue) GetKey(context ContainerReadContext, key Value) Value {
+	self := v.MustReferencedValue(context)
 
 	return self.(ValueIndexableValue).
 		GetKey(context, key)
 }
 
 func (v *StorageReferenceValue) SetKey(context ContainerMutationContext, key Value, value Value) {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	self.(ValueIndexableValue).
 		SetKey(context, key, value)
 }
 
 func (v *StorageReferenceValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
-	self := v.mustReferencedValue(context)
+	v.InsertKeyWithMutationCheck(
+		context,
+		key,
+		value,
+		true,
+	)
+}
+
+func (v *StorageReferenceValue) InsertKeyWithMutationCheck(
+	context ContainerMutationContext,
+	key Value,
+	value Value,
+	checkMutation bool,
+) {
+	self := v.MustReferencedValue(context)
 
 	self.(ValueIndexableValue).
-		InsertKey(context, key, value)
+		InsertKeyWithMutationCheck(
+			context,
+			key,
+			value,
+			checkMutation,
+		)
 }
 
 func (v *StorageReferenceValue) RemoveKey(context ContainerMutationContext, key Value) Value {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return self.(ValueIndexableValue).
 		RemoveKey(context, key)
@@ -297,10 +346,13 @@ func (v *StorageReferenceValue) GetTypeKey(
 	context MemberAccessibleContext,
 	key sema.Type,
 ) Value {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
-		access := MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization)
+		access, err := context.SemaAccessFromStaticAuthorization(v.Authorization)
+		if err != nil {
+			panic(err)
+		}
 		return selfComposite.getTypeKey(
 			context,
 			key,
@@ -317,14 +369,14 @@ func (v *StorageReferenceValue) SetTypeKey(
 	key sema.Type,
 	value Value,
 ) {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	self.(TypeIndexableValue).
 		SetTypeKey(context, key, value)
 }
 
 func (v *StorageReferenceValue) RemoveTypeKey(context ValueTransferContext, key sema.Type) Value {
-	self := v.mustReferencedValue(context)
+	self := v.MustReferencedValue(context)
 
 	return self.(TypeIndexableValue).
 		RemoveTypeKey(context, key)
@@ -371,7 +423,7 @@ func (*StorageReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *StorageReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *StorageReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return NonStorable{Value: v}, nil
 }
 
@@ -418,7 +470,7 @@ func (v *StorageReferenceValue) ForEach(
 	function func(value Value) (resume bool),
 	_ bool,
 ) {
-	referencedValue := v.mustReferencedValue(context)
+	referencedValue := v.MustReferencedValue(context)
 	forEachReference(
 		context,
 		v,
@@ -481,7 +533,7 @@ func (v *StorageReferenceValue) BorrowType() sema.Type {
 }
 
 func (v *StorageReferenceValue) Iterator(context ValueStaticTypeContext) ValueIterator {
-	referencedValue := v.mustReferencedValue(context)
+	referencedValue := v.MustReferencedValue(context)
 	referencedIterable, ok := referencedValue.(IterableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())

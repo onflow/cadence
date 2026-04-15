@@ -30,87 +30,93 @@ func _() {
 	_ = x[Greater-27]
 	_ = x[LessOrEqual-28]
 	_ = x[GreaterOrEqual-29]
-	_ = x[Equal-30]
-	_ = x[NotEqual-31]
-	_ = x[Not-32]
-	_ = x[Wrap-36]
-	_ = x[Unwrap-37]
-	_ = x[Destroy-38]
-	_ = x[TransferAndConvert-39]
-	_ = x[SimpleCast-40]
-	_ = x[FailableCast-41]
-	_ = x[ForceCast-42]
-	_ = x[Deref-43]
-	_ = x[Transfer-44]
-	_ = x[Convert-45]
-	_ = x[True-49]
-	_ = x[False-50]
-	_ = x[Void-51]
-	_ = x[Nil-52]
-	_ = x[NewSimpleComposite-53]
-	_ = x[NewComposite-54]
-	_ = x[NewCompositeAt-55]
-	_ = x[NewPath-56]
-	_ = x[NewArray-57]
-	_ = x[NewDictionary-58]
-	_ = x[NewRef-59]
-	_ = x[NewClosure-60]
-	_ = x[GetConstant-71]
-	_ = x[GetLocal-72]
-	_ = x[SetLocal-73]
-	_ = x[GetUpvalue-74]
-	_ = x[SetUpvalue-75]
-	_ = x[CloseUpvalue-76]
-	_ = x[GetGlobal-77]
-	_ = x[SetGlobal-78]
-	_ = x[GetField-79]
-	_ = x[RemoveField-80]
-	_ = x[SetField-81]
-	_ = x[SetIndex-82]
-	_ = x[GetIndex-83]
-	_ = x[RemoveIndex-84]
-	_ = x[GetMethod-85]
-	_ = x[GetTypeIndex-86]
-	_ = x[SetTypeIndex-87]
-	_ = x[RemoveTypeIndex-88]
-	_ = x[SetAttachmentBase-89]
-	_ = x[Invoke-92]
-	_ = x[Drop-102]
-	_ = x[Dup-103]
-	_ = x[Iterator-110]
-	_ = x[IteratorHasNext-111]
-	_ = x[IteratorNext-112]
-	_ = x[IteratorEnd-113]
-	_ = x[EmitEvent-114]
-	_ = x[Loop-115]
-	_ = x[Statement-116]
-	_ = x[TemplateString-117]
-	_ = x[OpcodeMax-118]
+	_ = x[Same-30]
+	_ = x[Equal-31]
+	_ = x[NotEqual-32]
+	_ = x[Not-33]
+	_ = x[Wrap-37]
+	_ = x[Unwrap-38]
+	_ = x[Destroy-39]
+	_ = x[TransferAndConvert-40]
+	_ = x[SimpleCast-41]
+	_ = x[FailableCast-42]
+	_ = x[ForceCast-43]
+	_ = x[Deref-44]
+	_ = x[Transfer-45]
+	_ = x[Convert-46]
+	_ = x[BoxOptional-47]
+	_ = x[True-50]
+	_ = x[False-51]
+	_ = x[Void-52]
+	_ = x[Nil-53]
+	_ = x[NewSimpleComposite-54]
+	_ = x[NewComposite-55]
+	_ = x[NewCompositeAt-56]
+	_ = x[NewPath-57]
+	_ = x[NewArray-58]
+	_ = x[NewDictionary-59]
+	_ = x[NewRef-60]
+	_ = x[NewClosure-61]
+	_ = x[GetConstant-72]
+	_ = x[GetLocal-73]
+	_ = x[SetLocal-74]
+	_ = x[GetUpvalue-75]
+	_ = x[SetUpvalue-76]
+	_ = x[CloseUpvalue-77]
+	_ = x[GetGlobal-78]
+	_ = x[SetGlobal-79]
+	_ = x[GetField-80]
+	_ = x[RemoveField-81]
+	_ = x[SetField-82]
+	_ = x[SetIndex-83]
+	_ = x[GetIndex-84]
+	_ = x[RemoveIndex-85]
+	_ = x[GetMethod-86]
+	_ = x[GetMethodDynamic-87]
+	_ = x[GetTypeIndex-88]
+	_ = x[SetTypeIndex-89]
+	_ = x[RemoveTypeIndex-90]
+	_ = x[SetAttachmentBase-91]
+	_ = x[GetFieldLocal-93]
+	_ = x[Invoke-94]
+	_ = x[Drop-104]
+	_ = x[Dup-105]
+	_ = x[Iterator-112]
+	_ = x[IteratorHasNext-113]
+	_ = x[IteratorNext-114]
+	_ = x[IteratorEnd-115]
+	_ = x[EmitEvent-116]
+	_ = x[Loop-117]
+	_ = x[Statement-118]
+	_ = x[TemplateString-119]
+	_ = x[Unreachable-120]
+	_ = x[OpcodeMax-121]
 }
 
 const (
 	_Opcode_name_0 = "UnknownReturnReturnValueJumpJumpIfFalseJumpIfTrueJumpIfNil"
 	_Opcode_name_1 = "AddSubtractMultiplyDivideModNegate"
 	_Opcode_name_2 = "BitwiseOrBitwiseAndBitwiseXorBitwiseLeftShiftBitwiseRightShift"
-	_Opcode_name_3 = "LessGreaterLessOrEqualGreaterOrEqualEqualNotEqualNot"
-	_Opcode_name_4 = "WrapUnwrapDestroyTransferAndConvertSimpleCastFailableCastForceCastDerefTransferConvert"
+	_Opcode_name_3 = "LessGreaterLessOrEqualGreaterOrEqualSameEqualNotEqualNot"
+	_Opcode_name_4 = "WrapUnwrapDestroyTransferAndConvertSimpleCastFailableCastForceCastDerefTransferConvertBoxOptional"
 	_Opcode_name_5 = "TrueFalseVoidNilNewSimpleCompositeNewCompositeNewCompositeAtNewPathNewArrayNewDictionaryNewRefNewClosure"
-	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueCloseUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndexGetMethodGetTypeIndexSetTypeIndexRemoveTypeIndexSetAttachmentBase"
-	_Opcode_name_7 = "Invoke"
+	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueCloseUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndexGetMethodGetMethodDynamicGetTypeIndexSetTypeIndexRemoveTypeIndexSetAttachmentBase"
+	_Opcode_name_7 = "GetFieldLocalInvoke"
 	_Opcode_name_8 = "DropDup"
-	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementTemplateStringOpcodeMax"
+	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementTemplateStringUnreachableOpcodeMax"
 )
 
 var (
 	_Opcode_index_0 = [...]uint8{0, 7, 13, 24, 28, 39, 49, 58}
 	_Opcode_index_1 = [...]uint8{0, 3, 11, 19, 25, 28, 34}
 	_Opcode_index_2 = [...]uint8{0, 9, 19, 29, 45, 62}
-	_Opcode_index_3 = [...]uint8{0, 4, 11, 22, 36, 41, 49, 52}
-	_Opcode_index_4 = [...]uint8{0, 4, 10, 17, 35, 45, 57, 66, 71, 79, 86}
+	_Opcode_index_3 = [...]uint8{0, 4, 11, 22, 36, 40, 45, 53, 56}
+	_Opcode_index_4 = [...]uint8{0, 4, 10, 17, 35, 45, 57, 66, 71, 79, 86, 97}
 	_Opcode_index_5 = [...]uint8{0, 4, 9, 13, 16, 34, 46, 60, 67, 75, 88, 94, 104}
-	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 59, 68, 77, 85, 96, 104, 112, 120, 131, 140, 152, 164, 179, 196}
+	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 59, 68, 77, 85, 96, 104, 112, 120, 131, 140, 156, 168, 180, 195, 212}
+	_Opcode_index_7 = [...]uint8{0, 13, 19}
 	_Opcode_index_8 = [...]uint8{0, 4, 7}
-	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 46, 55, 59, 68, 82, 91}
+	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 46, 55, 59, 68, 82, 93, 102}
 )
 
 func (i Opcode) String() string {
@@ -123,25 +129,26 @@ func (i Opcode) String() string {
 	case 20 <= i && i <= 24:
 		i -= 20
 		return _Opcode_name_2[_Opcode_index_2[i]:_Opcode_index_2[i+1]]
-	case 26 <= i && i <= 32:
+	case 26 <= i && i <= 33:
 		i -= 26
 		return _Opcode_name_3[_Opcode_index_3[i]:_Opcode_index_3[i+1]]
-	case 36 <= i && i <= 45:
-		i -= 36
+	case 37 <= i && i <= 47:
+		i -= 37
 		return _Opcode_name_4[_Opcode_index_4[i]:_Opcode_index_4[i+1]]
-	case 49 <= i && i <= 60:
-		i -= 49
+	case 50 <= i && i <= 61:
+		i -= 50
 		return _Opcode_name_5[_Opcode_index_5[i]:_Opcode_index_5[i+1]]
-	case 71 <= i && i <= 89:
-		i -= 71
+	case 72 <= i && i <= 91:
+		i -= 72
 		return _Opcode_name_6[_Opcode_index_6[i]:_Opcode_index_6[i+1]]
-	case i == 92:
-		return _Opcode_name_7
-	case 102 <= i && i <= 103:
-		i -= 102
+	case 93 <= i && i <= 94:
+		i -= 93
+		return _Opcode_name_7[_Opcode_index_7[i]:_Opcode_index_7[i+1]]
+	case 104 <= i && i <= 105:
+		i -= 104
 		return _Opcode_name_8[_Opcode_index_8[i]:_Opcode_index_8[i+1]]
-	case 110 <= i && i <= 118:
-		i -= 110
+	case 112 <= i && i <= 121:
+		i -= 112
 		return _Opcode_name_9[_Opcode_index_9[i]:_Opcode_index_9[i+1]]
 	default:
 		return "Opcode(" + strconv.FormatInt(int64(i), 10) + ")"

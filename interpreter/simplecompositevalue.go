@@ -48,7 +48,7 @@ type SimpleCompositeValue struct {
 	// privateFields is a property bag to carry internal data
 	// that are not visible to cadence users.
 	// TODO: any better way to pass down information?
-	privateFields map[string]Value
+	privateFields map[string]any
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -118,7 +118,7 @@ func (v *SimpleCompositeValue) StaticType(_ ValueStaticTypeContext) StaticType {
 func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool {
 	// Check type is importable
 	staticType := v.StaticType(context)
-	semaType := MustConvertStaticToSemaType(staticType, context)
+	semaType := context.SemaTypeFromStaticType(staticType)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
@@ -139,21 +139,28 @@ func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool
 	return importable
 }
 
-func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string) Value {
-	value, ok := v.Fields[name]
-	if ok {
-		return value
-	}
+func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			value, ok := v.Fields[name]
+			if ok {
+				return value
+			}
 
-	computeField := v.ComputeField
-	if computeField != nil {
-		value = computeField(name, context)
-		if value != nil {
-			return value
-		}
-	}
-
-	return context.GetMethod(v, name)
+			computeField := v.ComputeField
+			if computeField != nil {
+				value = computeField(name, context)
+				if value != nil {
+					return value
+				}
+			}
+			return nil
+		},
+	)
 }
 
 func (v *SimpleCompositeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -259,7 +266,7 @@ func (v *SimpleCompositeValue) ConformsToStaticType(
 	return true
 }
 
-func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return NonStorable{Value: v}, nil
 }
 
@@ -318,16 +325,16 @@ func (v *SimpleCompositeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v *SimpleCompositeValue) WithPrivateField(key string, value Value) *SimpleCompositeValue {
+func (v *SimpleCompositeValue) WithPrivateField(key string, value any) *SimpleCompositeValue {
 	if v.privateFields == nil {
-		v.privateFields = make(map[string]Value)
+		v.privateFields = make(map[string]any)
 	}
 
 	v.privateFields[key] = value
 	return v
 }
 
-func (v *SimpleCompositeValue) PrivateField(key string) Value {
+func (v *SimpleCompositeValue) PrivateField(key string) any {
 	if v.privateFields == nil {
 		return nil
 	}

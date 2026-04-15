@@ -47,6 +47,13 @@ func TestPrimitiveStaticTypeSemaTypeConversion(t *testing.T) {
 		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
+
+		// PrimitiveStaticTypeCapability is converted to sema.CapabilityType,
+		// which converts back to CapabilityStaticType
+		if ty == PrimitiveStaticTypeCapability { //nolint:staticcheck
+			continue
+		}
+
 		test(ty)
 	}
 }

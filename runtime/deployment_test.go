@@ -24,11 +24,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
@@ -86,7 +88,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		require.Equal(t, expectedCodeHash[:], actualCodeHash)
 	}
 
-	expectFailure := func(expectedErrorMessage string, programsCount int) expectation {
+	expectFailure := func(expectedErrorMessage string, codesCount, programsCount int) expectation {
 		return func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
 			RequireError(t, err)
 
@@ -95,7 +97,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 			assert.ErrorContains(t, runtimeErr, expectedErrorMessage)
 
-			assert.Len(t, runtimeErr.Codes, 2)
+			assert.Len(t, runtimeErr.Codes, codesCount)
 			assert.Len(t, runtimeErr.Programs, programsCount)
 
 			assert.Nil(t, accountCode)
@@ -103,14 +105,19 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		}
 	}
 
-	type argument interface {
-		interpreter.Value
-	}
+	type checkFunc = func(
+		t *testing.T,
+		err error,
+		accountCode []byte,
+		events []cadence.Event,
+		expectedEventType cadence.Type,
+	)
 
 	type testCase struct {
-		check     func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type)
-		contract  string
-		arguments []argument
+		check         checkFunc
+		contract      string
+		arguments     []string
+		declaredValue stdlib.StandardLibraryValue
 	}
 
 	test := func(t *testing.T, test testCase) {
@@ -122,13 +129,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			hex.EncodeToString([]byte(test.contract)),
 		)
 
-		argumentCodes := make([]string, len(test.arguments))
-
-		for i, argument := range test.arguments {
-			argumentCodes[i] = argument.String()
-		}
-
-		argumentCode := strings.Join(argumentCodes, ", ")
+		argumentCode := strings.Join(test.arguments, ", ")
 		if len(test.arguments) > 0 {
 			argumentCode = ", " + argumentCode
 		}
@@ -169,14 +170,24 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			},
 		}
 
+		environment := newTransactionEnvironment()
+
+		if test.declaredValue.Value != nil {
+			environment.DeclareValue(
+				test.declaredValue,
+				nil,
+			)
+		}
+
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Environment: environment,
+				Location:    common.TransactionLocation{},
+				UseVM:       *compile,
 			},
 		)
 		exportedEventType := ExportType(
@@ -191,7 +202,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			contract: `
               access(all) contract Test {}
             `,
-			arguments: []argument{},
+			arguments: []string{},
 			check:     expectSuccess,
 		})
 	})
@@ -203,8 +214,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
                   init(_ x: Int) {}
               }
             `,
-			arguments: []argument{
-				interpreter.NewUnmeteredIntValueFromInt64(1),
+			arguments: []string{
+				`1`,
 			},
 			check: expectSuccess,
 		})
@@ -225,11 +236,12 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
                   init(_ x: Int) {}
               }
             `,
-			arguments: []argument{
-				interpreter.TrueValue,
+			arguments: []string{
+				`true`,
 			},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				2,
 			),
 		})
@@ -248,11 +260,12 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			contract: `
               access(all) contract Test {}
             `,
-			arguments: []argument{
-				interpreter.NewUnmeteredIntValueFromInt64(1),
+			arguments: []string{
+				`1`,
 			},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				2,
 			),
 		})
@@ -288,9 +301,10 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
               fun testCase() {}
             `,
-			arguments: []argument{},
+			arguments: []string{},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				2,
 			),
 		})
@@ -315,9 +329,10 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			contract: `
               X
             `,
-			arguments: []argument{},
+			arguments: []string{},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				1,
 			),
 		})
@@ -343,9 +358,10 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
                   access(all) fun test() { X }
               }
             `,
-			arguments: []argument{},
+			arguments: []string{},
 			check: expectFailure(
 				expectedErrorMessage,
+				2,
 				2,
 			),
 		})
@@ -358,10 +374,170 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
                   init(_ path: StoragePath) {}
               }
             `,
-			arguments: []argument{
-				interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+			arguments: []string{
+				`/storage/test`,
 			},
 			check: expectSuccess,
 		})
 	})
+
+	t.Run("Type confusion", func(t *testing.T) {
+
+		const declaredValueName = `injectedValue`
+		test(t, testCase{
+			contract: `
+              access(all) contract Test {
+                  init(_ bool: Bool) {}
+              }
+            `,
+			arguments: []string{
+				declaredValueName,
+			},
+			declaredValue: stdlib.StandardLibraryValue{
+				Name:  declaredValueName,
+				Type:  sema.IntType,
+				Kind:  common.DeclarationKindValue,
+				Value: interpreter.TrueValue,
+			},
+			check: expectFailure(
+				"invalid transfer of value: expected `Int`, got `Bool`",
+				1,
+				1,
+			),
+		})
+	})
+}
+
+func TestRuntimeContractDeploymentInitializerArgument(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+
+	contract := []byte(`
+      access(all) contract Test {
+          init(arg: {Int: Int}) {
+              check(arg)
+          }
+      }
+    `)
+
+	deploy := fmt.Sprintf(
+		`
+          transaction {
+              prepare(signer: auth(Contracts) &Account) {
+                  let arg: {Int: Int} = {}
+                  signer.contracts.add(name: "Test", code: "%s".decodeHex(), arg: arg)
+              }
+          }
+        `,
+		hex.EncodeToString(contract),
+	)
+
+	var accountCode []byte
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{Address(addressValue)}, nil
+		},
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	check := func(value interpreter.Value) {
+		dictionaryValue, ok := value.(*interpreter.DictionaryValue)
+		require.True(t, ok)
+
+		assert.Equal(t,
+			atree.ValueID{
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x6,
+			},
+			dictionaryValue.ValueID(),
+		)
+	}
+
+	transactionEnvironment := newTransactionEnvironment()
+
+	functionType := sema.NewSimpleFunctionType(
+		sema.FunctionPurityView,
+		[]sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "arg",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.NewDictionaryType(nil, sema.IntType, sema.IntType),
+				),
+			},
+		},
+		sema.VoidTypeAnnotation,
+	)
+
+	var function interpreter.FunctionValue
+
+	const functionName = "check"
+	if *compile {
+		function = vm.NewNativeFunctionValue(
+			functionName,
+			functionType,
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
+				check(args[0])
+				return interpreter.Void
+			},
+		)
+	} else {
+		function = interpreter.NewStaticHostFunctionValue(
+			nil,
+			functionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				check(invocation.Arguments[0])
+				return interpreter.Void
+			},
+		)
+	}
+
+	transactionEnvironment.DeclareValue(
+		stdlib.StandardLibraryValue{
+			Name:  functionName,
+			Type:  functionType,
+			Kind:  common.DeclarationKindFunction,
+			Value: function,
+		},
+		nil,
+	)
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(deploy),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Environment: transactionEnvironment,
+			Location:    nextTransactionLocation(),
+			UseVM:       *compile,
+		},
+	)
+	require.NoError(t, err)
 }

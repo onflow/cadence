@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-//go:generate go run ./gen/main.go instructions.yml instructions.go
+//go:generate go run ./gen/main.go instructions.yml instructions.go pretty_instructions.go
 
 package opcode
 
@@ -30,8 +30,17 @@ import (
 
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
+
+// ProgramForInstructions represents a program that can resolve instruction operands.
+// This is defined as an interface to avoid circular dependency with the bbq package.
+type ProgramForInstructions interface {
+	GetConstants() []constant.DecodedConstant
+	GetTypes() []interpreter.StaticType
+	GetFunctionName(index uint16) string
+}
 
 type Instruction interface {
 	Encode(code *[]byte)
@@ -39,12 +48,14 @@ type Instruction interface {
 	OperandsString(sb *strings.Builder, colorize bool)
 	ResolvedOperandsString(
 		sb *strings.Builder,
-		constants []constant.DecodedConstant,
-		types []interpreter.StaticType,
-		functionNames []string,
+		program ProgramForInstructions,
 		colorize bool,
 	)
 	Opcode() Opcode
+	// Pretty converts this instruction to its pretty form with resolved operands.
+	// Pretty instructions are for debugging and display purposes only, not for runtime execution.
+	// They are useful for human-readable instruction dumps, analysis tools, debugging, and testing.
+	Pretty(program ProgramForInstructions) PrettyInstruction
 }
 
 func emitOpcode(code *[]byte, opcode Opcode) {
@@ -182,10 +193,33 @@ func decodeUpvalueArray(ip *uint16, code []byte) (upvalues []Upvalue) {
 
 // Jump
 
-func PatchJump(code *[]byte, opcodeOffset int, newTarget uint16) {
+func PatchJumpBytecode(code *[]byte, opcodeOffset int, newTarget uint16) {
 	first, second := encodeUint16(newTarget)
 	(*code)[opcodeOffset+1] = first
 	(*code)[opcodeOffset+2] = second
+}
+
+func PatchJumpInstruction(target []Instruction, offset int, newTarget uint16) {
+	switch ins := target[offset].(type) {
+	case InstructionJump:
+		ins.Target = newTarget
+		target[offset] = ins
+
+	case InstructionJumpIfFalse:
+		ins.Target = newTarget
+		target[offset] = ins
+
+	case InstructionJumpIfTrue:
+		ins.Target = newTarget
+		target[offset] = ins
+
+	case InstructionJumpIfNil:
+		ins.Target = newTarget
+		target[offset] = ins
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func DecodeInstructions(code []byte) []Instruction {
@@ -342,6 +376,41 @@ func printfFunctionNameArgument(
 		functionName = colorizeArgumentValue(functionName)
 	}
 	_, _ = fmt.Fprintf(sb, "%s:%s", argumentName, functionName)
+}
+
+func resolveTypeIndices(indices []uint16, types []interpreter.StaticType) []interpreter.StaticType {
+	if len(indices) == 0 {
+		return nil
+	}
+
+	result := make([]interpreter.StaticType, len(indices))
+	for i, index := range indices {
+		result[i] = types[index]
+	}
+	return result
+}
+
+func printfPrettyTypeArrayArgument(
+	sb *strings.Builder,
+	argumentName string,
+	types []interpreter.StaticType,
+	colorize bool,
+) {
+	if colorize {
+		argumentName = colorizeArgumentName(argumentName)
+	}
+	fmt.Fprintf(sb, "%s:[", argumentName)
+	for i, typ := range types {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		formattedType := strconv.Quote(typ.String())
+		if colorize {
+			formattedType = colorizeArgumentValue(formattedType)
+		}
+		sb.WriteString(formattedType)
+	}
+	sb.WriteByte(']')
 }
 
 func colorizeArgumentName(argumentName string) string {

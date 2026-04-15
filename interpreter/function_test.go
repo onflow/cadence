@@ -407,9 +407,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("no transfer, result is used", func(t *testing.T) {
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
-
-		inter, err := parseCheckAndPrepareWithOptions(t,
+		inter := parseCheckAndPrepare(t,
 			`
               struct S {}
 
@@ -418,16 +416,12 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
                   return S()
               }
             `,
-			ParseCheckAndInterpretOptions{
-				InterpreterConfig: &interpreter.Config{
-					Storage: storage,
-				},
-			},
 		)
+
+		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		_, err = inter.Invoke("test")
-		require.NoError(t, err)
+		storage := inter.Storage().(interpreter.InMemoryStorage)
 
 		slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 		require.NoError(t, err)
@@ -448,9 +442,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("no transfer, result is not used", func(t *testing.T) {
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
-
-		inter, err := parseCheckAndPrepareWithOptions(t,
+		inter := parseCheckAndPrepare(t,
 			`
               struct S {}
 
@@ -459,16 +451,12 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
                   return S()
               }
             `,
-			ParseCheckAndInterpretOptions{
-				InterpreterConfig: &interpreter.Config{
-					Storage: storage,
-				},
-			},
 		)
+
+		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		_, err = inter.Invoke("test")
-		require.NoError(t, err)
+		storage := inter.Storage().(interpreter.InMemoryStorage)
 
 		slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
 		require.NoError(t, err)
@@ -558,6 +546,92 @@ func TestInterpretConvertedResult(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}
+
+func TestInterpretSelfClosure(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+          struct Computer {
+              fun getAnswer(): Int {
+                  return 42
+              }
+
+              fun newAnswerGetter(): fun(): Int {
+                  return fun(): Int {
+                      return self.getAnswer()
+                  }
+              }
+          }
+
+          fun test(): Int {
+              let getAnswer = Computer().newAnswerGetter()
+              return getAnswer()
+          }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(
+		t,
+		interpreter.NewUnmeteredIntValueFromInt64(42),
+		result,
+	)
+}
+
+func TestInterpretConstructorAsFunction(t *testing.T) {
+	t.Parallel()
+
+	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                init() {}
+            }
+
+            fun test() {
+                let s = S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("enum", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            enum E: UInt8 {}
+
+            fun test() {
+                let s = E
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            attachment A for AnyResource {
+                init() {}
+            }
+
+            fun test() {
+                let s = A
+            }
+        `)
+
+		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
 }

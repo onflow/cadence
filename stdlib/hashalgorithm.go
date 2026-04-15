@@ -67,28 +67,55 @@ func NewHashAlgorithmCase(
 		nil,
 		nil,
 	)
+
 	value.Fields = map[string]interpreter.Value{
-		sema.EnumRawValueFieldName:                    rawValue,
-		sema.HashAlgorithmTypeHashFunctionName:        newInterpreterHashAlgorithmHashFunction(value, hasher),
-		sema.HashAlgorithmTypeHashWithTagFunctionName: newInterpreterHashAlgorithmHashWithTagFunction(value, hasher),
+		sema.EnumRawValueFieldName: rawValue,
 	}
+
+	// `sema.HashAlgorithmType` has the following members as function-members.
+	// Therefore, include them as functions in the value as well.
+	functions := map[string]interpreter.FunctionValue{}
+
+	value.FunctionMemberGetter = func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+		function, ok := functions[name]
+		if !ok {
+			switch name {
+			case sema.HashAlgorithmTypeHashFunctionName:
+				function = newInterpreterHashAlgorithmHashFunction(value, hasher)
+			case sema.HashAlgorithmTypeHashWithTagFunctionName:
+				function = newInterpreterHashAlgorithmHashWithTagFunction(value, hasher)
+			}
+
+			functions[name] = function
+		}
+
+		return function
+	}
+
 	return value, nil
 }
 
 // Native hash functions
-func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
+
+func NativeHashAlgorithmHashFunction(
+	hasher Hasher,
+	constantHashAlgoValue interpreter.MemberAccessibleValue,
+) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		if hashAlgoValue == nil {
-			// vm does not provide the hash algo value
-			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
-		}
 
 		dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+
+		hashAlgoValue := constantHashAlgoValue
+		if hashAlgoValue == nil {
+			// VM does not provide a constant hash algo value
+			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+		}
 
 		return hash(
 			context,
@@ -100,19 +127,27 @@ func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.Me
 	}
 }
 
-func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
+func NativeHashAlgorithmHashWithTagFunction(
+	hasher Hasher,
+	constantHashAlgoValue interpreter.MemberAccessibleValue,
+) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		if hashAlgoValue == nil {
-			// vm does not provide the hash algo value
-			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
-		}
+
 		dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 		tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
+
+		hashAlgoValue := constantHashAlgoValue
+		if hashAlgoValue == nil {
+			// VM does not provide a constant hash algo value
+			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+		}
+
 		return hash(
 			context,
 			hasher,
@@ -238,6 +273,7 @@ func NewVMHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 		func(
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {

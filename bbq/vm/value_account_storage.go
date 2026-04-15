@@ -66,7 +66,7 @@ func init() {
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachStoredFunctionName,
-			sema.Account_StorageTypeForEachPublicFunctionType,
+			sema.Account_StorageTypeForEachStoredFunctionType,
 			interpreter.NativeAccountStorageIterateFunction(nil, common.PathDomainStorage, sema.StoragePathType),
 		),
 	)
@@ -87,7 +87,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeLoadFunctionName,
 			sema.Account_StorageTypeLoadFunctionType,
-			interpreter.NativeAccountStorageReadFunction(nil, true),
+			interpreter.NativeAccountStorageLoadFunction(nil),
 		),
 	)
 
@@ -97,7 +97,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeCopyFunctionName,
 			sema.Account_StorageTypeCopyFunctionType,
-			interpreter.NativeAccountStorageReadFunction(nil, false),
+			interpreter.NativeAccountStorageCopyFunction(nil),
 		),
 	)
 

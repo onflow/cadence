@@ -30,10 +30,12 @@ type TypeConverter interface {
 	common.MemoryGauge
 	StaticTypeConversionHandler
 	SemaTypeFromStaticType(staticType StaticType) sema.Type
+	SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error)
 }
 
 var _ TypeConverter = &Interpreter{}
 
+// Deprecated: Use TypeConverter.SemaTypeFromStaticType instead.
 func MustConvertStaticToSemaType(staticType StaticType, typeConverter TypeConverter) sema.Type {
 	semaType, err := ConvertStaticToSemaType(typeConverter, staticType)
 	if err != nil {
@@ -44,7 +46,7 @@ func MustConvertStaticToSemaType(staticType StaticType, typeConverter TypeConver
 
 func MustSemaTypeOfValue(value Value, context ValueStaticTypeContext) sema.Type {
 	staticType := value.StaticType(context)
-	return MustConvertStaticToSemaType(staticType, context)
+	return context.SemaTypeFromStaticType(staticType)
 }
 
 type StorageReader interface {
@@ -64,18 +66,30 @@ type StorageWriter interface {
 		key StorageMapKey,
 		value Value,
 	) (existed bool)
+	RemoveStored(
+		storageAddress common.Address,
+		domain common.StorageDomain,
+		identifier StorageMapKey,
+	) atree.Storable
 }
 
 var _ StorageWriter = &Interpreter{}
 
 type ValueStaticTypeContext interface {
-	common.MemoryGauge
+	valueStaticTypeContext
+	ValueConversionContext
+}
+
+var _ ValueStaticTypeContext = &Interpreter{}
+
+type valueStaticTypeContext interface {
+	common.Gauge
 	StorageReader
 	TypeConverter
 	IsTypeInfoRecovered(location common.Location) bool
 }
 
-var _ ValueStaticTypeContext = &Interpreter{}
+var _ valueStaticTypeContext = &Interpreter{}
 
 type ValueStaticTypeConformanceContext interface {
 	ValueStaticTypeContext
@@ -85,7 +99,7 @@ type ValueStaticTypeConformanceContext interface {
 var _ ValueStaticTypeConformanceContext = &Interpreter{}
 
 type StorageContext interface {
-	ValueStaticTypeContext
+	valueStaticTypeContext
 	common.MemoryGauge
 	StorageMutationTracker
 	StorageIterationTracker
@@ -112,6 +126,7 @@ type ValueTransferContext interface {
 	ReferenceTracker
 	common.ComputationGauge
 	Tracer
+	ValueConvertContext
 
 	OnResourceOwnerChange(
 		resource *CompositeValue,
@@ -136,6 +151,13 @@ var _ ValueTransferContext = &Interpreter{}
 type ValueCreationContext interface {
 	ArrayCreationContext
 	DictionaryCreationContext
+	ValueConvertContext
+}
+
+var _ ValueCreationContext = &Interpreter{}
+
+type ValueConvertContext interface {
+	NewFunctionWithType(value FunctionValue, staticType FunctionStaticType) FunctionValue
 }
 
 var _ ValueCreationContext = &Interpreter{}
@@ -143,6 +165,11 @@ var _ ValueCreationContext = &Interpreter{}
 type ValueRemoveContext = ValueTransferContext
 
 var _ ValueRemoveContext = &Interpreter{}
+
+type ContainerReadContext interface {
+	common.ComputationGauge
+	ValueComparisonContext
+}
 
 type ContainerMutationContext interface {
 	ValueTransferContext
@@ -159,6 +186,7 @@ var _ ValueStringContext = &Interpreter{}
 type ValueCloneContext interface {
 	StorageContext
 	ReferenceTracker
+	ValueConversionContext
 }
 
 var _ ValueCloneContext = &Interpreter{}
@@ -413,7 +441,6 @@ type EventContext interface {
 var _ EventContext = &Interpreter{}
 
 type AttachmentContext interface {
-	ValueStaticTypeContext
 	ReferenceCreationContext
 	SetAttachmentIteration(composite *CompositeValue, state bool) bool
 }
@@ -450,6 +477,7 @@ type InvocationContext interface {
 	InvokeFunction(
 		fn FunctionValue,
 		arguments []Value,
+		returnType sema.Type,
 	) Value
 }
 
@@ -533,98 +561,110 @@ type NoOpStringContext struct {
 
 var _ ValueStringContext = NoOpStringContext{}
 
-func (ctx NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
+func (NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 	return nil
 }
 
-func (ctx NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
-	panic(errors.NewUnreachableError())
+func (NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
+	return nil
 }
 
-func (ctx NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f func()) {
+func (NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f func()) {
 	f()
 }
 
-func (ctx NoOpStringContext) ValidateContainerMutation(_ atree.ValueID) {
+func (NoOpStringContext) ValidateContainerMutation(_ atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) EnforceNotResourceDestruction(_ atree.ValueID) {
+func (NoOpStringContext) EnforceNotResourceDestruction(_ atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
+func (NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) WriteStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey, _ Value) (existed bool) {
+func (NoOpStringContext) WriteStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey, _ Value) (existed bool) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) Storage() Storage {
+func (NoOpStringContext) RemoveStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) atree.Storable {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) MaybeValidateAtreeValue(_ atree.Value) {
+func (NoOpStringContext) Storage() Storage {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) MaybeValidateAtreeStorage() {
+func (NoOpStringContext) MaybeValidateAtreeValue(_ atree.Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) MaybeTrackReferencedResourceKindedValue(_ *EphemeralReferenceValue) {
+func (NoOpStringContext) MaybeValidateAtreeStorage() {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
+func (NoOpStringContext) MaybeTrackReferencedResourceKindedValue(_ *EphemeralReferenceValue) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*EphemeralReferenceValue]struct{} {
+func (NoOpStringContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) OnResourceOwnerChange(_ *CompositeValue, _ common.Address, _ common.Address) {
+func (NoOpStringContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*EphemeralReferenceValue]struct{} {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) RecordStorageMutation() {
+func (NoOpStringContext) OnResourceOwnerChange(_ *CompositeValue, _ common.Address, _ common.Address) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) StorageMutatedDuringIteration() bool {
+func (NoOpStringContext) RecordStorageMutation() {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) InStorageIteration() bool {
+func (NoOpStringContext) StorageMutatedDuringIteration() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) SetInStorageIteration(_ bool) {
+func (NoOpStringContext) InStorageIteration() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) GetEntitlementType(_ TypeID) (*sema.EntitlementType, error) {
+func (NoOpStringContext) SetInStorageIteration(_ bool) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) GetEntitlementMapType(_ TypeID) (*sema.EntitlementMapType, error) {
+func (NoOpStringContext) GetEntitlementType(_ TypeID) (*sema.EntitlementType, error) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) GetInterfaceType(_ common.Location, _ string, _ TypeID) (*sema.InterfaceType, error) {
+func (NoOpStringContext) GetEntitlementMapType(_ TypeID) (*sema.EntitlementMapType, error) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ TypeID) (*sema.CompositeType, error) {
+func (NoOpStringContext) GetInterfaceType(_ common.Location, _ string, _ TypeID) (*sema.InterfaceType, error) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
+func (NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ TypeID) (*sema.CompositeType, error) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) SemaTypeFromStaticType(_ StaticType) sema.Type {
+func (NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpStringContext) SemaTypeFromStaticType(_ StaticType) sema.Type {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpStringContext) SemaAccessFromStaticAuthorization(Authorization) (sema.Access, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpStringContext) NewFunctionWithType(_ FunctionValue, _ FunctionStaticType) FunctionValue {
 	panic(errors.NewUnreachableError())
 }

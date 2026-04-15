@@ -7257,6 +7257,157 @@ func TestParseStringTemplate(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("escaped quote before interpolation", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`"\"\(x)\""`)
+
+		require.Empty(t, errs)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"\"",
+				"\"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Offset: 5, Line: 1, Column: 5},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+				EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("escaped newline before interpolation", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`"\n\(x)"`)
+
+		require.Empty(t, errs)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"\n",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Offset: 5, Line: 1, Column: 5},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+				EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("escaped tab before interpolation", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`"\t\(x)"`)
+
+		require.Empty(t, errs)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"\t",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Offset: 5, Line: 1, Column: 5},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+				EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("escaped backslash before interpolation", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`"\\\(x)"`)
+
+		require.Empty(t, errs)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"\\",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Offset: 5, Line: 1, Column: 5},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+				EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("expression at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`"a\(x)"`)
+
+		require.Empty(t, errs)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"a",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+				EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+			},
+		}
+
+		AssertEqualWithDiff(t, expected, actual)
+	})
+
 }
 
 func TestParseNilCoalescing(t *testing.T) {

@@ -74,7 +74,7 @@ func NewREPL() (*REPL, error) {
 
 	var uuid uint64
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := interpreter.NewInMemoryStorage(nil, nil)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, value := range standardLibraryValues {

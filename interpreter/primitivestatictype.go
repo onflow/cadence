@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
@@ -37,6 +38,9 @@ var PrimitiveStaticTypes = _PrimitiveStaticType_map
 type PrimitiveStaticType uint
 
 var _ StaticType = PrimitiveStaticType(0)
+
+// Some simple types are conforming types.
+var _ ConformingStaticType = PrimitiveStaticType(0)
 
 const primitiveStaticTypePrefix = "PrimitiveStaticType"
 
@@ -83,8 +87,8 @@ const (
 	PrimitiveStaticTypeAnyResourceAttachment
 	PrimitiveStaticTypeAnyStructAttachment
 	PrimitiveStaticTypeHashableStruct
-	_
-	_
+	PrimitiveStaticTypeStorable
+	PrimitiveStaticTypeInvalid
 	_
 
 	// Number
@@ -164,6 +168,7 @@ const (
 	// Storage
 
 	PrimitiveStaticTypePath
+	// Deprecated: PrimitiveStaticTypeCapability only exists for encoding/decoding purposes.
 	PrimitiveStaticTypeCapability
 	PrimitiveStaticTypeStoragePath
 	PrimitiveStaticTypeCapabilityPath
@@ -251,6 +256,7 @@ const (
 	PrimitiveStaticTypeIssueAccountCapabilityController
 	PrimitiveStaticTypeCapabilitiesMapping
 	PrimitiveStaticTypeAccountMapping
+	PrimitiveStaticTypeStringBuilder
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -260,6 +266,16 @@ const (
 
 func (PrimitiveStaticType) isStaticType() {}
 
+func (PrimitiveStaticType) isConformingStaticType() {}
+
+func (t PrimitiveStaticType) Walk(visit func(ty StaticType) bool) bool {
+	return visit(t)
+}
+
+func (PrimitiveStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t PrimitiveStaticType) elementSize() uint {
 	switch t {
 	case
@@ -268,7 +284,9 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeAny,
 		PrimitiveStaticTypeAnyStructAttachment,
 		PrimitiveStaticTypeAnyResourceAttachment,
-		PrimitiveStaticTypeHashableStruct:
+		PrimitiveStaticTypeHashableStruct,
+		PrimitiveStaticTypeStorable,
+		PrimitiveStaticTypeInvalid:
 		return UnknownElementSize
 
 	case PrimitiveStaticTypeVoid:
@@ -382,7 +400,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeGetAccountCapabilityController,
 		PrimitiveStaticTypeIssueAccountCapabilityController,
 		PrimitiveStaticTypeCapabilitiesMapping,
-		PrimitiveStaticTypeAccountMapping:
+		PrimitiveStaticTypeAccountMapping,
+		PrimitiveStaticTypeStringBuilder:
 		return UnknownElementSize
 
 	case PrimitiveStaticTypeAuthAccount,
@@ -464,6 +483,9 @@ func (t PrimitiveStaticType) ID() TypeID {
 
 func (t PrimitiveStaticType) SemaType() sema.Type {
 	switch t {
+	case PrimitiveStaticTypeInvalid:
+		return sema.InvalidType
+
 	case PrimitiveStaticTypeVoid:
 		return sema.VoidType
 
@@ -505,6 +527,9 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 
 	case PrimitiveStaticTypeBlock:
 		return sema.BlockType
+
+	case PrimitiveStaticTypeStorable:
+		return sema.StorableType
 
 	// Number
 
@@ -689,6 +714,9 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypeAccountMapping:
 		return sema.AccountMappingType
 
+	case PrimitiveStaticTypeStringBuilder:
+		return sema.StringBuilderType
+
 	case PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
 		// deprecated, but needed for migration purposes
 		return sema.FullyEntitledAccountReferenceType
@@ -753,6 +781,9 @@ func ConvertSemaToPrimitiveStaticType(
 	t sema.Type,
 ) (typ PrimitiveStaticType) {
 	switch t {
+
+	case sema.InvalidType:
+		typ = PrimitiveStaticTypeInvalid
 
 	case sema.StringType:
 		typ = PrimitiveStaticTypeString
@@ -876,6 +907,8 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeStorageCapabilityController
 	case sema.AccountCapabilityControllerType:
 		typ = PrimitiveStaticTypeAccountCapabilityController
+	case sema.StorableType:
+		typ = PrimitiveStaticTypeStorable
 
 	case sema.AccountType:
 		typ = PrimitiveStaticTypeAccount
@@ -958,18 +991,14 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeCapabilitiesMapping
 	case sema.AccountMappingType:
 		typ = PrimitiveStaticTypeAccountMapping
+
+	case sema.StringBuilderType:
+		typ = PrimitiveStaticTypeStringBuilder
 	}
 
-	switch t := t.(type) {
+	switch t.(type) {
 	case *sema.AddressType:
 		typ = PrimitiveStaticTypeAddress
-
-	// Storage
-	case *sema.CapabilityType:
-		// Only convert unparameterized Capability type
-		if t.BorrowType == nil {
-			typ = PrimitiveStaticTypeCapability
-		}
 	}
 
 	if typ == PrimitiveStaticTypeUnknown {

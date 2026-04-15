@@ -1,0 +1,7 @@
+rules:
+  - super: ReferenceType
+    predicate:
+      permits:
+        super: super.Authorization
+        sub: sub.Authorization
+

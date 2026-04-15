@@ -365,7 +365,7 @@ func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue)
 		})
 	}
 
-	return BoolValue(v.UFix64Value.Less(o.UFix64Value))
+	return BoolValue(v.UFix64Value.Less(context, o.UFix64Value))
 }
 
 func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -378,7 +378,7 @@ func (v UFix64Value) LessEqual(context ValueComparisonContext, other ComparableV
 		})
 	}
 
-	return BoolValue(v.UFix64Value.LessEqual(o.UFix64Value))
+	return BoolValue(v.UFix64Value.LessEqual(context, o.UFix64Value))
 }
 
 func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -391,7 +391,7 @@ func (v UFix64Value) Greater(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	return BoolValue(v.UFix64Value.Greater(o.UFix64Value))
+	return BoolValue(v.UFix64Value.Greater(context, o.UFix64Value))
 }
 
 func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -404,29 +404,35 @@ func (v UFix64Value) GreaterEqual(context ValueComparisonContext, other Comparab
 		})
 	}
 
-	return BoolValue(v.UFix64Value.GreaterEqual(o.UFix64Value))
+	return BoolValue(v.UFix64Value.GreaterEqual(context, o.UFix64Value))
 }
 
-func (v UFix64Value) Equal(_ ValueComparisonContext, other Value) bool {
+func (v UFix64Value) Equal(context ValueComparisonContext, other Value) bool {
 	otherUFix64, ok := other.(UFix64Value)
 	if !ok {
 		return false
 	}
 
-	return v.UFix64Value.Equal(otherUFix64.UFix64Value)
+	return v.UFix64Value.Equal(context, otherUFix64.UFix64Value)
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeUFix64 (1 byte)
 // - uint64 value encoded in big-endian (8 bytes)
-func (v UFix64Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v UFix64Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUFix64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v.UFix64Value))
 	return scratch[:9]
 }
 
-func (v UFix64Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v UFix64Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v UFix64Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -469,6 +475,7 @@ func (v UFix64Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -482,6 +489,15 @@ func (UFix64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 
 func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v.UFix64Value.IntegerPart())
+}
+
+func (UFix64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UFix64Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 func fix128BigIntToUFix64(

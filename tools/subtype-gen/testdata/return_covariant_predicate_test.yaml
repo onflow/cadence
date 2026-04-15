@@ -1,0 +1,7 @@
+rules:
+  - super: FunctionType
+    predicate:
+      returnCovariant:
+        source: sub
+        target: super
+

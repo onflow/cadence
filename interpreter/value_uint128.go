@@ -448,7 +448,7 @@ func (v UInt128Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeUInt128 (1 byte)
 // - big int encoded in big endian (n bytes)
-func (v UInt128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v UInt128Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)
@@ -609,8 +609,14 @@ func (v UInt128Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	)
 }
 
-func (v UInt128Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v UInt128Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v UInt128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -642,7 +648,7 @@ func (UInt128Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v UInt128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -665,6 +671,7 @@ func (v UInt128Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -686,4 +693,13 @@ func (v UInt128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (UInt128Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (UInt128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UInt128Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

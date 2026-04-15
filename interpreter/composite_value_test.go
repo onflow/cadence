@@ -72,7 +72,7 @@ func TestInterpretCompositeValue(t *testing.T) {
 // Utility methods
 func testCompositeValue(t *testing.T, code string) Invokable {
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
@@ -198,7 +198,7 @@ func TestInterpretContractTransfer(t *testing.T) {
 		    `,
 			value,
 		)
-		inter, _ := testAccountWithErrorHandler(
+		inter, _, _ := testAccountWithErrorHandler(
 			t,
 			address,
 			true,
@@ -208,7 +208,8 @@ func TestInterpretContractTransfer(t *testing.T) {
 			func(err error) {
 				var invalidMoveError *sema.InvalidMoveError
 				require.ErrorAs(t, err, &invalidMoveError)
-			})
+			},
+		)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

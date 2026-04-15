@@ -43,6 +43,10 @@ func LinkGlobals(
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) LinkedGlobals {
 
+	if linkedGlobals, ok := linkedGlobalsCache[location]; ok {
+		return linkedGlobals
+	}
+
 	executable := NewExecutableProgram(location, program, nil)
 
 	// reserved globals for the current program (exact)
@@ -84,6 +88,7 @@ func LinkGlobals(
 					return context.InvokeFunction(
 						valueGetter,
 						nil,
+						valueGetter.Type.ReturnTypeAnnotation.Type,
 					)
 				})
 			}
@@ -217,10 +222,10 @@ func linkImportedGlobal(
 func functionValueFromBBQFunction(
 	executable *ExecutableProgram,
 	function *bbq.Function[opcode.Instruction],
-) FunctionValue {
+) *CompiledFunctionValue {
 	funcStaticType := getTypeFromExecutable[interpreter.FunctionStaticType](executable, function.TypeIndex)
 
-	return CompiledFunctionValue{
+	return &CompiledFunctionValue{
 		Function:   function,
 		Executable: executable,
 		Type:       funcStaticType,

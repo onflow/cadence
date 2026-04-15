@@ -115,7 +115,7 @@ func (PathLinkValue) IsStorable() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint32) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
@@ -138,6 +138,7 @@ func (v PathLinkValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -164,6 +165,15 @@ func (v PathLinkValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
 		v.TargetPath,
 	}
+}
+
+func (PathLinkValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v PathLinkValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 // Deprecated: AccountLinkValue
@@ -239,7 +249,7 @@ func (AccountLinkValue) IsStorable() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint32) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
@@ -262,6 +272,7 @@ func (v AccountLinkValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -283,6 +294,15 @@ func (v AccountLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 
 func (v AccountLinkValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (AccountLinkValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v AccountLinkValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -310,7 +330,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, values.CBORTagPathLinkValue, //nolint:staticcheck
+		0xd8, byte(values.CBORTagPathLinkValue), //nolint:staticcheck
 		// array, 2 items follow
 		0x82,
 	})
@@ -334,7 +354,7 @@ func (v PathLinkValue) Encode(e *atree.Encoder) error {
 //	}
 var cborAccountLinkValue = []byte{
 	// tag
-	0xd8, values.CBORTagAccountLinkValue, //nolint:staticcheck
+	0xd8, byte(values.CBORTagAccountLinkValue), //nolint:staticcheck
 	// null
 	0xf6,
 }

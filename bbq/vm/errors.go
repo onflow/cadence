@@ -48,5 +48,8 @@ var _ errors.UserError = UnknownFunctionError{}
 func (UnknownFunctionError) IsUserError() {}
 
 func (e UnknownFunctionError) Error() string {
-	return fmt.Sprintf("unknown function `%s`", e.name)
+	return fmt.Sprintf("%s unknown function `%s`",
+		errors.InternalErrorMessagePrefix,
+		e.name,
+	)
 }

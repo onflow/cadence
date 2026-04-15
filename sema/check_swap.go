@@ -34,6 +34,9 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 	leftValueType := checker.VisitExpression(swap.Left, swap, rightTargetType)
 	rightValueType := checker.VisitExpression(swap.Right, swap, leftTargetType)
 
+	checker.enforceViewAssignment(swap, swap.Left)
+	checker.enforceViewAssignment(swap, swap.Right)
+
 	checker.Elaboration.SetSwapStatementTypes(
 		swap,
 		SwapStatementTypes{
@@ -41,6 +44,9 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 			RightType: rightValueType,
 		},
 	)
+
+	// Record as a resource move (when applicable),
+	// because in destructors, nested resource moves are allowed.
 
 	if leftValueType.IsResourceType() {
 		checker.elaborateNestedResourceMoveExpression(swap.Left)

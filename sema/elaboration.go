@@ -48,6 +48,9 @@ type RuntimeCastTypes struct {
 type ReturnStatementTypes struct {
 	ValueType  Type
 	ReturnType Type
+	// PassWithoutTransferOrConvert indicates whether to transfer/convert the result or not.
+	// IMPORTANT: FOR INTERNAL USE ONLY. User-defined functions must never have this flag on!
+	PassWithoutTransferOrConvert bool
 }
 
 type BinaryExpressionTypes struct {
@@ -58,6 +61,7 @@ type BinaryExpressionTypes struct {
 
 type VariableDeclarationTypes struct {
 	ValueType       Type
+	ValueActualType Type
 	SecondValueType Type
 	TargetType      Type
 }
@@ -73,9 +77,12 @@ type InvocationExpressionTypes struct {
 	ArgumentTypes  []Type
 	ParameterTypes []Type
 
-	// Flag indicating whether to transfer the arguments or not, when calling into this function type.
-	// IMPORTANT: Only for internal use only. User-defined functions must never have this flag on!
-	SkipArgumentsTransfer bool
+	// PassArgumentsWithoutTransferOrConvert indicates whether to transfer/convert the arguments or not.
+	// IMPORTANT: FOR INTERNAL USE ONLY. User-defined functions must never have this flag on!
+	PassArgumentsWithoutTransferOrConvert bool
+
+	// PassArgumentTypes indicates whether to pass the argument types or not.
+	PassArgumentTypes bool
 }
 
 type ArrayExpressionTypes struct {
@@ -126,6 +133,16 @@ type AttachExpressionTypes struct {
 	BaseType   Type
 }
 
+type AttachmentAccessTypes struct {
+	AttachmentType Type
+	BaseType       Type
+}
+
+type RemoveExpressionTypes struct {
+	AttachmentType Type
+	BaseType       Type
+}
+
 type Elaboration struct {
 	interfaceTypesAndDeclarationsBiMap      *bimap.BiMap[*InterfaceType, *ast.InterfaceDeclaration]
 	entitlementTypesAndDeclarationsBiMap    *bimap.BiMap[*EntitlementType, *ast.EntitlementDeclaration]
@@ -174,8 +191,8 @@ type Elaboration struct {
 	runtimeCastTypes                   map[*ast.CastingExpression]RuntimeCastTypes
 	referenceExpressionBorrowTypes     map[*ast.ReferenceExpression]Type
 	indexExpressionTypes               map[*ast.IndexExpression]IndexExpressionTypes
-	attachmentAccessTypes              map[*ast.IndexExpression]Type
-	attachmentRemoveTypes              map[*ast.RemoveStatement]Type
+	attachmentAccessTypes              map[*ast.IndexExpression]AttachmentAccessTypes
+	attachmentRemoveTypes              map[*ast.RemoveStatement]RemoveExpressionTypes
 	attachTypes                        map[*ast.AttachExpression]AttachExpressionTypes
 	forceExpressionTypes               map[*ast.ForceExpression]Type
 	staticCastTypes                    map[*ast.CastingExpression]CastTypes
@@ -187,6 +204,9 @@ type Elaboration struct {
 	isChecking                         bool
 	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
 	IsRecovered bool
+	// HasErrors is true if the checker that produced this elaboration had errors,
+	// either directly or transitively from imported programs.
+	HasErrors bool
 }
 
 func NewElaboration(gauge common.MemoryGauge) *Elaboration {
@@ -1003,7 +1023,7 @@ func (e *Elaboration) SetNumberConversionArgumentTypes(
 func (e *Elaboration) AttachmentAccessTypes(
 	expression *ast.IndexExpression,
 ) (
-	ty Type, ok bool,
+	ty AttachmentAccessTypes, ok bool,
 ) {
 	if e.attachmentAccessTypes == nil {
 		return
@@ -1014,10 +1034,10 @@ func (e *Elaboration) AttachmentAccessTypes(
 
 func (e *Elaboration) SetAttachmentAccessTypes(
 	expression *ast.IndexExpression,
-	ty Type,
+	ty AttachmentAccessTypes,
 ) {
 	if e.attachmentAccessTypes == nil {
-		e.attachmentAccessTypes = map[*ast.IndexExpression]Type{}
+		e.attachmentAccessTypes = map[*ast.IndexExpression]AttachmentAccessTypes{}
 	}
 	e.attachmentAccessTypes[expression] = ty
 }
@@ -1025,7 +1045,7 @@ func (e *Elaboration) SetAttachmentAccessTypes(
 func (e *Elaboration) AttachmentRemoveTypes(
 	stmt *ast.RemoveStatement,
 ) (
-	ty Type,
+	ty RemoveExpressionTypes,
 ) {
 	if e.attachmentRemoveTypes == nil {
 		return
@@ -1035,10 +1055,10 @@ func (e *Elaboration) AttachmentRemoveTypes(
 
 func (e *Elaboration) SetAttachmentRemoveTypes(
 	stmt *ast.RemoveStatement,
-	ty Type,
+	ty RemoveExpressionTypes,
 ) {
 	if e.attachmentRemoveTypes == nil {
-		e.attachmentRemoveTypes = map[*ast.RemoveStatement]Type{}
+		e.attachmentRemoveTypes = map[*ast.RemoveStatement]RemoveExpressionTypes{}
 	}
 	e.attachmentRemoveTypes[stmt] = ty
 }

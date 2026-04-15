@@ -164,7 +164,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	}
 
 	if isOptionalChainingResult {
-		_ = checker.checkPotentiallyUnevaluated(func() Type {
+		_, _ = checker.checkPotentiallyUnevaluated(func() Type {
 			checkInvocation()
 			// ignored
 			return nil
@@ -480,7 +480,11 @@ func (checker *Checker) checkInvocation(
 		for i := minCount; i < argumentCount; i++ {
 			argument := invocationExpression.Arguments[i]
 			// TODO: pass the expected type to support type inferring for parameters
-			argumentTypes[i] = checker.VisitExpression(argument.Expression, invocationExpression, nil)
+			argumentType := checker.VisitExpression(argument.Expression, invocationExpression, nil)
+
+			argumentTypes[i] = argumentType
+
+			checker.checkInvocationArgumentMove(argument.Expression, argumentType)
 		}
 	}
 
@@ -536,10 +540,11 @@ func (checker *Checker) checkInvocation(
 	checker.Elaboration.SetInvocationExpressionTypes(
 		invocationExpression,
 		InvocationExpressionTypes{
-			TypeArguments:  typeArguments,
-			ParameterTypes: parameterTypes,
-			ReturnType:     returnType,
-			ArgumentTypes:  argumentTypes,
+			TypeArguments:     typeArguments,
+			ParameterTypes:    parameterTypes,
+			ReturnType:        returnType,
+			ArgumentTypes:     argumentTypes,
+			PassArgumentTypes: functionType.Arity.IsVariadic(),
 		},
 	)
 

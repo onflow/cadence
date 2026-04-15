@@ -287,7 +287,7 @@ func (v Word8Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeWord8 (1 byte)
 // - uint8 value (1 byte)
-func (v Word8Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Word8Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeWord8)
 	scratch[1] = byte(v)
 	return scratch[:2]
@@ -387,8 +387,14 @@ func (v Word8Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Word8Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Word8Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -420,7 +426,7 @@ func (Word8Value) IsStorable() bool {
 	return true
 }
 
-func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -443,6 +449,7 @@ func (v Word8Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -464,4 +471,13 @@ func (v Word8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Word8Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Word8Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Word8Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

@@ -83,7 +83,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	var uuid uint64
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -134,7 +134,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)
 
-		uuidValue := res.GetMember(inter, sema.ResourceUUIDFieldName)
+		uuidValue := res.GetMember(inter, sema.ResourceUUIDFieldName, common.DeclarationKindField)
 
 		RequireValuesEqual(
 			t,

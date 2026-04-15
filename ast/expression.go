@@ -39,7 +39,7 @@ type Expression interface {
 	IfStatementTest
 	isExpression()
 	Doc() prettier.Doc
-	precedence() precedence
+	precedence() expressionPrecedence
 }
 
 // BoolExpression
@@ -98,8 +98,8 @@ func (e *BoolExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*BoolExpression) precedence() precedence {
-	return precedenceLiteral
+func (*BoolExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // NilExpression
@@ -161,8 +161,8 @@ func (e *NilExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*NilExpression) precedence() precedence {
-	return precedenceLiteral
+func (*NilExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // StringExpression
@@ -216,8 +216,8 @@ func (e *StringExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*StringExpression) precedence() precedence {
-	return precedenceLiteral
+func (*StringExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // StringTemplateExpression
@@ -276,8 +276,25 @@ func (e *StringTemplateExpression) Doc() prettier.Doc {
 		return prettier.Text(QuoteString(e.Values[0]))
 	}
 
-	// TODO: must reproduce expressions as literals
-	panic("not implemented")
+	concat := make(prettier.Concat, 0, 2+len(e.Values)+(3*len(e.Expressions)))
+	concat = append(concat, prettier.Text(`"`))
+	for i, value := range e.Values {
+		var sb strings.Builder
+		QuoteStringInner(value, &sb)
+		concat = append(concat, prettier.Text(sb.String()))
+
+		if i < len(e.Expressions) {
+			e := e.Expressions[i]
+			concat = append(
+				concat,
+				prettier.Text(`\(`),
+				e.Doc(),
+				prettier.Text(`)`),
+			)
+		}
+	}
+	concat = append(concat, prettier.Text(`"`))
+	return concat
 }
 
 func (e *StringTemplateExpression) MarshalJSON() ([]byte, error) {
@@ -291,8 +308,8 @@ func (e *StringTemplateExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*StringTemplateExpression) precedence() precedence {
-	return precedenceLiteral
+func (*StringTemplateExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // IntegerExpression
@@ -364,8 +381,8 @@ func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*IntegerExpression) precedence() precedence {
-	return precedenceLiteral
+func (*IntegerExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // FixedPointExpression
@@ -459,8 +476,8 @@ func (e *FixedPointExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*FixedPointExpression) precedence() precedence {
-	return precedenceLiteral
+func (*FixedPointExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // ArrayExpression
@@ -539,8 +556,8 @@ func (e *ArrayExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*ArrayExpression) precedence() precedence {
-	return precedenceLiteral
+func (*ArrayExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // DictionaryExpression
@@ -622,8 +639,8 @@ func (e *DictionaryExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*DictionaryExpression) precedence() precedence {
-	return precedenceLiteral
+func (*DictionaryExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 type DictionaryEntry struct {
@@ -731,8 +748,8 @@ func (e *IdentifierExpression) EndPosition(memoryGauge common.MemoryGauge) Posit
 	return e.Identifier.EndPosition(memoryGauge)
 }
 
-func (*IdentifierExpression) precedence() precedence {
-	return precedenceLiteral
+func (*IdentifierExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // Arguments
@@ -811,6 +828,9 @@ func (*InvocationExpression) isIfStatementTest() {}
 
 func (e *InvocationExpression) Walk(walkChild func(Element)) {
 	walkChild(e.InvokedExpression)
+	for _, typeArgument := range e.TypeArguments {
+		walkChild(typeArgument)
+	}
 	for _, argument := range e.Arguments {
 		walkChild(argument.Expression)
 	}
@@ -874,8 +894,8 @@ func (e *InvocationExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*InvocationExpression) precedence() precedence {
-	return precedenceAccess
+func (*InvocationExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceAccess
 }
 
 // AccessExpression
@@ -992,8 +1012,8 @@ func (e *MemberExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*MemberExpression) precedence() precedence {
-	return precedenceAccess
+func (*MemberExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceAccess
 }
 
 // IndexExpression
@@ -1069,8 +1089,8 @@ func (e *IndexExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*IndexExpression) precedence() precedence {
-	return precedenceAccess
+func (*IndexExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceAccess
 }
 
 // ConditionalExpression
@@ -1212,8 +1232,8 @@ func (e *ConditionalExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*ConditionalExpression) precedence() precedence {
-	return precedenceTernary
+func (*ConditionalExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceTernary
 }
 
 // UnaryExpression
@@ -1258,7 +1278,7 @@ func (e *UnaryExpression) String() string {
 	return Prettier(e)
 }
 
-func parenthesizedExpressionDoc(e Expression, parentPrecedence precedence) prettier.Doc {
+func parenthesizedExpressionDoc(e Expression, parentPrecedence expressionPrecedence) prettier.Doc {
 	if e == nil {
 		return prettier.Text("")
 	}
@@ -1271,7 +1291,9 @@ func parenthesizedExpressionDoc(e Expression, parentPrecedence precedence) prett
 
 	// Special case: when the parent has access precedence (postfix, e.g. `.f` or `[i]`) and the expression has unary postfix precedence,
 	// then there is no need to wrap the expression in parentheses
-	if parentPrecedence == precedenceAccess && subPrecedence == precedenceUnaryPostfix {
+	if parentPrecedence == expressionPrecedenceAccess &&
+		subPrecedence == expressionPrecedenceUnaryPostfix {
+
 		return doc
 	}
 
@@ -1312,8 +1334,8 @@ func (e *UnaryExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*UnaryExpression) precedence() precedence {
-	return precedenceUnaryPrefix
+func (*UnaryExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceUnaryPrefix
 }
 
 // BinaryExpression
@@ -1437,33 +1459,33 @@ func (e *BinaryExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (e *BinaryExpression) precedence() precedence {
+func (e *BinaryExpression) precedence() expressionPrecedence {
 	switch e.Operation {
 	case OperationOr:
-		return precedenceLogicalOr
+		return expressionPrecedenceLogicalOr
 	case OperationAnd:
-		return precedenceLogicalAnd
+		return expressionPrecedenceLogicalAnd
 	case OperationEqual,
 		OperationNotEqual,
 		OperationLess,
 		OperationLessEqual,
 		OperationGreater,
 		OperationGreaterEqual:
-		return precedenceComparison
+		return expressionPrecedenceComparison
 	case OperationNilCoalesce:
-		return precedenceNilCoalescing
+		return expressionPrecedenceNilCoalescing
 	case OperationBitwiseOr:
-		return precedenceBitwiseOr
+		return expressionPrecedenceBitwiseOr
 	case OperationBitwiseXor:
-		return precedenceBitwiseXor
+		return expressionPrecedenceBitwiseXor
 	case OperationBitwiseAnd:
-		return precedenceBitwiseAnd
+		return expressionPrecedenceBitwiseAnd
 	case OperationBitwiseLeftShift, OperationBitwiseRightShift:
-		return precedenceBitwiseShift
+		return expressionPrecedenceBitwiseShift
 	case OperationPlus, OperationMinus:
-		return precedenceAddition
+		return expressionPrecedenceAddition
 	case OperationMul, OperationDiv, OperationMod:
-		return precedenceMultiplication
+		return expressionPrecedenceMultiplication
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -1514,8 +1536,12 @@ func (*FunctionExpression) isExpression() {}
 func (*FunctionExpression) isIfStatementTest() {}
 
 func (e *FunctionExpression) Walk(walkChild func(Element)) {
-	// TODO: walk parameters
-	// TODO: walk return type
+	if e.ParameterList != nil {
+		e.ParameterList.Walk(walkChild)
+	}
+	if e.ReturnTypeAnnotation != nil {
+		walkChild(e.ReturnTypeAnnotation)
+	}
 	walkChild(e.FunctionBlock)
 }
 
@@ -1671,8 +1697,8 @@ func (e *FunctionExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*FunctionExpression) precedence() precedence {
-	return precedenceLiteral
+func (*FunctionExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // CastingExpression
@@ -1714,7 +1740,9 @@ func (*CastingExpression) isIfStatementTest() {}
 
 func (e *CastingExpression) Walk(walkChild func(Element)) {
 	walkChild(e.Expression)
-	// TODO: also walk type
+	if e.TypeAnnotation != nil {
+		walkChild(e.TypeAnnotation)
+	}
 }
 
 func (e *CastingExpression) String() string {
@@ -1761,8 +1789,8 @@ func (e *CastingExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*CastingExpression) precedence() precedence {
-	return precedenceCasting
+func (*CastingExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceCasting
 }
 
 // CreateExpression
@@ -1834,8 +1862,8 @@ func (e *CreateExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*CreateExpression) precedence() precedence {
-	return precedenceUnaryPrefix
+func (*CreateExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceUnaryPrefix
 }
 
 // DestroyExpression
@@ -1910,8 +1938,8 @@ func (e *DestroyExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*DestroyExpression) precedence() precedence {
-	return precedenceUnaryPrefix
+func (*DestroyExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceUnaryPrefix
 }
 
 // ReferenceExpression
@@ -1947,7 +1975,6 @@ func (*ReferenceExpression) isIfStatementTest() {}
 
 func (e *ReferenceExpression) Walk(walkChild func(Element)) {
 	walkChild(e.Expression)
-	// TODO: walk type
 }
 
 func (e *ReferenceExpression) String() string {
@@ -1993,8 +2020,8 @@ func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*ReferenceExpression) precedence() precedence {
-	return precedenceUnaryPrefix
+func (*ReferenceExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceUnaryPrefix
 }
 
 // ForceExpression
@@ -2069,8 +2096,8 @@ func (e *ForceExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*ForceExpression) precedence() precedence {
-	return precedenceUnaryPostfix
+func (*ForceExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceUnaryPostfix
 }
 
 // PathExpression
@@ -2147,8 +2174,8 @@ func (e *PathExpression) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (*PathExpression) precedence() precedence {
-	return precedenceLiteral
+func (*PathExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 // ()
@@ -2186,8 +2213,8 @@ func (v *VoidExpression) Doc() prettier.Doc {
 
 func (v *VoidExpression) isExpression() {}
 
-func (v *VoidExpression) precedence() precedence {
-	return precedenceLiteral
+func (v *VoidExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 func NewVoidExpression(

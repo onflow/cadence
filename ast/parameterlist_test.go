@@ -22,6 +22,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/turbolent/prettier"
 )
@@ -275,4 +276,54 @@ func TestParameterList_String(t *testing.T) {
 			params.String(),
 		)
 	})
+}
+
+func TestParameterList_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	typeAnnotation1 := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Int"},
+		},
+	}
+
+	defaultArg := &IntegerExpression{
+		PositiveLiteral: []byte("42"),
+		Base:            10,
+	}
+
+	typeAnnotation2 := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "String"},
+		},
+	}
+
+	params := &ParameterList{
+		Parameters: []*Parameter{
+			{
+				Identifier:      Identifier{Identifier: "x"},
+				TypeAnnotation:  typeAnnotation1,
+				DefaultArgument: defaultArg,
+			},
+			{
+				Identifier:     Identifier{Identifier: "y"},
+				TypeAnnotation: typeAnnotation2,
+			},
+		},
+	}
+
+	var visited []Element
+	params.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			typeAnnotation1,
+			defaultArg,
+			typeAnnotation2,
+		},
+		visited,
+	)
 }

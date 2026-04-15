@@ -268,8 +268,8 @@ func (e *AttachExpression) EndPosition(memoryGauge common.MemoryGauge) Position 
 	return e.Base.EndPosition(memoryGauge)
 }
 
-func (*AttachExpression) precedence() precedence {
-	return precedenceLiteral
+func (*AttachExpression) precedence() expressionPrecedence {
+	return expressionPrecedenceLiteral
 }
 
 func (e *AttachExpression) MarshalJSON() ([]byte, error) {
@@ -317,6 +317,7 @@ func (*RemoveStatement) ElementType() ElementType {
 func (*RemoveStatement) isStatement() {}
 
 func (s *RemoveStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Attachment)
 	walkChild(s.Value)
 }
 

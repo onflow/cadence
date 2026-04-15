@@ -29,6 +29,38 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
+type testProgram struct {
+	constants     []constant.DecodedConstant
+	types         []interpreter.StaticType
+	functionNames []string
+}
+
+var _ ProgramForInstructions = &testProgram{}
+
+func (p *testProgram) GetConstants() []constant.DecodedConstant {
+	return p.constants
+}
+
+func (p *testProgram) GetTypes() []interpreter.StaticType {
+	return p.types
+}
+
+func (p *testProgram) GetFunctionName(index uint16) string {
+	return p.functionNames[index]
+}
+
+func programForTest(
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+) ProgramForInstructions {
+	return &testProgram{
+		constants:     constants,
+		types:         types,
+		functionNames: functionNames,
+	}
+}
+
 func TestPrintRecursionFib(t *testing.T) {
 	t.Parallel()
 
@@ -45,16 +77,16 @@ func TestPrintRecursionFib(t *testing.T) {
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 1,
 		byte(Subtract),
-		byte(TransferAndConvert), 0, 0,
+		byte(TransferAndConvert), 0, 1, 0, 2,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0, 0, 0,
+		byte(Invoke), 0, 0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0,
 		// fib(n - 2)
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 0,
 		byte(Subtract),
-		byte(TransferAndConvert), 0, 0,
+		byte(TransferAndConvert), 0, 1, 0, 2,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0, 0, 0,
+		byte(Invoke), 0, 0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0,
 		// return sum
 		byte(Add),
 		byte(ReturnValue),
@@ -69,15 +101,15 @@ func TestPrintRecursionFib(t *testing.T) {
   6 |           GetLocal | local:0
   7 |        GetConstant | constant:1
   8 |           Subtract |
-  9 | TransferAndConvert | type:0
+  9 | TransferAndConvert | valueType:1 targetType:2
  10 |          GetGlobal | global:0
- 11 |             Invoke | typeArgs:[] argCount:0
+ 11 |             Invoke | typeArgs:[] argTypes:[2] paramTypes:[] returnType:3 hasImplicitArgument:false skipArgumentConversion:false
  12 |           GetLocal | local:0
  13 |        GetConstant | constant:0
  14 |           Subtract |
- 15 | TransferAndConvert | type:0
+ 15 | TransferAndConvert | valueType:1 targetType:2
  16 |          GetGlobal | global:0
- 17 |             Invoke | typeArgs:[] argCount:0
+ 17 |             Invoke | typeArgs:[] argTypes:[2] paramTypes:[] returnType:3 hasImplicitArgument:false skipArgumentConversion:false
  18 |                Add |
  19 |        ReturnValue |
 
@@ -86,7 +118,9 @@ func TestPrintRecursionFib(t *testing.T) {
 	var builder strings.Builder
 	const resolve = false
 	const colorize = false
-	err := PrintBytecode(&builder, code, resolve, nil, nil, nil, colorize)
+
+	program := programForTest(nil, nil, nil)
+	err := PrintBytecode(&builder, code, resolve, program, colorize)
 	require.NoError(t, err)
 
 	assert.Equal(t, expected, builder.String())
@@ -124,10 +158,8 @@ func TestPrintResolved(t *testing.T) {
 	var builder strings.Builder
 	const resolve = true
 	const colorize = false
-	err := PrintInstructions(
-		&builder,
-		instructions,
-		resolve,
+
+	program := programForTest(
 		[]constant.DecodedConstant{
 			{
 				Data: interpreter.NewUnmeteredStringValue("foo"),
@@ -149,6 +181,12 @@ func TestPrintResolved(t *testing.T) {
 			"bar",
 			"baz",
 		},
+	)
+	err := PrintInstructions(
+		&builder,
+		instructions,
+		resolve,
+		program,
 		colorize,
 	)
 	require.NoError(t, err)
@@ -160,37 +198,38 @@ func TestPrintInstruction(t *testing.T) {
 	t.Parallel()
 
 	instructions := map[string][]byte{
-		"GetConstant constant:258": {byte(GetConstant), 1, 2},
-		"GetLocal local:258":       {byte(GetLocal), 1, 2},
-		"SetLocal local:258":       {byte(SetLocal), 1, 2},
-		"GetUpvalue upvalue:258":   {byte(GetUpvalue), 1, 2},
-		"SetUpvalue upvalue:258":   {byte(SetUpvalue), 1, 2},
-		"CloseUpvalue local:258":   {byte(CloseUpvalue), 1, 2},
-		"GetGlobal global:258":     {byte(GetGlobal), 1, 2},
-		"SetGlobal global:258":     {byte(SetGlobal), 1, 2},
-		"GetMethod method:258":     {byte(GetMethod), 1, 2},
+		"GetConstant constant:258":                         {byte(GetConstant), 1, 2},
+		"GetLocal local:258":                               {byte(GetLocal), 1, 2},
+		"SetLocal local:258 isTempVar:true":                {byte(SetLocal), 1, 2, 1},
+		"GetUpvalue upvalue:258":                           {byte(GetUpvalue), 1, 2},
+		"SetUpvalue upvalue:258":                           {byte(SetUpvalue), 1, 2},
+		"CloseUpvalue local:258":                           {byte(CloseUpvalue), 1, 2},
+		"GetGlobal global:258":                             {byte(GetGlobal), 1, 2},
+		"SetGlobal global:258":                             {byte(SetGlobal), 1, 2},
+		"GetMethod method:258 receiverType:258":            {byte(GetMethod), 1, 2, 1, 2},
+		"GetMethodDynamic methodName:258 receiverType:258": {byte(GetMethodDynamic), 1, 2, 1, 2},
 
 		"Jump target:258":        {byte(Jump), 1, 2},
 		"JumpIfFalse target:258": {byte(JumpIfFalse), 1, 2},
 		"JumpIfTrue target:258":  {byte(JumpIfTrue), 1, 2},
 		"JumpIfNil target:258":   {byte(JumpIfNil), 1, 2},
 
-		"TransferAndConvert type:258": {byte(TransferAndConvert), 1, 2},
-		"Transfer":                    {byte(Transfer)},
-		"Convert type:258":            {byte(Convert), 1, 2},
+		"TransferAndConvert valueType:258 targetType:258": {byte(TransferAndConvert), 1, 2, 1, 2},
+		"Transfer":                             {byte(Transfer)},
+		"Convert valueType:258 targetType:258": {byte(Convert), 1, 2, 1, 2},
 
 		"NewSimpleComposite kind:CompositeKind(258) type:772":          {byte(NewSimpleComposite), 1, 2, 3, 4},
 		"NewComposite kind:CompositeKind(258) type:772":                {byte(NewComposite), 1, 2, 3, 4},
 		"NewCompositeAt kind:CompositeKind(258) type:772 address:1286": {byte(NewCompositeAt), 1, 2, 3, 4, 5, 6},
 
-		"SimpleCast type:258":   {byte(SimpleCast), 1, 2, 3},
-		"FailableCast type:258": {byte(FailableCast), 1, 2, 3},
-		"ForceCast type:258":    {byte(ForceCast), 1, 2, 3},
+		"SimpleCast targetType:258 valueType:772":   {byte(SimpleCast), 1, 2, 3, 4},
+		"FailableCast targetType:258 valueType:772": {byte(FailableCast), 1, 2, 3, 4},
+		"ForceCast targetType:258 valueType:772":    {byte(ForceCast), 1, 2, 3, 4},
 
 		`NewPath domain:PathDomainStorage identifier:5`: {byte(NewPath), 1, 0, 5},
 
-		"Invoke typeArgs:[772, 1286] argCount:1": {
-			byte(Invoke), 0, 2, 3, 4, 5, 6, 0, 1,
+		"Invoke typeArgs:[772, 1286] argTypes:[1800, 2304, 258] paramTypes:[1800, 2304, 258] returnType:772 hasImplicitArgument:true skipArgumentConversion:true": {
+			byte(Invoke), 0, 2, 3, 4, 5, 6, 0, 3, 7, 8, 9, 0, 1, 2, 0, 3, 7, 8, 9, 0, 1, 2, 3, 4, 1, 1,
 		},
 
 		"NewRef type:258 isImplicit:true": {byte(NewRef), 1, 2, 1},
@@ -219,29 +258,31 @@ func TestPrintInstruction(t *testing.T) {
 		"LessOrEqual":    {byte(LessOrEqual)},
 		"GreaterOrEqual": {byte(GreaterOrEqual)},
 
+		"Same":     {byte(Same)},
 		"Equal":    {byte(Equal)},
 		"NotEqual": {byte(NotEqual)},
 
-		"Wrap":    {byte(Wrap)},
-		"Unwrap":  {byte(Unwrap)},
-		"Destroy": {byte(Destroy)},
-		"True":    {byte(True)},
-		"False":   {byte(False)},
-		"Nil":     {byte(Nil)},
-		"Void":    {byte(Void)},
-		"GetField fieldName:258 accessedType:258": {byte(GetField), 1, 2, 1, 2},
-		"SetField fieldName:258 accessedType:258": {byte(SetField), 1, 2, 1, 2},
-		"RemoveField fieldName:258":               {byte(RemoveField), 1, 2},
-		"GetTypeIndex type:258":                   {byte(GetTypeIndex), 1, 2, 3},
-		"SetTypeIndex type:258":                   {byte(SetTypeIndex), 1, 2, 3},
-		"RemoveTypeIndex type:258":                {byte(RemoveTypeIndex), 1, 2, 3},
-		"SetAttachmentBase":                       {byte(SetAttachmentBase), 1, 2, 3},
-		"SetIndex":                                {byte(SetIndex)},
-		"GetIndex":                                {byte(GetIndex)},
-		"RemoveIndex":                             {byte(RemoveIndex)},
-		"Drop":                                    {byte(Drop)},
-		"Dup":                                     {byte(Dup)},
-		"Not":                                     {byte(Not)},
+		"Wrap":                       {byte(Wrap)},
+		"Unwrap":                     {byte(Unwrap)},
+		"Destroy":                    {byte(Destroy)},
+		"BoxOptional targetType:258": {byte(BoxOptional), 1, 2},
+		"True":                       {byte(True)},
+		"False":                      {byte(False)},
+		"Nil":                        {byte(Nil)},
+		"Void":                       {byte(Void)},
+		"GetField fieldName:258 accessedType:258":          {byte(GetField), 1, 2, 1, 2},
+		"SetField fieldName:258 accessedType:258":          {byte(SetField), 1, 2, 1, 2},
+		"RemoveField fieldName:258":                        {byte(RemoveField), 1, 2},
+		"GetTypeIndex indexedType:258 indexingType:258":    {byte(GetTypeIndex), 1, 2, 1, 2},
+		"SetTypeIndex indexedType:258 indexingType:258":    {byte(SetTypeIndex), 1, 2, 1, 2},
+		"RemoveTypeIndex indexedType:258 indexingType:258": {byte(RemoveTypeIndex), 1, 2, 1, 2},
+		"SetAttachmentBase":                                {byte(SetAttachmentBase), 1, 2, 3},
+		"SetIndex indexedType:258":                         {byte(SetIndex), 1, 2},
+		"GetIndex indexedType:258":                         {byte(GetIndex), 1, 2},
+		"RemoveIndex indexedType:258 pushPlaceholder:true": {byte(RemoveIndex), 1, 2, 1},
+		"Drop": {byte(Drop)},
+		"Dup":  {byte(Dup)},
+		"Not":  {byte(Not)},
 
 		"BitwiseOr":         {byte(BitwiseOr)},
 		"BitwiseAnd":        {byte(BitwiseAnd)},
@@ -258,6 +299,8 @@ func TestPrintInstruction(t *testing.T) {
 		"Loop":                            {byte(Loop)},
 		"Statement":                       {byte(Statement)},
 		"TemplateString exprSize:258":     {byte(TemplateString), 1, 2, 3, 4},
+		"GetFieldLocal fieldName:258 accessedType:258 local:772": {byte(GetFieldLocal), 1, 2, 1, 2, 3, 4},
+		"Unreachable": {byte(Unreachable)},
 	}
 
 	// Check if there is any opcode that is not tested
@@ -303,16 +346,16 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 1,
 		byte(Subtract),
-		byte(TransferAndConvert), 0, 0,
+		byte(TransferAndConvert), 0, 1, 0, 2,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0, 0, 0,
+		byte(Invoke), 0, 0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0,
 		// fib(n - 2)
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 0,
 		byte(Subtract),
-		byte(TransferAndConvert), 0, 0,
+		byte(TransferAndConvert), 0, 1, 0, 2,
 		byte(GetGlobal), 0, 0,
-		byte(Invoke), 0, 0, 0, 0,
+		byte(Invoke), 0, 0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0,
 		// return sum
 		byte(Add),
 		byte(ReturnValue),
@@ -337,9 +380,9 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 │    6 | GetLocal           |  local:0
 │    7 | GetConstant        |  constant:1
 │    8 | Subtract           | 
-│    9 | TransferAndConvert |  type:0
+│    9 | TransferAndConvert |  valueType:1 targetType:2
 │   10 | GetGlobal          |  global:0
-│   11 | Invoke             |  typeArgs:[] argCount:0
+│   11 | Invoke             |  typeArgs:[] argTypes:[2] paramTypes:[] returnType:3 hasImplicitArgument:false skipArgumentConversion:false
 └─────────────────────────────────────────────────────────────────────┘
     ──→ Unknown target (function_call)
 
@@ -351,9 +394,9 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 
 ┌─ Block 4 (14-17) ───────────────────────────────────────────────────┐
 │   14 | Subtract           | 
-│   15 | TransferAndConvert |  type:0
+│   15 | TransferAndConvert |  valueType:1 targetType:2
 │   16 | GetGlobal          |  global:0
-│   17 | Invoke             |  typeArgs:[] argCount:0
+│   17 | Invoke             |  typeArgs:[] argTypes:[2] paramTypes:[] returnType:3 hasImplicitArgument:false skipArgumentConversion:false
 └─────────────────────────────────────────────────────────────────────┘
     ──→ Unknown target (function_call)
 
@@ -367,7 +410,9 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 	var builder strings.Builder
 	const resolve = false
 	const colorize = false
-	err := PrintBytecodeWithFlow(&builder, code, resolve, nil, nil, nil, colorize)
+
+	program := programForTest(nil, nil, nil)
+	err := PrintBytecodeWithFlow(&builder, code, resolve, program, colorize)
 	require.NoError(t, err)
 
 	assert.Equal(t, expected, builder.String())

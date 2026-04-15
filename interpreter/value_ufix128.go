@@ -438,7 +438,7 @@ func (v UFix128Value) Equal(_ ValueComparisonContext, other Value) bool {
 // - HashInputTypeUFix128 (1 byte)
 // - high 64 bits encoded in big-endian (8 bytes)
 // - low 64 bits encoded in big-endian (8 bytes)
-func (v UFix128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v UFix128Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeUFix128)
 
 	UFix128 := fix.UFix128(v)
@@ -493,8 +493,14 @@ func ConvertUFix128(memoryGauge common.MemoryGauge, value Value) UFix128Value {
 	return NewUFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-func (v UFix128Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v UFix128Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v UFix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -527,7 +533,7 @@ func (UFix128Value) IsStorable() bool {
 	return true
 }
 
-func (v UFix128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v UFix128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -550,6 +556,7 @@ func (v UFix128Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -616,4 +623,13 @@ func ufix128SaturationArithmaticResult(
 	default:
 		panic(err)
 	}
+}
+
+func (UFix128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UFix128Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

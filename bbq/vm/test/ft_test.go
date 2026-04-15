@@ -39,6 +39,8 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils/contracts"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -60,13 +62,13 @@ func compiledFTTransfer(tb testing.TB) {
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
 
 	codes := map[common.Location][]byte{
-		burnerLocation:                     []byte(realBurnerContract),
-		viewResolverLocation:               []byte(realViewResolverContract),
-		fungibleTokenLocation:              []byte(realFungibleTokenContract),
-		metadataViewsLocation:              []byte(realMetadataViewsContract),
-		fungibleTokenMetadataViewsLocation: []byte(realFungibleTokenMetadataViewsContract),
-		nonFungibleTokenLocation:           []byte(realNonFungibleTokenContract),
-		flowTokenLocation:                  []byte(realFlowContract),
+		burnerLocation:                     []byte(contracts.RealBurnerContract),
+		viewResolverLocation:               []byte(contracts.RealViewResolverContract),
+		fungibleTokenLocation:              []byte(contracts.RealFungibleTokenContract),
+		metadataViewsLocation:              []byte(contracts.RealMetadataViewsContract),
+		fungibleTokenMetadataViewsLocation: []byte(contracts.RealFungibleTokenMetadataViewsContract),
+		nonFungibleTokenLocation:           []byte(contracts.RealNonFungibleTokenContract),
+		flowTokenLocation:                  []byte(contracts.RealFlowContract),
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
@@ -117,6 +119,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 			return activation
 		},
+		PeepholeOptimizationsEnabled: true,
 	}
 
 	// Parse and check contracts
@@ -157,7 +160,7 @@ func compiledFTTransfer(tb testing.TB) {
 		},
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 
 	vmConfig := vm.NewConfig(storage)
 
@@ -296,7 +299,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 		program := ParseCheckAndCompileCodeWithOptions(
 			tb,
-			realFlowTokenSetupAccountTransaction,
+			contracts.RealFlowTokenSetupAccountTransaction,
 			txLocation,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
@@ -327,7 +330,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 	mintTokensTxProgram := ParseCheckAndCompileCodeWithOptions(
 		tb,
-		realFlowTokenMintTokensTransaction,
+		contracts.RealFlowTokenMintTokensTransaction,
 		txLocation,
 		ParseCheckAndCompileOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
@@ -374,7 +377,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 	tokenTransferTxProgram := ParseCheckAndCompileCodeWithOptions(
 		tb,
-		realFlowTokenTransferTokensTransaction,
+		contracts.RealFlowTokenTransferTokensTransaction,
 		txLocation,
 		ParseCheckAndCompileOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
@@ -447,7 +450,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 		program := ParseCheckAndCompileCodeWithOptions(
 			tb,
-			realFlowTokenGetBalanceScript,
+			contracts.RealFlowTokenGetBalanceScript,
 			scriptLocation,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{

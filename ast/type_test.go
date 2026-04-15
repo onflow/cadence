@@ -203,6 +203,389 @@ func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestTypeAnnotation_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	innerType := &NominalType{
+		Identifier: Identifier{
+			Identifier: "T",
+		},
+	}
+
+	ty := &TypeAnnotation{
+		Type: innerType,
+	}
+
+	var visited []Element
+	ty.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			innerType,
+		},
+		visited,
+	)
+}
+
+func TestTypeStringParentheses(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reference to optional", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Type: &OptionalType{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "T",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"&(T?)",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional reference", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &ReferenceType{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "T",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"&T?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional function type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &FunctionType{
+				ReturnTypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "T",
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"(fun (): T)?",
+			ty.String(),
+		)
+	})
+
+	t.Run("function type with optional return type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &FunctionType{
+			ReturnTypeAnnotation: &TypeAnnotation{
+				Type: &OptionalType{
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "T",
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"fun (): T?",
+			ty.String(),
+		)
+	})
+
+	t.Run("reference to function type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Type: &FunctionType{
+				ReturnTypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "T",
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"&fun (): T",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional instantiation", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &InstantiationType{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Foo",
+					},
+				},
+				TypeArguments: []*TypeAnnotation{
+					{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "Bar",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"Foo<Bar>?",
+			ty.String(),
+		)
+	})
+
+	t.Run("reference to instantiation", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Type: &InstantiationType{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Foo",
+					},
+				},
+				TypeArguments: []*TypeAnnotation{
+					{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "Bar",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"&Foo<Bar>",
+			ty.String(),
+		)
+	})
+
+	t.Run("instantiation of reference", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{
+			Type: &ReferenceType{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Foo",
+					},
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				{
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "Bar",
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"(&Foo)<Bar>",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional intersection type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &IntersectionType{
+				Types: []*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "A",
+						},
+					},
+					{
+						Identifier: Identifier{
+							Identifier: "B",
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{A, B}?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional dictionary type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &DictionaryType{
+				KeyType: &NominalType{
+					Identifier: Identifier{
+						Identifier: "K",
+					},
+				},
+				ValueType: &NominalType{
+					Identifier: Identifier{
+						Identifier: "V",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{K: V}?",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional variable sized type", func(t *testing.T) {
+		t.Parallel()
+
+		variable := &OptionalType{
+			Type: &VariableSizedType{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "T",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"[T]?",
+			variable.String(),
+		)
+	})
+
+	t.Run("optional constant sized type", func(t *testing.T) {
+		t.Parallel()
+
+		constant := &OptionalType{
+			Type: &ConstantSizedType{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "T",
+					},
+				},
+				Size: &IntegerExpression{
+					Value:           big.NewInt(2),
+					PositiveLiteral: []byte("2"),
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"[T; 2]?",
+			constant.String(),
+		)
+	})
+
+	t.Run("double optional", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &OptionalType{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "T",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"T??",
+			ty.String(),
+		)
+	})
+
+	t.Run("authorized reference to optional", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: NewConjunctiveEntitlementSet(
+				[]*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "E",
+						},
+					},
+				},
+			),
+			Type: &OptionalType{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "T",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth(E) &(T?)",
+			ty.String(),
+		)
+	})
+
+	t.Run("optional authorized reference", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{
+			Type: &ReferenceType{
+				Authorization: NewConjunctiveEntitlementSet(
+					[]*NominalType{
+						{
+							Identifier: Identifier{
+								Identifier: "E",
+							},
+						},
+					},
+				),
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "T",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"(auth(E) &T)?",
+			ty.String(),
+		)
+	})
+}
+
 func TestNominalType_Doc(t *testing.T) {
 
 	t.Parallel()
@@ -350,6 +733,25 @@ func TestNominalType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestNominalType_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &NominalType{
+		Identifier: Identifier{
+			Identifier: "T",
+		},
+	}
+
+	var visited []Element
+	ty.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Empty(t, visited)
+
+}
+
 func TestOptionalType_Doc(t *testing.T) {
 
 	t.Parallel()
@@ -459,6 +861,33 @@ func TestOptionalType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestOptionalType_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	innerType := &NominalType{
+		Identifier: Identifier{
+			Identifier: "T",
+		},
+	}
+
+	ty := &OptionalType{
+		Type: innerType,
+	}
+
+	var visited []Element
+	ty.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			innerType,
+		},
+		visited,
 	)
 }
 
@@ -592,6 +1021,31 @@ func TestVariableSizedType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestVariableSizedType_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	elementType := &NominalType{
+		Identifier: Identifier{Identifier: "Int"},
+	}
+
+	typ := &VariableSizedType{
+		Type: elementType,
+	}
+
+	var visited []Element
+	typ.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			elementType,
+		},
+		visited,
 	)
 }
 
@@ -852,6 +1306,38 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestConstantSizedType_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	elementType := &NominalType{
+		Identifier: Identifier{Identifier: "Int"},
+	}
+
+	sizeExpr := &IntegerExpression{
+		PositiveLiteral: []byte("10"),
+		Base:            10,
+	}
+
+	typ := &ConstantSizedType{
+		Type: elementType,
+		Size: sizeExpr,
+	}
+
+	var visited []Element
+	typ.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			elementType,
+			sizeExpr,
+		},
+		visited,
 	)
 }
 
@@ -1116,6 +1602,41 @@ func TestDictionaryType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestDictionaryType_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	keyType := &NominalType{
+		Identifier: Identifier{
+			Identifier: "String",
+		},
+	}
+
+	valueType := &NominalType{
+		Identifier: Identifier{
+			Identifier: "Int",
+		},
+	}
+
+	ty := &DictionaryType{
+		KeyType:   keyType,
+		ValueType: valueType,
+	}
+
+	var visited []Element
+	ty.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			keyType,
+			valueType,
+		},
+		visited,
+	)
+}
+
 func TestFunctionType_Doc(t *testing.T) {
 
 	t.Parallel()
@@ -1367,6 +1888,55 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestFunctionType_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	param1 := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "Int",
+			},
+		},
+	}
+
+	param2 := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "String",
+			},
+		},
+	}
+
+	returnType := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "Bool",
+			},
+		},
+	}
+
+	ty := &FunctionType{
+		ParameterTypeAnnotations: []*TypeAnnotation{param1, param2},
+		ReturnTypeAnnotation:     returnType,
+	}
+
+	var visited []Element
+	ty.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			param1,
+			param2,
+			returnType,
+		},
+		visited,
+	)
+
+}
+
 func TestReferenceType_Doc(t *testing.T) {
 
 	t.Parallel()
@@ -1532,8 +2102,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("auth"),
 				prettier.Text("("),
 				prettier.Text("X"),
-				prettier.Text(","),
-				prettier.Space,
+				prettier.Text(", "),
 				prettier.Text("Y"),
 				prettier.Text(")"),
 				prettier.Space,
@@ -1575,8 +2144,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("auth"),
 				prettier.Text("("),
 				prettier.Text("X"),
-				prettier.Text(" |"),
-				prettier.Space,
+				prettier.Text(" | "),
 				prettier.Text("Y"),
 				prettier.Text(")"),
 				prettier.Space,
@@ -1898,6 +2466,117 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestReferenceType_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no children", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement1 := &NominalType{
+			Identifier: Identifier{
+				Identifier: "X",
+			},
+		}
+
+		entitlement2 := &NominalType{
+			Identifier: Identifier{
+				Identifier: "Y",
+			},
+		}
+
+		referencedType := &NominalType{
+			Identifier: Identifier{
+				Identifier: "T",
+			},
+		}
+
+		ty := &ReferenceType{
+			Authorization: &ConjunctiveEntitlementSet{
+				Elements: []*NominalType{entitlement1, entitlement2},
+			},
+			Type: referencedType,
+		}
+
+		var visited []Element
+		ty.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement1,
+				entitlement2,
+				referencedType,
+			},
+			visited,
+		)
+	})
+
+	t.Run("walks mapped access and referenced type", func(t *testing.T) {
+		t.Parallel()
+
+		entitlementMap := &NominalType{
+			Identifier: Identifier{
+				Identifier: "M",
+			},
+		}
+
+		referencedType := &NominalType{
+			Identifier: Identifier{
+				Identifier: "T",
+			},
+		}
+
+		ty := &ReferenceType{
+			Authorization: &MappedAccess{
+				EntitlementMap: entitlementMap,
+			},
+			Type: referencedType,
+		}
+
+		var visited []Element
+		ty.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlementMap,
+				referencedType,
+			},
+			visited,
+		)
+	})
+
+	t.Run("no authorization", func(t *testing.T) {
+		t.Parallel()
+
+		referencedType := &NominalType{
+			Identifier: Identifier{
+				Identifier: "T",
+			},
+		}
+
+		ty := &ReferenceType{
+			Type: referencedType,
+		}
+
+		var visited []Element
+		ty.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				referencedType,
+			},
+			visited,
+		)
+	})
+
+}
+
 func TestIntersectionType_Doc(t *testing.T) {
 
 	t.Parallel()
@@ -2112,6 +2791,36 @@ func TestIntersectionType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestIntersectionType_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	type1 := &NominalType{
+		Identifier: Identifier{Identifier: "Interface1"},
+	}
+
+	type2 := &NominalType{
+		Identifier: Identifier{Identifier: "Interface2"},
+	}
+
+	typ := &IntersectionType{
+		Types: []*NominalType{type1, type2},
+	}
+
+	var visited []Element
+	typ.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			type1,
+			type2,
+		},
+		visited,
 	)
 }
 
@@ -2448,5 +3157,45 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestInstantiationType_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	instantiatedType := &NominalType{
+		Identifier: Identifier{Identifier: "Generic"},
+	}
+
+	typeArg1 := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "Int"},
+		},
+	}
+
+	typeArg2 := &TypeAnnotation{
+		Type: &NominalType{
+			Identifier: Identifier{Identifier: "String"},
+		},
+	}
+
+	typ := &InstantiationType{
+		Type:          instantiatedType,
+		TypeArguments: []*TypeAnnotation{typeArg1, typeArg2},
+	}
+
+	var visited []Element
+	typ.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t,
+		[]Element{
+			instantiatedType,
+			typeArg1,
+			typeArg2,
+		},
+		visited,
 	)
 }

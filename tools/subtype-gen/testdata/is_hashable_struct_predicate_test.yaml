@@ -1,0 +1,5 @@
+rules:
+  - super: HashableStructType
+    predicate:
+      isHashableStruct: sub
+

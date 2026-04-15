@@ -26,20 +26,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
-
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
-	. "github.com/onflow/cadence/bbq/test_utils"
-	"github.com/onflow/cadence/bbq/vm"
 )
 
 type testAccountHandler struct {
@@ -426,6 +426,7 @@ func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activation
 			func(
 				context interpreter.NativeFunctionContext,
 				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
 				_ interpreter.Value,
 				arguments []interpreter.Value,
 			) vm.Value {
@@ -497,7 +498,7 @@ func CompileAndInvokeWithLogs(
 		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndLog,
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 	vmConfig := vm.NewConfig(storage)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(&logs)
@@ -548,6 +549,7 @@ func newConditionLogFunction(logs *[]string) stdlib.StandardLibraryValue {
 		func(
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			arguments []interpreter.Value,
 		) interpreter.Value {
@@ -576,7 +578,7 @@ func CompileAndInvokeWithConditionLogs(
 		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 	vmConfig := vm.NewConfig(storage)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
@@ -686,9 +688,16 @@ func ContractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 	return func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
 		contractInitializerName := commons.QualifiedName(contractName, commons.InitFunctionName)
 		contractInitializer := context.GetFunction(location, contractInitializerName)
+
+		compositeType, err := context.GetCompositeType(location, contractName, location.TypeID(context, contractName))
+		if err != nil {
+			panic(err)
+		}
+
 		result := context.InvokeFunction(
 			contractInitializer,
 			arguments,
+			compositeType,
 		)
 
 		return result.(*interpreter.CompositeValue)
@@ -816,7 +825,7 @@ func PrepareVMConfig(
 ) *vm.Config {
 
 	if config == nil {
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 		config = vm.NewConfig(storage)
 	}
 

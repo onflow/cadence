@@ -87,7 +87,7 @@ func TypeQualifier(typ sema.Type) string {
 		// TODO: Revisit. Probably this is not needed here?
 		return TypeQualifier(typ.Types[0])
 	case *sema.CapabilityType:
-		return interpreter.PrimitiveStaticTypeCapability.String()
+		return TypeQualifierCapability
 	case *sema.InclusiveRangeType:
 		return TypeQualifierInclusiveRange
 	default:
@@ -117,4 +117,49 @@ var CollectEventsFunctionType = &sema.FunctionType{
 			Identifier:     CollectEventsParamName,
 		},
 	},
+}
+
+type TypeCacheKey interface {
+	isTypeCacheKey()
+}
+
+type typeIDCacheKey common.TypeID
+
+var _ TypeCacheKey = typeIDCacheKey("")
+
+func (t typeIDCacheKey) isTypeCacheKey() {}
+
+type functionTypeCacheKey struct {
+	typeID        sema.TypeID
+	isConstructor bool
+}
+
+var _ TypeCacheKey = functionTypeCacheKey{}
+
+func (t functionTypeCacheKey) isTypeCacheKey() {}
+
+func NewTypeCacheKeyFromType(typ sema.Type) TypeCacheKey {
+	typeID := typ.ID()
+
+	if funcType, isFuncType := typ.(*sema.FunctionType); isFuncType {
+		return functionTypeCacheKey{
+			typeID:        typeID,
+			isConstructor: funcType.IsConstructor,
+		}
+	}
+
+	return typeIDCacheKey(typeID)
+}
+
+func NewTypeCacheKeyFromStaticType(typ interpreter.StaticType) TypeCacheKey {
+	typeID := typ.ID()
+
+	if funcType, isFuncType := typ.(interpreter.FunctionStaticType); isFuncType {
+		return functionTypeCacheKey{
+			typeID:        typeID,
+			isConstructor: funcType.IsConstructor,
+		}
+	}
+
+	return typeIDCacheKey(typeID)
 }

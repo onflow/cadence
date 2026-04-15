@@ -79,7 +79,7 @@ func (v ImplicitReferenceValue) GetAuthorization() interpreter.Authorization {
 	panic(errors.NewUnreachableError())
 }
 
-func (v ImplicitReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v ImplicitReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())

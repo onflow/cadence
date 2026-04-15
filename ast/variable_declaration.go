@@ -27,17 +27,17 @@ import (
 )
 
 type VariableDeclaration struct {
-	Value             Expression
-	SecondValue       Expression
-	TypeAnnotation    *TypeAnnotation
-	Transfer          *Transfer
-	SecondTransfer    *Transfer
-	ParentIfStatement *IfStatement `json:"-"`
-	DocString         string
-	Identifier        Identifier
-	StartPos          Position `json:"-"`
-	Access            Access
-	IsConstant        bool
+	Value                  Expression
+	SecondValue            Expression
+	TypeAnnotation         *TypeAnnotation
+	Transfer               *Transfer
+	SecondTransfer         *Transfer
+	ParentControlStatement Statement `json:"-"`
+	DocString              string
+	Identifier             Identifier
+	StartPos               Position `json:"-"`
+	Access                 Access
+	IsConstant             bool
 }
 
 var _ Element = &VariableDeclaration{}
@@ -107,7 +107,9 @@ func (d *VariableDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 func (*VariableDeclaration) isIfStatementTest() {}
 
 func (d *VariableDeclaration) Walk(walkChild func(Element)) {
-	// TODO: walk type
+	if d.TypeAnnotation != nil {
+		walkChild(d.TypeAnnotation)
+	}
 	walkChild(d.Value)
 	if d.SecondValue != nil {
 		walkChild(d.SecondValue)

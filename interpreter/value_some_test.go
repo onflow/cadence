@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	"github.com/onflow/cadence/values"
 )
 
@@ -50,7 +51,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.Equal(t, bv, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize), wrapperSize)
 	})
 
 	t.Run("SomeValue(SomeValue(bool))", func(t *testing.T) {
@@ -62,11 +63,11 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.Equal(t, bv, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...)))", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		var context interpreter.MemberAccessibleContext
 
@@ -114,7 +115,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.Array{}, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		atreeArray := unwrappedValue.(*atree.Array)
 		require.Equal(t, atree.Address(address), atreeArray.Address())
@@ -128,7 +129,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(DictionaryValue(...)))", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		var context interpreter.MemberAccessibleContext
 
@@ -179,7 +180,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)
@@ -220,7 +221,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(CompositeValue(...)))", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		var context interpreter.MemberAccessibleContext
 
@@ -283,7 +284,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		unwrappedValue, wrapperSize := v.UnwrapAtreeValue()
 		require.IsType(t, &atree.OrderedMap{}, unwrappedValue)
-		require.Equal(t, uint64(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
+		require.Equal(t, uint32(values.CBORTagSize+someStorableWithMultipleNestedLevelsArraySize+1), wrapperSize)
 
 		// Verify unwrapped value
 		atreeMap := unwrappedValue.(*atree.OrderedMap)
@@ -309,7 +310,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	address := common.Address{'A'}
 
 	t.Run("SomeValue(bool)", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		v := interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.BoolValue(true))
@@ -324,7 +325,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(bool))", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		v := interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredSomeValueNonCopying(
@@ -340,7 +341,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...))), small ArrayValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
@@ -401,7 +402,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(ArrayValue(...))), large ArrayValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
@@ -463,7 +464,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(DictionaryValue(...))), small DictionaryValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
 				Program:     ast.NewProgram(nil, []ast.Declaration{}),
@@ -555,7 +556,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(DictionaryValue(...))), large DictionaryValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
@@ -651,7 +652,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(CompositeValue(...))), small CompositeValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{
@@ -734,7 +735,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 	})
 
 	t.Run("SomeValue(SomeValue(CompositeValue(...))), large CompositeValue", func(t *testing.T) {
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := interpreter.NewInterpreter(
 			&interpreter.Program{

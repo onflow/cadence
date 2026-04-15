@@ -35,7 +35,7 @@ var _ atree.Storable = Uint64AtreeValue(0)
 func (v Uint64AtreeValue) Storable(
 	_ atree.SlabStorage,
 	_ atree.Address,
-	_ uint64,
+	_ uint32,
 ) (
 	atree.Storable,
 	error,
@@ -58,6 +58,14 @@ func (v Uint64AtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 
 func (Uint64AtreeValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Uint64AtreeValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Uint64AtreeValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
 }
 
 func Uint64AtreeValueHashInput(v atree.Value, scratch []byte) ([]byte, error) {

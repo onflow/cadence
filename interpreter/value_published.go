@@ -45,6 +45,7 @@ func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, v
 }
 
 var _ Value = &PublishedValue{}
+var _ atree.Storable = &PublishedValue{}
 var _ atree.Value = &PublishedValue{}
 var _ EquatableValue = &PublishedValue{}
 
@@ -115,7 +116,7 @@ func (*PublishedValue) IsStorable() bool {
 	return true
 }
 
-func (v *PublishedValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v *PublishedValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint32) (atree.Storable, error) {
 	return values.MaybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
@@ -193,4 +194,12 @@ func (v *PublishedValue) ChildStorables() []atree.Storable {
 		v.Recipient,
 		v.Value,
 	}
+}
+
+func (*PublishedValue) CanCopyNonRefSimple() bool {
+	return false
+}
+
+func (v *PublishedValue) CopyNonRefSimple() (atree.Storable, error) {
+	return nil, NewStorableCopyError("PublishedValue")
 }

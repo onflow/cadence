@@ -19,8 +19,10 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -43,7 +45,7 @@ func TestInterpretEnum(t *testing.T) {
 
 	var expectedType interpreter.Value
 	if *compile {
-		expectedType = vm.CompiledFunctionValue{}
+		expectedType = &vm.CompiledFunctionValue{}
 	} else {
 		expectedType = &interpreter.HostFunctionValue{}
 	}
@@ -253,18 +255,54 @@ func TestInterpretEnumInContract(t *testing.T) {
 	contract, ok := c.(interpreter.MemberAccessibleValue)
 	require.True(t, ok)
 
-	eValue := contract.GetMember(inter, "e")
+	eValue := contract.GetMember(inter, "e", common.DeclarationKindField)
 	require.NotNil(t, eValue)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)
 	enumCase := eValue.(*interpreter.CompositeValue)
 
-	rawValue := enumCase.GetMember(inter, "rawValue")
+	rawValue := enumCase.GetMember(inter, "rawValue", common.DeclarationKindField)
 
 	RequireValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredUInt8Value(0),
 		rawValue,
+	)
+}
+
+func TestInterpretEnumLookup(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test(): E {
+              return E(rawValue: 0)!
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 4)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
 	)
 }

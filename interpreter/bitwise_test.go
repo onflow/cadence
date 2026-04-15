@@ -204,7 +204,11 @@ func TestInterpretBitwiseLeftShift(t *testing.T) {
 
 	for ty, valueFunc := range bitwiseTestValueFunctions {
 
+		ty := ty
+		valueFunc := valueFunc
+
 		t.Run(ty, func(t *testing.T) {
+			t.Parallel()
 
 			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
@@ -221,6 +225,29 @@ func TestInterpretBitwiseLeftShift(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b01100000),
+				inter.GetGlobal("c"),
+			)
+		})
+
+		// Left shift zero
+		t.Run(fmt.Sprintf("%s(0)", ty), func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepare(t,
+				fmt.Sprintf(
+					`
+                      let a: %[1]s = 0
+                      let b: %[1]s = 3
+                      let c = a << b
+                    `,
+					ty,
+				),
+			)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				valueFunc(0),
 				inter.GetGlobal("c"),
 			)
 		})
@@ -507,6 +534,20 @@ func TestInterpretBitwiseLeftShift128(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("Int128(0) << Int128", func(t *testing.T) {
+
+		inter := parseCheckAndPrepare(t, `
+          let c = Int128(0) << 5
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt128ValueFromInt64(0),
+			inter.GetGlobal("c"),
+		)
+	})
+
 	t.Run("Int128 << 130 (zero result)", func(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
@@ -679,6 +720,20 @@ func TestInterpretBitwiseLeftShift128(t *testing.T) {
 func TestInterpretBitwiseLeftShift256(t *testing.T) {
 
 	t.Parallel()
+
+	t.Run("Int256(0) << Int256", func(t *testing.T) {
+
+		inter := parseCheckAndPrepare(t, `
+          let c = Int256(0) << 5
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredInt256ValueFromInt64(0),
+			inter.GetGlobal("c"),
+		)
+	})
 
 	t.Run("Int256 << 260 (zero result)", func(t *testing.T) {
 

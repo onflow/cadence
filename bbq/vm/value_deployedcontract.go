@@ -37,7 +37,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.DeployedContractTypePublicTypesFunctionName,
 			sema.DeployedContractTypePublicTypesFunctionType,
-			interpreter.NewNativeDeployedContractPublicTypesFunctionValue(nil, nil, nil),
+			interpreter.NewNativeDeployedContractPublicTypesFunctionValue(nil, nil),
 		),
 	)
 }

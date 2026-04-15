@@ -356,6 +356,11 @@ func generateErrors() []namedError {
 				Pos: placeholderPosition,
 			},
 		},
+		{"parser.MissingElseInGuardStatementError",
+			&parser.MissingElseInGuardStatementError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingEndOfParenthesizedExpressionError",
 			&parser.MissingEndOfParenthesizedExpressionError{
 				GotToken: placeholderToken,
@@ -709,7 +714,7 @@ func generateErrors() []namedError {
 			},
 		},
 		{"sema.CyclicConformanceError",
-			sema.CyclicConformanceError{
+			&sema.CyclicConformanceError{
 				InterfaceType: placeholderInterfaceType,
 				Range:         placeholderRange,
 			},
@@ -822,6 +827,11 @@ func generateErrors() []namedError {
 		},
 		{"sema.FunctionExpressionInConditionError",
 			&sema.FunctionExpressionInConditionError{
+				Range: placeholderRange,
+			},
+		},
+		{"sema.GuardStatementElseBlockMustExitError",
+			&sema.GuardStatementElseBlockMustExitError{
 				Range: placeholderRange,
 			},
 		},
@@ -1015,6 +1025,11 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidDestructionError",
 			&sema.InvalidDestructionError{
+				Range: placeholderRange,
+			},
+		},
+		{"sema.InvalidDictionaryIndexBindingError",
+			&sema.InvalidDictionaryIndexBindingError{
 				Range: placeholderRange,
 			},
 		},
@@ -1253,6 +1268,13 @@ func generateErrors() []namedError {
 			&sema.InvalidPragmaError{
 				Message: placeholderString,
 				Range:   placeholderRange,
+			},
+		},
+		{"sema.InvalidReferenceToOptionalTypeError",
+			&sema.InvalidReferenceToOptionalTypeError{
+				ActualType:   placeholderSemaType,
+				ExpectedType: placeholderSemaType,
+				Range:        placeholderRange,
 			},
 		},
 		{"sema.InvalidResourceAnnotationError",
@@ -1739,6 +1761,11 @@ func generateErrors() []namedError {
 		},
 		{"sema.UnsupportedResourceForLoopError",
 			&sema.UnsupportedResourceForLoopError{
+				Range: placeholderRange,
+			},
+		},
+		{"sema.WildcardAddressImportError",
+			&sema.WildcardAddressImportError{
 				Range: placeholderRange,
 			},
 		},

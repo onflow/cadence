@@ -43,6 +43,7 @@ func newAssertHelloLogFunction(t *testing.T, invoked *bool) stdlib.StandardLibra
 		func(
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
@@ -61,6 +62,7 @@ func newAssertUnexpectedLogFunction(t *testing.T) stdlib.StandardLibraryValue {
 		func(
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			_ []interpreter.Value,
 		) interpreter.Value {
@@ -194,11 +196,11 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &mutationError)
+		var argumentTypeError *interpreter.InvalidArgumentTypeError
+		require.ErrorAs(t, err, &argumentTypeError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, sema.StringType, argumentTypeError.ExpectedType)
+		assert.Equal(t, sema.IntType, argumentTypeError.ActualType)
 	})
 
 	t.Run("array appendAll invalid", func(t *testing.T) {
@@ -214,11 +216,23 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &mutationError)
+		var argumentTypeError *interpreter.InvalidArgumentTypeError
+		require.ErrorAs(t, err, &argumentTypeError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.StringType,
+			},
+			argumentTypeError.ExpectedType,
+		)
+		assert.Equal(
+			t,
+			&sema.VariableSizedType{
+				Type: sema.AnyStructType,
+			},
+			argumentTypeError.ActualType,
+		)
 	})
 
 	t.Run("array insert valid", func(t *testing.T) {
@@ -268,11 +282,11 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &mutationError)
+		var argumentTypeError *interpreter.InvalidArgumentTypeError
+		require.ErrorAs(t, err, &argumentTypeError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, sema.StringType, argumentTypeError.ExpectedType)
+		assert.Equal(t, sema.IntType, argumentTypeError.ActualType)
 	})
 
 	t.Run("array concat mismatching values", func(t *testing.T) {
@@ -290,8 +304,8 @@ func TestInterpretArrayMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &mutationError)
+		var argumentTypeError *interpreter.InvalidArgumentTypeError
+		require.ErrorAs(t, err, &argumentTypeError)
 
 		// Check original array
 
@@ -660,11 +674,11 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &mutationError)
+		var argumentTypeError *interpreter.InvalidArgumentTypeError
+		require.ErrorAs(t, err, &argumentTypeError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
-		assert.Equal(t, sema.IntType, mutationError.ActualType)
+		assert.Equal(t, sema.StringType, argumentTypeError.ExpectedType)
+		assert.Equal(t, sema.IntType, argumentTypeError.ActualType)
 	})
 
 	t.Run("dictionary insert invalid key", func(t *testing.T) {
@@ -680,11 +694,11 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var mutationError *interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &mutationError)
+		var argumentTypeError *interpreter.InvalidArgumentTypeError
+		require.ErrorAs(t, err, &argumentTypeError)
 
-		assert.Equal(t, sema.PublicPathType, mutationError.ExpectedType)
-		assert.Equal(t, sema.PrivatePathType, mutationError.ActualType)
+		assert.Equal(t, sema.PublicPathType, argumentTypeError.ExpectedType)
+		assert.Equal(t, sema.PrivatePathType, argumentTypeError.ActualType)
 	})
 
 	t.Run("invalid update through reference", func(t *testing.T) {

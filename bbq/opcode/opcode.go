@@ -68,6 +68,7 @@ const (
 
 	// Equality
 
+	Same
 	Equal
 	NotEqual
 
@@ -87,7 +88,7 @@ const (
 	Deref
 	Transfer
 	Convert
-	_
+	BoxOptional
 	_
 	_
 
@@ -131,12 +132,13 @@ const (
 	GetIndex
 	RemoveIndex
 	GetMethod
+	GetMethodDynamic
 	GetTypeIndex
 	SetTypeIndex
 	RemoveTypeIndex
 	SetAttachmentBase
 	_
-	_
+	GetFieldLocal
 
 	// Invocations
 
@@ -175,6 +177,7 @@ const (
 	Loop
 	Statement
 	TemplateString
+	Unreachable
 
 	// NOTE: not an actual opcode, must be last item
 	OpcodeMax

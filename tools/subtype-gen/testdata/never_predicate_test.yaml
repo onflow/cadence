@@ -1,0 +1,5 @@
+rules:
+  - super: SomeType
+    predicate:
+      never
+

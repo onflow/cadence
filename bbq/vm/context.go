@@ -42,7 +42,7 @@ type Context struct {
 	mutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues
 
-	invokeFunction                func(function Value, arguments []Value) (Value, error)
+	invokeFunction                func(function Value, arguments []Value, returnType sema.Type) (Value, error)
 	lookupFunction                func(location common.Location, name string) FunctionValue
 	recoverErrors                 func(onError func(error))
 	inStorageIteration            bool
@@ -55,7 +55,8 @@ type Context struct {
 	// This cache-alike is maintained per execution.
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
-	semaTypeCache map[sema.TypeID]sema.Type
+	semaTypeCache   map[commons.TypeCacheKey]sema.Type
+	semaAccessCache map[interpreter.Authorization]sema.Access
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
 	linkedGlobalsCache map[common.Location]LinkedGlobals
@@ -165,11 +166,20 @@ func (c *Context) WriteStored(
 ) (existed bool) {
 	accountStorage := c.storage.GetDomainStorageMap(c, storageAddress, domain, true)
 
-	return accountStorage.WriteValue(
-		c,
-		key,
-		value,
-	)
+	return accountStorage.WriteValue(c, key, value)
+}
+
+func (c *Context) RemoveStored(
+	storageAddress common.Address,
+	domain common.StorageDomain,
+	key interpreter.StorageMapKey,
+) atree.Storable {
+	accountStorage := c.storage.GetDomainStorageMap(c, storageAddress, domain, false)
+	if accountStorage == nil {
+		return nil
+	}
+
+	return accountStorage.RemoveValueWithoutDeletion(c, key)
 }
 
 func (c *Context) IsSubType(subType interpreter.StaticType, superType interpreter.StaticType) bool {
@@ -275,8 +285,9 @@ func (c *Context) GetLocation() common.Location {
 func (c *Context) InvokeFunction(
 	fn interpreter.FunctionValue,
 	arguments []interpreter.Value,
+	returnType sema.Type,
 ) interpreter.Value {
-	result, err := c.invokeFunction(fn, arguments)
+	result, err := c.invokeFunction(fn, arguments, returnType)
 	if err != nil {
 		panic(err)
 	}
@@ -297,7 +308,7 @@ func AttachmentBaseAndSelfValues(
 	// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to self
 	var unqualifiedName string
 	switch functionValue := method.(type) {
-	case CompiledFunctionValue:
+	case *CompiledFunctionValue:
 		unqualifiedName = functionValue.Function.Name
 	case *NativeFunctionValue:
 		unqualifiedName = functionValue.Name
@@ -329,14 +340,16 @@ func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
 ) interpreter.FunctionValue {
+
+	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
+		value = storageReference.MustReferencedValue(c).(interpreter.MemberAccessibleValue)
+	}
+
 	staticType := value.StaticType(c)
 
 	semaType := c.SemaTypeFromStaticType(staticType)
 
-	var location common.Location
-	if locatedType, ok := semaType.(sema.LocatedType); ok {
-		location = locatedType.GetLocation()
-	}
+	location := typeLocation(semaType)
 
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, name)
 
@@ -366,6 +379,17 @@ func (c *Context) GetMethod(
 		method,
 		base,
 	)
+}
+
+func typeLocation(semaType sema.Type) common.Location {
+	switch semaType := semaType.(type) {
+	case sema.LocatedType:
+		return semaType.GetLocation()
+	case *sema.ReferenceType:
+		return typeLocation(semaType.Type)
+	default:
+		return nil
+	}
 }
 
 func (c *Context) GetFunction(
@@ -403,6 +427,7 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 		func(
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			arguments []interpreter.Value,
 		) interpreter.Value {
@@ -416,26 +441,31 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 
 	arguments = append(arguments, collectFunction)
 
-	// The generated function takes no arguments unless its an attachment, and returns nothing.
-	c.InvokeFunction(method, arguments)
+	// The generated function takes no arguments unless it's an attachment, and returns nothing.
+	returnType := sema.VoidType
+	c.InvokeFunction(method, arguments, returnType)
 
 	return eventValues
 }
 
 func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
-	typeID := staticType.ID()
-	semaType, ok := c.semaTypeCache[typeID]
+	if staticType == nil {
+		return nil
+	}
+
+	typeCacheKey := commons.NewTypeCacheKeyFromStaticType(staticType)
+	semaType, ok := c.semaTypeCache[typeCacheKey]
 	if ok {
 		return semaType
 	}
 
 	// TODO: avoid the sema-type conversion
-	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
+	semaType = interpreter.MustConvertStaticToSemaType(staticType, c) //nolint:staticcheck
 
 	if c.semaTypeCache == nil {
-		c.semaTypeCache = make(map[sema.TypeID]sema.Type)
+		c.semaTypeCache = make(map[commons.TypeCacheKey]sema.Type)
 	}
-	c.semaTypeCache[typeID] = semaType
+	c.semaTypeCache[typeCacheKey] = semaType
 
 	return semaType
 }
@@ -456,7 +486,6 @@ func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
 			storageReference,
 			referencedValue,
 		)
-		return boundFunction
 	}
 
 	return member
@@ -530,4 +559,62 @@ func (c *Context) GetEntitlementMapType(
 
 func (c *Context) LocationRange() interpreter.LocationRange {
 	return c.getLocationRange()
+}
+
+func (c *Context) SemaAccessFromStaticAuthorization(auth interpreter.Authorization) (sema.Access, error) {
+	semaAccess, ok := c.semaAccessCache[auth]
+	if ok {
+		return semaAccess, nil
+	}
+
+	semaAccess, err := interpreter.ConvertStaticAuthorizationToSemaAccess(auth, c) //nolint:staticcheck
+	if err != nil {
+		return nil, err
+	}
+
+	if c.semaAccessCache == nil {
+		c.semaAccessCache = make(map[interpreter.Authorization]sema.Access)
+	}
+	c.semaAccessCache[auth] = semaAccess
+
+	return semaAccess, nil
+}
+
+// NewFunctionWithType Returns a new function instance of same kind (compiled/native/bound),
+// but with the given function type.
+// This preferred over creating a new wrapper function kind, since all places in VM
+// that handles function types already handle these known functions.
+// Introducing a new kind of wrapper function means, that would need to be handled
+// everywhere, which could be error-prone.
+func (c *Context) NewFunctionWithType(
+	funcValue interpreter.FunctionValue,
+	funcStaticType interpreter.FunctionStaticType,
+) interpreter.FunctionValue {
+
+	switch funcValue := funcValue.(type) {
+	case *CompiledFunctionValue:
+		return &CompiledFunctionValue{
+			Function:   funcValue.Function,
+			Executable: funcValue.Executable,
+			Type:       funcStaticType,
+			Upvalues:   funcValue.Upvalues,
+		}
+	case *NativeFunctionValue:
+		return &NativeFunctionValue{
+			Name:         funcValue.Name,
+			Function:     funcValue.Function,
+			functionType: funcStaticType.FunctionType,
+			fields:       funcValue.fields,
+		}
+	case *BoundFunctionValue:
+		method := c.NewFunctionWithType(funcValue.Method, funcStaticType).(FunctionValue)
+		return &BoundFunctionValue{
+			ReceiverReference: funcValue.ReceiverReference,
+			Method:            method,
+			functionType:      funcStaticType.FunctionType,
+			Base:              funcValue.Base,
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }

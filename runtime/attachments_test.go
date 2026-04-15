@@ -113,6 +113,7 @@ func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -124,6 +125,7 @@ func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -135,6 +137,7 @@ func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -215,6 +218,7 @@ func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -226,6 +230,7 @@ func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.Error(t, err)
@@ -299,6 +304,7 @@ func TestRuntimeAccountAttachmentExport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -310,6 +316,7 @@ func TestRuntimeAccountAttachmentExport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -379,6 +386,7 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -390,6 +398,7 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -492,6 +501,7 @@ func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -503,6 +513,7 @@ func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -514,6 +525,7 @@ func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -631,6 +643,7 @@ func TestRuntimeAccountAttachmentCapability(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -642,6 +655,7 @@ func TestRuntimeAccountAttachmentCapability(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -653,6 +667,7 @@ func TestRuntimeAccountAttachmentCapability(t *testing.T) {
 		Context{
 			Interface: runtimeInterface2,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -728,6 +743,7 @@ func TestRuntimeAttachmentStorage(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -770,6 +786,7 @@ func TestRuntimeAttachmentStorage(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -817,6 +834,7 @@ func TestRuntimeAttachmentStorage(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -868,6 +886,7 @@ func TestRuntimeAttachmentStorage(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)

@@ -56,11 +56,10 @@ type Desugar struct {
 }
 
 type inheritedFunction struct {
-	interfaceType            *sema.InterfaceType
-	functionDecl             *ast.FunctionDeclaration
-	rewrittenConditions      sema.PostConditionsRewrite
-	elaboration              *DesugaredElaboration
-	hasDefaultImplementation bool
+	interfaceType       *sema.InterfaceType
+	functionDecl        *ast.FunctionDeclaration
+	rewrittenConditions sema.PostConditionsRewrite
+	elaboration         *DesugaredElaboration
 }
 
 type inheritedEvent struct {
@@ -427,19 +426,9 @@ func (d *Desugar) desugarPreConditions(
 
 	desugaredConditions := make([]ast.Statement, 0)
 
-	functionHasImpl := d.functionHasImplementation(funcBlock)
-
 	// Desugar inherited pre-conditions
 	inheritedFuncs := d.inheritedFuncsWithConditions[enclosingFuncName]
 	for _, inheritedFunc := range inheritedFuncs {
-		if functionHasImpl && inheritedFunc.hasDefaultImplementation {
-			// If the current function has an implementation AND the inherited function
-			// also has an implementation, then the inherited function is considered to
-			// be overwritten.
-			// Thus, the inherited condition also considered overwritten, and hence do not include it.
-			continue
-		}
-
 		inheritedPreConditions := inheritedFunc.functionDecl.FunctionBlock.PreConditions
 		if inheritedPreConditions == nil {
 			continue
@@ -477,13 +466,6 @@ func (d *Desugar) desugarPreConditions(
 	return nil
 }
 
-func (d *Desugar) functionHasImplementation(funcBlock *ast.FunctionBlock) bool {
-	// Current function has an implementations only if it:
-	// 1) Is not an inherited function (i.e: implementation must not be an inherited one), AND
-	// 2) The function has statements.
-	return !d.isInheritedFunction && funcBlock.HasStatements()
-}
-
 func (d *Desugar) desugarPostConditions(
 	enclosingFuncName string,
 	funcBlock *ast.FunctionBlock,
@@ -510,21 +492,12 @@ func (d *Desugar) desugarPostConditions(
 		}
 	}
 
-	functionHasImpl := d.functionHasImplementation(funcBlock)
-
 	// Desugar inherited post-conditions
 	inheritedFuncs, ok := d.inheritedFuncsWithConditions[enclosingFuncName]
 	if ok && len(inheritedFuncs) > 0 {
 		// Must be added in reverse order.
 		for i := len(inheritedFuncs) - 1; i >= 0; i-- {
 			inheritedFunc := inheritedFuncs[i]
-			if functionHasImpl && inheritedFunc.hasDefaultImplementation {
-				// If the current function has an implementation AND the inherited function
-				// also has an implementation, then the inherited function is considered to
-				// be overwritten.
-				// Thus, the inherited condition also considered overwritten, and hence do not include it.
-				continue
-			}
 
 			inheritedFunctionBlock := inheritedFunc.functionDecl.FunctionBlock
 
@@ -944,17 +917,27 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 		declaration.Range,
 	)
 
+	initializerFuncType := compositeType.ConstructorFunctionType()
+
 	hasInit := false
 	for _, member := range desugaredMembers {
-		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok && member.Kind == common.DeclarationKindInitializer {
+		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok &&
+			member.Kind == common.DeclarationKindInitializer {
 			hasInit = true
+
+			// Set the initializer function type in the elaboration.
+			d.elaboration.SetFunctionDeclarationFunctionType(
+				member.FunctionDeclaration,
+				initializerFuncType,
+			)
+
 			break
 		}
 	}
 
 	if !hasInit {
 		membersDesugared = true
-		d.addEmptyInitializer(&desugaredMembers)
+		d.addEmptyInitializer(initializerFuncType, &desugaredMembers)
 	}
 
 	// Optimization: If none of the existing members got updated or,
@@ -1044,10 +1027,20 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		declaration.Range,
 	)
 
+	initializerFuncType := compositeType.ConstructorFunctionType()
+
 	hasInit := false
 	for _, member := range desugaredMembers {
-		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok && member.Kind == common.DeclarationKindInitializer {
+		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok &&
+			member.Kind == common.DeclarationKindInitializer {
 			hasInit = true
+
+			// Set the initializer function type in the elaboration.
+			d.elaboration.SetFunctionDeclarationFunctionType(
+				member.FunctionDeclaration,
+				initializerFuncType,
+			)
+
 			break
 		}
 	}
@@ -1060,7 +1053,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		if compositeType.Kind == common.CompositeKindEnum {
 			// generate enum initializer
 			enumInitializer := newEnumInitializer(d.memoryGauge, compositeType, d.elaboration)
-			enumInitializerFuncType := newEnumInitializerFuncType(compositeType.EnumRawType)
+			enumInitializerFuncType := newEnumInitializerFuncType(compositeType)
 			d.elaboration.SetFunctionDeclarationFunctionType(enumInitializer.FunctionDeclaration, enumInitializerFuncType)
 			desugaredMembers = append(desugaredMembers, enumInitializer)
 
@@ -1071,11 +1064,11 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 				declaration.Members.EnumCases(),
 				d.elaboration,
 			)
-			enumLookupFuncType := newEnumLookupFuncType(d.memoryGauge, compositeType)
+			enumLookupFuncType := sema.EnumLookupFunctionType(compositeType)
 			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
 			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
 		} else {
-			d.addEmptyInitializer(&desugaredMembers)
+			d.addEmptyInitializer(initializerFuncType, &desugaredMembers)
 		}
 	}
 
@@ -1141,11 +1134,10 @@ func (d *Desugar) inheritedFunctionsWithConditionsAndEvents(compositeType sema.C
 		}
 
 		funcs = append(funcs, &inheritedFunction{
-			interfaceType:            interfaceType,
-			functionDecl:             functionDecl,
-			rewrittenConditions:      rewrittenConditions,
-			elaboration:              elaboration,
-			hasDefaultImplementation: functionBlock.HasStatements(),
+			interfaceType:       interfaceType,
+			functionDecl:        functionDecl,
+			rewrittenConditions: rewrittenConditions,
+			elaboration:         elaboration,
 		})
 		inheritedFunctions[name] = funcs
 	}
@@ -1276,6 +1268,9 @@ func (d *Desugar) inheritedDefaultFunctions(
 				sema.ReturnStatementTypes{
 					ValueType:  funcReturnType,
 					ReturnType: funcReturnType,
+					// Given the delegation function this invocation appears in is synthetic,
+					// we may not transfer the result, to match interpreter behavior.
+					PassWithoutTransferOrConvert: true,
 				},
 			)
 
@@ -1471,6 +1466,9 @@ func (d *Desugar) interfaceDelegationMethodCall(
 		// So the argument types to the invocation of `Interface.defaultFunc` are the same
 		// as the parameter types of `defaultFunc`/`Interface.defaultFunc`.
 		ArgumentTypes: parameterTypes,
+		// Given the delegation function this invocation appears in is synthetic,
+		// we may not transfer the arguments, to match interpreter behavior.
+		PassArgumentsWithoutTransferOrConvert: true,
 	}
 
 	memberAccessInfo := sema.MemberAccessInfo{
@@ -1651,9 +1649,12 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		members = append(members, desugaredExecuteFunc)
 	}
 
+	compositeType := d.transactionCompositeType()
+
 	// Always add empty initializer for transactions.
 	// To be updated later by compilation.
-	d.addEmptyInitializer(&members)
+	initializerFuncType := compositeType.ConstructorFunctionType()
+	d.addEmptyInitializer(initializerFuncType, &members)
 
 	compositeDecl := ast.NewCompositeDeclaration(
 		d.memoryGauge,
@@ -1670,7 +1671,6 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		ast.EmptyRange,
 	)
 
-	compositeType := d.transactionCompositeType()
 	d.elaboration.SetCompositeDeclarationType(compositeDecl, compositeType)
 	d.elaboration.SetCompositeType(compositeType.ID(), compositeType)
 
@@ -1761,17 +1761,17 @@ func (d *Desugar) DesugarFunctionExpression(expression *ast.FunctionExpression) 
 	return functionExpr
 }
 
-var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
-	// This is created only once per compilation. So no need to meter memory.
-
+// IMPORTANT: Always create a new empty initializer for each use-case.
+// Shouldn't reuse declarations as they get used as keys in the elaboration.
+func newEmptyInitializer(memoryGauge common.MemoryGauge) *ast.SpecialFunctionDeclaration {
 	initializer := ast.NewFunctionDeclaration(
-		nil,
+		memoryGauge,
 		ast.AccessNotSpecified,
 		ast.FunctionPurityUnspecified,
 		false,
 		false,
 		ast.NewIdentifier(
-			nil,
+			memoryGauge,
 			commons.InitFunctionName,
 			ast.EmptyPosition,
 		),
@@ -1779,8 +1779,8 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 		nil,
 		nil,
 		ast.NewFunctionBlock(
-			nil,
-			ast.NewBlock(nil, nil, ast.EmptyRange),
+			memoryGauge,
+			ast.NewBlock(memoryGauge, nil, ast.EmptyRange),
 			nil,
 			nil,
 		),
@@ -1789,22 +1789,18 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 	)
 
 	return ast.NewSpecialFunctionDeclaration(
-		nil,
+		memoryGauge,
 		common.DeclarationKindInitializer,
 		initializer,
 	)
-}()
+}
 
-var emptyInitializerFuncType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityImpure,
-	nil,
-	sema.VoidTypeAnnotation,
-)
-
-func (d *Desugar) addEmptyInitializer(members *[]ast.Declaration) {
-	// Add an empty initializer
+// Add an empty initializer
+func (d *Desugar) addEmptyInitializer(initializerFuncType *sema.FunctionType, members *[]ast.Declaration) {
+	emptyInitializer := newEmptyInitializer(d.memoryGauge)
 	*members = append(*members, emptyInitializer)
-	d.elaboration.SetFunctionDeclarationFunctionType(emptyInitializer.FunctionDeclaration, emptyInitializerFuncType)
+
+	d.elaboration.SetFunctionDeclarationFunctionType(emptyInitializer.FunctionDeclaration, initializerFuncType)
 }
 
 func newEnumInitializer(
@@ -1937,16 +1933,16 @@ func newEnumInitializer(
 	)
 }
 
-func newEnumInitializerFuncType(rawValueType sema.Type) *sema.FunctionType {
+func newEnumInitializerFuncType(enumType *sema.CompositeType) *sema.FunctionType {
 	return sema.NewSimpleFunctionType(
 		sema.FunctionPurityImpure,
 		[]sema.Parameter{
 			{
 				Identifier:     sema.EnumRawValueFieldName,
-				TypeAnnotation: sema.NewTypeAnnotation(rawValueType),
+				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
 			},
 		},
-		sema.VoidTypeAnnotation,
+		sema.NewTypeAnnotation(enumType),
 	)
 }
 
@@ -2120,24 +2116,6 @@ func newEnumLookup(
 		),
 		ast.EmptyPosition,
 		"",
-	)
-}
-
-func newEnumLookupFuncType(
-	gauge common.MemoryGauge,
-	enumType *sema.CompositeType,
-) *sema.FunctionType {
-	return sema.NewSimpleFunctionType(
-		sema.FunctionPurityImpure,
-		[]sema.Parameter{
-			{
-				Identifier:     sema.EnumRawValueFieldName,
-				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
-			},
-		},
-		sema.NewTypeAnnotation(
-			sema.NewOptionalType(gauge, enumType),
-		),
 	)
 }
 
@@ -2385,10 +2363,10 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	d.elaboration.SetInvocationExpressionTypes(
 		invocation,
 		sema.InvocationExpressionTypes{
-			ReturnType:            sema.VoidType,
-			ArgumentTypes:         eventTypes,
-			ParameterTypes:        eventTypes,
-			SkipArgumentsTransfer: true,
+			ReturnType:                            sema.VoidType,
+			ArgumentTypes:                         eventTypes,
+			ParameterTypes:                        eventTypes,
+			PassArgumentsWithoutTransferOrConvert: true,
 		},
 	)
 

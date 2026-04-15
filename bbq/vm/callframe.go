@@ -18,15 +18,20 @@
 
 package vm
 
-import "time"
+import "github.com/onflow/cadence/bbq"
 
 type callFrame struct {
-	localsOffset uint16
-	localsCount  uint16
-	function     CompiledFunctionValue
-	openUpvalues map[int]*Upvalue
+	// Important: keep tracingInfo as the first field, because its size may vary depending on build tags
+	// (zero when tracing is disabled, the default).
+	// This does not work when it is the last field, see https://i.hsfzxjy.site/zst-at-the-rear-of-go-struct/
+	tracingInfo tracingInfo
 
-	// For tracing.
-	// TODO: Move this out of callFrame if possible.
-	startTime time.Time
+	openUpvalues map[int]*Upvalue
+	returnType   bbq.StaticType
+
+	function *CompiledFunctionValue
+
+	localsOffset        uint16
+	localsCount         uint16
+	hasImplicitArgument bool
 }

@@ -1,0 +1,465 @@
+{
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    }
+  },
+  "required": [
+    "rules"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "properties": {
+        "super": {
+          "$ref": "#/$defs/typePlaceholder"
+        },
+        "predicate": {
+          "$ref": "#/$defs/predicate"
+        }
+      },
+      "additionalProperties": false
+    },
+    "predicate": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/always"
+        },
+        {
+          "$ref": "#/$defs/never"
+        },
+        {
+          "$ref": "#/$defs/and"
+        },
+        {
+          "$ref": "#/$defs/or"
+        },
+        {
+          "$ref": "#/$defs/not"
+        },
+        {
+          "$ref": "#/$defs/equals"
+        },
+        {
+          "$ref": "#/$defs/subtype"
+        },
+        {
+          "$ref": "#/$defs/mustType"
+        },
+        {
+          "$ref": "#/$defs/permits"
+        },
+        {
+          "$ref": "#/$defs/isParameterizedSubtype"
+        },
+        {
+          "$ref": "#/$defs/setContains"
+        },
+        {
+          "$ref": "#/$defs/isResource"
+        },
+        {
+          "$ref": "#/$defs/isHashableStruct"
+        },
+        {
+          "$ref": "#/$defs/isStorable"
+        },
+        {
+          "$ref": "#/$defs/isAttachment"
+        },
+        {
+          "$ref": "#/$defs/deepEquals"
+        },
+        {
+          "$ref": "#/$defs/returnCovariant"
+        },
+        {
+          "$ref": "#/$defs/forAll"
+        },
+        {
+          "$ref": "#/$defs/isIntersectionSubset"
+        }
+      ]
+    },
+    "always": {
+      "const": "always"
+    },
+    "never": {
+      "const": "never"
+    },
+    "and": {
+      "type": "object",
+      "properties": {
+        "and": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          }
+        }
+      },
+      "required": [
+        "and"
+      ],
+      "additionalProperties": false
+    },
+    "or": {
+      "type": "object",
+      "properties": {
+        "or": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          }
+        }
+      },
+      "required": [
+        "or"
+      ],
+      "additionalProperties": false
+    },
+    "not": {
+      "type": "object",
+      "properties": {
+        "not": {
+          "$ref": "#/$defs/predicate"
+        }
+      },
+      "required": [
+        "not"
+      ],
+      "additionalProperties": false
+    },
+    "equals": {
+      "type": "object",
+      "properties": {
+        "equals": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "$ref": "#/$defs/expression"
+            },
+            "target": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "source",
+            "target"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "equals"
+      ],
+      "additionalProperties": false
+    },
+    "subtype": {
+      "type": "object",
+      "properties": {
+        "subtype": {
+          "type": "object",
+          "properties": {
+            "super": {
+              "$ref": "#/$defs/expression"
+            },
+            "sub": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "super",
+            "sub"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "subtype"
+      ],
+      "additionalProperties": false
+    },
+    "mustType": {
+      "type": "object",
+      "properties": {
+        "mustType": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "$ref": "#/$defs/expression"
+            },
+            "type": {
+              "$ref": "#/$defs/typePlaceholder"
+            }
+          },
+          "required": [
+            "source",
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "mustType"
+      ],
+      "additionalProperties": false
+    },
+    "permits": {
+      "type": "object",
+      "properties": {
+        "permits": {
+          "type": "object",
+          "properties": {
+            "super": {
+              "$ref": "#/$defs/expression"
+            },
+            "sub": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "super",
+            "sub"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "permits"
+      ],
+      "additionalProperties": false
+    },
+    "isParameterizedSubtype": {
+      "type": "object",
+      "properties": {
+        "isParameterizedSubtype": {
+          "type": "object",
+          "properties": {
+            "super": {
+              "$ref": "#/$defs/expression"
+            },
+            "sub": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "super",
+            "sub"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "isParameterizedSubtype"
+      ],
+      "additionalProperties": false
+    },
+    "setContains": {
+      "type": "object",
+      "properties": {
+        "setContains": {
+          "type": "object",
+          "properties": {
+            "set": {
+              "$ref": "#/$defs/expression"
+            },
+            "element": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "set",
+            "element"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "setContains"
+      ],
+      "additionalProperties": false
+    },
+    "isResource": {
+      "type": "object",
+      "properties": {
+        "isResource": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "isResource"
+      ],
+      "additionalProperties": false
+    },
+    "isHashableStruct": {
+      "type": "object",
+      "properties": {
+        "isHashableStruct": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "isHashableStruct"
+      ],
+      "additionalProperties": false
+    },
+    "isStorable": {
+      "type": "object",
+      "properties": {
+        "isStorable": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "isStorable"
+      ],
+      "additionalProperties": false
+    },
+    "isAttachment": {
+      "type": "object",
+      "properties": {
+        "isAttachment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "isAttachment"
+      ],
+      "additionalProperties": false
+    },
+    "deepEquals": {
+      "type": "object",
+      "properties": {
+        "deepEquals": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "$ref": "#/$defs/expression"
+            },
+            "target": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "source",
+            "target"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "deepEquals"
+      ],
+      "additionalProperties": false
+    },
+    "returnCovariant": {
+      "type": "object",
+      "properties": {
+        "returnCovariant": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "$ref": "#/$defs/expression"
+            },
+            "target": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "source",
+            "target"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "returnCovariant"
+      ],
+      "additionalProperties": false
+    },
+    "forAll": {
+      "type": "object",
+      "properties": {
+        "forAll": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "$ref": "#/$defs/expression"
+            },
+            "target": {
+              "$ref": "#/$defs/expression"
+            },
+            "predicate": {
+              "$ref": "#/$defs/predicate"
+            }
+          },
+          "required": [
+            "source",
+            "target",
+            "predicate"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "forAll"
+      ],
+      "additionalProperties": false
+    },
+    "isIntersectionSubset": {
+      "type": "object",
+      "properties": {
+        "isIntersectionSubset": {
+          "type": "object",
+          "properties": {
+            "super": {
+              "$ref": "#/$defs/expression"
+            },
+            "sub": {
+              "$ref": "#/$defs/expression"
+            }
+          },
+          "required": [
+            "super",
+            "sub"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "isIntersectionSubset"
+      ],
+      "additionalProperties": false
+    },
+    "expression": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "oneOf": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": [
+            "oneOf"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "typePlaceholder": {
+      "type": "string",
+      "pattern": "Type$",
+      "description": "Type placeholder must end with 'Type' suffix"
+    }
+  }
+}

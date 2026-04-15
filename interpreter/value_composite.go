@@ -186,6 +186,14 @@ func NewCompositeValue(
 			}()
 		}
 
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapConstruction,
+				Intensity: 1,
+			},
+		)
+
 		var err error
 		dictionary, err = atree.NewMap(
 			context.Storage(),
@@ -310,7 +318,7 @@ func (v *CompositeValue) StaticType(context ValueStaticTypeContext) StaticType {
 func (v *CompositeValue) IsImportable(context ValueImportableContext) bool {
 	// Check type is importable
 	staticType := v.StaticType(context)
-	semaType := MustConvertStaticToSemaType(staticType, context)
+	semaType := context.SemaTypeFromStaticType(staticType)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
@@ -319,7 +327,13 @@ func (v *CompositeValue) IsImportable(context ValueImportableContext) bool {
 	importable := true
 	v.ForEachField(
 		context,
-		func(_ string, value Value) (resume bool) {
+		func(fieldName string, value Value) (resume bool) {
+
+			if strings.HasPrefix(fieldName, unrepresentableNamePrefix) {
+				importable = false
+				return false
+			}
+
 			if !value.IsImportable(context) {
 				importable = false
 				// stop iteration
@@ -421,7 +435,7 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext) {
 					if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok &&
 						compositeFieldValue.Kind == common.CompositeKindAttachment {
 
-						compositeFieldValue.SetBaseValue(v)
+						compositeFieldValue.SetBaseValue(context, v)
 					}
 
 					maybeDestroy(contextForLocation, fieldValue)
@@ -450,6 +464,8 @@ func (v *CompositeValue) DefaultDestroyEvents(
 	events := make([]*CompositeValue, 0, length)
 	for _, constructor := range eventConstructors {
 
+		returnType := constructor.FunctionType(context).ReturnTypeAnnotation.Type
+
 		// pass the container value to the creation of the default event as an implicit argument, so that
 		// its fields are accessible in the body of the event constructor
 		eventConstructorInvocation := NewInvocation(
@@ -459,6 +475,7 @@ func (v *CompositeValue) DefaultDestroyEvents(
 			[]Value{v},
 			[]sema.Type{},
 			nil,
+			returnType,
 			context.LocationRange(),
 		)
 
@@ -485,7 +502,7 @@ func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, name 
 	return nil
 }
 
-func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string) Value {
+func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 
 	if TracingEnabled {
 		startTime := time.Now()
@@ -509,41 +526,51 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string)
 		return compositeMember(context, v, builtin)
 	}
 
-	// Give computed fields precedence over stored fields for built-in types
-	if v.Location == nil {
-		if computedField := v.GetComputedField(context, name); computedField != nil {
-			return computedField
-		}
-	}
-
-	if field := v.GetField(context, name); field != nil {
-		return compositeMember(context, v, field)
-	}
-
-	if v.NestedVariables != nil {
-		variable, ok := v.NestedVariables[name]
-		if ok {
-			return variable.GetValue(context)
-		}
-	}
-
 	context = context.GetMemberAccessContextForLocation(v.Location)
 
-	// Dynamically link in the computed fields, injected fields, and functions
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
 
-	if computedField := v.GetComputedField(context, name); computedField != nil {
-		return computedField
-	}
+			switch memberKind {
+			case common.DeclarationKindField:
+				// Give computed fields precedence over stored fields for built-in types.
+				if v.Location == nil {
+					if computedField := v.GetComputedField(context, name); computedField != nil {
+						return computedField
+					}
+				}
 
-	if injectedField := v.GetInjectedField(context, name); injectedField != nil {
-		return injectedField
-	}
+				if field := v.GetField(context, name); field != nil {
+					return compositeMember(context, v, field)
+				}
 
-	if function := context.GetMethod(v, name); function != nil {
-		return function
-	}
+				// Dynamically link in the computed fields and injected fields.
+				// Computed fields were already checked above, for builtin-types.
+				if v.Location != nil {
+					if computedField := v.GetComputedField(context, name); computedField != nil {
+						return computedField
+					}
+				}
 
-	return nil
+				if injectedField := v.GetInjectedField(context, name); injectedField != nil {
+					return injectedField
+				}
+			default:
+				if v.NestedVariables != nil {
+					variable, ok := v.NestedVariables[name]
+					if ok {
+						return variable.GetValue(context)
+					}
+				}
+			}
+
+			return nil
+		},
+	)
 }
 
 func compositeMember(context FunctionCreationContext, compositeValue Value, memberValue Value) Value {
@@ -687,6 +714,14 @@ func (v *CompositeValue) RemoveMember(context ValueTransferContext, name string)
 		}()
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
+
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
@@ -751,6 +786,14 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 			)
 		}()
 	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapSet,
+			Intensity: 1,
+		},
+	)
 
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeValueComparator,
@@ -887,7 +930,16 @@ func formatComposite(
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) Value {
+func (v *CompositeValue) GetField(gauge common.Gauge, name string) Value {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapGet,
+			Intensity: 1,
+		},
+	)
+
 	storedValue, err := v.dictionary.Get(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -901,7 +953,7 @@ func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) V
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(memoryGauge, storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
 func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool {
@@ -923,6 +975,14 @@ func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool
 	}
 
 	for {
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: 1,
+			},
+		)
+
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -948,13 +1008,13 @@ func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool
 // - HashInputTypeEnum (1 byte)
 // - type id (n bytes)
 // - hash input of raw value field name (n bytes)
-func (v *CompositeValue) HashInput(memoryGauge common.MemoryGauge, scratch []byte) []byte {
+func (v *CompositeValue) HashInput(gauge common.Gauge, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(memoryGauge, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(gauge, sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
-			HashInput(memoryGauge, scratch)
+			HashInput(gauge, scratch)
 
 		length := 1 + len(typeID) + len(rawValueHashInput)
 		if length <= len(scratch) {
@@ -1006,7 +1066,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	}
 
 	staticType := v.StaticType(context)
-	semaType := MustConvertStaticToSemaType(staticType, context)
+	semaType := context.SemaTypeFromStaticType(staticType)
 
 	switch staticType.(type) {
 	case *CompositeStaticType:
@@ -1053,13 +1113,12 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	fieldsLen := v.FieldCount()
 
 	computedFields := v.GetComputedFields()
-	if computedFields != nil {
-		fieldsLen += len(computedFields)
-	}
+	//if computedFields != nil {
+	//	fieldsLen += len(computedFields)
+	//}
 
-	// The composite might store additional fields
-	// which are not statically declared in the composite type.
-	if fieldsLen < len(compositeType.Fields) {
+	// Values for all declared fields must be present
+	if fieldsLen != len(compositeType.Fields) {
 		return false
 	}
 
@@ -1156,7 +1215,7 @@ func (v *CompositeValue) IsStorable() bool {
 func (v *CompositeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 	if !v.IsStorable() {
 		return NonStorable{Value: v}, nil
@@ -1168,7 +1227,7 @@ func (v *CompositeValue) Storable(
 	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
-func (v *CompositeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+func (v *CompositeValue) UnwrapAtreeValue() (atree.Value, uint32) {
 	// Wrapper size is 0 because CompositeValue is stored as
 	// atree.OrderedMap without any physical wrapping (see CompositeValue.Storable()).
 	return v.dictionary, 0
@@ -1196,11 +1255,13 @@ func (v *CompositeValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
+	count := v.FieldCount()
+
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindTransferCompositeValue,
-			Intensity: 1,
+			Intensity: uint64(count),
 		},
 	)
 
@@ -1237,23 +1298,19 @@ func (v *CompositeValue) Transfer(
 	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(context)
 
-	if needsStoreTo && v.Kind == common.CompositeKindContract {
-		panic(&NonTransferableValueError{
-			Value: v,
-		})
+	if needsStoreTo {
+		if v.Kind == common.CompositeKindContract {
+			panic(&NonTransferableValueError{
+				Value: v,
+			})
+		}
+
+		if isResourceKinded && !remove {
+			panic(&InvalidResourceTransferError{})
+		}
 	}
 
 	if needsStoreTo || !isResourceKinded {
-		// Use non-readonly iterator here because iterated
-		// value can be removed if remove parameter is true.
-		iterator, err := v.dictionary.Iterator(
-			StringAtreeValueComparator,
-			StringAtreeValueHashInput,
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-
 		elementCount := v.dictionary.Count()
 
 		elementOverhead, dataUse, metaDataUse := common.NewAtreeMapMemoryUsages(elementCount, 0)
@@ -1264,74 +1321,159 @@ func (v *CompositeValue) Transfer(
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(elementCount, 0)
 		common.UseMemory(context, elementMemoryUse)
 
-		func() {
-			seed := v.dictionary.Seed()
+		digesterBuilder := atree.NewDefaultDigesterBuilder()
 
-			if TracingEnabled {
-				startTime := time.Now()
+		// We need to check enum data because the raw type for enum is an integer subtype.
+		// Large Int or UInt values can be stored in a separate slab which isn't copyable.
 
-				defer func() {
-					valueID := dictionary.ValueID().String()
-					typeID := string(v.TypeID())
+		canCopyNonRefSimple := v.dictionary.CanCopyNonRefSimple()
 
-					context.ReportAtreeNewMapFromBatchDataTrace(
-						valueID,
-						typeID,
-						seed,
-						time.Since(startTime),
-					)
-				}()
-			}
+		if canCopyNonRefSimple {
 
-			dictionary, err = atree.NewMapFromBatchData(
-				context.Storage(),
-				address,
-				atree.NewDefaultDigesterBuilder(),
-				v.dictionary.Type(),
+			func() {
+
+				if TracingEnabled {
+					startTime := time.Now()
+
+					defer func() {
+						valueID := dictionary.ValueID().String()
+						typeID := string(v.TypeID())
+						seed := v.dictionary.Seed()
+
+						context.ReportAtreeNewMapSingleSlabTrace(
+							valueID,
+							typeID,
+							seed,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapSingleSlabConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				copiedDictionary, err := v.dictionary.CopyNonRefSimple(address, digesterBuilder)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				dictionary = copiedDictionary
+
+			}()
+
+		} else {
+
+			// Use non-readonly iterator here because iterated
+			// value can be removed if remove parameter is true.
+			iterator, err := v.dictionary.Iterator(
 				StringAtreeValueComparator,
 				StringAtreeValueHashInput,
-				seed,
-				func() (atree.Value, atree.Value, error) {
-
-					atreeKey, atreeValue, err := iterator.Next()
-					if err != nil {
-						return nil, nil, err
-					}
-					if atreeKey == nil || atreeValue == nil {
-						return nil, nil, nil
-					}
-
-					// NOTE: key is stringAtreeValue
-					// and does not need to be converted or copied
-
-					value := MustConvertStoredValue(context, atreeValue)
-					// the base of an attachment is not stored in the atree, so in order to make the
-					// transfer happen properly, we set the base value here if this field is an attachment
-					if compositeValue, ok := value.(*CompositeValue); ok &&
-						compositeValue.Kind == common.CompositeKindAttachment {
-
-						compositeValue.SetBaseValue(v)
-					}
-
-					value = value.Transfer(
-						context,
-						address,
-						remove,
-						nil,
-						preventTransfer,
-						false, // value is an element of parent container because it is returned from iterator.
-					)
-
-					return atreeKey, value, nil
-				},
 			)
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
-		}()
+
+			func() {
+				seed := v.dictionary.Seed()
+
+				if TracingEnabled {
+					startTime := time.Now()
+
+					defer func() {
+						valueID := dictionary.ValueID().String()
+						typeID := string(v.TypeID())
+
+						context.ReportAtreeNewMapFromBatchDataTrace(
+							valueID,
+							typeID,
+							seed,
+							time.Since(startTime),
+						)
+					}()
+				}
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapBatchConstruction,
+						Intensity: uint64(count),
+					},
+				)
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapReadIteration,
+						Intensity: uint64(count),
+					},
+				)
+
+				dictionary, err = atree.NewMapFromBatchData(
+					context.Storage(),
+					address,
+					digesterBuilder,
+					v.dictionary.Type(),
+					StringAtreeValueComparator,
+					StringAtreeValueHashInput,
+					seed,
+					func() (atree.Value, atree.Value, error) {
+
+						// Computation was already metered above
+
+						atreeKey, atreeValue, err := iterator.Next()
+						if err != nil {
+							return nil, nil, err
+						}
+						if atreeKey == nil || atreeValue == nil {
+							return nil, nil, nil
+						}
+
+						// NOTE: key is stringAtreeValue
+						// and does not need to be converted or copied
+
+						value := MustConvertStoredValue(context, atreeValue)
+						// the base of an attachment is not stored in the atree, so in order to make the
+						// transfer happen properly, we set the base value here if this field is an attachment
+						if compositeValue, ok := value.(*CompositeValue); ok &&
+							compositeValue.Kind == common.CompositeKindAttachment {
+
+							compositeValue.SetBaseValue(context, v)
+						}
+
+						value = value.Transfer(
+							context,
+							address,
+							remove,
+							nil,
+							preventTransfer,
+							false, // value is an element of parent container because it is returned from iterator.
+						)
+
+						return atreeKey, value, nil
+					},
+				)
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+			}()
+		}
 
 		if remove {
-			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapPopIteration,
+					Intensity: v.dictionary.Count(),
+				},
+			)
+
+			err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 				RemoveReferencedSlab(context, nameStorable)
 				RemoveReferencedSlab(context, valueStorable)
 			})
@@ -1485,6 +1627,14 @@ func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentConta
 
 	storage := v.dictionary.Storage
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapPopIteration,
+			Intensity: v.dictionary.Count(),
+		},
+	)
+
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 		// NOTE: key / field name is stringAtreeValue,
 		// and not a Value, so no need to deep remove
@@ -1511,6 +1661,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 // ForEachFieldName iterates over all field names of the composite value.
 // It does NOT iterate over computed fields and functions!
 func (v *CompositeValue) ForEachFieldName(
+	gauge common.ComputationGauge,
 	f func(fieldName string) (resume bool),
 ) {
 	iterate := func(fn atree.MapElementIterationFunc) error {
@@ -1523,14 +1674,24 @@ func (v *CompositeValue) ForEachFieldName(
 			fn,
 		)
 	}
-	v.forEachFieldName(iterate, f)
+	v.forEachFieldName(gauge, iterate, f)
 }
 
 func (v *CompositeValue) forEachFieldName(
+	gauge common.ComputationGauge,
 	atreeIterate func(fn atree.MapElementIterationFunc) error,
 	f func(fieldName string) (resume bool),
 ) {
 	err := atreeIterate(func(key atree.Value) (resume bool, err error) {
+
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: 1,
+			},
+		)
+
 		resume = f(
 			string(key.(StringAtreeValue)),
 		)
@@ -1613,6 +1774,14 @@ func (v *CompositeValue) RemoveField(
 	name string,
 ) {
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
+
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -1686,7 +1855,7 @@ func (v *CompositeValue) getBaseValue(
 	var baseType sema.Type
 	switch ty := attachmentType.GetBaseType().(type) {
 	case *sema.InterfaceType:
-		baseType, _ = ty.RewriteWithIntersectionTypes()
+		baseType, _ = sema.RewriteWithIntersectionTypes(ty)
 	default:
 		baseType = ty
 	}
@@ -1694,7 +1863,22 @@ func (v *CompositeValue) getBaseValue(
 	return NewEphemeralReferenceValue(context, functionAuthorization, v.base, baseType)
 }
 
-func (v *CompositeValue) SetBaseValue(base *CompositeValue) {
+func (v *CompositeValue) SetBaseValue(context ValueStaticTypeContext, base *CompositeValue) {
+	attachmentType, ok := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	expectedBaseType := attachmentType.GetBaseType()
+	actualBaseType := MustSemaTypeOfValue(base, context)
+
+	if !sema.IsSubType(actualBaseType, expectedBaseType) {
+		panic(&InvalidBaseTypeError{
+			ExpectedType: expectedBaseType,
+			ActualType:   actualBaseType,
+		})
+	}
+
 	v.base = base
 }
 
@@ -1706,7 +1890,8 @@ func (v *CompositeValue) getAttachmentValue(
 	context MemberAccessibleContext,
 	ty sema.Type,
 ) *CompositeValue {
-	attachment := v.GetMember(context, AttachmentMemberName(string(ty.ID())))
+	// Attachments are always fields.
+	attachment := v.GetMember(context, AttachmentMemberName(string(ty.ID())), common.DeclarationKindField)
 	if attachment != nil {
 		return attachment.(*CompositeValue)
 	}
@@ -1740,6 +1925,7 @@ var NativeForEachAttachmentFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1865,7 +2051,7 @@ func forEachAttachment(
 			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
 			// should convert the provided attachment value into a reference before passing it to the user
 			// callback
-			attachment.SetBaseValue(composite)
+			attachment.SetBaseValue(context, composite)
 			f(attachment)
 		}
 	}
@@ -1882,7 +2068,7 @@ func (v *CompositeValue) getTypeKey(
 	}
 	attachmentType := keyType.(*sema.CompositeType)
 	// dynamically set the attachment's base to this composite
-	attachment.SetBaseValue(v)
+	attachment.SetBaseValue(context, v)
 
 	// The attachment reference has the same entitlements as the base access
 	attachmentRef := NewEphemeralReferenceValue(

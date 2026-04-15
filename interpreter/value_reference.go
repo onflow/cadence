@@ -31,6 +31,13 @@ type ReferenceValue interface {
 	isReference()
 	ReferencedValue(context ValueStaticTypeContext, errorOnFailedDereference bool) *Value
 	BorrowType() sema.Type
+	// WithAuthorizationAndBorrowedType returns a new reference of the same kind,
+	// but with the given authorization and borrowed type.
+	WithAuthorizationAndBorrowedType(
+		context ReferenceCreationContext,
+		auth Authorization,
+		borrowedType sema.Type,
+	) ReferenceValue
 }
 
 func DereferenceValue(

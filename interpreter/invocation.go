@@ -25,13 +25,15 @@ import (
 
 // Invocation
 type Invocation struct {
-	LocationRange     LocationRange
-	Self              *Value
-	Base              *EphemeralReferenceValue
-	TypeArguments     *sema.TypeParameterTypeOrderedMap
-	InvocationContext InvocationContext
-	Arguments         []Value
-	ArgumentTypes     []sema.Type
+	LocationRange       LocationRange
+	Self                *Value
+	Base                *EphemeralReferenceValue
+	TypeArguments       *sema.TypeParameterTypeOrderedMap
+	InvocationContext   InvocationContext
+	Arguments           []Value
+	ArgumentTypes       []sema.Type
+	ReturnType          sema.Type
+	HasImplicitArgument bool
 }
 
 func NewInvocation(
@@ -41,6 +43,7 @@ func NewInvocation(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	typeArguments *sema.TypeParameterTypeOrderedMap,
+	returnType sema.Type,
 	locationRange LocationRange,
 ) Invocation {
 	common.UseMemory(invocationContext, common.InvocationMemoryUsage)
@@ -51,6 +54,7 @@ func NewInvocation(
 		Arguments:         arguments,
 		ArgumentTypes:     argumentTypes,
 		TypeArguments:     typeArguments,
+		ReturnType:        returnType,
 		LocationRange:     locationRange,
 		InvocationContext: invocationContext,
 	}

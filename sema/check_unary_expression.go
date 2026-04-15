@@ -133,6 +133,16 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 			ResourceInvalidationKindMoveDefinite,
 		)
 
+		// The value transfer need to be recorded as a resource move (when applicable),
+		// because in destructors, nested resource moves are allowed.
+		if valueType.IsResourceType() {
+			// Only the outermost expression must be recorded.
+			// i.e: In an expression, `<- a.b.c`, only `a.b.c` is a resource move. `a.b` is not.
+			// The outermost resource-typed expression is always a unary expression,
+			// because move-operator is mandatory for resource-typed expressions.
+			checker.elaborateNestedResourceMoveExpression(expression.Expression)
+		}
+
 		return valueType
 	}
 

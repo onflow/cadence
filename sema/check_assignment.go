@@ -190,7 +190,7 @@ func isWriteableInViewContext(t Type) bool {
 	return !isReference && !t.IsResourceType()
 }
 
-func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target ast.Expression) {
+func (checker *Checker) enforceViewAssignment(statement ast.Statement, target ast.Expression) {
 	if !checker.CurrentPurityScope().EnforcePurity {
 		return
 	}
@@ -201,7 +201,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 	// whether or not it is a local struct-kinded variable. E.g. in the case of `(b ? s1 : s2).x`, we can't
 	// know whether `s1` or `s2` is being accessed here
 	if baseVariable == nil {
-		checker.ObserveImpureOperation(assignment)
+		checker.ObserveImpureOperation(statement)
 		return
 	}
 
@@ -216,7 +216,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 	// They will still need a view annotation though (e.g. view init(...)).
 	if baseVariable.DeclarationKind == common.DeclarationKindSelf {
 		if checker.functionActivations.Current().InitializationInfo == nil {
-			checker.ObserveImpureOperation(assignment)
+			checker.ObserveImpureOperation(statement)
 		}
 		return
 	}
@@ -224,7 +224,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 	// Check that all the types in the access chain are not resources or references
 	for _, t := range accessChain {
 		if !isWriteableInViewContext(t) {
-			checker.ObserveImpureOperation(assignment)
+			checker.ObserveImpureOperation(statement)
 			return
 		}
 	}
@@ -234,7 +234,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 	// to the depth at which the current purity scope was created;
 	// i.e. if it is a parameter to the current function or was created within it
 	if checker.CurrentPurityScope().ActivationDepth > baseVariable.ActivationDepth {
-		checker.ObserveImpureOperation(assignment)
+		checker.ObserveImpureOperation(statement)
 	}
 }
 func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
@@ -255,26 +255,36 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 		return nil
 	}
 
-	var members *StringMemberOrderedMap
-	switch containerType := variable.Type.(type) {
-	case *CompositeType:
-		members = containerType.Members
-	case *InterfaceType:
-		members = containerType.Members
-	case *TransactionType:
-		members = containerType.Members
-	case *ReferenceType:
-		// self can only be a reference type if the container is an attachment, which is a composite
-		members = containerType.Type.(*CompositeType).Members
-	default:
-		panic(errors.NewUnreachableError())
-	}
+	members := membersForType(variable.Type)
 
 	fieldName := memberExpression.Identifier.Identifier
 
 	// caller handles the non-existing fieldNames
 	member, _ := members.Get(fieldName)
 	return member
+}
+
+func membersForType(typ Type) *StringMemberOrderedMap {
+	switch containerType := typ.(type) {
+	case *CompositeType:
+		return containerType.Members
+	case *InterfaceType:
+		return containerType.Members
+	case *TransactionType:
+		return containerType.Members
+	case *ReferenceType:
+		// self can only be a reference type if the container is an attachment, which is a composite
+		return containerType.Type.(*CompositeType).Members
+	case *IntersectionType:
+		intersectionTypes := containerType.Types
+		if len(intersectionTypes) == 0 {
+			panic(errors.NewUnreachableError())
+		}
+
+		return membersForType(intersectionTypes[0])
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (checker *Checker) withAssignment(b bool, f func() Type) Type {

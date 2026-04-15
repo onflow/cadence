@@ -117,6 +117,7 @@ var NativeInclusiveRangeConstructorFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -167,10 +168,7 @@ func NewInclusiveRange(
 	}
 
 	rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocationContext, startStaticType)
-	rangeSemaType := interpreter.MustConvertStaticToSemaType(
-		rangeStaticType,
-		invocationContext,
-	).(*sema.InclusiveRangeType)
+	rangeSemaType := invocationContext.SemaTypeFromStaticType(rangeStaticType).(*sema.InclusiveRangeType)
 
 	if step != nil {
 

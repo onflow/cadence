@@ -194,8 +194,7 @@ func (e *InterpreterEnvironment) Configure(
 
 	computationProfile := e.config.ComputationProfile
 	if computationProfile != nil {
-		computationProfile.DelegatedComputationGauge = computationGauge
-		computationGauge = computationProfile
+		computationGauge = newComputationProfileInstance(computationProfile, computationGauge)
 	}
 	e.InterpreterConfig.ComputationGauge = computationGauge
 
@@ -372,13 +371,11 @@ func (e *InterpreterEnvironment) newContractValueHandler() interpreter.ContractV
 
 				constructor := constructorGenerator(invocation.Address)
 
-				value, err := interpreter.InvokeFunctionValue(
+				value, err := interpreter.InvokeExternally(
 					inter,
 					constructor,
+					constructor.FunctionType(inter),
 					invocation.ConstructorArguments,
-					invocation.ArgumentTypes,
-					invocation.ParameterTypes,
-					invocation.ContractType,
 				)
 				if err != nil {
 					panic(err)

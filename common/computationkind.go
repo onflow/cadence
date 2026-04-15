@@ -21,14 +21,24 @@ package common
 //go:generate stringer -type=ComputationKind -trimprefix=ComputationKind
 
 // ComputationKind captures kind of computation that would be used for metring computation
+// !!! *WARNING* !!!
+//
+// Only add new ComputationKind by:
+// - appending to the end.
+//
+// Only remove ComputationKind by:
+// - replacing existing ComputationKind with a placeholder `_`.
+//
+// DO *NOT* REPLACE EXISTING COMPUTATIONKIND!
+// DO *NOT* REMOVE EXISTING COMPUTATIONKIND!
+// DO *NOT* INSERT NEW COMPUTATIONKIND IN BETWEEN!
 type ComputationKind uint
 
 // [1000,2000) is reserved for Cadence interpreter and runtime
 const ComputationKindRangeStart = 1000
 
 const (
-	ComputationKindUnknown ComputationKind = 0
-	// interpreter - base
+	ComputationKindUnknown   ComputationKind = 0
 	ComputationKindStatement ComputationKind = ComputationKindRangeStart + iota
 	ComputationKindLoop
 	ComputationKindFunctionInvocation
@@ -38,7 +48,6 @@ const (
 	_
 	_
 	_
-	// interpreter value operations
 	ComputationKindCreateCompositeValue
 	ComputationKindTransferCompositeValue
 	ComputationKindDestroyCompositeValue
@@ -84,10 +93,10 @@ const (
 	_
 	_
 	_
-	_
-	_
-	_
-	_
+	ComputationKindStringToLower
+	ComputationKindStringDecodeHex
+	ComputationKindGraphemesIteration
+	ComputationKindStringComparison
 	_
 	_
 	_
@@ -110,6 +119,12 @@ const (
 	_
 	_
 	ComputationKindEncodeValue
+	ComputationKindWordSliceOperation
+	ComputationKindUintParse
+	ComputationKindIntParse
+	ComputationKindBigIntParse
+	ComputationKindUfixParse
+	ComputationKindFixParse
 	_
 	_
 	_
@@ -123,13 +138,7 @@ const (
 	_
 	_
 	_
-	_
-	_
-	_
-	_
-	_
-	_
-	// stdlibs computation kinds
+	// stdlib
 	//
 	ComputationKindSTDLIBPanic
 	ComputationKindSTDLIBAssert
@@ -142,4 +151,129 @@ const (
 	// RLP
 	ComputationKindSTDLIBRLPDecodeString
 	ComputationKindSTDLIBRLPDecodeList
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	// atree array
+	ComputationKindAtreeArraySingleSlabConstruction
+	ComputationKindAtreeArrayBatchConstruction
+	ComputationKindAtreeArrayGet
+	ComputationKindAtreeArraySet
+	ComputationKindAtreeArrayAppend
+	ComputationKindAtreeArrayInsert
+	ComputationKindAtreeArrayRemove
+	ComputationKindAtreeArrayReadIteration
+	ComputationKindAtreeArrayPopIteration
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	ComputationKindAtreeMapConstruction
+	ComputationKindAtreeMapSingleSlabConstruction
+	ComputationKindAtreeMapBatchConstruction
+	ComputationKindAtreeMapHas
+	ComputationKindAtreeMapGet
+	ComputationKindAtreeMapSet
+	ComputationKindAtreeMapRemove
+	ComputationKindAtreeMapReadIteration
+	ComputationKindAtreeMapPopIteration
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	ComputationKind_Count
 )

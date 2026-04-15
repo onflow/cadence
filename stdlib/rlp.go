@@ -55,6 +55,7 @@ var NativeRLPDecodeStringFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -67,6 +68,7 @@ var NativeRLPDecodeListFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -191,23 +193,29 @@ func RLPDecodeList(
 		})
 	}
 
-	values := make([]interpreter.Value, len(output))
-	for i, b := range output {
-		values[i] = interpreter.ByteSliceToByteArrayValue(context, b)
-	}
+	outputLength := len(output)
 
-	return interpreter.NewArrayValue(
+	var index int
+	return interpreter.NewArrayValueWithIterator(
 		context,
 		interpreter.NewVariableSizedStaticType(
 			context,
 			interpreter.ByteArrayStaticType,
 		),
 		common.ZeroAddress,
-		values...,
+		uint64(outputLength),
+		func() interpreter.Value {
+			if index >= outputLength {
+				return nil
+			}
+			result := interpreter.ByteSliceToByteArrayValue(context, output[index])
+			index++
+			return result
+		},
 	)
 }
 
-var rlpContractFields = map[string]interpreter.Value{
+var rlpContractMethods = map[string]interpreter.FunctionValue{
 	RLPTypeDecodeListFunctionName:   interpreterRLPDecodeListFunction,
 	RLPTypeDecodeStringFunctionName: interpreterRLPDecodeStringFunction,
 }
@@ -219,9 +227,11 @@ var rlpContractValue = interpreter.NewSimpleCompositeValue(
 	RLPType.ID(),
 	RLPTypeStaticType,
 	nil,
-	rlpContractFields,
 	nil,
 	nil,
+	func(name string, context interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+		return rlpContractMethods[name]
+	},
 	nil,
 	nil,
 )

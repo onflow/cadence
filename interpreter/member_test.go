@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -43,7 +44,10 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndPrepare(t, `
+				// The passed in argument is created with VM.
+				// Therefore, the updates are only visible to VM.
+				// So comparing the storage is not possible.
+				inter := parseCheckAndPrepareWithoutStorageComparison(t, `
                     struct S {
                         var foo: Int
 
@@ -110,14 +114,47 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke("get", value)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("get", value) //nolint:staticcheck
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 
-				_, err = inter.Invoke("set", value)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("set", value) //nolint:staticcheck
 				RequireError(t, err)
+				require.ErrorAs(t, err, &memberAccessTypeError)
+			})
+
+			t.Run("invalid, built-in", func(t *testing.T) {
+
+				t.Parallel()
+
+				inter := parseCheckAndPrepare(t, `
+                    struct Foo {
+                        let publicKey: [UInt8]
+                        init() {
+                            self.publicKey = []
+                        }
+                    }
+
+                    fun get(pubKey: PublicKey) {
+                        pubKey.publicKey
+                    }
+                `)
+
+				// Construct an instance of type Foo
+				// by calling its constructor function of the same name
+
+				value, err := inter.Invoke("Foo")
+				require.NoError(t, err)
+
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("get", value) //nolint:staticcheck
+				RequireError(t, err)
+
+				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
 		})
@@ -187,7 +224,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke(
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly( //nolint:staticcheck
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
@@ -207,7 +245,10 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndPrepare(t, `
+				// The passed in argument is created with VM.
+				// Therefore, the updates are only visible to VM.
+				// So comparing the storage is not possible.
+				inter := parseCheckAndPrepareWithoutStorageComparison(t, `
                     struct interface SI {
                         var foo: Int
                     }
@@ -282,13 +323,15 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke("get", value)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("get", value) //nolint:staticcheck
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 
-				_, err = inter.Invoke("set", value)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("set", value) //nolint:staticcheck
 				RequireError(t, err)
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
@@ -367,7 +410,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				value, err := inter.Invoke("S2")
 				require.NoError(t, err)
 
-				_, err = inter.Invoke(
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly( //nolint:staticcheck
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(value),
 				)
@@ -379,7 +423,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 		})
 	})
 
-	t.Run("reference", func(t *testing.T) {
+	t.Run("ephemeral reference", func(t *testing.T) {
 
 		t.Run("non-optional", func(t *testing.T) {
 
@@ -387,7 +431,10 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndPrepare(t, `
+				// The passed in argument is created with VM.
+				// Therefore, the updates are only visible to VM.
+				// So comparing the storage is not possible.
+				inter := parseCheckAndPrepareWithoutStorageComparison(t, `
                     struct S {
                         var foo: Int
 
@@ -472,13 +519,15 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					sType,
 				)
 
-				_, err = inter.Invoke("get", ref)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("get", ref) //nolint:staticcheck
 				RequireError(t, err)
 
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 
-				_, err = inter.Invoke("set", ref)
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly("set", ref) //nolint:staticcheck
 				RequireError(t, err)
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
@@ -569,7 +618,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 					sType,
 				)
 
-				_, err = inter.Invoke(
+				// Intentionally passing wrong type of value
+				_, err = inter.InvokeUncheckedForTestingOnly( //nolint:staticcheck
 					"get",
 					interpreter.NewUnmeteredSomeValueNonCopying(
 						ref,
@@ -580,6 +630,115 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				var memberAccessTypeError *interpreter.MemberAccessTypeError
 				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
+		})
+	})
+
+	t.Run("storage reference", func(t *testing.T) {
+
+		t.Run("valid", func(t *testing.T) {
+
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _, _ := testAccount(t,
+				address,
+				true,
+				nil,
+				`
+                struct S {
+                    var foo: Int
+
+                    init() {
+                        self.foo = 1
+                    }
+                }
+
+                fun getStorageRef(): auth(Mutate) &S {
+                    account.storage.save(S(), to: /storage/x)
+                    return account.storage.borrow<auth(Mutate) &S>(from: /storage/x)!
+                }
+
+                fun get(ref: &S) {
+                    ref.foo
+                }
+
+                fun set(ref: &S) {
+                    ref.foo = 2
+                }
+            `,
+				sema.Config{},
+			)
+
+			storageRef, err := inter.Invoke("getStorageRef")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.StorageReferenceValue{}, storageRef)
+
+			_, err = inter.Invoke("get", storageRef)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("set", storageRef)
+			require.NoError(t, err)
+		})
+
+		t.Run("invalid", func(t *testing.T) {
+
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _, _ := testAccount(
+				t,
+				address,
+				true,
+				nil,
+				`
+                struct S {
+                    var foo: Int
+
+                    init() {
+                        self.foo = 1
+                    }
+                }
+
+                struct S2 {
+                    var foo: Int
+
+                    init() {
+                        self.foo = 2
+                    }
+                }
+
+                fun getStorageRef(): auth(Mutate) &S2 {
+                    account.storage.save(S2(), to: /storage/x)
+                    return account.storage.borrow<auth(Mutate) &S2>(from: /storage/x)!
+                }
+
+                fun get(ref: &S) {
+                    ref.foo
+                }
+
+                fun set(ref: &S) {
+                    ref.foo = 3
+                }
+                `,
+				sema.Config{},
+			)
+
+			storageRef, err := inter.Invoke("getStorageRef")
+			require.NoError(t, err)
+			require.IsType(t, &interpreter.StorageReferenceValue{}, storageRef)
+
+			// Intentionally passing wrong type of value
+			_, err = inter.InvokeUncheckedForTestingOnly("get", storageRef) //nolint:staticcheck
+			RequireError(t, err)
+			var memberAccessTypeError *interpreter.MemberAccessTypeError
+			require.ErrorAs(t, err, &memberAccessTypeError)
+
+			// Intentionally passing wrong type of value
+			_, err = inter.InvokeUncheckedForTestingOnly("set", storageRef) //nolint:staticcheck
+			RequireError(t, err)
+			require.ErrorAs(t, err, &memberAccessTypeError)
 		})
 	})
 }

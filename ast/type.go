@@ -38,6 +38,20 @@ type TypeAnnotation struct {
 	IsResource bool
 }
 
+func (t *TypeAnnotation) ElementType() ElementType {
+	return ElementTypeTypeAnnotation
+}
+
+func (t *TypeAnnotation) Walk(walkChild func(Element)) {
+	if t.Type != nil {
+		walkChild(t.Type)
+	}
+}
+
+var _ HasPosition = &TypeAnnotation{}
+var _ Pretty = &TypeAnnotation{}
+var _ Element = &TypeAnnotation{}
+
 func NewTypeAnnotation(
 	memoryGauge common.MemoryGauge,
 	isResource bool,
@@ -94,16 +108,57 @@ func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 // Type
 
 type Type interface {
-	HasPosition
+	Element
 	fmt.Stringer
 	isType()
 	Doc() prettier.Doc
+	Precedence() TypePrecedence
 	CheckEqual(other Type, checker TypeEqualityChecker) error
 }
 
 func IsEmptyType(t Type) bool {
 	nominalType, ok := t.(*NominalType)
 	return ok && nominalType.Identifier.Identifier == ""
+}
+
+func parenthesizedTypeDoc(t Type, parentPrecedence TypePrecedence) prettier.Doc {
+	if t == nil {
+		return prettier.Text("")
+	}
+
+	doc := t.Doc()
+	subPrecedence := t.Precedence()
+	if parentPrecedence <= subPrecedence &&
+		!typeNeedsParentheses(t, parentPrecedence) {
+
+		return doc
+	}
+
+	return prettier.WrapParentheses(
+		doc,
+		prettier.SoftLine{},
+	)
+}
+
+// typeNeedsParentheses determines whether the given type needs parentheses.
+// NOTE: sema.typeNeedsParentheses and interpreter.staticTypeNeedsParentheses
+// should match this function.
+func typeNeedsParentheses(t Type, parentPrecedence TypePrecedence) bool {
+	// Optional type wrapping function type or authorized reference type needs parentheses,
+	// e.g. (fun(): Int)? or (auth(E) &T)?
+
+	if parentPrecedence != TypePrecedenceOptional {
+		return false
+	}
+
+	switch t := t.(type) {
+	case *FunctionType:
+		return true
+	case *ReferenceType:
+		return t.Authorization != nil
+	default:
+		return false
+	}
 }
 
 // NominalType represents a named type
@@ -128,6 +183,10 @@ func NewNominalType(
 }
 
 func (*NominalType) isType() {}
+
+func (*NominalType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
+}
 
 func (t *NominalType) String() string {
 	return Prettier(t)
@@ -185,6 +244,14 @@ func (t *NominalType) CheckEqual(other Type, checker TypeEqualityChecker) error 
 	return checker.CheckNominalTypeEquality(t, other)
 }
 
+func (*NominalType) ElementType() ElementType {
+	return ElementTypeNominalType
+}
+
+func (*NominalType) Walk(_ func(Element)) {
+	// NO-OP
+}
+
 func (*NominalType) isEntitlementMapElement() {}
 
 // OptionalType represents am optional variant of another type
@@ -210,6 +277,10 @@ func NewOptionalType(
 
 func (*OptionalType) isType() {}
 
+func (*OptionalType) Precedence() TypePrecedence {
+	return TypePrecedenceOptional
+}
+
 func (t *OptionalType) String() string {
 	return Prettier(t)
 }
@@ -225,7 +296,7 @@ func (t *OptionalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 const optionalTypeSymbolDoc = prettier.Text("?")
 
 func (t *OptionalType) Doc() prettier.Doc {
-	typeDoc := docOrEmpty(t.Type)
+	typeDoc := parenthesizedTypeDoc(t.Type, t.Precedence())
 	return prettier.Concat{
 		typeDoc,
 		optionalTypeSymbolDoc,
@@ -247,6 +318,14 @@ func (t *OptionalType) MarshalJSON() ([]byte, error) {
 
 func (t *OptionalType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckOptionalTypeEquality(t, other)
+}
+
+func (*OptionalType) ElementType() ElementType {
+	return ElementTypeOptionalType
+}
+
+func (t *OptionalType) Walk(walkChild func(Element)) {
+	walkChild(t.Type)
 }
 
 // VariableSizedType is a variable sized array type
@@ -271,6 +350,10 @@ func NewVariableSizedType(
 }
 
 func (*VariableSizedType) isType() {}
+
+func (*VariableSizedType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
+}
 
 func (t *VariableSizedType) String() string {
 	return Prettier(t)
@@ -310,6 +393,14 @@ func (t *VariableSizedType) CheckEqual(other Type, checker TypeEqualityChecker) 
 	return checker.CheckVariableSizedTypeEquality(t, other)
 }
 
+func (*VariableSizedType) ElementType() ElementType {
+	return ElementTypeVariableSizedType
+}
+
+func (t *VariableSizedType) Walk(walkChild func(Element)) {
+	walkChild(t.Type)
+}
+
 // ConstantSizedType is a constant-sized array type
 
 type ConstantSizedType struct {
@@ -335,6 +426,10 @@ func NewConstantSizedType(
 }
 
 func (*ConstantSizedType) isType() {}
+
+func (*ConstantSizedType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
+}
 
 func (t *ConstantSizedType) String() string {
 	return Prettier(t)
@@ -375,6 +470,15 @@ func (t *ConstantSizedType) CheckEqual(other Type, checker TypeEqualityChecker) 
 	return checker.CheckConstantSizedTypeEquality(t, other)
 }
 
+func (*ConstantSizedType) ElementType() ElementType {
+	return ElementTypeConstantSizedType
+}
+
+func (t *ConstantSizedType) Walk(walkChild func(Element)) {
+	walkChild(t.Type)
+	walkChild(t.Size)
+}
+
 // DictionaryType
 
 type DictionaryType struct {
@@ -400,6 +504,10 @@ func NewDictionaryType(
 }
 
 func (*DictionaryType) isType() {}
+
+func (*DictionaryType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
+}
 
 func (t *DictionaryType) String() string {
 	return Prettier(t)
@@ -441,6 +549,15 @@ func (t *DictionaryType) CheckEqual(other Type, checker TypeEqualityChecker) err
 	return checker.CheckDictionaryTypeEquality(t, other)
 }
 
+func (*DictionaryType) ElementType() ElementType {
+	return ElementTypeDictionaryType
+}
+
+func (t *DictionaryType) Walk(walkChild func(Element)) {
+	walkChild(t.KeyType)
+	walkChild(t.ValueType)
+}
+
 // FunctionType
 
 type FunctionType struct {
@@ -469,6 +586,10 @@ func NewFunctionType(
 }
 
 func (*FunctionType) isType() {}
+
+func (*FunctionType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
+}
 
 func (t *FunctionType) String() string {
 	return Prettier(t)
@@ -549,6 +670,19 @@ func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error
 	return checker.CheckFunctionTypeEquality(t, other)
 }
 
+func (*FunctionType) ElementType() ElementType {
+	return ElementTypeFunctionType
+}
+
+func (t *FunctionType) Walk(walkChild func(Element)) {
+	for _, paramTypeAnnotation := range t.ParameterTypeAnnotations {
+		walkChild(paramTypeAnnotation)
+	}
+	if t.ReturnTypeAnnotation != nil {
+		walkChild(t.ReturnTypeAnnotation)
+	}
+}
+
 // ReferenceType
 type ReferenceType struct {
 	Type             Type     `json:"ReferencedType"`
@@ -574,6 +708,10 @@ func NewReferenceType(
 }
 
 func (*ReferenceType) isType() {}
+
+func (*ReferenceType) Precedence() TypePrecedence {
+	return TypePrecedenceReference
+}
 
 func (t *ReferenceType) String() string {
 	return Prettier(t)
@@ -611,11 +749,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 
 				for i, entitlement := range entitlements {
 					if i > 0 {
-						doc = append(
-							doc,
-							separatorDoc,
-							prettier.Space,
-						)
+						doc = append(doc, separatorDoc)
 					}
 					doc = append(doc, docOrEmpty(entitlement))
 				}
@@ -641,7 +775,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 	return append(
 		doc,
 		referenceTypeSymbolDoc,
-		docOrEmpty(t.Type),
+		parenthesizedTypeDoc(t.Type, t.Precedence()),
 	)
 }
 
@@ -660,6 +794,17 @@ func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 
 func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckReferenceTypeEquality(t, other)
+}
+
+func (*ReferenceType) ElementType() ElementType {
+	return ElementTypeReferenceType
+}
+
+func (t *ReferenceType) Walk(walkChild func(Element)) {
+	if t.Authorization != nil {
+		t.Authorization.Walk(walkChild)
+	}
+	walkChild(t.Type)
 }
 
 // IntersectionType
@@ -685,6 +830,10 @@ func NewIntersectionType(
 }
 
 func (*IntersectionType) isType() {}
+
+func (*IntersectionType) Precedence() TypePrecedence {
+	return TypePrecedencePrimary
+}
 
 func (t *IntersectionType) String() string {
 	return Prettier(t)
@@ -742,6 +891,16 @@ func (t *IntersectionType) CheckEqual(other Type, checker TypeEqualityChecker) e
 	return checker.CheckIntersectionTypeEquality(t, other)
 }
 
+func (*IntersectionType) ElementType() ElementType {
+	return ElementTypeIntersectionType
+}
+
+func (t *IntersectionType) Walk(walkChild func(Element)) {
+	for _, typ := range t.Types {
+		walkChild(typ)
+	}
+}
+
 // InstantiationType represents an instantiation of a generic (nominal) type
 
 type InstantiationType struct {
@@ -770,6 +929,10 @@ func NewInstantiationType(
 }
 
 func (*InstantiationType) isType() {}
+
+func (*InstantiationType) Precedence() TypePrecedence {
+	return TypePrecedenceInstantiation
+}
 
 func (t *InstantiationType) String() string {
 	return Prettier(t)
@@ -809,7 +972,7 @@ func (t *InstantiationType) Doc() prettier.Doc {
 	}
 
 	return prettier.Concat{
-		docOrEmpty(t.Type),
+		parenthesizedTypeDoc(t.Type, t.Precedence()),
 		prettier.Group{
 			Doc: prettier.Concat{
 				instantiationTypeStartDoc,
@@ -840,6 +1003,17 @@ func (t *InstantiationType) CheckEqual(other Type, checker TypeEqualityChecker) 
 	return checker.CheckInstantiationTypeEquality(t, other)
 }
 
+func (*InstantiationType) ElementType() ElementType {
+	return ElementTypeInstantiationType
+}
+
+func (t *InstantiationType) Walk(walkChild func(Element)) {
+	walkChild(t.Type)
+	for _, typeArg := range t.TypeArguments {
+		walkChild(typeArg)
+	}
+}
+
 type TypeEqualityChecker interface {
 	CheckNominalTypeEquality(*NominalType, Type) error
 	CheckOptionalTypeEquality(*OptionalType, Type) error
@@ -850,4 +1024,8 @@ type TypeEqualityChecker interface {
 	CheckReferenceTypeEquality(*ReferenceType, Type) error
 	CheckIntersectionTypeEquality(*IntersectionType, Type) error
 	CheckInstantiationTypeEquality(*InstantiationType, Type) error
+
+	CheckConjunctiveEntitlementSetEquality(*ConjunctiveEntitlementSet, Authorization, HasPosition) error
+	CheckDisjunctiveEntitlementSetEquality(*DisjunctiveEntitlementSet, Authorization, HasPosition) error
+	CheckMappedAccessEquality(*MappedAccess, Authorization, HasPosition) error
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 var compile = flag.Bool("compile", false, "Run tests using the compiler")
@@ -37,6 +38,11 @@ var compile = flag.Bool("compile", false, "Run tests using the compiler")
 func parseCheckAndPrepare(tb testing.TB, code string) Invokable {
 	tb.Helper()
 	return test_utils.ParseCheckAndPrepare(tb, code, *compile)
+}
+
+func parseCheckAndPrepareWithoutStorageComparison(tb testing.TB, code string) Invokable {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithoutStorageComparison(tb, code, *compile)
 }
 
 func parseCheckAndPrepareWithEvents(tb testing.TB, code string) (
@@ -57,7 +63,19 @@ func parseCheckAndPrepareWithOptions(
 	err error,
 ) {
 	tb.Helper()
-	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile)
+	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile, true)
+}
+
+func parseCheckAndPrepareWithOptionsWithoutStorageComparison(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (
+	invokable Invokable,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile, false)
 }
 
 func parseCheckAndPrepareWithLogs(
@@ -175,53 +193,126 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("[Bool] to [Bool?]", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			NewArrayValue(
+				inter,
+				&VariableSizedStaticType{
+					Type: PrimitiveStaticTypeBool,
+				},
+				common.Address{},
+				TrueValue,
+			),
+			ConvertAndBoxWithValidation(
+				inter,
+				NewArrayValue(
+					inter,
+					&VariableSizedStaticType{Type: PrimitiveStaticTypeBool},
+					common.Address{},
+					TrueValue,
+				),
+				&sema.VariableSizedType{Type: sema.BoolType},
+				&sema.VariableSizedType{
+					Type: &sema.OptionalType{
+						Type: sema.BoolType,
+					},
+				},
+			),
+		)
+	})
+
+	t.Run("{String: Bool} to {String: Bool?}", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			NewDictionaryValue(
+				inter,
+				&DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeString,
+					ValueType: PrimitiveStaticTypeBool,
+				},
+				NewUnmeteredStringValue("foo"),
+				TrueValue,
+			),
+			ConvertAndBoxWithValidation(
+				inter,
+				NewDictionaryValue(
+					inter,
+					&DictionaryStaticType{
+						KeyType:   PrimitiveStaticTypeString,
+						ValueType: PrimitiveStaticTypeBool,
+					},
+					NewUnmeteredStringValue("foo"),
+					TrueValue,
+				),
+				&sema.DictionaryType{
+					KeyType:   sema.StringType,
+					ValueType: sema.BoolType,
+				},
+				&sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.OptionalType{
+						Type: sema.BoolType,
+					},
+				},
+			),
+		)
+	})
 }
 
 func TestInterpreterBoxing(t *testing.T) {
 
 	t.Parallel()
 
-	for _, anyType := range []sema.Type{
-		sema.AnyStructType,
-		sema.AnyResourceType,
-	} {
+	anyType := sema.AnyStructType
 
-		t.Run(anyType.String(), func(t *testing.T) {
+	t.Run(fmt.Sprintf("Bool to %s?", anyType), func(t *testing.T) {
+		t.Parallel()
 
-			t.Run(fmt.Sprintf("Bool to %s?", anyType), func(t *testing.T) {
-				inter := newTestInterpreter(t)
+		inter := newTestInterpreter(t)
 
-				assert.Equal(t,
-					NewUnmeteredSomeValueNonCopying(
-						TrueValue,
-					),
-					ConvertAndBox(
-						inter,
-						TrueValue,
-						sema.BoolType,
-						&sema.OptionalType{Type: anyType},
-					),
-				)
+		assert.Equal(t,
+			NewUnmeteredSomeValueNonCopying(
+				TrueValue,
+			),
+			ConvertAndBoxWithValidation(
+				inter,
+				TrueValue,
+				sema.BoolType,
+				&sema.OptionalType{Type: anyType},
+			),
+		)
 
-			})
+	})
 
-			t.Run(fmt.Sprintf("Bool? to %s?", anyType), func(t *testing.T) {
-				inter := newTestInterpreter(t)
+	t.Run(fmt.Sprintf("Bool? to %s?", anyType), func(t *testing.T) {
+		t.Parallel()
 
-				assert.Equal(t,
-					NewUnmeteredSomeValueNonCopying(
-						TrueValue,
-					),
-					ConvertAndBox(
-						inter,
-						NewUnmeteredSomeValueNonCopying(TrueValue),
-						&sema.OptionalType{Type: sema.BoolType},
-						&sema.OptionalType{Type: anyType},
-					),
-				)
-			})
-		})
-	}
+		inter := newTestInterpreter(t)
+
+		assert.Equal(t,
+			NewUnmeteredSomeValueNonCopying(
+				TrueValue,
+			),
+			ConvertAndBoxWithValidation(
+				inter,
+				NewUnmeteredSomeValueNonCopying(TrueValue),
+				&sema.OptionalType{Type: sema.BoolType},
+				&sema.OptionalType{Type: anyType},
+			),
+		)
+	})
 }
 
 func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {

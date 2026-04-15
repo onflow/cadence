@@ -56,7 +56,7 @@ var _ atree.Value = &SomeValue{}
 var _ atree.WrapperValue = &SomeValue{}
 
 // UnwrapAtreeValue returns non-SomeValue and wrapper size.
-func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
+func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint32) {
 	// NOTE:
 	// - non-SomeValue is the same as non-SomeValue in SomeValue.Storable()
 	// - non-SomeValue wrapper size is the same as encoded wrapper size in SomeStorable.ByteSize().
@@ -71,10 +71,10 @@ func (v *SomeValue) UnwrapAtreeValue() (atree.Value, uint64) {
 	switch nonSomeValue := nonSomeValue.(type) {
 	case atree.WrapperValue:
 		unwrappedValue, wrapperSize := nonSomeValue.UnwrapAtreeValue()
-		return unwrappedValue, wrapperSize + uint64(someStorableEncodedPrefixSize)
+		return unwrappedValue, wrapperSize + someStorableEncodedPrefixSize
 
 	default:
-		return nonSomeValue, uint64(someStorableEncodedPrefixSize)
+		return nonSomeValue, someStorableEncodedPrefixSize
 	}
 }
 
@@ -149,8 +149,14 @@ func (v *SomeValue) MeteredString(
 	return v.value.MeteredString(context, seenReferences)
 }
 
-func (v *SomeValue) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v *SomeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v *SomeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -197,9 +203,8 @@ func OptionalValueMapFunction(
 }
 
 func (v *SomeValue) InnerValueType(context ValueStaticTypeContext) sema.Type {
-	return MustConvertStaticToSemaType(
+	return context.SemaTypeFromStaticType(
 		v.value.StaticType(context),
-		context,
 	)
 }
 
@@ -244,7 +249,7 @@ func (v *SomeValue) Equal(context ValueComparisonContext, other Value) bool {
 func (v *SomeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (atree.Storable, error) {
 
 	// SomeStorable returned from this function can be encoded in two ways:
@@ -273,7 +278,7 @@ func (v *SomeValue) Storable(
 
 		// Reduce maxInlineSize for non-SomeValue to make sure
 		// that SomeStorable wrapper is always encoded inline.
-		maxInlineSize -= uint64(someStorableEncodedPrefixSize)
+		maxInlineSize -= someStorableEncodedPrefixSize
 
 		nonSomeValueStorable, err := nonSomeValue.Storable(
 			storage,
@@ -407,8 +412,17 @@ func (v *SomeValue) InnerValue() Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
-	return v.value == nil || v.IsDestroyed()
+func (v *SomeValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
+	if v.value == nil || v.IsDestroyed() {
+		return true
+	}
+
+	inner, ok := v.value.(ResourceKindedValue)
+	if !ok {
+		return false
+	}
+
+	return inner.isInvalidatedResource(context)
 }
 
 type SomeStorable struct {
@@ -503,12 +517,25 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
+func (s SomeStorable) CanCopyNonRefSimple() bool {
+	return s.UnwrapAtreeStorable().CanCopyNonRefSimple()
+}
+
+func (s SomeStorable) CopyNonRefSimple() (atree.Storable, error) {
+	copied, err := s.UnwrapAtreeStorable().CopyNonRefSimple()
+	if err != nil {
+		return nil, err
+	}
+	return s.WrapAtreeStorable(copied), nil
+}
+
 // Native some functions
 
 var NativeOptionalMapFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {

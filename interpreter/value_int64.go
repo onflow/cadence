@@ -445,7 +445,7 @@ func (v Int64Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt64 (1 byte)
 // - int64 value encoded in big-endian (8 bytes)
-func (v Int64Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Int64Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
 	return scratch[:9]
@@ -568,8 +568,14 @@ func (v Int64Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewInt64Value(context, valueGetter)
 }
 
-func (v Int64Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Int64Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Int64Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -599,7 +605,7 @@ func (v Int64Value) ConformsToStaticType(
 	return true
 }
 
-func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -622,6 +628,7 @@ func (v Int64Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -643,4 +650,13 @@ func (v Int64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Int64Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Int64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Int64Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

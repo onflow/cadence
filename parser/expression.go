@@ -1193,20 +1193,24 @@ func defineStringExpression() {
 					literal = literal[1:]
 				}
 
-				length = len(literal)
-				if length >= 1 && literal[length-1] == '"' {
-					literal = literal[:length-1]
-					missingEnd = false
+				// Check if this string is followed by string interpolation
+				hasInterpolation := p.current.Is(lexer.TokenStringTemplate)
+
+				// Remove the closing quote if this is not followed by interpolation,
+				// i.e. this is the end of the string literal
+				if !hasInterpolation {
+					length = len(literal)
+					if length >= 1 && literal[length-1] == '"' {
+						literal = literal[:length-1]
+						missingEnd = false
+					}
 				}
 
 				parsedString := parseStringLiteralContent(p, literal)
 				literals = append(literals, parsedString)
 				endToken = curToken
 
-				// parser already points to next token
-				curToken = p.current
-
-				if curToken.Is(lexer.TokenStringTemplate) {
+				if hasInterpolation {
 					// If the next token is a string template,
 					// then we need to parse the expression inside the template
 
@@ -1251,17 +1255,17 @@ func defineStringExpression() {
 					literals[0], // must exist
 					startToken.Range,
 				), nil
-			} else {
-				return ast.NewStringTemplateExpression(
-					p.memoryGauge,
-					literals,
-					values,
-					ast.NewRange(p.memoryGauge,
-						startToken.StartPos,
-						endToken.EndPos),
-				), nil
 			}
-
+			return ast.NewStringTemplateExpression(
+				p.memoryGauge,
+				literals,
+				values,
+				ast.NewRange(
+					p.memoryGauge,
+					startToken.StartPos,
+					endToken.EndPos,
+				),
+			), nil
 		},
 	)
 }

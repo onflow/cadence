@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/bbq/vm"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -75,6 +76,7 @@ func NativePublicKeyConstructorFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -158,7 +160,7 @@ func NewPublicKeyFromValue(
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(context, sema.PublicKeyTypePublicKeyFieldName)
+	key := publicKey.GetMember(context, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(context, key)
 	if err != nil {
@@ -166,7 +168,7 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(context, sema.PublicKeyTypeSignatureAlgorithmFieldName)
+	signAlgoField := publicKey.GetMember(context, sema.PublicKeyTypeSignatureAlgorithmFieldName, common.DeclarationKindField)
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -179,7 +181,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetMember(context, sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetMember(context, sema.EnumRawValueFieldName, common.DeclarationKindField)
 	if rawValue == nil {
 		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
 	}
@@ -212,12 +214,13 @@ type PublicKeySignatureVerifier interface {
 }
 
 func NativePublicKeyVerifySignatureFunction(
-	publicKeyValue *interpreter.CompositeValue,
+	constantPublicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -226,7 +229,9 @@ func NativePublicKeyVerifySignatureFunction(
 		domainSeparationTagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[2])
 		hashAlgorithmValue := interpreter.AssertValueOfType[*interpreter.SimpleCompositeValue](args[3])
 
+		publicKeyValue := constantPublicKeyValue
 		if publicKeyValue == nil {
+			// VM does not provide a constant public key
 			publicKeyValue = interpreter.AssertValueOfType[*interpreter.CompositeValue](receiver)
 		}
 
@@ -322,19 +327,22 @@ type BLSPoPVerifier interface {
 }
 
 func NativePublicKeyVerifyPoPFunction(
-	publicKeyValue *interpreter.CompositeValue,
+	constantPublicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
 		signatureValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 
+		publicKeyValue := constantPublicKeyValue
 		if publicKeyValue == nil {
-			publicKeyValue = receiver.(*interpreter.CompositeValue)
+			// VM does not provide a constant public key
+			publicKeyValue = interpreter.AssertValueOfType[*interpreter.CompositeValue](receiver)
 		}
 
 		return PublicKeyVerifyPoP(

@@ -1,0 +1,7 @@
+rules:
+  - super: IntersectionType
+    predicate:
+      isIntersectionSubset:
+        super: super
+        sub: sub
+

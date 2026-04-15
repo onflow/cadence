@@ -25,6 +25,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
@@ -48,11 +49,69 @@ type StaticType interface {
 	Equal(other StaticType) bool
 	Encode(e *cbor.StreamEncoder) error
 	MeteredString(memoryGauge common.MemoryGauge) string
+	Precedence() ast.TypePrecedence
 	ID() TypeID
 	IsDeprecated() bool
+	// Walk calls the given function for this type and every type it is composed of.
+	// If the function returns false, the walk is stopped entirely.
+	Walk(visit func(ty StaticType) bool) bool
+}
+
+// WalkStaticType calls the given function for the given type and every type it is composed of.
+// If the function returns false, the walk is stopped entirely.
+func WalkStaticType(t StaticType, visit func(ty StaticType) bool) bool {
+	if t == nil {
+		return true
+	}
+	return t.Walk(visit)
 }
 
 type TypeID = common.TypeID
+
+func parenthesizedStaticTypeString(
+	ty StaticType,
+	parentPrecedence ast.TypePrecedence,
+	formatter func(StaticType) string,
+) string {
+	if ty == nil {
+		return ""
+	}
+
+	typeString := formatter(ty)
+	subPrecedence := ty.Precedence()
+	if parentPrecedence <= subPrecedence &&
+		!staticTypeNeedsParentheses(ty, parentPrecedence) {
+
+		return typeString
+	}
+
+	return fmt.Sprintf("(%s)", typeString)
+}
+
+// staticTypeNeedsParentheses determines whether the given static type needs parentheses.
+// NOTE: This should match sema.typeNeedsParentheses, which in turn should match ast.typeNeedsParentheses.
+func staticTypeNeedsParentheses(ty StaticType, parentPrecedence ast.TypePrecedence) bool {
+	// Optional type wrapping function type or authorized reference type needs parentheses,
+	// e.g. (fun(): Int)? or (auth(E) &T)?
+
+	if parentPrecedence != ast.TypePrecedenceOptional {
+		return false
+	}
+
+	switch typedType := ty.(type) {
+	case FunctionStaticType:
+		return true
+	case *ReferenceStaticType:
+		if typedType.Authorization == nil ||
+			typedType.Authorization.Equal(UnauthorizedAccess) ||
+			typedType.Authorization.Equal(InaccessibleAccess) {
+			return false
+		}
+		return true
+	default:
+		return false
+	}
+}
 
 // CompositeStaticType
 
@@ -63,6 +122,7 @@ type CompositeStaticType struct {
 }
 
 var _ StaticType = &CompositeStaticType{}
+var _ ConformingStaticType = &CompositeStaticType{}
 
 func NewCompositeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -104,8 +164,14 @@ func NewCompositeStaticTypeComputeTypeID(
 
 func (*CompositeStaticType) isStaticType() {}
 
+func (*CompositeStaticType) isConformingStaticType() {}
+
 func (*CompositeStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (*CompositeStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (t *CompositeStaticType) String() string {
@@ -134,6 +200,10 @@ func (*CompositeStaticType) IsDeprecated() bool {
 	return false
 }
 
+func (t *CompositeStaticType) Walk(visit func(ty StaticType) bool) bool {
+	return visit(t)
+}
+
 // InterfaceStaticType
 
 type InterfaceStaticType struct {
@@ -143,6 +213,7 @@ type InterfaceStaticType struct {
 }
 
 var _ StaticType = &InterfaceStaticType{}
+var _ ConformingStaticType = &InterfaceStaticType{}
 
 func NewInterfaceStaticType(
 	memoryGauge common.MemoryGauge,
@@ -184,8 +255,14 @@ func NewInterfaceStaticTypeComputeTypeID(
 
 func (*InterfaceStaticType) isStaticType() {}
 
+func (*InterfaceStaticType) isConformingStaticType() {}
+
 func (*InterfaceStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (*InterfaceStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (t *InterfaceStaticType) String() string {
@@ -212,6 +289,10 @@ func (t *InterfaceStaticType) ID() TypeID {
 
 func (*InterfaceStaticType) IsDeprecated() bool {
 	return false
+}
+
+func (t *InterfaceStaticType) Walk(visit func(ty StaticType) bool) bool {
+	return visit(t)
 }
 
 // ArrayStaticType
@@ -258,6 +339,10 @@ func (*VariableSizedStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*VariableSizedStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (*VariableSizedStaticType) isArrayStaticType() {}
 
 func (t *VariableSizedStaticType) ElementType() StaticType {
@@ -292,6 +377,13 @@ func (t *VariableSizedStaticType) IsDeprecated() bool {
 	return t.Type.IsDeprecated()
 }
 
+func (t *VariableSizedStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
+}
+
 // InclusiveRangeStaticType
 
 type InclusiveRangeStaticType struct {
@@ -299,6 +391,7 @@ type InclusiveRangeStaticType struct {
 }
 
 var _ StaticType = InclusiveRangeStaticType{}
+var _ ParameterizedStaticType = InclusiveRangeStaticType{}
 
 func NewInclusiveRangeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -315,6 +408,10 @@ func (InclusiveRangeStaticType) isStaticType() {}
 
 func (InclusiveRangeStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (InclusiveRangeStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceInstantiation
 }
 
 func (t InclusiveRangeStaticType) String() string {
@@ -344,6 +441,26 @@ func (t InclusiveRangeStaticType) ID() TypeID {
 
 func (t InclusiveRangeStaticType) IsDeprecated() bool {
 	return t.ElementType.IsDeprecated()
+}
+
+func (t InclusiveRangeStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.ElementType.Walk(visit)
+}
+
+func (t InclusiveRangeStaticType) BaseType() StaticType {
+	if t.ElementType == nil {
+		return nil
+	}
+	return InclusiveRangeStaticType{}
+}
+
+func (t InclusiveRangeStaticType) TypeArguments() []StaticType {
+	return []StaticType{
+		t.ElementType,
+	}
 }
 
 // ConstantSizedStaticType
@@ -382,6 +499,10 @@ func (*ConstantSizedStaticType) isStaticType() {}
 
 func (*ConstantSizedStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (*ConstantSizedStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (*ConstantSizedStaticType) isArrayStaticType() {}
@@ -425,6 +546,13 @@ func (t *ConstantSizedStaticType) IsDeprecated() bool {
 	return t.Type.IsDeprecated()
 }
 
+func (t *ConstantSizedStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
+}
+
 // DictionaryStaticType
 
 type DictionaryStaticType struct {
@@ -462,6 +590,10 @@ func (*DictionaryStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*DictionaryStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t *DictionaryStaticType) String() string {
 	return t.MeteredString(nil)
 }
@@ -496,6 +628,16 @@ func (t *DictionaryStaticType) IsDeprecated() bool {
 		t.ValueType.IsDeprecated()
 }
 
+func (t *DictionaryStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if !t.KeyType.Walk(visit) {
+		return false
+	}
+	return t.ValueType.Walk(visit)
+}
+
 // OptionalStaticType
 
 type OptionalStaticType struct {
@@ -519,12 +661,22 @@ func (*OptionalStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*OptionalStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceOptional
+}
+
 func (t *OptionalStaticType) String() string {
 	return t.MeteredString(nil)
 }
 
 func (t *OptionalStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	typeStr := t.Type.MeteredString(memoryGauge)
+	typeStr := parenthesizedStaticTypeString(
+		t.Type,
+		t.Precedence(),
+		func(ty StaticType) string {
+			return ty.MeteredString(memoryGauge)
+		},
+	)
 
 	common.UseMemory(memoryGauge, common.OptionalStaticTypeStringMemoryUsage)
 	return fmt.Sprintf("%s?", typeStr)
@@ -545,6 +697,13 @@ func (t *OptionalStaticType) ID() TypeID {
 
 func (t *OptionalStaticType) IsDeprecated() bool {
 	return t.Type.IsDeprecated()
+}
+
+func (t *OptionalStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
 }
 
 var NilStaticType = &OptionalStaticType{
@@ -579,6 +738,10 @@ func (*IntersectionStaticType) isStaticType() {}
 
 func (*IntersectionStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (*IntersectionStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
 }
 
 func (t *IntersectionStaticType) String() string {
@@ -652,6 +815,18 @@ func (t *IntersectionStaticType) IsDeprecated() bool {
 	}
 
 	return false
+}
+
+func (t *IntersectionStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	for _, interfaceType := range t.Types {
+		if !interfaceType.Walk(visit) {
+			return false
+		}
+	}
+	return true
 }
 
 // Authorization
@@ -879,12 +1054,22 @@ func (*ReferenceStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (*ReferenceStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceReference
+}
+
 func (t *ReferenceStaticType) String() string {
 	return t.MeteredString(nil)
 }
 
 func (t *ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	typeStr := t.ReferencedType.MeteredString(memoryGauge)
+	typeStr := parenthesizedStaticTypeString(
+		t.ReferencedType,
+		t.Precedence(),
+		func(ty StaticType) string {
+			return ty.MeteredString(memoryGauge)
+		},
+	)
 	authString := ""
 	if !t.Authorization.Equal(InaccessibleAccess) && !t.Authorization.Equal(UnauthorizedAccess) {
 		authString = t.Authorization.MeteredString(memoryGauge)
@@ -919,6 +1104,13 @@ func (t *ReferenceStaticType) IsDeprecated() bool {
 	return t.ReferencedType.IsDeprecated()
 }
 
+func (t *ReferenceStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.ReferencedType.Walk(visit)
+}
+
 // CapabilityStaticType
 
 type CapabilityStaticType struct {
@@ -926,6 +1118,7 @@ type CapabilityStaticType struct {
 }
 
 var _ StaticType = &CapabilityStaticType{}
+var _ ParameterizedStaticType = &CapabilityStaticType{}
 
 func NewCapabilityStaticType(
 	memoryGauge common.MemoryGauge,
@@ -942,6 +1135,10 @@ func (*CapabilityStaticType) isStaticType() {}
 
 func (*CapabilityStaticType) elementSize() uint {
 	return UnknownElementSize
+}
+
+func (*CapabilityStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedenceInstantiation
 }
 
 func (t *CapabilityStaticType) String() string {
@@ -989,6 +1186,40 @@ func (t *CapabilityStaticType) IsDeprecated() bool {
 		return false
 	}
 	return t.BorrowType.IsDeprecated()
+}
+
+func (t *CapabilityStaticType) Walk(visit func(ty StaticType) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if t.BorrowType != nil {
+		return t.BorrowType.Walk(visit)
+	}
+	return true
+}
+
+func (t *CapabilityStaticType) BaseType() StaticType {
+	// Note: Must be same as `sema.CapabilityType.BaseType()`
+	if t.BorrowType == nil {
+		return nil
+	}
+
+	return PrimitiveStaticTypeCapability
+}
+
+func (t *CapabilityStaticType) TypeArguments() []StaticType {
+	// Note: Must be same as `sema.CapabilityType.TypeArguments()`
+	borrowType := t.BorrowType
+	if borrowType == nil {
+		borrowType = &ReferenceStaticType{
+			ReferencedType: PrimitiveStaticTypeAny,
+			Authorization:  UnauthorizedAccess,
+		}
+	}
+
+	return []StaticType{
+		borrowType,
+	}
 }
 
 // Conversion
@@ -1046,12 +1277,10 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		return ConvertSemaReferenceTypeToStaticReferenceType(memoryGauge, t)
 
 	case *sema.CapabilityType:
-		if t.BorrowType == nil {
-			// Unparameterized Capability type should have been
-			// converted to primitive static type earlier
-			panic(errors.NewUnreachableError())
+		var borrowType StaticType
+		if t.BorrowType != nil {
+			borrowType = ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		}
-		borrowType := ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		return NewCapabilityStaticType(memoryGauge, borrowType)
 
 	case *sema.InclusiveRangeType:
@@ -1063,6 +1292,11 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 	case *sema.TransactionType:
 		return ConvertSemaTransactionToStaticTransactionType(memoryGauge, t)
+
+	case *sema.GenericType:
+		// Function types could have generic-typed returns/parameters. e.g: builtin functions.
+		// Since they are not resolved, the type is unknown here.
+		return PrimitiveStaticTypeUnknown
 	}
 
 	return nil
@@ -1184,6 +1418,13 @@ func ConvertSemaTransactionToStaticTransactionType(
 	)
 }
 
+// Deprecated: Use TypeConverter.SemaAccessFromStaticAuthorization instead.
+// ConvertStaticAuthorizationToSemaAccess converts authorization of static-types
+// to the sema-type representation of the same.
+//
+// **IMPORTANT**: Do not use this function directly. Instead, use the
+// `SemaAccessFromStaticAuthorization` method of the `TypeConverter` interface,
+// since it will cache and re-use the conversion results.
 func ConvertStaticAuthorizationToSemaAccess(
 	auth Authorization,
 	handler StaticAuthorizationConversionHandler,
@@ -1301,12 +1542,15 @@ func ConvertStaticToSemaType(
 		), nil
 
 	case InclusiveRangeStaticType:
-		elementType, err := ConvertStaticToSemaType(
-			context,
-			t.ElementType,
-		)
-		if err != nil {
-			return nil, err
+		var elementType sema.Type
+		if t.ElementType != nil {
+			elementType, err = ConvertStaticToSemaType(
+				context,
+				t.ElementType,
+			)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return sema.NewInclusiveRangeType(
@@ -1370,7 +1614,7 @@ func ConvertStaticToSemaType(
 			return nil, err
 		}
 
-		access, err := ConvertStaticAuthorizationToSemaAccess(t.Authorization, context)
+		access, err := context.SemaAccessFromStaticAuthorization(t.Authorization)
 
 		if err != nil {
 			return nil, err
@@ -1393,7 +1637,7 @@ func ConvertStaticToSemaType(
 		return sema.NewCapabilityType(context, borrowType), nil
 
 	case FunctionStaticType:
-		return t.Type, nil
+		return t.FunctionType, nil
 
 	case PrimitiveStaticType:
 		return t.SemaType(), nil
@@ -1406,7 +1650,7 @@ func ConvertStaticToSemaType(
 // FunctionStaticType
 
 type FunctionStaticType struct {
-	Type *sema.FunctionType
+	*sema.FunctionType
 }
 
 var _ StaticType = FunctionStaticType{}
@@ -1418,14 +1662,14 @@ func NewFunctionStaticType(
 	common.UseMemory(memoryGauge, common.FunctionStaticTypeMemoryUsage)
 
 	return FunctionStaticType{
-		Type: functionType,
+		FunctionType: functionType,
 	}
 }
 
 func (t FunctionStaticType) ReturnType(gauge common.MemoryGauge) StaticType {
 	var returnType StaticType
-	if t.Type.ReturnTypeAnnotation.Type != nil {
-		returnType = ConvertSemaToStaticType(gauge, t.Type.ReturnTypeAnnotation.Type)
+	if t.FunctionType.ReturnTypeAnnotation.Type != nil {
+		returnType = ConvertSemaToStaticType(gauge, t.ReturnTypeAnnotation.Type)
 	}
 
 	return returnType
@@ -1437,8 +1681,12 @@ func (FunctionStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
+func (FunctionStaticType) Precedence() ast.TypePrecedence {
+	return ast.TypePrecedencePrimary
+}
+
 func (t FunctionStaticType) String() string {
-	return t.Type.String()
+	return t.FunctionType.String()
 }
 
 func (t FunctionStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
@@ -1454,15 +1702,19 @@ func (t FunctionStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
-	return t.Type.Equal(otherFunction.Type)
+	return t.FunctionType.Equal(otherFunction.FunctionType)
 }
 
 func (t FunctionStaticType) ID() TypeID {
-	return t.Type.ID()
+	return t.FunctionType.ID()
 }
 
 func (FunctionStaticType) IsDeprecated() bool {
 	return false
+}
+
+func (t FunctionStaticType) Walk(visit func(ty StaticType) bool) bool {
+	return visit(t)
 }
 
 // TypeParameter
@@ -1497,4 +1749,17 @@ func (p TypeParameter) String() string {
 		builder.WriteString(p.TypeBound.String())
 	}
 	return builder.String()
+}
+
+type ParameterizedStaticType interface {
+	StaticType
+	BaseType() StaticType
+	TypeArguments() []StaticType
+}
+
+// ConformingStaticType is any static type that conforms to some interface.
+// This is the static-type counterpart of `sema.ConformingType`.
+type ConformingStaticType interface {
+	StaticType
+	isConformingStaticType()
 }

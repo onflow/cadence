@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
@@ -394,7 +395,7 @@ func TestInterpretEntitledReferences(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement Y
@@ -431,23 +432,19 @@ func TestInterpretEntitledReferences(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            access(all) fun test(): Bool {
+            access(all) fun test() {
                 let ref = &1 as auth(X) &Int
                 let anyStruct = ref as AnyStruct
                 let downRef = (anyStruct as? &Int)!
-                let downDownRef = downRef as? auth(X) &Int
-                return downDownRef == nil
+                let downDownRef = downRef as! auth(X) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		require.Equal(
-			t,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 }
 
@@ -462,23 +459,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement X
             entitlement Y
 
-            fun test(): Bool {
+            fun test() {
                 let ref = &1 as auth(X, Y) &Int
                 let upRef = ref as auth(X) &Int
-                let downRef = upRef as? auth(X, Y) &Int
-                return downRef == nil
+                let downRef = upRef as! auth(X, Y) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("disjoint downcast", func(t *testing.T) {
@@ -489,23 +481,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement X
             entitlement Y
 
-            fun test(): Bool {
+            fun test() {
                 let ref = &1 as auth(X, Y) &Int
                 let upRef = ref as auth(X | Y) &Int
-                let downRef = upRef as? auth(X) &Int
-                return downRef == nil
+                let downRef = upRef as! auth(X) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("wrong entitlement downcast", func(t *testing.T) {
@@ -516,23 +503,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement X
             entitlement Y
 
-            fun test(): Bool {
+            fun test() {
                 let ref = &1 as auth(X) &Int
                 let upRef = ref as auth(X | Y) &Int
-                let downRef = ref as? auth(Y) &Int
-                return downRef != nil
+                let downRef = ref as! auth(Y) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.FalseValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("correct entitlement downcast", func(t *testing.T) {
@@ -543,23 +525,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement X
             entitlement Y
 
-            fun test(): Bool {
+            fun test() {
                 let ref = &1 as auth(X) &Int
                 let upRef = ref as auth(X | Y) &Int
-                let downRef = upRef as? auth(X) &Int
-                return downRef == nil
+                let downRef = upRef as! auth(X) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("superset downcast", func(t *testing.T) {
@@ -570,22 +547,17 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement X
             entitlement Y
 
-            fun test(): Bool {
+            fun test() {
                 let ref = &1 as auth(X) &Int
-                let downRef = ref as? auth(X, Y) &Int
-                return downRef != nil
+                let downRef = ref as! auth(X, Y) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.FalseValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("cast up to anystruct, cannot expand", func(t *testing.T) {
@@ -596,23 +568,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement X
             entitlement Y
 
-            fun test(): Bool {
+            fun test() {
                 let ref = &1 as auth(X) &Int
                 let anyStruct = ref as AnyStruct
-                let downRef = anyStruct as? auth(X, Y) &Int
-                return downRef != nil
+                let downRef = anyStruct as! auth(X, Y) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.FalseValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("cast up to anystruct, retains old type", func(t *testing.T) {
@@ -623,22 +590,29 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement X
             entitlement Y
 
-            fun test(): Bool {
+            fun test() {
                 let ref = &1 as auth(X) &Int
                 let anyStruct = ref as AnyStruct
-                let downRef = anyStruct as? auth(X) &Int
-                return downRef != nil
+                let downRef = anyStruct as! auth(X) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
 			t,
-			inter,
-			interpreter.TrueValue,
-			value,
+			common.TypeID("auth(S.test.X)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
 		)
 	})
 
@@ -650,24 +624,19 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement X
             entitlement Y
 
-            fun test(): Bool {
+            fun test() {
                 let ref = &1 as auth(X) &Int
                 let anyStruct = ref as AnyStruct
                 let downRef = anyStruct as! &Int
-                let downDownRef = downRef as? auth(X) &Int
-                return downDownRef != nil
+                let downDownRef = downRef as! auth(X) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.FalseValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("entitled to nonentitled downcast", func(t *testing.T) {
@@ -681,25 +650,16 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
             entitlement E
 
-            fun test(): Bool {
+            fun test() {
                 let x <- create R()
                 let r = &x as auth(E) &{RI}
-                let r2 = r as! &{RI}
-                let isSuccess = r2 != nil
+                let r2 = r as! &{RI} // should succeed
                 destroy x
-                return isSuccess
             }
         `)
 
-		value, err := inter.Invoke("test")
+		_, err := inter.Invoke("test")
 		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
 	})
 
 	t.Run("order of entitlements doesn't matter", func(t *testing.T) {
@@ -710,23 +670,14 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement E
             entitlement F
 
-            fun test(): Bool {
+            fun test() {
                 let r = &1 as auth(E, F) &Int
-                let r2 = r as!auth(F, E) &Int
-                let isSuccess = r2 != nil
-                return isSuccess
+                let r2 = r as! auth(F, E) &Int // should succeed
             }
         `)
 
-		value, err := inter.Invoke("test")
+		_, err := inter.Invoke("test")
 		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
 	})
 
 	t.Run("capability downcast", func(t *testing.T) {
@@ -739,9 +690,9 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
             entitlement X
             entitlement Y
 
-            fun test(capXY: Capability<auth(X, Y) &Int>): Bool {
+            fun test(capXY: Capability<auth(X, Y) &Int>) {
                 let upCap = capXY as Capability<auth(X) &Int>
-                return upCap as? Capability<auth(X, Y) &Int> == nil
+                let down = upCap as! Capability<auth(X, Y) &Int>
             }
         `)
 
@@ -761,15 +712,11 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			),
 		)
 
-		value, err := inter.Invoke("test", capXY)
-		require.NoError(t, err)
+		_, err := inter.Invoke("test", capXY)
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("unparameterized capability downcast", func(t *testing.T) {
@@ -819,22 +766,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            fun test(): Bool {
+            fun test() {
                 let arr: auth(X) &Int = &1
                 let upArr = arr as &Int
-                return upArr as? auth(X) &Int == nil
+                let downArr = upArr as! auth(X) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("optional ref downcast", func(t *testing.T) {
@@ -844,23 +787,19 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            fun test(): Bool {
+            fun test() {
                 let one: Int? = 1
                 let arr: auth(X) &Int? = &one
                 let upArr = arr as &Int?
-                return upArr as? auth(X) &Int? == nil
+                let downArr = upArr as! auth(X) &Int?
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("ref array downcast", func(t *testing.T) {
@@ -870,22 +809,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            fun test(): Bool {
+            fun test() {
                 let arr: [auth(X) &Int] = [&1, &2]
                 let upArr = arr as [&Int]
-                return upArr as? [auth(X) &Int] == nil
+                let downArr = upArr as! [auth(X) &Int]
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("ref constant array downcast", func(t *testing.T) {
@@ -895,22 +830,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            fun test(): Bool {
+            fun test() {
                 let arr: [auth(X) &Int; 2] = [&1, &2]
                 let upArr = arr as [&Int; 2]
-                return upArr as? [auth(X) &Int; 2] == nil
+                let downArr = upArr as! [auth(X) &Int; 2]
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("ref constant array downcast no change", func(t *testing.T) {
@@ -920,22 +851,15 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            fun test(): Bool {
+            fun test() {
                 let arr: [auth(X) &Int; 2] = [&1, &2]
                 let upArr = arr as [auth(X) &Int; 2]
-                return upArr as? [auth(X) &Int; 2] == nil
+                let downArray = upArr as! [auth(X) &Int; 2]
             }
         `)
 
-		value, err := inter.Invoke("test")
+		_, err := inter.Invoke("test")
 		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.FalseValue,
-			value,
-		)
 	})
 
 	t.Run("ref array element downcast", func(t *testing.T) {
@@ -945,22 +869,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            fun test(): Bool {
+            fun test() {
                 let arr: [auth(X) &Int] = [&1, &2]
                 let upArr = arr as [&Int]
-                return upArr[0] as? auth(X) &Int == nil
+                let downArr = upArr[0] as! auth(X) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("ref constant array element downcast", func(t *testing.T) {
@@ -970,22 +890,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            fun test(): Bool {
+            fun test() {
                 let arr: [auth(X) &Int; 2] = [&1, &2]
                 let upArr = arr as [&Int; 2]
-                return upArr[0] as? auth(X) &Int == nil
+                let downArr = upArr[0] as! auth(X) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("ref dict downcast", func(t *testing.T) {
@@ -995,22 +911,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            fun test(): Bool {
+            fun test() {
                 let dict: {String: auth(X) &Int} = {"foo": &3}
                 let upDict = dict as {String: &Int}
-                return upDict as? {String: auth(X) &Int} == nil
+                let downArr = upDict as! {String: auth(X) &Int}
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("ref dict element downcast forced", func(t *testing.T) {
@@ -1020,22 +932,18 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		inter := parseCheckAndPrepare(t, `
             entitlement X
 
-            fun test(): Bool {
+            fun test() {
                 let dict: {String: auth(X) &Int} = {"foo": &3}
                 let upDict = dict as {String: &Int}
-                return upDict["foo"]! as? auth(X) &Int == nil
+                let downArr = upDict["foo"]! as! auth(X) &Int
             }
         `)
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 }
@@ -1356,7 +1264,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement Y
@@ -1799,7 +1707,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement E
@@ -1841,7 +1749,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement E
@@ -1887,7 +1795,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
+		inter, _, _ := testAccount(t, address, true, nil,
 			`
               entitlement X
               entitlement E
@@ -1927,7 +1835,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		)
 	})
 
-	t.Run("fully entitled in init", func(t *testing.T) {
+	t.Run("self fully entitled in init", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1944,7 +1852,6 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
                 init() {
                     let x = self as! auth(X, E, G) &A
-                    let y = base as! auth(X, E, G) &R
                 }
             }
 
@@ -1956,6 +1863,44 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("base unentitled in init", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement X
+            entitlement E
+            entitlement G
+
+            resource R {
+                access(X, E, G) fun foo() {}
+            }
+
+            access(all) attachment A for R {
+
+                init() {
+                    let x = base as! auth(X) &R
+                    let e = base as! auth(E) &R
+                    let g = base as! auth(G) &R
+                }
+            }
+
+            fun test() {
+                let r <- attach A() to <-create R()
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+		assert.Equal(t, common.TypeID("auth(S.test.X)&S.test.R"), forceCastTypeMismatchErr.ExpectedType.ID())
+		assert.Equal(t, common.TypeID("&S.test.R"), forceCastTypeMismatchErr.ActualType.ID())
 	})
 
 	t.Run("composed attachment access", func(t *testing.T) {
@@ -2144,4 +2089,237 @@ func TestInterpretBuiltinEntitlements(t *testing.T) {
 
 	_, err := inter.Invoke("main")
 	assert.NoError(t, err)
+}
+
+func TestInterpretEntitlementEscalationViaDefaultFunction(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndPrepareWithOptions(t, `
+        resource Vault {
+            access(Mutate) fun withdraw(): String {
+                return "withdrawing"
+            }
+        }
+
+        struct interface I1 {
+            fun escalate(_ inbound: AnyStruct): AnyStruct {
+                return inbound
+            }
+        }
+
+        struct interface I2 {
+            fun escalate(_ inbound: AnyStruct): auth(Mutate) &Vault
+        }
+
+        struct Attacker: I1, I2 {}
+
+        fun main() {
+            let attacker = Attacker()
+            let attackerRef = &attacker as &{I2}
+
+            let vault <- create Vault()
+            let vaultRef = &vault as &Vault
+
+            // Passing a vault reference and getting an entitled reference back!!
+            let entitledVaultRef: auth(Mutate) &Vault = attackerRef.escalate(vaultRef)
+
+            entitledVaultRef.withdraw()
+
+            destroy vault
+        }
+    `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.ConformanceError{}, errs[0])
+			},
+		},
+	)
+
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+
+	// TODO: Investigate why the compiler gives a different error.
+	if *compile {
+		var valueTransferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &valueTransferTypeError)
+	} else {
+		var invalidReferenceConversionError *interpreter.InvalidReferenceConversionError
+		require.ErrorAs(t, err, &invalidReferenceConversionError)
+	}
+}
+
+func TestInterpretEntitlementConversion(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("super type target with same entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct interface I {}
+
+            struct S: I {}
+
+            fun main() {
+                let s = S()
+                let sRef = &s as auth(Mutate) &S
+
+                let iRef: auth(Mutate) &{I} = sRef
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("super type target with less permissive entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct interface I {}
+
+            struct S: I {}
+
+            fun main() {
+                let s = S()
+                let sRef = &s as auth(Mutate, Insert) &S
+
+                let lessPermissiveIRef: auth(Insert) &{I} = sRef
+
+                let morePermissiveIRef = lessPermissiveIRef as! auth(Mutate, Insert) &{I}
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("sub type target with same entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct interface I {}
+
+            struct S: I {}
+
+            fun main() {
+                let s = S()
+                let iRef = &s as auth(Mutate) &{I}
+
+                let sRef: auth(Mutate) &S = iRef as! auth(Mutate) &S
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("sub type target with less permissive entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct interface I {}
+
+            struct S: I {}
+
+            fun main() {
+                let s = S()
+                let iRef = &s as auth(Mutate, Insert) &{I}
+
+                let lessPermissiveSRef: auth(Insert) &S = iRef as! auth(Insert) &S
+
+                let morePermissiveSRef = lessPermissiveSRef as! auth(Mutate, Insert) &S
+                let morePermissiveIRef = lessPermissiveSRef as! auth(Mutate, Insert) &{I}
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("less permissive entitlements, type-confused value", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t, `
+            struct interface I {}
+
+            struct S: I {}
+
+            struct T: I {}
+
+            fun main() {
+                let s = S()
+                let sRef = &s as auth(Mutate) &S
+                let iRef: auth(Mutate) &T = sRef
+            }
+        `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	})
+}
+
+func TestInterpretBaseDowncast(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+        entitlement E
+
+        resource R {
+            access(E) fun foo() {}
+        }
+
+        access(all) attachment A for R {
+
+            access(all) fun getBase(): auth(E) &R {
+				return base as! auth(E) &R
+			}
+        }
+
+        fun test() {
+            let r <- attach A() to <-create R()
+            r[A]!.getBase().foo()
+            destroy r
+        }
+    `)
+
+	_, err := inter.Invoke("test")
+	RequireError(t, err)
+
+	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+
+	assert.Equal(t,
+		common.TypeID("auth(S.test.E)&S.test.R"),
+		forceCastTypeMismatchErr.ExpectedType.ID(),
+	)
+	assert.Equal(t,
+		common.TypeID("&S.test.R"),
+		forceCastTypeMismatchErr.ActualType.ID(),
+	)
 }

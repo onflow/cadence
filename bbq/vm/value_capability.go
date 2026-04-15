@@ -19,7 +19,7 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -27,30 +27,14 @@ import (
 // Members
 
 func init() {
-	typeName := interpreter.PrimitiveStaticTypeCapability.String()
+	typeName := commons.TypeQualifierCapability
 
 	// Capability.borrow
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValue(
 			sema.CapabilityTypeBorrowFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				var borrowStaticType interpreter.StaticType
-
-				switch capabilityValue := receiver.(type) {
-				case *interpreter.PathCapabilityValue: //nolint:staticcheck
-					borrowStaticType = capabilityValue.BorrowType
-
-				case *interpreter.IDCapabilityValue:
-					borrowStaticType = capabilityValue.BorrowType
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				borrowType := context.SemaTypeFromStaticType(borrowStaticType).(*sema.ReferenceType)
-				return sema.CapabilityTypeBorrowFunctionType(borrowType)
-			},
+			interpreter.CapabilityTypeBorrowFunctionType,
 			interpreter.NativeCapabilityBorrowFunction(nil, nil, nil),
 		),
 	)
@@ -58,25 +42,9 @@ func init() {
 	// Capability.check
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValue(
 			sema.CapabilityTypeCheckFunctionName,
-			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				var borrowStaticType interpreter.StaticType
-
-				switch capabilityValue := receiver.(type) {
-				case *interpreter.PathCapabilityValue: //nolint:staticcheck
-					borrowStaticType = capabilityValue.BorrowType
-
-				case *interpreter.IDCapabilityValue:
-					borrowStaticType = capabilityValue.BorrowType
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				borrowType := context.SemaTypeFromStaticType(borrowStaticType).(*sema.ReferenceType)
-				return sema.CapabilityTypeCheckFunctionType(borrowType)
-			},
+			interpreter.CapabilityTypeCheckFunctionType,
 			interpreter.NativeCapabilityCheckFunction(nil, nil, nil),
 		),
 	)

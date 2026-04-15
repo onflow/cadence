@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"sync"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -33,6 +35,11 @@ type EphemeralReferenceValue struct {
 	// BorrowedType is the T in &T
 	BorrowedType  sema.Type
 	Authorization Authorization
+
+	// Referenced value cannot change.
+	// Hence, it's safe to store the static-type.
+	staticType     StaticType
+	staticTypeOnce sync.Once
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -77,6 +84,19 @@ func NewEphemeralReferenceValue(
 	return NewUnmeteredEphemeralReferenceValue(context, authorization, value, borrowedType)
 }
 
+func (v *EphemeralReferenceValue) WithAuthorizationAndBorrowedType(
+	context ReferenceCreationContext,
+	auth Authorization,
+	borrowedType sema.Type,
+) ReferenceValue {
+	return NewEphemeralReferenceValue(
+		context,
+		auth,
+		v.Value,
+		borrowedType,
+	)
+}
+
 func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) Accept(context ValueVisitContext, visitor Visitor) {
@@ -112,11 +132,30 @@ func (v *EphemeralReferenceValue) MeteredString(
 }
 
 func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	return NewReferenceStaticType(
-		context,
-		v.Authorization,
-		v.Value.StaticType(context),
-	)
+	// Compute a static type that:
+	// 1. Preserves the actual type structure (to allow type narrowing, e.g., &{RI} -> &R)
+	// 2. Uses the borrow type's authorization (to prevent entitlement escalation)
+	//
+	// For example:
+	// - Actual: [auth(E) &T], Borrow: [&T] -> Static: [&T] (authorization from borrow type)
+	// - Actual: [&R], Borrow: [&{RI}] -> Static: [&R] (type narrowing preserved)
+
+	v.staticTypeOnce.Do(func() {
+		actualStaticType := v.Value.StaticType(context)
+		innerStaticType := applyTargetTypeAuthorization(
+			context,
+			actualStaticType,
+			v.BorrowedType,
+		)
+
+		v.staticType = NewReferenceStaticType(
+			context,
+			v.Authorization,
+			innerStaticType,
+		)
+	})
+
+	return v.staticType
 }
 
 func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
@@ -131,7 +170,7 @@ func (v *EphemeralReferenceValue) ReferencedValue(_ ValueStaticTypeContext, _ bo
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
+func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
 	referencedValue := v.Value
 
 	var member Value
@@ -139,7 +178,6 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, nam
 	// First, *before* looking up the member on the referenced value,
 	// check whether the member is available via special handling
 	// for reference values (e.g. array higher-order functions)
-
 	member = getReferenceValueMember(context, v, referencedValue, name)
 	if member != nil {
 		return member
@@ -148,12 +186,18 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, nam
 	// Next, look up the member on the referenced value
 
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
-		member = memberAccessibleValue.GetMember(context, name)
+		member = memberAccessibleValue.GetMember(context, name,  memberKind)
 	}
 
 	if member == nil {
 		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
-		member = context.GetMethod(v, name)
+		return GetMember(
+			context,
+			v,
+			name,
+			memberKind,
+			nil,
+		)
 	}
 
 	return member
@@ -175,7 +219,7 @@ func (v *EphemeralReferenceValue) SetMember(context ValueTransferContext, name s
 	return setMember(context, v.Value, name, value)
 }
 
-func (v *EphemeralReferenceValue) GetKey(context ValueComparisonContext, key Value) Value {
+func (v *EphemeralReferenceValue) GetKey(context ContainerReadContext, key Value) Value {
 	return v.Value.(ValueIndexableValue).
 		GetKey(context, key)
 }
@@ -186,8 +230,27 @@ func (v *EphemeralReferenceValue) SetKey(context ContainerMutationContext, key V
 }
 
 func (v *EphemeralReferenceValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
+	v.InsertKeyWithMutationCheck(
+		context,
+		key,
+		value,
+		true,
+	)
+}
+
+func (v *EphemeralReferenceValue) InsertKeyWithMutationCheck(
+	context ContainerMutationContext,
+	key Value,
+	value Value,
+	checkMutation bool,
+) {
 	v.Value.(ValueIndexableValue).
-		InsertKey(context, key, value)
+		InsertKeyWithMutationCheck(
+			context,
+			key,
+			value,
+			checkMutation,
+		)
 }
 
 func (v *EphemeralReferenceValue) RemoveKey(context ContainerMutationContext, key Value) Value {
@@ -199,10 +262,16 @@ func (v *EphemeralReferenceValue) GetTypeKey(context MemberAccessibleContext, ke
 	self := v.Value
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+
+		semaAccess, err := context.SemaAccessFromStaticAuthorization(v.Authorization)
+		if err != nil {
+			panic(err)
+		}
+
 		return selfComposite.getTypeKey(
 			context,
 			key,
-			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
+			semaAccess,
 		)
 	}
 
@@ -272,7 +341,7 @@ func (*EphemeralReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return NonStorable{Value: v}, nil
 }
 
@@ -358,8 +427,8 @@ func (i *ReferenceValueIterator) Next(context ValueIteratorContext) Value {
 	return i.iterator.Next(context)
 }
 
-func (i *ReferenceValueIterator) HasNext() bool {
-	return i.iterator.HasNext()
+func (i *ReferenceValueIterator) HasNext(context ValueIteratorContext) bool {
+	return i.iterator.HasNext(context)
 }
 
 func (i *ReferenceValueIterator) ValueID() (atree.ValueID, bool) {

@@ -741,9 +741,7 @@ func TestCheckMemberAccess(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-
-		var typeMismatchError *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchError)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("array reference, optional typed element", func(t *testing.T) {
@@ -791,7 +789,24 @@ func TestCheckMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("array reference, authorized reference typed element", func(t *testing.T) {
+	t.Run("array reference, unauthorized reference typed element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [&[Int]] = [
+                    &[1] as &[Int],
+                    &[2] as &[Int]
+                ]
+                let arrayRef = &array as &[&[Int]]
+                let x: &[Int] = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, authorized reference typed element, unauthorized cast", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -800,19 +815,34 @@ func TestCheckMemberAccess(t *testing.T) {
                     &[1] as auth(Mutate) &[Int],
                     &[2] as auth(Mutate) &[Int]
                 ]
+
                 let arrayRef = &array as &[auth(Mutate) &[Int]]
 
-                // Must be an unauthorized reference.
+                let x: &[Int] = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, authorized reference typed element, authorized cast", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [auth(Mutate) &[Int]] = [
+                    &[1] as auth(Mutate) &[Int],
+                    &[2] as auth(Mutate) &[Int]
+                ]
+
+                let arrayRef = &array as &[auth(Mutate) &[Int]]
+
                 let x: auth(Mutate) &[Int] = arrayRef[0]
-                let y: &[Int] = arrayRef[0]
             }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-
-		var typeMismatchError *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchError)
-		assert.Equal(t, 10, typeMismatchError.StartPos.Line)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("dictionary, value", func(t *testing.T) {
@@ -859,10 +889,7 @@ func TestCheckMemberAccess(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-
-		var typeMismatchError *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchError)
-		assert.Equal(t, 9, typeMismatchError.StartPos.Line)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("dictionary reference, optional typed value", func(t *testing.T) {
@@ -892,10 +919,10 @@ func TestCheckMemberAccess(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		var typeMismatchError *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchError)
+		require.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
@@ -929,7 +956,7 @@ func TestCheckMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("dictionary reference, authorized reference typed element", func(t *testing.T) {
+	t.Run("dictionary reference, authorized reference typed element, unauthorized cast", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -938,19 +965,35 @@ func TestCheckMemberAccess(t *testing.T) {
                     "a": &{"c": 1} as auth(Mutate) &{String: Int},
                     "b": &{"d": 2} as auth(Mutate) &{String: Int}
                 }
+
                 let dictRef = &dict as &{String: auth(Mutate) &{String: Int}}
 
-                // Must be an unauthorized reference.
-                let x: (auth(Mutate) &{String: Int})? = dictRef["a"]
-                let y: &{String: Int}? = dictRef["a"]
+                let x: &{String: Int}? = dictRef["a"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, authorized reference typed element, authorized cast", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: auth(Mutate) &{String: Int}} = {
+                    "a": &{"c": 1} as auth(Mutate) &{String: Int},
+                    "b": &{"d": 2} as auth(Mutate) &{String: Int}
+                }
+
+                let dictRef = &dict as &{String: auth(Mutate) &{String: Int}}
+
+                let x: auth(Mutate) &{String: Int}? = dictRef["a"]
             }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		var typeMismatchError *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchError)
-		assert.Equal(t, 10, typeMismatchError.StartPos.Line)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("resource reference, attachment", func(t *testing.T) {
@@ -1042,9 +1085,7 @@ func TestCheckMemberAccess(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-
-		var invalidAccessError *sema.InvalidAccessError
-		require.ErrorAs(t, errs[0], &invalidAccessError)
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
 	t.Run("entitlement map access nested", func(t *testing.T) {
@@ -1097,9 +1138,7 @@ func TestCheckMemberAccess(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-
-		var typeMismatchError *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchError)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("anyresource swap on reference", func(t *testing.T) {

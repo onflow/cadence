@@ -21,6 +21,8 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -512,8 +514,7 @@ func TestInterpretAttachExecutionOrdering(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: enable after merging master in
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {
                 fun bar(): Int? {
                     return self[A]?.bar()
@@ -1583,7 +1584,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 access(all) var id: UInt8
@@ -1630,7 +1631,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 fun foo(): Int { return 3 }
@@ -1660,7 +1661,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             resource R {}
             resource R2 {
                 let r: @R
@@ -1711,7 +1712,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             access(all) resource R {
                 access(all) var id: UInt8
 
@@ -1757,7 +1758,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             resource R {}
 
             resource R2 {
@@ -1796,7 +1797,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, _, _ := testAccount(t, address, true, nil, `
             access(all) resource R {}
 
             var ref: &A? = nil
@@ -1921,7 +1922,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
         fun test() {
             var s = S()
             var ref = &s as &S
-            remove A from S
+            remove A from ref
         }
         `, ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(_ error) {},
@@ -2018,6 +2019,78 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		_, err := inter.Invoke("test")
 		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
 		require.ErrorAs(t, err, &attachmentError)
+	})
+
+	t.Run("remove from a constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
+            struct S {}
+
+            attachment A for S {}
+
+            fun test() {
+                remove A from S
+            }`,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(_ error) {},
+			},
+		)
+
+		_, err := inter.Invoke("test")
+		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
+		require.ErrorAs(t, err, &attachmentError)
+	})
+}
+
+func TestInterpretAttachmentConstructorGuard(t *testing.T) {
+	t.Parallel()
+
+	t.Run("direct call panics", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
+            struct S {}
+            attachment A for S {}
+            fun test() {
+                let f = A
+                let a <- f()
+                destroy a
+            }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(_ error) {},
+		})
+
+		_, err := inter.Invoke("test")
+		var constructorError *interpreter.InvalidAttachmentConstructorError
+		require.ErrorAs(t, err, &constructorError)
+	})
+
+	t.Run("attach expression succeeds", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+            attachment A for S {
+                access(all) fun foo(): Int { return 42 }
+            }
+            fun test(): Int {
+                let s = attach A() to S()
+                return s[A]!.foo()
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 42),
+			result,
+		)
 	})
 }
 
@@ -2653,5 +2726,121 @@ func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
 
 		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	})
+}
+
+func TestInterpretAttachmentToTypeConfusedValue(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+        struct X {}
+
+        struct Y {}
+
+        attachment A for X {
+            fun foo(): Int { return 3 }
+        }
+
+        fun test(x1: X) {
+            // Note: Casting is needed to ensure value's type to be treated as 'AnyStruct'
+            let x2 = (attach A() to x1) as AnyStruct
+        }
+    `)
+
+	yValue := interpreter.NewCompositeValue(
+		inter,
+		TestLocation,
+		"Y",
+		common.CompositeKindStructure,
+		nil,
+		common.ZeroAddress,
+	)
+
+	// Intentionally passing wrong type of value
+	_, err := inter.InvokeUncheckedForTestingOnly("test", yValue) //nolint:staticcheck
+	RequireError(t, err)
+
+	var invalidBaseTypeError *interpreter.InvalidBaseTypeError
+	require.ErrorAs(t, err, &invalidBaseTypeError)
+}
+
+func TestInterpretAttachmentBaseUnauthorizedInInit(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           resource R {
+              let x: Int
+
+              init(x: Int) {
+                  self.x = x
+              }
+           }
+
+           attachment A for R {
+              let x: Int
+
+              init() {
+                  self.x = base.x
+              }
+
+              fun getX(): Int {
+                  return self.x
+              }
+           }
+
+           fun test(): Int {
+               let r <- create R(x: 42)
+               let r2 <- attach A() to <-r
+               let i = r2[A]?.getX()!
+               destroy r2
+               return i
+           }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+			result,
+		)
+	})
+
+	t.Run("invalid downcast", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           entitlement E
+
+           resource R {
+              access(E) let x: Int
+
+              init(x: Int) {
+                  self.x = x
+              }
+           }
+
+           attachment A for R {
+              init() {
+				  base as! auth(E) &R
+              }
+           }
+
+           fun test() {
+               let r <- create R(x: 42)
+               let r2 <- attach A() to <-r
+               destroy r2
+           }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
 	})
 }

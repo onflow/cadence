@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 )
 
@@ -43,17 +44,19 @@ type function[E any] struct {
 }
 
 func newFunction[E any](
+	memoryGauge common.MemoryGauge,
 	enclosing *function[E],
 	name string,
 	qualifiedName string,
 	parameterCount uint16,
 	functionTypeIndex uint16,
 ) *function[E] {
+	common.UseMemory(memoryGauge, common.CompilerFunctionMemoryUsage)
 	return &function[E]{
 		enclosing:      enclosing,
 		name:           name,
 		qualifiedName:  qualifiedName,
-		locals:         activations.NewActivations[*local](nil),
+		locals:         activations.NewActivations[*local](memoryGauge),
 		parameterCount: parameterCount,
 		typeIndex:      functionTypeIndex,
 	}
@@ -68,7 +71,8 @@ func (f *function[E]) generateLocalIndex() uint16 {
 	return localIndex
 }
 
-func (f *function[E]) declareLocal(name string) *local {
+func (f *function[E]) declareLocal(memoryGauge common.MemoryGauge, name string) *local {
+	common.UseMemory(memoryGauge, common.CompilerLocalMemoryUsage)
 	local := &local{
 		index: f.generateLocalIndex(),
 	}

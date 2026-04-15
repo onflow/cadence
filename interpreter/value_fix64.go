@@ -307,6 +307,10 @@ func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue)
 		})
 	}
 
+	if o == 0 {
+		panic(&DivisionByZeroError{})
+	}
+
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
 
@@ -334,6 +338,10 @@ func (v Fix64Value) SaturatingDiv(context NumberValueArithmeticContext, other Nu
 			LeftType:     v.StaticType(context),
 			RightType:    other.StaticType(context),
 		})
+	}
+
+	if o == 0 {
+		panic(&DivisionByZeroError{})
 	}
 
 	a := new(big.Int).SetInt64(int64(v))
@@ -448,7 +456,7 @@ func (v Fix64Value) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeFix64 (1 byte)
 // - int64 value encoded in big-endian (8 bytes)
-func (v Fix64Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Fix64Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeFix64)
 	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
 	return scratch[:9]
@@ -514,8 +522,14 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value) Fix64Value {
 	}
 }
 
-func (v Fix64Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Fix64Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Fix64Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -549,7 +563,7 @@ func (Fix64Value) IsStorable() bool {
 	return true
 }
 
-func (v Fix64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Fix64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -572,6 +586,7 @@ func (v Fix64Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -601,6 +616,15 @@ func (v Fix64Value) IntegerPart() NumberValue {
 
 func (Fix64Value) Scale() int {
 	return sema.Fix64Scale
+}
+
+func (Fix64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Fix64Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 func fix128BigIntToFix64(

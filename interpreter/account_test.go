@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"fmt"
 	"testing"
 
@@ -60,6 +61,7 @@ func testAccount(
 ) (
 	Invokable,
 	func() map[storageKey]interpreter.Value,
+	interpreter.Storage,
 ) {
 	return testAccountWithErrorHandler(
 		t,
@@ -69,29 +71,6 @@ func testAccount(
 		code,
 		checkerConfig,
 		nil,
-	)
-}
-
-func testAccountWithCompilerEnabled(
-	t *testing.T,
-	address interpreter.AddressValue,
-	auth bool,
-	handler stdlib.AccountHandler,
-	code string,
-	checkerConfig sema.Config,
-) (
-	Invokable,
-	func() map[storageKey]interpreter.Value,
-) {
-	return testAccountWithErrorHandlerWithCompiler(
-		t,
-		address,
-		auth,
-		handler,
-		code,
-		checkerConfig,
-		nil,
-		true,
 	)
 }
 
@@ -413,66 +392,72 @@ func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
 	return false
 }
 
-type NoOpReferenceCreationContext struct{}
+type NoOpReferenceCreationContext struct {
+	interpreter.NoOpStringContext
+}
 
 var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
 
-func (n NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
+func (NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
-func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
-	// NO-OP
-	return nil
-}
-
-func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
-	// NO-OP
-}
-
-func (n NoOpReferenceCreationContext) MeterMemory(_ common.MemoryUsage) error {
+func (NoOpReferenceCreationContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) MeterComputation(_ common.ComputationUsage) error {
+func (NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
+	// NO-OP
+}
+
+func (NoOpReferenceCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) ReadStored(_ common.Address, _ common.StorageDomain, _ interpreter.StorageMapKey) interpreter.Value {
+func (NoOpReferenceCreationContext) MeterComputation(_ common.ComputationUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementType(_ interpreter.TypeID) (*sema.EntitlementType, error) {
+func (NoOpReferenceCreationContext) ReadStored(_ common.Address, _ common.StorageDomain, _ interpreter.StorageMapKey) interpreter.Value {
+	// NO-OP
+	return nil
+}
+
+func (NoOpReferenceCreationContext) GetEntitlementType(_ interpreter.TypeID) (*sema.EntitlementType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementMapType(_ interpreter.TypeID) (*sema.EntitlementMapType, error) {
+func (NoOpReferenceCreationContext) GetEntitlementMapType(_ interpreter.TypeID) (*sema.EntitlementMapType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetInterfaceType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.InterfaceType, error) {
+func (NoOpReferenceCreationContext) GetInterfaceType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.InterfaceType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetCompositeType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.CompositeType, error) {
+func (NoOpReferenceCreationContext) GetCompositeType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.CompositeType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(_ common.Location) bool {
+func (NoOpReferenceCreationContext) IsTypeInfoRecovered(_ common.Location) bool {
 	// NO-OP
 	return false
 }
 
-func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(_ interpreter.StaticType) sema.Type {
+func (NoOpReferenceCreationContext) SemaTypeFromStaticType(_ interpreter.StaticType) sema.Type {
 	// NO-OP
 	return nil
+}
+
+func (NoOpReferenceCreationContext) SemaAccessFromStaticAuthorization(interpreter.Authorization) (sema.Access, error) {
+	panic(errors.NewUnreachableError())
 }
 
 type NoOpFunctionCreationContext struct {
@@ -482,28 +467,28 @@ type NoOpFunctionCreationContext struct {
 
 var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
 
-func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
+func (NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) ReferencedResourceKindedValues(
+func (NoOpFunctionCreationContext) ReferencedResourceKindedValues(
 	_ atree.ValueID,
 ) map[*interpreter.EphemeralReferenceValue]struct{} {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(
+func (NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(
 	_ interpreter.Value,
 ) {
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
+func (NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) MeterMemory(_ common.MemoryUsage) error {
+func (NoOpFunctionCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
@@ -516,30 +501,11 @@ func testAccountWithErrorHandler(
 	code string,
 	checkerConfig sema.Config,
 	checkerErrorHandler func(error),
-) (Invokable, func() map[storageKey]interpreter.Value) {
-	return testAccountWithErrorHandlerWithCompiler(
-		t,
-		address,
-		auth,
-		handler,
-		code,
-		checkerConfig,
-		checkerErrorHandler,
-		false,
-	)
-}
-
-func testAccountWithErrorHandlerWithCompiler(
-	t *testing.T,
-	address interpreter.AddressValue,
-	auth bool,
-	handler stdlib.AccountHandler,
-	code string,
-	checkerConfig sema.Config,
-	checkerErrorHandler func(error),
-	compilerEnabled bool,
-) (Invokable, func() map[storageKey]interpreter.Value) {
-
+) (
+	Invokable,
+	func() map[storageKey]interpreter.Value,
+	interpreter.Storage,
+) {
 	account := stdlib.NewAccountValue(nil, handler, address)
 
 	// `authAccount`
@@ -602,14 +568,21 @@ func testAccountWithErrorHandlerWithCompiler(
 	var invokable Invokable
 	var storage interpreter.Storage
 
-	if compilerEnabled && *compile {
+	if *compile {
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.AtreeStorageValidationEnabled = true
+		vmConfig.AtreeValueValidationEnabled = true
+
 		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
-			variable := &interpreter.SimpleVariable{}
-			variable.InitializeWithValue(accountValueDeclaration.Value)
-			activation.Set(accountValueDeclaration.Name, variable)
+			accountVariable := &interpreter.SimpleVariable{}
+			accountVariable.InitializeWithValue(accountValueDeclaration.Value)
+			activation.Set(accountValueDeclaration.Name, accountVariable)
+
+			authAccountVariable := &interpreter.SimpleVariable{}
+			authAccountVariable.InitializeWithValue(authAccountValueDeclaration.Value)
+			activation.Set(authAccountValueDeclaration.Name, authAccountVariable)
 
 			return activation
 		}
@@ -629,6 +602,7 @@ func testAccountWithErrorHandlerWithCompiler(
 			code,
 			compilerUtils.CompilerAndVMOptions{
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					CheckerErrorHandler:  checkerErrorHandler,
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
 						BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
@@ -676,6 +650,8 @@ func testAccountWithErrorHandlerWithCompiler(
 					CheckerConfig: &checkerConfig,
 				},
 				InterpreterConfig: &interpreter.Config{
+					AtreeStorageValidationEnabled: true,
+					AtreeValueValidationEnabled:   true,
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -697,9 +673,9 @@ func testAccountWithErrorHandlerWithCompiler(
 		accountValues := make(map[storageKey]interpreter.Value)
 
 		for storageMapKey, accountStorage := range storage.(interpreter.InMemoryStorage).DomainStorageMaps {
-			iterator := accountStorage.Iterator(invokable)
+			iterator := accountStorage.Iterator()
 			for {
-				key, value := iterator.Next()
+				key, value := iterator.Next(invokable)
 				if key == nil {
 					break
 				}
@@ -714,7 +690,7 @@ func testAccountWithErrorHandlerWithCompiler(
 
 		return accountValues
 	}
-	return invokable, getAccountValues
+	return invokable, getAccountValues, storage
 }
 
 func TestInterpretAccountStorageSave(t *testing.T) {
@@ -727,7 +703,7 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               resource R {}
 
               fun test() {
@@ -768,7 +744,7 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               struct S {}
 
               fun test() {
@@ -815,7 +791,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountStorables := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               struct S {}
 
               resource R {}
@@ -840,14 +816,14 @@ func TestInterpretAccountStorageType(t *testing.T) {
 
 		value, err := inter.Invoke("typeAt")
 		require.NoError(t, err)
-		require.Len(t, getAccountStorables(), 0)
+		require.Len(t, getAccountValues(), 0)
 		require.Equal(t, interpreter.Nil, value)
 
 		// save R
 
 		_, err = inter.Invoke("saveR")
 		require.NoError(t, err)
-		require.Len(t, getAccountStorables(), 1)
+		require.Len(t, getAccountValues(), 1)
 
 		// type is now type of R
 
@@ -866,7 +842,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
 
 		_, err = inter.Invoke("saveS")
 		require.NoError(t, err)
-		require.Len(t, getAccountStorables(), 1)
+		require.Len(t, getAccountValues(), 1)
 
 		// type is now type of S
 
@@ -883,6 +859,49 @@ func TestInterpretAccountStorageType(t *testing.T) {
 	})
 }
 
+func getNonStackSlabs(t *testing.T, storage interpreter.Storage) []struct {
+	atree.SlabID
+	atree.Slab
+} {
+	iter, err := storage.SlabIterator()
+	require.NoError(t, err)
+
+	var slabs []struct {
+		atree.SlabID
+		atree.Slab
+	}
+
+	for {
+		slabID, slab := iter()
+		if slabID == atree.SlabIDUndefined {
+			break
+		}
+
+		if slabID.Address() == atree.AddressUndefined {
+			continue
+		}
+
+		slabs = append(
+			slabs,
+			struct {
+				atree.SlabID
+				atree.Slab
+			}{
+				SlabID: slabID,
+				Slab:   slab,
+			},
+		)
+	}
+
+	return slabs
+}
+
+func newSlabIndex(i uint64) atree.SlabIndex {
+	var index atree.SlabIndex
+	binary.BigEndian.PutUint64(index[:], i)
+	return index
+}
+
 func TestInterpretAccountStorageLoad(t *testing.T) {
 
 	t.Parallel()
@@ -893,7 +912,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues, storage := testAccount(t, address, true, nil, `
               resource R {}
 
               resource R2 {}
@@ -914,12 +933,30 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		t.Run("save R and load R ", func(t *testing.T) {
 
+			require.Equal(t, 0, storage.Count())
+
 			// save
 
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
 			require.Len(t, getAccountValues(), 1)
+
+			require.Equal(t, 2, storage.Count())
+
+			nonStackSlabs := getNonStackSlabs(t, storage)
+			require.Len(t, nonStackSlabs, 1)
+
+			assert.Equal(t,
+				atree.NewSlabID(
+					atree.Address(address),
+					newSlabIndex(2),
+				),
+				nonStackSlabs[0].SlabID,
+			)
+			require.IsType(t, &atree.MapDataSlab{}, nonStackSlabs[0].Slab)
+			mapDataSlab := nonStackSlabs[0].Slab.(*atree.MapDataSlab)
+			assert.Equal(t, uint32(1), mapDataSlab.Count())
 
 			// first load
 
@@ -934,6 +971,20 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 			// NOTE: check loaded value was removed from storage
 			require.Len(t, getAccountValues(), 0)
+
+			nonStackSlabs = getNonStackSlabs(t, storage)
+			require.Len(t, nonStackSlabs, 1)
+
+			assert.Equal(t,
+				atree.NewSlabID(
+					atree.Address(address),
+					newSlabIndex(2),
+				),
+				nonStackSlabs[0].SlabID,
+			)
+			require.IsType(t, &atree.MapDataSlab{}, nonStackSlabs[0].Slab)
+			mapDataSlab = nonStackSlabs[0].Slab.(*atree.MapDataSlab)
+			assert.Equal(t, uint32(0), mapDataSlab.Count())
 
 			// second load
 
@@ -957,11 +1008,11 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadR2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, getAccountValues(), 1)
+			// Check loaded value was removed from storage
+			require.Len(t, getAccountValues(), 0)
 		})
 	})
 
@@ -971,7 +1022,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               struct S {}
 
               struct S2 {}
@@ -1011,7 +1062,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 			// NOTE: check loaded value was removed from storage
-			require.Len(t, getAccountValues(), 0)
+			require.Empty(t, getAccountValues())
 
 			// second load
 
@@ -1035,11 +1086,11 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadS2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, getAccountValues(), 1)
+			// Check loaded value was removed from storage
+			require.Empty(t, getAccountValues())
 		})
 	})
 }
@@ -1073,7 +1124,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, code, sema.Config{})
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -1108,7 +1159,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, code, sema.Config{})
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -1122,8 +1173,8 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 		_, err = inter.Invoke("copyS2")
 		RequireError(t, err)
 
-		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+		var typeMismatchError *interpreter.StoredValueTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
 
 		// NOTE: check loaded value was *not* removed from storage
 		require.Len(t, getAccountValues(), 1)
@@ -1140,7 +1191,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               resource R {
                   let foo: Int
 
@@ -1283,8 +1334,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowR2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1317,7 +1368,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccountWithCompilerEnabled(t, address, true, nil, `
+		inter, getAccountValues, _ := testAccount(t, address, true, nil, `
               struct S {
                   let foo: Int
 
@@ -1371,11 +1422,12 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
                  return ref.foo
               }
 
-              fun invalidBorrowS(): &S2? {
+              fun invalidBorrowS(): Int {
                   let s = S()
                   account.storage.save(s, to: /storage/another_s)
-                  let borrowedS = account.storage.borrow<&AnyStruct>(from: /storage/another_s)
-                  return borrowedS as! &S2?
+                  let borrowedAny = account.storage.borrow<&AnyStruct>(from: /storage/another_s)
+                  let borrowedS = borrowedAny as! &S2?
+                  return borrowedS!.foo
               }
             `, sema.Config{})
 
@@ -1463,8 +1515,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowS2")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var typeMismatchError *interpreter.StoredValueTypeMismatchError
+			require.ErrorAs(t, err, &typeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1483,8 +1535,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("invalidBorrowS")
 			RequireError(t, err)
 
-			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
-			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+			var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 	})
 }
@@ -1526,7 +1578,7 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
                     `,
 					fieldName,
 				)
-				inter, _ := testAccountWithCompilerEnabled(
+				inter, _, _ := testAccount(
 					t,
 					address,
 					auth,
@@ -1589,7 +1641,7 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 
 				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
-				inter, _ := testAccountWithCompilerEnabled(t, address, auth, handler, code, sema.Config{})
+				inter, _, _ := testAccount(t, address, auth, handler, code, sema.Config{})
 
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
@@ -1611,7 +1663,7 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccount(t, address, true, nil, `
+	inter, _, _ := testAccount(t, address, true, nil, `
           fun getLoadType(): Type {
               return account.storage.load.getType()
           }
@@ -1630,7 +1682,7 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 	require.IsType(t, interpreter.TypeValue{}, loadType)
 	assert.Equal(t,
 		interpreter.FunctionStaticType{
-			Type: sema.Account_StorageTypeLoadFunctionType,
+			FunctionType: sema.Account_StorageTypeLoadFunctionType,
 		},
 		loadType.(interpreter.TypeValue).Type,
 	)
@@ -1640,7 +1692,7 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 	require.IsType(t, interpreter.TypeValue{}, copyType)
 	assert.Equal(t,
 		interpreter.FunctionStaticType{
-			Type: sema.Account_StorageTypeCopyFunctionType,
+			FunctionType: sema.Account_StorageTypeCopyFunctionType,
 		},
 		copyType.(interpreter.TypeValue).Type,
 	)

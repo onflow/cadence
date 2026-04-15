@@ -176,7 +176,7 @@ func (*StorageCapabilityControllerValue) IsStorable() bool {
 func (v *StorageCapabilityControllerValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
-	maxInlineSize uint64,
+	maxInlineSize uint32,
 ) (
 	atree.Storable,
 	error,
@@ -203,6 +203,8 @@ func (v *StorageCapabilityControllerValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
+	// For example, if this function doesn't use shallow copy the other should do the same.
 	return v
 }
 
@@ -233,7 +235,7 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string) (result Value) {
+func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -248,24 +250,32 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	// NOTE: check if controller is already deleted
 	v.CheckDeleted()
 
-	switch name {
-	case sema.StorageCapabilityControllerTypeTagFieldName:
-		return v.GetTag(context)
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		func() Value {
+			switch name {
+			case sema.StorageCapabilityControllerTypeTagFieldName:
+				return v.GetTag(context)
 
-	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
-		return v.CapabilityID
+			case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
+				return v.CapabilityID
 
-	case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
-		return NewTypeValue(context, v.BorrowType)
+			case sema.StorageCapabilityControllerTypeBorrowTypeFieldName:
+				return NewTypeValue(context, v.BorrowType)
 
-	case sema.StorageCapabilityControllerTypeCapabilityFieldName:
-		return v.GetCapability(context)
+			case sema.StorageCapabilityControllerTypeCapabilityFieldName:
+				return v.GetCapability(context)
 
-		// NOTE: when adding new functions, ensure CheckDeleted is called,
-		// by e.g. using StorageCapabilityControllerValue.newHostFunction
-	}
+				// NOTE: when adding new functions, ensure CheckDeleted is called,
+				// by e.g. using StorageCapabilityControllerValue.newHostFunction
+			}
 
-	return context.GetMethod(v, name)
+			return nil
+		},
+	)
 }
 
 func (v *StorageCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -359,6 +369,7 @@ func NewNativeDeletionCheckedStorageCapabilityControllerFunction(
 	return func(
 		context NativeFunctionContext,
 		typeArguments TypeArgumentsIterator,
+		argumentTypes ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -368,6 +379,7 @@ func NewNativeDeletionCheckedStorageCapabilityControllerFunction(
 		return f(
 			context,
 			typeArguments,
+			argumentTypes,
 			receiver,
 			args,
 		)
@@ -393,6 +405,7 @@ var NativeStorageCapabilityControllerDeleteFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -418,6 +431,7 @@ var NativeStorageCapabilityControllerTargetFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -440,6 +454,7 @@ var NativeStorageCapabilityControllerRetargetFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -471,6 +486,7 @@ var NativeStorageCapabilityControllerSetTagFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -492,4 +508,13 @@ func (v *StorageCapabilityControllerValue) newSetTagFunction(
 		sema.StorageCapabilityControllerTypeSetTagFunctionType,
 		NativeStorageCapabilityControllerSetTagFunction,
 	)
+}
+
+func (*StorageCapabilityControllerValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v *StorageCapabilityControllerValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

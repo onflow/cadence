@@ -1,0 +1,7 @@
+rules:
+  - super: OptionalType
+    predicate:
+      mustType:
+        source: sub
+        type: OptionalType
+

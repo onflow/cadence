@@ -22,6 +22,7 @@ import (
 	goErrors "errors"
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/rivo/uniseg"
 
@@ -124,6 +125,7 @@ type Checker struct {
 	inCreate                           bool
 	isChecked                          bool
 	inAssignment                       bool
+	importedProgramHadErrors           bool
 	parent                             ast.Element
 }
 
@@ -310,6 +312,7 @@ func (checker *Checker) Check() error {
 		}
 
 		checker.Elaboration.setIsChecking(false)
+		checker.Elaboration.HasErrors = len(checker.errors) > 0 || checker.importedProgramHadErrors
 		checker.isChecked = true
 
 		checker.resources.Reclaim()
@@ -1774,7 +1777,7 @@ func (checker *Checker) checkResourceFieldNesting(
 // under the assumption that the checked expression might not be evaluated.
 // That means that resource invalidation and returns are not definite,
 // but only potential
-func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
+func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) (Type, *ReturnInfo) {
 	functionActivation := checker.functionActivations.Current()
 
 	initialReturnInfo := functionActivation.ReturnInfo
@@ -1806,7 +1809,7 @@ func (checker *Checker) checkPotentiallyUnevaluated(check TypeCheckFunc) Type {
 		nil,
 	)
 
-	return result
+	return result, temporaryReturnInfo
 }
 
 func (checker *Checker) ResetErrors() {
@@ -2285,14 +2288,37 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	}
 
 	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
-	typeAnnotation.Type.CheckInstantiated(pos, checker.memoryGauge, checker.report)
+	checker.checkInvalidReferenceToOptionalType(typeAnnotation.Type, pos)
+	typeAnnotation.Type.CheckInstantiated(
+		pos,
+		checker.memoryGauge,
+		checker.report,
+		SeenTypes{},
+	)
 }
 
 func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
-	rewrittenType, rewritten := ty.RewriteWithIntersectionTypes()
+	rewrittenType, rewritten := RewriteWithIntersectionTypes(ty)
 	if rewritten {
 		checker.report(
 			&InvalidInterfaceTypeError{
+				ActualType:   ty,
+				ExpectedType: rewrittenType,
+				Range: ast.NewRange(
+					checker.memoryGauge,
+					pos.StartPosition(),
+					pos.EndPosition(checker.memoryGauge),
+				),
+			},
+		)
+	}
+}
+
+func (checker *Checker) checkInvalidReferenceToOptionalType(ty Type, pos ast.HasPosition) {
+	rewrittenType, rewritten := RewriteWithOptionalReferenceTypes(ty)
+	if rewritten {
+		checker.report(
+			&InvalidReferenceToOptionalTypeError{
 				ActualType:   ty,
 				ExpectedType: rewrittenType,
 				Range: ast.NewRange(
@@ -2606,6 +2632,7 @@ func (checker *Checker) checkErrorsForInvalidExpressionTypes(actualType Type, ex
 	// before checking for an invalid type, which is more expensive.
 
 	if len(checker.errors) == 0 &&
+		!checker.importedProgramHadErrors &&
 		(actualType.IsInvalidType() || (expectedType != nil && expectedType.IsInvalidType())) {
 
 		panic(errors.NewUnexpectedError("invalid type produced without error"))
@@ -2695,7 +2722,12 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 
 func (checker *Checker) beforeExtractor() *BeforeExtractor {
 	if checker._beforeExtractor == nil {
-		checker._beforeExtractor = NewBeforeExtractor(checker.memoryGauge, checker.report)
+		checker._beforeExtractor = NewBeforeExtractor(
+			checker.memoryGauge,
+			// TODO: improve
+			strings.ReplaceAll(checker.Location.ID(), ".", "\x00"),
+			checker.report,
+		)
 	}
 	return checker._beforeExtractor
 }

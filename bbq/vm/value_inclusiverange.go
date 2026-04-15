@@ -38,7 +38,7 @@ func init() {
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				elementType := interpreter.MustConvertStaticToSemaType(rangeType.ElementType, context)
+				elementType := context.SemaTypeFromStaticType(rangeType.ElementType)
 				return sema.InclusiveRangeContainsFunctionType(elementType)
 			},
 			interpreter.NativeInclusiveRangeContainsFunction,

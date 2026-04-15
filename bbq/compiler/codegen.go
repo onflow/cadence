@@ -20,7 +20,6 @@ package compiler
 
 import (
 	"github.com/onflow/cadence/bbq/opcode"
-	"github.com/onflow/cadence/errors"
 )
 
 type CodeGen[E any] interface {
@@ -53,7 +52,7 @@ func (g *ByteCodeGen) Emit(instruction opcode.Instruction) {
 }
 
 func (g *ByteCodeGen) PatchJump(offset int, newTarget uint16) {
-	opcode.PatchJump(g.target, offset, newTarget)
+	opcode.PatchJumpBytecode(g.target, offset, newTarget)
 }
 
 func (g *ByteCodeGen) LastInstruction() opcode.Instruction {
@@ -84,26 +83,7 @@ func (g *InstructionCodeGen) Emit(instruction opcode.Instruction) {
 }
 
 func (g *InstructionCodeGen) PatchJump(offset int, newTarget uint16) {
-	switch ins := (*g.target)[offset].(type) {
-	case opcode.InstructionJump:
-		ins.Target = newTarget
-		(*g.target)[offset] = ins
-
-	case opcode.InstructionJumpIfFalse:
-		ins.Target = newTarget
-		(*g.target)[offset] = ins
-
-	case opcode.InstructionJumpIfTrue:
-		ins.Target = newTarget
-		(*g.target)[offset] = ins
-
-	case opcode.InstructionJumpIfNil:
-		ins.Target = newTarget
-		(*g.target)[offset] = ins
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
+	opcode.PatchJumpInstruction(*g.target, offset, newTarget)
 }
 
 func (g *InstructionCodeGen) LastInstruction() opcode.Instruction {

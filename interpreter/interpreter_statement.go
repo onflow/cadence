@@ -146,9 +146,9 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 	value := interpreter.visitVariableDeclaration(declaration, true)
 
-	if someValue, ok := value.(*SomeValue); ok {
-
-		innerValue := someValue.InnerValue()
+	switch value := value.(type) {
+	case *SomeValue:
+		innerValue := value.InnerValue()
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
@@ -159,11 +159,71 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		)
 
 		return interpreter.visitBlock(thenBlock)
-	} else if elseBlock != nil {
+
+	case NilValue:
+		if elseBlock != nil {
+			return interpreter.visitBlock(elseBlock)
+		}
+		return nil
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (interpreter *Interpreter) VisitGuardStatement(statement *ast.GuardStatement) StatementResult {
+	switch test := statement.Test.(type) {
+	case ast.Expression:
+		return interpreter.visitGuardStatementWithTestExpression(test, statement.Else)
+	case *ast.VariableDeclaration:
+		return interpreter.visitGuardStatementWithVariableDeclaration(test, statement.Else)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (interpreter *Interpreter) visitGuardStatementWithTestExpression(
+	test ast.Expression,
+	elseBlock *ast.Block,
+) StatementResult {
+
+	value, ok := interpreter.evalExpression(test).(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if !value {
 		return interpreter.visitBlock(elseBlock)
 	}
 
 	return nil
+}
+
+func (interpreter *Interpreter) visitGuardStatementWithVariableDeclaration(
+	declaration *ast.VariableDeclaration,
+	elseBlock *ast.Block,
+) StatementResult {
+
+	value := interpreter.visitVariableDeclaration(declaration, true)
+
+	switch value := value.(type) {
+	case *SomeValue:
+		innerValue := value.InnerValue()
+
+		// Guard declares variable in current scope (no activation push/pop)
+		interpreter.declareVariable(
+			declaration.Identifier.Identifier,
+			innerValue,
+		)
+
+		return nil
+
+	case NilValue:
+		return interpreter.visitBlock(elseBlock)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) StatementResult {
@@ -228,6 +288,8 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) StatementResult {
 
 	for {
+		// The first test expression has already been metered,
+		// because the while statement itself was metered
 
 		value, ok := interpreter.evalExpression(statement.Test).(BoolValue)
 		if !ok || !bool(value) {
@@ -248,6 +310,9 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 		case ReturnResult:
 			return result
 		}
+
+		// Meter next test expression
+		common.UseComputation(interpreter, common.StatementComputationUsage)
 	}
 }
 
@@ -398,7 +463,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 			argumentType := argumentTypes[i]
 			parameterType := parameterTypes[i]
 
-			eventFields[i] = TransferAndConvert(
+			eventFields[i] = ConvertAndBoxWithValidation(
 				interpreter,
 				value,
 				argumentType,
@@ -415,7 +480,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 }
 
 func extractEventFields(
-	gauge common.MemoryGauge,
+	gauge common.Gauge,
 	event *CompositeValue, eventType *sema.CompositeType) []Value {
 
 	count := len(eventType.ConstructorParameters)
@@ -438,6 +503,9 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 	removeTarget := interpreter.evalExpression(removeStatement.Value)
 	base, ok := removeTarget.(*CompositeValue)
 
+	attachmentRemoveTypes := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
+	interpreter.checkIndexedValue(attachmentRemoveTypes.BaseType, removeTarget)
+
 	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
 		panic(&InvalidAttachmentOperationTargetError{
@@ -451,9 +519,7 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 		})
 	}
 
-	nominalType := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
-
-	removed := base.RemoveTypeKey(interpreter, nominalType)
+	removed := base.RemoveTypeKey(interpreter, attachmentRemoveTypes.AttachmentType)
 
 	// attachment not present on this base
 	if removed == nil {
@@ -468,7 +534,7 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 
 	if attachment.IsResourceKinded(interpreter) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
-		attachment.SetBaseValue(base)
+		attachment.SetBaseValue(interpreter, base)
 		attachment.Destroy(interpreter)
 	}
 
@@ -521,7 +587,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
 
 	const allowMissing = false
-	result := getterSetter.get(allowMissing)
+	result, _ := getterSetter.get(allowMissing)
 	if result == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -596,23 +662,34 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 
 	const allowMissing = false
 
-	leftValue := leftGetterSetter.get(allowMissing)
+	leftValue, leftInsertedPlaceholder := leftGetterSetter.get(allowMissing)
 	interpreter.checkSwapValue(leftValue, swap.Left)
 
-	rightValue := rightGetterSetter.get(allowMissing)
+	rightValue, _ := rightGetterSetter.get(allowMissing)
 	interpreter.checkSwapValue(rightValue, swap.Right)
 
-	// Set right value to left target,
-	// and left value to right target
+	// Handle swapping a value with itself, e.g. `a[i] <-> a[i]`:
+	//
+	// If getting the right value results in the placeholder we just set in the left,
+	// then set the left value back to the left target.
 
-	CheckInvalidatedResourceOrResourceReference(rightValue, interpreter)
-	transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType)
+	if rightValue == leftInsertedPlaceholder {
+		leftGetterSetter.set(leftValue)
+	} else {
+		// Not swapping a value with itself.
+		//
+		// Set right value to left target,
+		// and left value to right target
 
-	CheckInvalidatedResourceOrResourceReference(leftValue, interpreter)
-	transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType)
+		CheckInvalidatedResourceOrResourceReference(rightValue, interpreter)
+		transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType)
 
-	leftGetterSetter.set(transferredRightValue)
-	rightGetterSetter.set(transferredLeftValue)
+		CheckInvalidatedResourceOrResourceReference(leftValue, interpreter)
+		transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType)
+
+		leftGetterSetter.set(transferredRightValue)
+		rightGetterSetter.set(transferredLeftValue)
+	}
 
 	return nil
 }

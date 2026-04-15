@@ -19,11 +19,16 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
 // TestInterpretIndexingExpressionTransfer tests if the indexing value
@@ -70,4 +75,315 @@ func TestInterpretIndexingExpressionTransfer(t *testing.T) {
 		interpreter.UInt8Value(2),
 		result,
 	)
+}
+
+func TestInterpretIndexingExpressionTransferReadStatement(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test() {
+              let counts: {E: String} = {}
+              counts[E.A]
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 5)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
+}
+
+func TestInterpretIndexingExpressionTransferReadExpression(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test() {
+              let counts: {E: String} = {}
+              let count = counts[E.A]
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 5)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
+}
+
+func TestInterpretIndexingExpressionTransferWrite(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t,
+		`
+          enum E: UInt8 {
+              case A
+          }
+
+          fun test() {
+              let counts: {E: String} = {}
+              counts[E.A] = "A"
+          }
+        `,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 6)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
+}
+
+func TestInterpretIndexingExpressionTransferSwapStatement(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+      enum E: UInt8 {
+          case A
+          case B
+      }
+
+      fun test(): String {
+          let strings: {E: String} = {E.A: "A", E.B: "B"}
+          strings[E.A] <-> strings[E.B]
+          return "\(strings[E.A] ?? "")-\(strings[E.B] ?? "")"
+      }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	storage := inter.Storage().(interpreter.InMemoryStorage)
+
+	require.Equal(
+		t,
+		interpreter.NewUnmeteredStringValue("B-A"),
+		result,
+	)
+
+	slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+
+	var expectedSlabIndex atree.SlabIndex
+	binary.BigEndian.PutUint64(expectedSlabIndex[:], 17)
+
+	require.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			expectedSlabIndex,
+		),
+		slabID,
+	)
+}
+
+func TestInterpretIndexingTypeConfusedValue(t *testing.T) {
+	t.Parallel()
+
+	t.Run("get", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(indexable: [String?]): String? {
+              return indexable[0]
+          }
+        `)
+
+		value := interpreter.NewDictionaryValue(
+			inter,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeInt,
+				interpreter.PrimitiveStaticTypeString,
+			),
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			interpreter.NewUnmeteredStringValue("foo"),
+		)
+
+		// Intentionally passing wrong type of value
+		_, err := inter.InvokeUncheckedForTestingOnly("test", value) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("set", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(indexable: [String?]) {
+              indexable[0] = "foo"
+          }
+        `)
+
+		value := interpreter.NewDictionaryValue(
+			inter,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeInt,
+				interpreter.PrimitiveStaticTypeString,
+			),
+		)
+
+		// Intentionally passing wrong type of value
+		_, err := inter.InvokeUncheckedForTestingOnly("test", value) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+}
+
+func TestInterpretTypeIndexingTypeConfusedValue(t *testing.T) {
+	t.Parallel()
+
+	t.Run("get", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+          struct T {}
+
+          attachment A for S {}
+
+          fun test(indexable: S): AnyStruct {
+              return indexable[A]
+          }
+        `)
+
+		value := interpreter.NewCompositeValue(
+			inter,
+			TestLocation,
+			"T",
+			common.CompositeKindStructure,
+			nil,
+			common.ZeroAddress,
+		)
+
+		// Intentionally passing wrong type of value
+		_, err := inter.InvokeUncheckedForTestingOnly("test", value) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("attach", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+          struct T {}
+
+          attachment A for S {}
+
+          fun test(indexable: S) {
+              attach A() to indexable
+          }
+        `)
+
+		value := interpreter.NewCompositeValue(
+			inter,
+			TestLocation,
+			"T",
+			common.CompositeKindStructure,
+			nil,
+			common.ZeroAddress,
+		)
+
+		// Intentionally passing wrong type of value
+		_, err := inter.InvokeUncheckedForTestingOnly("test", value) //nolint:staticcheck
+		RequireError(t, err)
+
+		// The base is set in the attachment first (before the attachment is set to the base).
+		// So the invalid base type error occurs first.
+		var invalidBaseTypeError *interpreter.InvalidBaseTypeError
+		require.ErrorAs(t, err, &invalidBaseTypeError)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+          struct T {}
+
+          attachment A for S {}
+
+          fun test(indexable: S) {
+              remove A from indexable
+          }
+        `)
+
+		value := interpreter.NewCompositeValue(
+			inter,
+			TestLocation,
+			"T",
+			common.CompositeKindStructure,
+			nil,
+			common.ZeroAddress,
+		)
+
+		// Intentionally passing wrong type of value
+		_, err := inter.InvokeUncheckedForTestingOnly("test", value) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
 }

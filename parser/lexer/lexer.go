@@ -441,6 +441,12 @@ func (l *lexer) scanString(quote rune) {
 				// NOTE: invalid end of string handled by parser
 				l.backupOne()
 				return
+			default:
+				// Regular escape sequence (e.g., \", \n, \t, \\, etc.)
+				// Continue to next iteration without reading another character,
+				// as we've already consumed both the backslash and the escaped character
+				r = l.next()
+				continue
 			}
 		}
 		r = l.next()

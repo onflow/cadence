@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -3937,8 +3938,11 @@ func TestCheckOptionalReference(t *testing.T) {
             struct Foo {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[1])
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[2])
 	})
 
 	t.Run("reference to nested optional", func(t *testing.T) {
@@ -3953,7 +3957,185 @@ func TestCheckOptionalReference(t *testing.T) {
             struct Foo {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidReferenceToOptionalTypeError{}, errs[1])
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[2])
+	})
+}
+
+func TestInterpretInterfaceReferenceToSelfVariable(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource interface", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface RI {
+                fun foo(): &{RI} {
+                    return &self as &{RI}
+                }
+
+                fun bar() {
+                    self.foo()
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct interface", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface SI {
+                fun foo(): &{SI} {
+                    return &self as &{SI}
+                }
+
+                fun bar() {
+                    self.foo()
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
+// TestCheckInvalidReferenceOfOptionalTypeSuggestion tests that
+// a reference to an optional type cannot be used
+func TestCheckInvalidReferenceOfOptionalTypeS(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+      let f: fun(auth(Mutate) &(Int?)): {String: auth(Mutate) &(Int?)} = panic("")
+    `
+	_, err := ParseAndCheckWithPanic(t, code)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	var invalidReferenceToOptionalTypeErr *sema.InvalidReferenceToOptionalTypeError
+	require.ErrorAs(t, errs[0], &invalidReferenceToOptionalTypeErr)
+
+	assert.Equal(t,
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.OptionalType{
+							Type: &sema.ReferenceType{
+								Type: sema.IntType,
+								Authorization: sema.NewEntitlementSetAccess(
+									[]*sema.EntitlementType{
+										sema.MutateType,
+									},
+									sema.Conjunction,
+								),
+							},
+						},
+					),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				&sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.OptionalType{
+						Type: &sema.ReferenceType{
+							Type: sema.IntType,
+							Authorization: sema.NewEntitlementSetAccess(
+								[]*sema.EntitlementType{
+									sema.MutateType,
+								},
+								sema.Conjunction,
+							),
+						},
+					},
+				},
+			),
+		},
+		invalidReferenceToOptionalTypeErr.ExpectedType,
+	)
+
+	assert.Contains(t,
+		invalidReferenceToOptionalTypeErr.SecondaryError(),
+		"got `fun(auth(Mutate) &(Int?)): {String: auth(Mutate) &(Int?)}`, "+
+			"consider using `fun((auth(Mutate) &Int)?): {String: (auth(Mutate) &Int)?}`",
+	)
+
+	fixes := invalidReferenceToOptionalTypeErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Replace with `fun((auth(Mutate) &Int)?): {String: (auth(Mutate) &Int)?}`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "fun((auth(Mutate) &Int)?): {String: (auth(Mutate) &Int)?}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
+							EndPos:   ast.Position{Offset: 70, Line: 2, Column: 69},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      let f: fun((auth(Mutate) &Int)?): {String: (auth(Mutate) &Int)?} = panic("")
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestCheckReferencesInFunctionTypes(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("assignment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun authRefReturningFunc(): auth(Mutate) &Int {
+                return &1
+            }
+
+            fun test() {
+                // Shouldn't require explicit type annotation
+                let anyStruct = authRefReturningFunc
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("as function argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun authRefReturningFunc(): auth(Mutate) &Int {
+                return &1
+            }
+
+            fun authRefAcceptingFunc(_ f: (fun(): auth(Mutate) &Int)) {}
+
+            fun test() {
+                // Shouldn't require explicit type annotation
+                authRefAcceptingFunc(authRefReturningFunc)
+            }
+        `)
+
+		require.NoError(t, err)
 	})
 }

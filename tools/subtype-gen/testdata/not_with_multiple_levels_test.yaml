@@ -1,0 +1,24 @@
+rules:
+  - super: AnyStructAttachmentType
+    predicate:
+      and:
+        - isAttachment: sub
+        - not:
+            isResource: sub
+
+  - super: ComplexType
+    predicate:
+      and:
+        - not:
+            equals:
+              source: sub
+              target: AnyType
+        - not:
+            or:
+              - equals:
+                  source: sub
+                  target: AnyStructType
+              - equals:
+                  source: sub
+                  target: AnyResourceType
+

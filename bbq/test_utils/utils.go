@@ -104,7 +104,7 @@ func ParseCheckAndCompileCodeWithOptions(
 	options ParseCheckAndCompileOptions,
 	programs CompiledPrograms,
 ) *bbq.InstructionProgram {
-	checker := parseAndCheckWithOptions(
+	checker := ParseAndCheckWithOptionsForCompiling(
 		t,
 		code,
 		location,
@@ -116,7 +116,7 @@ func ParseCheckAndCompileCodeWithOptions(
 		DesugaredElaboration: compiler.NewDesugaredElaboration(checker.Elaboration),
 	}
 
-	program, desugaredElaboration := compile(
+	program, desugaredElaboration := Compile(
 		t,
 		options.CompilerConfig,
 		checker,
@@ -143,7 +143,7 @@ func ParseCheckAndCompileCodeWithOptions(
 	return program
 }
 
-func parseAndCheckWithOptions(
+func ParseAndCheckWithOptionsForCompiling(
 	t testing.TB,
 	code string,
 	location common.Location,
@@ -199,7 +199,7 @@ func parseAndCheckWithOptions(
 	return checker
 }
 
-func compile(
+func Compile(
 	t testing.TB,
 	config *compiler.Config,
 	checker *sema.Checker,

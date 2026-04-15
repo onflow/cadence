@@ -1,0 +1,10 @@
+[project]
+name = "compat"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "click>=8.3.1",
+    "coloredlogs>=15.0.1",
+    "dacite>=1.9.2",
+    "pyyaml>=6.0.3",
+]

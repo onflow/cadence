@@ -16,41 +16,41 @@
  * limitations under the License.
  */
 
-package test
+package contracts
 
 import (
 	_ "embed"
 )
 
 //go:embed contracts/ViewResolver.cdc
-var realViewResolverContract string
+var RealViewResolverContract string
 
 //go:embed contracts/Burner.cdc
-var realBurnerContract string
+var RealBurnerContract string
 
 //go:embed contracts/FungibleToken.cdc
-var realFungibleTokenContract string
+var RealFungibleTokenContract string
 
 //go:embed contracts/MetadataViews.cdc
-var realMetadataViewsContract string
+var RealMetadataViewsContract string
 
 //go:embed contracts/FungibleTokenMetadataViews.cdc
-var realFungibleTokenMetadataViewsContract string
+var RealFungibleTokenMetadataViewsContract string
 
 //go:embed contracts/NonFungibleToken.cdc
-var realNonFungibleTokenContract string
+var RealNonFungibleTokenContract string
 
 //go:embed contracts/FlowToken.cdc
-var realFlowContract string
+var RealFlowContract string
 
 //go:embed transactions/flowToken/setup_account.cdc
-var realFlowTokenSetupAccountTransaction string
+var RealFlowTokenSetupAccountTransaction string
 
 //go:embed transactions/flowToken/transfer_tokens.cdc
-var realFlowTokenTransferTokensTransaction string
+var RealFlowTokenTransferTokensTransaction string
 
 //go:embed transactions/flowToken/mint_tokens.cdc
-var realFlowTokenMintTokensTransaction string
+var RealFlowTokenMintTokensTransaction string
 
 //go:embed scripts/flowToken/get_balance.cdc
-var realFlowTokenGetBalanceScript string
+var RealFlowTokenGetBalanceScript string

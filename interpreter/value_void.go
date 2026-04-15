@@ -83,7 +83,7 @@ func (v VoidValue) Equal(_ ValueComparisonContext, other Value) bool {
 	return ok
 }
 
-func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -106,6 +106,7 @@ func (v VoidValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -127,4 +128,13 @@ func (v VoidValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (VoidValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (VoidValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v VoidValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

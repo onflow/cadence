@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/pretty"
+	"github.com/onflow/cadence/test_utils/contracts"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -63,9 +64,13 @@ func parseCheckAndInterpretWithOptions(
 	err error,
 ) {
 
-	var memoryGauge common.MemoryGauge
+	var (
+		memoryGauge      common.MemoryGauge
+		computationGauge common.ComputationGauge
+	)
 	if options.InterpreterConfig != nil {
 		memoryGauge = options.InterpreterConfig.MemoryGauge
+		computationGauge = options.InterpreterConfig.ComputationGauge
 	}
 	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
 		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
@@ -112,7 +117,10 @@ func parseCheckAndInterpretWithOptions(
 		}
 	}
 	if config.Storage == nil {
-		config.Storage = interpreter.NewInMemoryStorage(memoryGauge)
+		config.Storage = interpreter.NewInMemoryStorage(
+			memoryGauge,
+			computationGauge,
+		)
 	}
 
 	inter, err = interpreter.NewInterpreter(
@@ -182,7 +190,7 @@ func newSingleAddressOrStringLocationHandler(tb testing.TB, address common.Addre
 
 func interpreterFTTransfer(tb testing.TB) {
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
@@ -197,12 +205,12 @@ func interpreterFTTransfer(tb testing.TB) {
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
 
 	codes := map[common.Location][]byte{
-		burnerLocation:                     []byte(realBurnerContract),
-		viewResolverLocation:               []byte(realViewResolverContract),
-		fungibleTokenLocation:              []byte(realFungibleTokenContract),
-		metadataViewsLocation:              []byte(realMetadataViewsContract),
-		fungibleTokenMetadataViewsLocation: []byte(realFungibleTokenMetadataViewsContract),
-		nonFungibleTokenLocation:           []byte(realNonFungibleTokenContract),
+		burnerLocation:                     []byte(contracts.RealBurnerContract),
+		viewResolverLocation:               []byte(contracts.RealViewResolverContract),
+		fungibleTokenLocation:              []byte(contracts.RealFungibleTokenContract),
+		metadataViewsLocation:              []byte(contracts.RealMetadataViewsContract),
+		fungibleTokenMetadataViewsLocation: []byte(contracts.RealFungibleTokenMetadataViewsContract),
+		nonFungibleTokenLocation:           []byte(contracts.RealNonFungibleTokenContract),
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
@@ -425,7 +433,7 @@ func interpreterFTTransfer(tb testing.TB) {
 
 	flowTokenDeploymentTransaction := DeploymentTransaction(
 		"FlowToken",
-		[]byte(realFlowContract),
+		[]byte(contracts.RealFlowContract),
 	)
 
 	inter, err := parseCheckAndInterpret(
@@ -460,7 +468,7 @@ func interpreterFTTransfer(tb testing.TB) {
 		receiverAddress,
 	} {
 		inter, err := parseCheckAndInterpret(
-			realFlowTokenSetupAccountTransaction,
+			contracts.RealFlowTokenSetupAccountTransaction,
 			nextTransactionLocation(),
 		)
 		require.NoError(tb, err)
@@ -481,7 +489,7 @@ func interpreterFTTransfer(tb testing.TB) {
 	total := uint64(1000000)
 
 	inter, err = parseCheckAndInterpret(
-		realFlowTokenMintTokensTransaction,
+		contracts.RealFlowTokenMintTokensTransaction,
 		nextTransactionLocation(),
 	)
 	require.NoError(tb, err)
@@ -507,7 +515,7 @@ func interpreterFTTransfer(tb testing.TB) {
 	transferAmount := interpreter.NewUnmeteredUFix64ValueWithInteger(1)
 
 	inter, err = parseCheckAndInterpret(
-		realFlowTokenTransferTokensTransaction,
+		contracts.RealFlowTokenTransferTokensTransaction,
 		nextTransactionLocation(),
 	)
 	require.NoError(tb, err)
@@ -567,7 +575,7 @@ func interpreterFTTransfer(tb testing.TB) {
 		receiverAddress,
 	} {
 		inter, err = parseCheckAndInterpret(
-			realFlowTokenGetBalanceScript,
+			contracts.RealFlowTokenGetBalanceScript,
 			nextScriptLocation(),
 		)
 		require.NoError(tb, err)
@@ -657,12 +665,12 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		name string
 		code []byte
 	}{
-		{"Burner", []byte(realBurnerContract)},
-		{"ViewResolver", []byte(realViewResolverContract)},
-		{"FungibleToken", []byte(realFungibleTokenContract)},
-		{"NonFungibleToken", []byte(realNonFungibleTokenContract)},
-		{"MetadataViews", []byte(realMetadataViewsContract)},
-		{"FungibleTokenMetadataViews", []byte(realFungibleTokenMetadataViewsContract)},
+		{"Burner", []byte(contracts.RealBurnerContract)},
+		{"ViewResolver", []byte(contracts.RealViewResolverContract)},
+		{"FungibleToken", []byte(contracts.RealFungibleTokenContract)},
+		{"NonFungibleToken", []byte(contracts.RealNonFungibleTokenContract)},
+		{"MetadataViews", []byte(contracts.RealMetadataViewsContract)},
+		{"FungibleTokenMetadataViews", []byte(contracts.RealFungibleTokenMetadataViewsContract)},
 	}
 
 	for _, contract := range contractInterfaces {
@@ -687,7 +695,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	err := interpreterRuntime.ExecuteTransaction(
 		runtime.Script{
-			Source: DeploymentTransaction("FlowToken", []byte(realFlowContract)),
+			Source: DeploymentTransaction("FlowToken", []byte(contracts.RealFlowContract)),
 		},
 		runtime.Context{
 			Interface:   runtimeInterface,
@@ -708,7 +716,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		err = interpreterRuntime.ExecuteTransaction(
 			runtime.Script{
-				Source: []byte(realFlowTokenSetupAccountTransaction),
+				Source: []byte(contracts.RealFlowTokenSetupAccountTransaction),
 			},
 			runtime.Context{
 				Interface:   runtimeInterface,
@@ -730,7 +738,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	err = interpreterRuntime.ExecuteTransaction(
 		runtime.Script{
-			Source: []byte(realFlowTokenMintTokensTransaction),
+			Source: []byte(contracts.RealFlowTokenMintTokensTransaction),
 			Arguments: encodeArgs([]cadence.Value{
 				cadence.Address(senderAddress),
 				mintAmount,
@@ -758,7 +766,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		err = interpreterRuntime.ExecuteTransaction(
 			runtime.Script{
-				Source: []byte(realFlowTokenTransferTokensTransaction),
+				Source: []byte(contracts.RealFlowTokenTransferTokensTransaction),
 				Arguments: encodeArgs([]cadence.Value{
 					sendAmount,
 					cadence.Address(receiverAddress),
@@ -790,7 +798,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		result, err := interpreterRuntime.ExecuteScript(
 			runtime.Script{
-				Source: []byte(realFlowTokenGetBalanceScript),
+				Source: []byte(contracts.RealFlowTokenGetBalanceScript),
 				Arguments: encodeArgs([]cadence.Value{
 					cadence.Address(address),
 				}),

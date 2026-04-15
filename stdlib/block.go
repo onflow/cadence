@@ -82,6 +82,7 @@ func NativeGetBlockFunction(provider BlockAtHeightProvider) interpreter.NativeFu
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -149,17 +150,8 @@ func NewBlockValue(
 
 	// ID
 	common.UseMemory(context, blockIDMemoryUsage)
-	var values = make([]interpreter.Value, sema.BlockTypeIdFieldType.Size)
-	for i, b := range block.Hash {
-		values[i] = interpreter.NewUnmeteredUInt8Value(b)
-	}
 
-	idValue := interpreter.NewArrayValue(
-		context,
-		BlockIDStaticType,
-		common.ZeroAddress,
-		values...,
-	)
+	idValue := interpreter.ByteSliceToByteArrayValueWithType(context, BlockIDStaticType, block.Hash[:])
 
 	// timestamp
 	// TODO: verify
@@ -204,6 +196,7 @@ func NativeGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.Na
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
+		_ interpreter.ArgumentTypesIterator,
 		_ interpreter.Value,
 		_ []interpreter.Value,
 	) interpreter.Value {

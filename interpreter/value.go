@@ -73,6 +73,14 @@ func (NonStorable) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (NonStorable) CanCopyNonRefSimple() bool {
+	return false
+}
+
+func (NonStorable) CopyNonRefSimple() (atree.Storable, error) {
+	return nil, NewStorableCopyError("NonStorable")
+}
+
 // Value is the Cadence value hierarchy which is heavily tied to the interpreter and persistent storage,
 // and has lots of implementation details.
 //
@@ -131,10 +139,16 @@ type Value interface {
 
 type ValueIndexableValue interface {
 	Value
-	GetKey(context ValueComparisonContext, key Value) Value
+	GetKey(context ContainerReadContext, key Value) Value
 	SetKey(context ContainerMutationContext, key Value, value Value)
 	RemoveKey(context ContainerMutationContext, key Value) Value
 	InsertKey(context ContainerMutationContext, key Value, value Value)
+	InsertKeyWithMutationCheck(
+		context ContainerMutationContext,
+		key Value,
+		value Value,
+		checkMutation bool,
+	)
 }
 
 type TypeIndexableValue interface {
@@ -148,7 +162,7 @@ type TypeIndexableValue interface {
 
 type MemberAccessibleValue interface {
 	Value
-	GetMember(context MemberAccessibleContext, name string) Value
+	GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value
 	RemoveMember(context ValueTransferContext, name string) Value
 	// SetMember returns whether a value previously existed with this name.
 	SetMember(context ValueTransferContext, name string, value Value) bool
@@ -158,7 +172,7 @@ type MemberAccessibleValue interface {
 }
 
 type ValueComparisonContext interface {
-	common.MemoryGauge
+	common.Gauge
 	ValueStaticTypeContext
 }
 
@@ -244,14 +258,14 @@ type OwnedValue interface {
 }
 
 type ValueIteratorContext interface {
-	common.MemoryGauge
+	common.Gauge
 	NumberValueArithmeticContext
 }
 
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
-	HasNext() bool
+	HasNext(context ValueIteratorContext) bool
 	Next(context ValueIteratorContext) Value
 	ValueID() (atree.ValueID, bool)
 }

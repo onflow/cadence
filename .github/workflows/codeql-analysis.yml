@@ -11,9 +11,8 @@ on:
       - master
       - 'feature/**'
       - 'v**'
-
-env:
-  GO_VERSION: '1.24'
+  schedule:
+    - cron: '0 0 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -23,23 +22,35 @@ jobs:
   CodeQL-Build:
     name: CodeQL
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+      pull-requests: write
+
+    env:
+      GOPRIVATE: "github.com/onflow"
+
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v5
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v6
       with:
-        go-version: ${{ env.GO_VERSION }}
+        go-version: '1.25'
         cache: true
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v4
       with:
         languages: go
+        queries: security-extended
 
     - name: Build
       run: make build
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:go"

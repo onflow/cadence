@@ -224,6 +224,7 @@ func TestRuntimeContract(t *testing.T) {
 			storageMap := NewStorage(
 				storage,
 				nil,
+				nil,
 				StorageConfig{},
 			).GetDomainStorageMap(
 				inter,
@@ -234,7 +235,7 @@ func TestRuntimeContract(t *testing.T) {
 			if storageMap == nil {
 				return false
 			}
-			return storageMap.ValueExists(interpreter.StringStorageMapKey("Test"))
+			return storageMap.ValueExists(nil, interpreter.StringStorageMapKey("Test"))
 		}
 
 		t.Run("add", func(t *testing.T) {

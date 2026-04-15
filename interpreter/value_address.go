@@ -137,7 +137,7 @@ func (v AddressValue) Equal(_ ValueComparisonContext, other Value) bool {
 // HashInput returns a byte slice containing:
 // - HashInputTypeAddress (1 byte)
 // - address (8 bytes)
-func (v AddressValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v AddressValue) HashInput(_ common.Gauge, scratch []byte) []byte {
 	length := 1 + len(v)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -159,8 +159,14 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v AddressValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v AddressValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -222,7 +228,7 @@ func (AddressValue) IsStorable() bool {
 	return true
 }
 
-func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -245,6 +251,7 @@ func (v AddressValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(transferContext, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -266,6 +273,15 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (AddressValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v AddressValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 func AddressValueFromByteArray(context ContainerMutationContext, byteArray *ArrayValue) AddressValue {
@@ -291,6 +307,7 @@ var NativeAddressToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -303,6 +320,7 @@ var NativeAddressToBytesFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
 		receiver Value,
 		_ []Value,
 	) Value {

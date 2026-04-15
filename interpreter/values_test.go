@@ -85,7 +85,12 @@ func newRandomValueTestInterpreter(t *testing.T) (inter *interpreter.Interpreter
 			err := storage.Commit(inter, false)
 			require.NoError(t, err)
 		}
-		config.Storage = runtime.NewStorage(ledger, nil, runtime.StorageConfig{})
+		config.Storage = runtime.NewStorage(
+			ledger,
+			nil,
+			nil,
+			runtime.StorageConfig{},
+		)
 	}
 
 	resetStorage()
@@ -195,10 +200,10 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 	}
 }
 
-func withoutAtreeStorageValidationEnabled[T any](inter Invokable, f func() T) T {
-	switch inter := inter.(type) {
+func withoutAtreeStorageValidationEnabled[T any](invokable Invokable, f func() T) T {
+	switch invokable := invokable.(type) {
 	case *interpreter.Interpreter:
-		config := inter.SharedState.Config
+		config := invokable.SharedState.Config
 		original := config.AtreeStorageValidationEnabled
 		config.AtreeStorageValidationEnabled = false
 		result := f()
@@ -211,7 +216,7 @@ func withoutAtreeStorageValidationEnabled[T any](inter Invokable, f func() T) T 
 		return f()
 
 	default:
-		panic(fmt.Errorf("unsupported invokable type %T", inter))
+		panic(fmt.Errorf("unsupported invokable type %T", invokable))
 	}
 }
 
@@ -1102,7 +1107,7 @@ func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 
 		for name, field := range fieldsMappedByName {
 
-			value := composite.GetMember(inter, name)
+			value := composite.GetMember(inter, name, common.DeclarationKindField)
 
 			fieldValue := importValue(t, inter, field)
 			AssertValuesEqual(t, inter, fieldValue, value)
@@ -2999,6 +3004,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 
 				return true
 			},
+			false,
 		)
 
 		var updates []update
@@ -3129,6 +3135,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 
 				return true
 			},
+			false,
 		)
 
 		var removes []cadence.Value
@@ -3357,7 +3364,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			inter,
 			func(name string, element interpreter.Value) (resume bool) {
 
-				expectedElement := expectedComposite.GetMember(inter, name)
+				expectedElement := expectedComposite.GetMember(inter, name, common.DeclarationKindField)
 				AssertValuesEqual(t, inter, expectedElement, element)
 
 				iterations += 1
@@ -3438,7 +3445,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			for {
 				name = r.randomUTF8String()
 
-				if actualNestedComposite.GetMember(inter, name) != nil {
+				if actualNestedComposite.GetMember(inter, name, common.DeclarationKindField) != nil {
 					continue
 				}
 
@@ -3577,6 +3584,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		fieldNames := make([]string, 0, fieldCount)
 
 		actualNestedComposite.ForEachFieldName(
+			inter,
 			func(name string) (resume bool) {
 				fieldNames = append(fieldNames, name)
 				return true
@@ -3699,6 +3707,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		fieldNames := make([]string, 0, fieldCount)
 
 		actualNestedComposite.ForEachFieldName(
+			inter,
 			func(name string) (resume bool) {
 
 				fieldNames = append(fieldNames, name)
@@ -3910,7 +3919,7 @@ func getNestedValue(
 			)
 			composite := value.(*interpreter.CompositeValue)
 
-			value = composite.GetMember(inter, element.name)
+			value = composite.GetMember(inter, element.name, common.DeclarationKindField)
 
 			require.NotNil(t,
 				value,
@@ -4734,7 +4743,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
@@ -4812,7 +4821,7 @@ func TestInterpretCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 	r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 	t.Logf("seed: %d", r.seed)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
@@ -6048,7 +6057,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			require.Equal(t, count, childComposite.FieldCount())
 
 			for i := 0; i < count; i++ {
-				value := childComposite.GetMember(inter, strconv.Itoa(i))
+				value := childComposite.GetMember(inter, strconv.Itoa(i), common.DeclarationKindField)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
 			}
@@ -6224,7 +6233,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			require.Equal(t, count, childComposite.FieldCount())
 
 			for i := 0; i < count; i++ {
-				value := childComposite.GetMember(inter, strconv.Itoa(i))
+				value := childComposite.GetMember(inter, strconv.Itoa(i), common.DeclarationKindField)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
 			}

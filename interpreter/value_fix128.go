@@ -446,7 +446,7 @@ func (v Fix128Value) Equal(_ ValueComparisonContext, other Value) bool {
 // - HashInputTypeFix128 (1 byte)
 // - high 64 bits encoded in big-endian (8 bytes)
 // - low 64 bits encoded in big-endian (8 bytes)
-func (v Fix128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
+func (v Fix128Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeFix128)
 
 	fix128 := fix.Fix128(v)
@@ -500,8 +500,14 @@ func ConvertFix128(memoryGauge common.MemoryGauge, value Value) Fix128Value {
 	return NewFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-func (v Fix128Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Fix128Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
 func (v Fix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
@@ -534,7 +540,7 @@ func (Fix128Value) IsStorable() bool {
 	return true
 }
 
-func (v Fix128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v Fix128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint32) (atree.Storable, error) {
 	return v, nil
 }
 
@@ -557,6 +563,7 @@ func (v Fix128Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -605,6 +612,15 @@ func (v Fix128Value) ToBigInt() *big.Int {
 	return fixedpoint.Fix128ToBigInt(fix.Fix128(v))
 }
 
+func (Fix128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Fix128Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
+}
+
 func handleFixedpointError(err error) {
 	switch err.(type) {
 	// `fix.ErrUnderflow` happens when the value is within the range but is too small
@@ -617,6 +633,8 @@ func handleFixedpointError(err error) {
 		panic(&OverflowError{})
 	case fix.NegativeOverflowError:
 		panic(&UnderflowError{})
+	case fix.DivisionByZeroError:
+		panic(&DivisionByZeroError{})
 	default:
 		panic(err)
 	}
