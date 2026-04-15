@@ -1076,10 +1076,6 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 				context,
 				arrayType,
 				arrayType.ElementType(false),
-				func(err error) {
-					// TODO:
-					panic(err)
-				},
 			),
 			NativeArrayFilterFunction,
 		)
@@ -1729,18 +1725,23 @@ func (v *ArrayValue) Reverse(
 func (v *ArrayValue) Filter(
 	context InvocationContext,
 	procedure FunctionValue,
-	asReference bool,
+	accessedType sema.Type,
 ) Value {
 
 	elementType := v.SemaType(context).ElementType(false)
-	argumentType := elementType
+
+	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
 	if asReference {
-		argumentType = sema.NewReferenceType(
+		outerRef, _ := sema.MaybeReferenceType(accessedType)
+		elementType = sema.GetDescendantReferenceType(
 			context,
-			sema.UnauthorizedAccess,
 			elementType,
+			sema.UnauthorizedAccess,
+			outerRef.Authorization,
 		)
 	}
+
+	argumentType := elementType
 	argumentTypes := []sema.Type{argumentType}
 
 	procedureFunctionType := procedure.FunctionType(context)
@@ -1840,19 +1841,24 @@ func (v *ArrayValue) Filter(
 func (v *ArrayValue) Map(
 	context InvocationContext,
 	procedure FunctionValue,
-	asReference bool,
+	accessedType sema.Type,
 ) Value {
 	count := v.Count()
 
 	elementType := v.SemaType(context).ElementType(false)
-	argumentType := elementType
+
+	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
 	if asReference {
-		argumentType = sema.NewReferenceType(
+		outerRef, _ := sema.MaybeReferenceType(accessedType)
+		elementType = sema.GetDescendantReferenceType(
 			context,
-			sema.UnauthorizedAccess,
 			elementType,
+			sema.UnauthorizedAccess,
+			outerRef.Authorization,
 		)
 	}
+
+	argumentType := elementType
 	argumentTypes := []sema.Type{argumentType}
 
 	procedureFunctionType := procedure.FunctionType(context)
@@ -2333,8 +2339,7 @@ var NativeArrayFilterFunction = NativeFunction(
 		args []Value,
 	) Value {
 		var (
-			array       *ArrayValue
-			asReference bool
+			array *ArrayValue
 		)
 
 		switch receiver := receiver.(type) {
@@ -2342,12 +2347,10 @@ var NativeArrayFilterFunction = NativeFunction(
 			array = receiver
 
 		case *StorageReferenceValue:
-			asReference = true
-			referencedValue := receiver.mustReferencedValue(context)
+			referencedValue := receiver.MustReferencedValue(context)
 			array = AssertValueOfType[*ArrayValue](referencedValue)
 
 		case *EphemeralReferenceValue:
-			asReference = true
 			referencedValue := receiver.Value
 			array = AssertValueOfType[*ArrayValue](referencedValue)
 
@@ -2355,9 +2358,11 @@ var NativeArrayFilterFunction = NativeFunction(
 			panic(errors.NewUnreachableError())
 		}
 
+		accessedType := MustSemaTypeOfValue(receiver, context)
+
 		funcValue := AssertValueOfType[FunctionValue](args[0])
 
-		return array.Filter(context, funcValue, asReference)
+		return array.Filter(context, funcValue, accessedType)
 	},
 )
 
@@ -2370,8 +2375,7 @@ var NativeArrayMapFunction = NativeFunction(
 		args []Value,
 	) Value {
 		var (
-			array       *ArrayValue
-			asReference bool
+			array *ArrayValue
 		)
 
 		switch receiver := receiver.(type) {
@@ -2379,12 +2383,10 @@ var NativeArrayMapFunction = NativeFunction(
 			array = receiver
 
 		case *StorageReferenceValue:
-			asReference = true
-			referencedValue := receiver.mustReferencedValue(context)
+			referencedValue := receiver.MustReferencedValue(context)
 			array = AssertValueOfType[*ArrayValue](referencedValue)
 
 		case *EphemeralReferenceValue:
-			asReference = true
 			referencedValue := receiver.Value
 			array = AssertValueOfType[*ArrayValue](referencedValue)
 
@@ -2392,9 +2394,11 @@ var NativeArrayMapFunction = NativeFunction(
 			panic(errors.NewUnreachableError())
 		}
 
+		accessedType := MustSemaTypeOfValue(receiver, context)
+
 		funcValue := AssertValueOfType[FunctionValue](args[0])
 
-		return array.Map(context, funcValue, asReference)
+		return array.Map(context, funcValue, accessedType)
 	},
 )
 

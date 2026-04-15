@@ -3877,7 +3877,7 @@ func TestInterpretArrayNestedAuthReferencesAccess(t *testing.T) {
             fun test() {
                 var s = S()
                 let array: [auth(Mutate) &S] = [&s as auth(Mutate) &S]
-                let arrayRef = &array as &[auth(Mutate) &S]
+                let arrayRef = &array as auth(Mutate) &[auth(Mutate) &S]
 
                 arrayRef.map(
                     // element type of 'arrayRef' is 'auth(Mutate) &S'.

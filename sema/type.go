@@ -2966,7 +2966,6 @@ func ArrayFilterFunctionMemberFuncResolver(
 				memoryGauge,
 				accessedType,
 				elementType,
-				report,
 			),
 			arrayTypeFilterFunctionDocString,
 		)
@@ -3193,16 +3192,15 @@ func ArrayFilterFunctionType(
 	memoryGauge common.MemoryGauge,
 	accessedType Type,
 	elementType Type,
-	report func(error),
 ) *FunctionType {
 
-	if shouldReturnReference(accessedType, elementType, false) {
-		elementType = getReferenceTypeForChild(
+	if ShouldReturnReference(accessedType, elementType, false) {
+		outerRef, _ := MaybeReferenceType(accessedType)
+		elementType = GetDescendantReferenceType(
 			memoryGauge,
 			elementType,
 			UnauthorizedAccess,
-			nil,
-			report,
+			outerRef.Authorization,
 		)
 	}
 
@@ -3265,13 +3263,13 @@ func ArrayMapFunctionType(
 
 	elementType := arrayType.ElementType(false)
 
-	if shouldReturnReference(accessedType, elementType, false) {
-		elementType = getReferenceTypeForChild(
+	if ShouldReturnReference(accessedType, elementType, false) {
+		outerRef, _ := MaybeReferenceType(accessedType)
+		elementType = GetDescendantReferenceType(
 			memoryGauge,
 			elementType,
 			UnauthorizedAccess,
-			nil,
-			report,
+			outerRef.Authorization,
 		)
 	}
 

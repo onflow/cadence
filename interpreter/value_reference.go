@@ -105,10 +105,6 @@ func getReferenceValueMember(
 					context,
 					refType,
 					arrayType.ElementType(false),
-					func(err error) {
-						// TODO:
-						panic(err)
-					},
 				),
 				NativeArrayFilterFunction,
 			)

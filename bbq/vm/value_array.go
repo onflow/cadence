@@ -81,10 +81,6 @@ func init() {
 						context,
 						arrayType,
 						elementType,
-						func(err error) {
-							// TODO:
-							panic(err)
-						},
 					)
 				},
 				interpreter.NativeArrayFilterFunction,
