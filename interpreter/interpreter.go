@@ -7032,6 +7032,85 @@ func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authoriza
 	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter) //nolint:staticcheck
 }
 
+func (interpreter *Interpreter) GetReferenceValueMember(
+	v ReferenceValue,
+	referencedValue Value,
+	name string,
+	memberKind common.DeclarationKind,
+) Value {
+
+	// First, *before* looking up the member on the referenced value,
+	// check whether the member is available via special handling
+	// for reference values (e.g. array higher-order functions)
+	value := getReferenceValueHigherOrderFunction(interpreter, v, referencedValue, name)
+	if value != nil {
+		return value
+	}
+
+	var member Value
+
+	// Next, look up the member on the referenced value
+
+	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
+		member = memberAccessibleValue.GetMember(interpreter, name, memberKind)
+	}
+
+	if member == nil {
+		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
+		return GetMember(
+			interpreter,
+			v,
+			name,
+			memberKind,
+			nil,
+		)
+	}
+
+	return member
+}
+
+func getReferenceValueHigherOrderFunction(
+	context MemberAccessibleContext,
+	v ReferenceValue,
+	referencedValue Value,
+	name string,
+) FunctionValue {
+	switch referencedValue := referencedValue.(type) {
+	case *ArrayValue:
+		refType := context.SemaTypeFromStaticType(v.StaticType(context))
+
+		arrayType := referencedValue.SemaType(context)
+
+		switch name {
+		case sema.ArrayTypeFilterFunctionName:
+			return NewBoundHostFunctionValue(
+				context,
+				v,
+				sema.ArrayFilterFunctionType(
+					context,
+					refType,
+					arrayType.ElementType(false),
+				),
+				NativeArrayFilterFunction,
+			)
+
+		case sema.ArrayTypeMapFunctionName:
+			return NewBoundHostFunctionValue(
+				context,
+				v,
+				sema.ArrayMapFunctionType(
+					context,
+					refType,
+					arrayType,
+				),
+				NativeArrayMapFunction,
+			)
+		}
+	}
+
+	return nil
+}
+
 func StorageReference(
 	context ValueStaticTypeContext,
 	storageReference *StorageReferenceValue,

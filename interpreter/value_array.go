@@ -1088,10 +1088,6 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 				context,
 				arrayType,
 				arrayType,
-				func(err error) {
-					// TODO:
-					panic(err)
-				},
 			),
 			NativeArrayMapFunction,
 		)
@@ -1753,16 +1749,7 @@ func (v *ArrayValue) Filter(
 		panic(errors.NewExternalError(err))
 	}
 
-	elementStaticType := v.Type.ElementType()
-
-	resultElementStaticType := elementStaticType
-	if asReference {
-		resultElementStaticType = NewReferenceStaticType(
-			context,
-			UnauthorizedAccess,
-			elementStaticType,
-		)
-	}
+	resultElementStaticType := ConvertSemaToStaticType(context, argumentType)
 
 	return NewArrayValueWithIterator(
 		context,

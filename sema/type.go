@@ -2928,7 +2928,6 @@ func ArrayMapFunctionMemberFuncResolver(
 				memoryGauge,
 				accessedType,
 				arrayType,
-				report,
 			),
 			arrayTypeMapFunctionDocString,
 		)
@@ -3240,7 +3239,6 @@ func ArrayMapFunctionType(
 	memoryGauge common.MemoryGauge,
 	accessedType Type,
 	arrayType ArrayType,
-	report func(error),
 ) *FunctionType {
 
 	typeParameter := &TypeParameter{

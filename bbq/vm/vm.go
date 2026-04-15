@@ -1021,18 +1021,12 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
+	base, receiver := baseAndReceiver(vm.context, receiver, method)
 	checkMemberAccessTargetType(
 		vm,
 		ins.ReceiverType,
 		receiver,
 	)
-
-	var base *interpreter.EphemeralReferenceValue
-	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
-		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
-			base, receiver = AttachmentBaseAndSelfValues(context, refValue, method)
-		}
-	}
 
 	boundFunction := NewBoundFunctionValue(
 		context,
@@ -1094,6 +1088,21 @@ func maybeUpdateStorageReferenceBoundFunctionReceiver(
 
 var emptyTypeParametersMap = &sema.TypeParameterTypeOrderedMap{}
 
+func baseAndReceiver(
+	context interpreter.StaticTypeAndReferenceContext,
+	receiver Value,
+	method FunctionValue,
+) (base *interpreter.EphemeralReferenceValue, self Value) {
+
+	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
+			base, receiver = AttachmentBaseAndSelfValues(context, refValue, method)
+		}
+	}
+
+	return base, receiver
+}
+
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
@@ -1154,7 +1163,7 @@ func invokeFunction(
 	case *NativeFunctionValue:
 		if isBoundFunction {
 			// For built-in functions, pass the dereferenced receiver.
-			receiver = boundFunction.DereferencedReceiver(context)
+			receiver = boundFunction.maybeDereferencedReceiver(context)
 		}
 
 		if interpreter.TracingEnabled {
@@ -1330,7 +1339,7 @@ func loadTypes(vm *VM, typeIndices []uint16) []bbq.StaticType {
 
 func maybeDereferenceReceiver(
 	context interpreter.ValueStaticTypeContext,
-	receiverReference interpreter.ReferenceValue,
+	receiverReference interpreter.Value,
 	isNative bool,
 ) Value {
 
@@ -1346,7 +1355,7 @@ func maybeDereferenceReceiver(
 		}
 		return innerValue
 	case *interpreter.StorageReferenceValue:
-		referencedValue := receiverReference.ReferencedValue(context, true)
+		referencedValue := typedValue.ReferencedValue(context, true)
 		// `storageRef.ReferencedValue()` above already checks for the type validity, if it's not nil.
 		// If nil, that means the value has been moved out of storage.
 		if referencedValue == nil {

@@ -8302,6 +8302,30 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, interpreter.BoolValue(false), result)
 	})
+
+	t.Run("array value, builtin function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := CompileAndInvoke(
+			t,
+			`
+				let innerValueMinusOne =
+				    fun (_ x: Int8): Int8 {
+					    return x - 1
+				    }
+
+                fun test(): [Int8] {
+                    let a: [Int8] = [5]
+                    let ref = &a as &[Int8]
+                    var map = ref.map
+                    return map(innerValueMinusOne)
+                }
+            `,
+			"test",
+		)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestArrayFunctions(t *testing.T) {

@@ -11081,7 +11081,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 		require.Equal(t, 0, array.Count())
 	})
 
-	t.Run("reference", func(t *testing.T) {
+	t.Run("reference, container array", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -11089,7 +11089,8 @@ func TestInterpretArrayFilter(t *testing.T) {
               let array = [[1]]
               let ref: &[[Int]] = &array
 
-              return ref.filter(view fun(s: &[Int]): Bool {
+              let filter = ref.filter
+              return filter(view fun(s: &[Int]): Bool {
                   return true
               })
           }
@@ -11142,6 +11143,215 @@ func TestInterpretArrayFilter(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			innerArray.Get(inter, 0),
 		)
+	})
+
+	t.Run("reference, primitive array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [Int] {
+              let array = [5]
+              let ref: &[Int] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: Int): Bool {
+                  return true
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Check outer array
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		expectedType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+		assert.Equal(t, expectedType, arrayValue.StaticType(inter))
+
+		require.Equal(t, 1, arrayValue.Count())
+		element := arrayValue.Get(inter, 0)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			element,
+		)
+	})
+
+	t.Run("reference, reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&Int] {
+              let array: [&Int] = [&5 as &Int]
+              let ref: &[&Int] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: &Int): Bool {
+                  return true
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Check outer array
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		expectedType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.PrimitiveStaticTypeInt,
+			),
+		)
+		assert.Equal(t, expectedType, arrayValue.StaticType(inter))
+
+		require.Equal(t, 1, arrayValue.Count())
+		element := arrayValue.Get(inter, 0)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, element)
+		referenceValue := element.(*interpreter.EphemeralReferenceValue)
+
+		assert.Equal(t,
+			expectedType.ElementType(),
+			referenceValue.StaticType(inter),
+		)
+
+		require.Equal(
+			t,
+			interpreter.UnauthorizedAccess,
+			referenceValue.Authorization,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			referenceValue.Value,
+		)
+	})
+
+	t.Run("reference, container array, covariant filter function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&[Int]] {
+              let array = [[1]]
+              let ref: &[[Int]] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: AnyStruct): Bool {
+                  var typedArg = s as! &[Int]
+                  return true
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Check outer array
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		expectedType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
+		)
+		assert.Equal(t, expectedType, arrayValue.StaticType(inter))
+
+		require.Equal(t, 1, arrayValue.Count())
+		element := arrayValue.Get(inter, 0)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, element)
+		referenceValue := element.(*interpreter.EphemeralReferenceValue)
+
+		assert.Equal(t,
+			expectedType.ElementType(),
+			referenceValue.StaticType(inter),
+		)
+
+		require.IsType(t, &interpreter.ArrayValue{}, referenceValue.Value)
+		innerArray := referenceValue.Value.(*interpreter.ArrayValue)
+
+		expectedInnerArrayType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+		assert.Equal(t, expectedInnerArrayType, innerArray.StaticType(inter))
+
+		require.Equal(t, 1, innerArray.Count())
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			innerArray.Get(inter, 0),
+		)
+	})
+
+	t.Run("reference, auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&Int] {
+              let array: [auth(Mutate) &Int] = [&5 as auth(Mutate) &Int]
+              let ref: &[auth(Mutate) &Int] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: &Int): Bool {
+                  var typedArg = s as! auth(Mutate) &Int
+                  return true
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
+
+	t.Run("reference, optional auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&Int?]? {
+              let v: Int? = 5
+              let array: [auth(Mutate) &Int?]? = [&v as auth(Mutate) &Int?]
+              let ref: &[auth(Mutate) &Int?]? = &array
+
+              return ref?.filter(view fun(s: &Int?): Bool {
+                  var typedArg = s as! auth(Mutate) &Int
+                  return true
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
 	})
 }
 
@@ -11650,7 +11860,7 @@ func TestInterpretArrayMap(t *testing.T) {
 		)
 	})
 
-	t.Run("reference", func(t *testing.T) {
+	t.Run("reference, container array", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -11684,6 +11894,149 @@ func TestInterpretArrayMap(t *testing.T) {
 		)
 	})
 
+	t.Run("reference, primitive array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String] {
+              let array: [Int8] = [5]
+              let ref: &[Int8] = &array
+
+              return ref.map(fun(v: Int8): String {
+                  return v.toString()
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("5"),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference, reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String] {
+              let array: [&Int8] = [&5 as &Int8]
+              let ref: &[&Int8] = &array
+
+              return ref.map(fun(v: &Int8): String {
+                  return v.toString()
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("5"),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference, container array, covariant map function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+
+          fun test(): [Int] {
+              let array = [S()]
+              let ref: &[S] = &array
+
+              return ref.map(fun(s: AnyStruct): Int {
+                  var typedS = s as! &S
+                  return 5
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(5),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference, auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String] {
+              let array: [auth(Mutate) &Int8] = [&5 as auth(Mutate) &Int8]
+              let ref: &[auth(Mutate) &Int8] = &array
+
+              return ref.map(fun(v: &Int8): String {
+                  var typedArg = v as! auth(Mutate) &Int8
+                  return v.toString()
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
+
+	t.Run("reference, optional auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String?]? {
+              let v: Int8? = 5
+              let array: [auth(Mutate) &Int8?]? = [&v as auth(Mutate) &Int8?]
+              let ref: &[auth(Mutate) &Int8?]? = &array
+
+              return ref?.map(fun(v: &Int8?): String? {
+                  var typedArg = v as! auth(Mutate) &Int8
+                  return v?.toString()
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
 }
 
 func TestInterpretArrayToVariableSized(t *testing.T) {

@@ -301,7 +301,7 @@ func (c *Context) GetResourceDestructionContextForLocation(location common.Locat
 }
 
 func AttachmentBaseAndSelfValues(
-	c *Context,
+	context interpreter.StaticTypeAndReferenceContext,
 	v *interpreter.CompositeValue,
 	method FunctionValue,
 ) (base *interpreter.EphemeralReferenceValue, self *interpreter.EphemeralReferenceValue) {
@@ -314,7 +314,7 @@ func AttachmentBaseAndSelfValues(
 		unqualifiedName = functionValue.Name
 	}
 
-	fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)
+	fnAccess := interpreter.GetAccessOfMember(context, v, unqualifiedName)
 	// with respect to entitlements, any access inside an attachment that is not an entitlement access
 	// does not provide any entitlements to base and self
 	// E.g. consider:
@@ -333,7 +333,7 @@ func AttachmentBaseAndSelfValues(
 	if fnAccess.IsPrimitiveAccess() {
 		fnAccess = sema.UnauthorizedAccess
 	}
-	return interpreter.AttachmentBaseAndSelfValues(c, fnAccess, v)
+	return interpreter.AttachmentBaseAndSelfValues(context, fnAccess, v)
 }
 
 func (c *Context) GetMethod(
@@ -367,15 +367,11 @@ func (c *Context) GetMethod(
 		return method
 	}
 
-	var base *interpreter.EphemeralReferenceValue
-	// If the value is an attachment, then we must create an authorized reference
-	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
-		base, value = AttachmentBaseAndSelfValues(c, v, method)
-	}
+	base, receiver := baseAndReceiver(c, value, method)
 
 	return NewBoundFunctionValue(
 		c,
-		value,
+		receiver,
 		method,
 		base,
 	)
@@ -617,4 +613,37 @@ func (c *Context) NewFunctionWithType(
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func (c *Context) GetReferenceValueMember(
+	v interpreter.ReferenceValue,
+	referencedValue interpreter.Value,
+	name string,
+	memberKind common.DeclarationKind,
+) interpreter.Value {
+
+	// NOTE: Must call the `GetMethod` of the reference, not of the referenced-value.
+	member := c.GetMethod(v, name)
+	if member != nil {
+		return member
+	}
+
+	// If not found, look up the member on the referenced value
+	if memberAccessibleValue, ok := referencedValue.(interpreter.MemberAccessibleValue); ok {
+		member := memberAccessibleValue.GetMember(c, name, memberKind)
+
+		// The member was obtained from the referenced-value.
+		// However, this was accessed via a reference.
+		// Therefore, update the receiver to the reference.
+		if boundFunction, isBoundFunction := member.(*BoundFunctionValue); isBoundFunction {
+			// Note: We shouldn't reach here, since ideally the methods must have been found
+			// by calling the `GetMethod` function above.
+			// TODO: Maybe just panic?
+			boundFunction.ReceiverReference = v
+		}
+
+		return member
+	}
+
+	return nil
 }

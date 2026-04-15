@@ -111,9 +111,10 @@ func NewNativeFunctionValue(
 	fn interpreter.NativeFunction,
 ) *NativeFunctionValue {
 	return &NativeFunctionValue{
-		Name:         name,
-		functionType: funcType,
-		Function:     fn,
+		Name:                name,
+		functionType:        funcType,
+		Function:            fn,
+		dereferenceReceiver: true,
 	}
 }
 
@@ -123,8 +124,9 @@ func NewNativeFunctionValueWithDerivedType(
 	fn interpreter.NativeFunction,
 ) *NativeFunctionValue {
 	return &NativeFunctionValue{
-		Name:               name,
-		functionTypeGetter: typeGetter,
-		Function:           fn,
+		Name:                name,
+		functionTypeGetter:  typeGetter,
+		Function:            fn,
+		dereferenceReceiver: true,
 	}
 }

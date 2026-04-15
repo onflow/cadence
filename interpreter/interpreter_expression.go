@@ -1560,7 +1560,6 @@ func CreateReferenceValue(
 		}
 
 	case *sema.ReferenceType:
-
 		switch value := value.(type) {
 		case *SomeValue:
 			// Case (3.a): target type is non-optional, actual value is optional.
