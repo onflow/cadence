@@ -391,7 +391,7 @@ func newTestTypeReadFileFunction(
 
 			content, err := testFramework.ReadFile(pathString.Str)
 			if err != nil {
-				panic(err)
+				panic(errors.NewDefaultUserError("cannot read file %q: %s", pathString.Str, err))
 			}
 
 			return interpreter.NewUnmeteredStringValue(content)
