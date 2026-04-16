@@ -127,6 +127,7 @@ func (d *EntitlementDeclaration) String() string {
 
 type EntitlementMapElement interface {
 	isEntitlementMapElement()
+	Walk(walkChild func(Element))
 	Doc() prettier.Doc
 }
 
@@ -159,6 +160,15 @@ func (d *EntitlementMapRelation) Doc() prettier.Doc {
 		docOrEmpty(d.Input),
 		arrowKeywordSpaceDoc,
 		docOrEmpty(d.Output),
+	}
+}
+
+func (d *EntitlementMapRelation) Walk(walkChild func(Element)) {
+	if d.Input != nil {
+		walkChild(d.Input)
+	}
+	if d.Output != nil {
+		walkChild(d.Output)
 	}
 }
 
@@ -198,7 +208,16 @@ func (*EntitlementMappingDeclaration) ElementType() ElementType {
 	return ElementTypeEntitlementMappingDeclaration
 }
 
-func (*EntitlementMappingDeclaration) Walk(_ func(Element)) {}
+func (d *EntitlementMappingDeclaration) Walk(walkChild func(Element)) {
+	for _, element := range d.Elements {
+		switch element := element.(type) {
+		case Element:
+			walkChild(element)
+		case EntitlementMapElement:
+			element.Walk(walkChild)
+		}
+	}
+}
 
 func (*EntitlementMappingDeclaration) isDeclaration() {}
 

@@ -67,7 +67,7 @@ func (p *Program) EndPosition(memoryGauge common.MemoryGauge) Position {
 }
 
 func (p *Program) Walk(walkChild func(Element)) {
-	walkDeclarations(walkChild, p.declarations)
+	walkElements(walkChild, p.declarations)
 }
 
 func (p *Program) PragmaDeclarations() []*PragmaDeclaration {

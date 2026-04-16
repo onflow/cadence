@@ -503,80 +503,122 @@ func TestFunctionDeclaration_Walk(t *testing.T) {
 
 	t.Parallel()
 
-	typeBound := &TypeAnnotation{
-		Type: &NominalType{
-			Identifier: Identifier{Identifier: "Bound"},
-		},
-	}
+	t.Run("without access", func(t *testing.T) {
+		t.Parallel()
 
-	paramTypeAnnotation := &TypeAnnotation{
-		Type: &NominalType{
-			Identifier: Identifier{Identifier: "String"},
-		},
-	}
-
-	defaultArg := &IntegerExpression{
-		PositiveLiteral: []byte("42"),
-		Base:            10,
-	}
-
-	returnTypeAnnotation := &TypeAnnotation{
-		Type: &NominalType{
-			Identifier: Identifier{Identifier: "Int"},
-		},
-	}
-
-	body := &IntegerExpression{
-		PositiveLiteral: []byte("1"),
-		Base:            10,
-	}
-
-	decl := &FunctionDeclaration{
-		Identifier: Identifier{Identifier: "foo"},
-		TypeParameterList: &TypeParameterList{
-			TypeParameters: []*TypeParameter{
-				{
-					Identifier: Identifier{Identifier: "T"},
-					TypeBound:  typeBound,
-				},
+		typeBound := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Bound"},
 			},
-		},
-		ParameterList: &ParameterList{
-			Parameters: []*Parameter{
-				{
-					Identifier:      Identifier{Identifier: "x"},
-					TypeAnnotation:  paramTypeAnnotation,
-					DefaultArgument: defaultArg,
-				},
+		}
+
+		paramTypeAnnotation := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "String"},
 			},
-		},
-		ReturnTypeAnnotation: returnTypeAnnotation,
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{
-					&ReturnStatement{
-						Expression: body,
+		}
+
+		defaultArg := &IntegerExpression{
+			PositiveLiteral: []byte("42"),
+			Base:            10,
+		}
+
+		returnTypeAnnotation := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Int"},
+			},
+		}
+
+		body := &IntegerExpression{
+			PositiveLiteral: []byte("1"),
+			Base:            10,
+		}
+
+		decl := &FunctionDeclaration{
+			Identifier: Identifier{Identifier: "foo"},
+			TypeParameterList: &TypeParameterList{
+				TypeParameters: []*TypeParameter{
+					{
+						Identifier: Identifier{Identifier: "T"},
+						TypeBound:  typeBound,
 					},
 				},
 			},
-		},
-	}
+			ParameterList: &ParameterList{
+				Parameters: []*Parameter{
+					{
+						Identifier:      Identifier{Identifier: "x"},
+						TypeAnnotation:  paramTypeAnnotation,
+						DefaultArgument: defaultArg,
+					},
+				},
+			},
+			ReturnTypeAnnotation: returnTypeAnnotation,
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{
+						&ReturnStatement{
+							Expression: body,
+						},
+					},
+				},
+			},
+		}
 
-	var visited []Element
-	decl.Walk(func(element Element) {
-		visited = append(visited, element)
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				typeBound,
+				paramTypeAnnotation,
+				defaultArg,
+				returnTypeAnnotation,
+				decl.FunctionBlock,
+			},
+			visited,
+		)
 	})
 
-	assert.Equal(t,
-		[]Element{
-			typeBound,
-			paramTypeAnnotation,
-			defaultArg,
-			returnTypeAnnotation,
-			decl.FunctionBlock,
-		},
-		visited,
-	)
+	t.Run("with entitlement access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "E"},
+		}
+
+		returnTypeAnnotation := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Int"},
+			},
+		}
+
+		decl := &FunctionDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			Identifier: Identifier{Identifier: "foo"},
+			ParameterList: &ParameterList{
+				Parameters: []*Parameter{},
+			},
+			ReturnTypeAnnotation: returnTypeAnnotation,
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+				returnTypeAnnotation,
+			},
+			visited,
+		)
+	})
 }
 
 func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
@@ -979,80 +1021,84 @@ func TestSpecialFunctionDeclaration_Walk(t *testing.T) {
 
 	t.Parallel()
 
-	typeBound := &TypeAnnotation{
-		Type: &NominalType{
-			Identifier: Identifier{Identifier: "Bound"},
-		},
-	}
+	t.Run("without access", func(t *testing.T) {
+		t.Parallel()
 
-	paramTypeAnnotation := &TypeAnnotation{
-		Type: &NominalType{
-			Identifier: Identifier{Identifier: "String"},
-		},
-	}
+		typeBound := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Bound"},
+			},
+		}
 
-	defaultArg := &IntegerExpression{
-		PositiveLiteral: []byte("42"),
-		Base:            10,
-	}
+		paramTypeAnnotation := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "String"},
+			},
+		}
 
-	returnTypeAnnotation := &TypeAnnotation{
-		Type: &NominalType{
-			Identifier: Identifier{Identifier: "Int"},
-		},
-	}
+		defaultArg := &IntegerExpression{
+			PositiveLiteral: []byte("42"),
+			Base:            10,
+		}
 
-	body := &IntegerExpression{
-		PositiveLiteral: []byte("1"),
-		Base:            10,
-	}
+		returnTypeAnnotation := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Int"},
+			},
+		}
 
-	decl := &SpecialFunctionDeclaration{
-		FunctionDeclaration: &FunctionDeclaration{
-			Identifier: Identifier{Identifier: "foo"},
-			TypeParameterList: &TypeParameterList{
-				TypeParameters: []*TypeParameter{
-					{
-						Identifier: Identifier{Identifier: "T"},
-						TypeBound:  typeBound,
+		body := &IntegerExpression{
+			PositiveLiteral: []byte("1"),
+			Base:            10,
+		}
+
+		decl := &SpecialFunctionDeclaration{
+			FunctionDeclaration: &FunctionDeclaration{
+				Identifier: Identifier{Identifier: "foo"},
+				TypeParameterList: &TypeParameterList{
+					TypeParameters: []*TypeParameter{
+						{
+							Identifier: Identifier{Identifier: "T"},
+							TypeBound:  typeBound,
+						},
 					},
 				},
-			},
-			ParameterList: &ParameterList{
-				Parameters: []*Parameter{
-					{
-						Identifier:      Identifier{Identifier: "x"},
-						TypeAnnotation:  paramTypeAnnotation,
-						DefaultArgument: defaultArg,
+				ParameterList: &ParameterList{
+					Parameters: []*Parameter{
+						{
+							Identifier:      Identifier{Identifier: "x"},
+							TypeAnnotation:  paramTypeAnnotation,
+							DefaultArgument: defaultArg,
+						},
 					},
 				},
-			},
-			ReturnTypeAnnotation: returnTypeAnnotation,
-			FunctionBlock: &FunctionBlock{
-				Block: &Block{
-					Statements: []Statement{
-						&ReturnStatement{
-							Expression: body,
+				ReturnTypeAnnotation: returnTypeAnnotation,
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&ReturnStatement{
+								Expression: body,
+							},
 						},
 					},
 				},
 			},
-		},
-	}
+		}
 
-	var visited []Element
-	decl.Walk(func(element Element) {
-		visited = append(visited, element)
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				typeBound,
+				paramTypeAnnotation,
+				defaultArg,
+				returnTypeAnnotation,
+				decl.FunctionDeclaration.FunctionBlock,
+			},
+			visited,
+		)
 	})
-
-	assert.Equal(t,
-		[]Element{
-			typeBound,
-			paramTypeAnnotation,
-			defaultArg,
-			returnTypeAnnotation,
-			decl.FunctionDeclaration.FunctionBlock,
-		},
-		visited,
-	)
 }

@@ -422,3 +422,116 @@ include X
 		)
 	})
 }
+
+func TestEntitlementMappingDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &EntitlementMappingDeclaration{}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Empty(t, visited)
+	})
+
+	t.Run("with inclusion", func(t *testing.T) {
+		t.Parallel()
+
+		inclusion := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+
+		decl := &EntitlementMappingDeclaration{
+			Elements: []EntitlementMapElement{inclusion},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				inclusion,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with relation", func(t *testing.T) {
+		t.Parallel()
+
+		input := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+		output := &NominalType{
+			Identifier: Identifier{Identifier: "Y"},
+		}
+
+		decl := &EntitlementMappingDeclaration{
+			Elements: []EntitlementMapElement{
+				&EntitlementMapRelation{
+					Input:  input,
+					Output: output,
+				},
+			},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				input,
+				output,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with inclusion and relation", func(t *testing.T) {
+		t.Parallel()
+
+		inclusion := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+		input := &NominalType{
+			Identifier: Identifier{Identifier: "A"},
+		}
+		output := &NominalType{
+			Identifier: Identifier{Identifier: "B"},
+		}
+
+		decl := &EntitlementMappingDeclaration{
+			Elements: []EntitlementMapElement{
+				inclusion,
+				&EntitlementMapRelation{
+					Input:  input,
+					Output: output,
+				},
+			},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				inclusion,
+				input,
+				output,
+			},
+			visited,
+		)
+	})
+}
