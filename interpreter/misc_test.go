@@ -12037,6 +12037,41 @@ func TestInterpretArrayMap(t *testing.T) {
 		var typeMismatchError *interpreter.ForceCastTypeMismatchError
 		require.ErrorAs(t, err, &typeMismatchError)
 	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          entitlement E1
+          entitlement E2
+
+          fun test(): [String] {
+              let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+              let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+              return ref.map(fun(v: auth(E1) &Int8): String {
+                  return v.toString()
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("5"),
+			),
+			value,
+		)
+	})
 }
 
 func TestInterpretArrayToVariableSized(t *testing.T) {

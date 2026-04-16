@@ -1193,6 +1193,97 @@ func TestCheckArrayFilter(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1) parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test(): [auth(E1) &Int8] {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                return ref.filter(view fun(v: auth(E1) &Int8): Bool {
+                    return true
+                })
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1, E2) return", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                // Result of the filter function must have the intersection for entitlements.
+                let result: [auth(E1, E2) &Int8] =  ref.filter(
+                    view fun(v: auth(E1) &Int8): Bool {
+                        return true
+                    }
+                )
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 10, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("[auth(S.test.E1,S.test.E2)&Int8]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("[auth(S.test.E1)&Int8]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1, E2) parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test(): AnyStruct {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                return ref.filter(view fun(v: auth(E1, E2) &Int8): Bool {
+                    return true
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 9, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("view fun(auth(S.test.E1)&Int8):Bool"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("view fun(auth(S.test.E1,S.test.E2)&Int8):Bool"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
 }
 
 func TestCheckArrayFilterInvalidArgs(t *testing.T) {
@@ -1387,6 +1478,60 @@ func TestCheckArrayMap(t *testing.T) {
 		assert.Equal(
 			t,
 			common.TypeID("fun((auth(Mutate)&Int8)?):String"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1) parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test(): [String] {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                return ref.map(fun(v: auth(E1) &Int8): String {
+                    return v.toString()
+                })
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1, E2) parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test(): [String] {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                return ref.map(fun(v: auth(E1, E2) &Int8): String {
+                    return v.toString()
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 9, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun(auth(S.test.E1)&Int8):String"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun(auth(S.test.E1,S.test.E2)&Int8):String"),
 			typeMismatchError.ActualType.ID(),
 		)
 	})
