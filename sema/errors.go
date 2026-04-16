@@ -7148,25 +7148,3 @@ func (*GuardStatementElseBlockMustExitError) SecondaryError() string {
 func (*GuardStatementElseBlockMustExitError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/control-flow#guard"
 }
-
-// InvalidMemberReferenceError
-type InvalidMemberReferenceError struct {
-	ExpectedAuthorization Access
-	ActualAuthorization   Access
-	ast.Range
-}
-
-var _ SemanticError = &InvalidMemberReferenceError{}
-var _ errors.UserError = &InvalidMemberReferenceError{}
-
-func (e *InvalidMemberReferenceError) isSemanticError() {}
-
-func (*InvalidMemberReferenceError) IsUserError() {}
-
-func (e *InvalidMemberReferenceError) Error() string {
-	return fmt.Sprintf(
-		"cannot create reference: expected `%s`, got `%s`",
-		e.ExpectedAuthorization,
-		e.ActualAuthorization,
-	)
-}
