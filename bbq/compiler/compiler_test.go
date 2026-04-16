@@ -13956,8 +13956,8 @@ func TestCompileReferenceMethod(t *testing.T) {
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
-        fun test(array: &[Int]): [Int] {
-            return array.map(fun (element: Int): Int {
+        fun test(arrayRef: &[Int]): [Int] {
+            return arrayRef.map(fun (element: Int): Int {
                 return element * 2
             })
         }
@@ -13978,22 +13978,50 @@ func TestCompileReferenceMethod(t *testing.T) {
 		arrayIndex = iota
 	)
 
+	intArrayType := &interpreter.VariableSizedStaticType{
+		Type: interpreter.PrimitiveStaticTypeInt,
+	}
+
+	intArrayReferenceType := &interpreter.ReferenceStaticType{
+		Authorization:  interpreter.Unauthorized{},
+		ReferencedType: intArrayType,
+	}
+
+	// Ideally we would assert a concrete function type here,
+	// but that would require a custom assertion function,
+	// as function types are not directly comparable.
+	functionPointerType := program.Types[3]
+
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// return array.map(...)
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: arrayIndex},
-			opcode.InstructionGetMethod{Method: 1},
-			opcode.InstructionNewClosure{Function: 1},
-			opcode.InstructionTransferAndConvert{Type: 2},
-			opcode.InstructionInvoke{
-				TypeArgs: []uint16{1},
-				ArgCount: 1,
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: arrayIndex},
+			opcode.PrettyInstructionGetMethod{
+				ReceiverType: intArrayReferenceType,
+				Method:       1,
 			},
-			opcode.InstructionTransferAndConvert{Type: 3},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionNewClosure{Function: 1},
+			opcode.PrettyInstructionTransfer{},
+			opcode.PrettyInstructionInvoke{
+				ArgTypes: []interpreter.StaticType{
+					functionPointerType,
+				},
+				TypeArgs: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					functionPointerType,
+				},
+				ReturnType: intArrayType,
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  intArrayType,
+				TargetType: intArrayType,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		functions[0].Code,
+		prettyInstructions(functions[0].Code, program),
 	)
 
 	const (
@@ -14002,16 +14030,24 @@ func TestCompileReferenceMethod(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]opcode.Instruction{
+		[]opcode.PrettyInstruction{
 			// return element * 2
-			opcode.InstructionStatement{},
-			opcode.InstructionGetLocal{Local: elementIndex},
-			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionMultiply{},
-			opcode.InstructionTransferAndConvert{Type: 1},
-			opcode.InstructionReturnValue{},
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: elementIndex},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionMultiply{},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
 		},
-		functions[1].Code,
+		prettyInstructions(functions[1].Code, program),
 	)
 
 	assert.Equal(t,
@@ -14039,8 +14075,8 @@ func TestCompileReferenceMethod(t *testing.T) {
 				GlobalInfo: bbq.GlobalInfo{
 					Index:         1,
 					Location:      nil,
-					Name:          "$ArrayVariableSizedRef.map",
-					QualifiedName: "$ArrayVariableSizedRef.map",
+					Name:          "$ArrayVariableSized.map",
+					QualifiedName: "$ArrayVariableSized.map",
 				},
 			},
 		},
