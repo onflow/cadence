@@ -33,6 +33,7 @@ import (
 
 type Access interface {
 	isAccess()
+	Walk(walkChild func(Element))
 	Keyword() string
 	Description() string
 	String() string
@@ -172,6 +173,10 @@ func NewEntitlementAccess(entitlements EntitlementSet) EntitlementAccess {
 
 func (EntitlementAccess) isAccess() {}
 
+func (e EntitlementAccess) Walk(walkChild func(Element)) {
+	e.EntitlementSet.Walk(walkChild)
+}
+
 func (EntitlementAccess) Description() string {
 	return "entitled access"
 }
@@ -299,6 +304,8 @@ func PrimitiveAccessCount() int {
 }
 
 func (PrimitiveAccess) isAccess() {}
+
+func (PrimitiveAccess) Walk(_ func(Element)) {}
 
 // TODO: remove.
 //   only used by tests which are not updated yet

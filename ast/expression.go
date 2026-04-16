@@ -264,7 +264,7 @@ func (*StringTemplateExpression) isExpression() {}
 func (*StringTemplateExpression) isIfStatementTest() {}
 
 func (e *StringTemplateExpression) Walk(walkChild func(Element)) {
-	walkExpressions(walkChild, e.Expressions)
+	walkElements(walkChild, e.Expressions)
 }
 
 func (e *StringTemplateExpression) String() string {
@@ -513,7 +513,7 @@ func (*ArrayExpression) isExpression() {}
 func (*ArrayExpression) isIfStatementTest() {}
 
 func (e *ArrayExpression) Walk(walkChild func(Element)) {
-	walkExpressions(walkChild, e.Values)
+	walkElements(walkChild, e.Values)
 }
 
 func (e *ArrayExpression) String() string {

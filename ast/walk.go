@@ -44,20 +44,8 @@ func Walk(walker Walker, element Element) {
 	walker.Walk(nil)
 }
 
-func walkExpressions(walkChild func(Element), expressions []Expression) {
-	for _, expression := range expressions {
-		walkChild(expression)
-	}
-}
-
-func walkStatements(walkChild func(Element), statements []Statement) {
-	for _, statement := range statements {
-		walkChild(statement)
-	}
-}
-
-func walkDeclarations(walkChild func(Element), declarations []Declaration) {
-	for _, declaration := range declarations {
-		walkChild(declaration)
+func walkElements[E Element](walkChild func(Element), elements []E) {
+	for _, element := range elements {
+		walkChild(element)
 	}
 }

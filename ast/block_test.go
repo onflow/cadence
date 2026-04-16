@@ -870,7 +870,7 @@ func TestFunctionBlock_Walk(t *testing.T) {
 	)
 }
 
-func TestTestCondition_Doc(t *testing.T) {
+func TestCondition_Doc(t *testing.T) {
 	t.Parallel()
 
 	t.Run("with test and message", func(t *testing.T) {
@@ -969,6 +969,87 @@ func TestTestCondition_Doc(t *testing.T) {
 			},
 			condition.Doc(),
 		)
+	})
+}
+
+func TestCondition_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with test only", func(t *testing.T) {
+		t.Parallel()
+
+		test := &BoolExpression{Value: true}
+
+		condition := TestCondition{
+			Test: test,
+		}
+
+		var visited []Element
+		condition.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t, []Element{test}, visited)
+	})
+
+	t.Run("with test and message", func(t *testing.T) {
+		t.Parallel()
+
+		test := &BoolExpression{Value: true}
+		message := &StringExpression{Value: "fail"}
+
+		condition := TestCondition{
+			Test:    test,
+			Message: message,
+		}
+
+		var visited []Element
+		condition.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t, []Element{test, message}, visited)
+	})
+}
+
+func TestConditions_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		conditions := &Conditions{}
+
+		var visited []Element
+		conditions.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Empty(t, visited)
+	})
+
+	t.Run("with conditions", func(t *testing.T) {
+		t.Parallel()
+
+		cond1 := TestCondition{
+			Test: &BoolExpression{Value: true},
+		}
+		cond2 := TestCondition{
+			Test: &BoolExpression{Value: false},
+		}
+
+		conditions := &Conditions{
+			Conditions: []Condition{cond1, cond2},
+		}
+
+		var visited []Element
+		conditions.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t, []Element{cond1, cond2}, visited)
 	})
 }
 

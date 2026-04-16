@@ -252,38 +252,141 @@ func TestAttachmentDeclaration_Walk(t *testing.T) {
 
 	t.Parallel()
 
-	field := &FieldDeclaration{
-		Identifier: Identifier{Identifier: "field"},
-		TypeAnnotation: &TypeAnnotation{
-			Type: &NominalType{
-				Identifier: Identifier{Identifier: "Int"},
+	t.Run("members only", func(t *testing.T) {
+		t.Parallel()
+
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+			TypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{Identifier: "Int"},
+				},
 			},
-		},
-	}
+		}
 
-	function := &FunctionDeclaration{
-		Identifier: Identifier{Identifier: "function"},
-	}
+		function := &FunctionDeclaration{
+			Identifier: Identifier{Identifier: "function"},
+		}
 
-	decl := &AttachmentDeclaration{
-		Members: NewUnmeteredMembers([]Declaration{
-			field,
-			function,
-		}),
-	}
+		decl := &AttachmentDeclaration{
+			Members: NewUnmeteredMembers([]Declaration{
+				field,
+				function,
+			}),
+		}
 
-	var visited []Element
-	decl.Walk(func(element Element) {
-		visited = append(visited, element)
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				field,
+				function,
+			},
+			visited,
+		)
 	})
 
-	assert.Equal(t,
-		[]Element{
-			field,
-			function,
-		},
-		visited,
-	)
+	t.Run("with base type", func(t *testing.T) {
+		t.Parallel()
+
+		baseType := &NominalType{
+			Identifier: Identifier{Identifier: "Base"},
+		}
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+		}
+
+		decl := &AttachmentDeclaration{
+			BaseType: baseType,
+			Members:  NewUnmeteredMembers([]Declaration{field}),
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				baseType,
+				field,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with conformances", func(t *testing.T) {
+		t.Parallel()
+
+		conformance := &NominalType{
+			Identifier: Identifier{Identifier: "Foo"},
+		}
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+		}
+
+		decl := &AttachmentDeclaration{
+			Conformances: []*NominalType{conformance},
+			Members:      NewUnmeteredMembers([]Declaration{field}),
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				conformance,
+				field,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with entitlement access, base type, and conformances", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "E"},
+		}
+		baseType := &NominalType{
+			Identifier: Identifier{Identifier: "Base"},
+		}
+		conformance := &NominalType{
+			Identifier: Identifier{Identifier: "Iface"},
+		}
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+		}
+
+		decl := &AttachmentDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			BaseType:     baseType,
+			Conformances: []*NominalType{conformance},
+			Members:      NewUnmeteredMembers([]Declaration{field}),
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+				baseType,
+				conformance,
+				field,
+			},
+			visited,
+		)
+	})
 }
 
 func TestAttachExpressionMarshallJSON(t *testing.T) {
