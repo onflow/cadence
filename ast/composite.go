@@ -532,8 +532,10 @@ func (*EnumCaseDeclaration) ElementType() ElementType {
 	return ElementTypeEnumCaseDeclaration
 }
 
-func (*EnumCaseDeclaration) Walk(_ func(Element)) {
-	// NO-OP
+func (d *EnumCaseDeclaration) Walk(walkChild func(Element)) {
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
 }
 
 func (*EnumCaseDeclaration) isDeclaration() {}

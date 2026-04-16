@@ -60,7 +60,11 @@ func (*EntitlementDeclaration) ElementType() ElementType {
 	return ElementTypeEntitlementDeclaration
 }
 
-func (*EntitlementDeclaration) Walk(_ func(Element)) {}
+func (d *EntitlementDeclaration) Walk(walkChild func(Element)) {
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
+}
 
 func (*EntitlementDeclaration) isDeclaration() {}
 
@@ -209,6 +213,9 @@ func (*EntitlementMappingDeclaration) ElementType() ElementType {
 }
 
 func (d *EntitlementMappingDeclaration) Walk(walkChild func(Element)) {
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
 	for _, element := range d.Elements {
 		switch element := element.(type) {
 		case Element:
