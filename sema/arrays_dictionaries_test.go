@@ -1346,6 +1346,17 @@ func TestCheckArrayMap(t *testing.T) {
 		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errs[0], &typeMismatchError)
 		assert.Equal(t, 6, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun(&Int8):String"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun(auth(Mutate)&Int8):String"),
+			typeMismatchError.ActualType.ID(),
+		)
 	})
 
 	t.Run("reference, optional auth reference array", func(t *testing.T) {
@@ -1367,6 +1378,17 @@ func TestCheckArrayMap(t *testing.T) {
 		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errs[0], &typeMismatchError)
 		assert.Equal(t, 7, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun((&Int8)?):String"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun((auth(Mutate)&Int8)?):String"),
+			typeMismatchError.ActualType.ID(),
+		)
 	})
 }
 
