@@ -1021,8 +1021,8 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
-	// TODO: Double check this (this is also how the interpreter does it!!)
-	// Do the target-type check **before** updating the receiver for attachments (?!)
+	// TODO: Double check this (this is also how the interpreter does it)
+	// Do the target-type check **before** updating the receiver for attachments
 	checkMemberAccessTargetType(
 		vm,
 		ins.ReceiverType,
@@ -1342,33 +1342,30 @@ func loadTypes(vm *VM, typeIndices []uint16) []bbq.StaticType {
 
 func maybeDereferenceReceiver(
 	context interpreter.ValueStaticTypeContext,
-	receiverReference interpreter.Value,
+	receiverReference interpreter.ReferenceValue,
 	isNative bool,
 ) Value {
 
-	switch typedValue := receiverReference.(type) {
-	case *interpreter.EphemeralReferenceValue:
-		// Do not dereference attachments, so that the receiver is a reference as expected.
-		// Exception: Native function receiver needs to be dereferenced to match interpreter.
-		innerValue := typedValue.Value
-		if innerValue, ok := innerValue.(*interpreter.CompositeValue); ok && !isNative {
-			if innerValue.Kind == common.CompositeKindAttachment {
-				return receiverReference
-			}
-		}
-		return innerValue
-	case *interpreter.StorageReferenceValue:
-		referencedValue := typedValue.ReferencedValue(context, true)
-		// `storageRef.ReferencedValue()` above already checks for the type validity, if it's not nil.
-		// If nil, that means the value has been moved out of storage.
-		if referencedValue == nil {
-			panic(&interpreter.ReferencedValueChangedError{})
-		}
+	referencedValue := receiverReference.ReferencedValue(context, true)
 
-		return *referencedValue
-	default:
-		return receiverReference
+	// `storageRef.ReferencedValue()` above already checks for the type validity, if it's not nil.
+	// If nil, that means the value has been moved out of storage.
+	// Note: `referencedValue` could be nil only for storage references.
+	if referencedValue == nil {
+		panic(&interpreter.ReferencedValueChangedError{})
 	}
+
+	dereferencedReceiver := *referencedValue
+
+	// Do not dereference attachments, so that the receiver is a reference as expected.
+	// Exception: Native function receiver needs to be dereferenced to match interpreter.
+	if innerValue, ok := dereferencedReceiver.(*interpreter.CompositeValue); ok && !isNative {
+		if innerValue.Kind == common.CompositeKindAttachment {
+			return receiverReference
+		}
+	}
+
+	return dereferencedReceiver
 }
 
 func opDrop(vm *VM) {

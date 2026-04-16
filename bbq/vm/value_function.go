@@ -76,6 +76,7 @@ func (v *CompiledFunctionValue) ComputeFunctionType(_ Value, context interpreter
 }
 
 func (v *CompiledFunctionValue) DereferenceReceiver() bool {
+	// Compiled functions should always get the receiver dereferenced.
 	return true
 }
 
@@ -176,7 +177,12 @@ type NativeFunctionValue struct {
 	functionType       *sema.FunctionType
 	functionTypeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
 
-	fields              map[string]Value
+	fields map[string]Value
+
+	// Most native functions need the receiver dereferenced.
+	// But some native functions such as `Array.filter`/`Array.map`
+	// needs the receiver as-is, because the parameter type depends
+	// on whether the receiver is a reference or not.
 	dereferenceReceiver bool
 }
 
@@ -514,14 +520,25 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 }
 
 func (v *BoundFunctionValue) maybeDereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
-	receiver := *interpreter.GetReceiver(
-		v.ReceiverReference,
-		v.ReceiverIsReference,
-		context,
-	)
 
-	if v.DereferenceReceiver() {
-		receiver = maybeDereferenceReceiver(context, receiver, v.IsNative())
+	interpreter.CheckInvalidatedResourceOrResourceReference(v.ReceiverReference, context)
+
+	var receiver Value = v.ReceiverReference
+
+	// Receiver needs to be dereferenced, if:
+	//  - The function always required the receiver to be dereferenced (e.g: compiled functions).
+	//    Then it must be dereferenced, even if the method was invoked on a reference-value.
+	//  - Or, the receiver is an implicitly created reference (for invalidation purpose only),
+	//    and wasn't a reference to begin with.
+	shouldDereference := v.DereferenceReceiver() || !v.ReceiverIsReference
+
+	if shouldDereference {
+		receiver = maybeDereferenceReceiver(
+			context,
+			v.ReceiverReference,
+			v.IsNative(),
+		)
+
 	}
 
 	return receiver
