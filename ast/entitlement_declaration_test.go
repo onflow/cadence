@@ -423,6 +423,111 @@ include X
 	})
 }
 
+func TestEntitlementDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without access", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &EntitlementDeclaration{
+			Identifier: Identifier{Identifier: "E"},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Empty(t, visited)
+	})
+
+	t.Run("with entitlement access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+
+		decl := &EntitlementDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			Identifier: Identifier{Identifier: "E"},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+			},
+			visited,
+		)
+	})
+}
+
+func TestEntitlementMapRelation_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with input and output", func(t *testing.T) {
+		t.Parallel()
+
+		input := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+		output := &NominalType{
+			Identifier: Identifier{Identifier: "Y"},
+		}
+
+		relation := &EntitlementMapRelation{
+			Input:  input,
+			Output: output,
+		}
+
+		var visited []Element
+		relation.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				input,
+				output,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with nil input", func(t *testing.T) {
+		t.Parallel()
+
+		output := &NominalType{
+			Identifier: Identifier{Identifier: "Y"},
+		}
+
+		relation := &EntitlementMapRelation{
+			Output: output,
+		}
+
+		var visited []Element
+		relation.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				output,
+			},
+			visited,
+		)
+	})
+}
+
 func TestEntitlementMappingDeclaration_Walk(t *testing.T) {
 
 	t.Parallel()

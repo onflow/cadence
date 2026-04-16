@@ -1085,6 +1085,53 @@ enum AB: CD {
 	})
 }
 
+func TestEnumCaseDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without access", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &EnumCaseDeclaration{
+			Identifier: Identifier{Identifier: "x"},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Empty(t, visited)
+	})
+
+	t.Run("with entitlement access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "E"},
+		}
+
+		decl := &EnumCaseDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			Identifier: Identifier{Identifier: "x"},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+			},
+			visited,
+		)
+	})
+}
+
 func TestEnumCaseDeclaration_Doc(t *testing.T) {
 
 	t.Parallel()
