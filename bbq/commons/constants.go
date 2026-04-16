@@ -45,13 +45,9 @@ const (
 
 	TypeQualifierArrayConstantSized = "$ArrayConstantSized"
 	TypeQualifierArrayVariableSized = "$ArrayVariableSized"
-
-	TypeQualifierArrayConstantSizedRef = "$ArrayConstantSizedRef"
-	TypeQualifierArrayVariableSizedRef = "$ArrayVariableSizedRef"
-
-	TypeQualifierDictionary     = "$Dictionary"
-	TypeQualifierFunction       = "$Function"
-	TypeQualifierOptional       = "$Optional"
-	TypeQualifierInclusiveRange = "$InclusiveRange"
-	TypeQualifierCapability     = "$Capability"
+	TypeQualifierDictionary         = "$Dictionary"
+	TypeQualifierFunction           = "$Function"
+	TypeQualifierOptional           = "$Optional"
+	TypeQualifierInclusiveRange     = "$InclusiveRange"
+	TypeQualifierCapability         = "$Capability"
 )

@@ -67,19 +67,19 @@ func (*CompiledFunctionValue) IsValue() {}
 
 func (*CompiledFunctionValue) IsFunctionValue() {}
 
-func (v CompiledFunctionValue) HasComputedFunctionType() bool {
+func (v *CompiledFunctionValue) HasComputedFunctionType() bool {
 	return false
 }
 
-func (v CompiledFunctionValue) ComputeFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v *CompiledFunctionValue) ComputeFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	return v.FunctionType(context)
 }
 
-func (v CompiledFunctionValue) DereferenceReceiver() bool {
+func (v *CompiledFunctionValue) DereferenceReceiver() bool {
 	return true
 }
 
-func (v CompiledFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
+func (v *CompiledFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bbq.StaticType {
 	return v.Type
 }
 
@@ -354,7 +354,8 @@ func (v *NativeFunctionValue) WithDereferenceReceiver(dereferenceReceiver bool) 
 
 // BoundFunctionValue is a function-wrapper which captures the receivers of an object-method.
 type BoundFunctionValue struct {
-	ReceiverReference interpreter.ReferenceValue
+	ReceiverReference   interpreter.ReferenceValue
+	ReceiverIsReference bool
 
 	Method       FunctionValue
 	functionType *sema.FunctionType
@@ -376,12 +377,13 @@ func NewBoundFunctionValue(
 	// This reference is later used to check the validity of the referenced value/resource.
 	// For attachments, 'self' is already a reference. So no need to create a reference again.
 
-	receiverRef, _ := interpreter.ReceiverReference(context, receiver)
+	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver)
 
 	return &BoundFunctionValue{
-		Method:            method,
-		ReceiverReference: receiverRef,
-		Base:              base,
+		Method:              method,
+		ReceiverReference:   receiverRef,
+		ReceiverIsReference: receiverIsRef,
+		Base:                base,
 	}
 }
 
@@ -514,12 +516,14 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 func (v *BoundFunctionValue) maybeDereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
 	receiver := *interpreter.GetReceiver(
 		v.ReceiverReference,
-		v.IsNative(),
+		v.ReceiverIsReference,
 		context,
 	)
+
 	if v.DereferenceReceiver() {
 		receiver = maybeDereferenceReceiver(context, receiver, v.IsNative())
 	}
+
 	return receiver
 }
 

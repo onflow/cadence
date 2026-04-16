@@ -1021,12 +1021,15 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
-	base, receiver := baseAndReceiver(vm.context, receiver, method)
+	// TODO: Double check this (this is also how the interpreter does it!!)
+	// Do the target-type check **before** updating the receiver for attachments (?!)
 	checkMemberAccessTargetType(
 		vm,
 		ins.ReceiverType,
 		receiver,
 	)
+
+	base, receiver := baseAndReceiver(vm.context, receiver, method)
 
 	boundFunction := NewBoundFunctionValue(
 		context,

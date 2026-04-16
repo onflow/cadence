@@ -367,11 +367,15 @@ func (c *Context) GetMethod(
 		return method
 	}
 
-	base, receiver := baseAndReceiver(c, value, method)
+	var base *interpreter.EphemeralReferenceValue
+	// If the value is an attachment, then we must create an authorized reference
+	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
+		base, value = AttachmentBaseAndSelfValues(c, v, method)
+	}
 
 	return NewBoundFunctionValue(
 		c,
-		receiver,
+		value,
 		method,
 		base,
 	)
@@ -640,6 +644,7 @@ func (c *Context) GetReferenceValueMember(
 			// by calling the `GetMethod` function above.
 			// TODO: Maybe just panic?
 			boundFunction.ReceiverReference = v
+			boundFunction.ReceiverIsReference = true
 		}
 
 		return member

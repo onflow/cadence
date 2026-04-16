@@ -1683,7 +1683,7 @@ func (e *InvalidArgumentTypeError) Error() string {
 	)
 
 	return fmt.Sprintf(
-		"%s invalid transfer of value: expected `%s`, got `%s`",
+		"%s invalid argument type: expected `%s`, got `%s`",
 		errors.InternalErrorMessagePrefix,
 		expected,
 		actual,

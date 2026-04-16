@@ -362,7 +362,7 @@ func NewBoundFunctionValue(
 	)
 }
 
-func ReceiverReference(context ReferenceCreationContext, receiver Value) (ReferenceValue, bool) {
+func ReceiverReference(context ReferenceCreationContext, receiver Value) (receiverRef ReferenceValue, receiverIsRef bool) {
 	// Since 'self' work as an implicit reference, create an explicit one and hold it.
 	// This reference is later used to check the validity of the referenced value/resource.
 	// For attachments, 'self' is already a reference. So no need to create a reference again.
