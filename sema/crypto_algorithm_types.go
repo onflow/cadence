@@ -47,6 +47,11 @@ const (
 	SignatureAlgorithmECDSA_P256
 	SignatureAlgorithmECDSA_secp256k1
 	SignatureAlgorithmBLS_BLS12_381
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	SignatureAlgorithm_Count
 )
 
 var SignatureAlgorithms = []SignatureAlgorithm{
@@ -185,6 +190,11 @@ const (
 	HashAlgorithmSHA3_384
 	HashAlgorithmKMAC128_BLS_BLS12_381
 	HashAlgorithmKECCAK_256
+
+	// !!! *WARNING* !!!
+	// ADD NEW TYPES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
+	HashAlgorithm_Count
 )
 
 var HashAlgorithms = []HashAlgorithm{
