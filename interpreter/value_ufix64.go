@@ -26,6 +26,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -353,6 +355,18 @@ func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue
 	handleFix64Error(err)
 
 	return UFix64Value{UFix64Value: result}
+}
+
+func (v UFix64Value) Pow(context NumberValueArithmeticContext, other Fix64Value) NumberValue {
+	valueGetter := func() uint64 {
+		a := fix.UFix64(uint64(v.UFix64Value))
+		b := fix.Fix64(uint64(other))
+		result, err := a.Pow(b)
+		handleFixedpointError(err)
+		return uint64(result)
+	}
+
+	return NewUFix64Value(context, valueGetter)
 }
 
 func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {

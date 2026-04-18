@@ -1379,6 +1379,52 @@ type SaturatingArithmeticSupport struct {
 	Divide   bool
 }
 
+const FixedPointNumericTypePowFunctionName = "pow"
+const fixedPointNumericTypePowFunctionDocString = `
+Returns this value raised to the power of the given exponent.
+The exponent may be negative or fractional.
+`
+
+var FixedPointPowFunctionTypes = map[Type]*FunctionType{}
+
+func addFixedPointPowFunction(
+	baseType *FixedPointNumericType,
+	exponentType Type,
+	members map[string]MemberResolver,
+) {
+	funcType := NewSimpleFunctionType(
+		FunctionPurityView,
+		[]Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "exponent",
+				TypeAnnotation: NewTypeAnnotation(exponentType),
+			},
+		},
+		NewTypeAnnotation(baseType),
+	)
+
+	FixedPointPowFunctionTypes[baseType] = funcType
+
+	members[FixedPointNumericTypePowFunctionName] = MemberResolver{
+		Kind: common.DeclarationKindFunction,
+		Resolve: func(
+			memoryGauge common.MemoryGauge,
+			_ string,
+			_ ast.HasPosition,
+			_ func(error),
+		) *Member {
+			return NewPublicFunctionMember(
+				memoryGauge,
+				baseType,
+				FixedPointNumericTypePowFunctionName,
+				funcType,
+				fixedPointNumericTypePowFunctionDocString,
+			)
+		},
+	}
+}
+
 // NumericType represent all the types in the integer range
 // and non-fractional ranged types.
 type NumericType struct {
@@ -1817,6 +1863,15 @@ func (t *FixedPointNumericType) GetMembers() map[string]MemberResolver {
 	// Compute members and cache them
 	computedMembers := map[string]MemberResolver{}
 	addSaturatingArithmeticFunctions(t, computedMembers)
+
+	// Add pow function for concrete unsigned fixed-point types
+	switch t {
+	case UFix64Type:
+		addFixedPointPowFunction(t, Fix64Type, computedMembers)
+	case UFix128Type:
+		addFixedPointPowFunction(t, Fix128Type, computedMembers)
+	}
+
 	computedMembers = withBuiltinMembers(t, computedMembers)
 	t.memberResolvers.Store(&computedMembers)
 	return computedMembers
