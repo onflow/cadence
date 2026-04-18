@@ -26,6 +26,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -164,6 +166,42 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value) UFix64Value {
 
 	default:
 		panic(fmt.Sprintf("can't convert to UFix64: %s", value))
+	}
+}
+
+func ConvertUFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roundingMode fix.RoundingMode) UFix64Value {
+	switch value := value.(type) {
+	case UFix128Value:
+		return NewUFix64Value(
+			memoryGauge,
+			func() uint64 {
+				result, err := fix.UFix128(value).ToUFix64(roundingMode)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				return uint64(result)
+			},
+		)
+
+	case Fix128Value:
+		return NewUFix64Value(
+			memoryGauge,
+			func() uint64 {
+				fix128 := fix.Fix128(value)
+				if fix128.IsNeg() {
+					panic(&UnderflowError{})
+				}
+				// A non-negative Fix128 has the same bit representation as UFix128
+				result, err := fix.UFix128(fix128).ToUFix64(roundingMode)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				return uint64(result)
+			},
+		)
+
+	default:
+		return ConvertUFix64(memoryGauge, value)
 	}
 }
 

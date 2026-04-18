@@ -27,6 +27,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -511,6 +513,40 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value) Fix64Value {
 
 	default:
 		panic(fmt.Sprintf("can't convert to Fix64: %s", value))
+	}
+}
+
+func ConvertFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roundingMode fix.RoundingMode) Fix64Value {
+	switch value := value.(type) {
+	case Fix128Value:
+		return NewFix64Value(
+			memoryGauge,
+			func() int64 {
+				result, err := fix.Fix128(value).ToFix64(roundingMode)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				return int64(result)
+			},
+		)
+
+	case UFix128Value:
+		return NewFix64Value(
+			memoryGauge,
+			func() int64 {
+				result, err := fix.UFix128(value).ToUFix64(roundingMode)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				if uint64(result) > Fix64MaxValue {
+					panic(&OverflowError{})
+				}
+				return int64(result)
+			},
+		)
+
+	default:
+		return ConvertFix64(memoryGauge, value)
 	}
 }
 

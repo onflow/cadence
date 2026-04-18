@@ -20,6 +20,7 @@ package test_utils
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -319,6 +320,29 @@ func ParseCheckAndPrepareWithOptions(
 			// (i.e: only get the values that were added externally for tests)
 			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
 
+			// Collect nested variables (e.g. enum case values like "RoundingMode.towardZero")
+			// from HostFunctionValues, so they can be registered in both the VM and compiler activations.
+			type nestedVariableEntry struct {
+				qualifiedName string
+				value         interpreter.Value
+			}
+			var nestedEntries []nestedVariableEntry
+
+			for name, variable := range interpreterBaseActivationVariables { //nolint:maprange
+				value := variable.GetValue(nil)
+				if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
+					for nestedName, nestedVar := range functionValue.NestedVariables { //nolint:maprange
+						nestedEntries = append(nestedEntries, nestedVariableEntry{
+							qualifiedName: name + "." + nestedName,
+							value:         nestedVar.GetValue(nil),
+						})
+					}
+				}
+			}
+			slices.SortFunc(nestedEntries, func(a, b nestedVariableEntry) int {
+				return strings.Compare(a.qualifiedName, b.qualifiedName)
+			})
+
 			vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 
 				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
@@ -336,7 +360,7 @@ func ParseCheckAndPrepareWithOptions(
 					value := variable.GetValue(nil)
 
 					if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
-						value = vm.NewNativeFunctionValue(
+						nativeFn := vm.NewNativeFunctionValue(
 							name,
 							functionValue.Type,
 							func(
@@ -371,6 +395,13 @@ func ParseCheckAndPrepareWithOptions(
 							},
 						)
 
+						// Transfer nested variables (e.g. enum case values)
+						// from the interpreter's HostFunctionValue to the VM's NativeFunctionValue.
+						for nestedName, nestedVar := range functionValue.NestedVariables { //nolint:maprange
+							nativeFn.SetField(nestedName, nestedVar.GetValue(nil))
+						}
+
+						value = nativeFn
 					}
 
 					vmVariable := interpreter.NewVariableWithValue(
@@ -379,6 +410,14 @@ func ParseCheckAndPrepareWithOptions(
 					)
 
 					activation.Set(name, vmVariable)
+				}
+
+				// Register nested variables as separate qualified globals.
+				for _, entry := range nestedEntries {
+					activation.Set(
+						entry.qualifiedName,
+						interpreter.NewVariableWithValue(nil, entry.value),
+					)
 				}
 
 				return activation
@@ -399,6 +438,15 @@ func ParseCheckAndPrepareWithOptions(
 							compiler.NewGlobalImport(name),
 						)
 					}
+
+					// Register nested variables as separate qualified compiler globals.
+					for _, entry := range nestedEntries {
+						activation.Set(
+							entry.qualifiedName,
+							compiler.NewGlobalImport(entry.qualifiedName),
+						)
+					}
+
 					return activation
 				},
 			}

@@ -34,6 +34,8 @@ import (
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -3510,10 +3512,11 @@ var BigEndianBytesConverters = func() map[string]TypedBigEndianBytesConverter {
 }()
 
 type ValueConverterDeclaration struct {
-	Min             Value
-	Max             Value
-	Convert         func(common.MemoryGauge, Value) Value
-	nestedVariables []struct {
+	Min                 Value
+	Max                 Value
+	Convert             func(common.MemoryGauge, Value) Value
+	ConvertWithRounding func(common.MemoryGauge, Value, fix.RoundingMode) Value
+	nestedVariables     []struct {
 		Name  string
 		Value Value
 	}
@@ -3678,6 +3681,9 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		Convert: func(gauge common.MemoryGauge, value Value) Value {
 			return ConvertFix64(gauge, value)
 		},
+		ConvertWithRounding: func(gauge common.MemoryGauge, value Value, round fix.RoundingMode) Value {
+			return ConvertFix64WithRounding(gauge, value, round)
+		},
 		Min: NewUnmeteredFix64Value(math.MinInt64),
 		Max: NewUnmeteredFix64Value(math.MaxInt64),
 	},
@@ -3693,6 +3699,9 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		Name: sema.UFix64TypeName,
 		Convert: func(gauge common.MemoryGauge, value Value) Value {
 			return ConvertUFix64(gauge, value)
+		},
+		ConvertWithRounding: func(gauge common.MemoryGauge, value Value, round fix.RoundingMode) Value {
+			return ConvertUFix64WithRounding(gauge, value, round)
 		},
 		Min: NewUnmeteredUFix64Value(0),
 		Max: NewUnmeteredUFix64Value(math.MaxUint64),
@@ -4158,12 +4167,20 @@ var converterFunctionValues = func() []converterFunction {
 	for index, declaration := range ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.Convert
+		convertWithRounding := declaration.ConvertWithRounding
 
 		converterFunctionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
 
+		var nativeFn NativeFunction
+		if convertWithRounding != nil {
+			nativeFn = NativeConverterFunctionWithRounding(convert, convertWithRounding)
+		} else {
+			nativeFn = NativeConverterFunction(convert)
+		}
+
 		converterFunctionValue := NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			converterFunctionType,
-			NativeConverterFunction(convert),
+			nativeFn,
 		)
 
 		addMember := func(name string, value Value) {
@@ -4430,6 +4447,25 @@ func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value 
 		_ Value,
 		args []Value,
 	) Value {
+		return convert(context, args[0])
+	}
+}
+
+func NativeConverterFunctionWithRounding(
+	convert func(memoryGauge common.MemoryGauge, value Value) Value,
+	convertWithRounding func(memoryGauge common.MemoryGauge, value Value, round fix.RoundingMode) Value,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		_ Value,
+		args []Value,
+	) Value {
+		if len(args) > 1 {
+			roundingMode := extractRoundingMode(args[1])
+			return convertWithRounding(context, args[0], roundingMode)
+		}
 		return convert(context, args[0])
 	}
 }

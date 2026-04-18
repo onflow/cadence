@@ -39,7 +39,7 @@ func TestCheckHashAlgorithmCases(t *testing.T) {
 		baseValueActivation.DeclareValue(value)
 	}
 
-	test := func(algorithm sema.CryptoAlgorithm) {
+	test := func(algorithm sema.NativeEnumCase) {
 
 		_, err := ParseAndCheckWithOptions(t,
 			fmt.Sprintf(
@@ -120,7 +120,7 @@ func TestCheckSignatureAlgorithmCases(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.InterpreterSignatureAlgorithmConstructor)
 
-	test := func(algorithm sema.CryptoAlgorithm) {
+	test := func(algorithm sema.NativeEnumCase) {
 
 		_, err := ParseAndCheckWithOptions(t,
 			fmt.Sprintf(
