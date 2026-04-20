@@ -169,6 +169,42 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value) UFix64Value {
 	}
 }
 
+func ConvertUFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roundingRule fix.RoundingMode) UFix64Value {
+	switch value := value.(type) {
+	case UFix128Value:
+		return NewUFix64Value(
+			memoryGauge,
+			func() uint64 {
+				result, err := fix.UFix128(value).ToUFix64(roundingRule)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				return uint64(result)
+			},
+		)
+
+	case Fix128Value:
+		return NewUFix64Value(
+			memoryGauge,
+			func() uint64 {
+				fix128 := fix.Fix128(value)
+				if fix128.IsNeg() {
+					panic(&UnderflowError{})
+				}
+				// A non-negative Fix128 has the same bit representation as UFix128
+				result, err := fix.UFix128(fix128).ToUFix64(roundingRule)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				return uint64(result)
+			},
+		)
+
+	default:
+		return ConvertUFix64(memoryGauge, value)
+	}
+}
+
 var _ Value = UFix64Value{}
 var _ atree.Storable = UFix64Value{}
 var _ NumberValue = UFix64Value{}

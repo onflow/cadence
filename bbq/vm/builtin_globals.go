@@ -228,13 +228,21 @@ func init() {
 	for _, declaration := range interpreter.ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.Convert
+		convertWithRounding := declaration.ConvertWithRounding
 
 		functionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
+
+		var nativeFn interpreter.NativeFunction
+		if convertWithRounding != nil {
+			nativeFn = interpreter.NativeConverterFunctionWithRounding(convert, convertWithRounding)
+		} else {
+			nativeFn = interpreter.NativeConverterFunction(convert)
+		}
 
 		function := NewNativeFunctionValue(
 			declaration.Name,
 			functionType,
-			interpreter.NativeConverterFunction(convert),
+			nativeFn,
 		)
 		registerBuiltinFunction(function)
 
