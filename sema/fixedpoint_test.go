@@ -32,6 +32,114 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
+func TestCheckFixedPointPow(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("UFix64", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("valid", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t, `
+				let result = 2.0.pow(3.0)
+			`)
+			require.NoError(t, err)
+
+			resultType := RequireGlobalValue(t, checker.Elaboration, "result")
+			assert.Equal(t, sema.UFix64Type, resultType)
+		})
+
+		t.Run("valid, negative exponent", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let result = 2.0.pow(-1.0)
+			`)
+			require.NoError(t, err)
+		})
+
+		t.Run("valid, explicit types", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let base: UFix64 = 2.0
+				let exponent: Fix64 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.NoError(t, err)
+		})
+
+		t.Run("invalid, wrong exponent type", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let result = 2.0.pow(3.0 as UFix64)
+			`)
+			require.Error(t, err)
+		})
+	})
+
+	t.Run("UFix128", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("valid", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t, `
+				let base: UFix128 = 2.0
+				let exponent: Fix128 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.NoError(t, err)
+
+			resultType := RequireGlobalValue(t, checker.Elaboration, "result")
+			assert.Equal(t, sema.UFix128Type, resultType)
+		})
+
+		t.Run("invalid, wrong exponent type", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let base: UFix128 = 2.0
+				let exponent: Fix64 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.Error(t, err)
+		})
+	})
+
+	t.Run("not available on signed types", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("Fix64", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let base: Fix64 = 2.0
+				let exponent: Fix64 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.Error(t, err)
+		})
+
+		t.Run("Fix128", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let base: Fix128 = 2.0
+				let exponent: Fix128 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.Error(t, err)
+		})
+	})
+}
+
 func TestCheckFixedPointLiteralTypeConversionInVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
