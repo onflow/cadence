@@ -1425,6 +1425,60 @@ func addFixedPointPowFunction(
 	}
 }
 
+const FixedPointNumericTypeMultiplyDivideFunctionName = "multiplyDivide"
+const fixedPointNumericTypeMultiplyDivideFunctionDocString = `
+Returns self * factor / divisor, without intermediate rounding
+`
+
+var FixedPointMultiplyDivideFunctionTypes = map[Type]*FunctionType{}
+
+func addFixedPointMultiplyDivideFunction(
+	fixedPointType *FixedPointNumericType,
+	members map[string]MemberResolver,
+) {
+	funcType := NewSimpleFunctionType(
+		FunctionPurityView,
+		[]Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "factor",
+				TypeAnnotation: NewTypeAnnotation(fixedPointType),
+			},
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "divisor",
+				TypeAnnotation: NewTypeAnnotation(fixedPointType),
+			},
+			{
+				Label:          "rounding",
+				Identifier:     "rounding",
+				TypeAnnotation: RoundingRuleTypeAnnotation,
+			},
+		},
+		NewTypeAnnotation(fixedPointType),
+	)
+
+	FixedPointMultiplyDivideFunctionTypes[fixedPointType] = funcType
+
+	members[FixedPointNumericTypeMultiplyDivideFunctionName] = MemberResolver{
+		Kind: common.DeclarationKindFunction,
+		Resolve: func(
+			memoryGauge common.MemoryGauge,
+			_ string,
+			_ ast.HasPosition,
+			_ func(error),
+		) *Member {
+			return NewPublicFunctionMember(
+				memoryGauge,
+				fixedPointType,
+				FixedPointNumericTypeMultiplyDivideFunctionName,
+				funcType,
+				fixedPointNumericTypeMultiplyDivideFunctionDocString,
+			)
+		},
+	}
+}
+
 // NumericType represent all the types in the integer range
 // and non-fractional ranged types.
 type NumericType struct {
@@ -1870,6 +1924,12 @@ func (t *FixedPointNumericType) GetMembers() map[string]MemberResolver {
 		addFixedPointPowFunction(t, Fix64Type, computedMembers)
 	case UFix128Type:
 		addFixedPointPowFunction(t, Fix128Type, computedMembers)
+	}
+
+	// Add multiplyDivide function for all concrete fixed-point types
+	switch t {
+	case Fix64Type, UFix64Type, Fix128Type, UFix128Type:
+		addFixedPointMultiplyDivideFunction(t, computedMembers)
 	}
 
 	computedMembers = withBuiltinMembers(t, computedMembers)

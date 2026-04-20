@@ -116,6 +116,18 @@ func getNumberValueFunctionMember(
 			funcType,
 			NativeFixedPointPowFunction,
 		)
+
+	case sema.FixedPointNumericTypeMultiplyDivideFunctionName:
+		funcType, ok := sema.FixedPointMultiplyDivideFunctionTypes[typ]
+		if !ok {
+			return nil
+		}
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			funcType,
+			NativeFixedPointMultiplyDivideFunction,
+		)
 	}
 
 	return nil
@@ -225,6 +237,21 @@ var NativeNumberSaturatingDivideFunction = NativeFunction(
 	) Value {
 		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingDiv(context, other)
+	},
+)
+
+var NativeFixedPointMultiplyDivideFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		factor := AssertValueOfType[FixedPointValue](args[0])
+		divisor := AssertValueOfType[FixedPointValue](args[1])
+		rounding := extractRoundingRule(args[2])
+		return receiver.(FixedPointValue).MultiplyDivide(context, factor, divisor, rounding)
 	},
 )
 

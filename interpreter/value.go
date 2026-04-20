@@ -23,6 +23,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 )
@@ -322,6 +324,12 @@ type FixedPointValue interface {
 	NumberValue
 	IntegerPart() NumberValue
 	Scale() int
+	MultiplyDivide(
+		context NumberValueArithmeticContext,
+		factor FixedPointValue,
+		divisor FixedPointValue,
+		rounding fix.RoundingMode,
+	) NumberValue
 }
 
 type AuthorizedValue interface {
