@@ -9512,6 +9512,43 @@ func TestGetAuthAccount(t *testing.T) {
 	})
 }
 
+func TestBoolToString(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+                fun test(): String {
+                    let x: Bool = true
+                    return x.toString()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("true"), result)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+                fun test(): String {
+                    let x: Bool = false
+                    return x.toString()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("false"), result)
+	})
+}
+
 func TestStringTemplate(t *testing.T) {
 
 	t.Parallel()
@@ -9549,6 +9586,23 @@ func TestStringTemplate(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t, interpreter.NewUnmeteredStringValue("A + B = 4"), result)
+	})
+
+	t.Run("bool", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+                fun test(): String {
+                    let x = true
+                    let y = false
+                    return "\(x) and \(y)"
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("true and false"), result)
 	})
 }
 

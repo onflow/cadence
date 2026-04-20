@@ -82,6 +82,40 @@ func TestInterpretToString(t *testing.T) {
 		)
 	})
 
+	t.Run("Bool, true", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          let x: Bool = true
+          let y = x.toString()
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("true"),
+			inter.GetGlobal("y"),
+		)
+	})
+
+	t.Run("Bool, false", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          let x: Bool = false
+          let y = x.toString()
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("false"),
+			inter.GetGlobal("y"),
+		)
+	})
+
 	for _, ty := range sema.AllFixedPointTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {

@@ -808,7 +808,8 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 func HasToStringFunction(ty Type) bool {
 	switch ty {
-	case CharacterType:
+	case BoolType,
+		CharacterType:
 		return true
 	default:
 		return IsSubType(ty, NumberType) ||
@@ -4711,6 +4712,14 @@ var AllNumberTypes = common.Concat(
 		SignedNumberType,
 	},
 )
+
+var AllPathTypes = []Type{
+	PathType,
+	StoragePathType,
+	CapabilityPathType,
+	PublicPathType,
+	PrivatePathType,
+}
 
 var BuiltinEntitlements = map[string]*EntitlementType{}
 
