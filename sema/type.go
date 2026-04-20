@@ -4570,7 +4570,7 @@ var AllBuiltinTypes = common.Concat(
 		PublicKeyType,
 		SignatureAlgorithmType,
 		HashAlgorithmType,
-		RoundingModeType,
+		RoundingRuleType,
 		StorageCapabilityControllerType,
 		AccountCapabilityControllerType,
 		DeploymentResultType,
@@ -4885,7 +4885,7 @@ func FixedPoint64ConversionFunctionType(numberType Type) *FunctionType {
 			{
 				Label:          "rounding",
 				Identifier:     "rounding",
-				TypeAnnotation: RoundingModeTypeAnnotation,
+				TypeAnnotation: RoundingRuleTypeAnnotation,
 			},
 		},
 		Arity:                    &Arity{Min: 1, Max: 2},
@@ -10205,7 +10205,7 @@ func init() {
 		PublicKeyType,
 		HashAlgorithmType,
 		SignatureAlgorithmType,
-		RoundingModeType,
+		RoundingRuleType,
 		AccountType,
 		DeploymentResultType,
 	}

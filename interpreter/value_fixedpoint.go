@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func extractRoundingMode(value Value) fix.RoundingMode {
+func extractRoundingRule(value Value) fix.RoundingMode {
 	composite, ok := value.(*SimpleCompositeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())

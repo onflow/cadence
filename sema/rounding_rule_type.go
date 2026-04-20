@@ -20,89 +20,89 @@ package sema
 
 import "github.com/onflow/cadence/errors"
 
-const RoundingModeTypeName = "RoundingMode"
+const RoundingRuleTypeName = "RoundingRule"
 
-var RoundingModeType = newNativeEnumType(
-	RoundingModeTypeName,
+var RoundingRuleType = newNativeEnumType(
+	RoundingRuleTypeName,
 	UInt8Type,
 	nil,
 )
 
-var RoundingModeTypeAnnotation = NewTypeAnnotation(RoundingModeType)
+var RoundingRuleTypeAnnotation = NewTypeAnnotation(RoundingRuleType)
 
-type RoundingMode uint8
+type RoundingRule uint8
 
-// NOTE: only add new modes, do *NOT* change existing items,
+// NOTE: only add new rules, do *NOT* change existing items,
 // reuse raw values for other items, swap the order, etc.
 //
 // # Existing stored values use these raw values and should not change
 //
-// IMPORTANT: update RoundingModes
+// IMPORTANT: update RoundingRules
 const (
-	RoundingModeTowardZero RoundingMode = iota
-	RoundingModeAwayFromZero
-	RoundingModeNearestHalfAway
-	RoundingModeNearestHalfEven
+	RoundingRuleTowardZero RoundingRule = iota
+	RoundingRuleAwayFromZero
+	RoundingRuleNearestHalfAway
+	RoundingRuleNearestHalfEven
 
 	// !!! *WARNING* !!!
-	// ADD NEW MODES *BEFORE* THIS WARNING.
-	// DO *NOT* ADD NEW MODES AFTER THIS LINE!
-	RoundingMode_Count
+	// ADD NEW RULES *BEFORE* THIS WARNING.
+	// DO *NOT* ADD NEW RULES AFTER THIS LINE!
+	RoundingRule_Count
 )
 
-var RoundingModes = []RoundingMode{
-	RoundingModeTowardZero,
-	RoundingModeAwayFromZero,
-	RoundingModeNearestHalfAway,
-	RoundingModeNearestHalfEven,
+var RoundingRules = []RoundingRule{
+	RoundingRuleTowardZero,
+	RoundingRuleAwayFromZero,
+	RoundingRuleNearestHalfAway,
+	RoundingRuleNearestHalfEven,
 }
 
-func (mode RoundingMode) Name() string {
-	switch mode {
-	case RoundingModeTowardZero:
+func (rule RoundingRule) Name() string {
+	switch rule {
+	case RoundingRuleTowardZero:
 		return "towardZero"
-	case RoundingModeAwayFromZero:
+	case RoundingRuleAwayFromZero:
 		return "awayFromZero"
-	case RoundingModeNearestHalfAway:
+	case RoundingRuleNearestHalfAway:
 		return "nearestHalfAway"
-	case RoundingModeNearestHalfEven:
+	case RoundingRuleNearestHalfEven:
 		return "nearestHalfEven"
 	}
 
 	panic(errors.NewUnreachableError())
 }
 
-func (mode RoundingMode) RawValue() uint8 {
-	switch mode {
-	case RoundingModeTowardZero:
+func (rule RoundingRule) RawValue() uint8 {
+	switch rule {
+	case RoundingRuleTowardZero:
 		return 0
-	case RoundingModeAwayFromZero:
+	case RoundingRuleAwayFromZero:
 		return 1
-	case RoundingModeNearestHalfAway:
+	case RoundingRuleNearestHalfAway:
 		return 2
-	case RoundingModeNearestHalfEven:
+	case RoundingRuleNearestHalfEven:
 		return 3
 	}
 
 	panic(errors.NewUnreachableError())
 }
 
-func (mode RoundingMode) DocString() string {
-	switch mode {
-	case RoundingModeTowardZero:
-		return RoundingModeTowardZeroDocString
-	case RoundingModeAwayFromZero:
-		return RoundingModeAwayFromZeroDocString
-	case RoundingModeNearestHalfAway:
-		return RoundingModeNearestHalfAwayDocString
-	case RoundingModeNearestHalfEven:
-		return RoundingModeNearestHalfEvenDocString
+func (rule RoundingRule) DocString() string {
+	switch rule {
+	case RoundingRuleTowardZero:
+		return RoundingRuleTowardZeroDocString
+	case RoundingRuleAwayFromZero:
+		return RoundingRuleAwayFromZeroDocString
+	case RoundingRuleNearestHalfAway:
+		return RoundingRuleNearestHalfAwayDocString
+	case RoundingRuleNearestHalfEven:
+		return RoundingRuleNearestHalfEvenDocString
 	}
 
 	panic(errors.NewUnreachableError())
 }
 
-const RoundingModeTowardZeroDocString = `
+const RoundingRuleTowardZeroDocString = `
 Round to the closest representable fixed-point value that has
 a magnitude less than or equal to the magnitude of the real result,
 effectively truncating the fractional part.
@@ -110,7 +110,7 @@ effectively truncating the fractional part.
 e.g. 5e-8 / 2 = 2e-8, -5e-8 / 2 = -2e-8
 `
 
-const RoundingModeAwayFromZeroDocString = `
+const RoundingRuleAwayFromZeroDocString = `
 Round to the closest representable fixed-point value that has
 a magnitude greater than or equal to the magnitude of the real result,
 effectively rounding up any fractional part.
@@ -118,7 +118,7 @@ effectively rounding up any fractional part.
 e.g. 5e-8 / 2 = 3e-8, -5e-8 / 2 = -3e-8
 `
 
-const RoundingModeNearestHalfAwayDocString = `
+const RoundingRuleNearestHalfAwayDocString = `
 Round to the closest representable fixed-point value to the real result,
 which could be larger (rounded up) or smaller (rounded down) depending on
 if the unrepresentable portion is greater than or less than one half
@@ -130,7 +130,7 @@ the value will be rounded away from zero.
 e.g. 7e-8 / 2 = 4e-8, 5e-8 / 2 = 3e-8
 `
 
-const RoundingModeNearestHalfEvenDocString = `
+const RoundingRuleNearestHalfEvenDocString = `
 Round to the closest representable fixed-point value to the real result,
 which could be larger (rounded up) or smaller (rounded down) depending on
 if the unrepresentable portion is greater than or less than one half

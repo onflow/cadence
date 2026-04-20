@@ -1223,7 +1223,7 @@ var AccountKeyType = ExportedBuiltinType(sema.AccountKeyType).(*cadence.StructTy
 var PublicKeyType = ExportedBuiltinType(sema.PublicKeyType).(*cadence.StructType)
 var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType).(*cadence.EnumType)
 var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType).(*cadence.EnumType)
-var RoundingModeEnumType = ExportedBuiltinType(sema.RoundingModeType).(*cadence.EnumType)
+var RoundingRuleEnumType = ExportedBuiltinType(sema.RoundingRuleType).(*cadence.EnumType)
 
 func ExportedBuiltinType(internalType sema.Type) cadence.Type {
 	return ExportType(internalType, map[sema.TypeID]cadence.Type{})

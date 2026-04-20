@@ -474,12 +474,12 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 					},
 				).WithType(SignAlgoType)
 
-			case sema.RoundingModeType:
+			case sema.RoundingRuleType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
 						cadence.NewUInt8(0),
 					},
-				).WithType(RoundingModeEnumType)
+				).WithType(RoundingRuleEnumType)
 
 			case sema.PublicKeyType:
 				value = cadence.NewStruct(
@@ -1073,12 +1073,12 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 					},
 				).WithType(SignAlgoType)
 
-			case sema.RoundingModeType:
+			case sema.RoundingRuleType:
 				value = cadence.NewEnum(
 					[]cadence.Value{
 						cadence.NewUInt8(0),
 					},
-				).WithType(RoundingModeEnumType)
+				).WithType(RoundingRuleEnumType)
 
 			case sema.PublicKeyType:
 				value = cadence.NewStruct(

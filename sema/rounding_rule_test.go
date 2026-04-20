@@ -30,7 +30,7 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-func TestCheckRoundingModeCases(t *testing.T) {
+func TestCheckRoundingRuleCases(t *testing.T) {
 
 	t.Parallel()
 
@@ -39,14 +39,14 @@ func TestCheckRoundingModeCases(t *testing.T) {
 		baseValueActivation.DeclareValue(value)
 	}
 
-	test := func(mode sema.NativeEnumCase) {
+	test := func(rule sema.NativeEnumCase) {
 
 		_, err := ParseAndCheckWithOptions(t,
 			fmt.Sprintf(
 				`
-               let mode: RoundingMode = RoundingMode.%s
+               let rule: RoundingRule = RoundingRule.%s
             `,
-				mode.Name(),
+				rule.Name(),
 			),
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
@@ -60,21 +60,21 @@ func TestCheckRoundingModeCases(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	for _, mode := range sema.RoundingModes {
-		test(mode)
+	for _, rule := range sema.RoundingRules {
+		test(rule)
 	}
 }
 
-func TestCheckRoundingModeConstructor(t *testing.T) {
+func TestCheckRoundingRuleConstructor(t *testing.T) {
 
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InterpreterRoundingModeConstructor)
+	baseValueActivation.DeclareValue(stdlib.InterpreterRoundingRuleConstructor)
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let mode = RoundingMode(rawValue: 0)
+           let rule = RoundingRule(rawValue: 0)
         `,
 		ParseAndCheckOptions{
 			CheckerConfig: &sema.Config{
@@ -88,7 +88,7 @@ func TestCheckRoundingModeConstructor(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckRoundingModeRawValue(t *testing.T) {
+func TestCheckRoundingRuleRawValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -99,8 +99,8 @@ func TestCheckRoundingModeRawValue(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-           let mode = RoundingMode.towardZero
-           let rawValue: UInt8 = mode.rawValue
+           let rule = RoundingRule.towardZero
+           let rawValue: UInt8 = rule.rawValue
         `,
 		ParseAndCheckOptions{
 			CheckerConfig: &sema.Config{
@@ -114,7 +114,7 @@ func TestCheckRoundingModeRawValue(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckFix64WithRoundingMode(t *testing.T) {
+func TestCheckFix64WithRoundingRule(t *testing.T) {
 
 	t.Parallel()
 
@@ -128,7 +128,7 @@ func TestCheckFix64WithRoundingMode(t *testing.T) {
 
 		_, err := ParseAndCheckWithOptions(t,
 			`
-               let x: Fix64 = Fix64(1, rounding: RoundingMode.towardZero)
+               let x: Fix64 = Fix64(1, rounding: RoundingRule.towardZero)
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
@@ -181,7 +181,7 @@ func TestCheckFix64WithRoundingMode(t *testing.T) {
 	})
 }
 
-func TestCheckUFix64WithRoundingMode(t *testing.T) {
+func TestCheckUFix64WithRoundingRule(t *testing.T) {
 
 	t.Parallel()
 
@@ -195,7 +195,7 @@ func TestCheckUFix64WithRoundingMode(t *testing.T) {
 
 		_, err := ParseAndCheckWithOptions(t,
 			`
-               let x: UFix64 = UFix64(1, rounding: RoundingMode.nearestHalfEven)
+               let x: UFix64 = UFix64(1, rounding: RoundingRule.nearestHalfEven)
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{

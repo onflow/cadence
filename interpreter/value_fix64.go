@@ -516,13 +516,13 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value) Fix64Value {
 	}
 }
 
-func ConvertFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roundingMode fix.RoundingMode) Fix64Value {
+func ConvertFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roundingRule fix.RoundingMode) Fix64Value {
 	switch value := value.(type) {
 	case Fix128Value:
 		return NewFix64Value(
 			memoryGauge,
 			func() int64 {
-				result, err := fix.Fix128(value).ToFix64(roundingMode)
+				result, err := fix.Fix128(value).ToFix64(roundingRule)
 				if err != nil {
 					handleFixedPointConversionError(err)
 				}
@@ -534,7 +534,7 @@ func ConvertFix64WithRounding(memoryGauge common.MemoryGauge, value Value, round
 		return NewFix64Value(
 			memoryGauge,
 			func() int64 {
-				result, err := fix.UFix128(value).ToUFix64(roundingMode)
+				result, err := fix.UFix128(value).ToUFix64(roundingRule)
 				if err != nil {
 					handleFixedPointConversionError(err)
 				}

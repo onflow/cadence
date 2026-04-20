@@ -169,13 +169,13 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value) UFix64Value {
 	}
 }
 
-func ConvertUFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roundingMode fix.RoundingMode) UFix64Value {
+func ConvertUFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roundingRule fix.RoundingMode) UFix64Value {
 	switch value := value.(type) {
 	case UFix128Value:
 		return NewUFix64Value(
 			memoryGauge,
 			func() uint64 {
-				result, err := fix.UFix128(value).ToUFix64(roundingMode)
+				result, err := fix.UFix128(value).ToUFix64(roundingRule)
 				if err != nil {
 					handleFixedPointConversionError(err)
 				}
@@ -192,7 +192,7 @@ func ConvertUFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roun
 					panic(&UnderflowError{})
 				}
 				// A non-negative Fix128 has the same bit representation as UFix128
-				result, err := fix.UFix128(fix128).ToUFix64(roundingMode)
+				result, err := fix.UFix128(fix128).ToUFix64(roundingRule)
 				if err != nil {
 					handleFixedPointConversionError(err)
 				}

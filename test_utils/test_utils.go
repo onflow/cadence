@@ -320,7 +320,7 @@ func ParseCheckAndPrepareWithOptions(
 			// (i.e: only get the values that were added externally for tests)
 			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
 
-			// Collect nested variables (e.g. enum case values like "RoundingMode.towardZero")
+			// Collect nested variables (e.g. enum case values like "RoundingRule.towardZero")
 			// from HostFunctionValues, so they can be registered in both the VM and compiler activations.
 			type nestedVariableEntry struct {
 				qualifiedName string

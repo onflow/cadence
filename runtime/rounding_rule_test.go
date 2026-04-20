@@ -32,12 +32,12 @@ import (
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
-func newRoundingModeArgument(rawValue uint8) cadence.Value {
+func newRoundingRuleArgument(rawValue uint8) cadence.Value {
 	return cadence.NewEnum([]cadence.Value{
 		cadence.UInt8(rawValue),
 	}).WithType(cadence.NewEnumType(
 		nil,
-		sema.RoundingModeTypeName,
+		sema.RoundingRuleTypeName,
 		cadence.UInt8Type,
 		[]cadence.Field{
 			{
@@ -49,7 +49,7 @@ func newRoundingModeArgument(rawValue uint8) cadence.Value {
 	))
 }
 
-func TestRuntimeRoundingModeExport(t *testing.T) {
+func TestRuntimeRoundingRuleExport(t *testing.T) {
 
 	t.Parallel()
 
@@ -57,13 +57,13 @@ func TestRuntimeRoundingModeExport(t *testing.T) {
 	runtimeInterface := &TestRuntimeInterface{}
 	nextScriptLocation := NewScriptLocationGenerator()
 
-	testRoundingMode := func(mode sema.NativeEnumCase) {
+	testRoundingRule := func(rule sema.NativeEnumCase) {
 		script := fmt.Sprintf(`
-              access(all) fun main(): RoundingMode {
-                  return RoundingMode.%s
+              access(all) fun main(): RoundingRule {
+                  return RoundingRule.%s
               }
             `,
-			mode.Name(),
+			rule.Name(),
 		)
 
 		value, err := runtime.ExecuteScript(
@@ -85,17 +85,17 @@ func TestRuntimeRoundingModeExport(t *testing.T) {
 		fields := cadence.FieldsMappedByName(enumValue)
 		require.Len(t, fields, 1)
 		assert.Equal(t,
-			cadence.NewUInt8(mode.RawValue()),
+			cadence.NewUInt8(rule.RawValue()),
 			fields[sema.EnumRawValueFieldName],
 		)
 	}
 
-	for _, mode := range sema.RoundingModes {
-		testRoundingMode(mode)
+	for _, rule := range sema.RoundingRules {
+		testRoundingRule(rule)
 	}
 }
 
-func TestRuntimeRoundingModeImport(t *testing.T) {
+func TestRuntimeRoundingRuleImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -108,18 +108,18 @@ func TestRuntimeRoundingModeImport(t *testing.T) {
 	nextScriptLocation := NewScriptLocationGenerator()
 
 	const script = `
-      access(all) fun main(mode: RoundingMode): UInt8 {
-          return mode.rawValue
+      access(all) fun main(rule: RoundingRule): UInt8 {
+          return rule.rawValue
       }
     `
 
-	testRoundingMode := func(mode sema.NativeEnumCase) {
+	testRoundingRule := func(rule sema.NativeEnumCase) {
 
 		value, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
 				Arguments: encodeArgs([]cadence.Value{
-					newRoundingModeArgument(mode.RawValue()),
+					newRoundingRuleArgument(rule.RawValue()),
 				}),
 			},
 			Context{
@@ -130,15 +130,15 @@ func TestRuntimeRoundingModeImport(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, cadence.UInt8(mode.RawValue()), value)
+		assert.Equal(t, cadence.UInt8(rule.RawValue()), value)
 	}
 
-	for _, mode := range sema.RoundingModes {
-		testRoundingMode(mode)
+	for _, rule := range sema.RoundingRules {
+		testRoundingRule(rule)
 	}
 }
 
-func TestRuntimeRoundingModeImportInvalid(t *testing.T) {
+func TestRuntimeRoundingRuleImportInvalid(t *testing.T) {
 
 	t.Parallel()
 
@@ -151,8 +151,8 @@ func TestRuntimeRoundingModeImportInvalid(t *testing.T) {
 	nextScriptLocation := NewScriptLocationGenerator()
 
 	const script = `
-      access(all) fun main(mode: RoundingMode): UInt8 {
-          return mode.rawValue
+      access(all) fun main(rule: RoundingRule): UInt8 {
+          return rule.rawValue
       }
     `
 
@@ -160,7 +160,7 @@ func TestRuntimeRoundingModeImportInvalid(t *testing.T) {
 		Script{
 			Source: []byte(script),
 			Arguments: encodeArgs([]cadence.Value{
-				newRoundingModeArgument(99), // invalid raw value
+				newRoundingRuleArgument(99), // invalid raw value
 			}),
 		},
 		Context{
@@ -171,10 +171,10 @@ func TestRuntimeRoundingModeImportInvalid(t *testing.T) {
 	)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unknown RoundingMode")
+	assert.Contains(t, err.Error(), "unknown RoundingRule")
 }
 
-func TestRuntimeFix64ConversionWithRoundingModeArgument(t *testing.T) {
+func TestRuntimeFix64ConversionWithRoundingRuleArgument(t *testing.T) {
 
 	t.Parallel()
 
@@ -190,9 +190,9 @@ func TestRuntimeFix64ConversionWithRoundingModeArgument(t *testing.T) {
 		t.Parallel()
 
 		const script = `
-          access(all) fun main(mode: RoundingMode): Fix64 {
+          access(all) fun main(rule: RoundingRule): Fix64 {
               let x: Fix128 = 1.000000005000000000000000
-              return Fix64(x, rounding: mode)
+              return Fix64(x, rounding: rule)
           }
         `
 
@@ -200,7 +200,7 @@ func TestRuntimeFix64ConversionWithRoundingModeArgument(t *testing.T) {
 		value, err := runtime.ExecuteScript(
 			Script{
 				Source:    []byte(script),
-				Arguments: encodeArgs([]cadence.Value{newRoundingModeArgument(0)}),
+				Arguments: encodeArgs([]cadence.Value{newRoundingRuleArgument(0)}),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -217,9 +217,9 @@ func TestRuntimeFix64ConversionWithRoundingModeArgument(t *testing.T) {
 		t.Parallel()
 
 		const script = `
-          access(all) fun main(mode: RoundingMode): UFix64 {
+          access(all) fun main(rule: RoundingRule): UFix64 {
               let x: UFix128 = 1.000000005000000000000000
-              return UFix64(x, rounding: mode)
+              return UFix64(x, rounding: rule)
           }
         `
 
@@ -227,7 +227,7 @@ func TestRuntimeFix64ConversionWithRoundingModeArgument(t *testing.T) {
 		value, err := runtime.ExecuteScript(
 			Script{
 				Source:    []byte(script),
-				Arguments: encodeArgs([]cadence.Value{newRoundingModeArgument(1)}),
+				Arguments: encodeArgs([]cadence.Value{newRoundingRuleArgument(1)}),
 			},
 			Context{
 				Interface: runtimeInterface,

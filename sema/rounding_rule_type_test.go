@@ -25,32 +25,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRoundingModeValues(t *testing.T) {
+func TestRoundingRuleValues(t *testing.T) {
 	t.Parallel()
 
-	// Ensure that the values of the RoundingMode enum are not accidentally changed,
+	// Ensure that the values of the RoundingRule enum are not accidentally changed,
 	// e.g. by adding a new value in between or by changing an existing value.
 
-	expectedValues := map[RoundingMode]uint8{
-		RoundingModeTowardZero:      0,
-		RoundingModeAwayFromZero:    1,
-		RoundingModeNearestHalfAway: 2,
-		RoundingModeNearestHalfEven: 3,
-		RoundingMode_Count:          4,
+	expectedValues := map[RoundingRule]uint8{
+		RoundingRuleTowardZero:      0,
+		RoundingRuleAwayFromZero:    1,
+		RoundingRuleNearestHalfAway: 2,
+		RoundingRuleNearestHalfEven: 3,
+		RoundingRule_Count:          4,
 	}
 
 	// Check all expected values.
-	for mode, expectedValue := range expectedValues {
-		require.Equal(t, expectedValue, uint8(mode), "value mismatch for %d", mode)
+	for rule, expectedValue := range expectedValues {
+		require.Equal(t, expectedValue, uint8(rule), "value mismatch for %d", rule)
 	}
 
 	// Check that no new values have been added
 	// without updating the expected values above.
-	for i := uint8(0); i < uint8(RoundingMode_Count); i++ {
-		mode := RoundingMode(i)
-		_, ok := expectedValues[mode]
+	for i := uint8(0); i < uint8(RoundingRule_Count); i++ {
+		rule := RoundingRule(i)
+		_, ok := expectedValues[rule]
 		require.True(t, ok,
-			fmt.Sprintf("unexpected RoundingMode value %d: update expectedValues", i),
+			fmt.Sprintf("unexpected RoundingRule value %d: update expectedValues", i),
 		)
 	}
 }

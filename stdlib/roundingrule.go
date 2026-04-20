@@ -26,12 +26,12 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-var roundingModeStaticType interpreter.StaticType = interpreter.ConvertSemaCompositeTypeToStaticCompositeType(
+var roundingRuleStaticType interpreter.StaticType = interpreter.ConvertSemaCompositeTypeToStaticCompositeType(
 	nil,
-	sema.RoundingModeType,
+	sema.RoundingRuleType,
 )
 
-func NewRoundingModeCase(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {
+func NewRoundingRuleCase(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {
 
 	fields := map[string]interpreter.Value{
 		sema.EnumRawValueFieldName: rawValue,
@@ -39,8 +39,8 @@ func NewRoundingModeCase(rawValue interpreter.UInt8Value) interpreter.MemberAcce
 
 	return interpreter.NewSimpleCompositeValue(
 		nil,
-		sema.RoundingModeType.ID(),
-		roundingModeStaticType,
+		sema.RoundingRuleType.ID(),
+		roundingRuleStaticType,
 		[]string{sema.EnumRawValueFieldName},
 		fields,
 		nil,
@@ -50,27 +50,27 @@ func NewRoundingModeCase(rawValue interpreter.UInt8Value) interpreter.MemberAcce
 	)
 }
 
-var roundingModeLookupType = nativeEnumLookupType(
-	sema.RoundingModeType,
-	sema.RoundingModes,
+var roundingRuleLookupType = nativeEnumLookupType(
+	sema.RoundingRuleType,
+	sema.RoundingRules,
 )
 
-var interpreterRoundingModeConstructorValue, RoundingModeCaseValues = interpreterNativeEnumValueAndCaseValues(
-	roundingModeLookupType,
-	sema.RoundingModes,
-	NewRoundingModeCase,
+var interpreterRoundingRuleConstructorValue, RoundingRuleCaseValues = interpreterNativeEnumValueAndCaseValues(
+	roundingRuleLookupType,
+	sema.RoundingRules,
+	NewRoundingRuleCase,
 )
 
-var InterpreterRoundingModeConstructor = StandardLibraryValue{
-	Name:  sema.RoundingModeTypeName,
-	Type:  roundingModeLookupType,
-	Value: interpreterRoundingModeConstructorValue,
+var InterpreterRoundingRuleConstructor = StandardLibraryValue{
+	Name:  sema.RoundingRuleTypeName,
+	Type:  roundingRuleLookupType,
+	Value: interpreterRoundingRuleConstructorValue,
 	Kind:  common.DeclarationKindEnum,
 }
 
-var vmRoundingModeConstructorValue = vm.NewNativeFunctionValue(
-	sema.RoundingModeTypeName,
-	roundingModeLookupType,
+var vmRoundingRuleConstructorValue = vm.NewNativeFunctionValue(
+	sema.RoundingRuleTypeName,
+	roundingRuleLookupType,
 	func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeArgumentsIterator,
@@ -80,7 +80,7 @@ var vmRoundingModeConstructorValue = vm.NewNativeFunctionValue(
 	) interpreter.Value {
 		rawValue := args[0].(interpreter.UInt8Value)
 
-		caseValue, ok := RoundingModeCaseValues[rawValue]
+		caseValue, ok := RoundingRuleCaseValues[rawValue]
 		if !ok {
 			return interpreter.Nil
 		}
@@ -89,23 +89,23 @@ var vmRoundingModeConstructorValue = vm.NewNativeFunctionValue(
 	},
 )
 
-var VMRoundingModeConstructor = StandardLibraryValue{
-	Name:  sema.RoundingModeTypeName,
-	Type:  roundingModeLookupType,
-	Value: vmRoundingModeConstructorValue,
+var VMRoundingRuleConstructor = StandardLibraryValue{
+	Name:  sema.RoundingRuleTypeName,
+	Type:  roundingRuleLookupType,
+	Value: vmRoundingRuleConstructorValue,
 	Kind:  common.DeclarationKindEnum,
 }
 
-var VMRoundingModeCaseValues = func() []VMValue {
-	values := make([]VMValue, len(sema.RoundingModes))
-	for i, roundingMode := range sema.RoundingModes {
-		rawValue := interpreter.UInt8Value(roundingMode.RawValue())
+var VMRoundingRuleCaseValues = func() []VMValue {
+	values := make([]VMValue, len(sema.RoundingRules))
+	for i, roundingRule := range sema.RoundingRules {
+		rawValue := interpreter.UInt8Value(roundingRule.RawValue())
 		values[i] = VMValue{
 			Name: commons.TypeQualifiedName(
-				sema.RoundingModeType,
-				roundingMode.Name(),
+				sema.RoundingRuleType,
+				roundingRule.Name(),
 			),
-			Value: RoundingModeCaseValues[rawValue],
+			Value: RoundingRuleCaseValues[rawValue],
 		}
 	}
 	return values

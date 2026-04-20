@@ -1582,8 +1582,8 @@ func (i valueImporter) importCompositeValue(
 			// (e.g. it has host functions)
 			return i.importSignatureAlgorithm(fields)
 
-		case sema.RoundingModeType:
-			return i.importRoundingMode(fields)
+		case sema.RoundingRuleType:
+			return i.importRoundingRule(fields)
 
 		default:
 			return nil, errors.NewDefaultUserError(
@@ -1775,7 +1775,7 @@ func (valueImporter) importSignatureAlgorithm(
 	return caseValue, nil
 }
 
-func (valueImporter) importRoundingMode(
+func (valueImporter) importRoundingRule(
 	fields []interpreter.CompositeField,
 ) (
 	interpreter.MemberAccessibleValue,
@@ -1785,7 +1785,7 @@ func (valueImporter) importRoundingMode(
 	var foundRawValue bool
 	var rawValue interpreter.UInt8Value
 
-	ty := sema.RoundingModeType
+	ty := sema.RoundingRuleType
 
 	for _, field := range fields {
 		switch field.Name {
@@ -1817,10 +1817,10 @@ func (valueImporter) importRoundingMode(
 		)
 	}
 
-	caseValue, ok := stdlib.RoundingModeCaseValues[rawValue]
+	caseValue, ok := stdlib.RoundingRuleCaseValues[rawValue]
 	if !ok {
 		return nil, errors.NewDefaultUserError(
-			"unknown RoundingMode with rawValue %d",
+			"unknown RoundingRule with rawValue %d",
 			rawValue,
 		)
 	}

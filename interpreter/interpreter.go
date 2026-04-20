@@ -4463,8 +4463,8 @@ func NativeConverterFunctionWithRounding(
 		args []Value,
 	) Value {
 		if len(args) > 1 {
-			roundingMode := extractRoundingMode(args[1])
-			return convertWithRounding(context, args[0], roundingMode)
+			roundingRule := extractRoundingRule(args[1])
+			return convertWithRounding(context, args[0], roundingRule)
 		}
 		return convert(context, args[0])
 	}
