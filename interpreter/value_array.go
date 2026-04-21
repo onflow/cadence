@@ -2325,26 +2325,7 @@ var NativeArrayFilterFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		var (
-			array *ArrayValue
-		)
-
-		switch receiver := receiver.(type) {
-		case *ArrayValue:
-			array = receiver
-
-		case *StorageReferenceValue:
-			referencedValue := receiver.MustReferencedValue(context)
-			array = AssertValueOfType[*ArrayValue](referencedValue)
-
-		case *EphemeralReferenceValue:
-			referencedValue := receiver.Value
-			array = AssertValueOfType[*ArrayValue](referencedValue)
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-
+		array := arrayValueFromReceiver(context, receiver)
 		accessedType := MustSemaTypeOfValue(receiver, context)
 
 		funcValue := AssertValueOfType[FunctionValue](args[0])
@@ -2352,6 +2333,24 @@ var NativeArrayFilterFunction = NativeFunction(
 		return array.Filter(context, funcValue, accessedType)
 	},
 )
+
+func arrayValueFromReceiver(context ValueStaticTypeContext, receiver Value) *ArrayValue {
+	switch receiver := receiver.(type) {
+	case *ArrayValue:
+		return receiver
+
+	case *StorageReferenceValue:
+		referencedValue := receiver.MustReferencedValue(context)
+		return AssertValueOfType[*ArrayValue](referencedValue)
+
+	case *EphemeralReferenceValue:
+		referencedValue := receiver.Value
+		return AssertValueOfType[*ArrayValue](referencedValue)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
 
 var NativeArrayMapFunction = NativeFunction(
 	func(
@@ -2361,26 +2360,7 @@ var NativeArrayMapFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		var (
-			array *ArrayValue
-		)
-
-		switch receiver := receiver.(type) {
-		case *ArrayValue:
-			array = receiver
-
-		case *StorageReferenceValue:
-			referencedValue := receiver.MustReferencedValue(context)
-			array = AssertValueOfType[*ArrayValue](referencedValue)
-
-		case *EphemeralReferenceValue:
-			referencedValue := receiver.Value
-			array = AssertValueOfType[*ArrayValue](referencedValue)
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-
+		array := arrayValueFromReceiver(context, receiver)
 		accessedType := MustSemaTypeOfValue(receiver, context)
 
 		funcValue := AssertValueOfType[FunctionValue](args[0])
