@@ -6615,3 +6615,42 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		require.ErrorAs(t, err, &typeMismatchError)
 	})
 }
+
+func TestInterpretBoundFunctionTypedFieldViaReference(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t,
+		`
+            struct S {
+                var f: fun()
+
+                init(_ f: fun()) {
+                    self.f = f
+                }
+            }
+
+            struct T {
+                fun foo() {
+                    self.functionOnT()
+                }
+
+                fun functionOnT() {}
+            }
+
+            fun test() {
+                let t = T()
+                let s = S(t.foo)
+
+                var sRef = &s as &S
+
+                // 'f()' Looks like a bound function on 'S' (via 'sRef'),
+                // but is actually a bound function of 'T'.
+                // So accessing a bound function via a reference shouldn't change the receiver.
+                sRef.f()
+            }
+`,
+	)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+}

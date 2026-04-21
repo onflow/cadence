@@ -7056,7 +7056,7 @@ func (interpreter *Interpreter) GetReferenceValueMember(
 	}
 
 	if member == nil {
-		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
+		// NOTE: Must call the `GetMethod` of the reference value, not of the referenced value.
 		return GetMember(
 			interpreter,
 			v,

@@ -634,20 +634,7 @@ func (c *Context) GetReferenceValueMember(
 
 	// If not found, look up the member on the referenced value
 	if memberAccessibleValue, ok := referencedValue.(interpreter.MemberAccessibleValue); ok {
-		member := memberAccessibleValue.GetMember(c, name, memberKind)
-
-		// The member was obtained from the referenced-value.
-		// However, this was accessed via a reference.
-		// Therefore, update the receiver to the reference.
-		if boundFunction, isBoundFunction := member.(*BoundFunctionValue); isBoundFunction {
-			// Note: We shouldn't reach here, since ideally the methods must have been found
-			// by calling the `GetMethod` function above.
-			// TODO: Maybe just panic?
-			boundFunction.ReceiverReference = v
-			boundFunction.ReceiverIsReference = true
-		}
-
-		return member
+		return memberAccessibleValue.GetMember(c, name, memberKind)
 	}
 
 	return nil

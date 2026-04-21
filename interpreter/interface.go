@@ -247,7 +247,12 @@ type MemberAccessibleContext interface {
 		referencedValue Value,
 		member Value,
 	) Value
-	GetReferenceValueMember(v ReferenceValue, referencedValue Value, name string, memberKind common.DeclarationKind) Value
+	GetReferenceValueMember(
+		v ReferenceValue,
+		referencedValue Value,
+		name string,
+		memberKind common.DeclarationKind,
+	) Value
 }
 
 var _ MemberAccessibleContext = &Interpreter{}
