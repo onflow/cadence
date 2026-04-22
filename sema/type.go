@@ -1326,17 +1326,26 @@ func registerSaturatingArithmeticType(t Type) {
 	)
 }
 
-func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
+func addSaturatingArithmeticFunctions(
+	t SaturatingArithmeticType,
+	members map[string]MemberResolver,
+) {
+	functionType := SaturatingArithmeticTypeFunctionTypes[t]
 
 	addArithmeticFunction := func(name string, docString string) {
 		members[name] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, _ string, _ ast.HasPosition, _ func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				_ string,
+				_ ast.HasPosition,
+				_ func(error),
+			) *Member {
 				return NewPublicFunctionMember(
 					memoryGauge,
 					t,
 					name,
-					SaturatingArithmeticTypeFunctionTypes[t],
+					functionType,
 					docString,
 				)
 			},
@@ -1387,12 +1396,8 @@ The exponent may be negative or fractional.
 
 var FixedPointPowFunctionTypes = map[Type]*FunctionType{}
 
-func addFixedPointPowFunction(
-	baseType *FixedPointNumericType,
-	exponentType Type,
-	members map[string]MemberResolver,
-) {
-	funcType := NewSimpleFunctionType(
+func registerFixedPointPowFunction(t *FixedPointNumericType, exponentType *FixedPointNumericType) {
+	FixedPointPowFunctionTypes[t] = NewSimpleFunctionType(
 		FunctionPurityView,
 		[]Parameter{
 			{
@@ -1401,10 +1406,15 @@ func addFixedPointPowFunction(
 				TypeAnnotation: NewTypeAnnotation(exponentType),
 			},
 		},
-		NewTypeAnnotation(baseType),
+		NewTypeAnnotation(t),
 	)
+}
 
-	FixedPointPowFunctionTypes[baseType] = funcType
+func addFixedPointPowFunction(
+	t *FixedPointNumericType,
+	members map[string]MemberResolver,
+) {
+	functionType := FixedPointPowFunctionTypes[t]
 
 	members[FixedPointNumericTypePowFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
@@ -1416,9 +1426,9 @@ func addFixedPointPowFunction(
 		) *Member {
 			return NewPublicFunctionMember(
 				memoryGauge,
-				baseType,
+				t,
 				FixedPointNumericTypePowFunctionName,
-				funcType,
+				functionType,
 				fixedPointNumericTypePowFunctionDocString,
 			)
 		},
@@ -1723,6 +1733,11 @@ func (t *FixedPointNumericType) WithSaturatingFunctions(saturatingArithmetic Sat
 	return t
 }
 
+func (t *FixedPointNumericType) WithPowFunction(exponentType *FixedPointNumericType) *FixedPointNumericType {
+	registerFixedPointPowFunction(t, exponentType)
+	return t
+}
+
 func (t *FixedPointNumericType) SupportsSaturatingAdd() bool {
 	return t.saturatingArithmetic.Add
 }
@@ -1863,15 +1878,9 @@ func (t *FixedPointNumericType) GetMembers() map[string]MemberResolver {
 	// Compute members and cache them
 	computedMembers := map[string]MemberResolver{}
 	addSaturatingArithmeticFunctions(t, computedMembers)
-
-	// Add pow function for concrete unsigned fixed-point types
-	switch t {
-	case UFix64Type:
-		addFixedPointPowFunction(t, Fix64Type, computedMembers)
-	case UFix128Type:
-		addFixedPointPowFunction(t, Fix128Type, computedMembers)
+	if _, ok := FixedPointPowFunctionTypes[t]; ok {
+		addFixedPointPowFunction(t, computedMembers)
 	}
-
 	computedMembers = withBuiltinMembers(t, computedMembers)
 	t.memberResolvers.Store(&computedMembers)
 	return computedMembers
@@ -2197,7 +2206,8 @@ var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
 		Add:      true,
 		Subtract: true,
 		Multiply: true,
-	})
+	}).
+	WithPowFunction(Fix64Type)
 var UFix64TypeAnnotation = NewTypeAnnotation(UFix64Type)
 
 // UFix128Type represents the 128-bit unsigned decimal fixed-point type `UFix128`
@@ -2211,7 +2221,8 @@ var UFix128Type = NewFixedPointNumericType(UFix128TypeName).
 		Add:      true,
 		Subtract: true,
 		Multiply: true,
-	})
+	}).
+	WithPowFunction(Fix128Type)
 var UFix128TypeAnnotation = NewTypeAnnotation(UFix128Type)
 
 // Numeric type ranges
