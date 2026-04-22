@@ -21,6 +21,7 @@ package runtime_test
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -984,7 +985,7 @@ func TestRuntimeCoverageReportDiff(t *testing.T) {
 	otherCoverageReport.AddLineHit(location, 5)
 	otherCoverageReport.AddLineHit(location, 7)
 
-	diff := coverageReport.Diff(*otherCoverageReport)
+	diff := coverageReport.Diff(otherCoverageReport)
 
 	actual, err = json.Marshal(diff)
 	require.NoError(t, err)
@@ -1079,7 +1080,7 @@ func TestRuntimeCoverageReportMerge(t *testing.T) {
 	excludedLocation := common.StringLocation("FooContract")
 	otherCoverageReport.ExcludeLocation(excludedLocation)
 
-	coverageReport.Merge(*otherCoverageReport)
+	coverageReport.Merge(otherCoverageReport)
 
 	actual, err := json.Marshal(coverageReport)
 	require.NoError(t, err)
@@ -2063,4 +2064,378 @@ end_of_record
 		)
 	})
 
+}
+
+func TestCoverageReportConcurrentAddLineHit(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  access(all) fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.StringLocation("AnswerScript")
+	coverageReport.InspectProgram(location, program)
+
+	const goroutines = 10
+	const hitsPerGoroutine = 100
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < hitsPerGoroutine; j++ {
+				coverageReport.AddLineHit(location, 3)
+				coverageReport.AddLineHit(location, 5)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	locationCoverage := coverageReport.Coverage[location]
+	assert.Equal(t, goroutines*hitsPerGoroutine, locationCoverage.LineHits[3])
+	assert.Equal(t, goroutines*hitsPerGoroutine, locationCoverage.LineHits[5])
+	assert.Equal(t, 0, locationCoverage.LineHits[4])
+	assert.Equal(t, 0, locationCoverage.LineHits[7])
+}
+
+func TestCoverageReportConcurrentInspectAndAddLineHit(t *testing.T) {
+
+	t.Parallel()
+
+	coverageReport := NewCoverageReport()
+
+	const goroutines = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		location := common.StringLocation(fmt.Sprintf("Script_%d", i))
+		script := []byte(fmt.Sprintf(`
+		  access(all) fun answer_%d(): Int {
+		    var i = 0
+		    while i < 42 {
+		      i = i + 1
+		    }
+		    return i
+		  }
+		`, i))
+
+		program, err := parser.ParseProgram(nil, script, parser.Config{})
+		require.NoError(t, err)
+
+		go func() {
+			defer wg.Done()
+			coverageReport.InspectProgram(location, program)
+			for j := 0; j < 100; j++ {
+				coverageReport.AddLineHit(location, 3)
+				coverageReport.AddLineHit(location, 5)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	assert.Equal(t, goroutines, coverageReport.TotalLocations())
+
+	for i := 0; i < goroutines; i++ {
+		location := common.StringLocation(fmt.Sprintf("Script_%d", i))
+		assert.True(t, coverageReport.IsLocationInspected(location))
+		locationCoverage := coverageReport.Coverage[location]
+		assert.Equal(t, 100, locationCoverage.LineHits[3])
+		assert.Equal(t, 100, locationCoverage.LineHits[5])
+	}
+}
+
+func TestCoverageReportConcurrentReadsAndWrites(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  access(all) fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	location := common.StringLocation("AnswerScript")
+	coverageReport.InspectProgram(location, program)
+
+	const goroutines = 10
+	const iterations = 100
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 2)
+
+	// Writers
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				coverageReport.AddLineHit(location, 3)
+			}
+		}()
+	}
+
+	// Readers
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				_ = coverageReport.Percentage()
+				_ = coverageReport.Statements()
+				_ = coverageReport.Hits()
+				_ = coverageReport.Misses()
+				_ = coverageReport.String()
+				_ = coverageReport.Summary()
+				_, _ = json.Marshal(coverageReport)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	locationCoverage := coverageReport.Coverage[location]
+	assert.Equal(t, goroutines*iterations, locationCoverage.LineHits[3])
+}
+
+func TestCoverageReportConcurrentOnStatementHandler(t *testing.T) {
+
+	t.Parallel()
+
+	importedScript := []byte(`
+	  access(all) fun getIntegerTrait(_ n: Int): String {
+	    if n < 0 {
+	      return "Negative"
+	    } else if n == 0 {
+	      return "Zero"
+	    } else if n < 10 {
+	      return "Small"
+	    } else if n < 100 {
+	      return "Big"
+	    } else if n < 1000 {
+	      return "Huge"
+	    }
+
+	    return "Enormous"
+	  }
+	`)
+
+	script := []byte(`
+	  import "imported"
+
+	  access(all) fun main(): String {
+	    return getIntegerTrait(42)
+	  }
+	`)
+
+	coverageReport := NewCoverageReport()
+
+	const goroutines = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	errs := make([]error, goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(index int) {
+			defer wg.Done()
+
+			runtimeInterface := &TestRuntimeInterface{
+				OnGetCode: func(location Location) (bytes []byte, err error) {
+					switch location {
+					case common.StringLocation("imported"):
+						return importedScript, nil
+					default:
+						return nil, fmt.Errorf("unknown import location: %s", location)
+					}
+				},
+			}
+
+			config := DefaultTestInterpreterConfig
+			config.CoverageReport = coverageReport
+			rt := NewTestRuntimeWithConfig(config)
+
+			_, err := rt.ExecuteScript(
+				Script{
+					Source: script,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.ScriptLocation{byte(index)},
+				},
+			)
+			errs[index] = err
+		}(i)
+	}
+
+	wg.Wait()
+
+	for i, err := range errs {
+		assert.NoError(t, err, "goroutine %d failed", i)
+	}
+
+	// The imported location should be inspected
+	importedLocation := common.StringLocation("imported")
+	assert.True(t, coverageReport.IsLocationInspected(importedLocation))
+
+	// Each script location should be inspected
+	for i := 0; i < goroutines; i++ {
+		location := common.ScriptLocation{byte(i)}
+		assert.True(t, coverageReport.IsLocationInspected(location))
+	}
+
+	// The imported script's lines should have been hit by all goroutines.
+	// Each execution hits some lines; total hits should equal goroutines
+	// times the per-execution hit count.
+	locationCoverage := coverageReport.Coverage[importedLocation]
+	require.NotNil(t, locationCoverage)
+
+	// Line 3 (the first `if n < 0`) is hit once per execution
+	assert.Equal(t, goroutines, locationCoverage.LineHits[3])
+}
+
+func TestCoverageReportConcurrentMerge(t *testing.T) {
+
+	t.Parallel()
+
+	coverageReport := NewCoverageReport()
+
+	const goroutines = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func(index int) {
+			defer wg.Done()
+
+			location := common.StringLocation(fmt.Sprintf("Script_%d", index))
+			script := []byte(fmt.Sprintf(`
+			  access(all) fun answer_%d(): Int {
+			    var i = 0
+			    return i
+			  }
+			`, index))
+
+			program, err := parser.ParseProgram(nil, script, parser.Config{})
+			if err != nil {
+				return
+			}
+
+			other := NewCoverageReport()
+			other.InspectProgram(location, program)
+			other.AddLineHit(location, 3)
+
+			coverageReport.Merge(other)
+		}(i)
+	}
+
+	wg.Wait()
+
+	assert.Equal(t, goroutines, coverageReport.TotalLocations())
+
+	for i := 0; i < goroutines; i++ {
+		location := common.StringLocation(fmt.Sprintf("Script_%d", i))
+		assert.True(t, coverageReport.IsLocationInspected(location))
+	}
+}
+
+func TestCoverageReportConcurrentExcludeLocation(t *testing.T) {
+
+	t.Parallel()
+
+	coverageReport := NewCoverageReport()
+
+	const goroutines = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func(index int) {
+			defer wg.Done()
+			location := common.StringLocation(fmt.Sprintf("Excluded_%d", index))
+			coverageReport.ExcludeLocation(location)
+		}(i)
+	}
+
+	wg.Wait()
+
+	for i := 0; i < goroutines; i++ {
+		location := common.StringLocation(fmt.Sprintf("Excluded_%d", i))
+		assert.True(t, coverageReport.IsLocationExcluded(location))
+	}
+}
+
+func TestCoverageReportConcurrentReset(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  access(all) fun answer(): Int {
+	    var i = 0
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+
+	const goroutines = 10
+	const iterations = 100
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 2)
+
+	// Writers that add data
+	for i := 0; i < goroutines; i++ {
+		go func(index int) {
+			defer wg.Done()
+			location := common.StringLocation(fmt.Sprintf("Script_%d", index))
+			for j := 0; j < iterations; j++ {
+				coverageReport.InspectProgram(location, program)
+				coverageReport.AddLineHit(location, 3)
+			}
+		}(i)
+	}
+
+	// Concurrent resets
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				coverageReport.Reset()
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	// Just verify no panic/race occurred; final state is non-deterministic
 }

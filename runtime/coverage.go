@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -121,6 +122,7 @@ type CoverageReport struct {
 	// Contains a mapping with source paths for each
 	// location.
 	locationMappings map[string]string
+	lock             sync.RWMutex
 }
 
 // WithLocationFilter sets the LocationFilter for the current
@@ -128,6 +130,8 @@ type CoverageReport struct {
 func (r *CoverageReport) WithLocationFilter(
 	locationFilter LocationFilter,
 ) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 	r.locationFilter = locationFilter
 }
 
@@ -136,18 +140,28 @@ func (r *CoverageReport) WithLocationFilter(
 func (r *CoverageReport) WithLocationMappings(
 	locationMappings map[string]string,
 ) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 	r.locationMappings = locationMappings
 }
 
 // ExcludeLocation adds the given location to the map of excluded
 // locations.
 func (r *CoverageReport) ExcludeLocation(location Location) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 	r.ExcludedLocations[location] = struct{}{}
 }
 
 // IsLocationExcluded checks whether the given location is excluded
 // or not, from coverage collection.
 func (r *CoverageReport) IsLocationExcluded(location Location) bool {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.isLocationExcluded(location)
+}
+
+func (r *CoverageReport) isLocationExcluded(location Location) bool {
 	_, ok := r.ExcludedLocations[location]
 	return ok
 }
@@ -157,11 +171,17 @@ func (r *CoverageReport) IsLocationExcluded(location Location) bool {
 // - If the location is excluded from coverage collection
 // - If the location has not been inspected for its statements
 func (r *CoverageReport) AddLineHit(location Location, line int) {
-	if r.IsLocationExcluded(location) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.addLineHit(location, line)
+}
+
+func (r *CoverageReport) addLineHit(location Location, line int) {
+	if r.isLocationExcluded(location) {
 		return
 	}
 
-	if !r.IsLocationInspected(location) {
+	if !r.isLocationInspected(location) {
 		return
 	}
 
@@ -176,10 +196,16 @@ func (r *CoverageReport) AddLineHit(location Location, line int) {
 // If the CoverageReport.LocationFilter is present, and calling it with the given
 // location results to false, the method call also results in a NO-OP.
 func (r *CoverageReport) InspectProgram(location Location, program *ast.Program) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.inspectProgram(location, program)
+}
+
+func (r *CoverageReport) inspectProgram(location Location, program *ast.Program) {
 	if r.locationFilter != nil && !r.locationFilter(location) {
 		return
 	}
-	if r.IsLocationExcluded(location) {
+	if r.isLocationExcluded(location) {
 		return
 	}
 	r.Locations[location] = struct{}{}
@@ -237,6 +263,12 @@ func (r *CoverageReport) InspectProgram(location Location, program *ast.Program)
 // IsLocationInspected checks whether the given location,
 // has been inspected or not.
 func (r *CoverageReport) IsLocationInspected(location Location) bool {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.isLocationInspected(location)
+}
+
+func (r *CoverageReport) isLocationInspected(location Location) bool {
 	_, isInspected := r.Locations[location]
 	return isInspected
 }
@@ -245,8 +277,14 @@ func (r *CoverageReport) IsLocationInspected(location Location) bool {
 // percentage. It is defined as the ratio of total covered lines over
 // total statements, for all locations.
 func (r *CoverageReport) Percentage() string {
-	totalStatements := r.Statements()
-	totalCoveredLines := r.Hits()
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.percentage()
+}
+
+func (r *CoverageReport) percentage() string {
+	totalStatements := r.statements()
+	totalCoveredLines := r.hits()
 	var percentage float64 = 100
 	if totalStatements != 0 {
 		percentage = 100 * float64(totalCoveredLines) / float64(totalStatements)
@@ -260,15 +298,19 @@ func (r *CoverageReport) Percentage() string {
 // String returns a human-friendly message for the covered
 // statements percentage.
 func (r *CoverageReport) String() string {
-	if r.Statements() == 0 {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	if r.statements() == 0 {
 		return "There are no statements to cover"
 	}
-	return fmt.Sprintf("Coverage: %v of statements", r.Percentage())
+	return fmt.Sprintf("Coverage: %v of statements", r.percentage())
 }
 
 // Reset clears the collected coverage information for all locations and inspected locations.
 // Excluded locations remain intact.
 func (r *CoverageReport) Reset() {
+	r.lock.Lock()
+	defer r.lock.Unlock()
 	clear(r.Coverage)
 	clear(r.Locations)
 }
@@ -276,7 +318,13 @@ func (r *CoverageReport) Reset() {
 // Merge adds all the collected coverage information to the
 // calling object. Excluded locations are also taken into
 // account.
-func (r *CoverageReport) Merge(other CoverageReport) {
+func (r *CoverageReport) Merge(other *CoverageReport) {
+	other.lock.RLock()
+	defer other.lock.RUnlock()
+
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	for location, locationCoverage := range other.Coverage { // nolint:maprange
 		r.Coverage[location] = locationCoverage
 	}
@@ -292,6 +340,8 @@ func (r *CoverageReport) Merge(other CoverageReport) {
 // is helpful in order to marshal/unmarshal a CoverageReport, without
 // losing any valuable information.
 func (r *CoverageReport) ExcludedLocationIDs() []string {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 	excludedLocationIDs := make([]string, 0, len(r.ExcludedLocations))
 	for location := range r.ExcludedLocations { // nolint:maprange
 		excludedLocationIDs = append(excludedLocationIDs, location.ID())
@@ -304,12 +354,24 @@ func (r *CoverageReport) ExcludedLocationIDs() []string {
 // - inspected,
 // - not marked as exlucded.
 func (r *CoverageReport) TotalLocations() int {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.totalLocations()
+}
+
+func (r *CoverageReport) totalLocations() int {
 	return len(r.Coverage)
 }
 
 // Statements returns the total count of statements, for all the
 // locations included in the CoverageReport.
 func (r *CoverageReport) Statements() int {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.statements()
+}
+
+func (r *CoverageReport) statements() int {
 	totalStatements := 0
 	for _, locationCoverage := range r.Coverage { // nolint:maprange
 		totalStatements += locationCoverage.Statements
@@ -320,6 +382,12 @@ func (r *CoverageReport) Statements() int {
 // Hits returns the total count of covered lines, for all the
 // locations included in the CoverageReport.
 func (r *CoverageReport) Hits() int {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.hits()
+}
+
+func (r *CoverageReport) hits() int {
 	totalCoveredLines := 0
 	for _, locationCoverage := range r.Coverage { // nolint:maprange
 		totalCoveredLines += locationCoverage.CoveredLines()
@@ -330,7 +398,13 @@ func (r *CoverageReport) Hits() int {
 // Misses returns the total count of non-covered lines, for all
 // the locations included in the CoverageReport.
 func (r *CoverageReport) Misses() int {
-	return r.Statements() - r.Hits()
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.misses()
+}
+
+func (r *CoverageReport) misses() int {
+	return r.statements() - r.hits()
 }
 
 // Summary returns a CoverageReportSummary object, containing
@@ -341,12 +415,14 @@ func (r *CoverageReport) Misses() int {
 // - Total Misses,
 // - Overall Coverage Percentage.
 func (r *CoverageReport) Summary() CoverageReportSummary {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 	return CoverageReportSummary{
-		Locations:  r.TotalLocations(),
-		Statements: r.Statements(),
-		Hits:       r.Hits(),
-		Misses:     r.Misses(),
-		Coverage:   r.Percentage(),
+		Locations:  r.totalLocations(),
+		Statements: r.statements(),
+		Hits:       r.hits(),
+		Misses:     r.misses(),
+		Coverage:   r.percentage(),
 	}
 }
 
@@ -368,18 +444,24 @@ func (r *CoverageReport) Summary() CoverageReportSummary {
 // - Hits increased by 2,
 // - Misses decreased by 2,
 // - Coverage Δ increased by 100.0%.
-func (r *CoverageReport) Diff(other CoverageReport) CoverageReportSummary {
-	baseCoverage := 100 * float64(r.Hits()) / float64(r.Statements())
-	newCoverage := 100 * float64(other.Hits()) / float64(other.Statements())
+func (r *CoverageReport) Diff(other *CoverageReport) CoverageReportSummary {
+	other.lock.RLock()
+	defer other.lock.RUnlock()
+
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	baseCoverage := 100 * float64(r.hits()) / float64(r.statements())
+	newCoverage := 100 * float64(other.hits()) / float64(other.statements())
 	coverageDelta := fmt.Sprintf(
 		"%0.1f%%",
 		100*(newCoverage-baseCoverage)/baseCoverage,
 	)
 	return CoverageReportSummary{
-		Locations:  other.TotalLocations() - r.TotalLocations(),
-		Statements: other.Statements() - r.Statements(),
-		Hits:       other.Hits() - r.Hits(),
-		Misses:     other.Misses() - r.Misses(),
+		Locations:  other.totalLocations() - r.totalLocations(),
+		Statements: other.statements() - r.statements(),
+		Hits:       other.hits() - r.hits(),
+		Misses:     other.misses() - r.misses(),
 		Coverage:   coverageDelta,
 	}
 }
@@ -424,6 +506,9 @@ type lcAlias struct {
 // key/value pair on the *CoverageReport.Coverage map, as well
 // as the IDs on the *CoverageReport.ExcludedLocations map.
 func (r *CoverageReport) MarshalJSON() ([]byte, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
 	coverage := make(map[string]lcAlias, len(r.Coverage))
 	for location, locationCoverage := range r.Coverage { // nolint:maprange
 		locationSource := r.sourcePathForLocation(location)
@@ -434,12 +519,18 @@ func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 			Percentage:  locationCoverage.Percentage(),
 		}
 	}
+
+	excludedLocationIDs := make([]string, 0, len(r.ExcludedLocations))
+	for location := range r.ExcludedLocations { // nolint:maprange
+		excludedLocationIDs = append(excludedLocationIDs, location.ID())
+	}
+
 	return json.Marshal(&struct {
 		Coverage          map[string]lcAlias `json:"coverage"`
 		ExcludedLocations []string           `json:"excluded_locations"`
 	}{
 		Coverage:          coverage,
-		ExcludedLocations: r.ExcludedLocationIDs(),
+		ExcludedLocations: excludedLocationIDs,
 	})
 }
 
@@ -455,6 +546,9 @@ func (r *CoverageReport) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, cr); err != nil {
 		return err
 	}
+
+	r.lock.Lock()
+	defer r.lock.Unlock()
 
 	for locationID, locationCoverage := range cr.Coverage { // nolint:maprange
 		location, _, err := common.DecodeTypeID(nil, locationID)
@@ -491,6 +585,9 @@ func (r *CoverageReport) UnmarshalJSON(data []byte) error {
 // Description for the LCOV file format, can be found here
 // https://github.com/linux-test-project/lcov/blob/master/man/geninfo.1#L948.
 func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
 	i := 0
 	locations := make([]common.Location, len(r.Coverage))
 	for location := range r.Coverage { // nolint:maprange
@@ -567,12 +664,14 @@ func (r *CoverageReport) sourcePathForLocation(location common.Location) string 
 func (r *CoverageReport) newOnStatementHandler() interpreter.OnStatementFunc {
 	return func(inter *interpreter.Interpreter, statement ast.Statement) {
 		location := inter.Location
-		if !r.IsLocationInspected(location) {
-			program := inter.Program.Program
-			r.InspectProgram(location, program)
-		}
-
 		line := statement.StartPosition().Line
-		r.AddLineHit(location, line)
+
+		r.lock.Lock()
+		defer r.lock.Unlock()
+
+		if !r.isLocationInspected(location) {
+			r.inspectProgram(location, inter.Program.Program)
+		}
+		r.addLineHit(location, line)
 	}
 }
