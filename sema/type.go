@@ -1442,22 +1442,19 @@ Returns self * factor / divisor, without intermediate rounding
 
 var FixedPointMultiplyDivideFunctionTypes = map[Type]*FunctionType{}
 
-func addFixedPointMultiplyDivideFunction(
-	fixedPointType *FixedPointNumericType,
-	members map[string]MemberResolver,
-) {
-	funcType := NewSimpleFunctionType(
+func registerFixedPointMultiplyDivideFunction(t *FixedPointNumericType) {
+	FixedPointMultiplyDivideFunctionTypes[t] = NewSimpleFunctionType(
 		FunctionPurityView,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "factor",
-				TypeAnnotation: NewTypeAnnotation(fixedPointType),
+				TypeAnnotation: NewTypeAnnotation(t),
 			},
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "divisor",
-				TypeAnnotation: NewTypeAnnotation(fixedPointType),
+				TypeAnnotation: NewTypeAnnotation(t),
 			},
 			{
 				Label:          "rounding",
@@ -1465,10 +1462,15 @@ func addFixedPointMultiplyDivideFunction(
 				TypeAnnotation: RoundingRuleTypeAnnotation,
 			},
 		},
-		NewTypeAnnotation(fixedPointType),
+		NewTypeAnnotation(t),
 	)
+}
 
-	FixedPointMultiplyDivideFunctionTypes[fixedPointType] = funcType
+func addFixedPointMultiplyDivideFunction(
+	t *FixedPointNumericType,
+	members map[string]MemberResolver,
+) {
+	functionType := FixedPointMultiplyDivideFunctionTypes[t]
 
 	members[FixedPointNumericTypeMultiplyDivideFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
@@ -1480,9 +1482,9 @@ func addFixedPointMultiplyDivideFunction(
 		) *Member {
 			return NewPublicFunctionMember(
 				memoryGauge,
-				fixedPointType,
+				t,
 				FixedPointNumericTypeMultiplyDivideFunctionName,
-				funcType,
+				functionType,
 				fixedPointNumericTypeMultiplyDivideFunctionDocString,
 			)
 		},
@@ -1744,9 +1746,11 @@ var _ FractionalRangedType = &FixedPointNumericType{}
 var _ SaturatingArithmeticType = &FixedPointNumericType{}
 
 func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
-	return &FixedPointNumericType{
+	t := &FixedPointNumericType{
 		name: typeName,
 	}
+	registerFixedPointMultiplyDivideFunction(t)
+	return t
 }
 
 func (t *FixedPointNumericType) Tag() TypeTag {
