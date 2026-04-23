@@ -37,6 +37,183 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
+func TestInterpretFixedPointPow(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("UFix64", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			base          string
+			exponent      string
+			expected      uint64
+			expectedError bool
+		}
+
+		// Expected values were pre-computed using the fixed-point library's UFix64.Pow(Fix64).
+		testCases := []testCase{
+			// Edge cases
+			{base: "0.00000000", exponent: "0.00000000", expected: 100000000}, // 0^0 = 1
+			{base: "0.00000000", exponent: "2.00000000", expected: 0},         // 0^2 = 0
+			{base: "1.00000000", exponent: "0.00000000", expected: 100000000}, // 1^0 = 1
+			{base: "1.00000000", exponent: "5.00000000", expected: 100000000}, // 1^5 = 1
+			{base: "2.00000000", exponent: "0.00000000", expected: 100000000}, // 2^0 = 1
+			{base: "2.00000000", exponent: "1.00000000", expected: 200000000}, // 2^1 = 2
+
+			// Integer exponents
+			{base: "2.00000000", exponent: "3.00000000", expected: 800000000},     // 2^3 = 8
+			{base: "5.00000000", exponent: "2.00000000", expected: 2500000000},    // 5^2 = 25
+			{base: "10.00000000", exponent: "3.00000000", expected: 100000000000}, // 10^3 = 1000
+
+			// Negative exponents
+			{base: "2.00000000", exponent: "-1.00000000", expected: 50000000}, // 2^(-1) = 0.5
+			{base: "4.00000000", exponent: "-1.00000000", expected: 25000000}, // 4^(-1) = 0.25
+			{base: "10.00000000", exponent: "-2.00000000", expected: 1000000}, // 10^(-2) = 0.01
+
+			// Fractional bases
+			{base: "0.50000000", exponent: "2.00000000", expected: 25000000},  // 0.5^2 = 0.25
+			{base: "1.50000000", exponent: "2.00000000", expected: 225000000}, // 1.5^2 = 2.25
+			{base: "0.25000000", exponent: "3.00000000", expected: 1562500},   // 0.25^3 = 0.015625
+
+			// Fractional exponents
+			{base: "4.00000000", exponent: "0.50000000", expected: 200000000}, // 4^0.5 = 2
+			{base: "9.00000000", exponent: "0.50000000", expected: 300000000}, // 9^0.5 = 3
+			{base: "8.00000000", exponent: "0.33333333", expected: 199999999}, // 8^(1/3) ≈ 2
+
+			// Values from library test data
+			{base: "0.11111111", exponent: "2.00000000", expected: 1234568},      // (1/9)^2
+			{base: "0.33333333", exponent: "3.00000000", expected: 3703704},      // (1/3)^3
+			{base: "2.71828183", exponent: "1.00000000", expected: 271828183},    // e^1
+			{base: "3.14159265", exponent: "-0.50000000", expected: 56418958},    // pi^(-0.5)
+			{base: "0.14285714", exponent: "2.00000000", expected: 2040816},      // (1/7)^2
+			{base: "123.45678901", exponent: "0.50000000", expected: 1111111106}, // 123.45678901^0.5
+
+			// Repeating decimal bases with negative exponents
+			{base: "0.66666666", exponent: "-1.00000000", expected: 150000002}, // (2/3)^(-1)
+			{base: "0.50000000", exponent: "-2.00000000", expected: 400000000}, // 0.5^(-2) = 4
+
+			// Overflow
+			{base: "429496.72960000", exponent: "2.00000000", expectedError: true}, // sqrt(MaxUFix64)^2 overflows
+			{base: "10.00000000", exponent: "20.00000000", expectedError: true},    // 10^20 overflows
+
+			// Underflow (truncated to 0 by handleFixedpointError)
+			{base: "0.00000003", exponent: "2.00000000", expected: 0}, // 0.00000003^2 underflows to 0
+		}
+
+		for _, tc := range testCases {
+
+			testName := fmt.Sprintf("%s ^ %s", tc.base, tc.exponent)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+
+				code := fmt.Sprintf(
+					`
+					fun test(): UFix64 {
+						let base: UFix64 = %s
+						let exponent: Fix64 = %s
+						return base.pow(exponent)
+					}
+					`,
+					tc.base,
+					tc.exponent,
+				)
+
+				inter := parseCheckAndPrepare(t, code)
+
+				if tc.expectedError {
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+				} else {
+					result, err := inter.Invoke("test")
+					require.NoError(t, err)
+
+					expected := interpreter.NewUnmeteredUFix64Value(tc.expected)
+					AssertValuesEqual(t, inter, expected, result)
+				}
+			})
+		}
+	})
+
+	t.Run("UFix128", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			base          string
+			exponent      string
+			expected      string
+			expectedError bool
+		}
+
+		// Expected values were pre-computed using the fixed-point library's UFix128.Pow(Fix128).
+		testCases := []testCase{
+			// Edge cases
+			{base: "0.000000000000000000000000", exponent: "0.000000000000000000000000", expected: "1.000000000000000000000000"}, // 0^0 = 1
+			{base: "1.000000000000000000000000", exponent: "0.000000000000000000000000", expected: "1.000000000000000000000000"}, // 1^0 = 1
+			{base: "1.000000000000000000000000", exponent: "5.000000000000000000000000", expected: "1.000000000000000000000000"}, // 1^5 = 1
+			{base: "2.000000000000000000000000", exponent: "0.000000000000000000000000", expected: "1.000000000000000000000000"}, // 2^0 = 1
+			{base: "2.000000000000000000000000", exponent: "1.000000000000000000000000", expected: "2.000000000000000000000000"}, // 2^1 = 2
+
+			// Integer exponents
+			{base: "2.000000000000000000000000", exponent: "3.000000000000000000000000", expected: "8.000000000000000000000000"},     // 2^3 = 8
+			{base: "5.000000000000000000000000", exponent: "2.000000000000000000000000", expected: "25.000000000000000000000000"},    // 5^2 = 25
+			{base: "10.000000000000000000000000", exponent: "3.000000000000000000000000", expected: "1000.000000000000000000000000"}, // 10^3 = 1000
+
+			// Negative exponents
+			{base: "2.000000000000000000000000", exponent: "-1.000000000000000000000000", expected: "0.500000000000000000000000"}, // 2^(-1) = 0.5
+			{base: "4.000000000000000000000000", exponent: "-1.000000000000000000000000", expected: "0.250000000000000000000000"}, // 4^(-1) = 0.25
+
+			// Fractional base
+			{base: "0.500000000000000000000000", exponent: "2.000000000000000000000000", expected: "0.250000000000000000000000"}, // 0.5^2 = 0.25
+
+			// Fractional exponent
+			{base: "4.000000000000000000000000", exponent: "0.500000000000000000000000", expected: "2.000000000000000000000000"}, // 4^0.5 = 2
+			{base: "9.000000000000000000000000", exponent: "0.500000000000000000000000", expected: "3.000000000000000000000000"}, // 9^0.5 = 3
+		}
+
+		for _, tc := range testCases {
+
+			testName := fmt.Sprintf("%s ^ %s", tc.base, tc.exponent)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+
+				code := fmt.Sprintf(
+					`
+					fun test(): UFix128 {
+						let base: UFix128 = %s
+						let exponent: Fix128 = %s
+						return base.pow(exponent)
+					}
+					`,
+					tc.base,
+					tc.exponent,
+				)
+
+				inter := parseCheckAndPrepare(t, code)
+
+				if tc.expectedError {
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+				} else {
+					result, err := inter.Invoke("test")
+					require.NoError(t, err)
+
+					expected := parseCheckAndPrepare(t, fmt.Sprintf(
+						`let expected: UFix128 = %s`,
+						tc.expected,
+					)).GetGlobal("expected")
+
+					AssertValuesEqual(t, inter, expected, result)
+				}
+			})
+		}
+	})
+}
+
 func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 
 	t.Parallel()
