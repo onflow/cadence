@@ -393,6 +393,54 @@ func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue
 	return UFix64Value{UFix64Value: result}
 }
 
+func (v UFix64Value) MultiplyDivide(
+	context NumberValueArithmeticContext,
+	factor FixedPointValue,
+	divisor FixedPointValue,
+	rounding fix.RoundingMode,
+) NumberValue {
+	f, ok := factor.(UFix64Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    factor.StaticType(context),
+		})
+	}
+
+	d, ok := divisor.(UFix64Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    divisor.StaticType(context),
+		})
+	}
+
+	valueGetter := func() uint64 {
+		a := fix.UFix64(uint64(v.UFix64Value))
+		b := fix.UFix64(uint64(f.UFix64Value))
+		c := fix.UFix64(uint64(d.UFix64Value))
+		result, err := a.FMD(b, c, rounding)
+		handleFixedpointError(err)
+		return uint64(result)
+	}
+
+	return NewUFix64Value(context, valueGetter)
+}
+
+func (v UFix64Value) Pow(context NumberValueArithmeticContext, other Fix64Value) NumberValue {
+	valueGetter := func() uint64 {
+		a := fix.UFix64(uint64(v.UFix64Value))
+		b := fix.Fix64(uint64(other))
+		result, err := a.Pow(b)
+		handleFixedpointError(err)
+		return uint64(result)
+	}
+
+	return NewUFix64Value(context, valueGetter)
+}
+
 func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {

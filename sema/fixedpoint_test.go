@@ -27,10 +27,218 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
+
+func TestCheckFixedPointMultiplyDivide(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	for _, value := range stdlib.InterpreterDefaultScriptStandardLibraryValues(nil) {
+		baseValueActivation.DeclareValue(value)
+	}
+
+	parseAndCheckWithRoundingRule := func(t *testing.T, code string) (*sema.Checker, error) {
+		return ParseAndCheckWithOptions(t,
+			code,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+	}
+
+	for _, fixedPointType := range common.Concat(
+		sema.AllSignedFixedPointTypes,
+		sema.AllUnsignedFixedPointTypes,
+	) {
+
+		t.Run(fixedPointType.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("valid", func(t *testing.T) {
+				t.Parallel()
+
+				checker, err := parseAndCheckWithRoundingRule(t,
+					fmt.Sprintf(
+						`
+						let a: %[1]s = 2.0
+						let b: %[1]s = 3.0
+						let c: %[1]s = 1.0
+						let result = a.multiplyDivide(b, c, rounding: RoundingRule.towardZero)
+						`,
+						fixedPointType,
+					),
+				)
+				require.NoError(t, err)
+
+				resultType := RequireGlobalValue(t, checker.Elaboration, "result")
+				assert.Equal(t, fixedPointType, resultType)
+			})
+
+			t.Run("invalid, wrong factor type", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := parseAndCheckWithRoundingRule(t,
+					fmt.Sprintf(
+						`
+						let a: %[1]s = 2.0
+						let b: Int = 3
+						let c: %[1]s = 1.0
+						let result = a.multiplyDivide(b, c, rounding: RoundingRule.towardZero)
+						`,
+						fixedPointType,
+					),
+				)
+				require.Error(t, err)
+			})
+
+			t.Run("valid, without rounding", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+						let a: %[1]s = 2.0
+						let b: %[1]s = 3.0
+						let c: %[1]s = 1.0
+						let result = a.multiplyDivide(b, c)
+						`,
+						fixedPointType,
+					),
+				)
+				require.NoError(t, err)
+			})
+		})
+	}
+
+	t.Run("not available on integer types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let a: Int = 2
+			let result = a.multiplyDivide(3, 1, rounding: RoundingRule.towardZero)
+		`)
+		require.Error(t, err)
+	})
+}
+
+func TestCheckFixedPointPow(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("UFix64", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("valid", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t, `
+				let result = 2.0.pow(3.0)
+			`)
+			require.NoError(t, err)
+
+			resultType := RequireGlobalValue(t, checker.Elaboration, "result")
+			assert.Equal(t, sema.UFix64Type, resultType)
+		})
+
+		t.Run("valid, negative exponent", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let result = 2.0.pow(-1.0)
+			`)
+			require.NoError(t, err)
+		})
+
+		t.Run("valid, explicit types", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let base: UFix64 = 2.0
+				let exponent: Fix64 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.NoError(t, err)
+		})
+
+		t.Run("invalid, wrong exponent type", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let result = 2.0.pow(3.0 as UFix64)
+			`)
+			require.Error(t, err)
+		})
+	})
+
+	t.Run("UFix128", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("valid", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t, `
+				let base: UFix128 = 2.0
+				let exponent: Fix128 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.NoError(t, err)
+
+			resultType := RequireGlobalValue(t, checker.Elaboration, "result")
+			assert.Equal(t, sema.UFix128Type, resultType)
+		})
+
+		t.Run("invalid, wrong exponent type", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let base: UFix128 = 2.0
+				let exponent: Fix64 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.Error(t, err)
+		})
+	})
+
+	t.Run("not available on signed types", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("Fix64", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let base: Fix64 = 2.0
+				let exponent: Fix64 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.Error(t, err)
+		})
+
+		t.Run("Fix128", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+				let base: Fix128 = 2.0
+				let exponent: Fix128 = 3.0
+				let result = base.pow(exponent)
+			`)
+			require.Error(t, err)
+		})
+	})
+}
 
 func TestCheckFixedPointLiteralTypeConversionInVariableDeclaration(t *testing.T) {
 

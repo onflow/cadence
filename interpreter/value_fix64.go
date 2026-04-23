@@ -387,6 +387,42 @@ func (v Fix64Value) Mod(context NumberValueArithmeticContext, other NumberValue)
 	return v.Minus(context, truncatedQuotient.Mul(context, o))
 }
 
+func (v Fix64Value) MultiplyDivide(
+	context NumberValueArithmeticContext,
+	factor FixedPointValue,
+	divisor FixedPointValue,
+	rounding fix.RoundingMode,
+) NumberValue {
+	f, ok := factor.(Fix64Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    factor.StaticType(context),
+		})
+	}
+
+	d, ok := divisor.(Fix64Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    divisor.StaticType(context),
+		})
+	}
+
+	valueGetter := func() int64 {
+		a := fix.Fix64(uint64(v))
+		b := fix.Fix64(uint64(f))
+		c := fix.Fix64(uint64(d))
+		result, err := a.FMD(b, c, rounding)
+		handleFixedpointError(err)
+		return int64(result)
+	}
+
+	return NewFix64Value(context, valueGetter)
+}
+
 func (v Fix64Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {

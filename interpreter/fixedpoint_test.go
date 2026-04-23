@@ -23,6 +23,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,6 +40,531 @@ import (
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
+
+func fix128BigInt(s string) *big.Int {
+	// Parse a decimal string like "33.333333333333333333333333"
+	// into the raw scaled big.Int (removing the decimal point).
+	// The fractional part must have exactly Fix128Scale (24) digits.
+	parts := strings.SplitN(s, ".", 2)
+	if len(parts) == 1 {
+		// No decimal point — treat as integer, scale up
+		v, ok := new(big.Int).SetString(s, 10)
+		if !ok {
+			panic("invalid fix128 string: " + s)
+		}
+		return v.Mul(v, sema.Fix128FactorIntBig)
+	}
+	if len(parts[1]) != sema.Fix128Scale {
+		panic(fmt.Sprintf("expected %d fractional digits, got %d: %s", sema.Fix128Scale, len(parts[1]), s))
+	}
+	raw := parts[0] + parts[1]
+	v, ok := new(big.Int).SetString(raw, 10)
+	if !ok {
+		panic("invalid fix128 string: " + s)
+	}
+	return v
+}
+
+func TestInterpretFixedPointMultiplyDivide(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("UFix64", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			a, b, c       string
+			rounding      string
+			expected      uint64
+			expectedError bool
+		}
+
+		// Expected values pre-computed using the fixed-point library's UFix64.FMD().
+		testCases := []testCase{
+			// Basic: 2*3/1 = 6
+			{a: "2.00000000", b: "3.00000000", c: "1.00000000", rounding: "towardZero", expected: 600000000},
+			// Rounding modes: 10*10/3
+			{a: "10.00000000", b: "10.00000000", c: "3.00000000", rounding: "towardZero", expected: 3333333333},
+			{a: "10.00000000", b: "10.00000000", c: "3.00000000", rounding: "awayFromZero", expected: 3333333334},
+			{a: "10.00000000", b: "10.00000000", c: "3.00000000", rounding: "nearestHalfAway", expected: 3333333333},
+			// Fractional: 0.5*0.5/1.0 = 0.25
+			{a: "0.50000000", b: "0.50000000", c: "1.00000000", rounding: "towardZero", expected: 25000000},
+			// Zero factor
+			{a: "0.00000000", b: "5.00000000", c: "2.00000000", rounding: "towardZero", expected: 0},
+			{a: "5.00000000", b: "0.00000000", c: "2.00000000", rounding: "towardZero", expected: 0},
+			// Larger values: 100*200/50 = 400
+			{a: "100.00000000", b: "200.00000000", c: "50.00000000", rounding: "towardZero", expected: 40000000000},
+			// 1*1/3 with different rounding
+			{a: "1.00000000", b: "1.00000000", c: "3.00000000", rounding: "towardZero", expected: 33333333},
+			{a: "1.00000000", b: "1.00000000", c: "3.00000000", rounding: "awayFromZero", expected: 33333334},
+			// Division by zero
+			{a: "1.00000000", b: "2.00000000", c: "0.00000000", rounding: "towardZero", expectedError: true},
+		}
+
+		for _, tc := range testCases {
+
+			testName := fmt.Sprintf("%s * %s / %s (%s)", tc.a, tc.b, tc.c, tc.rounding)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+
+				code := fmt.Sprintf(
+					`
+					fun test(): UFix64 {
+						let a: UFix64 = %s
+						let b: UFix64 = %s
+						let c: UFix64 = %s
+						return a.multiplyDivide(b, c, rounding: RoundingRule.%s)
+					}
+					`,
+					tc.a, tc.b, tc.c, tc.rounding,
+				)
+
+				inter := parseCheckAndPrepareWithRoundingRule(t, code)
+
+				if tc.expectedError {
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+				} else {
+					result, err := inter.Invoke("test")
+					require.NoError(t, err)
+
+					expected := interpreter.NewUnmeteredUFix64Value(tc.expected)
+					AssertValuesEqual(t, inter, expected, result)
+				}
+			})
+		}
+	})
+
+	t.Run("Fix64", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			a, b, c       string
+			rounding      string
+			expected      int64
+			expectedError bool
+		}
+
+		testCases := []testCase{
+			// Basic: 2*3/1 = 6
+			{a: "2.00000000", b: "3.00000000", c: "1.00000000", rounding: "towardZero", expected: 600000000},
+			// Signed: (-2)*3/1 = -6
+			{a: "-2.00000000", b: "3.00000000", c: "1.00000000", rounding: "towardZero", expected: -600000000},
+			// (-5)*(-3)/2 = 7.5
+			{a: "-5.00000000", b: "-3.00000000", c: "2.00000000", rounding: "towardZero", expected: 750000000},
+			// Rounding: 10*10/3
+			{a: "10.00000000", b: "10.00000000", c: "3.00000000", rounding: "towardZero", expected: 3333333333},
+			{a: "10.00000000", b: "10.00000000", c: "3.00000000", rounding: "awayFromZero", expected: 3333333334},
+			// 1/3 truncated
+			{a: "1.00000000", b: "1.00000000", c: "3.00000000", rounding: "towardZero", expected: 33333333},
+			// Division by zero
+			{a: "1.00000000", b: "2.00000000", c: "0.00000000", rounding: "towardZero", expectedError: true},
+		}
+
+		for _, tc := range testCases {
+
+			testName := fmt.Sprintf("%s * %s / %s (%s)", tc.a, tc.b, tc.c, tc.rounding)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+
+				code := fmt.Sprintf(
+					`
+					fun test(): Fix64 {
+						let a: Fix64 = %s
+						let b: Fix64 = %s
+						let c: Fix64 = %s
+						return a.multiplyDivide(b, c, rounding: RoundingRule.%s)
+					}
+					`,
+					tc.a, tc.b, tc.c, tc.rounding,
+				)
+
+				inter := parseCheckAndPrepareWithRoundingRule(t, code)
+
+				if tc.expectedError {
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+				} else {
+					result, err := inter.Invoke("test")
+					require.NoError(t, err)
+
+					expected := interpreter.NewUnmeteredFix64Value(tc.expected)
+					AssertValuesEqual(t, inter, expected, result)
+				}
+			})
+		}
+	})
+
+	t.Run("UFix128", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			a, b, c       string
+			rounding      string
+			expected      string
+			expectedError bool
+		}
+
+		testCases := []testCase{
+			{a: "2.000000000000000000000000", b: "3.000000000000000000000000", c: "1.000000000000000000000000", rounding: "towardZero", expected: "6.000000000000000000000000"},
+			{a: "10.000000000000000000000000", b: "10.000000000000000000000000", c: "3.000000000000000000000000", rounding: "towardZero", expected: "33.333333333333333333333333"},
+			{a: "10.000000000000000000000000", b: "10.000000000000000000000000", c: "3.000000000000000000000000", rounding: "awayFromZero", expected: "33.333333333333333333333334"},
+			{a: "0.500000000000000000000000", b: "0.500000000000000000000000", c: "1.000000000000000000000000", rounding: "towardZero", expected: "0.250000000000000000000000"},
+			{a: "100.000000000000000000000000", b: "200.000000000000000000000000", c: "50.000000000000000000000000", rounding: "towardZero", expected: "400.000000000000000000000000"},
+			// Division by zero
+			{a: "1.000000000000000000000000", b: "2.000000000000000000000000", c: "0.000000000000000000000000", rounding: "towardZero", expectedError: true},
+		}
+
+		for _, tc := range testCases {
+
+			testName := fmt.Sprintf("%s * %s / %s (%s)", tc.a, tc.b, tc.c, tc.rounding)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+
+				code := fmt.Sprintf(
+					`
+					fun test(): UFix128 {
+						let a: UFix128 = %s
+						let b: UFix128 = %s
+						let c: UFix128 = %s
+						return a.multiplyDivide(b, c, rounding: RoundingRule.%s)
+					}
+					`,
+					tc.a, tc.b, tc.c, tc.rounding,
+				)
+
+				inter := parseCheckAndPrepareWithRoundingRule(t, code)
+
+				if tc.expectedError {
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+				} else {
+					result, err := inter.Invoke("test")
+					require.NoError(t, err)
+
+					expected := interpreter.NewUFix128ValueFromBigInt(nil, fix128BigInt(tc.expected))
+					AssertValuesEqual(t, inter, expected, result)
+				}
+			})
+		}
+	})
+
+	t.Run("Fix128", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			a, b, c       string
+			rounding      string
+			expected      string
+			expectedError bool
+		}
+
+		testCases := []testCase{
+			{a: "2.000000000000000000000000", b: "3.000000000000000000000000", c: "1.000000000000000000000000", rounding: "towardZero", expected: "6.000000000000000000000000"},
+			{a: "-2.000000000000000000000000", b: "3.000000000000000000000000", c: "1.000000000000000000000000", rounding: "towardZero", expected: "-6.000000000000000000000000"},
+			{a: "-2.000000000000000000000000", b: "-3.000000000000000000000000", c: "1.000000000000000000000000", rounding: "towardZero", expected: "6.000000000000000000000000"},
+			{a: "10.000000000000000000000000", b: "10.000000000000000000000000", c: "3.000000000000000000000000", rounding: "towardZero", expected: "33.333333333333333333333333"},
+			{a: "10.000000000000000000000000", b: "10.000000000000000000000000", c: "3.000000000000000000000000", rounding: "awayFromZero", expected: "33.333333333333333333333334"},
+			// Division by zero
+			{a: "1.000000000000000000000000", b: "2.000000000000000000000000", c: "0.000000000000000000000000", rounding: "towardZero", expectedError: true},
+		}
+
+		for _, tc := range testCases {
+
+			testName := fmt.Sprintf("%s * %s / %s (%s)", tc.a, tc.b, tc.c, tc.rounding)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+
+				code := fmt.Sprintf(
+					`
+					fun test(): Fix128 {
+						let a: Fix128 = %s
+						let b: Fix128 = %s
+						let c: Fix128 = %s
+						return a.multiplyDivide(b, c, rounding: RoundingRule.%s)
+					}
+					`,
+					tc.a, tc.b, tc.c, tc.rounding,
+				)
+
+				inter := parseCheckAndPrepareWithRoundingRule(t, code)
+
+				if tc.expectedError {
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+				} else {
+					result, err := inter.Invoke("test")
+					require.NoError(t, err)
+
+					expected := interpreter.NewFix128ValueFromBigInt(nil, fix128BigInt(tc.expected))
+					AssertValuesEqual(t, inter, expected, result)
+				}
+			})
+		}
+	})
+
+	t.Run("default rounding (truncate)", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("UFix64", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepareWithRoundingRule(t, `
+				fun test(): UFix64 {
+					let a: UFix64 = 10.0
+					let b: UFix64 = 10.0
+					let c: UFix64 = 3.0
+					return a.multiplyDivide(b, c)
+				}
+			`)
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			// 10*10/3 truncated = 33.33333333
+			expected := interpreter.NewUnmeteredUFix64Value(3333333333)
+			AssertValuesEqual(t, inter, expected, result)
+		})
+
+		t.Run("Fix64", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepareWithRoundingRule(t, `
+				fun test(): Fix64 {
+					let a: Fix64 = 10.0
+					let b: Fix64 = 10.0
+					let c: Fix64 = 3.0
+					return a.multiplyDivide(b, c)
+				}
+			`)
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			// 10*10/3 truncated = 33.33333333
+			expected := interpreter.NewUnmeteredFix64Value(3333333333)
+			AssertValuesEqual(t, inter, expected, result)
+		})
+
+		t.Run("UFix128", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepareWithRoundingRule(t, `
+				fun test(): UFix128 {
+					let a: UFix128 = 10.0
+					let b: UFix128 = 10.0
+					let c: UFix128 = 3.0
+					return a.multiplyDivide(b, c)
+				}
+			`)
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			// 10*10/3 truncated = 33.333333333333333333333333
+			expected := interpreter.NewUFix128ValueFromBigInt(nil, fix128BigInt("33.333333333333333333333333"))
+			AssertValuesEqual(t, inter, expected, result)
+		})
+
+		t.Run("Fix128", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepareWithRoundingRule(t, `
+				fun test(): Fix128 {
+					let a: Fix128 = 10.0
+					let b: Fix128 = 10.0
+					let c: Fix128 = 3.0
+					return a.multiplyDivide(b, c)
+				}
+			`)
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			// 10*10/3 truncated = 33.333333333333333333333333
+			expected := interpreter.NewFix128ValueFromBigInt(nil, fix128BigInt("33.333333333333333333333333"))
+			AssertValuesEqual(t, inter, expected, result)
+		})
+	})
+}
+
+func TestInterpretFixedPointPow(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("UFix64", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			base          string
+			exponent      string
+			expected      uint64
+			expectedError bool
+		}
+
+		// Expected values were pre-computed using the fixed-point library's UFix64.Pow(Fix64).
+		testCases := []testCase{
+			// Edge cases
+			{base: "0.00000000", exponent: "0.00000000", expected: 100000000}, // 0^0 = 1
+			{base: "0.00000000", exponent: "2.00000000", expected: 0},         // 0^2 = 0
+			{base: "1.00000000", exponent: "0.00000000", expected: 100000000}, // 1^0 = 1
+			{base: "1.00000000", exponent: "5.00000000", expected: 100000000}, // 1^5 = 1
+			{base: "2.00000000", exponent: "0.00000000", expected: 100000000}, // 2^0 = 1
+			{base: "2.00000000", exponent: "1.00000000", expected: 200000000}, // 2^1 = 2
+
+			// Integer exponents
+			{base: "2.00000000", exponent: "3.00000000", expected: 800000000},     // 2^3 = 8
+			{base: "5.00000000", exponent: "2.00000000", expected: 2500000000},    // 5^2 = 25
+			{base: "10.00000000", exponent: "3.00000000", expected: 100000000000}, // 10^3 = 1000
+
+			// Negative exponents
+			{base: "2.00000000", exponent: "-1.00000000", expected: 50000000}, // 2^(-1) = 0.5
+			{base: "4.00000000", exponent: "-1.00000000", expected: 25000000}, // 4^(-1) = 0.25
+			{base: "10.00000000", exponent: "-2.00000000", expected: 1000000}, // 10^(-2) = 0.01
+
+			// Fractional bases
+			{base: "0.50000000", exponent: "2.00000000", expected: 25000000},  // 0.5^2 = 0.25
+			{base: "1.50000000", exponent: "2.00000000", expected: 225000000}, // 1.5^2 = 2.25
+			{base: "0.25000000", exponent: "3.00000000", expected: 1562500},   // 0.25^3 = 0.015625
+
+			// Fractional exponents
+			{base: "4.00000000", exponent: "0.50000000", expected: 200000000}, // 4^0.5 = 2
+			{base: "9.00000000", exponent: "0.50000000", expected: 300000000}, // 9^0.5 = 3
+			{base: "8.00000000", exponent: "0.33333333", expected: 199999999}, // 8^(1/3) ≈ 2
+
+			// Values from library test data
+			{base: "0.11111111", exponent: "2.00000000", expected: 1234568},      // (1/9)^2
+			{base: "0.33333333", exponent: "3.00000000", expected: 3703704},      // (1/3)^3
+			{base: "2.71828183", exponent: "1.00000000", expected: 271828183},    // e^1
+			{base: "3.14159265", exponent: "-0.50000000", expected: 56418958},    // pi^(-0.5)
+			{base: "0.14285714", exponent: "2.00000000", expected: 2040816},      // (1/7)^2
+			{base: "123.45678901", exponent: "0.50000000", expected: 1111111106}, // 123.45678901^0.5
+
+			// Repeating decimal bases with negative exponents
+			{base: "0.66666666", exponent: "-1.00000000", expected: 150000002}, // (2/3)^(-1)
+			{base: "0.50000000", exponent: "-2.00000000", expected: 400000000}, // 0.5^(-2) = 4
+
+			// Overflow
+			{base: "429496.72960000", exponent: "2.00000000", expectedError: true}, // sqrt(MaxUFix64)^2 overflows
+			{base: "10.00000000", exponent: "20.00000000", expectedError: true},    // 10^20 overflows
+
+			// Underflow (truncated to 0 by handleFixedpointError)
+			{base: "0.00000003", exponent: "2.00000000", expected: 0}, // 0.00000003^2 underflows to 0
+		}
+
+		for _, tc := range testCases {
+
+			testName := fmt.Sprintf("%s ^ %s", tc.base, tc.exponent)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+
+				code := fmt.Sprintf(
+					`
+					fun test(): UFix64 {
+						let base: UFix64 = %s
+						let exponent: Fix64 = %s
+						return base.pow(exponent)
+					}
+					`,
+					tc.base,
+					tc.exponent,
+				)
+
+				inter := parseCheckAndPrepare(t, code)
+
+				if tc.expectedError {
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+				} else {
+					result, err := inter.Invoke("test")
+					require.NoError(t, err)
+
+					expected := interpreter.NewUnmeteredUFix64Value(tc.expected)
+					AssertValuesEqual(t, inter, expected, result)
+				}
+			})
+		}
+	})
+
+	t.Run("UFix128", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			base          string
+			exponent      string
+			expected      string
+			expectedError bool
+		}
+
+		// Expected values were pre-computed using the fixed-point library's UFix128.Pow(Fix128).
+		testCases := []testCase{
+			// Edge cases
+			{base: "0.000000000000000000000000", exponent: "0.000000000000000000000000", expected: "1.000000000000000000000000"}, // 0^0 = 1
+			{base: "1.000000000000000000000000", exponent: "0.000000000000000000000000", expected: "1.000000000000000000000000"}, // 1^0 = 1
+			{base: "1.000000000000000000000000", exponent: "5.000000000000000000000000", expected: "1.000000000000000000000000"}, // 1^5 = 1
+			{base: "2.000000000000000000000000", exponent: "0.000000000000000000000000", expected: "1.000000000000000000000000"}, // 2^0 = 1
+			{base: "2.000000000000000000000000", exponent: "1.000000000000000000000000", expected: "2.000000000000000000000000"}, // 2^1 = 2
+
+			// Integer exponents
+			{base: "2.000000000000000000000000", exponent: "3.000000000000000000000000", expected: "8.000000000000000000000000"},     // 2^3 = 8
+			{base: "5.000000000000000000000000", exponent: "2.000000000000000000000000", expected: "25.000000000000000000000000"},    // 5^2 = 25
+			{base: "10.000000000000000000000000", exponent: "3.000000000000000000000000", expected: "1000.000000000000000000000000"}, // 10^3 = 1000
+
+			// Negative exponents
+			{base: "2.000000000000000000000000", exponent: "-1.000000000000000000000000", expected: "0.500000000000000000000000"}, // 2^(-1) = 0.5
+			{base: "4.000000000000000000000000", exponent: "-1.000000000000000000000000", expected: "0.250000000000000000000000"}, // 4^(-1) = 0.25
+
+			// Fractional base
+			{base: "0.500000000000000000000000", exponent: "2.000000000000000000000000", expected: "0.250000000000000000000000"}, // 0.5^2 = 0.25
+
+			// Fractional exponent
+			{base: "4.000000000000000000000000", exponent: "0.500000000000000000000000", expected: "2.000000000000000000000000"}, // 4^0.5 = 2
+			{base: "9.000000000000000000000000", exponent: "0.500000000000000000000000", expected: "3.000000000000000000000000"}, // 9^0.5 = 3
+		}
+
+		for _, tc := range testCases {
+
+			testName := fmt.Sprintf("%s ^ %s", tc.base, tc.exponent)
+
+			t.Run(testName, func(t *testing.T) {
+				t.Parallel()
+
+				code := fmt.Sprintf(
+					`
+					fun test(): UFix128 {
+						let base: UFix128 = %s
+						let exponent: Fix128 = %s
+						return base.pow(exponent)
+					}
+					`,
+					tc.base,
+					tc.exponent,
+				)
+
+				inter := parseCheckAndPrepare(t, code)
+
+				if tc.expectedError {
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+				} else {
+					result, err := inter.Invoke("test")
+					require.NoError(t, err)
+
+					expected := interpreter.NewUFix128ValueFromBigInt(nil, fix128BigInt(tc.expected))
+					AssertValuesEqual(t, inter, expected, result)
+				}
+			})
+		}
+	})
+}
 
 func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 

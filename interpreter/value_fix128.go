@@ -370,6 +370,43 @@ func (v Fix128Value) Mod(context NumberValueArithmeticContext, other NumberValue
 	return NewFix128Value(context, valueGetter)
 }
 
+func (v Fix128Value) MultiplyDivide(
+	context NumberValueArithmeticContext,
+	factor FixedPointValue,
+	divisor FixedPointValue,
+	rounding fix.RoundingMode,
+) NumberValue {
+	f, ok := factor.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    factor.StaticType(context),
+		})
+	}
+
+	d, ok := divisor.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    divisor.StaticType(context),
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		result, err := fix.Fix128(v).FMD(
+			fix.Fix128(f),
+			fix.Fix128(d),
+			rounding,
+		)
+		handleFixedpointError(err)
+		return result
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
 func (v Fix128Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Fix128Value)
 	if !ok {
