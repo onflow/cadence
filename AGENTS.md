@@ -62,7 +62,7 @@ Compiler/runtime is a pipeline of Go packages at the repo root:
 - **Commit messages:** present tense, imperative mood, ≤72-char subject (`CONTRIBUTING.md` §Git Commit Messages). Maintainer branches use `<github-username>/<issue-number>-<short-title>`.
 - **Version bumps:** `make release bump=patch|minor|major`. `bump-version.sh` rewrites `version.go` `const Version` and `npm-packages/cadence-parser/package.json` — they must stay in sync.
 - **`old_parser/` is intentionally retained** for pre-1.0 contract upgrade compatibility; do not delete.
-- **CODEOWNERS:** all files require review from `@turbolent @SupunS @RZhang05` (`CODEOWNERS`).
+- **CODEOWNERS:** all files require review from the owners listed in `CODEOWNERS`.
 
 ## Files Not to Modify
 
