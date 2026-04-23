@@ -50,12 +50,12 @@ func NewSignatureAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.Memb
 	)
 }
 
-var signatureAlgorithmLookupType = cryptoAlgorithmEnumLookupType(
+var signatureAlgorithmLookupType = nativeEnumLookupType(
 	sema.SignatureAlgorithmType,
 	sema.SignatureAlgorithms,
 )
 
-var interpreterSignatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = interpreterCryptoAlgorithmEnumValueAndCaseValues(
+var interpreterSignatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = interpreterNativeEnumValueAndCaseValues(
 	signatureAlgorithmLookupType,
 	sema.SignatureAlgorithms,
 	NewSignatureAlgorithmCase,

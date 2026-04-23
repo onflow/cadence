@@ -4570,6 +4570,7 @@ var AllBuiltinTypes = common.Concat(
 		PublicKeyType,
 		SignatureAlgorithmType,
 		HashAlgorithmType,
+		RoundingRuleType,
 		StorageCapabilityControllerType,
 		AccountCapabilityControllerType,
 		DeploymentResultType,
@@ -4752,7 +4753,13 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
-			functionType := NumberConversionFunctionType(numberType)
+			var functionType *FunctionType
+			switch numberType {
+			case Fix64Type, UFix64Type:
+				functionType = FixedPoint64ConversionFunctionType(numberType)
+			default:
+				functionType = NumberConversionFunctionType(numberType)
+			}
 
 			addMember := func(member *Member) {
 				if functionType.Members == nil {
@@ -4860,6 +4867,28 @@ func NumberConversionFunctionType(numberType Type) *FunctionType {
 				TypeAnnotation: NumberTypeAnnotation,
 			},
 		},
+		ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
+		ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
+	}
+}
+
+func FixedPoint64ConversionFunctionType(numberType Type) *FunctionType {
+	return &FunctionType{
+		Purity:           FunctionPurityView,
+		TypeFunctionType: numberType,
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: NumberTypeAnnotation,
+			},
+			{
+				Label:          "rounding",
+				Identifier:     "rounding",
+				TypeAnnotation: RoundingRuleTypeAnnotation,
+			},
+		},
+		Arity:                    &Arity{Min: 1, Max: 2},
 		ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
 		ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
 	}
@@ -9671,7 +9700,7 @@ var PublicKeyTypeVerifyPoPFunctionType = NewSimpleFunctionType(
 	BoolTypeAnnotation,
 )
 
-type CryptoAlgorithm interface {
+type NativeEnumCase interface {
 	RawValue() uint8
 	Name() string
 	DocString() string
@@ -10176,6 +10205,7 @@ func init() {
 		PublicKeyType,
 		HashAlgorithmType,
 		SignatureAlgorithmType,
+		RoundingRuleType,
 		AccountType,
 		DeploymentResultType,
 	}

@@ -57,6 +57,7 @@ func InterpreterDefaultStandardLibraryValues(handler StandardLibraryHandler) []S
 		InterpreterAssertFunction,
 		InterpreterPanicFunction,
 		InterpreterSignatureAlgorithmConstructor,
+		InterpreterRoundingRuleConstructor,
 		InterpreterInclusiveRangeConstructor,
 		NewInterpreterLogFunction(handler),
 		NewInterpreterRevertibleRandomFunction(handler),
@@ -76,6 +77,7 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		VMAssertFunction,
 		VMPanicFunction,
 		VMSignatureAlgorithmConstructor,
+		VMRoundingRuleConstructor,
 		VMInclusiveRangeConstructor,
 		NewVMLogFunction(handler),
 		NewVMRevertibleRandomFunction(handler),
@@ -155,6 +157,7 @@ func VMValues(handler StandardLibraryHandler) []VMValue {
 	return common.Concat(
 		VMSignatureAlgorithmCaseValues,
 		NewVMHashAlgorithmCaseValues(handler),
+		VMRoundingRuleCaseValues,
 	)
 }
 

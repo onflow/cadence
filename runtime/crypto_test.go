@@ -185,7 +185,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 	runtimeInterface := &TestRuntimeInterface{}
 	nextScriptLocation := NewScriptLocationGenerator()
 
-	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
+	testHashAlgorithm := func(algo sema.NativeEnumCase) {
 		script := fmt.Sprintf(`
               access(all) fun main(): HashAlgorithm {
                   return HashAlgorithm.%s
@@ -231,7 +231,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 	runtimeInterface := &TestRuntimeInterface{}
 	nextScriptLocation := NewScriptLocationGenerator()
 
-	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
+	testSignatureAlgorithm := func(algo sema.NativeEnumCase) {
 		script := fmt.Sprintf(`
               access(all) fun main(): SignatureAlgorithm {
                   return SignatureAlgorithm.%s
@@ -288,7 +288,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 
 	nextScriptLocation := NewScriptLocationGenerator()
 
-	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
+	testSignatureAlgorithm := func(algo sema.NativeEnumCase) {
 
 		value, err := runtime.ExecuteScript(
 			Script{
@@ -344,7 +344,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
       }
     `
 
-	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
+	testHashAlgorithm := func(algo sema.NativeEnumCase) {
 
 		var logs []string
 		var hashCalls int
