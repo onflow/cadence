@@ -13,10 +13,10 @@
 
 - **What:** Cadence is the resource-oriented smart contract programming language used on the [Flow network](https://flow.com).
 - **Who it's for:** developers building on Flow who want compile-time safety, resource semantics, and capability-based access control. Also: teams coming from Solidity who have been burned by reentrancy, unlimited approvals, or MEV.
-- **Why use it:** Cadence prevents entire vulnerability classes at the compiler level. Assets are resources, not ledger entries. Reentrancy is impossible. Approvals are scoped.
+- **Why use it:** Cadence prevents entire vulnerability classes at the compiler level. Assets are resources, not ledger entries. Reentrancy attacks are significantly mitigated by Cadence's resource ownership model. Approvals are scoped.
 - **Status:** Cadence 1.0, current release [v1.10.2](https://github.com/onflow/cadence/releases). Live on Flow mainnet.
 - **License:** Apache 2.0.
-- **Get started:** [Cadence Playground (browser)](https://play.onflow.org/) or [cadence-lang.org](https://cadence-lang.org) for the language reference. Open-sourced since 2020.
+- **Get started:** [Cadence Playground (browser)](https://play.flow.com/) or [cadence-lang.org](https://cadence-lang.org) for the language reference. Open-sourced since 2019.
 
 ## Introduction
 
@@ -28,7 +28,7 @@ Core design principles:
 - **Capability-based security.** Fine-grained access control via entitlements. Functions are restricted to callers holding specific authorizations at compile time.
 - **Type safety.** Strong static typing with type inference. No runtime type surprises.
 - **Upgradeable by default.** Contracts are upgradeable with enforced backward compatibility. No proxy pattern needed.
-- **Reentrancy-proof.** When a resource transfers, the caller's reference is invalidated at compile time. The reentrancy attack window does not exist.
+- **Reentrancy significantly mitigated.** When a resource transfers, the caller's reference is invalidated at runtime, eliminating the most common reentrancy attack vectors.
 
 ## Features
 
@@ -55,11 +55,11 @@ For a full walkthrough of resources, capabilities, and transactions, see the [Ca
 
 ## Getting Started
 
-To get started writing Cadence, try the [Cadence Playground (browser)](https://play.onflow.org/).
+To get started writing Cadence, try the [Cadence Playground (browser)](https://play.flow.com/).
 
 If you want to develop locally, use these tools:
 
-- [Flow CLI](https://github.com/onflow/flow-cli) — includes the Cadence compiler and the [Flow emulator](https://github.com/onflow/flow-emulator), a lightweight tool that emulates the behaviour of the real Flow network.
+- [Flow CLI](https://github.com/onflow/flow-cli) — the primary tool for building on Flow; includes the [Flow emulator](https://github.com/onflow/flow-emulator), a lightweight tool that emulates the behaviour of the real Flow network.
 - [VS Code Cadence extension](https://github.com/onflow/vscode-cadence) — enables development, deployment, and interaction with Cadence contracts.
 
 ## Documentation
@@ -76,7 +76,7 @@ Cadence is the native smart contract programming language of the [Flow network](
 
 ### How is Cadence different from Solidity?
 
-Cadence treats assets as first-class resources with move semantics enforced by the compiler. Resources cannot be duplicated, implicitly destroyed, or accessed after being moved. Reentrancy is impossible because references are invalidated at compile time when a resource transfers. Access control is capability-based via entitlements rather than `msg.sender` checks.
+Cadence treats assets as first-class resources with move semantics enforced by the compiler. Resources cannot be duplicated, implicitly destroyed, or accessed after being moved. Reentrancy attacks are significantly mitigated by Cadence's resource ownership model because references are invalidated at runtime when a resource transfers. Access control is capability-based via entitlements rather than `msg.sender` checks.
 
 ### What is resource-oriented programming?
 
@@ -96,7 +96,7 @@ The Cadence implementation in this repository is designed as the runtime for the
 
 ### How do I learn Cadence?
 
-Start with [cadence-lang.org](https://cadence-lang.org) for the language reference, work through the [Cadence tutorial](https://cadence-lang.org/docs/tutorial/first-steps), and try examples in the [Cadence Playground (browser)](https://play.onflow.org/). The [Flow Developer Portal](https://developers.flow.com) covers end-to-end application development.
+Start with [cadence-lang.org](https://cadence-lang.org) for the language reference, work through the [Cadence tutorial](https://cadence-lang.org/docs/tutorial/first-steps), and try examples in the [Cadence Playground (browser)](https://play.flow.com/). The [Flow Developer Portal](https://developers.flow.com) covers end-to-end application development.
 
 ### Where is the language specification?
 
@@ -111,12 +111,6 @@ See [SECURITY.md](./SECURITY.md) for the responsible disclosure process. Do not 
 If you would like to contribute to Cadence, have a look at the [contributing guide](./CONTRIBUTING.md).
 
 You can also join the next [Cadence Working Group](https://github.com/onflow/Flow-Working-Groups/tree/main/cadence_language_and_execution_working_group) meeting to participate in language design discussions.
-
-## Community
-
-- [Flow Discord](https://discord.gg/flow) — real-time help and discussion
-- [Flow Forum](https://forum.flow.com) — long-form governance and proposals
-- [Flow Improvement Proposals (FLIPs)](https://github.com/onflow/flips) — formal proposals
 
 ## About Flow
 
