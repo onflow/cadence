@@ -248,11 +248,7 @@ func TestInterpretFixedPointMultiplyDivide(t *testing.T) {
 					result, err := inter.Invoke("test")
 					require.NoError(t, err)
 
-					expected := parseCheckAndPrepare(t, fmt.Sprintf(
-						`let expected: UFix128 = %s`,
-						tc.expected,
-					)).GetGlobal("expected")
-
+					expected := interpreter.NewUFix128ValueFromBigInt(nil, fix128BigInt(tc.expected))
 					AssertValuesEqual(t, inter, expected, result)
 				}
 			})
@@ -308,11 +304,7 @@ func TestInterpretFixedPointMultiplyDivide(t *testing.T) {
 					result, err := inter.Invoke("test")
 					require.NoError(t, err)
 
-					expected := parseCheckAndPrepare(t, fmt.Sprintf(
-						`let expected: Fix128 = %s`,
-						tc.expected,
-					)).GetGlobal("expected")
-
+					expected := interpreter.NewFix128ValueFromBigInt(nil, fix128BigInt(tc.expected))
 					AssertValuesEqual(t, inter, expected, result)
 				}
 			})
@@ -566,11 +558,7 @@ func TestInterpretFixedPointPow(t *testing.T) {
 					result, err := inter.Invoke("test")
 					require.NoError(t, err)
 
-					expected := parseCheckAndPrepare(t, fmt.Sprintf(
-						`let expected: UFix128 = %s`,
-						tc.expected,
-					)).GetGlobal("expected")
-
+					expected := interpreter.NewUFix128ValueFromBigInt(nil, fix128BigInt(tc.expected))
 					AssertValuesEqual(t, inter, expected, result)
 				}
 			})
