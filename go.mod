@@ -1,8 +1,6 @@
 module github.com/onflow/cadence
 
-go 1.24.0
-
-toolchain go1.24.3
+go 1.26.0
 
 require (
 	github.com/SaveTheRbtz/mph v0.1.1-0.20240117162131-4166ec7869bc
