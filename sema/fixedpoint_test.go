@@ -102,7 +102,7 @@ func TestCheckFixedPointMultiplyDivide(t *testing.T) {
 				require.Error(t, err)
 			})
 
-			t.Run("invalid, missing rounding", func(t *testing.T) {
+			t.Run("valid, without rounding", func(t *testing.T) {
 				t.Parallel()
 
 				_, err := ParseAndCheck(t,
@@ -116,7 +116,7 @@ func TestCheckFixedPointMultiplyDivide(t *testing.T) {
 						fixedPointType,
 					),
 				)
-				require.Error(t, err)
+				require.NoError(t, err)
 			})
 		})
 	}

@@ -23,6 +23,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,6 +40,30 @@ import (
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
+
+func fix128BigInt(s string) *big.Int {
+	// Parse a decimal string like "33.333333333333333333333333"
+	// into the raw scaled big.Int (removing the decimal point).
+	// The fractional part must have exactly Fix128Scale (24) digits.
+	parts := strings.SplitN(s, ".", 2)
+	if len(parts) == 1 {
+		// No decimal point — treat as integer, scale up
+		v, ok := new(big.Int).SetString(s, 10)
+		if !ok {
+			panic("invalid fix128 string: " + s)
+		}
+		return v.Mul(v, sema.Fix128FactorIntBig)
+	}
+	if len(parts[1]) != sema.Fix128Scale {
+		panic(fmt.Sprintf("expected %d fractional digits, got %d: %s", sema.Fix128Scale, len(parts[1]), s))
+	}
+	raw := parts[0] + parts[1]
+	v, ok := new(big.Int).SetString(raw, 10)
+	if !ok {
+		panic("invalid fix128 string: " + s)
+	}
+	return v
+}
 
 func TestInterpretFixedPointMultiplyDivide(t *testing.T) {
 
@@ -292,6 +317,87 @@ func TestInterpretFixedPointMultiplyDivide(t *testing.T) {
 				}
 			})
 		}
+	})
+
+	t.Run("default rounding (truncate)", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("UFix64", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepareWithRoundingRule(t, `
+				fun test(): UFix64 {
+					let a: UFix64 = 10.0
+					let b: UFix64 = 10.0
+					let c: UFix64 = 3.0
+					return a.multiplyDivide(b, c)
+				}
+			`)
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			// 10*10/3 truncated = 33.33333333
+			expected := interpreter.NewUnmeteredUFix64Value(3333333333)
+			AssertValuesEqual(t, inter, expected, result)
+		})
+
+		t.Run("Fix64", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepareWithRoundingRule(t, `
+				fun test(): Fix64 {
+					let a: Fix64 = 10.0
+					let b: Fix64 = 10.0
+					let c: Fix64 = 3.0
+					return a.multiplyDivide(b, c)
+				}
+			`)
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			// 10*10/3 truncated = 33.33333333
+			expected := interpreter.NewUnmeteredFix64Value(3333333333)
+			AssertValuesEqual(t, inter, expected, result)
+		})
+
+		t.Run("UFix128", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepareWithRoundingRule(t, `
+				fun test(): UFix128 {
+					let a: UFix128 = 10.0
+					let b: UFix128 = 10.0
+					let c: UFix128 = 3.0
+					return a.multiplyDivide(b, c)
+				}
+			`)
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			// 10*10/3 truncated = 33.333333333333333333333333
+			expected := interpreter.NewUFix128ValueFromBigInt(nil, fix128BigInt("33.333333333333333333333333"))
+			AssertValuesEqual(t, inter, expected, result)
+		})
+
+		t.Run("Fix128", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepareWithRoundingRule(t, `
+				fun test(): Fix128 {
+					let a: Fix128 = 10.0
+					let b: Fix128 = 10.0
+					let c: Fix128 = 3.0
+					return a.multiplyDivide(b, c)
+				}
+			`)
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			// 10*10/3 truncated = 33.333333333333333333333333
+			expected := interpreter.NewFix128ValueFromBigInt(nil, fix128BigInt("33.333333333333333333333333"))
+			AssertValuesEqual(t, inter, expected, result)
+		})
 	})
 }
 

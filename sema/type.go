@@ -1443,9 +1443,9 @@ Returns self * factor / divisor, without intermediate rounding
 var FixedPointMultiplyDivideFunctionTypes = map[Type]*FunctionType{}
 
 func registerFixedPointMultiplyDivideFunction(t *FixedPointNumericType) {
-	FixedPointMultiplyDivideFunctionTypes[t] = NewSimpleFunctionType(
-		FunctionPurityView,
-		[]Parameter{
+	FixedPointMultiplyDivideFunctionTypes[t] = &FunctionType{
+		Purity: FunctionPurityView,
+		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "factor",
@@ -1462,8 +1462,9 @@ func registerFixedPointMultiplyDivideFunction(t *FixedPointNumericType) {
 				TypeAnnotation: RoundingRuleTypeAnnotation,
 			},
 		},
-		NewTypeAnnotation(t),
-	)
+		Arity:                &Arity{Min: 2, Max: 3},
+		ReturnTypeAnnotation: NewTypeAnnotation(t),
+	}
 }
 
 func addFixedPointMultiplyDivideFunction(

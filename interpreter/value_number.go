@@ -21,6 +21,8 @@ package interpreter
 import (
 	"math/big"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
@@ -250,7 +252,12 @@ var NativeFixedPointMultiplyDivideFunction = NativeFunction(
 	) Value {
 		factor := AssertValueOfType[FixedPointValue](args[0])
 		divisor := AssertValueOfType[FixedPointValue](args[1])
-		rounding := extractRoundingRule(args[2])
+		var rounding fix.RoundingMode
+		if len(args) > 2 {
+			rounding = extractRoundingRule(args[2])
+		} else {
+			rounding = fix.RoundTruncate
+		}
 		return receiver.(FixedPointValue).MultiplyDivide(context, factor, divisor, rounding)
 	},
 )
