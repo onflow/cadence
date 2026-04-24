@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repository. Every rule below trace
 
 ## Overview
 
-Reference Go implementation of Cadence, Flow's resource-oriented smart contract language (`module github.com/onflow/cadence`, `go 1.24.0` in `go.mod`). Current release is `v1.10.2` (`version.go`). The repo ships the lexer, parser, semantic checker, tree-walking interpreter, a bytecode compiler+VM (`bbq/`), runtime, stdlib, CLI tools, and the `@onflow/cadence-parser` npm package. License: Apache 2.0.
+Reference Go implementation of Cadence, Flow's resource-oriented smart contract language (`module github.com/onflow/cadence`). The repo ships the lexer, parser, semantic checker, tree-walking interpreter, a bytecode compiler+VM (`bbq/`), runtime, stdlib, CLI tools, and the `@onflow/cadence-parser` npm package. License: Apache 2.0.
 
 ## Build and Test Commands
 
