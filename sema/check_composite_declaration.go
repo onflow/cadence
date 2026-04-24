@@ -1090,12 +1090,16 @@ func (checker *Checker) declareEnumConstructor(
 
 	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
 
+	compositeType.EnumCases = make([]string, 0, len(enumCases))
+
 	for _, enumCase := range enumCases {
 		caseName := enumCase.Identifier.Identifier
 
 		if enumLookupFunctionType.Members.Contains(caseName) {
 			continue
 		}
+
+		compositeType.EnumCases = append(compositeType.EnumCases, caseName)
 
 		enumLookupFunctionType.Members.Set(
 			caseName,

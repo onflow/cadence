@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
@@ -232,5 +233,57 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 			AssertValuesEqual(t, inter, testCase.expected, actual)
 		}
+	})
+
+	t.Run("exhaustive enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+              case blue
+          }
+
+          fun test(): [String] {
+              let results: [String] = []
+              let rawValues: [UInt8] = [0, 1, 2]
+              for rawValue in rawValues {
+                  let c = Color(rawValue: rawValue)!
+                  results.append(name(c))
+              }
+              return results
+          }
+
+          fun name(_ c: Color): String {
+              #exhaustive
+              switch c {
+              case Color.red:
+                  return "red"
+              case Color.green:
+                  return "green"
+              case Color.blue:
+                  return "blue"
+              }
+          }
+        `)
+
+		actual, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter,
+			interpreter.NewArrayValue(
+				inter,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("red"),
+				interpreter.NewUnmeteredStringValue("green"),
+				interpreter.NewUnmeteredStringValue("blue"),
+			),
+			actual,
+		)
 	})
 }

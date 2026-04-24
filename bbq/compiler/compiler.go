@@ -4165,8 +4165,9 @@ func (c *Compiler[_, _]) VisitFieldDeclaration(_ *ast.FieldDeclaration) (_ struc
 }
 
 func (c *Compiler[_, _]) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+	// Pragmas are directives for the checker (e.g. #exhaustive).
+	// Nothing to compile.
+	return
 }
 
 func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {

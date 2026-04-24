@@ -32,7 +32,7 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 	functionActivation := checker.functionActivations.Current()
 
 	// check all statements
-	for _, statement := range statements {
+	for i, statement := range statements {
 
 		// Is this statement unreachable? Report it once for this statement,
 		// but avoid noise and don't report it for all remaining unreachable statements
@@ -60,6 +60,23 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 
 		// check statement
 
+		switch stmt := statement.(type) {
+		case *ast.SwitchStatement:
+			isExhaustive := isPrecedingStatementExhaustivePragma(statements, i)
+			checker.checkSwitchStatement(stmt, isExhaustive)
+			continue
+
+		case *ast.PragmaDeclaration:
+			if isExhaustivePragma(stmt) && !isStatementFollowedBySwitch(statements, i) {
+				checker.report(
+					&InvalidPragmaError{
+						Message: "the #exhaustive pragma must be placed directly before a switch statement",
+						Range:   ast.NewRangeFromPositioned(checker.memoryGauge, stmt),
+					},
+				)
+			}
+		}
+
 		ast.AcceptStatement[struct{}](statement, checker)
 	}
 }
@@ -75,9 +92,13 @@ func (checker *Checker) checkValidStatement(statement ast.Statement) bool {
 
 	// Only function and variable declarations are allowed locally
 
-	switch declaration.(type) {
+	switch decl := declaration.(type) {
 	case *ast.FunctionDeclaration, *ast.VariableDeclaration:
 		return true
+	case *ast.PragmaDeclaration:
+		if isExhaustivePragma(decl) {
+			return true
+		}
 	}
 
 	identifier := declaration.DeclarationIdentifier()
