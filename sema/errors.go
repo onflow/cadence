@@ -5869,6 +5869,27 @@ func (e *MissingSwitchCaseStatementsError) EndPosition(common.MemoryGauge) ast.P
 	return e.Pos
 }
 
+// MissingSwitchCasesError
+
+type MissingSwitchCasesError struct {
+	MissingCases []string
+	ast.Range
+}
+
+var _ SemanticError = &MissingSwitchCasesError{}
+var _ errors.UserError = &MissingSwitchCasesError{}
+
+func (*MissingSwitchCasesError) isSemanticError() {}
+
+func (*MissingSwitchCasesError) IsUserError() {}
+
+func (e *MissingSwitchCasesError) Error() string {
+	return fmt.Sprintf(
+		"switch is not exhaustive: missing case(s): %s",
+		strings.Join(e.MissingCases, ", "),
+	)
+}
+
 // MissingEntryPointError
 
 type MissingEntryPointError struct {

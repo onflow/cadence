@@ -610,3 +610,293 @@ func TestCheckSwitchResourceInvalidation(t *testing.T) {
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 }
+
+func TestCheckSwitchStatementExhaustiveEnum(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("exhaustive, no default, definite return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+              case blue
+          }
+
+          fun test(c: Color): String {
+              #exhaustive
+              switch c {
+              case Color.red:
+                  return "red"
+              case Color.green:
+                  return "green"
+              case Color.blue:
+                  return "blue"
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("exhaustive, with default, no error", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+              case blue
+          }
+
+          fun test(c: Color): String {
+              #exhaustive
+              switch c {
+              case Color.red:
+                  return "red"
+              case Color.green:
+                  return "green"
+              case Color.blue:
+                  return "blue"
+              default:
+                  return "unknown"
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("exhaustive, unreachable code after switch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+              case blue
+          }
+
+          fun test(c: Color): String {
+              #exhaustive
+              switch c {
+              case Color.red:
+                  return "red"
+              case Color.green:
+                  return "green"
+              case Color.blue:
+                  return "blue"
+              }
+              return "unreachable"
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("non-exhaustive, missing cases error", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+              case blue
+          }
+
+          fun test(c: Color): String {
+              #exhaustive
+              switch c {
+              case Color.red:
+                  return "red"
+              case Color.green:
+                  return "green"
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.MissingSwitchCasesError{}, errs[0])
+		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
+	})
+
+	t.Run("single case enum, exhaustive", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          enum Direction: UInt8 {
+              case up
+          }
+
+          fun test(d: Direction): String {
+              #exhaustive
+              switch d {
+              case Direction.up:
+                  return "up"
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("exhaustive, no return in body", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+          }
+
+          fun test(c: Color) {
+              var x = 0
+              #exhaustive
+              switch c {
+              case Color.red:
+                  x = 1
+              case Color.green:
+                  x = 2
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non-member-access expression, missing cases", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+          }
+
+          fun test(c: Color): String {
+              let r = Color.red
+              let g = Color.green
+              #exhaustive
+              switch c {
+              case r:
+                  return "red"
+              case g:
+                  return "green"
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.MissingSwitchCasesError{}, errs[0])
+		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
+	})
+
+	t.Run("without pragma, no exhaustiveness check", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+              case blue
+          }
+
+          fun test(c: Color): String {
+              switch c {
+              case Color.red:
+                  return "red"
+              case Color.green:
+                  return "green"
+              case Color.blue:
+                  return "blue"
+              }
+          }
+        `)
+
+		// Without #exhaustive, the switch is not treated as exhaustive
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[0])
+	})
+
+	t.Run("pragma on non-enum type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(x: Int): String {
+              #exhaustive
+              switch x {
+              case 1:
+                  return "one"
+              default:
+                  return "other"
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
+	})
+
+	t.Run("pragma not followed by switch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test() {
+              #exhaustive
+              let x = 1
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
+	})
+
+	t.Run("duplicate case, not exhaustive", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+              case blue
+          }
+
+          fun test(c: Color): String {
+              #exhaustive
+              switch c {
+              case Color.red:
+                  return "red"
+              case Color.red:
+                  return "red again"
+              case Color.green:
+                  return "green"
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.MissingSwitchCasesError{}, errs[0])
+		assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
+	})
+}
