@@ -4511,4 +4511,59 @@ func TestInterpretDynamicCastingEntitledCapability(t *testing.T) {
 		t.Parallel()
 		test(t, "AnyStruct", noError)
 	})
+
+	t.Run("nested in Array", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun test(cap: [Capability<auth(E1, E2) &Int>]) {
+                let upcastedCap: [Capability<&Int>] = cap
+                let downcastedCap = upcastedCap as! [Capability<auth(E1, E2) &Int>]
+            }
+        `
+
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+		borrowType := typeValue.Type
+
+		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+
+		arrayValue := interpreter.NewArrayValue(
+			inter,
+			interpreter.NewVariableSizedStaticType(
+				inter,
+				interpreter.NewCapabilityStaticType(
+					inter,
+					borrowType,
+				),
+			),
+			common.ZeroAddress,
+			capabilityValue,
+		)
+
+		_, err = inter.Invoke("test", arrayValue)
+
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(t, common.TypeID("[Capability<auth(S.test.E1,S.test.E2)&Int>]"), forceCastTypeMismatchError.ExpectedType.ID())
+		assert.Equal(t, common.TypeID("[Capability<&Int>]"), forceCastTypeMismatchError.ActualType.ID())
+	})
 }
