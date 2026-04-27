@@ -4466,7 +4466,7 @@ func TestInterpretDynamicCastingEntitledCapability(t *testing.T) {
 		borrowType := typeValue.Type
 
 		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
-			4,
+			0, // Random ID
 			interpreter.AddressValue{},
 			borrowType,
 		)
