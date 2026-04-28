@@ -481,22 +481,6 @@ func (c *Context) GetContractValue(contractLocation common.AddressLocation) *int
 	return c.ContractValueHandler(c, contractLocation)
 }
 
-func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
-	storageReference *interpreter.StorageReferenceValue,
-	referencedValue Value,
-	member Value,
-) Value {
-	if boundFunction, isBoundFunction := member.(*BoundFunctionValue); isBoundFunction {
-		boundFunction.ReceiverReference = interpreter.StorageReference(
-			c,
-			storageReference,
-			referencedValue,
-		)
-	}
-
-	return member
-}
-
 func (c *Context) ensureProgramInitialized(location common.Location) {
 	if location == nil {
 		return

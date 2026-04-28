@@ -1410,7 +1410,7 @@ func (i valueImporter) importInclusiveRangeValue(
 	v *cadence.InclusiveRange,
 	expectedType sema.Type,
 ) (
-	*interpreter.SimpleCompositeValue,
+	*interpreter.CompositeValue,
 	error,
 ) {
 

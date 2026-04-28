@@ -247,7 +247,7 @@ func NewBLSContract(
 ) StandardLibraryValue {
 	methods := map[string]interpreter.FunctionValue{}
 
-	computeLazyStoredMethod := func(name string) *interpreter.HostFunctionValue {
+	computeLazyStoredMethod := func(name string) interpreter.FunctionValue {
 		switch name {
 		case BLSTypeAggregatePublicKeysFunctionName:
 			return newInterpreterBLSAggregatePublicKeysFunction(gauge, handler)

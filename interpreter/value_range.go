@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
@@ -34,7 +35,7 @@ func NewInclusiveRangeValue(
 	end IntegerValue,
 	rangeStaticType InclusiveRangeStaticType,
 	rangeSemaType *sema.InclusiveRangeType,
-) *SimpleCompositeValue {
+) *CompositeValue {
 	startComparable, startOk := start.(ComparableValue)
 	endComparable, endOk := end.(ComparableValue)
 	if !startOk || !endOk {
@@ -80,7 +81,7 @@ func NewInclusiveRangeValueWithStep(
 	step IntegerValue,
 	rangeType InclusiveRangeStaticType,
 	rangeSemaType *sema.InclusiveRangeType,
-) *SimpleCompositeValue {
+) *CompositeValue {
 
 	zeroValue := GetSmallIntegerValue(0, start.StaticType(context))
 
@@ -147,43 +148,49 @@ func createInclusiveRange(
 	step IntegerValue,
 	rangeType InclusiveRangeStaticType,
 	rangeSemaType *sema.InclusiveRangeType,
-) *SimpleCompositeValue {
-
-	var rangeValue *SimpleCompositeValue
-
-	fields := map[string]Value{
-		sema.InclusiveRangeTypeStartFieldName: start,
-		sema.InclusiveRangeTypeEndFieldName:   end,
-		sema.InclusiveRangeTypeStepFieldName:  step,
+) *CompositeValue {
+	fields := []CompositeField{
+		{
+			Name:  sema.InclusiveRangeTypeStartFieldName,
+			Value: start,
+		},
+		{
+			Name:  sema.InclusiveRangeTypeEndFieldName,
+			Value: end,
+		},
+		{
+			Name:  sema.InclusiveRangeTypeStepFieldName,
+			Value: step,
+		},
 	}
 
-	computeMethod := func(name string, _ MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
-		switch name {
-		case sema.InclusiveRangeTypeContainsFunctionName:
-			return NewBoundHostFunctionValue(
-				context,
-				rangeValue,
-				accessedReference,
-				sema.InclusiveRangeContainsFunctionType(
-					rangeSemaType.MemberType,
-				),
-				NativeInclusiveRangeContainsFunction,
-			)
-		}
-
-		return nil
-	}
-
-	rangeValue = NewSimpleCompositeValue(
+	rangeValue := NewCompositeValueWithStaticType(
 		context,
-		rangeSemaType.ID(),
-		rangeType,
 		nil,
+		rangeSemaType.QualifiedString(),
+		common.CompositeKindStructure,
 		fields,
-		nil,
-		computeMethod,
-		nil,
-		nil,
+		common.ZeroAddress,
+		rangeType,
+	)
+
+	rangeValue.Functions = orderedmap.New[FunctionOrderedMap](1)
+
+	rangeValue.Functions.Set(
+		sema.InclusiveRangeTypeContainsFunctionName,
+		NewBoundHostFunctionValue(
+			context,
+			rangeValue,
+
+			// TODO: Need to switch to using SimpleCompositeValue.
+			// Or maybe just make this a host function (not a bound function)?
+			nil,
+
+			sema.InclusiveRangeContainsFunctionType(
+				rangeSemaType.MemberType,
+			),
+			NativeInclusiveRangeContainsFunction,
+		),
 	)
 
 	return rangeValue

@@ -7049,35 +7049,17 @@ func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) se
 	return MustConvertStaticToSemaType(staticType, interpreter) //nolint:staticcheck
 }
 
-func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
-	storageReference *StorageReferenceValue,
-	referencedValue Value,
-	member Value,
-) Value {
-	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
-		boundFunction.SelfReference = StorageReference(
-			interpreter,
-			storageReference,
-			referencedValue,
-		)
-		return boundFunction
-	}
-
-	return member
-}
-
 func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
 	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter) //nolint:staticcheck
 }
 
-func StorageReference(
+func storageReference(
 	context ValueStaticTypeContext,
 	storageReference *StorageReferenceValue,
 	referencedValue Value,
 ) *StorageReferenceValue {
 
-	// As also mentioned in `(StorageReference).GetMember` method,
-	// we cannot use the storage reference as-is here.
+	// It is wrong to use the storage reference as-is here.
 	// This is because since we look up the member on the referenced value,
 	// we also must use its type as the borrowed type for the `SelfReference` type,
 	// because during invocation the bound function can only be invoked

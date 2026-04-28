@@ -1064,8 +1064,6 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 		base,
 	)
 
-	maybeUpdateStorageReferenceBoundFunctionReceiver(context, receiver, boundFunction)
-
 	vm.push(boundFunction)
 }
 
@@ -1097,26 +1095,7 @@ func opGetMethodDynamic(vm *VM, ins opcode.InstructionGetMethodDynamic) {
 		})
 	}
 
-	maybeUpdateStorageReferenceBoundFunctionReceiver(context, receiver, method)
-
 	vm.push(method)
-}
-
-func maybeUpdateStorageReferenceBoundFunctionReceiver(
-	context *Context,
-	receiver Value,
-	boundFunction *BoundFunctionValue,
-) {
-	if storageReference, ok := receiver.(*interpreter.StorageReferenceValue); ok {
-		referencedValue := storageReference.MustReferencedValue(context)
-
-		// Ignore the "updated" return value, since the bound function is a pointer.
-		_ = context.MaybeUpdateStorageReferenceMemberReceiver(
-			storageReference,
-			referencedValue,
-			boundFunction,
-		)
-	}
 }
 
 var emptyTypeParametersMap = &sema.TypeParameterTypeOrderedMap{}

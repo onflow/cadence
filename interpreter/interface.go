@@ -219,6 +219,7 @@ var _ GetReferenceContext = &Interpreter{}
 
 type IterableValueForeachContext interface {
 	ValueTransferContext
+	MemberAccessibleContext
 }
 
 var _ IterableValueForeachContext = &Interpreter{}
@@ -242,11 +243,6 @@ type MemberAccessibleContext interface {
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
 	GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue
-	MaybeUpdateStorageReferenceMemberReceiver(
-		storageReference *StorageReferenceValue,
-		referencedValue Value,
-		member Value,
-	) Value
 }
 
 var _ MemberAccessibleContext = &Interpreter{}

@@ -89,57 +89,57 @@ func TestCompositeStorage(t *testing.T) {
 
 func TestInclusiveRangeStorage(t *testing.T) {
 
-	//t.Parallel()
-	//
-	//storage := NewUnmeteredInMemoryStorage()
-	//
-	//inter, err := NewInterpreter(
-	//	nil,
-	//	common.AddressLocation{},
-	//	&Config{Storage: storage},
-	//)
-	//require.NoError(t, err)
-	//
-	//value := NewInclusiveRangeValueWithStep(
-	//	inter,
-	//	NewUnmeteredInt16Value(1),
-	//	NewUnmeteredInt16Value(100),
-	//	NewUnmeteredInt16Value(5),
-	//	NewInclusiveRangeStaticType(inter, PrimitiveStaticTypeInt16),
-	//	sema.NewInclusiveRangeType(inter, sema.Int16Type),
-	//)
-	//
-	//require.NotEqual(t, atree.ValueID{}, value.ValueID())
-	//
-	//require.Equal(t, 1, storage.BasicSlabStorage.Count())
-	//
-	//_, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
-	//require.NoError(t, err)
-	//require.True(t, ok)
-	//
-	//// Ensure that updating a field (e.g. step) works
-	//const stepFieldName = "step"
-	//
-	//value.SetMember(inter, stepFieldName, NewUnmeteredInt16Value(10))
-	//
-	//require.Equal(t, 1, storage.BasicSlabStorage.Count())
-	//
-	//retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
-	//require.NoError(t, err)
-	//require.True(t, ok)
-	//
-	//storedValue := StoredValue(inter, retrievedStorable, storage)
-	//
-	//// InclusiveRange is stored as a CompositeValue.
-	//require.IsType(t, storedValue, &SimpleCompositeValue{})
-	//storedComposite := storedValue.(*SimpleCompositeValue)
-	//
-	//RequireValuesEqual(
-	//	t,
-	//	inter,
-	//	NewUnmeteredInt16Value(10),
-	//	storedComposite.GetMember(inter, stepFieldName, common.DeclarationKindField, nil),
-	//)
+	t.Parallel()
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := NewInterpreter(
+		nil,
+		common.AddressLocation{},
+		&Config{Storage: storage},
+	)
+	require.NoError(t, err)
+
+	value := NewInclusiveRangeValueWithStep(
+		inter,
+		NewUnmeteredInt16Value(1),
+		NewUnmeteredInt16Value(100),
+		NewUnmeteredInt16Value(5),
+		NewInclusiveRangeStaticType(inter, PrimitiveStaticTypeInt16),
+		sema.NewInclusiveRangeType(inter, sema.Int16Type),
+	)
+
+	require.NotEqual(t, atree.ValueID{}, value.ValueID())
+
+	require.Equal(t, 1, storage.BasicSlabStorage.Count())
+
+	_, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	// Ensure that updating a field (e.g. step) works
+	const stepFieldName = "step"
+
+	value.SetMember(inter, stepFieldName, NewUnmeteredInt16Value(10))
+
+	require.Equal(t, 1, storage.BasicSlabStorage.Count())
+
+	retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	storedValue := StoredValue(inter, retrievedStorable, storage)
+
+	// InclusiveRange is stored as a CompositeValue.
+	require.IsType(t, storedValue, &CompositeValue{})
+	storedComposite := storedValue.(*CompositeValue)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		NewUnmeteredInt16Value(10),
+		storedComposite.GetField(inter, stepFieldName),
+	)
 }
 
 func TestArrayStorage(t *testing.T) {

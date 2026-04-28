@@ -214,6 +214,7 @@ func NewUnmeteredStaticHostFunctionValue(
 
 // NewStaticHostFunctionValue constructs a host function that is not bounded to any value.
 // For constructing a function bound to a value (e.g: a member function), the output of this method
+// must be wrapped with a BoundFunctionValue
 func NewStaticHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,
@@ -351,14 +352,20 @@ func NewBoundFunctionValue(
 	base *EphemeralReferenceValue,
 ) BoundFunctionValue {
 
-	selfRef, _ := ReceiverReference(context, *self, accessedReference)
+	selfReference, _ := ReceiverReference(context, *self, accessedReference)
 
-	return NewBoundFunctionValueFromSelfReference(
-		context,
-		function,
-		selfRef,
-		base,
-	)
+	// If the function is already a bound function, then do not re-wrap.
+	if boundFunc, isBoundFunc := function.(BoundFunctionValue); isBoundFunc {
+		return boundFunc
+	}
+
+	common.UseMemory(context, common.BoundFunctionValueMemoryUsage)
+
+	return BoundFunctionValue{
+		Function:      function,
+		SelfReference: selfReference,
+		Base:          base,
+	}
 }
 
 func ReceiverReference(
@@ -374,6 +381,13 @@ func ReceiverReference(
 	// If the 'self' is already a reference (accessed via a reference), then no need to create a reference again.
 
 	if accessedReference != nil {
+		if storageRef, isStorageReference := accessedReference.(*StorageReferenceValue); isStorageReference {
+			// If this is accessed via a storage reference, then narrow the borrow-type to match
+			// the type of the actual stored value.
+			// See the description of `storageReference` for more details.
+			accessedReference = storageReference(context, storageRef, receiver)
+		}
+
 		return accessedReference, true
 	}
 
@@ -389,27 +403,6 @@ func ReceiverReference(
 	)
 
 	return selfRef, false
-}
-
-func NewBoundFunctionValueFromSelfReference(
-	gauge common.MemoryGauge,
-	function FunctionValue,
-	selfReference ReferenceValue,
-	base *EphemeralReferenceValue,
-) BoundFunctionValue {
-
-	// If the function is already a bound function, then do not re-wrap.
-	if boundFunc, isBoundFunc := function.(BoundFunctionValue); isBoundFunc {
-		return boundFunc
-	}
-
-	common.UseMemory(gauge, common.BoundFunctionValueMemoryUsage)
-
-	return BoundFunctionValue{
-		Function:      function,
-		SelfReference: selfReference,
-		Base:          base,
-	}
 }
 
 func (BoundFunctionValue) IsValue() {}
