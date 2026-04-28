@@ -32,7 +32,7 @@ type SimpleCompositeValue struct {
 	staticType           StaticType
 	Fields               map[string]Value
 	ComputeField         func(name string, context MemberAccessibleContext) Value
-	FunctionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue
+	FunctionMemberGetter func(name string, context MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue
 	fieldFormatters      map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
@@ -61,7 +61,7 @@ func NewSimpleCompositeValue(
 	fieldNames []string,
 	fields map[string]Value,
 	computeField func(name string, context MemberAccessibleContext) Value,
-	functionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue,
+	functionMemberGetter func(name string, context MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
 	stringer func(ValueStringContext, SeenReferences) string,
 ) *SimpleCompositeValue {
@@ -139,10 +139,16 @@ func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool
 	return importable
 }
 
-func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *SimpleCompositeValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -163,12 +169,16 @@ func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name s
 	)
 }
 
-func (v *SimpleCompositeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *SimpleCompositeValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	if v.FunctionMemberGetter == nil {
 		return nil
 	}
 
-	return v.FunctionMemberGetter(name, context)
+	return v.FunctionMemberGetter(name, context, accessedReference)
 }
 
 func (v *SimpleCompositeValue) RemoveMember(_ ValueTransferContext, name string) Value {

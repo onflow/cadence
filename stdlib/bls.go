@@ -247,7 +247,7 @@ func NewBLSContract(
 ) StandardLibraryValue {
 	methods := map[string]interpreter.FunctionValue{}
 
-	computeLazyStoredMethod := func(name string) interpreter.FunctionValue {
+	computeLazyStoredMethod := func(name string) *interpreter.HostFunctionValue {
 		switch name {
 		case BLSTypeAggregatePublicKeysFunctionName:
 			return newInterpreterBLSAggregatePublicKeysFunction(gauge, handler)
@@ -258,7 +258,12 @@ func NewBLSContract(
 		}
 	}
 
-	blsContractMethodsGetter := func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+	blsContractMethodsGetter := func(
+		name string,
+		_ interpreter.MemberAccessibleContext,
+		_ interpreter.ReferenceValue,
+	) interpreter.FunctionValue {
+		// These are host-functions (not bound functions). OK to ignore the accessed-reference
 		method, ok := methods[name]
 		if !ok {
 			method = computeLazyStoredMethod(name)

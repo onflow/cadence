@@ -339,6 +339,7 @@ func AttachmentBaseAndSelfValues(
 func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
+	accessedReference interpreter.ReferenceValue,
 ) interpreter.FunctionValue {
 
 	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
@@ -376,6 +377,7 @@ func (c *Context) GetMethod(
 	return NewBoundFunctionValue(
 		c,
 		value,
+		accessedReference,
 		method,
 		base,
 	)
@@ -400,7 +402,11 @@ func (c *Context) GetFunction(
 }
 
 func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue) []*interpreter.CompositeValue {
-	method := c.GetMethod(resourceValue, commons.ResourceDestroyedEventsFunctionName)
+	// This is an internally used function by the VM.
+	// Safe to assume the receiver is not a reference.
+	var accessedReference interpreter.ReferenceValue = nil
+
+	method := c.GetMethod(resourceValue, commons.ResourceDestroyedEventsFunctionName, accessedReference)
 
 	if method == nil {
 		return nil

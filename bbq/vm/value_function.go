@@ -303,10 +303,12 @@ func (v *NativeFunctionValue) GetMember(
 	context interpreter.MemberAccessibleContext,
 	name string,
 	memberKind common.DeclarationKind,
+	accessedReference interpreter.ReferenceValue,
 ) interpreter.Value {
 	return interpreter.GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() interpreter.Value {
@@ -323,7 +325,7 @@ func (*NativeFunctionValue) SetMember(_ interpreter.ValueTransferContext, _ stri
 	panic(errors.NewUnreachableError())
 }
 
-func (v *NativeFunctionValue) GetMethod(_ interpreter.MemberAccessibleContext, _ string) interpreter.FunctionValue {
+func (v *NativeFunctionValue) GetMethod(context interpreter.MemberAccessibleContext, name string, accessedReference interpreter.ReferenceValue) interpreter.FunctionValue {
 	// Should never be called, VM should not look up method on value.
 	// See `NativeFunctionValue.GetMember`
 	panic(errors.NewUnreachableError())
@@ -348,6 +350,7 @@ var boundFunctionMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindBo
 func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
 	receiver interpreter.Value,
+	accessedReference interpreter.ReferenceValue,
 	method FunctionValue,
 	base *interpreter.EphemeralReferenceValue,
 ) *BoundFunctionValue {
@@ -358,7 +361,7 @@ func NewBoundFunctionValue(
 	// This reference is later used to check the validity of the referenced value/resource.
 	// For attachments, 'self' is already a reference. So no need to create a reference again.
 
-	receiverRef, _ := interpreter.ReceiverReference(context, receiver)
+	receiverRef, _ := interpreter.ReceiverReference(context, receiver, accessedReference)
 
 	return &BoundFunctionValue{
 		Method:            method,
@@ -490,10 +493,7 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 }
 
 func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
-
-	interpreter.CheckInvalidatedResourceOrResourceReference(v.ReceiverReference, context)
-
-	return maybeDereferenceReceiver(
+	return interpreter.MaybeDereferenceReceiver(
 		context,
 		v.ReceiverReference,
 		v.IsNative(),

@@ -170,11 +170,19 @@ func (v *EphemeralReferenceValue) ReferencedValue(_ ValueStaticTypeContext, _ bo
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *EphemeralReferenceValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	_ ReferenceValue,
+) Value {
 	var result Value
 
+	// For ephemeral references, "accessedReference" is the value itself.
+	accessedReference := v
+
 	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, name, memberKind)
+		result = memberAccessibleValue.GetMember(context, name, memberKind, accessedReference)
 	}
 
 	if result == nil {
@@ -182,6 +190,7 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, nam
 		return GetMember(
 			context,
 			v,
+			accessedReference,
 			name,
 			memberKind,
 			nil,
@@ -191,8 +200,11 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, nam
 	return result
 }
 
-func (v *EphemeralReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getBuiltinFunctionMember(context, v.Value, name)
+func (v *EphemeralReferenceValue) GetMethod(context MemberAccessibleContext, name string, _ ReferenceValue) FunctionValue {
+	// For ephemeral references, "accessedReference" is the value itself.
+	accessedReference := v
+
+	return getBuiltinFunctionMember(context, v.Value, name, accessedReference)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {

@@ -420,7 +420,7 @@ func TestInclusiveRange(t *testing.T) {
 			rangeType := interpreter.NewInclusiveRangeStaticType(nil, integerType)
 			rangeSemaType := sema.NewInclusiveRangeType(nil, testCase.ty)
 
-			var expectedRangeValue *interpreter.CompositeValue
+			var expectedRangeValue *interpreter.SimpleCompositeValue
 
 			if withStep {
 				expectedRangeValue = interpreter.NewInclusiveRangeValueWithStep(

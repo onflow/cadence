@@ -5041,6 +5041,7 @@ func NativeAccountStorageIterateFunction(
 func newStorageIterationFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	functionType *sema.FunctionType,
 	addressValue AddressValue,
 	domain common.PathDomain,
@@ -5050,6 +5051,7 @@ func newStorageIterationFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		functionType,
 		NativeAccountStorageIterateFunction(&addressValue, domain, pathType),
 	)
@@ -5257,12 +5259,14 @@ func NativeAccountStorageSaveFunction(
 func authAccountStorageSaveFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		sema.Account_StorageTypeSaveFunctionType,
 		NativeAccountStorageSaveFunction(&addressValue),
 	)
@@ -5340,12 +5344,14 @@ func NativeAccountStorageTypeFunction(
 func authAccountStorageTypeFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		sema.Account_StorageTypeTypeFunctionType,
 		NativeAccountStorageTypeFunction(&addressValue),
 	)
@@ -5384,11 +5390,13 @@ func AccountStorageType(
 func authAccountStorageLoadFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 	return authAccountLoadFunction(
 		context,
 		storageValue,
+		accessedReference,
 		addressValue,
 		sema.Account_StorageTypeLoadFunctionType,
 	)
@@ -5397,11 +5405,13 @@ func authAccountStorageLoadFunction(
 func authAccountStorageCopyFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 	return authAccountCopyFunction(
 		context,
 		storageValue,
+		accessedReference,
 		addressValue,
 		sema.Account_StorageTypeCopyFunctionType,
 	)
@@ -5454,6 +5464,7 @@ func NativeAccountStorageLoadFunction(
 func authAccountCopyFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 	functionType *sema.FunctionType,
 ) BoundFunctionValue {
@@ -5461,6 +5472,7 @@ func authAccountCopyFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		functionType,
 		NativeAccountStorageCopyFunction(&addressValue),
 	)
@@ -5469,6 +5481,7 @@ func authAccountCopyFunction(
 func authAccountLoadFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 	functionType *sema.FunctionType,
 ) BoundFunctionValue {
@@ -5476,6 +5489,7 @@ func authAccountLoadFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		functionType,
 		NativeAccountStorageLoadFunction(&addressValue),
 	)
@@ -5603,12 +5617,14 @@ func NativeAccountStorageBorrowFunction(
 func authAccountStorageBorrowFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		sema.Account_StorageTypeBorrowFunctionType,
 		NativeAccountStorageBorrowFunction(&addressValue),
 	)
@@ -5678,12 +5694,14 @@ func NativeAccountStorageCheckFunction(
 func authAccountStorageCheckFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		sema.Account_StorageTypeCheckFunctionType,
 		NativeAccountStorageCheckFunction(&addressValue),
 	)
@@ -6063,16 +6081,24 @@ func getMember(
 	memberKind common.DeclarationKind,
 ) Value {
 	var result Value
+
+	// At the initial call to get-member, "accessed reference" is nil/unknown.
+	// If the memeber is indeed accessed via a reference (i.e: "self" is a reference),
+	// then `memberAccessibleValue.GetMember` will delegation to the underlying referenced value,
+	// which will pass the receiver reference as the "accessed reference" to the
+	// delegated `GetMember` of referenced-value.
+	var accessedReference ReferenceValue = nil
+
 	// When the accessed value has a type that supports the declaration of members
 	// or is a built-in type that has members (`MemberAccessibleValue`),
 	// then try to get the member for the given identifier.
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, identifier, memberKind)
+		result = memberAccessibleValue.GetMember(context, identifier, memberKind, accessedReference)
 	}
 	if result == nil {
-		result = getBuiltinFunctionMember(context, self, identifier)
+		result = getBuiltinFunctionMember(context, self, identifier, accessedReference)
 	}
 
 	// NOTE: do not panic if the member is nil. This is a valid state.
@@ -6084,13 +6110,14 @@ func getMember(
 func GetMember(
 	context MemberAccessibleContext,
 	value MemberAccessibleValue,
+	accessedReference ReferenceValue,
 	memberName string,
 	memberKind common.DeclarationKind,
 	nonFunctionMemberGetter func() Value,
 ) Value {
 	switch memberKind {
 	case common.DeclarationKindFunction:
-		return context.GetMethod(value, memberName)
+		return context.GetMethod(value, memberName, accessedReference)
 	default:
 		// The default case is used for nonFunctionMemberGetter because,
 		// constructors have the declaration kind as struct/resource/etc.
@@ -6104,12 +6131,17 @@ func GetMember(
 	}
 }
 
-func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, identifier string) FunctionValue {
+func getBuiltinFunctionMember(
+	context MemberAccessibleContext,
+	self Value,
+	identifier string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch identifier {
 	case sema.IsInstanceFunctionName:
-		return isInstanceFunction(context, self)
+		return isInstanceFunction(context, self, accessedReference)
 	case sema.GetTypeFunctionName:
-		return getTypeFunction(context, self)
+		return getTypeFunction(context, self, accessedReference)
 	default:
 		return nil
 	}
@@ -6131,10 +6163,11 @@ var NativeIsInstanceFunction = NativeFunction(
 	},
 )
 
-func isInstanceFunction(context FunctionCreationContext, self Value) FunctionValue {
+func isInstanceFunction(context FunctionCreationContext, self Value, accessedReference ReferenceValue) FunctionValue {
 	return NewBoundHostFunctionValue(
 		context,
 		self,
+		accessedReference,
 		sema.IsInstanceFunctionType,
 		NativeIsInstanceFunction,
 	)
@@ -6167,10 +6200,11 @@ var NativeGetTypeFunction = NativeFunction(
 	},
 )
 
-func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue {
+func getTypeFunction(context FunctionCreationContext, self Value, accessedReference ReferenceValue) FunctionValue {
 	return NewBoundHostFunctionValue(
 		context,
 		self,
+		accessedReference,
 		sema.GetTypeFunctionType,
 		NativeGetTypeFunction,
 	)
@@ -6671,6 +6705,7 @@ var CapabilityTypeCheckFunctionType = sema.CapabilityTypeCheckFunctionType(sema.
 func capabilityBorrowFunction(
 	context FunctionCreationContext,
 	capabilityValue CapabilityValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -6679,6 +6714,7 @@ func capabilityBorrowFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
+		accessedReference,
 		CapabilityTypeBorrowFunctionType,
 		NativeCapabilityBorrowFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
@@ -6780,6 +6816,7 @@ func NativeCapabilityCheckFunction(
 func capabilityCheckFunction(
 	context FunctionCreationContext,
 	capabilityValue CapabilityValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -6788,6 +6825,7 @@ func capabilityCheckFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
+		accessedReference,
 		CapabilityTypeCheckFunctionType,
 		NativeCapabilityCheckFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
@@ -6991,8 +7029,8 @@ func (interpreter *Interpreter) StorageMutatedDuringIteration() bool {
 	return interpreter.SharedState.storageMutatedDuringIteration
 }
 
-func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name string) FunctionValue {
-	return value.GetMethod(interpreter, name)
+func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue {
+	return value.GetMethod(interpreter, name, accessedReference)
 }
 
 func (interpreter *Interpreter) GetGlobal(name string) Value {

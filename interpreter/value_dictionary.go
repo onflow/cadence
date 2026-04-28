@@ -805,11 +805,17 @@ func (v *DictionaryValue) MeteredString(
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *DictionaryValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -911,12 +917,13 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, name string
 	)
 }
 
-func (v *DictionaryValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *DictionaryValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
 	switch name {
 	case sema.DictionaryTypeRemoveFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.DictionaryRemoveFunctionType(
 				v.SemaType(context),
 			),
@@ -927,6 +934,7 @@ func (v *DictionaryValue) GetMethod(context MemberAccessibleContext, name string
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.DictionaryInsertFunctionType(
 				v.SemaType(context),
 			),
@@ -937,6 +945,7 @@ func (v *DictionaryValue) GetMethod(context MemberAccessibleContext, name string
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.DictionaryContainsKeyFunctionType(
 				v.SemaType(context),
 			),
@@ -947,6 +956,7 @@ func (v *DictionaryValue) GetMethod(context MemberAccessibleContext, name string
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(context),
 			),

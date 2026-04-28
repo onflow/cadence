@@ -51,6 +51,7 @@ type NumberValue interface {
 func getNumberValueFunctionMember(
 	context MemberAccessibleContext,
 	v NumberValue,
+	accessedReference ReferenceValue,
 	name string,
 	typ sema.Type,
 ) FunctionValue {
@@ -60,6 +61,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ToStringFunctionType,
 			NativeNumberToStringFunction,
 		)
@@ -68,6 +70,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ToBigEndianBytesFunctionType,
 			NativeNumberToBigEndianBytesFunction,
 		)
@@ -76,6 +79,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			NativeNumberSaturatingAddFunction,
 		)
@@ -84,6 +88,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			NativeNumberSaturatingSubtractFunction,
 		)
@@ -92,6 +97,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			NativeNumberSaturatingMultiplyFunction,
 		)
@@ -100,6 +106,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			NativeNumberSaturatingDivideFunction,
 		)

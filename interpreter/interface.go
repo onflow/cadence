@@ -241,7 +241,7 @@ type MemberAccessibleContext interface {
 	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
-	GetMethod(value MemberAccessibleValue, name string) FunctionValue
+	GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue
 	MaybeUpdateStorageReferenceMemberReceiver(
 		storageReference *StorageReferenceValue,
 		referencedValue Value,

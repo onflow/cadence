@@ -372,7 +372,16 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
+	// External invocation happen on non-references.
+	var accessedReference interpreter.ReferenceValue = nil
+
+	boundFunction := NewBoundFunctionValue(
+		context,
+		receiver,
+		accessedReference,
+		functionValue,
+		nil,
+	)
 
 	return vm.prepareAndInvokeExternally(boundFunction, arguments)
 }
@@ -546,6 +555,9 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeValue, signers []Value) error {
 	context := vm.context
 
+	// Transaction invocation happens on the concrete value.
+	var accessedReference interpreter.ReferenceValue = nil
+
 	prepareVariable := vm.globals.Find(commons.TransactionPrepareFunctionName)
 	if prepareVariable == nil {
 		if len(signers) > 0 {
@@ -563,6 +575,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 	boundPrepareFunction := NewBoundFunctionValue(
 		context,
 		transaction,
+		accessedReference,
 		prepareFunction,
 		nil,
 	)
@@ -585,9 +598,14 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 
 	executeValue := executeVariable.GetValue(context)
 	executeFunction := executeValue.(FunctionValue)
+
+	// Transaction invocation happens on the concrete value.
+	var accessedReference interpreter.ReferenceValue = nil
+
 	boundExecuteFunction := NewBoundFunctionValue(
 		context,
 		transaction,
+		accessedReference,
 		executeFunction,
 		nil,
 	)
@@ -1034,9 +1052,14 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 		}
 	}
 
+	// Ignore casting failures. Only interested in the receiver as a reference.
+	// If the receiver is not a reference, then `accessedReference` must be `nil`.
+	accessedReference, _ := receiver.(interpreter.ReferenceValue)
+
 	boundFunction := NewBoundFunctionValue(
 		context,
 		receiver,
+		accessedReference,
 		method,
 		base,
 	)
@@ -1059,7 +1082,11 @@ func opGetMethodDynamic(vm *VM, ins opcode.InstructionGetMethodDynamic) {
 		receiver,
 	)
 
-	method, ok := context.GetMethod(receiver, fieldName).(*BoundFunctionValue)
+	// Ignore casting failures. Only interested in the receiver as a reference.
+	// If the receiver is not a reference, then `accessedReference` must be `nil`.
+	accessedReference, _ := receiver.(interpreter.ReferenceValue)
+
+	method, ok := context.GetMethod(receiver, fieldName, accessedReference).(*BoundFunctionValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -1328,37 +1355,6 @@ func loadTypes(vm *VM, typeIndices []uint16) []bbq.StaticType {
 	return types
 }
 
-func maybeDereferenceReceiver(
-	context interpreter.ValueStaticTypeContext,
-	receiverReference interpreter.ReferenceValue,
-	isNative bool,
-) Value {
-
-	switch typedValue := receiverReference.(type) {
-	case *interpreter.EphemeralReferenceValue:
-		// Do not dereference attachments, so that the receiver is a reference as expected.
-		// Exception: Native function receiver needs to be dereferenced to match interpreter.
-		innerValue := typedValue.Value
-		if innerValue, ok := innerValue.(*interpreter.CompositeValue); ok && !isNative {
-			if innerValue.Kind == common.CompositeKindAttachment {
-				return receiverReference
-			}
-		}
-		return innerValue
-	case *interpreter.StorageReferenceValue:
-		referencedValue := receiverReference.ReferencedValue(context, true)
-		// `storageRef.ReferencedValue()` above already checks for the type validity, if it's not nil.
-		// If nil, that means the value has been moved out of storage.
-		if referencedValue == nil {
-			panic(&interpreter.ReferencedValueChangedError{})
-		}
-
-		return *referencedValue
-	default:
-		return receiverReference
-	}
-}
-
 func opDrop(vm *VM) {
 	_ = vm.pop()
 }
@@ -1473,7 +1469,7 @@ func getField(
 	// VM assumes the field name is always a string.
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
-	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName, common.DeclarationKindField)
+	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName, common.DeclarationKindField, nil)
 	if fieldValue == nil {
 		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,

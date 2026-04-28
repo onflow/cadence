@@ -101,6 +101,7 @@ func TestFunctionStaticType(t *testing.T) {
 			inter,
 			hostFunctionValue,
 			&compositeValue,
+			nil, // Not accessed via a reference. Hence, nil.
 			nil,
 		)
 

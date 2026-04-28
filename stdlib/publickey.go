@@ -160,7 +160,7 @@ func NewPublicKeyFromValue(
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(context, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField)
+	key := publicKey.GetMember(context, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField, nil)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(context, key)
 	if err != nil {
@@ -168,7 +168,7 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(context, sema.PublicKeyTypeSignatureAlgorithmFieldName, common.DeclarationKindField)
+	signAlgoField := publicKey.GetMember(context, sema.PublicKeyTypeSignatureAlgorithmFieldName, common.DeclarationKindField, nil)
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -181,7 +181,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetMember(context, sema.EnumRawValueFieldName, common.DeclarationKindField)
+	rawValue := signAlgoValue.GetMember(context, sema.EnumRawValueFieldName, common.DeclarationKindField, nil)
 	if rawValue == nil {
 		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
 	}
@@ -255,6 +255,7 @@ func newInterpreterPublicKeyVerifySignatureFunction(
 	return interpreter.NewBoundHostFunctionValue(
 		inter,
 		publicKeyValue,
+		nil, // TODO: Pass the reference if it accessed via a reference.
 		sema.PublicKeyTypeVerifyFunctionType,
 		NativePublicKeyVerifySignatureFunction(publicKeyValue, verifier),
 	)
@@ -362,6 +363,7 @@ func newInterpreterPublicKeyVerifyPoPFunction(
 	return interpreter.NewBoundHostFunctionValue(
 		inter,
 		publicKeyValue,
+		nil, // TODO: Pass the reference if it accessed via a reference.
 		sema.PublicKeyTypeVerifyPoPFunctionType,
 		NativePublicKeyVerifyPoPFunction(publicKeyValue, verifier),
 	)

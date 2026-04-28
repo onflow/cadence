@@ -2655,8 +2655,8 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 		require.True(t, ok)
 
 		require.Equal(t,
-			enumValue.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField),
-			transferredComposite.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField),
+			enumValue.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField, nil),
+			transferredComposite.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField, nil),
 		)
 	})
 
@@ -2744,8 +2744,8 @@ func TestInterpretTransferComputationMeteringEnum(t *testing.T) {
 		require.True(t, ok)
 
 		require.Equal(t,
-			enumValue.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField),
-			transferredComposite.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField),
+			enumValue.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField, nil),
+			transferredComposite.GetMember(inter, sema.EnumRawValueFieldName, common.DeclarationKindField, nil),
 		)
 	})
 }

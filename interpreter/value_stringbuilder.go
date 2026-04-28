@@ -75,7 +75,7 @@ func NewStringBuilderValue(gauge common.MemoryGauge) *SimpleCompositeValue {
 
 	var methods map[string]FunctionValue
 
-	functionMemberGetter := func(name string, context MemberAccessibleContext) FunctionValue {
+	functionMemberGetter := func(name string, context MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
 		if methods == nil {
 			methods = make(map[string]FunctionValue)
 		}
@@ -108,6 +108,7 @@ func NewStringBuilderValue(gauge common.MemoryGauge) *SimpleCompositeValue {
 			method = NewBoundHostFunctionValue(
 				context,
 				self,
+				accessedReference,
 				funcType,
 				nativeFunc,
 			)

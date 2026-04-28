@@ -214,13 +214,21 @@ func (v *StorageReferenceValue) MustReferencedValue(
 	return *referencedValue
 }
 
-func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *StorageReferenceValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	_ ReferenceValue,
+) Value {
 	referencedValue := v.MustReferencedValue(context)
 
 	var member Value
 
+	// For storage references, "accessedReference" is the value itself.
+	accessedReference := v
+
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
-		member = memberAccessibleValue.GetMember(context, name, memberKind)
+		member = memberAccessibleValue.GetMember(context, name, memberKind, accessedReference)
 	}
 
 	if member == nil {
@@ -228,6 +236,7 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name 
 		member = GetMember(
 			context,
 			v,
+			accessedReference,
 			name,
 			memberKind,
 			nil,
@@ -262,9 +271,13 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name 
 	)
 }
 
-func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string, _ ReferenceValue) FunctionValue {
 	referencedValue := v.MustReferencedValue(context)
-	return getBuiltinFunctionMember(context, referencedValue, name)
+
+	// For storage references, "accessedReference" is the value itself.
+	accessedReference := v
+
+	return getBuiltinFunctionMember(context, referencedValue, name, accessedReference)
 }
 
 func (v *StorageReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {
