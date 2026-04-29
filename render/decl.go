@@ -425,18 +425,19 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap) prettier.
 		// Binary expressions (e.g., ?? nil-coalescing) need Indent for
 		// continuation line indentation. Other expressions render directly
 		// to avoid over-indenting function call arguments.
+		valueDoc := wrapWithAllComments(d.Value, d.Value.Doc(), cm)
 		if _, ok := d.Value.(*ast.BinaryExpression); ok {
 			parts = append(parts, prettier.Group{
 				Doc: prettier.Indent{
 					Doc: prettier.Concat{
 						prettier.Line{},
-						d.Value.Doc(),
+						valueDoc,
 					},
 				},
 			})
 		} else {
 			parts = append(parts, prettier.Space)
-			parts = append(parts, d.Value.Doc())
+			parts = append(parts, valueDoc)
 		}
 	}
 
