@@ -3,6 +3,7 @@ package render
 import (
 	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/turbolent/prettier"
 )
 
@@ -14,26 +15,29 @@ func renderDeclaration(decl ast.Declaration, cm *trivia.CommentMap) prettier.Doc
 
 	switch d := decl.(type) {
 	case *ast.FunctionDeclaration:
-		doc = renderFunction(d)
+		doc = renderFunction(d, cm)
 	case *ast.CompositeDeclaration:
 		doc = renderComposite(d, cm)
 	case *ast.InterfaceDeclaration:
 		doc = renderInterface(d, cm)
 	case *ast.VariableDeclaration:
-		doc = renderVariable(d)
+		doc = renderVariable(d, cm)
 	case *ast.FieldDeclaration:
-		doc = renderField(d)
+		doc = renderField(d, cm)
 	case *ast.SpecialFunctionDeclaration:
-		doc = renderSpecialFunction(d)
+		doc = renderSpecialFunction(d, cm)
 	default:
+		// For unknown declaration types, use upstream Doc() and drain
+		// any descendant comments so they're not orphaned.
 		doc = decl.Doc()
+		return wrapWithAllComments(decl, doc, cm)
 	}
 
 	return wrapWithComments(decl, doc, cm)
 }
 
 // renderFunction renders a function declaration with access on the same line.
-func renderFunction(d *ast.FunctionDeclaration) prettier.Doc {
+func renderFunction(d *ast.FunctionDeclaration, cm *trivia.CommentMap) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Access modifier
@@ -65,28 +69,93 @@ func renderFunction(d *ast.FunctionDeclaration) prettier.Doc {
 
 	// Parameters
 	if d.ParameterList != nil {
-		parts = append(parts, d.ParameterList.Doc())
+		paramDoc := d.ParameterList.Doc()
+		drainWalkable(d.ParameterList, cm)
+		parts = append(parts, paramDoc)
 	}
 
 	// Return type
 	if d.ReturnTypeAnnotation != nil && d.ReturnTypeAnnotation.Type != nil {
-		parts = append(parts, prettier.Text(": "), d.ReturnTypeAnnotation.Doc())
+		parts = append(parts, prettier.Text(": "), wrapWithAllComments(d.ReturnTypeAnnotation, d.ReturnTypeAnnotation.Doc(), cm))
 	}
 
 	// Function body
 	if d.FunctionBlock != nil {
-		parts = append(parts, prettier.Space, d.FunctionBlock.Doc())
+		parts = append(parts, prettier.Space, renderFunctionBlock(d.FunctionBlock, cm))
 	}
 
 	return parts
 }
 
+// renderFunctionBlock renders a { pre { } post { } stmts } block with
+// comment interleaving between statements.
+func renderFunctionBlock(b *ast.FunctionBlock, cm *trivia.CommentMap) prettier.Doc {
+	if b.IsEmpty() {
+		return prettier.Text("{}")
+	}
+
+	body := prettier.Concat{}
+	needSep := false
+
+	// Pre-conditions
+	if b.PreConditions != nil && !b.PreConditions.IsEmpty() {
+		condDoc := b.PreConditions.Doc(prettier.Text("pre"))
+		drainConditionComments(b.PreConditions, cm)
+		body = append(body, condDoc)
+		needSep = true
+	}
+
+	// Post-conditions
+	if b.PostConditions != nil && !b.PostConditions.IsEmpty() {
+		if needSep {
+			body = append(body, prettier.HardLine{})
+		}
+		condDoc := b.PostConditions.Doc(prettier.Text("post"))
+		drainConditionComments(b.PostConditions, cm)
+		body = append(body, condDoc)
+		needSep = true
+	}
+
+	// Statements
+	if b.Block != nil {
+		for _, stmt := range b.Block.Statements {
+			if needSep {
+				body = append(body, prettier.HardLine{})
+			}
+			doc := wrapWithAllComments(stmt, stmt.Doc(), cm)
+			body = append(body, doc)
+			needSep = true
+		}
+	}
+
+	return prettier.Concat{
+		prettier.Text("{"),
+		prettier.Indent{Doc: prettier.Concat{
+			prettier.HardLine{},
+			body,
+		}},
+		prettier.HardLine{},
+		prettier.Text("}"),
+	}
+}
+
 // renderComposite renders a composite declaration (resource, struct, contract, etc.)
 // with access on the same line.
 func renderComposite(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettier.Doc {
-	// Events render differently
-	if d.CompositeKind == 0 { // event
-		return d.Doc()
+	// Events use a special compact format (no members block with braces)
+	if d.CompositeKind == common.CompositeKindEvent {
+		doc := d.EventDoc()
+		// Drain any comments attached to event children (parameter types, etc.)
+		var extras []prettier.Doc
+		drainDescendantComments(d, cm, &extras)
+		if len(extras) > 0 {
+			parts := prettier.Concat{doc}
+			for _, e := range extras {
+				parts = append(parts, prettier.HardLine{}, e)
+			}
+			return parts
+		}
+		return doc
 	}
 
 	parts := prettier.Concat{}
@@ -180,7 +249,7 @@ func renderMembersBlock(members *ast.Members, cm *trivia.CommentMap) prettier.Do
 }
 
 // renderVariable renders a variable declaration with access on the same line.
-func renderVariable(d *ast.VariableDeclaration) prettier.Doc {
+func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Access modifier
@@ -200,7 +269,7 @@ func renderVariable(d *ast.VariableDeclaration) prettier.Doc {
 
 	// Type annotation
 	if d.TypeAnnotation != nil && d.TypeAnnotation.Type != nil {
-		parts = append(parts, prettier.Text(": "), d.TypeAnnotation.Doc())
+		parts = append(parts, prettier.Text(": "), wrapWithAllComments(d.TypeAnnotation, d.TypeAnnotation.Doc(), cm))
 	}
 
 	// Transfer and value
@@ -222,9 +291,21 @@ func renderVariable(d *ast.VariableDeclaration) prettier.Doc {
 	return parts
 }
 
+// drainConditionComments drains any comments attached to Conditions' children.
+func drainConditionComments(conds *ast.Conditions, cm *trivia.CommentMap) {
+	conds.Walk(func(child ast.Element) {
+		if child == nil {
+			return
+		}
+		cm.Take(child)
+		var discard []prettier.Doc
+		drainDescendantComments(child, cm, &discard)
+	})
+}
+
 // renderSpecialFunction renders init/destroy/prepare declarations.
 // These don't use the "fun" keyword.
-func renderSpecialFunction(d *ast.SpecialFunctionDeclaration) prettier.Doc {
+func renderSpecialFunction(d *ast.SpecialFunctionDeclaration, cm *trivia.CommentMap) prettier.Doc {
 	fn := d.FunctionDeclaration
 	parts := prettier.Concat{}
 
@@ -243,7 +324,9 @@ func renderSpecialFunction(d *ast.SpecialFunctionDeclaration) prettier.Doc {
 
 	// Parameters
 	if fn.ParameterList != nil {
-		parts = append(parts, fn.ParameterList.Doc())
+		paramDoc := fn.ParameterList.Doc()
+		drainWalkable(fn.ParameterList, cm)
+		parts = append(parts, paramDoc)
 	}
 
 	// Return type
@@ -253,14 +336,14 @@ func renderSpecialFunction(d *ast.SpecialFunctionDeclaration) prettier.Doc {
 
 	// Body
 	if fn.FunctionBlock != nil {
-		parts = append(parts, prettier.Space, fn.FunctionBlock.Doc())
+		parts = append(parts, prettier.Space, renderFunctionBlock(fn.FunctionBlock, cm))
 	}
 
 	return parts
 }
 
 // renderField renders a field declaration (inside composites) with access on the same line.
-func renderField(d *ast.FieldDeclaration) prettier.Doc {
+func renderField(d *ast.FieldDeclaration, cm *trivia.CommentMap) prettier.Doc {
 	parts := prettier.Concat{}
 
 	if d.Access != ast.AccessNotSpecified {
@@ -278,7 +361,7 @@ func renderField(d *ast.FieldDeclaration) prettier.Doc {
 	parts = append(parts, prettier.Text(d.Identifier.Identifier))
 
 	if d.TypeAnnotation != nil && d.TypeAnnotation.Type != nil {
-		parts = append(parts, prettier.Text(": "), d.TypeAnnotation.Doc())
+		parts = append(parts, prettier.Text(": "), wrapWithAllComments(d.TypeAnnotation, d.TypeAnnotation.Doc(), cm))
 	}
 
 	return parts

@@ -45,7 +45,8 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 
 	// Verify no orphaned comments remain
 	if !cm.IsEmpty() {
-		return result, fmt.Errorf("internal error: orphaned comments remain in CommentMap")
+		details := cm.OrphanDetails()
+		return result, fmt.Errorf("internal error: orphaned comments remain in CommentMap\n%s", details)
 	}
 
 	// Round-trip verification: re-parse and compare ASTs

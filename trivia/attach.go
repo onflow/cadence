@@ -1,6 +1,7 @@
 package trivia
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/onflow/cadence/ast"
@@ -59,6 +60,25 @@ func (cm *CommentMap) IsEmpty() bool {
 		len(cm.Leading) == 0 &&
 		len(cm.Trailing) == 0 &&
 		len(cm.SameLine) == 0
+}
+
+// OrphanDetails returns a human-readable summary of remaining comments in the map.
+func (cm *CommentMap) OrphanDetails() string {
+	var details string
+	for k, v := range cm.Leading {
+		for _, g := range v {
+			details += fmt.Sprintf("  Leading on %T at %s: %q\n", k, k.StartPosition(), g.Comments[0].Text)
+		}
+	}
+	for k, v := range cm.Trailing {
+		for _, g := range v {
+			details += fmt.Sprintf("  Trailing on %T at %s: %q\n", k, k.StartPosition(), g.Comments[0].Text)
+		}
+	}
+	for k, v := range cm.SameLine {
+		details += fmt.Sprintf("  SameLine on %T at %s: %q\n", k, k.StartPosition(), v.Comments[0].Text)
+	}
+	return details
 }
 
 // Attach walks the AST and binds comment groups to nodes by position.

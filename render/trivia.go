@@ -69,3 +69,60 @@ func renderComment(c trivia.Comment) prettier.Doc {
 	}
 	return prettier.Text(text)
 }
+
+// wrapWithAllComments wraps a node's Doc with its own comments AND drains
+// comments from all descendant nodes, emitting them inline. Use this for
+// nodes rendered via upstream Doc() where we don't control child rendering.
+func wrapWithAllComments(elem ast.Element, doc prettier.Doc, cm *trivia.CommentMap) prettier.Doc {
+	doc = wrapWithComments(elem, doc, cm)
+	var extras []prettier.Doc
+	drainDescendantComments(elem, cm, &extras)
+	if len(extras) > 0 {
+		// Interleave descendant comments into the doc.
+		// These won't be perfectly positioned but they're preserved.
+		parts := prettier.Concat{doc}
+		for _, e := range extras {
+			parts = append(parts, prettier.HardLine{}, e)
+		}
+		return parts
+	}
+	return doc
+}
+
+// walkable is anything with a Walk method (ast.Element, ParameterList, etc.)
+type walkable interface {
+	Walk(func(ast.Element))
+}
+
+// drainWalkable drains comments from all children of a walkable node.
+func drainWalkable(w walkable, cm *trivia.CommentMap) {
+	w.Walk(func(child ast.Element) {
+		if child == nil {
+			return
+		}
+		cm.Take(child)
+		var discard []prettier.Doc
+		drainDescendantComments(child, cm, &discard)
+	})
+}
+
+// drainDescendantComments recursively removes and collects all comments
+// from child nodes of elem.
+func drainDescendantComments(elem ast.Element, cm *trivia.CommentMap, out *[]prettier.Doc) {
+	elem.Walk(func(child ast.Element) {
+		if child == nil {
+			return
+		}
+		leading, sameLine, trailing := cm.Take(child)
+		for _, g := range leading {
+			*out = append(*out, renderCommentGroup(g))
+		}
+		if sameLine != nil {
+			*out = append(*out, renderCommentGroup(sameLine))
+		}
+		for _, g := range trailing {
+			*out = append(*out, renderCommentGroup(g))
+		}
+		drainDescendantComments(child, cm, out)
+	})
+}
