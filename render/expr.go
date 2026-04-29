@@ -12,9 +12,7 @@ import (
 func renderExpression(expr ast.Expression, cm *trivia.CommentMap) prettier.Doc {
 	switch e := expr.(type) {
 	case *ast.InvocationExpression:
-		if cm.HasTrailing(e.InvokedExpression) {
-			return wrapWithComments(e, renderInvocationWithComments(e, cm), cm)
-		}
+		return wrapWithComments(e, renderInvocationExpression(e, cm), cm)
 	case *ast.CastingExpression:
 		return wrapWithComments(e, renderCastingExpression(e, cm), cm)
 	}
@@ -30,17 +28,29 @@ func renderIndentedExpression(expr ast.Expression, cm *trivia.CommentMap) pretti
 	return prettier.Indent{Doc: doc}
 }
 
-// renderInvocationWithComments renders a function call where comments between
-// the function name and the opening paren need to be placed inside the
-// argument list. This forces arguments to break across lines.
-func renderInvocationWithComments(e *ast.InvocationExpression, cm *trivia.CommentMap) prettier.Doc {
+// invocationArg holds a rendered argument and any associated comments that
+// must be placed relative to the comma separator (same-line comments go
+// after the comma on the same line, not before it).
+type invocationArg struct {
+	doc      prettier.Doc               // argument rendering (label: expr)
+	leading  []*trivia.CommentGroup     // comments before the argument
+	sameLine *trivia.CommentGroup        // same-line comment (after arg, before next)
+	trailing []*trivia.CommentGroup     // comments after the argument
+	extras   []prettier.Doc             // drained descendant comment docs
+}
+
+// renderInvocationExpression renders a function call with comments preserved
+// inside the argument list. Without this, wrapWithAllComments + upstream Doc()
+// displaces argument comments outside the closing paren.
+func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentMap) prettier.Doc {
 	parts := prettier.Concat{}
 
-	// Take comments from the invoked expression.
+	// Take comments from the invoked expression separately. Trailing comments
+	// sit between the function name and the opening paren.
 	leading, sameLine, trailing := cm.Take(e.InvokedExpression)
 	invokedDoc := renderExpression(e.InvokedExpression, cm)
 
-	// Re-apply leading and same-line.
+	// Re-apply leading and same-line to the invoked expression.
 	if len(leading) > 0 || sameLine != nil {
 		wrapped := prettier.Concat{}
 		for _, g := range leading {
@@ -54,7 +64,7 @@ func renderInvocationWithComments(e *ast.InvocationExpression, cm *trivia.Commen
 	}
 	parts = append(parts, invokedDoc)
 
-	// Type arguments (use upstream rendering)
+	// Type arguments
 	if len(e.TypeArguments) > 0 {
 		typeArgDocs := make([]prettier.Doc, len(e.TypeArguments))
 		for i, ta := range e.TypeArguments {
@@ -73,6 +83,7 @@ func renderInvocationWithComments(e *ast.InvocationExpression, cm *trivia.Commen
 		)
 	}
 
+	// No arguments
 	if len(e.Arguments) == 0 {
 		parts = append(parts, prettier.Text("()"))
 		for _, g := range trailing {
@@ -81,46 +92,109 @@ func renderInvocationWithComments(e *ast.InvocationExpression, cm *trivia.Commen
 		return parts
 	}
 
-	// Build argument list with trailing comments before first arg.
-	// Use upstream arg.Doc() for each argument, draining descendant
-	// comments to prevent orphans.
-	inner := prettier.Concat{}
-	for _, g := range trailing {
-		inner = append(inner, renderCommentGroup(g), prettier.HardLine{})
-	}
-	var leftovers []prettier.Doc
+	// Collect argument docs with their comments
+	args := make([]invocationArg, len(e.Arguments))
+	hasComments := len(trailing) > 0
 	for i, arg := range e.Arguments {
-		if i > 0 {
-			inner = append(inner, prettier.Text(","), prettier.HardLine{})
+		a := invocationArg{doc: arg.Doc()}
+
+		// Collect comments from the Argument element and its Expression.
+		argLeading, argSameLine, argTrailing := cm.Take(arg)
+		exprLeading, exprSameLine, exprTrailing := cm.Take(arg.Expression)
+
+		a.leading = append(argLeading, exprLeading...)
+		a.trailing = append(argTrailing, exprTrailing...)
+		// Same-line: prefer argument-level (closer to the text)
+		a.sameLine = argSameLine
+		if a.sameLine == nil {
+			a.sameLine = exprSameLine
 		}
-		inner = append(inner, arg.Doc())
-		// Drain comments from the Argument element (now walkable since
-		// onflow/cadence PR #4485) and its descendant expression.
-		cm.Take(arg)
-		drainDescendantComments(arg, cm, &leftovers)
+
+		// Drain deeper descendants
+		var extras []prettier.Doc
+		drainDescendantComments(arg, cm, &extras)
+		// Convert extras to trailing comment groups (render as-is)
+		if len(extras) > 0 {
+			hasComments = true
+		}
+
+		if len(a.leading) > 0 || a.sameLine != nil || len(a.trailing) > 0 || len(extras) > 0 {
+			hasComments = true
+		}
+		// Store extras as additional trailing docs
+		a.extras = extras
+		args[i] = a
 	}
 
-	parts = append(parts,
-		prettier.Text("("),
-		prettier.Indent{Doc: prettier.Concat{
-			prettier.HardLine{},
-			inner,
-		}},
-		prettier.HardLine{},
-		prettier.Text(")"),
-	)
+	if hasComments {
+		// Comments force arguments to break across lines.
+		inner := prettier.Concat{}
+		for _, g := range trailing {
+			inner = append(inner, renderCommentGroup(g), prettier.HardLine{})
+		}
+		for i, a := range args {
+			if i > 0 {
+				inner = append(inner, prettier.Text(","))
+				// Previous arg's same-line comment goes after the comma
+				if args[i-1].sameLine != nil {
+					inner = append(inner, prettier.Text("  "), renderCommentGroupInline(args[i-1].sameLine))
+				}
+				inner = append(inner, prettier.HardLine{})
+				// Previous arg's trailing comments
+				for _, g := range args[i-1].trailing {
+					inner = append(inner, renderCommentGroup(g), prettier.HardLine{})
+				}
+				for _, e := range args[i-1].extras {
+					inner = append(inner, e, prettier.HardLine{})
+				}
+			}
+			// Leading comments for this arg
+			for _, g := range a.leading {
+				inner = append(inner, renderCommentGroup(g), prettier.HardLine{})
+			}
+			inner = append(inner, a.doc)
+		}
+		// Handle last arg's same-line and trailing
+		lastArg := args[len(args)-1]
+		if lastArg.sameLine != nil {
+			inner = append(inner, prettier.Text("  "), renderCommentGroupInline(lastArg.sameLine))
+		}
+		for _, g := range lastArg.trailing {
+			inner = append(inner, prettier.HardLine{}, renderCommentGroup(g))
+		}
+		for _, e := range lastArg.extras {
+			inner = append(inner, prettier.HardLine{}, e)
+		}
 
-	// Emit any leftover descendant comments after the invocation
-	for _, e := range leftovers {
-		parts = append(parts, prettier.HardLine{}, e)
+		parts = append(parts,
+			prettier.Text("("),
+			prettier.Indent{Doc: prettier.Concat{
+				prettier.HardLine{},
+				inner,
+			}},
+			prettier.HardLine{},
+			prettier.Text(")"),
+		)
+	} else {
+		// No comments: use soft-breaking argument list
+		plainDocs := make([]prettier.Doc, len(args))
+		for i, a := range args {
+			plainDocs[i] = a.doc
+		}
+		argSep := prettier.Concat{prettier.Text(","), prettier.Line{}}
+		parts = append(parts,
+			prettier.WrapParentheses(
+				prettier.Join(argSep, plainDocs...),
+				prettier.SoftLine{},
+			),
+		)
 	}
 
 	return parts
 }
 
 // renderCastingExpression renders a cast (as/as!/as?) with the operator and
-// target type indented on continuation lines. The upstream Doc() places the
-// operator at the same indent level as the expression, which looks wrong.
+// target type indented on continuation lines.
 func renderCastingExpression(e *ast.CastingExpression, cm *trivia.CommentMap) prettier.Doc {
 	exprDoc := renderExpression(e.Expression, cm)
 	typeDoc := wrapWithAllComments(e.TypeAnnotation, e.TypeAnnotation.Doc(), cm)
