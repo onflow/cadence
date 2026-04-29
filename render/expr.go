@@ -21,6 +21,15 @@ func renderExpression(expr ast.Expression, cm *trivia.CommentMap) prettier.Doc {
 	return wrapWithAllComments(expr, expr.Doc(), cm)
 }
 
+// renderIndentedExpression renders an expression wrapped in Indent so that
+// continuation lines (from Line{} breaks inside the expression's Doc) are
+// indented. Used for while/if conditions where the upstream BinaryExpression
+// Doc() uses Line{} without Indent for the operator continuation.
+func renderIndentedExpression(expr ast.Expression, cm *trivia.CommentMap) prettier.Doc {
+	doc := renderExpression(expr, cm)
+	return prettier.Indent{Doc: doc}
+}
+
 // renderInvocationWithComments renders a function call where comments between
 // the function name and the opening paren need to be placed inside the
 // argument list. This forces arguments to break across lines.
@@ -73,9 +82,8 @@ func renderInvocationWithComments(e *ast.InvocationExpression, cm *trivia.Commen
 	}
 
 	// Build argument list with trailing comments before first arg.
-	// Use upstream arg.Doc() for each argument to preserve proper
-	// comma separation. Drain argument expression comments to prevent
-	// orphans — any descendant comments fall back to after the call.
+	// Use upstream arg.Doc() for each argument, draining descendant
+	// comments to prevent orphans.
 	inner := prettier.Concat{}
 	for _, g := range trailing {
 		inner = append(inner, renderCommentGroup(g), prettier.HardLine{})
@@ -86,9 +94,10 @@ func renderInvocationWithComments(e *ast.InvocationExpression, cm *trivia.Commen
 			inner = append(inner, prettier.Text(","), prettier.HardLine{})
 		}
 		inner = append(inner, arg.Doc())
-		// Drain comments from the argument expression and descendants
-		cm.Take(arg.Expression)
-		drainDescendantComments(arg.Expression, cm, &leftovers)
+		// Drain comments from the Argument element (now walkable since
+		// onflow/cadence PR #4485) and its descendant expression.
+		cm.Take(arg)
+		drainDescendantComments(arg, cm, &leftovers)
 	}
 
 	parts = append(parts,

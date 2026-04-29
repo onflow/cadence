@@ -26,8 +26,6 @@ func renderDeclaration(decl ast.Declaration, cm *trivia.CommentMap) prettier.Doc
 		doc = renderField(d, cm)
 	case *ast.SpecialFunctionDeclaration:
 		doc = renderSpecialFunction(d, cm)
-	case *ast.EntitlementDeclaration:
-		doc = renderEntitlement(d, cm)
 	case *ast.EntitlementMappingDeclaration:
 		doc = renderEntitlementMapping(d, cm)
 	default:
@@ -220,7 +218,7 @@ func renderWhileStatement(s *ast.WhileStatement, cm *trivia.CommentMap) prettier
 	parts := prettier.Concat{}
 
 	parts = append(parts, prettier.Text("while "))
-	parts = append(parts, renderExpression(s.Test, cm))
+	parts = append(parts, renderIndentedExpression(s.Test, cm))
 	parts = append(parts, prettier.Space)
 	parts = append(parts, renderBlockBraces(s.Block, cm))
 
@@ -331,7 +329,10 @@ func renderComposite(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettie
 	// Name
 	parts = append(parts, prettier.Text(d.Identifier.Identifier))
 
-	// Conformances
+	// Conformances — the upstream Walk() now yields these as children,
+	// so comments may be attached to them. Drain conformance comments
+	// and move trailing comments to be leading of the first member
+	// (they logically describe the first field, not the conformance type).
 	conformances := d.Conformances
 	if len(conformances) > 0 {
 		parts = append(parts, prettier.Text(":"), prettier.Space)
@@ -340,6 +341,13 @@ func renderComposite(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettie
 				parts = append(parts, prettier.Text(","), prettier.Space)
 			}
 			parts = append(parts, c.Doc())
+			_, _, trailing := cm.Take(c)
+			if len(trailing) > 0 {
+				decls := d.Members.Declarations()
+				if len(decls) > 0 {
+					cm.Leading[decls[0]] = append(trailing, cm.Leading[decls[0]]...)
+				}
+			}
 		}
 	}
 
@@ -368,6 +376,13 @@ func renderInterface(d *ast.InterfaceDeclaration, cm *trivia.CommentMap) prettie
 				parts = append(parts, prettier.Text(","), prettier.Space)
 			}
 			parts = append(parts, c.Doc())
+			_, _, trailing := cm.Take(c)
+			if len(trailing) > 0 {
+				decls := d.Members.Declarations()
+				if len(decls) > 0 {
+					cm.Leading[decls[0]] = append(trailing, cm.Leading[decls[0]]...)
+				}
+			}
 		}
 	}
 
@@ -551,23 +566,10 @@ func renderField(d *ast.FieldDeclaration, cm *trivia.CommentMap) prettier.Doc {
 	return parts
 }
 
-// renderEntitlement renders an entitlement declaration with access on the same line.
-// The upstream Doc() uses HardLine after access, which we override to Space.
-func renderEntitlement(d *ast.EntitlementDeclaration, _ *trivia.CommentMap) prettier.Doc {
-	parts := prettier.Concat{}
-
-	if d.Access != ast.AccessNotSpecified {
-		parts = append(parts, d.Access.Doc(), prettier.Space)
-	}
-
-	parts = append(parts, prettier.Text("entitlement"), prettier.Space)
-	parts = append(parts, prettier.Text(d.Identifier.Identifier))
-
-	return parts
-}
-
 // renderEntitlementMapping renders an entitlement mapping declaration with
-// access on the same line and elements in a braced block.
+// access on the same line and elements in a braced block. Needed because the
+// upstream Doc() doesn't wrap in a Group (so Line after access breaks) and
+// doesn't indent elements.
 func renderEntitlementMapping(d *ast.EntitlementMappingDeclaration, _ *trivia.CommentMap) prettier.Doc {
 	parts := prettier.Concat{}
 
@@ -609,3 +611,4 @@ func renderEntitlementMapping(d *ast.EntitlementMappingDeclaration, _ *trivia.Co
 
 	return parts
 }
+
