@@ -10,6 +10,7 @@ import (
 
 	"github.com/janezpodhostnik/cadencefmt/internal/format"
 	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
+	"github.com/janezpodhostnik/cadencefmt/internal/format/verify"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -97,6 +98,40 @@ func TestIdempotence(t *testing.T) {
 			if string(first) != string(second) {
 				t.Errorf("not idempotent.\n--- first ---\n%s\n--- second ---\n%s",
 					string(first), string(second))
+			}
+		})
+	}
+}
+
+func TestRoundTrip(t *testing.T) {
+	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
+
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		t.Fatalf("reading testdata dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			dir := filepath.Join(testdataDir, name)
+			inputPath := filepath.Join(dir, "input.cdc")
+
+			input, err := os.ReadFile(inputPath)
+			if err != nil {
+				t.Fatalf("reading input: %v", err)
+			}
+
+			output, err := format.Format(input, inputPath, format.Default())
+			if err != nil {
+				t.Fatalf("format error: %v", err)
+			}
+
+			if err := verify.RoundTrip(input, output); err != nil {
+				t.Errorf("round-trip failed: %v", err)
 			}
 		})
 	}

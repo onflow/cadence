@@ -7,6 +7,7 @@ import (
 	"github.com/janezpodhostnik/cadencefmt/internal/format/render"
 	"github.com/janezpodhostnik/cadencefmt/internal/format/rewrite"
 	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
+	"github.com/janezpodhostnik/cadencefmt/internal/format/verify"
 	"github.com/onflow/cadence/parser"
 	"github.com/turbolent/prettier"
 )
@@ -45,6 +46,13 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 	// Verify no orphaned comments remain
 	if !cm.IsEmpty() {
 		return result, fmt.Errorf("internal error: orphaned comments remain in CommentMap")
+	}
+
+	// Round-trip verification: re-parse and compare ASTs
+	if !opts.SkipVerify {
+		if err := verify.RoundTrip(src, result); err != nil {
+			return result, fmt.Errorf("internal error: round-trip verification failed: %w", err)
+		}
 	}
 
 	return result, nil

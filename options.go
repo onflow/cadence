@@ -19,6 +19,7 @@ type Options struct {
 	StripSemicolons bool
 	KeepBlankLines  int
 	FormatVersion   string
+	SkipVerify      bool
 }
 
 // Default returns the canonical default formatting options.
