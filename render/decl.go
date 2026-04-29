@@ -269,16 +269,24 @@ func renderReturnStatement(s *ast.ReturnStatement, cm *trivia.CommentMap) pretti
 		return prettier.Text("return")
 	}
 
-	exprDoc := wrapWithAllComments(s.Expression, s.Expression.Doc(), cm)
-
-	// Binary expressions need Indent for proper continuation line indentation
+	// Binary expressions need Indent for proper continuation line indentation.
+	// Drain descendant comments outside the Indent so they don't pick up
+	// expression-level indentation that isn't stable across re-formats.
 	if _, ok := s.Expression.(*ast.BinaryExpression); ok {
-		return prettier.Concat{
+		exprDoc := wrapWithComments(s.Expression, s.Expression.Doc(), cm)
+		parts := prettier.Concat{
 			prettier.Text("return "),
 			prettier.Indent{Doc: exprDoc},
 		}
+		var extras []prettier.Doc
+		drainDescendantComments(s.Expression, cm, &extras)
+		for _, e := range extras {
+			parts = append(parts, prettier.HardLine{}, e)
+		}
+		return parts
 	}
 
+	exprDoc := wrapWithAllComments(s.Expression, s.Expression.Doc(), cm)
 	return prettier.Concat{
 		prettier.Text("return "),
 		exprDoc,
@@ -425,8 +433,11 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap) prettier.
 		// Binary expressions (e.g., ?? nil-coalescing) need Indent for
 		// continuation line indentation. Other expressions render directly
 		// to avoid over-indenting function call arguments.
-		valueDoc := wrapWithAllComments(d.Value, d.Value.Doc(), cm)
 		if _, ok := d.Value.(*ast.BinaryExpression); ok {
+			// Don't use wrapWithAllComments here — drained descendant
+			// comments would end up inside the Indent, gaining indentation
+			// that isn't stable across re-formats.
+			valueDoc := wrapWithComments(d.Value, d.Value.Doc(), cm)
 			parts = append(parts, prettier.Group{
 				Doc: prettier.Indent{
 					Doc: prettier.Concat{
@@ -435,7 +446,13 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap) prettier.
 					},
 				},
 			})
+			var extras []prettier.Doc
+			drainDescendantComments(d.Value, cm, &extras)
+			for _, e := range extras {
+				parts = append(parts, prettier.HardLine{}, e)
+			}
 		} else {
+			valueDoc := wrapWithAllComments(d.Value, d.Value.Doc(), cm)
 			parts = append(parts, prettier.Space)
 			parts = append(parts, valueDoc)
 		}

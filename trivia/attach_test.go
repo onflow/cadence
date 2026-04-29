@@ -50,7 +50,29 @@ access(all) fun main() {}
 }
 
 func TestAttach_FileFooter(t *testing.T) {
+	// No blank line before comment → trailing of last decl, not footer
 	source := `access(all) fun main() {}
+// trailing comment
+`
+	program, cm := attachComments(t, source)
+	decls := program.Declarations()
+
+	if len(cm.Footer) != 0 {
+		t.Errorf("expected no footer, got %d", len(cm.Footer))
+	}
+	trailing := cm.Trailing[decls[0]]
+	if len(trailing) != 1 {
+		t.Fatalf("expected 1 trailing group, got %d", len(trailing))
+	}
+	if trailing[0].Comments[0].Text != "// trailing comment" {
+		t.Errorf("trailing text = %q", trailing[0].Comments[0].Text)
+	}
+}
+
+func TestAttach_FooterWithBlankLine(t *testing.T) {
+	// Blank line before comment → true footer
+	source := `access(all) fun main() {}
+
 // footer comment
 `
 	_, cm := attachComments(t, source)

@@ -222,27 +222,3 @@ func findRepoRoot(t *testing.T) string {
 	}
 }
 
-// diffStrings returns a simple line-by-line diff for debugging.
-func diffStrings(a, b string) string {
-	linesA := strings.Split(a, "\n")
-	linesB := strings.Split(b, "\n")
-	var out strings.Builder
-	max := len(linesA)
-	if len(linesB) > max {
-		max = len(linesB)
-	}
-	for i := 0; i < max; i++ {
-		la, lb := "", ""
-		if i < len(linesA) {
-			la = linesA[i]
-		}
-		if i < len(linesB) {
-			lb = linesB[i]
-		}
-		if la != lb {
-			out.WriteString("- " + la + "\n")
-			out.WriteString("+ " + lb + "\n")
-		}
-	}
-	return out.String()
-}

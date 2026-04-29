@@ -208,6 +208,26 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 		}
 	}
 
+	// Groups after the last sibling: mirror the "between siblings" heuristic.
+	// Without this, comments on the next line after the last sibling are
+	// left unconsumed and incorrectly classified as footer/header by the caller.
+	if len(siblings) > 0 && gi < len(groups) {
+		lastNode := siblings[len(siblings)-1]
+		lastEnd := lastNode.EndPosition(nil)
+		if sl := cm.SameLine[lastNode]; sl != nil {
+			lastEnd = sl.EndPos()
+		}
+		for gi < len(groups) {
+			g := groups[gi]
+			if blankLineBetween(lastEnd, g.StartPos()) {
+				break
+			}
+			cm.Trailing[lastNode] = append(cm.Trailing[lastNode], g)
+			gi++
+			lastEnd = g.EndPos()
+		}
+	}
+
 	// Return unconsumed groups
 	return groups[gi:]
 }

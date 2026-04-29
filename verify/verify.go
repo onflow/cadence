@@ -74,10 +74,10 @@ func compareImportSets(a, b []ast.Declaration) error {
 
 	aSet := make(map[string]bool)
 	for _, d := range a {
-		aSet[fmt.Sprintf("%s", d)] = true
+		aSet[d.(fmt.Stringer).String()] = true
 	}
 	for _, d := range b {
-		key := fmt.Sprintf("%s", d)
+		key := d.(fmt.Stringer).String()
 		if !aSet[key] {
 			return fmt.Errorf("formatted has extra import: %s", key)
 		}
@@ -128,9 +128,3 @@ func collectChildren(elem ast.Element) []ast.Element {
 	return children
 }
 
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
-}

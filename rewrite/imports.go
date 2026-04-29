@@ -29,8 +29,10 @@ func (r *importsSorter) Rewrite(prog *ast.Program, _ *trivia.CommentMap) error {
 		return nil
 	}
 
-	// Deduplicate: keep first occurrence of each unique import
-	imports, indices = dedup(imports, indices)
+	// Note: we do not deduplicate imports here because we cannot remove
+	// declarations from the AST. Dedup would shrink the imports slice but
+	// leave the declaration at the removed index in place, causing
+	// non-idempotent output. Stable sort puts duplicates adjacent.
 
 	// Stable sort preserves relative order of equal imports
 	sort.SliceStable(imports, func(i, j int) bool {
@@ -102,24 +104,3 @@ func importName(imp *ast.ImportDeclaration) string {
 	return ""
 }
 
-// importKey returns a string key for deduplication.
-func importKey(imp *ast.ImportDeclaration) string {
-	return imp.Location.ID() + ":" + importName(imp)
-}
-
-// dedup removes duplicate imports, keeping the first occurrence.
-func dedup(imports []*ast.ImportDeclaration, indices []int) ([]*ast.ImportDeclaration, []int) {
-	seen := make(map[string]bool)
-	var out []*ast.ImportDeclaration
-	var outIdx []int
-	for i, imp := range imports {
-		key := importKey(imp)
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		out = append(out, imp)
-		outIdx = append(outIdx, indices[i])
-	}
-	return out, outIdx
-}

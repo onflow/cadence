@@ -16,7 +16,7 @@ func FuzzFormat(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Must not panic on any input
-		format.Format(data, "fuzz.cdc", format.Default())
+		_, _ = format.Format(data, "fuzz.cdc", format.Default())
 	})
 }
 
