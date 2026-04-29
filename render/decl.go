@@ -153,6 +153,8 @@ func renderStatement(stmt ast.Statement, cm *trivia.CommentMap) prettier.Doc {
 		return wrapWithComments(s, renderIfStatement(s, cm), cm)
 	case *ast.VariableDeclaration:
 		return wrapWithComments(s, renderVariable(s, cm), cm)
+	case *ast.AssignmentStatement:
+		return wrapWithComments(s, renderAssignmentStatement(s, cm), cm)
 	default:
 		return wrapWithAllComments(stmt, stmt.Doc(), cm)
 	}
@@ -240,6 +242,20 @@ func renderIfStatement(s *ast.IfStatement, cm *trivia.CommentMap) prettier.Doc {
 		parts = append(parts, prettier.Text(" else "))
 		parts = append(parts, renderBlockBraces(s.Else, cm))
 	}
+
+	return parts
+}
+
+// renderAssignmentStatement renders target = value without the upstream's
+// extra Indent wrapper that over-indents function call arguments.
+func renderAssignmentStatement(s *ast.AssignmentStatement, cm *trivia.CommentMap) prettier.Doc {
+	parts := prettier.Concat{}
+
+	parts = append(parts, wrapWithAllComments(s.Target, s.Target.Doc(), cm))
+	parts = append(parts, prettier.Space)
+	parts = append(parts, s.Transfer.Doc())
+	parts = append(parts, prettier.Space)
+	parts = append(parts, wrapWithAllComments(s.Value, s.Value.Doc(), cm))
 
 	return parts
 }
