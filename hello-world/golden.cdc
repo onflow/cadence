@@ -1,0 +1,2 @@
+access(all)
+fun main() {}
