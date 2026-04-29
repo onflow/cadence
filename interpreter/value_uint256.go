@@ -625,7 +625,11 @@ func (v UInt256Value) GetMember(
 	)
 }
 
-func (v UInt256Value) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v UInt256Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	return getNumberValueFunctionMember(
 		context,
 		v,

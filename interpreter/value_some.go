@@ -165,7 +165,11 @@ func (v *SomeValue) GetMember(
 	)
 }
 
-func (v *SomeValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v *SomeValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := v.InnerValueType(context)

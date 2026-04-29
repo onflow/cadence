@@ -403,7 +403,11 @@ func (v Word8Value) GetMember(
 	)
 }
 
-func (v Word8Value) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v Word8Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	return getNumberValueFunctionMember(
 		context,
 		v,

@@ -441,7 +441,11 @@ func (v UFix64Value) GetMember(
 	)
 }
 
-func (v UFix64Value) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v UFix64Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	return getNumberValueFunctionMember(
 		context,
 		v,

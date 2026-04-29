@@ -524,7 +524,11 @@ func (v UInt64Value) GetMember(
 	)
 }
 
-func (v UInt64Value) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v UInt64Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	return getNumberValueFunctionMember(
 		context,
 		v,

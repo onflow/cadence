@@ -538,7 +538,11 @@ func (v Fix64Value) GetMember(
 	)
 }
 
-func (v Fix64Value) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v Fix64Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	return getNumberValueFunctionMember(
 		context,
 		v,

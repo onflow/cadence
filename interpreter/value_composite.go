@@ -486,7 +486,12 @@ func (v *CompositeValue) DefaultDestroyEvents(
 	return events
 }
 
-func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, name string, accessedReference ReferenceValue) Value {
+func (v *CompositeValue) getBuiltinMember(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) Value {
+
 	switch name {
 	case sema.ResourceOwnerFieldName:
 		if v.Kind == common.CompositeKindResource {
@@ -637,7 +642,11 @@ func (v *CompositeValue) GetInjectedField(context MemberAccessibleContext, name 
 	return value
 }
 
-func (v *CompositeValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v *CompositeValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	if v.Functions == nil {
 		v.Functions = context.GetCompositeValueFunctions(v)
 	}
@@ -1914,7 +1923,13 @@ func (v *CompositeValue) getAttachmentValue(
 	ty sema.Type,
 ) *CompositeValue {
 	// Attachments are always fields.
-	attachment := v.GetMember(context, AttachmentMemberName(string(ty.ID())), common.DeclarationKindField, nil)
+	attachment := v.GetMember(
+		context,
+		AttachmentMemberName(string(ty.ID())),
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
+
 	if attachment != nil {
 		return attachment.(*CompositeValue)
 	}
@@ -1932,7 +1947,10 @@ func (v *CompositeValue) GetAttachments(context AttachmentContext) []*CompositeV
 	return attachments
 }
 
-func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationContext, accessedReference ReferenceValue) Value {
+func (v *CompositeValue) forEachAttachmentFunction(
+	context FunctionCreationContext,
+	accessedReference ReferenceValue,
+) Value {
 	compositeType := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
 	return NewBoundHostFunctionValue(
 		context,

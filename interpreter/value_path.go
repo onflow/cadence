@@ -142,7 +142,11 @@ var NativePathValueToStringFunction = NativeFunction(
 	},
 )
 
-func (v PathValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v PathValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:

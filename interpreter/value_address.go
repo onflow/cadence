@@ -175,9 +175,13 @@ func (v AddressValue) GetMember(
 	)
 }
 
-func (v AddressValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
-	switch name {
+func (v AddressValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 
+	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
 			context,

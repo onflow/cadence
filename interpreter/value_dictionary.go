@@ -917,7 +917,11 @@ func (v *DictionaryValue) GetMember(
 	)
 }
 
-func (v *DictionaryValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v *DictionaryValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.DictionaryTypeRemoveFunctionName:
 		return NewBoundHostFunctionValue(

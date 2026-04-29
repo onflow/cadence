@@ -960,7 +960,12 @@ func (v *ArrayValue) GetMember(
 	)
 }
 
-func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v *ArrayValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
 		return NewBoundHostFunctionValue(

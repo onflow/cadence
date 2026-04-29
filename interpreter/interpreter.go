@@ -6083,7 +6083,7 @@ func getMember(
 	var result Value
 
 	// At the initial call to get-member, "accessed reference" is nil/unknown.
-	// If the member is indeed accessed via a reference (i.e: "self" is a reference),
+	// If the member is indeed accessed via a reference (i.e: `self`/`memberAccessibleValue` is a reference),
 	// then `memberAccessibleValue.GetMember` will delegate the call to the underlying referenced value.
 	// There it will pass the receiver reference as the "accessed reference" to the
 	// delegated `GetMember` of referenced-value.

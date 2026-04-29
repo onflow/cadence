@@ -243,7 +243,11 @@ func (v TypeValue) GetMember(
 	)
 }
 
-func (v TypeValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v TypeValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.MetaTypeIsSubtypeFunctionName:
 		return NewBoundHostFunctionValue(

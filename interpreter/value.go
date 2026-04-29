@@ -162,6 +162,9 @@ type TypeIndexableValue interface {
 
 type MemberAccessibleValue interface {
 	Value
+	// GetMember return member of any kind (fields, methods, etc.), of this value.
+	// If the member was accessed via a reference, then it must be passed in as the `accessedReference`.
+	// Otherwise (member wass accessed via the concrete value), then `accessedReference` must be `nil`.
 	GetMember(
 		context MemberAccessibleContext,
 		name string,

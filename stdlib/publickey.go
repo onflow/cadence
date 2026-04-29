@@ -168,7 +168,13 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(context, sema.PublicKeyTypeSignatureAlgorithmFieldName, common.DeclarationKindField, nil)
+	signAlgoField := publicKey.GetMember(
+		context,
+		sema.PublicKeyTypeSignatureAlgorithmFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
+
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -181,7 +187,13 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetMember(context, sema.EnumRawValueFieldName, common.DeclarationKindField, nil)
+	rawValue := signAlgoValue.GetMember(
+		context,
+		sema.EnumRawValueFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
+
 	if rawValue == nil {
 		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
 	}

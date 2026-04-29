@@ -228,7 +228,12 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind, accessedReference ReferenceValue) (result Value) {
+func (v *StorageCapabilityControllerValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -272,7 +277,11 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	)
 }
 
-func (v *StorageCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v *StorageCapabilityControllerValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
 		return v.newSetTagFunction(context, accessedReference)

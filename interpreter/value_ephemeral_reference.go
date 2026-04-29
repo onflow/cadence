@@ -200,7 +200,11 @@ func (v *EphemeralReferenceValue) GetMember(
 	return result
 }
 
-func (v *EphemeralReferenceValue) GetMethod(context MemberAccessibleContext, name string, _ ReferenceValue) FunctionValue {
+func (v *EphemeralReferenceValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	_ ReferenceValue,
+) FunctionValue {
 	// For ephemeral references, "accessedReference" is the value itself.
 	accessedReference := v
 

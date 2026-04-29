@@ -436,7 +436,11 @@ func (v *StringValue) GetMember(
 	)
 }
 
-func (v *StringValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v *StringValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.StringTypeConcatFunctionName:
 		return NewBoundHostFunctionValue(

@@ -263,7 +263,12 @@ func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string, _ common.DeclarationKind, _ ReferenceValue) Value {
+func (f *HostFunctionValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	_ common.DeclarationKind,
+	_ ReferenceValue,
+) Value {
 	// Host Functions have variables with both fields and functions.
 	// So validating / or returning one or the other isn't possible at the moment.
 	if f.NestedVariables != nil {
@@ -555,11 +560,18 @@ func NewUnmeteredBoundHostFunctionValue(
 
 	hostFunc := NewUnmeteredStaticHostFunctionValue(funcType, function)
 
+	// This method is only used by the test-framework at the moment.
+	// And they are all unentitled references (imported `Test` contract, and it's fields).
+	// So keeping this `nil` for now is OK, as it will create an implicit reference internally.
+	// TODO: Maybe pass in the actual reference. Might need to refactor the test-framework
+	//  function registration.
+	var accessedReference ReferenceValue = nil
+
 	return NewBoundFunctionValue(
 		context,
 		hostFunc,
 		&self,
-		nil, // TODO:
+		accessedReference,
 		nil,
 	)
 }

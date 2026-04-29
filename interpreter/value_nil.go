@@ -123,7 +123,7 @@ func (v NilValue) GetMember(
 	)
 }
 
-func (v NilValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v NilValue) GetMethod(_ MemberAccessibleContext, name string, _ ReferenceValue) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		return nilValueMapFunction

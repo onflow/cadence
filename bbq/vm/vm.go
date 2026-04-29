@@ -1448,7 +1448,13 @@ func getField(
 	// VM assumes the field name is always a string.
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
-	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName, common.DeclarationKindField, nil)
+	fieldValue := memberAccessibleValue.GetMember(
+		vm.context,
+		fieldName,
+		common.DeclarationKindField,
+		nil, // accessedReference is not needed for getting fields; only needed for getting methods.
+	)
+
 	if fieldValue == nil {
 		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,

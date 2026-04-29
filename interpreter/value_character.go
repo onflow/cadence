@@ -298,7 +298,12 @@ var NativeCharacterValueToStringFunction = NativeFunction(
 	},
 )
 
-func (v CharacterValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
+func (v CharacterValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
