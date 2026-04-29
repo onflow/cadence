@@ -370,12 +370,18 @@ func TestGroup(t *testing.T) {
 			source:   "/* line1\nline2 */\n\n// after",
 			expected: []int{1, 1},
 		},
+		{
+			name:     "comments separated by code",
+			source:   "// before\nlet x = 1 // after",
+			expected: []int{1, 1},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			comments := Scan([]byte(tt.source))
-			groups := Group(comments)
+			src := []byte(tt.source)
+			comments := Scan(src)
+			groups := Group(comments, src)
 
 			if tt.expected == nil {
 				if groups != nil {
