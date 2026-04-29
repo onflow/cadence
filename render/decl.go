@@ -69,11 +69,9 @@ func renderFunction(d *ast.FunctionDeclaration, cm *trivia.CommentMap) prettier.
 		parts = append(parts, d.TypeParameterList.Doc())
 	}
 
-	// Parameters
+	// Parameters — use custom rendering to preserve comments between params
 	if d.ParameterList != nil {
-		paramDoc := d.ParameterList.Doc()
-		drainWalkable(d.ParameterList, cm)
-		parts = append(parts, paramDoc)
+		parts = append(parts, renderParameterList(d.ParameterList, cm))
 	}
 
 	// Return type
@@ -369,75 +367,96 @@ func renderEvent(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettier.Do
 	}
 
 	paramList := initializers[0].FunctionDeclaration.ParameterList
-	if paramList == nil || len(paramList.Parameters) == 0 {
-		parts = append(parts, prettier.Text("()"))
-		// Drain the initializer's comments
-		drainDescendantComments(d, cm, nil)
-		return parts
-	}
-
-	// Build parameter list with comment interleaving.
-	// ParameterList.Walk() yields TypeAnnotation (not Parameter), so
-	// comments are attached to TypeAnnotation nodes. For each parameter,
-	// collect its TypeAnnotation's leading comments (before the param) and
-	// the PREVIOUS TypeAnnotation's trailing comments (between params).
-	paramDocs := make([]prettier.Doc, len(paramList.Parameters))
-	hasParamComments := false
-	var pendingTrailing []*trivia.CommentGroup // trailing from previous param
-	for i, param := range paramList.Parameters {
-		paramDoc := param.Doc()
-		if param.TypeAnnotation != nil {
-			leading, _, trailing := cm.Take(param.TypeAnnotation)
-			// Pending trailing from previous param + leading on this param
-			allLeading := append(pendingTrailing, leading...)
-			if len(allLeading) > 0 {
-				prefix := prettier.Concat{}
-				for _, g := range allLeading {
-					prefix = append(prefix, renderCommentGroup(g), prettier.HardLine{})
-				}
-				paramDoc = prettier.Concat(append(prefix, paramDoc))
-				hasParamComments = true
-			}
-			pendingTrailing = trailing
-		} else {
-			pendingTrailing = nil
-		}
-		paramDocs[i] = paramDoc
-	}
-
-	if hasParamComments {
-		// Comments force parameters to break across lines
-		inner := prettier.Concat{}
-		for i, paramDoc := range paramDocs {
-			if i > 0 {
-				inner = append(inner, prettier.Text(","), prettier.HardLine{})
-			}
-			inner = append(inner, paramDoc)
-		}
-		parts = append(parts,
-			prettier.Text("("),
-			prettier.Indent{Doc: prettier.Concat{
-				prettier.HardLine{},
-				inner,
-			}},
-			prettier.HardLine{},
-			prettier.Text(")"),
-		)
-	} else {
-		// No comments: use soft-breaking parameter list
-		paramSep := prettier.Concat{prettier.Text(","), prettier.Line{}}
-		parts = append(parts,
-			prettier.WrapParentheses(
-				prettier.Join(paramSep, paramDocs...),
-				prettier.SoftLine{},
-			),
-		)
-	}
+	parts = append(parts, renderParameterList(paramList, cm))
 
 	// Drain any remaining descendant comments (type annotations, etc.)
 	drainDescendantComments(d, cm, nil)
 
 	return parts
+}
+
+// paramInfo holds a rendered parameter and its associated comments.
+type paramInfo struct {
+	doc      prettier.Doc
+	leading  []*trivia.CommentGroup
+	sameLine *trivia.CommentGroup
+	trailing []*trivia.CommentGroup
+}
+
+// renderParameterList renders a function/event parameter list with comments
+// interleaved between parameters. ParameterList.Walk() yields TypeAnnotation
+// nodes (not Parameter), so comments are attached to TypeAnnotation nodes.
+func renderParameterList(paramList *ast.ParameterList, cm *trivia.CommentMap) prettier.Doc {
+	if paramList == nil || len(paramList.Parameters) == 0 {
+		drainWalkable(paramList, cm)
+		return prettier.Text("()")
+	}
+
+	// Collect parameters with their comments
+	params := make([]paramInfo, len(paramList.Parameters))
+	hasComments := false
+	var pendingTrailing []*trivia.CommentGroup
+
+	for i, param := range paramList.Parameters {
+		p := paramInfo{doc: param.Doc()}
+		if param.TypeAnnotation != nil {
+			leading, sameLine, trailing := cm.Take(param.TypeAnnotation)
+			p.leading = append(pendingTrailing, leading...)
+			p.sameLine = sameLine
+			p.trailing = trailing
+			if len(p.leading) > 0 || p.sameLine != nil {
+				hasComments = true
+			}
+			pendingTrailing = trailing
+		} else {
+			if len(pendingTrailing) > 0 {
+				p.leading = pendingTrailing
+				hasComments = true
+			}
+			pendingTrailing = nil
+		}
+		params[i] = p
+	}
+
+	if !hasComments {
+		// No comments: use upstream soft-breaking layout
+		drainWalkable(paramList, cm)
+		return paramList.Doc()
+	}
+
+	// Comments present: force parameters to break across lines.
+	// Same-line comments go after the comma on the same line.
+	inner := prettier.Concat{}
+	for i, p := range params {
+		if i > 0 {
+			inner = append(inner, prettier.Text(","))
+			// Previous param's same-line comment after comma
+			if params[i-1].sameLine != nil {
+				inner = append(inner, prettier.Text("  "), renderCommentGroupInline(params[i-1].sameLine))
+			}
+			inner = append(inner, prettier.HardLine{})
+		}
+		// Leading comments for this param
+		for _, g := range p.leading {
+			inner = append(inner, renderCommentGroup(g), prettier.HardLine{})
+		}
+		inner = append(inner, p.doc)
+	}
+	// Last param's same-line comment
+	lastParam := params[len(params)-1]
+	if lastParam.sameLine != nil {
+		inner = append(inner, prettier.Text("  "), renderCommentGroupInline(lastParam.sameLine))
+	}
+
+	return prettier.Concat{
+		prettier.Text("("),
+		prettier.Indent{Doc: prettier.Concat{
+			prettier.HardLine{},
+			inner,
+		}},
+		prettier.HardLine{},
+		prettier.Text(")"),
+	}
 }
 
 // renderInterface renders an interface declaration with access on the same line.
@@ -605,11 +624,9 @@ func renderSpecialFunction(d *ast.SpecialFunctionDeclaration, cm *trivia.Comment
 	// Name (init/destroy/prepare)
 	parts = append(parts, prettier.Text(fn.Identifier.Identifier))
 
-	// Parameters
+	// Parameters — use custom rendering to preserve comments between params
 	if fn.ParameterList != nil {
-		paramDoc := fn.ParameterList.Doc()
-		drainWalkable(fn.ParameterList, cm)
-		parts = append(parts, paramDoc)
+		parts = append(parts, renderParameterList(fn.ParameterList, cm))
 	}
 
 	// Return type
