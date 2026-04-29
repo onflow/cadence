@@ -236,7 +236,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("access(all)"),
-								prettier.HardLine{},
+								prettier.Line{},
 								prettier.Concat{
 									prettier.Text("let"),
 									prettier.Space,
@@ -484,26 +484,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 
 	require.Equal(
 		t,
-		`transaction(x: X) {
-    access(all)
-    let f: @F
-    
-    prepare(signer: &Account) {}
-    
-    pre {
-        true:
-            "pre"
-    }
-    
-    execute {
-        "xyz"
-    }
-    
-    post {
-        false:
-            "post"
-    }
-}`,
+		"transaction(x: X) {\n    access(all) let f: @F\n    \n    prepare(signer: &Account) {}\n    \n    pre {\n        true:\n            \"pre\"\n    }\n    \n    execute {\n        \"xyz\"\n    }\n    \n    post {\n        false:\n            \"post\"\n    }\n}",
 		decl.String(),
 	)
 }

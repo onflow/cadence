@@ -4594,7 +4594,7 @@ func TestInvocationExpression_Walk(t *testing.T) {
 		[]Element{
 			invokedExpr,
 			expr.TypeArguments[0],
-			arg,
+			expr.Arguments[0],
 		},
 		visited,
 	)

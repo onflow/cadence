@@ -34,6 +34,16 @@ type Argument struct {
 	TrailingSeparatorPos Position
 }
 
+var _ Element = &Argument{}
+
+func (*Argument) ElementType() ElementType {
+	return ElementTypeArgument
+}
+
+func (a *Argument) Walk(walkChild func(Element)) {
+	walkChild(a.Expression)
+}
+
 func NewArgument(
 	memoryGauge common.MemoryGauge,
 	label string,

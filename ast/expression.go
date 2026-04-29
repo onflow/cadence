@@ -832,7 +832,7 @@ func (e *InvocationExpression) Walk(walkChild func(Element)) {
 		walkChild(typeArgument)
 	}
 	for _, argument := range e.Arguments {
-		walkChild(argument.Expression)
+		walkChild(argument)
 	}
 }
 
@@ -1304,13 +1304,19 @@ func parenthesizedExpressionDoc(e Expression, parentPrecedence expressionPrecede
 }
 
 func (e *UnaryExpression) Doc() prettier.Doc {
-	return prettier.Concat{
+	doc := prettier.Concat{
 		e.Operation.Doc(),
+	}
+	if e.Operation == OperationMove {
+		doc = append(doc, prettier.Space)
+	}
+	doc = append(doc,
 		parenthesizedExpressionDoc(
 			e.Expression,
 			e.precedence(),
 		),
-	}
+	)
+	return doc
 }
 
 func (e *UnaryExpression) StartPosition() Position {
@@ -1598,7 +1604,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			docOrEmpty(access),
-			prettier.HardLine{},
+			prettier.Line{},
 		)
 	}
 

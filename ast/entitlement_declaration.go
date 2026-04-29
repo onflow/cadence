@@ -112,7 +112,7 @@ func (d *EntitlementDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			docOrEmpty(d.Access),
-			prettier.HardLine{},
+			prettier.Line{},
 		)
 	}
 
@@ -122,7 +122,9 @@ func (d *EntitlementDeclaration) Doc() prettier.Doc {
 		prettier.Text(d.Identifier.Identifier),
 	)
 
-	return doc
+	return prettier.Group{
+		Doc: doc,
+	}
 }
 
 func (d *EntitlementDeclaration) String() string {
@@ -293,7 +295,7 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			docOrEmpty(d.Access),
-			prettier.HardLine{},
+			prettier.Line{},
 		)
 	}
 

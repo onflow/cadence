@@ -144,7 +144,7 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("attachment"),
 				prettier.Space,
 				prettier.Text("Foo"),
@@ -182,7 +182,7 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text(""),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("attachment"),
 				prettier.Space,
 				prettier.Text(""),
@@ -227,8 +227,7 @@ func TestAttachmentDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			`access(all)
-attachment Foo for Bar: Baz {}`,
+			"access(all) attachment Foo for Bar: Baz {}",
 			decl.String(),
 		)
 	})
@@ -241,8 +240,7 @@ attachment Foo for Bar: Baz {}`,
 
 		require.Equal(
 			t,
-			`
-attachment  for  {}`,
+			" attachment  for  {}",
 			decl.String(),
 		)
 	})

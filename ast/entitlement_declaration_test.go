@@ -84,11 +84,13 @@ func TestEntitlementDeclaration_Doc(t *testing.T) {
 
 		require.Equal(
 			t,
-			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.HardLine{},
-				prettier.Text("entitlement "),
-				prettier.Text("AB"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("access(all)"),
+					prettier.Line{},
+					prettier.Text("entitlement "),
+					prettier.Text("AB"),
+				},
 			},
 			decl.Doc(),
 		)
@@ -113,8 +115,7 @@ func TestEntitlementDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			`access(all)
-entitlement AB`,
+			"access(all) entitlement AB",
 			decl.String(),
 		)
 
@@ -247,7 +248,7 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("entitlement "),
 				prettier.Text("mapping "),
 				prettier.Text("AB"),
@@ -309,7 +310,7 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("entitlement "),
 				prettier.Text("mapping "),
 				prettier.Text("AB"),
@@ -366,10 +367,7 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			`access(all)
-entitlement mapping AB {
- -> 
-}`,
+			"access(all) entitlement mapping AB {\n -> \n}",
 			decl.String(),
 		)
 	})
@@ -413,8 +411,7 @@ entitlement mapping AB {
 
 		require.Equal(
 			t,
-			`access(all)
-entitlement mapping AB {
+			`access(all) entitlement mapping AB {
 include X
     X -> Y
 }`,
