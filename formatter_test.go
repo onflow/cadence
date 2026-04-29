@@ -4,10 +4,12 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/janezpodhostnik/cadencefmt/internal/format"
+	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -98,6 +100,62 @@ func TestIdempotence(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCommentPreservation(t *testing.T) {
+	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
+
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		t.Fatalf("reading testdata dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			dir := filepath.Join(testdataDir, name)
+			inputPath := filepath.Join(dir, "input.cdc")
+
+			input, err := os.ReadFile(inputPath)
+			if err != nil {
+				t.Fatalf("reading input: %v", err)
+			}
+
+			output, err := format.Format(input, inputPath, format.Default())
+			if err != nil {
+				t.Fatalf("format error: %v", err)
+			}
+
+			// Extract comment texts from input and output
+			inputComments := commentTexts(input)
+			outputComments := commentTexts(output)
+
+			if len(inputComments) == 0 {
+				return // no comments to check
+			}
+
+			// Compare as sorted multisets
+			sort.Strings(inputComments)
+			sort.Strings(outputComments)
+
+			if strings.Join(inputComments, "\n") != strings.Join(outputComments, "\n") {
+				t.Errorf("comment preservation failed.\ninput comments:  %v\noutput comments: %v",
+					inputComments, outputComments)
+			}
+		})
+	}
+}
+
+func commentTexts(src []byte) []string {
+	comments := trivia.Scan(src)
+	texts := make([]string, len(comments))
+	for i, c := range comments {
+		texts[i] = strings.TrimRight(c.Text, " \t")
+	}
+	return texts
 }
 
 // findRepoRoot walks up from the working directory to find the repo root
