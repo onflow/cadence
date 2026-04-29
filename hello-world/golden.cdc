@@ -1,2 +1,1 @@
-access(all)
-fun main() {}
+access(all) fun main() {}

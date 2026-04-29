@@ -1,6 +1,4 @@
-access(all)
-fun first() {}
+access(all) fun first() {}
 
 // This belongs to second
-access(all)
-fun second() {}
+access(all) fun second() {}

@@ -1,6 +1,4 @@
-access(all)
-fun a() {}
+access(all) fun a() {}
 // after a
 
-access(all)
-fun b() {}
+access(all) fun b() {}
