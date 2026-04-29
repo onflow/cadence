@@ -151,6 +151,8 @@ func renderStatement(stmt ast.Statement, cm *trivia.CommentMap) prettier.Doc {
 		return wrapWithComments(s, renderWhileStatement(s, cm), cm)
 	case *ast.IfStatement:
 		return wrapWithComments(s, renderIfStatement(s, cm), cm)
+	case *ast.VariableDeclaration:
+		return wrapWithComments(s, renderVariable(s, cm), cm)
 	default:
 		return wrapWithAllComments(stmt, stmt.Doc(), cm)
 	}
@@ -404,14 +406,22 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap) prettier.
 	if d.Value != nil {
 		parts = append(parts, prettier.Space)
 		parts = append(parts, prettier.Text(d.Transfer.Operation.Operator()))
-		parts = append(parts, prettier.Group{
-			Doc: prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.Line{},
-					d.Value.Doc(),
+		// Binary expressions (e.g., ?? nil-coalescing) need Indent for
+		// continuation line indentation. Other expressions render directly
+		// to avoid over-indenting function call arguments.
+		if _, ok := d.Value.(*ast.BinaryExpression); ok {
+			parts = append(parts, prettier.Group{
+				Doc: prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.Line{},
+						d.Value.Doc(),
+					},
 				},
-			},
-		})
+			})
+		} else {
+			parts = append(parts, prettier.Space)
+			parts = append(parts, d.Value.Doc())
+		}
 	}
 
 	// Second transfer (for swap operations)
