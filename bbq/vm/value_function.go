@@ -325,7 +325,11 @@ func (*NativeFunctionValue) SetMember(_ interpreter.ValueTransferContext, _ stri
 	panic(errors.NewUnreachableError())
 }
 
-func (v *NativeFunctionValue) GetMethod(context interpreter.MemberAccessibleContext, name string, accessedReference interpreter.ReferenceValue) interpreter.FunctionValue {
+func (v *NativeFunctionValue) GetMethod(
+	_ interpreter.MemberAccessibleContext,
+	_ string,
+	_ interpreter.ReferenceValue,
+) interpreter.FunctionValue {
 	// Should never be called, VM should not look up method on value.
 	// See `NativeFunctionValue.GetMember`
 	panic(errors.NewUnreachableError())

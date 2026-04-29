@@ -6083,9 +6083,9 @@ func getMember(
 	var result Value
 
 	// At the initial call to get-member, "accessed reference" is nil/unknown.
-	// If the memeber is indeed accessed via a reference (i.e: "self" is a reference),
-	// then `memberAccessibleValue.GetMember` will delegation to the underlying referenced value,
-	// which will pass the receiver reference as the "accessed reference" to the
+	// If the member is indeed accessed via a reference (i.e: "self" is a reference),
+	// then `memberAccessibleValue.GetMember` will delegate the call to the underlying referenced value.
+	// There it will pass the receiver reference as the "accessed reference" to the
 	// delegated `GetMember` of referenced-value.
 	var accessedReference ReferenceValue = nil
 
@@ -7053,10 +7053,9 @@ func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authoriza
 	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter) //nolint:staticcheck
 }
 
-func storageReference(
+func storageReferenceWithNarrowedType(
 	context ValueStaticTypeContext,
 	storageReference *StorageReferenceValue,
-	referencedValue Value,
 ) *StorageReferenceValue {
 
 	// It is wrong to use the storage reference as-is here.
@@ -7072,7 +7071,9 @@ func storageReference(
 	// Then, if we change the storage location to store a value of unrelated type U instead (e.g. `Int`),
 	// and invoke the bound function, the bound function is potentially invalid.
 
+	referencedValue := storageReference.MustReferencedValue(context)
 	referencedValueStaticType := referencedValue.StaticType(context)
+
 	return NewStorageReferenceValue(
 		context,
 		storageReference.Authorization,

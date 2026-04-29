@@ -371,7 +371,7 @@ func (c *Context) GetMethod(
 	var base *interpreter.EphemeralReferenceValue
 	// If the value is an attachment, then we must create an authorized reference
 	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
-		base, value = AttachmentBaseAndSelfValues(c, v, method)
+		base, accessedReference = AttachmentBaseAndSelfValues(c, v, method)
 	}
 
 	return NewBoundFunctionValue(

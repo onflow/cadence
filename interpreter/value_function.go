@@ -384,8 +384,8 @@ func ReceiverReference(
 		if storageRef, isStorageReference := accessedReference.(*StorageReferenceValue); isStorageReference {
 			// If this is accessed via a storage reference, then narrow the borrow-type to match
 			// the type of the actual stored value.
-			// See the description of `storageReference` for more details.
-			accessedReference = storageReference(context, storageRef, receiver)
+			// See the description of `storageReferenceWithNarrowedType` for more details.
+			accessedReference = storageReferenceWithNarrowedType(context, storageRef)
 		}
 
 		return accessedReference, true
