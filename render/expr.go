@@ -6,14 +6,17 @@ import (
 	"github.com/turbolent/prettier"
 )
 
-// renderExpression dispatches to a custom renderer for invocations with
-// comments between the function name and arguments, otherwise falls back
-// to the upstream Doc() with full comment draining.
+// renderExpression dispatches to custom renderers for expression types that
+// need fixes (invocations with displaced comments, casts with missing indent),
+// otherwise falls back to the upstream Doc() with full comment draining.
 func renderExpression(expr ast.Expression, cm *trivia.CommentMap) prettier.Doc {
-	if e, ok := expr.(*ast.InvocationExpression); ok {
+	switch e := expr.(type) {
+	case *ast.InvocationExpression:
 		if cm.HasTrailing(e.InvokedExpression) {
 			return wrapWithComments(e, renderInvocationWithComments(e, cm), cm)
 		}
+	case *ast.CastingExpression:
+		return wrapWithComments(e, renderCastingExpression(e, cm), cm)
 	}
 	return wrapWithAllComments(expr, expr.Doc(), cm)
 }
@@ -104,4 +107,26 @@ func renderInvocationWithComments(e *ast.InvocationExpression, cm *trivia.Commen
 	}
 
 	return parts
+}
+
+// renderCastingExpression renders a cast (as/as!/as?) with the operator and
+// target type indented on continuation lines. The upstream Doc() places the
+// operator at the same indent level as the expression, which looks wrong.
+func renderCastingExpression(e *ast.CastingExpression, cm *trivia.CommentMap) prettier.Doc {
+	exprDoc := renderExpression(e.Expression, cm)
+	typeDoc := wrapWithAllComments(e.TypeAnnotation, e.TypeAnnotation.Doc(), cm)
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			prettier.Group{Doc: exprDoc},
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.Line{},
+					e.Operation.Doc(),
+					prettier.Space,
+					typeDoc,
+				},
+			},
+		},
+	}
 }
