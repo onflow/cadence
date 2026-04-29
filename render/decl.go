@@ -26,6 +26,10 @@ func renderDeclaration(decl ast.Declaration, cm *trivia.CommentMap) prettier.Doc
 		doc = renderField(d, cm)
 	case *ast.SpecialFunctionDeclaration:
 		doc = renderSpecialFunction(d, cm)
+	case *ast.EntitlementDeclaration:
+		doc = renderEntitlement(d, cm)
+	case *ast.EntitlementMappingDeclaration:
+		doc = renderEntitlementMapping(d, cm)
 	default:
 		// For unknown declaration types, use upstream Doc() and drain
 		// any descendant comments so they're not orphaned.
@@ -155,6 +159,8 @@ func renderStatement(stmt ast.Statement, cm *trivia.CommentMap) prettier.Doc {
 		return wrapWithComments(s, renderVariable(s, cm), cm)
 	case *ast.AssignmentStatement:
 		return wrapWithComments(s, renderAssignmentStatement(s, cm), cm)
+	case *ast.ExpressionStatement:
+		return wrapWithComments(s, renderExpression(s.Expression, cm), cm)
 	default:
 		return wrapWithAllComments(stmt, stmt.Doc(), cm)
 	}
@@ -202,7 +208,7 @@ func renderForStatement(s *ast.ForStatement, cm *trivia.CommentMap) prettier.Doc
 	parts = append(parts, prettier.Text("for "))
 	parts = append(parts, prettier.Text(s.Identifier.Identifier))
 	parts = append(parts, prettier.Text(" in "))
-	parts = append(parts, wrapWithAllComments(s.Value, s.Value.Doc(), cm))
+	parts = append(parts, renderExpression(s.Value, cm))
 	parts = append(parts, prettier.Space)
 	parts = append(parts, renderBlockBraces(s.Block, cm))
 
@@ -214,7 +220,7 @@ func renderWhileStatement(s *ast.WhileStatement, cm *trivia.CommentMap) prettier
 	parts := prettier.Concat{}
 
 	parts = append(parts, prettier.Text("while "))
-	parts = append(parts, wrapWithAllComments(s.Test, s.Test.Doc(), cm))
+	parts = append(parts, renderExpression(s.Test, cm))
 	parts = append(parts, prettier.Space)
 	parts = append(parts, renderBlockBraces(s.Block, cm))
 
@@ -251,11 +257,11 @@ func renderIfStatement(s *ast.IfStatement, cm *trivia.CommentMap) prettier.Doc {
 func renderAssignmentStatement(s *ast.AssignmentStatement, cm *trivia.CommentMap) prettier.Doc {
 	parts := prettier.Concat{}
 
-	parts = append(parts, wrapWithAllComments(s.Target, s.Target.Doc(), cm))
+	parts = append(parts, renderExpression(s.Target, cm))
 	parts = append(parts, prettier.Space)
 	parts = append(parts, s.Transfer.Doc())
 	parts = append(parts, prettier.Space)
-	parts = append(parts, wrapWithAllComments(s.Value, s.Value.Doc(), cm))
+	parts = append(parts, renderExpression(s.Value, cm))
 
 	return parts
 }
@@ -286,7 +292,7 @@ func renderReturnStatement(s *ast.ReturnStatement, cm *trivia.CommentMap) pretti
 		return parts
 	}
 
-	exprDoc := wrapWithAllComments(s.Expression, s.Expression.Doc(), cm)
+	exprDoc := renderExpression(s.Expression, cm)
 	return prettier.Concat{
 		prettier.Text("return "),
 		exprDoc,
@@ -452,7 +458,7 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap) prettier.
 				parts = append(parts, prettier.HardLine{}, e)
 			}
 		} else {
-			valueDoc := wrapWithAllComments(d.Value, d.Value.Doc(), cm)
+			valueDoc := renderExpression(d.Value, cm)
 			parts = append(parts, prettier.Space)
 			parts = append(parts, valueDoc)
 		}
@@ -541,6 +547,65 @@ func renderField(d *ast.FieldDeclaration, cm *trivia.CommentMap) prettier.Doc {
 	if d.TypeAnnotation != nil && d.TypeAnnotation.Type != nil {
 		parts = append(parts, prettier.Text(": "), wrapWithAllComments(d.TypeAnnotation, d.TypeAnnotation.Doc(), cm))
 	}
+
+	return parts
+}
+
+// renderEntitlement renders an entitlement declaration with access on the same line.
+// The upstream Doc() uses HardLine after access, which we override to Space.
+func renderEntitlement(d *ast.EntitlementDeclaration, _ *trivia.CommentMap) prettier.Doc {
+	parts := prettier.Concat{}
+
+	if d.Access != ast.AccessNotSpecified {
+		parts = append(parts, d.Access.Doc(), prettier.Space)
+	}
+
+	parts = append(parts, prettier.Text("entitlement"), prettier.Space)
+	parts = append(parts, prettier.Text(d.Identifier.Identifier))
+
+	return parts
+}
+
+// renderEntitlementMapping renders an entitlement mapping declaration with
+// access on the same line and elements in a braced block.
+func renderEntitlementMapping(d *ast.EntitlementMappingDeclaration, _ *trivia.CommentMap) prettier.Doc {
+	parts := prettier.Concat{}
+
+	if d.Access != ast.AccessNotSpecified {
+		parts = append(parts, d.Access.Doc(), prettier.Space)
+	}
+
+	parts = append(parts, prettier.Text("entitlement"), prettier.Space)
+	parts = append(parts, prettier.Text("mapping"), prettier.Space)
+	parts = append(parts, prettier.Text(d.Identifier.Identifier))
+
+	if len(d.Elements) == 0 {
+		parts = append(parts, prettier.Text(" {}"))
+		return parts
+	}
+
+	body := prettier.Concat{}
+	for i, element := range d.Elements {
+		if i > 0 {
+			body = append(body, prettier.HardLine{})
+		}
+		if _, isNominalType := element.(*ast.NominalType); isNominalType {
+			body = append(body, prettier.Text("include "), element.Doc())
+		} else if element != nil {
+			body = append(body, element.Doc())
+		}
+	}
+
+	parts = append(parts,
+		prettier.Space,
+		prettier.Text("{"),
+		prettier.Indent{Doc: prettier.Concat{
+			prettier.HardLine{},
+			body,
+		}},
+		prettier.HardLine{},
+		prettier.Text("}"),
+	)
 
 	return parts
 }

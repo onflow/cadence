@@ -188,13 +188,50 @@ func commentTexts(src []byte) []string {
 	comments := trivia.Scan(src)
 	texts := make([]string, len(comments))
 	for i, c := range comments {
-		texts[i] = strings.TrimRight(c.Text, " \t")
+		// Normalize: strip trailing whitespace from each line within the
+		// comment, so blank lines inside block comments compare equal
+		// regardless of indentation whitespace.
+		lines := strings.Split(c.Text, "\n")
+		for j, line := range lines {
+			lines[j] = strings.TrimRight(line, " \t")
+		}
+		texts[i] = strings.Join(lines, "\n")
 	}
 	return texts
 }
 
 // findRepoRoot walks up from the working directory to find the repo root
 // (identified by go.mod).
+func TestNoTrailingWhitespace(t *testing.T) {
+	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		t.Fatalf("reading testdata dir: %v", err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			input, err := os.ReadFile(filepath.Join(testdataDir, name, "input.cdc"))
+			if err != nil {
+				t.Fatalf("reading input: %v", err)
+			}
+			got, err := format.Format(input, "test.cdc", format.Default())
+			if err != nil {
+				t.Fatalf("format error: %v", err)
+			}
+			for i, line := range strings.Split(string(got), "\n") {
+				trimmed := strings.TrimRight(line, " \t")
+				if trimmed != line {
+					t.Errorf("line %d has trailing whitespace: %q", i+1, line)
+				}
+			}
+		})
+	}
+}
+
 func findRepoRoot(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()

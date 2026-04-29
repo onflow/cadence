@@ -41,7 +41,7 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 	var buf bytes.Buffer
 	prettier.Prettier(&buf, doc, opts.LineWidth, indent)
 
-	result := buf.Bytes()
+	result := stripTrailingLineWhitespace(buf.Bytes())
 
 	// Verify no orphaned comments remain
 	if !cm.IsEmpty() {
@@ -57,4 +57,18 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 	}
 
 	return result, nil
+}
+
+// stripTrailingLineWhitespace strips indent whitespace from blank lines.
+// The prettier library emits indent prefixes on blank lines inside Indent
+// blocks (e.g. "    \n" instead of "\n"); this cleans that up.
+// Only whitespace-only lines are affected — content lines are not touched.
+func stripTrailingLineWhitespace(data []byte) []byte {
+	lines := bytes.Split(data, []byte("\n"))
+	for i, line := range lines {
+		if len(bytes.TrimRight(line, " \t")) == 0 {
+			lines[i] = nil
+		}
+	}
+	return bytes.Join(lines, []byte("\n"))
 }

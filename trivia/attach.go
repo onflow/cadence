@@ -246,6 +246,11 @@ func getChildren(node ast.Element) []ast.Element {
 	return children
 }
 
+// HasTrailing returns true if the element has trailing comment groups.
+func (cm *CommentMap) HasTrailing(n ast.Element) bool {
+	return len(cm.Trailing[n]) > 0
+}
+
 // blankLineBetween returns true if there is at least one blank line between
 // positions a and b (i.e., the line gap is > 1).
 func blankLineBetween(a, b ast.Position) bool {
