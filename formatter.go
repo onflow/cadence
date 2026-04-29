@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/janezpodhostnik/cadencefmt/internal/format/render"
+	"github.com/janezpodhostnik/cadencefmt/internal/format/rewrite"
 	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
 	"github.com/onflow/cadence/parser"
 	"github.com/turbolent/prettier"
@@ -22,6 +23,11 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 	comments := trivia.Scan(src)
 	groups := trivia.Group(comments, src)
 	cm := trivia.Attach(program, groups, src)
+
+	// Apply AST rewrites (import sorting, etc.)
+	if err := rewrite.Apply(program, cm); err != nil {
+		return nil, fmt.Errorf("rewrite error: %w", err)
+	}
 
 	indent := opts.Indent
 	if opts.UseTabs {
