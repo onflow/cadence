@@ -122,7 +122,7 @@ func renderFunctionBlock(b *ast.FunctionBlock, cm *trivia.CommentMap) prettier.D
 			if needSep {
 				body = append(body, prettier.HardLine{})
 			}
-			doc := wrapWithAllComments(stmt, stmt.Doc(), cm)
+			doc := renderStatement(stmt, cm)
 			body = append(body, doc)
 			needSep = true
 		}
@@ -136,6 +136,42 @@ func renderFunctionBlock(b *ast.FunctionBlock, cm *trivia.CommentMap) prettier.D
 		}},
 		prettier.HardLine{},
 		prettier.Text("}"),
+	}
+}
+
+// renderStatement dispatches to custom renderers for specific statement types,
+// otherwise falls back to the upstream Doc().
+func renderStatement(stmt ast.Statement, cm *trivia.CommentMap) prettier.Doc {
+	switch s := stmt.(type) {
+	case *ast.ReturnStatement:
+		return wrapWithComments(s, renderReturnStatement(s, cm), cm)
+	default:
+		return wrapWithAllComments(stmt, stmt.Doc(), cm)
+	}
+}
+
+// renderReturnStatement renders a return statement. For binary expressions
+// (e.g., ?? nil-coalescing), wraps in Indent so continuation lines are
+// indented relative to "return". Other expressions render directly to
+// avoid over-indenting function call arguments.
+func renderReturnStatement(s *ast.ReturnStatement, cm *trivia.CommentMap) prettier.Doc {
+	if s.Expression == nil {
+		return prettier.Text("return")
+	}
+
+	exprDoc := wrapWithAllComments(s.Expression, s.Expression.Doc(), cm)
+
+	// Binary expressions need Indent for proper continuation line indentation
+	if _, ok := s.Expression.(*ast.BinaryExpression); ok {
+		return prettier.Concat{
+			prettier.Text("return "),
+			prettier.Indent{Doc: exprDoc},
+		}
+	}
+
+	return prettier.Concat{
+		prettier.Text("return "),
+		exprDoc,
 	}
 }
 
@@ -276,8 +312,14 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap) prettier.
 	if d.Value != nil {
 		parts = append(parts, prettier.Space)
 		parts = append(parts, prettier.Text(d.Transfer.Operation.Operator()))
-		parts = append(parts, prettier.Space)
-		parts = append(parts, d.Value.Doc())
+		parts = append(parts, prettier.Group{
+			Doc: prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.Line{},
+					d.Value.Doc(),
+				},
+			},
+		})
 	}
 
 	// Second transfer (for swap operations)
