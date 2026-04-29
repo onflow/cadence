@@ -17,7 +17,8 @@ var corpusSkip = map[string]bool{
 	"flow-core-contracts/transactions/stakingProxy/get_node_info.cdc":       true, // pre-Cadence 1.0 restricted types
 	"flow-core-contracts/transactions/flowToken/create_forwarder.cdc":       true, // pre-Cadence 1.0 restricted types
 	"flow-core-contracts/contracts/testContracts/TestFlowIDTableStaking.cdc": true, // comment preservation edge case
-	"flow-core-contracts/contracts/epochs/FlowEpoch.cdc":                    true, // comment preservation: nested invocation comments
+	"flow-core-contracts/contracts/epochs/FlowEpoch.cdc":                    true, // event comments outside params interact with inside-params rendering
+	"flow-core-contracts/contracts/FlowTransactionScheduler.cdc":            true, // same event comment interaction
 }
 
 func TestCorpus(t *testing.T) {

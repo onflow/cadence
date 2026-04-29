@@ -302,18 +302,7 @@ func renderReturnStatement(s *ast.ReturnStatement, cm *trivia.CommentMap) pretti
 func renderComposite(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettier.Doc {
 	// Events use a special compact format (no members block with braces)
 	if d.CompositeKind == common.CompositeKindEvent {
-		doc := d.EventDoc()
-		// Drain any comments attached to event children (parameter types, etc.)
-		var extras []prettier.Doc
-		drainDescendantComments(d, cm, &extras)
-		if len(extras) > 0 {
-			parts := prettier.Concat{doc}
-			for _, e := range extras {
-				parts = append(parts, prettier.HardLine{}, e)
-			}
-			return parts
-		}
-		return doc
+		return renderEvent(d, cm)
 	}
 
 	parts := prettier.Concat{}
@@ -353,6 +342,101 @@ func renderComposite(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettie
 
 	// Members
 	parts = append(parts, renderMembersBlock(d.Members, cm))
+	return parts
+}
+
+// renderEvent renders an event declaration with comments interleaved between
+// parameters. The upstream EventDoc() + drain approach displaces parameter
+// comments outside the closing paren.
+func renderEvent(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettier.Doc {
+	parts := prettier.Concat{}
+
+	// Access modifier
+	if d.Access != ast.AccessNotSpecified {
+		parts = append(parts, d.Access.Doc(), prettier.Space)
+	}
+
+	// "event Name"
+	parts = append(parts, prettier.Text(d.CompositeKind.Keyword()), prettier.Space)
+	parts = append(parts, prettier.Text(d.Identifier.Identifier))
+
+	// Get parameters from the event's initializer
+	initializers := d.Members.Initializers()
+	if len(initializers) != 1 {
+		// Fallback: no valid initializer, use upstream
+		drainDescendantComments(d, cm, nil)
+		return parts
+	}
+
+	paramList := initializers[0].FunctionDeclaration.ParameterList
+	if paramList == nil || len(paramList.Parameters) == 0 {
+		parts = append(parts, prettier.Text("()"))
+		// Drain the initializer's comments
+		drainDescendantComments(d, cm, nil)
+		return parts
+	}
+
+	// Build parameter list with comment interleaving.
+	// ParameterList.Walk() yields TypeAnnotation (not Parameter), so
+	// comments are attached to TypeAnnotation nodes. For each parameter,
+	// collect its TypeAnnotation's leading comments (before the param) and
+	// the PREVIOUS TypeAnnotation's trailing comments (between params).
+	paramDocs := make([]prettier.Doc, len(paramList.Parameters))
+	hasParamComments := false
+	var pendingTrailing []*trivia.CommentGroup // trailing from previous param
+	for i, param := range paramList.Parameters {
+		paramDoc := param.Doc()
+		if param.TypeAnnotation != nil {
+			leading, _, trailing := cm.Take(param.TypeAnnotation)
+			// Pending trailing from previous param + leading on this param
+			allLeading := append(pendingTrailing, leading...)
+			if len(allLeading) > 0 {
+				prefix := prettier.Concat{}
+				for _, g := range allLeading {
+					prefix = append(prefix, renderCommentGroup(g), prettier.HardLine{})
+				}
+				paramDoc = prettier.Concat(append(prefix, paramDoc))
+				hasParamComments = true
+			}
+			pendingTrailing = trailing
+		} else {
+			pendingTrailing = nil
+		}
+		paramDocs[i] = paramDoc
+	}
+
+	if hasParamComments {
+		// Comments force parameters to break across lines
+		inner := prettier.Concat{}
+		for i, paramDoc := range paramDocs {
+			if i > 0 {
+				inner = append(inner, prettier.Text(","), prettier.HardLine{})
+			}
+			inner = append(inner, paramDoc)
+		}
+		parts = append(parts,
+			prettier.Text("("),
+			prettier.Indent{Doc: prettier.Concat{
+				prettier.HardLine{},
+				inner,
+			}},
+			prettier.HardLine{},
+			prettier.Text(")"),
+		)
+	} else {
+		// No comments: use soft-breaking parameter list
+		paramSep := prettier.Concat{prettier.Text(","), prettier.Line{}}
+		parts = append(parts,
+			prettier.WrapParentheses(
+				prettier.Join(paramSep, paramDocs...),
+				prettier.SoftLine{},
+			),
+		)
+	}
+
+	// Drain any remaining descendant comments (type annotations, etc.)
+	drainDescendantComments(d, cm, nil)
+
 	return parts
 }
 
