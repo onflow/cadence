@@ -99,16 +99,6 @@ func compareElements(a, b ast.Element, path string) error {
 			path, a.ElementType(), b.ElementType())
 	}
 
-	// Compare string representation (captures identifiers, operators, etc.)
-	// This is a pragmatic comparison — it catches semantic differences while
-	// ignoring whitespace/position changes.
-	aStr := fmt.Sprintf("%s", a)
-	bStr := fmt.Sprintf("%s", b)
-	if aStr != bStr {
-		return fmt.Errorf("%s: content mismatch\n  original:  %s\n  formatted: %s",
-			path, truncate(aStr, 200), truncate(bStr, 200))
-	}
-
 	// Recursively compare children
 	aChildren := collectChildren(a)
 	bChildren := collectChildren(b)

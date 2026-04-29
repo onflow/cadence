@@ -145,9 +145,101 @@ func renderStatement(stmt ast.Statement, cm *trivia.CommentMap) prettier.Doc {
 	switch s := stmt.(type) {
 	case *ast.ReturnStatement:
 		return wrapWithComments(s, renderReturnStatement(s, cm), cm)
+	case *ast.ForStatement:
+		return wrapWithComments(s, renderForStatement(s, cm), cm)
+	case *ast.WhileStatement:
+		return wrapWithComments(s, renderWhileStatement(s, cm), cm)
+	case *ast.IfStatement:
+		return wrapWithComments(s, renderIfStatement(s, cm), cm)
 	default:
 		return wrapWithAllComments(stmt, stmt.Doc(), cm)
 	}
+}
+
+// renderBlock renders the body of a block by iterating statements and
+// interleaving comments. Returns the body content without braces.
+func renderBlock(b *ast.Block, cm *trivia.CommentMap) prettier.Doc {
+	if b == nil || len(b.Statements) == 0 {
+		return nil
+	}
+
+	body := prettier.Concat{}
+	for i, stmt := range b.Statements {
+		if i > 0 {
+			body = append(body, prettier.HardLine{})
+		}
+		doc := renderStatement(stmt, cm)
+		body = append(body, doc)
+	}
+	return body
+}
+
+// renderBlockBraces wraps a block body in { ... } with indentation.
+func renderBlockBraces(b *ast.Block, cm *trivia.CommentMap) prettier.Doc {
+	body := renderBlock(b, cm)
+	if body == nil {
+		return prettier.Text("{}")
+	}
+	return prettier.Concat{
+		prettier.Text("{"),
+		prettier.Indent{Doc: prettier.Concat{
+			prettier.HardLine{},
+			body,
+		}},
+		prettier.HardLine{},
+		prettier.Text("}"),
+	}
+}
+
+// renderForStatement renders a for-in loop with comment interleaving in the body.
+func renderForStatement(s *ast.ForStatement, cm *trivia.CommentMap) prettier.Doc {
+	parts := prettier.Concat{}
+
+	parts = append(parts, prettier.Text("for "))
+	parts = append(parts, prettier.Text(s.Identifier.Identifier))
+	parts = append(parts, prettier.Text(" in "))
+	parts = append(parts, wrapWithAllComments(s.Value, s.Value.Doc(), cm))
+	parts = append(parts, prettier.Space)
+	parts = append(parts, renderBlockBraces(s.Block, cm))
+
+	return parts
+}
+
+// renderWhileStatement renders a while loop with comment interleaving in the body.
+func renderWhileStatement(s *ast.WhileStatement, cm *trivia.CommentMap) prettier.Doc {
+	parts := prettier.Concat{}
+
+	parts = append(parts, prettier.Text("while "))
+	parts = append(parts, wrapWithAllComments(s.Test, s.Test.Doc(), cm))
+	parts = append(parts, prettier.Space)
+	parts = append(parts, renderBlockBraces(s.Block, cm))
+
+	return parts
+}
+
+// renderIfStatement renders an if/else-if/else chain with comment interleaving.
+func renderIfStatement(s *ast.IfStatement, cm *trivia.CommentMap) prettier.Doc {
+	parts := prettier.Concat{}
+
+	parts = append(parts, prettier.Text("if "))
+	parts = append(parts, wrapWithAllComments(s.Test, s.Test.Doc(), cm))
+	parts = append(parts, prettier.Space)
+	parts = append(parts, renderBlockBraces(s.Then, cm))
+
+	if s.Else != nil && len(s.Else.Statements) > 0 {
+		// Check if the else block is a single if-statement (else-if chain)
+		if len(s.Else.Statements) == 1 {
+			if elseIf, ok := s.Else.Statements[0].(*ast.IfStatement); ok {
+				parts = append(parts, prettier.Text(" else "))
+				parts = append(parts, wrapWithComments(elseIf, renderIfStatement(elseIf, cm), cm))
+				return parts
+			}
+		}
+		parts = append(parts, prettier.Text(" else "))
+		parts = append(parts, renderBlockBraces(s.Else, cm))
+	}
+
+	return parts
 }
 
 // renderReturnStatement renders a return statement. For binary expressions
