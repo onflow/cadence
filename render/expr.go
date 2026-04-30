@@ -8,24 +8,24 @@ import (
 	"github.com/turbolent/prettier"
 )
 
-// renderExpression dispatches to custom renderers for expression types that
+// expression dispatches to custom renderers for expression types that
 // need fixes (invocations with displaced comments, casts with missing indent),
 // otherwise falls back to the upstream Doc() with full comment draining.
-func renderExpression(expr ast.Expression, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
+func (r *renderer) expression(expr ast.Expression) prettier.Doc {
 	switch e := expr.(type) {
 	case *ast.InvocationExpression:
-		return wrapWithComments(e, renderInvocationExpression(e, cm, ctx), cm)
+		return r.wrapComments(e, r.invocationExpression(e))
 	case *ast.StringTemplateExpression:
-		return wrapWithComments(e, renderStringTemplateExpression(e, cm), cm)
+		return r.wrapComments(e, r.stringTemplate(e))
 	}
-	return wrapWithAllComments(expr, expr.Doc(), cm)
+	return r.wrapAllComments(expr, expr.Doc())
 }
 
-// renderArgumentDoc renders an invocation argument using our renderExpression
+// argumentDoc renders an invocation argument using our expression renderer
 // for the value, so custom expression renderers (string templates, invocations,
 // casts) are applied. Mirrors upstream Argument.Doc() structure.
-func renderArgumentDoc(arg *ast.Argument, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
-	exprDoc := renderExpression(arg.Expression, cm, ctx)
+func (r *renderer) argumentDoc(arg *ast.Argument) prettier.Doc {
+	exprDoc := r.expression(arg.Expression)
 	if arg.Label == "" {
 		return exprDoc
 	}
@@ -46,16 +46,16 @@ type invocationArg struct {
 	extras   []prettier.Doc         // drained descendant comment docs
 }
 
-// renderInvocationExpression renders a function call with comments preserved
-// inside the argument list. Without this, wrapWithAllComments + upstream Doc()
+// invocationExpression renders a function call with comments preserved
+// inside the argument list. Without this, wrapAllComments + upstream Doc()
 // displaces argument comments outside the closing paren.
-func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
+func (r *renderer) invocationExpression(e *ast.InvocationExpression) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Take comments from the invoked expression separately. Trailing comments
 	// sit between the function name and the opening paren.
-	leading, sameLine, trailing := cm.Take(e.InvokedExpression)
-	invokedDoc := renderExpression(e.InvokedExpression, cm, ctx)
+	leading, sameLine, trailing := r.cm.Take(e.InvokedExpression)
+	invokedDoc := r.expression(e.InvokedExpression)
 
 	// Re-apply leading and same-line to the invoked expression.
 	if len(leading) > 0 || sameLine != nil {
@@ -75,7 +75,7 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 	if len(e.TypeArguments) > 0 {
 		typeArgDocs := make([]prettier.Doc, len(e.TypeArguments))
 		for i, ta := range e.TypeArguments {
-			typeArgDocs[i] = wrapWithAllComments(ta, ta.Doc(), cm)
+			typeArgDocs[i] = r.wrapAllComments(ta, ta.Doc())
 		}
 		parts = append(parts,
 			prettier.Wrap(
@@ -103,13 +103,13 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 	args := make([]invocationArg, len(e.Arguments))
 	hasComments := len(trailing) > 0
 	for i, arg := range e.Arguments {
-		// Render the argument using our renderExpression so custom expression
+		// Render the argument using our expression renderer so custom expression
 		// renderers (e.g., string templates) are applied to argument values.
-		a := invocationArg{doc: renderArgumentDoc(arg, cm, ctx)}
+		a := invocationArg{doc: r.argumentDoc(arg)}
 
 		// Collect comments from the Argument element and its Expression.
-		argLeading, argSameLine, argTrailing := cm.Take(arg)
-		exprLeading, exprSameLine, exprTrailing := cm.Take(arg.Expression)
+		argLeading, argSameLine, argTrailing := r.cm.Take(arg)
+		exprLeading, exprSameLine, exprTrailing := r.cm.Take(arg.Expression)
 
 		a.leading = append(argLeading, exprLeading...)
 		a.trailing = append(argTrailing, exprTrailing...)
@@ -121,7 +121,7 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 
 		// Drain deeper descendants
 		var extras []prettier.Doc
-		drainDescendantComments(arg, cm, &extras)
+		r.drainDescendants(arg, &extras)
 		// Convert extras to trailing comment groups (render as-is)
 		if len(extras) > 0 {
 			hasComments = true
@@ -202,11 +202,11 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 	return parts
 }
 
-// renderStringTemplateExpression renders a string template with interpolation
-// expressions kept flat (no line breaks inside \(...)). The upstream Doc()
-// renders each interpolation via expr.Doc() which can include Line{} breaks.
-// We render each interpolation as a flat Text node using expr.String().
-func renderStringTemplateExpression(e *ast.StringTemplateExpression, cm *trivia.CommentMap) prettier.Doc {
+// stringTemplate renders a string template with interpolation expressions
+// kept flat (no line breaks inside \(...)). The upstream Doc() renders each
+// interpolation via expr.Doc() which can include Line{} breaks. We render
+// each interpolation as a flat Text node using expr.String().
+func (r *renderer) stringTemplate(e *ast.StringTemplateExpression) prettier.Doc {
 	if len(e.Expressions) == 0 {
 		return prettier.Text(ast.QuoteString(e.Values[0]))
 	}
@@ -222,8 +222,8 @@ func renderStringTemplateExpression(e *ast.StringTemplateExpression, cm *trivia.
 			expr := e.Expressions[i]
 			// Render interpolation expression as flat text to prevent
 			// line breaks inside \(...). Drain any comments on it.
-			cm.Take(expr)
-			drainDescendantComments(expr, cm, nil)
+			r.cm.Take(expr)
+			r.drainDescendants(expr, nil)
 			concat = append(concat,
 				prettier.Text(`\(`),
 				prettier.Text(expr.String()),

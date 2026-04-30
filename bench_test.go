@@ -242,8 +242,7 @@ func BenchmarkStage_Render(b *testing.B) {
 		if err := rewrite.Apply(program, cm, true); err != nil {
 			b.Fatal(err)
 		}
-		ctx := &render.Context{}
-		render.Program(program, cm, ctx)
+		render.Program(program, cm, src, nil)
 	}
 }
 
@@ -256,8 +255,7 @@ func BenchmarkStage_PrettyPrint(b *testing.B) {
 	if err := rewrite.Apply(program, cm, true); err != nil {
 		b.Fatal(err)
 	}
-	ctx := &render.Context{}
-	doc := render.Program(program, cm, ctx)
+	doc := render.Program(program, cm, src, nil)
 	opts := format.Default()
 	indent := strings.Repeat(opts.IndentCharacter, opts.IndentCount)
 

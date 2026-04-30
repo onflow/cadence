@@ -1,18 +1,25 @@
 package render
 
 import (
+	"github.com/janezpodhostnik/cadencefmt/internal/format/rewrite"
 	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/common"
 	"github.com/turbolent/prettier"
 )
 
 // Program renders an *ast.Program with interleaved comments from the CommentMap.
-func Program(prog *ast.Program, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
+// source is the original input bytes (used for blank-line detection); semicolons
+// is nil unless the caller wants explicit ; preserved.
+func Program(prog *ast.Program, cm *trivia.CommentMap, source []byte, semicolons map[ast.Element]bool) prettier.Doc {
+	r := &renderer{cm: cm, source: source, semicolons: semicolons}
+	return r.program(prog)
+}
+
+func (r *renderer) program(prog *ast.Program) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Header comments
-	header := cm.TakeHeader()
+	header := r.cm.TakeHeader()
 	for _, g := range header {
 		parts = append(parts, renderCommentGroup(g), prettier.HardLine{})
 	}
@@ -28,12 +35,11 @@ func Program(prog *ast.Program, cm *trivia.CommentMap, ctx *Context) prettier.Do
 				parts = append(parts, prettier.HardLine{})
 			}
 		}
-		doc := renderDeclaration(decl, cm, ctx)
-		parts = append(parts, doc)
+		parts = append(parts, r.declaration(decl))
 	}
 
 	// Footer comments
-	footer := cm.TakeFooter()
+	footer := r.cm.TakeFooter()
 	if len(footer) > 0 {
 		parts = append(parts, prettier.HardLine{})
 	}
@@ -55,25 +61,11 @@ func declSeparation(prev, next ast.Declaration) int {
 	nextImp, nextIsImport := next.(*ast.ImportDeclaration)
 
 	if prevIsImport && nextIsImport {
-		if importGroupType(prevImp) == importGroupType(nextImp) {
+		if rewrite.ImportGroupOrder(prevImp) == rewrite.ImportGroupOrder(nextImp) {
 			return 1 // same import group: no blank line
 		}
 		return 2 // different import groups: blank line
 	}
 
 	return 2 // default: blank line between declarations
-}
-
-// importGroupType returns the sort group for an import: 0=identifier, 1=address, 2=string.
-func importGroupType(imp *ast.ImportDeclaration) int {
-	switch imp.Location.(type) {
-	case common.IdentifierLocation:
-		return 0
-	case common.AddressLocation:
-		return 1
-	case common.StringLocation:
-		return 2
-	default:
-		return 3
-	}
 }

@@ -47,9 +47,9 @@ func (r *importsSorter) Rewrite(prog *ast.Program, _ *trivia.CommentMap) error {
 	return nil
 }
 
-// importGroupOrder returns the sort group for an import:
+// ImportGroupOrder returns the sort group for an import:
 // 0 = identifier (standard), 1 = address, 2 = string.
-func importGroupOrder(imp *ast.ImportDeclaration) int {
+func ImportGroupOrder(imp *ast.ImportDeclaration) int {
 	switch imp.Location.(type) {
 	case common.IdentifierLocation:
 		return 0
@@ -64,7 +64,7 @@ func importGroupOrder(imp *ast.ImportDeclaration) int {
 
 // importLess defines the sort order for import declarations.
 func importLess(a, b *ast.ImportDeclaration) bool {
-	ga, gb := importGroupOrder(a), importGroupOrder(b)
+	ga, gb := ImportGroupOrder(a), ImportGroupOrder(b)
 	if ga != gb {
 		return ga < gb
 	}

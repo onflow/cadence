@@ -2,6 +2,7 @@ package format
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,8 +10,18 @@ import (
 	"github.com/janezpodhostnik/cadencefmt/internal/format/rewrite"
 	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
 	"github.com/janezpodhostnik/cadencefmt/internal/format/verify"
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/parser"
 	"github.com/turbolent/prettier"
+)
+
+// ErrParse marks errors caused by malformed input source.
+// ErrInternal marks errors caused by formatter bugs (rewrite failure,
+// orphaned comments, round-trip verification failure). Callers can
+// distinguish these via errors.Is to choose an appropriate exit code.
+var (
+	ErrParse    = errors.New("parse error")
+	ErrInternal = errors.New("internal error")
 )
 
 // Format parses Cadence source and returns deterministically formatted output.
@@ -22,7 +33,7 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 
 	program, err := parser.ParseProgram(nil, src, parser.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("parse error: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrParse, err)
 	}
 
 	// Extract and attach comments
@@ -32,17 +43,17 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 
 	// Apply AST rewrites (import sorting, etc.)
 	if err := rewrite.Apply(program, cm, opts.SortImports); err != nil {
-		return nil, fmt.Errorf("rewrite error: %w", err)
+		return nil, fmt.Errorf("%w: rewrite failed: %w", ErrInternal, err)
 	}
 
 	indent := strings.Repeat(opts.IndentCharacter, opts.IndentCount)
 
 	// Render AST with interleaved comments
-	ctx := &render.Context{Source: src}
+	var semicolons map[ast.Element]bool
 	if !opts.StripSemicolons {
-		ctx.Semicolons = trivia.ScanSemicolons(src, program)
+		semicolons = trivia.ScanSemicolons(src, program)
 	}
-	doc := render.Program(program, cm, ctx)
+	doc := render.Program(program, cm, src, semicolons)
 
 	var buf bytes.Buffer
 	prettier.Prettier(&buf, doc, opts.LineWidth, indent)
@@ -55,13 +66,13 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 	// Verify no orphaned comments remain
 	if !cm.IsEmpty() {
 		details := cm.OrphanDetails()
-		return result, fmt.Errorf("internal error: orphaned comments remain in CommentMap\n%s", details)
+		return result, fmt.Errorf("%w: orphaned comments remain in CommentMap\n%s", ErrInternal, details)
 	}
 
 	// Round-trip verification: re-parse and compare ASTs
 	if !opts.SkipVerify {
 		if err := verify.RoundTrip(src, result); err != nil {
-			return result, fmt.Errorf("internal error: round-trip verification failed: %w", err)
+			return result, fmt.Errorf("%w: round-trip verification failed: %w", ErrInternal, err)
 		}
 	}
 
