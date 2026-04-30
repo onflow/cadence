@@ -15,8 +15,6 @@ func renderExpression(expr ast.Expression, cm *trivia.CommentMap) prettier.Doc {
 	switch e := expr.(type) {
 	case *ast.InvocationExpression:
 		return wrapWithComments(e, renderInvocationExpression(e, cm), cm)
-	case *ast.CastingExpression:
-		return wrapWithComments(e, renderCastingExpression(e, cm), cm)
 	case *ast.StringTemplateExpression:
 		return wrapWithComments(e, renderStringTemplateExpression(e, cm), cm)
 	}
@@ -35,15 +33,6 @@ func renderArgumentDoc(arg *ast.Argument, cm *trivia.CommentMap) prettier.Doc {
 		prettier.Text(arg.Label + ": "),
 		exprDoc,
 	}
-}
-
-// renderIndentedExpression renders an expression wrapped in Indent so that
-// continuation lines (from Line{} breaks inside the expression's Doc) are
-// indented. Used for while/if conditions where the upstream BinaryExpression
-// Doc() uses Line{} without Indent for the operator continuation.
-func renderIndentedExpression(expr ast.Expression, cm *trivia.CommentMap) prettier.Doc {
-	doc := renderExpression(expr, cm)
-	return prettier.Indent{Doc: doc}
 }
 
 // invocationArg holds a rendered argument and any associated comments that
@@ -246,23 +235,3 @@ func renderStringTemplateExpression(e *ast.StringTemplateExpression, cm *trivia.
 	return concat
 }
 
-// renderCastingExpression renders a cast (as/as!/as?) with the operator and
-// target type indented on continuation lines.
-func renderCastingExpression(e *ast.CastingExpression, cm *trivia.CommentMap) prettier.Doc {
-	exprDoc := renderExpression(e.Expression, cm)
-	typeDoc := wrapWithAllComments(e.TypeAnnotation, e.TypeAnnotation.Doc(), cm)
-
-	return prettier.Group{
-		Doc: prettier.Concat{
-			prettier.Group{Doc: exprDoc},
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.Line{},
-					e.Operation.Doc(),
-					prettier.Space,
-					typeDoc,
-				},
-			},
-		},
-	}
-}

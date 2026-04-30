@@ -236,7 +236,7 @@ func renderWhileStatement(s *ast.WhileStatement, cm *trivia.CommentMap) prettier
 	parts := prettier.Concat{}
 
 	parts = append(parts, prettier.Text("while "))
-	parts = append(parts, renderIndentedExpression(s.Test, cm))
+	parts = append(parts, renderExpression(s.Test, cm))
 	parts = append(parts, prettier.Space)
 	parts = append(parts, renderBlockBraces(s.Block, cm))
 
@@ -771,9 +771,8 @@ func renderField(d *ast.FieldDeclaration, cm *trivia.CommentMap) prettier.Doc {
 }
 
 // renderEntitlementMapping renders an entitlement mapping declaration with
-// access on the same line and elements in a braced block. Needed because the
-// upstream Doc() doesn't wrap in a Group (so Line after access breaks) and
-// doesn't indent elements.
+// access on the same line and elements in a braced block. The upstream Doc()
+// wraps in Group (fixing access modifier line) but doesn't indent elements.
 func renderEntitlementMapping(d *ast.EntitlementMappingDeclaration, _ *trivia.CommentMap) prettier.Doc {
 	parts := prettier.Concat{}
 
@@ -815,4 +814,5 @@ func renderEntitlementMapping(d *ast.EntitlementMappingDeclaration, _ *trivia.Co
 
 	return parts
 }
+
 
