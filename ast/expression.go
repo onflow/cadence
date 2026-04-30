@@ -832,7 +832,7 @@ func (e *InvocationExpression) Walk(walkChild func(Element)) {
 		walkChild(typeArgument)
 	}
 	for _, argument := range e.Arguments {
-		walkChild(argument.Expression)
+		walkChild(argument)
 	}
 }
 
@@ -1304,13 +1304,19 @@ func parenthesizedExpressionDoc(e Expression, parentPrecedence expressionPrecede
 }
 
 func (e *UnaryExpression) Doc() prettier.Doc {
-	return prettier.Concat{
+	doc := prettier.Concat{
 		e.Operation.Doc(),
+	}
+	if e.Operation == OperationMove {
+		doc = append(doc, prettier.Space)
+	}
+	doc = append(doc,
 		parenthesizedExpressionDoc(
 			e.Expression,
 			e.precedence(),
 		),
-	}
+	)
+	return doc
 }
 
 func (e *UnaryExpression) StartPosition() Position {
@@ -1428,11 +1434,15 @@ func (e *BinaryExpression) Doc() prettier.Doc {
 			prettier.Group{
 				Doc: leftDoc,
 			},
-			prettier.Line{},
-			e.Operation.Doc(),
-			prettier.Space,
-			prettier.Group{
-				Doc: rightDoc,
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.Line{},
+					e.Operation.Doc(),
+					prettier.Space,
+					prettier.Group{
+						Doc: rightDoc,
+					},
+				},
 			},
 		},
 	}
@@ -1598,7 +1608,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			docOrEmpty(access),
-			prettier.HardLine{},
+			prettier.Line{},
 		)
 	}
 
@@ -1630,8 +1640,10 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			functionFunKeywordDoc,
-			prettier.Space,
 		)
+		if identifier != "" {
+			doc = append(doc, prettier.Space)
+		}
 	}
 
 	if identifier != "" {
@@ -1760,10 +1772,14 @@ func (e *CastingExpression) Doc() prettier.Doc {
 			prettier.Group{
 				Doc: doc,
 			},
-			prettier.Line{},
-			e.Operation.Doc(),
-			prettier.Space,
-			docOrEmpty(e.TypeAnnotation),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.Line{},
+					e.Operation.Doc(),
+					prettier.Space,
+					docOrEmpty(e.TypeAnnotation),
+				},
+			},
 		},
 	}
 }

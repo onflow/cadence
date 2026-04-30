@@ -87,6 +87,7 @@ const (
 	ElementTypePathExpression
 	ElementTypeAttachExpression
 	ElementTypeStringTemplateExpression
+	ElementTypeArgument
 
 	// Types
 
