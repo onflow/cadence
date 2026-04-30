@@ -267,6 +267,72 @@ func (cm *CommentMap) HasTrailing(n ast.Element) bool {
 	return len(cm.Trailing[n]) > 0
 }
 
+// HasLeadingLineComment reports whether n has a leading `//`-style comment.
+// Does not remove comments from the map.
+func (cm *CommentMap) HasLeadingLineComment(n ast.Element) bool {
+	for _, g := range cm.Leading[n] {
+		for _, c := range g.Comments {
+			if c.Kind == KindLine || c.Kind == KindDocLine {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// MoveTrailingLineCommentsToLeading transfers any line-comment groups from
+// cm.Trailing[from] to the front of cm.Leading[to]. Block-comment groups stay
+// where they are. Used by renderers that need to render an inter-token
+// line comment as leading-of-next instead of trailing-of-prev so that the
+// `//` lands on its own line in output.
+func (cm *CommentMap) MoveTrailingLineCommentsToLeading(from, to ast.Element) {
+	trailing := cm.Trailing[from]
+	if len(trailing) == 0 {
+		return
+	}
+	var keep []*CommentGroup
+	var move []*CommentGroup
+	for _, g := range trailing {
+		if len(g.Comments) > 0 {
+			last := g.Comments[len(g.Comments)-1]
+			if last.Kind == KindLine || last.Kind == KindDocLine {
+				move = append(move, g)
+				continue
+			}
+		}
+		keep = append(keep, g)
+	}
+	if len(move) == 0 {
+		return
+	}
+	if len(keep) == 0 {
+		delete(cm.Trailing, from)
+	} else {
+		cm.Trailing[from] = keep
+	}
+	cm.Leading[to] = append(move, cm.Leading[to]...)
+}
+
+// MoveSameLineLineCommentToLeading moves a `//`-style same-line comment from
+// cm.SameLine[from] to the front of cm.Leading[to]. No-op if SameLine[from]
+// is empty or is a block comment. Used so a sameLine line comment on a
+// non-terminal child (e.g. TypeAnnotation inside VariableDeclaration) is
+// re-rendered as leading of the next sibling, otherwise the wrapWithComments
+// emit of `node  //` is followed by parent-emitted tokens on the same line
+// and the comment swallows them.
+func (cm *CommentMap) MoveSameLineLineCommentToLeading(from, to ast.Element) {
+	g := cm.SameLine[from]
+	if g == nil || len(g.Comments) == 0 {
+		return
+	}
+	last := g.Comments[len(g.Comments)-1]
+	if last.Kind != KindLine && last.Kind != KindDocLine {
+		return
+	}
+	delete(cm.SameLine, from)
+	cm.Leading[to] = append([]*CommentGroup{g}, cm.Leading[to]...)
+}
+
 // blankLineBetween returns true if there is at least one blank line between
 // positions a and b (i.e., the line gap is > 1).
 func blankLineBetween(a, b ast.Position) bool {

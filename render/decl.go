@@ -747,8 +747,18 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap, ctx *Cont
 	// Identifier
 	parts = append(parts, prettier.Text(d.Identifier.Identifier))
 
-	// Type annotation
+	// Type annotation. If the type annotation has same-line or trailing `//`
+	// line comments AND there is a value, hoist them to leading of the value:
+	// otherwise the type's `//` renders followed by ` = <value>` on the same
+	// doc line, and the comment swallows the assignment in the output.
 	if d.TypeAnnotation != nil && d.TypeAnnotation.Type != nil {
+		if d.Value != nil {
+			// Move in reverse source order so the prepends produce source order:
+			// trailing comments are between the type and value, same-line is on
+			// the type's own line (earlier in source than trailing).
+			cm.MoveTrailingLineCommentsToLeading(d.TypeAnnotation, d.Value)
+			cm.MoveSameLineLineCommentToLeading(d.TypeAnnotation, d.Value)
+		}
 		parts = append(parts, prettier.Text(": "), wrapWithAllComments(d.TypeAnnotation, d.TypeAnnotation.Doc(), cm))
 	}
 
@@ -756,6 +766,9 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap, ctx *Cont
 	if d.Value != nil {
 		parts = append(parts, prettier.Space)
 		parts = append(parts, prettier.Text(d.Transfer.Operation.Operator()))
+		// Peek before rendering since renderExpression / wrapWithComments
+		// drains the value's leading comments.
+		valueHasLineComment := cm.HasLeadingLineComment(d.Value)
 		// Binary expressions (e.g., ?? nil-coalescing) need Indent for
 		// continuation line indentation. Other expressions render directly
 		// to avoid over-indenting function call arguments.
@@ -779,7 +792,11 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap, ctx *Cont
 			}
 		} else {
 			valueDoc := renderExpression(d.Value, cm, ctx)
-			parts = append(parts, prettier.Space)
+			if valueHasLineComment {
+				parts = append(parts, prettier.HardLine{})
+			} else {
+				parts = append(parts, prettier.Space)
+			}
 			parts = append(parts, valueDoc)
 		}
 	}
