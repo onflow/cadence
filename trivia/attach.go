@@ -233,10 +233,26 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 }
 
 // getChildren returns the direct children of an AST element, sorted by position.
+// Children from access modifier entitlement types are excluded so that comments
+// between the access modifier and the declaration keyword are not misclassified
+// as trailing on the NominalType inside access(X).
 func getChildren(node ast.Element) []ast.Element {
+	// Collect elements from the access modifier so we can exclude them.
+	excluded := map[ast.Element]bool{}
+	if decl, ok := node.(ast.Declaration); ok {
+		access := decl.DeclarationAccess()
+		if access != nil {
+			access.Walk(func(child ast.Element) {
+				if child != nil {
+					excluded[child] = true
+				}
+			})
+		}
+	}
+
 	var children []ast.Element
 	node.Walk(func(child ast.Element) {
-		if child != nil {
+		if child != nil && !excluded[child] {
 			children = append(children, child)
 		}
 	})

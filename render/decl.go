@@ -48,13 +48,33 @@ func renderDeclaration(decl ast.Declaration, cm *trivia.CommentMap, ctx *Context
 	return doc
 }
 
+// renderAccess renders an access modifier and takes any comments attached
+// to its child NominalType nodes (entitlement types). Comments are rendered
+// between the access modifier and the following keyword.
+func renderAccess(access ast.Access, cm *trivia.CommentMap) prettier.Doc {
+	if access == ast.AccessNotSpecified {
+		return nil
+	}
+	// Drain comments from entitlement NominalType children so they don't
+	// become orphaned. These comments are on AST nodes that the upstream
+	// Access.Doc() renders as flat text (e.g., "access(A)"), so there's
+	// no natural position for them in the output.
+	access.Walk(func(child ast.Element) {
+		if child == nil {
+			return
+		}
+		cm.Take(child)
+	})
+	return prettier.Concat{access.Doc(), prettier.Space}
+}
+
 // renderFunction renders a function declaration with access on the same line.
 func renderFunction(d *ast.FunctionDeclaration, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Access modifier
 	if d.Access != ast.AccessNotSpecified {
-		parts = append(parts, d.Access.Doc(), prettier.Space)
+		parts = append(parts, renderAccess(d.Access, cm))
 	}
 
 	// Purity (view)
@@ -340,7 +360,7 @@ func renderComposite(d *ast.CompositeDeclaration, cm *trivia.CommentMap, ctx *Co
 
 	// Access modifier
 	if d.Access != ast.AccessNotSpecified {
-		parts = append(parts, d.Access.Doc(), prettier.Space)
+		parts = append(parts, renderAccess(d.Access, cm))
 	}
 
 	// Kind keyword
@@ -384,7 +404,7 @@ func renderEvent(d *ast.CompositeDeclaration, cm *trivia.CommentMap, ctx *Contex
 
 	// Access modifier
 	if d.Access != ast.AccessNotSpecified {
-		parts = append(parts, d.Access.Doc(), prettier.Space)
+		parts = append(parts, renderAccess(d.Access, cm))
 	}
 
 	// "event Name"
@@ -583,7 +603,7 @@ func renderInterface(d *ast.InterfaceDeclaration, cm *trivia.CommentMap, ctx *Co
 	parts := prettier.Concat{}
 
 	if d.Access != ast.AccessNotSpecified {
-		parts = append(parts, d.Access.Doc(), prettier.Space)
+		parts = append(parts, renderAccess(d.Access, cm))
 	}
 
 	parts = append(parts, prettier.Text(d.CompositeKind.Keyword()), prettier.Space)
@@ -651,7 +671,7 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap, ctx *Cont
 
 	// Access modifier
 	if d.Access != ast.AccessNotSpecified {
-		parts = append(parts, d.Access.Doc(), prettier.Space)
+		parts = append(parts, renderAccess(d.Access, cm))
 	}
 
 	// let/var keyword
@@ -732,7 +752,7 @@ func renderSpecialFunction(d *ast.SpecialFunctionDeclaration, cm *trivia.Comment
 
 	// Access modifier (rare for special functions but possible)
 	if fn.Access != ast.AccessNotSpecified {
-		parts = append(parts, fn.Access.Doc(), prettier.Space)
+		parts = append(parts, renderAccess(fn.Access, cm))
 	}
 
 	// Purity
@@ -767,7 +787,7 @@ func renderField(d *ast.FieldDeclaration, cm *trivia.CommentMap) prettier.Doc {
 	parts := prettier.Concat{}
 
 	if d.Access != ast.AccessNotSpecified {
-		parts = append(parts, d.Access.Doc(), prettier.Space)
+		parts = append(parts, renderAccess(d.Access, cm))
 	}
 
 	if d.IsStatic() {
@@ -790,11 +810,11 @@ func renderField(d *ast.FieldDeclaration, cm *trivia.CommentMap) prettier.Doc {
 // renderEntitlementMapping renders an entitlement mapping declaration with
 // access on the same line and elements in a braced block. The upstream Doc()
 // wraps in Group (fixing access modifier line) but doesn't indent elements.
-func renderEntitlementMapping(d *ast.EntitlementMappingDeclaration, _ *trivia.CommentMap) prettier.Doc {
+func renderEntitlementMapping(d *ast.EntitlementMappingDeclaration, cm *trivia.CommentMap) prettier.Doc {
 	parts := prettier.Concat{}
 
 	if d.Access != ast.AccessNotSpecified {
-		parts = append(parts, d.Access.Doc(), prettier.Space)
+		parts = append(parts, renderAccess(d.Access, cm))
 	}
 
 	parts = append(parts, prettier.Text("entitlement"), prettier.Space)

@@ -232,6 +232,40 @@ func TestKeepBlankLines_Default(t *testing.T) {
 	}
 }
 
+func TestAccessModifierComment_FuzzCase(t *testing.T) {
+	t.Parallel()
+	src := []byte("contract A{access(A)event00(\nA\n//\n:A)}")
+	first, err := format.Format(src, "test.cdc", format.Default())
+	if err != nil {
+		t.Fatalf("first format: %v", err)
+	}
+	second, err := format.Format(first, "test.cdc", format.Default())
+	if err != nil {
+		t.Fatalf("second format: %v", err)
+	}
+	if string(first) != string(second) {
+		t.Errorf("not idempotent.\n--- first ---\n%s\n--- second ---\n%s",
+			first, second)
+	}
+}
+
+func TestAccessModifierComment_ContractBody(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(A)contract A{A(//\n)}")
+	first, err := format.Format(src, "test.cdc", format.Default())
+	if err != nil {
+		t.Fatalf("first format: %v", err)
+	}
+	second, err := format.Format(first, "test.cdc", format.Default())
+	if err != nil {
+		t.Fatalf("second format: %v", err)
+	}
+	if string(first) != string(second) {
+		t.Errorf("not idempotent.\n--- first ---\n%s\n--- second ---\n%s",
+			first, second)
+	}
+}
+
 func TestStripSemicolons_Default(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) let x: Int = 1;\n")
