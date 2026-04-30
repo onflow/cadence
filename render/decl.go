@@ -7,6 +7,52 @@ import (
 	"github.com/turbolent/prettier"
 )
 
+// hasBlankLineBetween checks the source bytes between two statements for a
+// blank line (a line containing only whitespace). This is more reliable than
+// comparing AST line numbers, which can be inaccurate for multi-line expressions.
+// Must be called BEFORE cm.Take() drains comments, since it uses comment
+// positions to narrow the byte range.
+func hasBlankLineBetween(prev, curr ast.Statement, cm *trivia.CommentMap, source []byte) bool {
+	if len(source) == 0 {
+		return false
+	}
+
+	// Find the last byte offset of prev (including trailing comments).
+	endOffset := prev.EndPosition(nil).Offset
+	if trailing := cm.Trailing[prev]; len(trailing) > 0 {
+		if tEnd := trailing[len(trailing)-1].EndPos().Offset; tEnd > endOffset {
+			endOffset = tEnd
+		}
+	}
+
+	// Find the first byte offset of curr (including leading comments).
+	startOffset := curr.StartPosition().Offset
+	if leading := cm.Leading[curr]; len(leading) > 0 {
+		if lStart := leading[0].StartPos().Offset; lStart < startOffset {
+			startOffset = lStart
+		}
+	}
+
+	// Scan the source bytes between the two positions for a blank line:
+	// two newlines with only whitespace between them.
+	if endOffset >= startOffset || endOffset >= len(source) {
+		return false
+	}
+	sawNewline := false
+	for i := endOffset; i < startOffset && i < len(source); i++ {
+		b := source[i]
+		if b == '\n' {
+			if sawNewline {
+				return true
+			}
+			sawNewline = true
+		} else if b != ' ' && b != '\t' && b != '\r' {
+			sawNewline = false
+		}
+	}
+	return false
+}
+
 // renderDeclaration dispatches to a custom renderer for the declaration type
 // if we need to override the upstream Doc() behavior, otherwise falls back
 // to the default Doc().
@@ -159,9 +205,18 @@ func renderFunctionBlock(b *ast.FunctionBlock, cm *trivia.CommentMap, ctx *Conte
 			body = append(body, renderCommentGroup(g))
 			needSep = true
 		}
-		for _, stmt := range b.Block.Statements {
+		// Pre-compute blank line flags before rendering drains the CommentMap.
+		stmts := b.Block.Statements
+		blankBefore := make([]bool, len(stmts))
+		for i := 1; i < len(stmts); i++ {
+			blankBefore[i] = hasBlankLineBetween(stmts[i-1], stmts[i], cm, ctx.Source)
+		}
+		for i, stmt := range stmts {
 			if needSep {
 				body = append(body, prettier.HardLine{})
+				if blankBefore[i] {
+					body = append(body, prettier.HardLine{})
+				}
 			}
 			doc := renderStatement(stmt, cm, ctx)
 			body = append(body, doc)
@@ -222,10 +277,18 @@ func renderBlock(b *ast.Block, cm *trivia.CommentMap, ctx *Context) prettier.Doc
 		return nil
 	}
 
+	blankBefore := make([]bool, len(b.Statements))
+	for i := 1; i < len(b.Statements); i++ {
+		blankBefore[i] = hasBlankLineBetween(b.Statements[i-1], b.Statements[i], cm, ctx.Source)
+	}
+
 	body := prettier.Concat{}
 	for i, stmt := range b.Statements {
 		if i > 0 {
 			body = append(body, prettier.HardLine{})
+			if blankBefore[i] {
+				body = append(body, prettier.HardLine{})
+			}
 		}
 		doc := renderStatement(stmt, cm, ctx)
 		body = append(body, doc)

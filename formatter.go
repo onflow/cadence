@@ -40,7 +40,7 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 	}
 
 	// Render AST with interleaved comments
-	ctx := &render.Context{}
+	ctx := &render.Context{Source: src}
 	if !opts.StripSemicolons {
 		ctx.Semicolons = trivia.ScanSemicolons(src, program)
 	}
