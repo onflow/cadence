@@ -114,14 +114,16 @@ func drainDescendantComments(elem ast.Element, cm *trivia.CommentMap, out *[]pre
 			return
 		}
 		leading, sameLine, trailing := cm.Take(child)
-		for _, g := range leading {
-			*out = append(*out, renderCommentGroup(g))
-		}
-		if sameLine != nil {
-			*out = append(*out, renderCommentGroup(sameLine))
-		}
-		for _, g := range trailing {
-			*out = append(*out, renderCommentGroup(g))
+		if out != nil {
+			for _, g := range leading {
+				*out = append(*out, renderCommentGroup(g))
+			}
+			if sameLine != nil {
+				*out = append(*out, renderCommentGroup(sameLine))
+			}
+			for _, g := range trailing {
+				*out = append(*out, renderCommentGroup(g))
+			}
 		}
 		drainDescendantComments(child, cm, out)
 	})
