@@ -14,8 +14,11 @@ import (
 // corpusSkip lists corpus files that don't parse with the current Cadence
 // parser (pre-1.0 syntax, comment-preservation edge cases, etc.).
 var corpusSkip = map[string]bool{
-	"flow-core-contracts/transactions/stakingProxy/get_node_info.cdc":       true, // pre-Cadence 1.0 restricted types
-	"flow-core-contracts/transactions/flowToken/create_forwarder.cdc":       true, // pre-Cadence 1.0 restricted types
+	"flow-core-contracts/transactions/stakingProxy/get_node_info.cdc":          true, // pre-Cadence 1.0 restricted types
+	"flow-core-contracts/transactions/flowToken/create_forwarder.cdc":          true, // pre-Cadence 1.0 restricted types
+	"flow-ft/transactions/switchboard/setup_royalty_account_by_paths.cdc":      true, // pre-Cadence 1.0 restricted types
+	"flow-ft/transactions/switchboard/setup_royalty_account.cdc":               true, // pre-Cadence 1.0 restricted types
+	"flow-nft/tests/scripts/get_nft_metadata.cdc":                             true, // pre-Cadence 1.0 restricted types
 }
 
 func TestCorpus(t *testing.T) {

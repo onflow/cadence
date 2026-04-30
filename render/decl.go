@@ -121,12 +121,29 @@ func renderFunctionBlock(b *ast.FunctionBlock, cm *trivia.CommentMap) prettier.D
 
 	// Statements
 	if b.Block != nil {
+		// Drain any comments attached to the Block node itself
+		// (e.g., comments inside post{} blocks in interface functions)
+		leading, _, trailing := cm.Take(b.Block)
+		for _, g := range leading {
+			if needSep {
+				body = append(body, prettier.HardLine{})
+			}
+			body = append(body, renderCommentGroup(g))
+			needSep = true
+		}
 		for _, stmt := range b.Block.Statements {
 			if needSep {
 				body = append(body, prettier.HardLine{})
 			}
 			doc := renderStatement(stmt, cm)
 			body = append(body, doc)
+			needSep = true
+		}
+		for _, g := range trailing {
+			if needSep {
+				body = append(body, prettier.HardLine{})
+			}
+			body = append(body, renderCommentGroup(g))
 			needSep = true
 		}
 	}
