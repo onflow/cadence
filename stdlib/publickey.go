@@ -263,11 +263,14 @@ func newInterpreterPublicKeyVerifySignatureFunction(
 	inter *interpreter.Interpreter,
 	publicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
-) interpreter.BoundFunctionValue {
-	return interpreter.NewBoundHostFunctionValue(
+) *interpreter.HostFunctionValue {
+	// `CompositeValue` generally store functions as static-functions (e.g: user-defined functions).
+	// Those get converted to bound functions on retrieval. See `CompositeValue.GetMethod()` function in `value_composite.go`
+	// Do the same for native-functions as well. i.e: create and store a static-host-function.
+	// A bound function cannot be created here, because it is unknown whether the function
+	// is accessed via a reference or directly on the concrete value, at this point.
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		inter,
-		publicKeyValue,
-		nil, // TODO: Pass the reference if it accessed via a reference.
 		sema.PublicKeyTypeVerifyFunctionType,
 		NativePublicKeyVerifySignatureFunction(publicKeyValue, verifier),
 	)
@@ -371,11 +374,14 @@ func newInterpreterPublicKeyVerifyPoPFunction(
 	inter *interpreter.Interpreter,
 	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
-) interpreter.BoundFunctionValue {
-	return interpreter.NewBoundHostFunctionValue(
+) *interpreter.HostFunctionValue {
+	// `CompositeValue` generally store functions as static-functions (e.g: user-defined functions).
+	// Those get converted to bound functions on retrieval. See `CompositeValue.GetMethod()` function in `value_composite.go`
+	// Do the same for native-functions as well. i.e: create and store a static-host-function.
+	// A bound function cannot be created here, because it is unknown whether the function
+	// is accessed via a reference or directly on the concrete value, at this point.
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		inter,
-		publicKeyValue,
-		nil, // TODO: Pass the reference if it accessed via a reference.
 		sema.PublicKeyTypeVerifyPoPFunctionType,
 		NativePublicKeyVerifyPoPFunction(publicKeyValue, verifier),
 	)

@@ -357,12 +357,12 @@ func NewBoundFunctionValue(
 	base *EphemeralReferenceValue,
 ) BoundFunctionValue {
 
-	selfReference, _ := ReceiverReference(context, *self, accessedReference)
-
 	// If the function is already a bound function, then do not re-wrap.
 	if boundFunc, isBoundFunc := function.(BoundFunctionValue); isBoundFunc {
 		return boundFunc
 	}
+
+	selfReference, _ := ReceiverReference(context, *self, accessedReference)
 
 	common.UseMemory(context, common.BoundFunctionValueMemoryUsage)
 
