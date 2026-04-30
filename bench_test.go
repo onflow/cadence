@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/janezpodhostnik/cadencefmt/internal/format"
@@ -257,12 +258,14 @@ func BenchmarkStage_PrettyPrint(b *testing.B) {
 	}
 	ctx := &render.Context{}
 	doc := render.Program(program, cm, ctx)
+	opts := format.Default()
+	indent := strings.Repeat(opts.IndentCharacter, opts.IndentCount)
 
 	var buf bytes.Buffer
 	b.ResetTimer()
 	for b.Loop() {
 		buf.Reset()
-		prettier.Prettier(&buf, doc, 100, "    ")
+		prettier.Prettier(&buf, doc, opts.LineWidth, indent)
 	}
 }
 

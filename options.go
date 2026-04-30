@@ -10,8 +10,8 @@ const CurrentFormatVersion = "1"
 // via Default().
 type Options struct {
 	LineWidth       int
-	Indent          string
-	UseTabs         bool
+	IndentCharacter string // " " or "\t"
+	IndentCount     int
 	SortImports     bool
 	StripSemicolons bool
 	KeepBlankLines  int
@@ -24,6 +24,12 @@ func (o Options) Validate() error {
 	if o.FormatVersion != CurrentFormatVersion {
 		return fmt.Errorf("unsupported format version %q (current: %s)", o.FormatVersion, CurrentFormatVersion)
 	}
+	if o.IndentCharacter != " " && o.IndentCharacter != "\t" {
+		return fmt.Errorf("IndentCharacter must be %q or %q, got %q", " ", "\t", o.IndentCharacter)
+	}
+	if o.IndentCount < 1 {
+		return fmt.Errorf("IndentCount must be >= 1, got %d", o.IndentCount)
+	}
 	if o.KeepBlankLines < 0 {
 		return fmt.Errorf("KeepBlankLines must be >= 0, got %d", o.KeepBlankLines)
 	}
@@ -34,8 +40,8 @@ func (o Options) Validate() error {
 func Default() Options {
 	return Options{
 		LineWidth:       100,
-		Indent:          "    ",
-		UseTabs:         false,
+		IndentCharacter: " ",
+		IndentCount:     4,
 		SortImports:     true,
 		StripSemicolons: true,
 		KeepBlankLines:  1,

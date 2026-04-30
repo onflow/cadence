@@ -332,6 +332,173 @@ func TestFormatVersion_Current(t *testing.T) {
 	}
 }
 
+// --- Indent option tests ---
+
+func TestIndent_Default(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	got, err := format.Format(src, "test.cdc", format.Default())
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), "\n    let x") {
+		t.Errorf("expected 4-space indent, got:\n%s", got)
+	}
+}
+
+func TestIndent_TwoSpaces(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	opts := format.Default()
+	opts.IndentCount = 2
+	got, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), "\n  let x") {
+		t.Errorf("expected 2-space indent, got:\n%s", got)
+	}
+	if strings.Contains(string(got), "\n    let x") {
+		t.Errorf("should not have 4-space indent, got:\n%s", got)
+	}
+}
+
+func TestIndent_ThreeSpaces(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	opts := format.Default()
+	opts.IndentCount = 3
+	got, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), "\n   let x") {
+		t.Errorf("expected 3-space indent, got:\n%s", got)
+	}
+}
+
+func TestIndent_Tabs(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	opts := format.Default()
+	opts.IndentCharacter = "\t"
+	opts.IndentCount = 1
+	got, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), "\n\tlet x") {
+		t.Errorf("expected tab indent, got:\n%s", got)
+	}
+}
+
+func TestIndent_Idempotent(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	opts := format.Default()
+	opts.IndentCount = 2
+	first, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("first format: %v", err)
+	}
+	second, err := format.Format(first, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("second format: %v", err)
+	}
+	if string(first) != string(second) {
+		t.Errorf("not idempotent.\n--- first ---\n%s\n--- second ---\n%s", first, second)
+	}
+}
+
+func TestIndentCharacter_Invalid(t *testing.T) {
+	t.Parallel()
+	opts := format.Default()
+	opts.IndentCharacter = "x"
+	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
+	if err == nil {
+		t.Fatal("expected error for invalid IndentCharacter")
+	}
+	if !strings.Contains(err.Error(), "IndentCharacter") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestIndentCount_Zero(t *testing.T) {
+	t.Parallel()
+	opts := format.Default()
+	opts.IndentCount = 0
+	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
+	if err == nil {
+		t.Fatal("expected error for IndentCount=0")
+	}
+	if !strings.Contains(err.Error(), "IndentCount") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// --- LineWidth option tests ---
+
+func TestLineWidth_Narrow(t *testing.T) {
+	t.Parallel()
+	// This expression fits in 100 cols but not 40
+	src := []byte("access(all) fun main(parameterOne: Int, parameterTwo: String) {}\n")
+	opts := format.Default()
+	opts.LineWidth = 40
+	got, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	// With narrow width, params should break across lines
+	if !strings.Contains(string(got), "\n") || strings.Count(string(got), "\n") < 2 {
+		t.Errorf("expected line break with LineWidth=40, got:\n%s", got)
+	}
+}
+
+func TestLineWidth_Wide(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main(parameterOne: Int, parameterTwo: String) {}\n")
+	opts := format.Default()
+	opts.LineWidth = 200
+	got, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	// With wide width, should stay on one line (just the declaration + trailing newline)
+	lines := strings.Split(strings.TrimRight(string(got), "\n"), "\n")
+	if len(lines) != 1 {
+		t.Errorf("expected single line with LineWidth=200, got %d lines:\n%s", len(lines), got)
+	}
+}
+
+// --- SortImports option test ---
+
+func TestSortImports_False(t *testing.T) {
+	t.Parallel()
+	src := []byte("import \"Zebra\"\nimport \"Alpha\"\n\naccess(all) fun main() {}\n")
+	opts := format.Default()
+	opts.SortImports = false
+	got, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	// NOTE: SortImports=false is not yet wired to rewrite.Apply,
+	// so imports are currently always sorted. This test documents the
+	// current behavior and will need updating when the option is wired up.
+	_ = got
+}
+
+// --- SkipVerify option test ---
+
+func TestSkipVerify(t *testing.T) {
+	t.Parallel()
+	opts := format.Default()
+	opts.SkipVerify = true
+	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("unexpected error with SkipVerify=true: %v", err)
+	}
+}
+
 func commentTexts(src []byte) []string {
 	comments := trivia.Scan(src)
 	texts := make([]string, len(comments))

@@ -3,6 +3,7 @@ package format
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/janezpodhostnik/cadencefmt/internal/format/render"
 	"github.com/janezpodhostnik/cadencefmt/internal/format/rewrite"
@@ -34,10 +35,7 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 		return nil, fmt.Errorf("rewrite error: %w", err)
 	}
 
-	indent := opts.Indent
-	if opts.UseTabs {
-		indent = "\t"
-	}
+	indent := strings.Repeat(opts.IndentCharacter, opts.IndentCount)
 
 	// Render AST with interleaved comments
 	ctx := &render.Context{Source: src}
