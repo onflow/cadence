@@ -31,7 +31,7 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 	cm := trivia.Attach(program, groups, src)
 
 	// Apply AST rewrites (import sorting, etc.)
-	if err := rewrite.Apply(program, cm); err != nil {
+	if err := rewrite.Apply(program, cm, opts.SortImports); err != nil {
 		return nil, fmt.Errorf("rewrite error: %w", err)
 	}
 

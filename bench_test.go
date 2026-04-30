@@ -222,7 +222,7 @@ func BenchmarkStage_Rewrite(b *testing.B) {
 		comments := trivia.Scan(src)
 		groups := trivia.Group(comments, src)
 		cm := trivia.Attach(program, groups, src)
-		if err := rewrite.Apply(program, cm); err != nil {
+		if err := rewrite.Apply(program, cm, true); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -239,7 +239,7 @@ func BenchmarkStage_Render(b *testing.B) {
 		comments := trivia.Scan(src)
 		groups := trivia.Group(comments, src)
 		cm := trivia.Attach(program, groups, src)
-		if err := rewrite.Apply(program, cm); err != nil {
+		if err := rewrite.Apply(program, cm, true); err != nil {
 			b.Fatal(err)
 		}
 		ctx := &render.Context{}
@@ -253,7 +253,7 @@ func BenchmarkStage_PrettyPrint(b *testing.B) {
 	comments := trivia.Scan(src)
 	groups := trivia.Group(comments, src)
 	cm := trivia.Attach(program, groups, src)
-	if err := rewrite.Apply(program, cm); err != nil {
+	if err := rewrite.Apply(program, cm, true); err != nil {
 		b.Fatal(err)
 	}
 	ctx := &render.Context{}

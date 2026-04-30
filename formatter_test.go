@@ -472,6 +472,20 @@ func TestLineWidth_Wide(t *testing.T) {
 
 // --- SortImports option test ---
 
+func TestSortImports_True(t *testing.T) {
+	t.Parallel()
+	src := []byte("import \"Zebra\"\nimport \"Alpha\"\n\naccess(all) fun main() {}\n")
+	got, err := format.Format(src, "test.cdc", format.Default())
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	alphaIdx := strings.Index(string(got), "\"Alpha\"")
+	zebraIdx := strings.Index(string(got), "\"Zebra\"")
+	if alphaIdx > zebraIdx {
+		t.Errorf("expected imports sorted (Alpha before Zebra), got:\n%s", got)
+	}
+}
+
 func TestSortImports_False(t *testing.T) {
 	t.Parallel()
 	src := []byte("import \"Zebra\"\nimport \"Alpha\"\n\naccess(all) fun main() {}\n")
@@ -481,10 +495,11 @@ func TestSortImports_False(t *testing.T) {
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
-	// NOTE: SortImports=false is not yet wired to rewrite.Apply,
-	// so imports are currently always sorted. This test documents the
-	// current behavior and will need updating when the option is wired up.
-	_ = got
+	zebraIdx := strings.Index(string(got), "\"Zebra\"")
+	alphaIdx := strings.Index(string(got), "\"Alpha\"")
+	if zebraIdx > alphaIdx {
+		t.Errorf("expected imports to stay unsorted (Zebra before Alpha), got:\n%s", got)
+	}
 }
 
 // --- SkipVerify option test ---
