@@ -28,6 +28,8 @@ func renderDeclaration(decl ast.Declaration, cm *trivia.CommentMap) prettier.Doc
 		doc = renderSpecialFunction(d, cm)
 	case *ast.EntitlementMappingDeclaration:
 		doc = renderEntitlementMapping(d, cm)
+	case *ast.TransactionDeclaration:
+		doc = renderTransaction(d, cm)
 	default:
 		// For unknown declaration types, use upstream Doc() and drain
 		// any descendant comments so they're not orphaned.
@@ -71,7 +73,8 @@ func renderFunction(d *ast.FunctionDeclaration, cm *trivia.CommentMap) prettier.
 
 	// Parameters — use custom rendering to preserve comments between params
 	if d.ParameterList != nil {
-		parts = append(parts, renderParameterList(d.ParameterList, cm))
+		paramDoc, _ := renderParameterList(d.ParameterList, cm)
+		parts = append(parts, paramDoc)
 	}
 
 	// Return type
@@ -367,12 +370,92 @@ func renderEvent(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettier.Do
 	}
 
 	paramList := initializers[0].FunctionDeclaration.ParameterList
-	parts = append(parts, renderParameterList(paramList, cm))
+	paramDoc, _ := renderParameterList(paramList, cm)
+	parts = append(parts, paramDoc)
 
 	// Drain any remaining descendant comments (type annotations, etc.)
 	drainDescendantComments(d, cm, nil)
 
 	return parts
+}
+
+// renderTransaction renders a transaction declaration with comment
+// interleaving inside prepare/execute blocks. Without this, the default
+// wrapWithAllComments path drains all block-interior comments and appends
+// them after the closing brace.
+func renderTransaction(d *ast.TransactionDeclaration, cm *trivia.CommentMap) prettier.Doc {
+	doc := prettier.Concat{prettier.Text("transaction")}
+
+	// Parameters
+	paramDoc, paramTrailing := renderParameterList(d.ParameterList, cm)
+	doc = append(doc, paramDoc)
+
+	// Move trailing comments from last parameter to leading of first field
+	if len(paramTrailing) > 0 && len(d.Fields) > 0 {
+		cm.Leading[d.Fields[0]] = append(paramTrailing, cm.Leading[d.Fields[0]]...)
+	}
+
+	// Build body contents
+	var contents []prettier.Doc
+
+	// Fields
+	for _, field := range d.Fields {
+		fieldDoc := renderDeclaration(field, cm)
+		contents = append(contents, fieldDoc)
+	}
+
+	// Prepare block
+	if d.Prepare != nil {
+		prepareDoc := renderDeclaration(d.Prepare, cm)
+		contents = append(contents, prepareDoc)
+	}
+
+	// Pre-conditions
+	if d.PreConditions != nil && !d.PreConditions.IsEmpty() {
+		condDoc := d.PreConditions.Doc(prettier.Text("pre"))
+		drainWalkable(d.PreConditions, cm)
+		contents = append(contents, condDoc)
+	}
+
+	// Execute block
+	if d.Execute != nil {
+		executeDoc := renderDeclaration(d.Execute, cm)
+		contents = append(contents, executeDoc)
+	}
+
+	// Post-conditions
+	if d.PostConditions != nil && !d.PostConditions.IsEmpty() {
+		condDoc := d.PostConditions.Doc(prettier.Text("post"))
+		drainWalkable(d.PostConditions, cm)
+		contents = append(contents, condDoc)
+	}
+
+	// Build the braced body
+	if len(contents) == 0 {
+		doc = append(doc, prettier.Text(" {}"))
+		return doc
+	}
+
+	body := prettier.Concat{}
+	for i, content := range contents {
+		if i > 0 {
+			body = append(body, prettier.HardLine{})
+		}
+		body = append(body, content)
+	}
+
+	doc = append(doc,
+		prettier.Space,
+		prettier.Text("{"),
+		prettier.Indent{Doc: prettier.Concat{
+			prettier.HardLine{},
+			body,
+		}},
+		prettier.HardLine{},
+		prettier.Text("}"),
+	)
+
+	return doc
 }
 
 // paramInfo holds a rendered parameter and its associated comments.
@@ -386,10 +469,12 @@ type paramInfo struct {
 // renderParameterList renders a function/event parameter list with comments
 // interleaved between parameters. ParameterList.Walk() yields TypeAnnotation
 // nodes (not Parameter), so comments are attached to TypeAnnotation nodes.
-func renderParameterList(paramList *ast.ParameterList, cm *trivia.CommentMap) prettier.Doc {
+// Returns the rendered doc and any trailing comments from the last parameter
+// that the caller should place after the parameter list.
+func renderParameterList(paramList *ast.ParameterList, cm *trivia.CommentMap) (prettier.Doc, []*trivia.CommentGroup) {
 	if paramList == nil || len(paramList.Parameters) == 0 {
 		drainWalkable(paramList, cm)
-		return prettier.Text("()")
+		return prettier.Text("()"), nil
 	}
 
 	// Collect parameters with their comments
@@ -421,7 +506,7 @@ func renderParameterList(paramList *ast.ParameterList, cm *trivia.CommentMap) pr
 	if !hasComments {
 		// No comments: use upstream soft-breaking layout
 		drainWalkable(paramList, cm)
-		return paramList.Doc()
+		return paramList.Doc(), pendingTrailing
 	}
 
 	// Comments present: force parameters to break across lines.
@@ -456,7 +541,7 @@ func renderParameterList(paramList *ast.ParameterList, cm *trivia.CommentMap) pr
 		}},
 		prettier.HardLine{},
 		prettier.Text(")"),
-	}
+	}, pendingTrailing
 }
 
 // renderInterface renders an interface declaration with access on the same line.
@@ -626,7 +711,8 @@ func renderSpecialFunction(d *ast.SpecialFunctionDeclaration, cm *trivia.Comment
 
 	// Parameters — use custom rendering to preserve comments between params
 	if fn.ParameterList != nil {
-		parts = append(parts, renderParameterList(fn.ParameterList, cm))
+		paramDoc, _ := renderParameterList(fn.ParameterList, cm)
+		parts = append(parts, paramDoc)
 	}
 
 	// Return type

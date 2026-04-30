@@ -1,6 +1,8 @@
 package render
 
 import (
+	"strings"
+
 	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
 	"github.com/onflow/cadence/ast"
 	"github.com/turbolent/prettier"
@@ -15,8 +17,24 @@ func renderExpression(expr ast.Expression, cm *trivia.CommentMap) prettier.Doc {
 		return wrapWithComments(e, renderInvocationExpression(e, cm), cm)
 	case *ast.CastingExpression:
 		return wrapWithComments(e, renderCastingExpression(e, cm), cm)
+	case *ast.StringTemplateExpression:
+		return wrapWithComments(e, renderStringTemplateExpression(e, cm), cm)
 	}
 	return wrapWithAllComments(expr, expr.Doc(), cm)
+}
+
+// renderArgumentDoc renders an invocation argument using our renderExpression
+// for the value, so custom expression renderers (string templates, invocations,
+// casts) are applied. Mirrors upstream Argument.Doc() structure.
+func renderArgumentDoc(arg *ast.Argument, cm *trivia.CommentMap) prettier.Doc {
+	exprDoc := renderExpression(arg.Expression, cm)
+	if arg.Label == "" {
+		return exprDoc
+	}
+	return prettier.Concat{
+		prettier.Text(arg.Label + ": "),
+		exprDoc,
+	}
 }
 
 // renderIndentedExpression renders an expression wrapped in Indent so that
@@ -96,7 +114,9 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 	args := make([]invocationArg, len(e.Arguments))
 	hasComments := len(trailing) > 0
 	for i, arg := range e.Arguments {
-		a := invocationArg{doc: arg.Doc()}
+		// Render the argument using our renderExpression so custom expression
+		// renderers (e.g., string templates) are applied to argument values.
+		a := invocationArg{doc: renderArgumentDoc(arg, cm)}
 
 		// Collect comments from the Argument element and its Expression.
 		argLeading, argSameLine, argTrailing := cm.Take(arg)
@@ -191,6 +211,39 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 	}
 
 	return parts
+}
+
+// renderStringTemplateExpression renders a string template with interpolation
+// expressions kept flat (no line breaks inside \(...)). The upstream Doc()
+// renders each interpolation via expr.Doc() which can include Line{} breaks.
+// We render each interpolation as a flat Text node using expr.String().
+func renderStringTemplateExpression(e *ast.StringTemplateExpression, cm *trivia.CommentMap) prettier.Doc {
+	if len(e.Expressions) == 0 {
+		return prettier.Text(ast.QuoteString(e.Values[0]))
+	}
+
+	concat := make(prettier.Concat, 0, 2+len(e.Values)+(3*len(e.Expressions)))
+	concat = append(concat, prettier.Text(`"`))
+	for i, value := range e.Values {
+		var sb strings.Builder
+		ast.QuoteStringInner(value, &sb)
+		concat = append(concat, prettier.Text(sb.String()))
+
+		if i < len(e.Expressions) {
+			expr := e.Expressions[i]
+			// Render interpolation expression as flat text to prevent
+			// line breaks inside \(...). Drain any comments on it.
+			cm.Take(expr)
+			drainDescendantComments(expr, cm, nil)
+			concat = append(concat,
+				prettier.Text(`\(`),
+				prettier.Text(expr.String()),
+				prettier.Text(`)`),
+			)
+		}
+	}
+	concat = append(concat, prettier.Text(`"`))
+	return concat
 }
 
 // renderCastingExpression renders a cast (as/as!/as?) with the operator and
