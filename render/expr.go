@@ -11,10 +11,10 @@ import (
 // renderExpression dispatches to custom renderers for expression types that
 // need fixes (invocations with displaced comments, casts with missing indent),
 // otherwise falls back to the upstream Doc() with full comment draining.
-func renderExpression(expr ast.Expression, cm *trivia.CommentMap) prettier.Doc {
+func renderExpression(expr ast.Expression, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	switch e := expr.(type) {
 	case *ast.InvocationExpression:
-		return wrapWithComments(e, renderInvocationExpression(e, cm), cm)
+		return wrapWithComments(e, renderInvocationExpression(e, cm, ctx), cm)
 	case *ast.StringTemplateExpression:
 		return wrapWithComments(e, renderStringTemplateExpression(e, cm), cm)
 	}
@@ -24,8 +24,8 @@ func renderExpression(expr ast.Expression, cm *trivia.CommentMap) prettier.Doc {
 // renderArgumentDoc renders an invocation argument using our renderExpression
 // for the value, so custom expression renderers (string templates, invocations,
 // casts) are applied. Mirrors upstream Argument.Doc() structure.
-func renderArgumentDoc(arg *ast.Argument, cm *trivia.CommentMap) prettier.Doc {
-	exprDoc := renderExpression(arg.Expression, cm)
+func renderArgumentDoc(arg *ast.Argument, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
+	exprDoc := renderExpression(arg.Expression, cm, ctx)
 	if arg.Label == "" {
 		return exprDoc
 	}
@@ -39,23 +39,23 @@ func renderArgumentDoc(arg *ast.Argument, cm *trivia.CommentMap) prettier.Doc {
 // must be placed relative to the comma separator (same-line comments go
 // after the comma on the same line, not before it).
 type invocationArg struct {
-	doc      prettier.Doc               // argument rendering (label: expr)
-	leading  []*trivia.CommentGroup     // comments before the argument
-	sameLine *trivia.CommentGroup        // same-line comment (after arg, before next)
-	trailing []*trivia.CommentGroup     // comments after the argument
-	extras   []prettier.Doc             // drained descendant comment docs
+	doc      prettier.Doc           // argument rendering (label: expr)
+	leading  []*trivia.CommentGroup // comments before the argument
+	sameLine *trivia.CommentGroup   // same-line comment (after arg, before next)
+	trailing []*trivia.CommentGroup // comments after the argument
+	extras   []prettier.Doc         // drained descendant comment docs
 }
 
 // renderInvocationExpression renders a function call with comments preserved
 // inside the argument list. Without this, wrapWithAllComments + upstream Doc()
 // displaces argument comments outside the closing paren.
-func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentMap) prettier.Doc {
+func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Take comments from the invoked expression separately. Trailing comments
 	// sit between the function name and the opening paren.
 	leading, sameLine, trailing := cm.Take(e.InvokedExpression)
-	invokedDoc := renderExpression(e.InvokedExpression, cm)
+	invokedDoc := renderExpression(e.InvokedExpression, cm, ctx)
 
 	// Re-apply leading and same-line to the invoked expression.
 	if len(leading) > 0 || sameLine != nil {
@@ -65,7 +65,7 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 		}
 		wrapped = append(wrapped, invokedDoc)
 		if sameLine != nil {
-			wrapped = append(wrapped, prettier.Text("  "), renderCommentGroupInline(sameLine))
+			wrapped = append(wrapped, prettier.Text("  "), renderCommentGroup(sameLine))
 		}
 		invokedDoc = wrapped
 	}
@@ -105,7 +105,7 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 	for i, arg := range e.Arguments {
 		// Render the argument using our renderExpression so custom expression
 		// renderers (e.g., string templates) are applied to argument values.
-		a := invocationArg{doc: renderArgumentDoc(arg, cm)}
+		a := invocationArg{doc: renderArgumentDoc(arg, cm, ctx)}
 
 		// Collect comments from the Argument element and its Expression.
 		argLeading, argSameLine, argTrailing := cm.Take(arg)
@@ -146,7 +146,7 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 				inner = append(inner, prettier.Text(","))
 				// Previous arg's same-line comment goes after the comma
 				if args[i-1].sameLine != nil {
-					inner = append(inner, prettier.Text("  "), renderCommentGroupInline(args[i-1].sameLine))
+					inner = append(inner, prettier.Text("  "), renderCommentGroup(args[i-1].sameLine))
 				}
 				inner = append(inner, prettier.HardLine{})
 				// Previous arg's trailing comments
@@ -166,7 +166,7 @@ func renderInvocationExpression(e *ast.InvocationExpression, cm *trivia.CommentM
 		// Handle last arg's same-line and trailing
 		lastArg := args[len(args)-1]
 		if lastArg.sameLine != nil {
-			inner = append(inner, prettier.Text("  "), renderCommentGroupInline(lastArg.sameLine))
+			inner = append(inner, prettier.Text("  "), renderCommentGroup(lastArg.sameLine))
 		}
 		for _, g := range lastArg.trailing {
 			inner = append(inner, prettier.HardLine{}, renderCommentGroup(g))
@@ -234,4 +234,3 @@ func renderStringTemplateExpression(e *ast.StringTemplateExpression, cm *trivia.
 	concat = append(concat, prettier.Text(`"`))
 	return concat
 }
-

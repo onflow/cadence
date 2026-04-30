@@ -8,7 +8,7 @@ import (
 )
 
 // Program renders an *ast.Program with interleaved comments from the CommentMap.
-func Program(prog *ast.Program, cm *trivia.CommentMap, lineWidth int, indent string) prettier.Doc {
+func Program(prog *ast.Program, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Header comments
@@ -28,7 +28,7 @@ func Program(prog *ast.Program, cm *trivia.CommentMap, lineWidth int, indent str
 				parts = append(parts, prettier.HardLine{})
 			}
 		}
-		doc := renderDeclaration(decl, cm)
+		doc := renderDeclaration(decl, cm, ctx)
 		parts = append(parts, doc)
 	}
 

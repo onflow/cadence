@@ -16,6 +16,7 @@ import (
 var update = flag.Bool("update", false, "update golden files")
 
 func TestSnapshot(t *testing.T) {
+	t.Parallel()
 	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
 
 	entries, err := os.ReadDir(testdataDir)
@@ -29,6 +30,7 @@ func TestSnapshot(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			dir := filepath.Join(testdataDir, name)
 			inputPath := filepath.Join(dir, "input.cdc")
 			goldenPath := filepath.Join(dir, "golden.cdc")
@@ -64,6 +66,7 @@ func TestSnapshot(t *testing.T) {
 }
 
 func TestIdempotence(t *testing.T) {
+	t.Parallel()
 	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
 
 	entries, err := os.ReadDir(testdataDir)
@@ -77,6 +80,7 @@ func TestIdempotence(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			dir := filepath.Join(testdataDir, name)
 			inputPath := filepath.Join(dir, "input.cdc")
 
@@ -104,6 +108,7 @@ func TestIdempotence(t *testing.T) {
 }
 
 func TestRoundTrip(t *testing.T) {
+	t.Parallel()
 	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
 
 	entries, err := os.ReadDir(testdataDir)
@@ -117,6 +122,7 @@ func TestRoundTrip(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			dir := filepath.Join(testdataDir, name)
 			inputPath := filepath.Join(dir, "input.cdc")
 
@@ -138,6 +144,7 @@ func TestRoundTrip(t *testing.T) {
 }
 
 func TestCommentPreservation(t *testing.T) {
+	t.Parallel()
 	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
 
 	entries, err := os.ReadDir(testdataDir)
@@ -151,6 +158,7 @@ func TestCommentPreservation(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			dir := filepath.Join(testdataDir, name)
 			inputPath := filepath.Join(dir, "input.cdc")
 
@@ -184,6 +192,112 @@ func TestCommentPreservation(t *testing.T) {
 	}
 }
 
+func TestKeepBlankLines_Zero(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun a() {}\n\n\naccess(all) fun b() {}\n")
+	opts := format.Default()
+	opts.KeepBlankLines = 0
+	got, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if strings.Contains(string(got), "\n\n") {
+		t.Errorf("expected no blank lines with KeepBlankLines=0, got:\n%s", got)
+	}
+}
+
+func TestKeepBlankLines_Two(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun a() {}\n\n\n\n\naccess(all) fun b() {}\n")
+	opts := format.Default()
+	opts.KeepBlankLines = 2
+	got, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if strings.Contains(string(got), "\n\n\n\n") {
+		t.Errorf("expected at most 2 blank lines with KeepBlankLines=2, got:\n%s", got)
+	}
+}
+
+func TestKeepBlankLines_Default(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun a() {}\n\n\n\n\naccess(all) fun b() {}\n")
+	got, err := format.Format(src, "test.cdc", format.Default())
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if strings.Contains(string(got), "\n\n\n") {
+		t.Errorf("expected at most 1 blank line with default options, got:\n%s", got)
+	}
+}
+
+func TestStripSemicolons_Default(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) let x: Int = 1;\n")
+	got, err := format.Format(src, "test.cdc", format.Default())
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if strings.Contains(string(got), ";") {
+		t.Errorf("expected semicolons stripped by default, got:\n%s", got)
+	}
+}
+
+func TestStripSemicolons_False(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) let x: Int = 1;\n")
+	opts := format.Default()
+	opts.StripSemicolons = false
+	got, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), ";") {
+		t.Errorf("expected semicolons preserved with StripSemicolons=false, got:\n%s", got)
+	}
+}
+
+func TestStripSemicolons_Idempotent(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) let x: Int = 1;\n")
+	opts := format.Default()
+	opts.StripSemicolons = false
+	first, err := format.Format(src, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("first format error: %v", err)
+	}
+	second, err := format.Format(first, "test.cdc", opts)
+	if err != nil {
+		t.Fatalf("second format error: %v", err)
+	}
+	if string(first) != string(second) {
+		t.Errorf("not idempotent with StripSemicolons=false.\n--- first ---\n%s\n--- second ---\n%s",
+			first, second)
+	}
+}
+
+func TestFormatVersion_Unsupported(t *testing.T) {
+	t.Parallel()
+	opts := format.Default()
+	opts.FormatVersion = "99"
+	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
+	if err == nil {
+		t.Fatal("expected error for unsupported format version")
+	}
+	if !strings.Contains(err.Error(), "unsupported format version") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestFormatVersion_Current(t *testing.T) {
+	t.Parallel()
+	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", format.Default())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func commentTexts(src []byte) []string {
 	comments := trivia.Scan(src)
 	texts := make([]string, len(comments))
@@ -200,9 +314,8 @@ func commentTexts(src []byte) []string {
 	return texts
 }
 
-// findRepoRoot walks up from the working directory to find the repo root
-// (identified by go.mod).
 func TestNoTrailingWhitespace(t *testing.T) {
+	t.Parallel()
 	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
 	entries, err := os.ReadDir(testdataDir)
 	if err != nil {
@@ -214,6 +327,7 @@ func TestNoTrailingWhitespace(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			input, err := os.ReadFile(filepath.Join(testdataDir, name, "input.cdc"))
 			if err != nil {
 				t.Fatalf("reading input: %v", err)
@@ -229,33 +343,6 @@ func TestNoTrailingWhitespace(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func findRepoRoot(t *testing.T) string {
-	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Fallback: try relative path from the test file's package
-			// (internal/format/) -> repo root is ../../
-			wd, _ := os.Getwd()
-			candidate := filepath.Join(wd, "..", "..")
-			if abs, err := filepath.Abs(candidate); err == nil {
-				if _, err := os.Stat(filepath.Join(abs, "go.mod")); err == nil {
-					return abs
-				}
-			}
-			t.Fatal("could not find repo root (go.mod)")
-		}
-		dir = parent
 	}
 }
 

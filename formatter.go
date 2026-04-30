@@ -15,6 +15,10 @@ import (
 // Format parses Cadence source and returns deterministically formatted output.
 // filename is used for diagnostics only; the file need not exist on disk.
 func Format(src []byte, filename string, opts Options) ([]byte, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, err
+	}
+
 	program, err := parser.ParseProgram(nil, src, parser.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("parse error: %w", err)
@@ -36,12 +40,19 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 	}
 
 	// Render AST with interleaved comments
-	doc := render.Program(program, cm, opts.LineWidth, indent)
+	ctx := &render.Context{}
+	if !opts.StripSemicolons {
+		ctx.Semicolons = trivia.ScanSemicolons(src, program)
+	}
+	doc := render.Program(program, cm, ctx)
 
 	var buf bytes.Buffer
 	prettier.Prettier(&buf, doc, opts.LineWidth, indent)
 
-	result := rejoinStringInterpolations(stripTrailingLineWhitespace(buf.Bytes()))
+	result := collapseBlankLines(
+		rejoinStringInterpolations(stripTrailingLineWhitespace(buf.Bytes())),
+		opts.KeepBlankLines,
+	)
 
 	// Verify no orphaned comments remain
 	if !cm.IsEmpty() {
@@ -146,6 +157,25 @@ func rejoinStringInterpolations(data []byte) []byte {
 	}
 
 	return result
+}
+
+// collapseBlankLines limits consecutive blank lines to at most max.
+func collapseBlankLines(data []byte, max int) []byte {
+	lines := bytes.Split(data, []byte("\n"))
+	result := make([][]byte, 0, len(lines))
+	consecutive := 0
+	for _, line := range lines {
+		if len(bytes.TrimSpace(line)) == 0 {
+			consecutive++
+			if consecutive > max {
+				continue
+			}
+		} else {
+			consecutive = 0
+		}
+		result = append(result, line)
+	}
+	return bytes.Join(result, []byte("\n"))
 }
 
 // stripTrailingLineWhitespace strips indent whitespace from blank lines.

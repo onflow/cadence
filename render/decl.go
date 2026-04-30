@@ -10,26 +10,26 @@ import (
 // renderDeclaration dispatches to a custom renderer for the declaration type
 // if we need to override the upstream Doc() behavior, otherwise falls back
 // to the default Doc().
-func renderDeclaration(decl ast.Declaration, cm *trivia.CommentMap) prettier.Doc {
+func renderDeclaration(decl ast.Declaration, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	var doc prettier.Doc
 
 	switch d := decl.(type) {
 	case *ast.FunctionDeclaration:
-		doc = renderFunction(d, cm)
+		doc = renderFunction(d, cm, ctx)
 	case *ast.CompositeDeclaration:
-		doc = renderComposite(d, cm)
+		doc = renderComposite(d, cm, ctx)
 	case *ast.InterfaceDeclaration:
-		doc = renderInterface(d, cm)
+		doc = renderInterface(d, cm, ctx)
 	case *ast.VariableDeclaration:
-		doc = renderVariable(d, cm)
+		doc = renderVariable(d, cm, ctx)
 	case *ast.FieldDeclaration:
 		doc = renderField(d, cm)
 	case *ast.SpecialFunctionDeclaration:
-		doc = renderSpecialFunction(d, cm)
+		doc = renderSpecialFunction(d, cm, ctx)
 	case *ast.EntitlementMappingDeclaration:
 		doc = renderEntitlementMapping(d, cm)
 	case *ast.TransactionDeclaration:
-		doc = renderTransaction(d, cm)
+		doc = renderTransaction(d, cm, ctx)
 	default:
 		// For unknown declaration types, use upstream Doc() and drain
 		// any descendant comments so they're not orphaned.
@@ -37,11 +37,19 @@ func renderDeclaration(decl ast.Declaration, cm *trivia.CommentMap) prettier.Doc
 		return wrapWithAllComments(decl, doc, cm)
 	}
 
-	return wrapWithComments(decl, doc, cm)
+	// Drain any remaining descendant comments (e.g., NominalType nodes
+	// inside entitlement access modifiers) that specific renderers didn't take.
+	drainDescendantComments(decl, cm, nil)
+
+	doc = wrapWithComments(decl, doc, cm)
+	if ctx.HasSemicolon(decl) {
+		doc = prettier.Concat{doc, prettier.Text(";")}
+	}
+	return doc
 }
 
 // renderFunction renders a function declaration with access on the same line.
-func renderFunction(d *ast.FunctionDeclaration, cm *trivia.CommentMap) prettier.Doc {
+func renderFunction(d *ast.FunctionDeclaration, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Access modifier
@@ -84,7 +92,7 @@ func renderFunction(d *ast.FunctionDeclaration, cm *trivia.CommentMap) prettier.
 
 	// Function body
 	if d.FunctionBlock != nil {
-		parts = append(parts, prettier.Space, renderFunctionBlock(d.FunctionBlock, cm))
+		parts = append(parts, prettier.Space, renderFunctionBlock(d.FunctionBlock, cm, ctx))
 	}
 
 	return parts
@@ -92,7 +100,7 @@ func renderFunction(d *ast.FunctionDeclaration, cm *trivia.CommentMap) prettier.
 
 // renderFunctionBlock renders a { pre { } post { } stmts } block with
 // comment interleaving between statements.
-func renderFunctionBlock(b *ast.FunctionBlock, cm *trivia.CommentMap) prettier.Doc {
+func renderFunctionBlock(b *ast.FunctionBlock, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	if b.IsEmpty() {
 		return prettier.Text("{}")
 	}
@@ -135,7 +143,7 @@ func renderFunctionBlock(b *ast.FunctionBlock, cm *trivia.CommentMap) prettier.D
 			if needSep {
 				body = append(body, prettier.HardLine{})
 			}
-			doc := renderStatement(stmt, cm)
+			doc := renderStatement(stmt, cm, ctx)
 			body = append(body, doc)
 			needSep = true
 		}
@@ -161,30 +169,35 @@ func renderFunctionBlock(b *ast.FunctionBlock, cm *trivia.CommentMap) prettier.D
 
 // renderStatement dispatches to custom renderers for specific statement types,
 // otherwise falls back to the upstream Doc().
-func renderStatement(stmt ast.Statement, cm *trivia.CommentMap) prettier.Doc {
+func renderStatement(stmt ast.Statement, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
+	var doc prettier.Doc
 	switch s := stmt.(type) {
 	case *ast.ReturnStatement:
-		return wrapWithComments(s, renderReturnStatement(s, cm), cm)
+		doc = wrapWithComments(s, renderReturnStatement(s, cm, ctx), cm)
 	case *ast.ForStatement:
-		return wrapWithComments(s, renderForStatement(s, cm), cm)
+		doc = wrapWithComments(s, renderForStatement(s, cm, ctx), cm)
 	case *ast.WhileStatement:
-		return wrapWithComments(s, renderWhileStatement(s, cm), cm)
+		doc = wrapWithComments(s, renderWhileStatement(s, cm, ctx), cm)
 	case *ast.IfStatement:
-		return wrapWithComments(s, renderIfStatement(s, cm), cm)
+		doc = wrapWithComments(s, renderIfStatement(s, cm, ctx), cm)
 	case *ast.VariableDeclaration:
-		return wrapWithComments(s, renderVariable(s, cm), cm)
+		doc = wrapWithComments(s, renderVariable(s, cm, ctx), cm)
 	case *ast.AssignmentStatement:
-		return wrapWithComments(s, renderAssignmentStatement(s, cm), cm)
+		doc = wrapWithComments(s, renderAssignmentStatement(s, cm, ctx), cm)
 	case *ast.ExpressionStatement:
-		return wrapWithComments(s, renderExpression(s.Expression, cm), cm)
+		doc = wrapWithComments(s, renderExpression(s.Expression, cm, ctx), cm)
 	default:
-		return wrapWithAllComments(stmt, stmt.Doc(), cm)
+		doc = wrapWithAllComments(stmt, stmt.Doc(), cm)
 	}
+	if ctx.HasSemicolon(stmt) {
+		doc = prettier.Concat{doc, prettier.Text(";")}
+	}
+	return doc
 }
 
 // renderBlock renders the body of a block by iterating statements and
 // interleaving comments. Returns the body content without braces.
-func renderBlock(b *ast.Block, cm *trivia.CommentMap) prettier.Doc {
+func renderBlock(b *ast.Block, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	if b == nil || len(b.Statements) == 0 {
 		return nil
 	}
@@ -194,15 +207,15 @@ func renderBlock(b *ast.Block, cm *trivia.CommentMap) prettier.Doc {
 		if i > 0 {
 			body = append(body, prettier.HardLine{})
 		}
-		doc := renderStatement(stmt, cm)
+		doc := renderStatement(stmt, cm, ctx)
 		body = append(body, doc)
 	}
 	return body
 }
 
 // renderBlockBraces wraps a block body in { ... } with indentation.
-func renderBlockBraces(b *ast.Block, cm *trivia.CommentMap) prettier.Doc {
-	body := renderBlock(b, cm)
+func renderBlockBraces(b *ast.Block, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
+	body := renderBlock(b, cm, ctx)
 	if body == nil {
 		return prettier.Text("{}")
 	}
@@ -218,51 +231,51 @@ func renderBlockBraces(b *ast.Block, cm *trivia.CommentMap) prettier.Doc {
 }
 
 // renderForStatement renders a for-in loop with comment interleaving in the body.
-func renderForStatement(s *ast.ForStatement, cm *trivia.CommentMap) prettier.Doc {
+func renderForStatement(s *ast.ForStatement, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	parts = append(parts, prettier.Text("for "))
 	parts = append(parts, prettier.Text(s.Identifier.Identifier))
 	parts = append(parts, prettier.Text(" in "))
-	parts = append(parts, renderExpression(s.Value, cm))
+	parts = append(parts, renderExpression(s.Value, cm, ctx))
 	parts = append(parts, prettier.Space)
-	parts = append(parts, renderBlockBraces(s.Block, cm))
+	parts = append(parts, renderBlockBraces(s.Block, cm, ctx))
 
 	return parts
 }
 
 // renderWhileStatement renders a while loop with comment interleaving in the body.
-func renderWhileStatement(s *ast.WhileStatement, cm *trivia.CommentMap) prettier.Doc {
+func renderWhileStatement(s *ast.WhileStatement, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	parts = append(parts, prettier.Text("while "))
-	parts = append(parts, renderExpression(s.Test, cm))
+	parts = append(parts, renderExpression(s.Test, cm, ctx))
 	parts = append(parts, prettier.Space)
-	parts = append(parts, renderBlockBraces(s.Block, cm))
+	parts = append(parts, renderBlockBraces(s.Block, cm, ctx))
 
 	return parts
 }
 
 // renderIfStatement renders an if/else-if/else chain with comment interleaving.
-func renderIfStatement(s *ast.IfStatement, cm *trivia.CommentMap) prettier.Doc {
+func renderIfStatement(s *ast.IfStatement, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	parts = append(parts, prettier.Text("if "))
 	parts = append(parts, wrapWithAllComments(s.Test, s.Test.Doc(), cm))
 	parts = append(parts, prettier.Space)
-	parts = append(parts, renderBlockBraces(s.Then, cm))
+	parts = append(parts, renderBlockBraces(s.Then, cm, ctx))
 
 	if s.Else != nil && len(s.Else.Statements) > 0 {
 		// Check if the else block is a single if-statement (else-if chain)
 		if len(s.Else.Statements) == 1 {
 			if elseIf, ok := s.Else.Statements[0].(*ast.IfStatement); ok {
 				parts = append(parts, prettier.Text(" else "))
-				parts = append(parts, wrapWithComments(elseIf, renderIfStatement(elseIf, cm), cm))
+				parts = append(parts, wrapWithComments(elseIf, renderIfStatement(elseIf, cm, ctx), cm))
 				return parts
 			}
 		}
 		parts = append(parts, prettier.Text(" else "))
-		parts = append(parts, renderBlockBraces(s.Else, cm))
+		parts = append(parts, renderBlockBraces(s.Else, cm, ctx))
 	}
 
 	return parts
@@ -270,14 +283,14 @@ func renderIfStatement(s *ast.IfStatement, cm *trivia.CommentMap) prettier.Doc {
 
 // renderAssignmentStatement renders target = value without the upstream's
 // extra Indent wrapper that over-indents function call arguments.
-func renderAssignmentStatement(s *ast.AssignmentStatement, cm *trivia.CommentMap) prettier.Doc {
+func renderAssignmentStatement(s *ast.AssignmentStatement, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
-	parts = append(parts, renderExpression(s.Target, cm))
+	parts = append(parts, renderExpression(s.Target, cm, ctx))
 	parts = append(parts, prettier.Space)
 	parts = append(parts, s.Transfer.Doc())
 	parts = append(parts, prettier.Space)
-	parts = append(parts, renderExpression(s.Value, cm))
+	parts = append(parts, renderExpression(s.Value, cm, ctx))
 
 	return parts
 }
@@ -286,7 +299,7 @@ func renderAssignmentStatement(s *ast.AssignmentStatement, cm *trivia.CommentMap
 // (e.g., ?? nil-coalescing), wraps in Indent so continuation lines are
 // indented relative to "return". Other expressions render directly to
 // avoid over-indenting function call arguments.
-func renderReturnStatement(s *ast.ReturnStatement, cm *trivia.CommentMap) prettier.Doc {
+func renderReturnStatement(s *ast.ReturnStatement, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	if s.Expression == nil {
 		return prettier.Text("return")
 	}
@@ -308,7 +321,7 @@ func renderReturnStatement(s *ast.ReturnStatement, cm *trivia.CommentMap) pretti
 		return parts
 	}
 
-	exprDoc := renderExpression(s.Expression, cm)
+	exprDoc := renderExpression(s.Expression, cm, ctx)
 	return prettier.Concat{
 		prettier.Text("return "),
 		exprDoc,
@@ -317,10 +330,10 @@ func renderReturnStatement(s *ast.ReturnStatement, cm *trivia.CommentMap) pretti
 
 // renderComposite renders a composite declaration (resource, struct, contract, etc.)
 // with access on the same line.
-func renderComposite(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettier.Doc {
+func renderComposite(d *ast.CompositeDeclaration, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	// Events use a special compact format (no members block with braces)
 	if d.CompositeKind == common.CompositeKindEvent {
-		return renderEvent(d, cm)
+		return renderEvent(d, cm, ctx)
 	}
 
 	parts := prettier.Concat{}
@@ -359,14 +372,14 @@ func renderComposite(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettie
 	}
 
 	// Members
-	parts = append(parts, renderMembersBlock(d.Members, cm))
+	parts = append(parts, renderMembersBlock(d.Members, cm, ctx))
 	return parts
 }
 
 // renderEvent renders an event declaration with comments interleaved between
 // parameters. The upstream EventDoc() + drain approach displaces parameter
 // comments outside the closing paren.
-func renderEvent(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettier.Doc {
+func renderEvent(d *ast.CompositeDeclaration, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Access modifier
@@ -400,7 +413,7 @@ func renderEvent(d *ast.CompositeDeclaration, cm *trivia.CommentMap) prettier.Do
 // interleaving inside prepare/execute blocks. Without this, the default
 // wrapWithAllComments path drains all block-interior comments and appends
 // them after the closing brace.
-func renderTransaction(d *ast.TransactionDeclaration, cm *trivia.CommentMap) prettier.Doc {
+func renderTransaction(d *ast.TransactionDeclaration, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	doc := prettier.Concat{prettier.Text("transaction")}
 
 	// Parameters
@@ -417,13 +430,13 @@ func renderTransaction(d *ast.TransactionDeclaration, cm *trivia.CommentMap) pre
 
 	// Fields
 	for _, field := range d.Fields {
-		fieldDoc := renderDeclaration(field, cm)
+		fieldDoc := renderDeclaration(field, cm, ctx)
 		contents = append(contents, fieldDoc)
 	}
 
 	// Prepare block
 	if d.Prepare != nil {
-		prepareDoc := renderDeclaration(d.Prepare, cm)
+		prepareDoc := renderDeclaration(d.Prepare, cm, ctx)
 		contents = append(contents, prepareDoc)
 	}
 
@@ -436,7 +449,7 @@ func renderTransaction(d *ast.TransactionDeclaration, cm *trivia.CommentMap) pre
 
 	// Execute block
 	if d.Execute != nil {
-		executeDoc := renderDeclaration(d.Execute, cm)
+		executeDoc := renderDeclaration(d.Execute, cm, ctx)
 		contents = append(contents, executeDoc)
 	}
 
@@ -526,6 +539,10 @@ func renderParameterList(paramList *ast.ParameterList, cm *trivia.CommentMap) (p
 		return paramList.Doc(), pendingTrailing
 	}
 
+	// Drain any remaining descendant comments (e.g., on NominalType children
+	// of TypeAnnotation nodes) so they don't become orphaned.
+	drainWalkable(paramList, cm)
+
 	// Comments present: force parameters to break across lines.
 	// Same-line comments go after the comma on the same line.
 	inner := prettier.Concat{}
@@ -534,7 +551,7 @@ func renderParameterList(paramList *ast.ParameterList, cm *trivia.CommentMap) (p
 			inner = append(inner, prettier.Text(","))
 			// Previous param's same-line comment after comma
 			if params[i-1].sameLine != nil {
-				inner = append(inner, prettier.Text("  "), renderCommentGroupInline(params[i-1].sameLine))
+				inner = append(inner, prettier.Text("  "), renderCommentGroup(params[i-1].sameLine))
 			}
 			inner = append(inner, prettier.HardLine{})
 		}
@@ -547,7 +564,7 @@ func renderParameterList(paramList *ast.ParameterList, cm *trivia.CommentMap) (p
 	// Last param's same-line comment
 	lastParam := params[len(params)-1]
 	if lastParam.sameLine != nil {
-		inner = append(inner, prettier.Text("  "), renderCommentGroupInline(lastParam.sameLine))
+		inner = append(inner, prettier.Text("  "), renderCommentGroup(lastParam.sameLine))
 	}
 
 	return prettier.Concat{
@@ -562,7 +579,7 @@ func renderParameterList(paramList *ast.ParameterList, cm *trivia.CommentMap) (p
 }
 
 // renderInterface renders an interface declaration with access on the same line.
-func renderInterface(d *ast.InterfaceDeclaration, cm *trivia.CommentMap) prettier.Doc {
+func renderInterface(d *ast.InterfaceDeclaration, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	if d.Access != ast.AccessNotSpecified {
@@ -591,13 +608,13 @@ func renderInterface(d *ast.InterfaceDeclaration, cm *trivia.CommentMap) prettie
 		}
 	}
 
-	parts = append(parts, renderMembersBlock(d.Members, cm))
+	parts = append(parts, renderMembersBlock(d.Members, cm, ctx))
 	return parts
 }
 
 // renderMembersBlock renders a { members } block with each member using
 // our custom declaration renderers.
-func renderMembersBlock(members *ast.Members, cm *trivia.CommentMap) prettier.Doc {
+func renderMembersBlock(members *ast.Members, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	if members == nil {
 		return prettier.Text(" {}")
 	}
@@ -612,7 +629,7 @@ func renderMembersBlock(members *ast.Members, cm *trivia.CommentMap) prettier.Do
 		if i > 0 {
 			body = append(body, prettier.HardLine{}, prettier.HardLine{})
 		}
-		doc := renderDeclaration(decl, cm)
+		doc := renderDeclaration(decl, cm, ctx)
 		body = append(body, doc)
 	}
 
@@ -629,7 +646,7 @@ func renderMembersBlock(members *ast.Members, cm *trivia.CommentMap) prettier.Do
 }
 
 // renderVariable renders a variable declaration with access on the same line.
-func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap) prettier.Doc {
+func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	parts := prettier.Concat{}
 
 	// Access modifier
@@ -678,7 +695,7 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap) prettier.
 				parts = append(parts, prettier.HardLine{}, e)
 			}
 		} else {
-			valueDoc := renderExpression(d.Value, cm)
+			valueDoc := renderExpression(d.Value, cm, ctx)
 			parts = append(parts, prettier.Space)
 			parts = append(parts, valueDoc)
 		}
@@ -709,7 +726,7 @@ func drainConditionComments(conds *ast.Conditions, cm *trivia.CommentMap) {
 
 // renderSpecialFunction renders init/destroy/prepare declarations.
 // These don't use the "fun" keyword.
-func renderSpecialFunction(d *ast.SpecialFunctionDeclaration, cm *trivia.CommentMap) prettier.Doc {
+func renderSpecialFunction(d *ast.SpecialFunctionDeclaration, cm *trivia.CommentMap, ctx *Context) prettier.Doc {
 	fn := d.FunctionDeclaration
 	parts := prettier.Concat{}
 
@@ -739,7 +756,7 @@ func renderSpecialFunction(d *ast.SpecialFunctionDeclaration, cm *trivia.Comment
 
 	// Body
 	if fn.FunctionBlock != nil {
-		parts = append(parts, prettier.Space, renderFunctionBlock(fn.FunctionBlock, cm))
+		parts = append(parts, prettier.Space, renderFunctionBlock(fn.FunctionBlock, cm, ctx))
 	}
 
 	return parts
@@ -814,5 +831,3 @@ func renderEntitlementMapping(d *ast.EntitlementMappingDeclaration, _ *trivia.Co
 
 	return parts
 }
-
-

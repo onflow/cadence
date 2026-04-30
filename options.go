@@ -1,12 +1,10 @@
 package format
 
-// QuoteStyle controls string literal quoting. Only double quotes are valid
-// in Cadence, so this is a placeholder for potential future expansion.
-type QuoteStyle int
+import "fmt"
 
-const (
-	DoubleQuote QuoteStyle = iota
-)
+// CurrentFormatVersion identifies the formatting algorithm version.
+// Bump when rewrite pass order changes or formatting rules change.
+const CurrentFormatVersion = "1"
 
 // Options controls formatting behavior. All fields have sensible defaults
 // via Default().
@@ -15,11 +13,21 @@ type Options struct {
 	Indent          string
 	UseTabs         bool
 	SortImports     bool
-	QuoteStyle      QuoteStyle
 	StripSemicolons bool
 	KeepBlankLines  int
 	FormatVersion   string
 	SkipVerify      bool
+}
+
+// Validate checks that the Options are valid.
+func (o Options) Validate() error {
+	if o.FormatVersion != CurrentFormatVersion {
+		return fmt.Errorf("unsupported format version %q (current: %s)", o.FormatVersion, CurrentFormatVersion)
+	}
+	if o.KeepBlankLines < 0 {
+		return fmt.Errorf("KeepBlankLines must be >= 0, got %d", o.KeepBlankLines)
+	}
+	return nil
 }
 
 // Default returns the canonical default formatting options.
@@ -29,9 +37,8 @@ func Default() Options {
 		Indent:          "    ",
 		UseTabs:         false,
 		SortImports:     true,
-		QuoteStyle:      DoubleQuote,
 		StripSemicolons: true,
 		KeepBlankLines:  1,
-		FormatVersion:   "1",
+		FormatVersion:   CurrentFormatVersion,
 	}
 }

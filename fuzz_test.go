@@ -47,7 +47,7 @@ func FuzzRoundtrip(f *testing.F) {
 
 func seedFromTestdata(f *testing.F) {
 	f.Helper()
-	root := findFuzzRepoRoot(f)
+	root := findRepoRoot(f)
 	testdataDir := filepath.Join(root, "testdata", "format")
 
 	entries, err := os.ReadDir(testdataDir)
@@ -68,20 +68,3 @@ func seedFromTestdata(f *testing.F) {
 	}
 }
 
-func findFuzzRepoRoot(f *testing.F) string {
-	f.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		f.Fatal(err)
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			f.Fatal("could not find repo root")
-		}
-		dir = parent
-	}
-}

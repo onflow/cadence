@@ -27,7 +27,7 @@ func wrapWithComments(elem ast.Element, doc prettier.Doc, cm *trivia.CommentMap)
 	parts = append(parts, doc)
 
 	if sameLine != nil {
-		parts = append(parts, prettier.Text("  "), renderCommentGroupInline(sameLine))
+		parts = append(parts, prettier.Text("  "), renderCommentGroup(sameLine))
 	}
 
 	for _, g := range trailing {
@@ -51,12 +51,6 @@ func renderCommentGroup(g *trivia.CommentGroup) prettier.Doc {
 		parts = append(parts, renderComment(c))
 	}
 	return parts
-}
-
-// renderCommentGroupInline renders a comment group for same-line placement
-// (no leading HardLine).
-func renderCommentGroupInline(g *trivia.CommentGroup) prettier.Doc {
-	return renderCommentGroup(g)
 }
 
 // renderComment renders a single comment. Line comments have trailing

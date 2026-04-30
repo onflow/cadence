@@ -13,6 +13,8 @@ type Rewriter interface {
 }
 
 // Apply runs all rewriters in the canonical fixed order.
+// If you change the pass order or add/remove passes,
+// bump format.CurrentFormatVersion in options.go.
 func Apply(prog *ast.Program, cm *trivia.CommentMap) error {
 	rewriters := []Rewriter{
 		&importsSorter{},
