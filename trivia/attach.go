@@ -194,10 +194,10 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 
 			for gi < len(groups) && groups[gi].EndPos().Offset < nextStart.Offset {
 				g := groups[gi]
-				// Disambiguation heuristic:
-				// 1. Same-line wins (handled above)
-				// 2. Blank line between previous sibling and comment → Leading of next
-				// 3. Otherwise → Trailing of previous
+				// Disambiguation heuristic for comments between siblings:
+				// 1. Same-line comments are handled above
+				// 2. Blank line between previous sibling end and comment → Leading of next
+				// 3. No blank line (adjacent) → Trailing of previous
 				if blankLineBetween(nodeEnd, g.StartPos()) {
 					cm.Leading[siblings[si+1]] = append(cm.Leading[siblings[si+1]], g)
 				} else {

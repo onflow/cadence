@@ -64,9 +64,9 @@ func (s *scanner) scan() []Comment {
 	return comments
 }
 
-// scanLineComment consumes a line comment starting at the current position
-// (which must be at '/'). Returns the comment with Kind set to either
-// KindLine or KindDocLine.
+// scanLineComment consumes a line comment (// ...) starting at the current
+// position (which must be at the first '/' of '//'). Returns the comment
+// with Kind set to either KindLine or KindDocLine.
 func (s *scanner) scanLineComment() Comment {
 	start := s.position()
 	startOff := s.pos

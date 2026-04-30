@@ -48,8 +48,8 @@ func Program(prog *ast.Program, cm *trivia.CommentMap, ctx *Context) prettier.Do
 }
 
 // declSeparation returns the number of HardLines to insert between
-// two consecutive declarations. Imports in the same group get 1 (just a newline);
-// imports in different groups or non-imports get 2 (blank line).
+// two consecutive declarations. Imports in the same group get 1 (no blank line);
+// imports in different groups or non-imports get 2 (one blank line).
 func declSeparation(prev, next ast.Declaration) int {
 	prevImp, prevIsImport := prev.(*ast.ImportDeclaration)
 	nextImp, nextIsImport := next.(*ast.ImportDeclaration)
