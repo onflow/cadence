@@ -1434,11 +1434,15 @@ func (e *BinaryExpression) Doc() prettier.Doc {
 			prettier.Group{
 				Doc: leftDoc,
 			},
-			prettier.Line{},
-			e.Operation.Doc(),
-			prettier.Space,
-			prettier.Group{
-				Doc: rightDoc,
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.Line{},
+					e.Operation.Doc(),
+					prettier.Space,
+					prettier.Group{
+						Doc: rightDoc,
+					},
+				},
 			},
 		},
 	}
@@ -1636,8 +1640,10 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			functionFunKeywordDoc,
-			prettier.Space,
 		)
+		if identifier != "" {
+			doc = append(doc, prettier.Space)
+		}
 	}
 
 	if identifier != "" {
@@ -1766,10 +1772,14 @@ func (e *CastingExpression) Doc() prettier.Doc {
 			prettier.Group{
 				Doc: doc,
 			},
-			prettier.Line{},
-			e.Operation.Doc(),
-			prettier.Space,
-			docOrEmpty(e.TypeAnnotation),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.Line{},
+					e.Operation.Doc(),
+					prettier.Space,
+					docOrEmpty(e.TypeAnnotation),
+				},
+			},
 		},
 	}
 }

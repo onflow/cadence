@@ -246,24 +246,26 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 
 		require.Equal(
 			t,
-			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.Line{},
-				prettier.Text("entitlement "),
-				prettier.Text("mapping "),
-				prettier.Text("AB"),
-				prettier.Space,
-				prettier.Text("{"),
-				prettier.HardLine{},
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.Text(""),
-						prettier.Text(" -> "),
-						prettier.Text(""),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("access(all)"),
+					prettier.Line{},
+					prettier.Text("entitlement "),
+					prettier.Text("mapping "),
+					prettier.Text("AB"),
+					prettier.Space,
+					prettier.Text("{"),
+					prettier.HardLine{},
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Text(""),
+							prettier.Text(" -> "),
+							prettier.Text(""),
+						},
 					},
+					prettier.HardLine{},
+					prettier.Text("}"),
 				},
-				prettier.HardLine{},
-				prettier.Text("}"),
 			},
 			decl.Doc(),
 		)
@@ -308,31 +310,33 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 
 		require.Equal(
 			t,
-			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.Line{},
-				prettier.Text("entitlement "),
-				prettier.Text("mapping "),
-				prettier.Text("AB"),
-				prettier.Space,
-				prettier.Text("{"),
-				prettier.HardLine{},
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.Concat{
-							prettier.Text("include "),
-							prettier.Text("X"),
-						},
-						prettier.HardLine{},
-						prettier.Concat{
-							prettier.Text("X"),
-							prettier.Text(" -> "),
-							prettier.Text("Y"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("access(all)"),
+					prettier.Line{},
+					prettier.Text("entitlement "),
+					prettier.Text("mapping "),
+					prettier.Text("AB"),
+					prettier.Space,
+					prettier.Text("{"),
+					prettier.HardLine{},
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Concat{
+								prettier.Text("include "),
+								prettier.Text("X"),
+							},
+							prettier.HardLine{},
+							prettier.Concat{
+								prettier.Text("X"),
+								prettier.Text(" -> "),
+								prettier.Text("Y"),
+							},
 						},
 					},
+					prettier.HardLine{},
+					prettier.Text("}"),
 				},
-				prettier.HardLine{},
-				prettier.Text("}"),
 			},
 			decl.Doc(),
 		)

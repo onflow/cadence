@@ -340,7 +340,9 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		mappingEndDoc,
 	)
 
-	return doc
+	return prettier.Group{
+		Doc: doc,
+	}
 }
 
 func (d *EntitlementMappingDeclaration) String() string {
