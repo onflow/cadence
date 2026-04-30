@@ -756,8 +756,8 @@ func renderVariable(d *ast.VariableDeclaration, cm *trivia.CommentMap, ctx *Cont
 			// Move in reverse source order so the prepends produce source order:
 			// trailing comments are between the type and value, same-line is on
 			// the type's own line (earlier in source than trailing).
-			cm.MoveTrailingLineCommentsToLeading(d.TypeAnnotation, d.Value)
-			cm.MoveSameLineLineCommentToLeading(d.TypeAnnotation, d.Value)
+			cm.MoveTrailingToLeading(d.TypeAnnotation, d.Value)
+			cm.MoveSameLineToLeading(d.TypeAnnotation, d.Value)
 		}
 		parts = append(parts, prettier.Text(": "), wrapWithAllComments(d.TypeAnnotation, d.TypeAnnotation.Doc(), cm))
 	}

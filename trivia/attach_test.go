@@ -307,3 +307,67 @@ access(all) fun b() {}
 		t.Errorf("footer: got %d, want 1", len(cm.Footer))
 	}
 }
+
+func TestTrueEndPosition(t *testing.T) {
+	tests := []struct {
+		name       string
+		source     string
+		reportedAt int // offset of the reported end
+		reportedLn int // line of the reported end
+		wantOffset int
+		wantLine   int
+	}{
+		{
+			name:       "no whitespace, no clip",
+			source:     "abc",
+			reportedAt: 2,
+			reportedLn: 1,
+			wantOffset: 2,
+			wantLine:   1,
+		},
+		{
+			name:       "trailing space same line",
+			source:    "abc  ",
+			reportedAt: 4,
+			reportedLn: 1,
+			wantOffset: 2, // 'c'
+			wantLine:   1,
+		},
+		{
+			name:       "reported end is the newline that closes its own line",
+			source:     "ab\n",
+			reportedAt: 2, // '\n' is on line 1
+			reportedLn: 1,
+			wantOffset: 1, // 'b'
+			wantLine:   1,
+		},
+		{
+			name:       "reported end on next-line indent (Pragma/VoidExpression quirk)",
+			source:     "#()\n    //x",
+			reportedAt: 7, // last space of indent before '//' on line 2
+			reportedLn: 2,
+			wantOffset: 2, // ')'
+			wantLine:   1,
+		},
+		{
+			name:       "multiple newlines walked back",
+			source:     "ab\n\n\ncd",
+			reportedAt: 4, // third newline; line 3 (each newline is on the line it terminates)
+			reportedLn: 3,
+			wantOffset: 1, // 'b'
+			wantLine:   1,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := trueEndPosition(
+				ast.Position{Offset: tc.reportedAt, Line: tc.reportedLn, Column: 0},
+				[]byte(tc.source),
+			)
+			if got.Offset != tc.wantOffset || got.Line != tc.wantLine {
+				t.Errorf("got offset=%d line=%d, want offset=%d line=%d",
+					got.Offset, got.Line, tc.wantOffset, tc.wantLine)
+			}
+		})
+	}
+}

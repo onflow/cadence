@@ -94,7 +94,7 @@ func Attach(program *ast.Program, groups []*CommentGroup, source []byte) *Commen
 		elements[i] = d
 	}
 
-	remaining := attachLevel(cm, elements, groups, true)
+	remaining := attachLevel(cm, elements, groups, true, source)
 
 	// Anything left over is footer
 	cm.Footer = append(cm.Footer, remaining...)
@@ -104,7 +104,7 @@ func Attach(program *ast.Program, groups []*CommentGroup, source []byte) *Commen
 // attachLevel distributes comment groups among a sequence of sibling elements.
 // It recurses into each element's children for groups that fall inside the element.
 // Returns any groups not consumed (after the last sibling).
-func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup, isTopLevel bool) []*CommentGroup {
+func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup, isTopLevel bool, source []byte) []*CommentGroup {
 	if len(groups) == 0 {
 		return nil
 	}
@@ -142,7 +142,17 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 	for si := 0; si < len(siblings); si++ {
 		node := siblings[si]
 		nodeStart := node.StartPosition()
-		nodeEnd := node.EndPosition(nil)
+		// nodeEndRaw is what the parser reports — used for the inside check
+		// because comments physically inside the un-clipped span belong to
+		// descendants of node.
+		nodeEndRaw := node.EndPosition(nil)
+		// nodeEnd is the syntactic end (last non-whitespace byte). Used for
+		// sameLine and between-sibling decisions because some upstream
+		// constructs report an end position past their closing token (e.g.
+		// VoidExpression `()` whose EndPos is the start of the *next* token,
+		// which on multi-line input lands on the next line's indent and pulls
+		// a following comment into a spurious sameLine attachment).
+		nodeEnd := trueEndPosition(nodeEndRaw, source)
 
 		// Collect groups that fall inside this node (start after node start, end at or before node end)
 		var inside []*CommentGroup
@@ -151,7 +161,7 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 			gStart := g.StartPos()
 			gEnd := g.EndPos()
 
-			if gStart.Offset > nodeStart.Offset && gEnd.Offset <= nodeEnd.Offset {
+			if gStart.Offset > nodeStart.Offset && gEnd.Offset <= nodeEndRaw.Offset {
 				inside = append(inside, g)
 				gi++
 				continue
@@ -162,7 +172,7 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 		// Recursively handle inside groups
 		if len(inside) > 0 {
 			children := getChildren(node)
-			leftover := attachLevel(cm, children, inside, false)
+			leftover := attachLevel(cm, children, inside, false, source)
 			// Leftover from inside = trailing of last child, or dangling
 			if len(leftover) > 0 {
 				if len(children) > 0 {
@@ -213,7 +223,7 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 	// left unconsumed and incorrectly classified as footer/header by the caller.
 	if len(siblings) > 0 && gi < len(groups) {
 		lastNode := siblings[len(siblings)-1]
-		lastEnd := lastNode.EndPosition(nil)
+		lastEnd := trueEndPosition(lastNode.EndPosition(nil), source)
 		if sl := cm.SameLine[lastNode]; sl != nil {
 			lastEnd = sl.EndPos()
 		}
@@ -230,6 +240,41 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 
 	// Return unconsumed groups
 	return groups[gi:]
+}
+
+// trueEndPosition returns the position of the last non-whitespace byte at or
+// before reportedEnd.Offset. Compensates for upstream parser quirks where
+// some node EndPositions land on the next token's whitespace — notably
+// VoidExpression `()`, whose EndPos is set to p.current.EndPos AFTER consuming
+// `)`, which on multi-line input is the start of the next line's indent.
+// Without this, a comment on the line after such a node attaches as SameLine,
+// which differs from how a re-parse classifies the same comment after the
+// formatter has normalized the layout, breaking idempotence.
+//
+// Column is left as-is since attach.go only reads Line and Offset for its
+// decisions.
+func trueEndPosition(reportedEnd ast.Position, source []byte) ast.Position {
+	if len(source) == 0 {
+		return reportedEnd
+	}
+	offset := reportedEnd.Offset
+	if offset >= len(source) {
+		offset = len(source) - 1
+	}
+	line := reportedEnd.Line
+	for offset > 0 {
+		b := source[offset]
+		if b != ' ' && b != '\t' && b != '\n' && b != '\r' {
+			break
+		}
+		// About to move offset → offset-1. The line decreases when the byte
+		// we're moving onto is `\n` (the `\n` itself is on the prior line).
+		if source[offset-1] == '\n' {
+			line--
+		}
+		offset--
+	}
+	return ast.Position{Offset: offset, Line: line, Column: reportedEnd.Column}
 }
 
 // getChildren returns the direct children of an AST element, sorted by position.
@@ -280,53 +325,27 @@ func (cm *CommentMap) HasLeadingLineComment(n ast.Element) bool {
 	return false
 }
 
-// MoveTrailingLineCommentsToLeading transfers any line-comment groups from
-// cm.Trailing[from] to the front of cm.Leading[to]. Block-comment groups stay
-// where they are. Used by renderers that need to render an inter-token
-// line comment as leading-of-next instead of trailing-of-prev so that the
-// `//` lands on its own line in output.
-func (cm *CommentMap) MoveTrailingLineCommentsToLeading(from, to ast.Element) {
+// MoveTrailingToLeading transfers all comment groups from cm.Trailing[from]
+// to the front of cm.Leading[to]. Used by renderers that need to render an
+// inter-token comment as leading-of-next instead of trailing-of-prev so the
+// comment renders in a position that re-parses to the same attach key
+// (avoids idempotence flips where a comment between two tokens of one
+// declaration lands as Trailing on one pass and SameLine/Leading on another).
+func (cm *CommentMap) MoveTrailingToLeading(from, to ast.Element) {
 	trailing := cm.Trailing[from]
 	if len(trailing) == 0 {
 		return
 	}
-	var keep []*CommentGroup
-	var move []*CommentGroup
-	for _, g := range trailing {
-		if len(g.Comments) > 0 {
-			last := g.Comments[len(g.Comments)-1]
-			if last.Kind == KindLine || last.Kind == KindDocLine {
-				move = append(move, g)
-				continue
-			}
-		}
-		keep = append(keep, g)
-	}
-	if len(move) == 0 {
-		return
-	}
-	if len(keep) == 0 {
-		delete(cm.Trailing, from)
-	} else {
-		cm.Trailing[from] = keep
-	}
-	cm.Leading[to] = append(move, cm.Leading[to]...)
+	delete(cm.Trailing, from)
+	cm.Leading[to] = append(trailing, cm.Leading[to]...)
 }
 
-// MoveSameLineLineCommentToLeading moves a `//`-style same-line comment from
-// cm.SameLine[from] to the front of cm.Leading[to]. No-op if SameLine[from]
-// is empty or is a block comment. Used so a sameLine line comment on a
-// non-terminal child (e.g. TypeAnnotation inside VariableDeclaration) is
-// re-rendered as leading of the next sibling, otherwise the wrapWithComments
-// emit of `node  //` is followed by parent-emitted tokens on the same line
-// and the comment swallows them.
-func (cm *CommentMap) MoveSameLineLineCommentToLeading(from, to ast.Element) {
+// MoveSameLineToLeading moves the same-line comment from cm.SameLine[from] to
+// the front of cm.Leading[to]. No-op if SameLine[from] is empty. See
+// MoveTrailingToLeading for rationale.
+func (cm *CommentMap) MoveSameLineToLeading(from, to ast.Element) {
 	g := cm.SameLine[from]
-	if g == nil || len(g.Comments) == 0 {
-		return
-	}
-	last := g.Comments[len(g.Comments)-1]
-	if last.Kind != KindLine && last.Kind != KindDocLine {
+	if g == nil {
 		return
 	}
 	delete(cm.SameLine, from)
