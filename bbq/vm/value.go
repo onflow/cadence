@@ -48,15 +48,13 @@ func ConvertAndBoxWithValidation(
 func ConvertAndBox(
 	context *Context,
 	value Value,
-	staticValueType, targetType bbq.StaticType,
+	targetType bbq.StaticType,
 ) Value {
-	valueSemaType := context.SemaTypeFromStaticType(staticValueType)
 	targetSemaType := context.SemaTypeFromStaticType(targetType)
 
 	return interpreter.ConvertAndBox(
 		context,
 		value,
-		valueSemaType,
 		targetSemaType,
 	)
 }
