@@ -241,7 +241,11 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 		inter,
 		executor.functionName,
 		common.DeclarationKindFunction,
-		nil, // Used internally, and the function-value is not moved around. OK to pass `nil`.
+
+		// Calling `GetMember` on the composite value, not on a reference value.
+		// Also, used internally, and the function-value is not moved around.
+		// Therefore, "accessedReference" is `nil`.
+		nil,
 	)
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)

@@ -389,7 +389,10 @@ func ReceiverReference(
 		if storageRef, isStorageReference := accessedReference.(*StorageReferenceValue); isStorageReference {
 			// If this is accessed via a storage reference, then narrow the borrow-type to match
 			// the type of the actual stored value.
-			// See the description of `storageReferenceWithNarrowedType` for more details.
+			// Because, for example, imagine storing a value of type `T` (e.g. `String`),
+			// creating a reference with a supertype (e.g. `AnyStruct`), and then creating a bound function on it.
+			// Then, if we change the storage location to store a value of unrelated type `U` instead (e.g. `Int`),
+			// and invoke the bound function, the bound function is potentially invalid.
 			accessedReference = storageReferenceWithNarrowedType(context, storageRef)
 		}
 

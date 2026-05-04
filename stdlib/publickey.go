@@ -160,7 +160,12 @@ func NewPublicKeyFromValue(
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(context, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField, nil)
+	key := publicKey.GetMember(
+		context,
+		sema.PublicKeyTypePublicKeyFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(context, key)
 	if err != nil {
