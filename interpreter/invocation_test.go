@@ -845,7 +845,7 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 			nil,
 			nil,
 			nil,
-			func(name string, context interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+			func(name string, context interpreter.MemberAccessibleContext, _ interpreter.ReferenceValue) interpreter.FunctionValue {
 				if name == methodName {
 					return functionValue
 				}

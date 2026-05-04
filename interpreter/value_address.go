@@ -159,23 +159,34 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v AddressValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		nil,
 	)
 }
 
-func (v AddressValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	switch name {
+func (v AddressValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 
+	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ToStringFunctionType,
 			NativeAddressToStringFunction,
 		)
@@ -184,6 +195,7 @@ func (v AddressValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.AddressTypeToBytesFunctionType,
 			NativeAddressToBytesFunction,
 		)

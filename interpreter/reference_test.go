@@ -6590,3 +6590,317 @@ func TestInterpretNestedStorageReferenceAsAnyStructCasting(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretBoundFunctionTypedFieldViaReference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("bound function on a non-reference", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("inside ephemeral reference", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepare(t,
+				`
+            struct S {
+                var f: fun()
+
+                init(_ f: fun()) {
+                    self.f = f
+                }
+            }
+
+            struct T {
+                fun foo() {
+                    self.functionOnT()
+                }
+
+                fun functionOnT() {}
+            }
+
+            fun test() {
+                let t = T()
+                let s = S(t.foo)
+
+                var sRef = &s as &S
+
+                // 'f()' Looks like a bound function on 'S' (via 'sRef'),
+                // but is actually a bound function of 'T'.
+                // So accessing a bound function via a reference shouldn't change the receiver.
+                sRef.f()
+            }
+        `,
+			)
+
+			_, err := inter.Invoke("test")
+			require.NoError(t, err)
+		})
+
+		t.Run("inside storage reference", func(t *testing.T) {
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _, _ := testAccount(t, address, true, nil, `
+            struct S {
+                var f: fun(): String
+
+                init(_ f: fun(): String) {
+                    self.f = f
+                }
+
+                fun typeConfusedFunction(): String {
+                    return "hello from S"
+                }
+            }
+
+            struct T {
+                fun foo(): String {
+                    return self.typeConfusedFunction()
+                }
+
+                fun typeConfusedFunction(): String {
+                    return "hello from T"
+                }
+            }
+
+            fun test(): String {
+                let t = T()
+                let s = S(t.foo)
+
+                account.storage.save(s as AnyStruct, to: /storage/s)
+                let sRef = account.storage.borrow<&S>(from: /storage/s)!
+
+                // 'f()' Looks like a bound function on 'S' (via 'sRef'),
+                // but is actually a bound function of 'T'.
+                // So accessing a bound function via a reference shouldn't change the receiver.
+                return sRef.f()
+            }
+        `,
+				sema.Config{},
+			)
+
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredStringValue("hello from T"),
+				result,
+			)
+		})
+	})
+
+	t.Run("bound function on an ephemeral reference", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("inside ephemeral reference", func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepare(t,
+				`
+            struct S {
+                var f: fun()
+
+                init(_ f: fun()) {
+                    self.f = f
+                }
+            }
+
+            struct T {
+                fun foo() {
+                    self.functionOnT()
+                }
+
+                fun functionOnT() {}
+            }
+
+            fun test() {
+                let t = T()
+                let tRef = &t as &T
+
+                let s = S(tRef.foo)
+                var sRef = &s as &S
+
+                // 'f()' Looks like a bound function on 'S' (via 'sRef'),
+                // but is actually a bound function of 'T'.
+                // So accessing a bound function via a reference shouldn't change the receiver.
+                sRef.f()
+            }
+        `,
+			)
+
+			_, err := inter.Invoke("test")
+			require.NoError(t, err)
+		})
+
+		t.Run("inside storage reference", func(t *testing.T) {
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _, _ := testAccount(t, address, true, nil, `
+            struct S {
+                var f: fun(): String
+
+                init(_ f: fun(): String) {
+                    self.f = f
+                }
+
+                fun typeConfusedFunction(): String {
+                    return "hello from S"
+                }
+            }
+
+            struct T {
+                fun foo(): String {
+                    return self.typeConfusedFunction()
+                }
+
+                fun typeConfusedFunction(): String {
+                    return "hello from T"
+                }
+            }
+
+            fun test(): String {
+               let t = T()
+                let tRef = &t as &T
+
+                let s = S(tRef.foo)
+                account.storage.save(s as AnyStruct, to: /storage/s)
+                let sRef = account.storage.borrow<&S>(from: /storage/s)!
+
+                // 'f()' Looks like a bound function on 'S' (via 'sRef'),
+                // but is actually a bound function of 'T'.
+                // So accessing a bound function via a reference shouldn't change the receiver.
+                return sRef.f()
+            }
+        `,
+				sema.Config{},
+			)
+
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredStringValue("hello from T"),
+				result,
+			)
+		})
+	})
+
+	t.Run("bound function on a storage reference", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("inside ephemeral reference", func(t *testing.T) {
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _, _ := testAccount(t, address, true, nil, `
+            struct S {
+                var f: fun(): String
+
+                init(_ f: fun(): String) {
+                    self.f = f
+                }
+
+                fun typeConfusedFunction(): String {
+                    return "hello from S"
+                }
+            }
+
+            struct T {
+                fun foo(): String {
+                    return self.typeConfusedFunction()
+                }
+
+                fun typeConfusedFunction(): String {
+                    return "hello from T"
+                }
+            }
+
+            fun test(): String {
+                account.storage.save(T(), to: /storage/t)
+                let tRef = account.storage.borrow<&T>(from: /storage/t)!
+
+                let s = S(tRef.foo)
+                account.storage.save(s as AnyStruct, to: /storage/s)
+                let sRef = account.storage.borrow<&S>(from: /storage/s)!
+
+                // 'f()' Looks like a bound function on 'S' (via 'sRef'),
+                // but is actually a bound function of 'T'.
+                // So accessing a bound function via a reference shouldn't change the receiver.
+                return sRef.f()
+            }
+        `,
+				sema.Config{},
+			)
+
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredStringValue("hello from T"),
+				result,
+			)
+		})
+
+		t.Run("bound function on a storage reference, inside storage reference", func(t *testing.T) {
+			t.Parallel()
+
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			inter, _, _ := testAccount(t, address, true, nil, `
+            struct S {
+                var f: fun(): String
+
+                init(_ f: fun(): String) {
+                    self.f = f
+                }
+
+                fun typeConfusedFunction(): String {
+                    return "hello from S"
+                }
+            }
+
+            struct T {
+                fun foo(): String {
+                    return self.typeConfusedFunction()
+                }
+
+                fun typeConfusedFunction(): String {
+                    return "hello from T"
+                }
+            }
+
+            fun test(): String {
+                account.storage.save(T(), to: /storage/t)
+                let tRef = account.storage.borrow<&T>(from: /storage/t)!
+
+                let s = S(tRef.foo)
+                account.storage.save(s as AnyStruct, to: /storage/s)
+                let sRef = account.storage.borrow<&S>(from: /storage/s)!
+
+                // 'f()' Looks like a bound function on 'S' (via 'sRef'),
+                // but is actually a bound function of 'T'.
+                // So accessing a bound function via a reference shouldn't change the receiver.
+                return sRef.f()
+            }
+        `,
+				sema.Config{},
+			)
+
+			result, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			assert.Equal(
+				t,
+				interpreter.NewUnmeteredStringValue("hello from T"),
+				result,
+			)
+		})
+	})
+}

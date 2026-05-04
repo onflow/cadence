@@ -170,11 +170,24 @@ func (v *EphemeralReferenceValue) ReferencedValue(_ ValueStaticTypeContext, _ bo
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *EphemeralReferenceValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	var result Value
 
+	// For ephemeral references, "accessedReference" is the value itself.
+	if accessedReference != nil {
+		// Parameter must be always `nil`, since the root of the `GetMember` call
+		// starts with a nil "accessedReference".
+		panic(errors.NewUnreachableError())
+	}
+	accessedReference = v
+
 	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, name, memberKind)
+		result = memberAccessibleValue.GetMember(context, name, memberKind, accessedReference)
 	}
 
 	if result == nil {
@@ -182,6 +195,7 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, nam
 		return GetMember(
 			context,
 			v,
+			accessedReference,
 			name,
 			memberKind,
 			nil,
@@ -191,8 +205,18 @@ func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, nam
 	return result
 }
 
-func (v *EphemeralReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getBuiltinFunctionMember(context, v.Value, name)
+func (v *EphemeralReferenceValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	// For ephemeral references, "accessedReference" must be the value itself.
+	// We only reach here via `GetMember` method, and in that method,
+	// the `accessedReference` should be correctly passed in (and not `nil`).
+	if accessedReference != v {
+		panic(errors.NewUnreachableError())
+	}
+	return getBuiltinFunctionMember(context, v.Value, name, accessedReference)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {

@@ -113,10 +113,16 @@ func (v PathValue) MeteredString(
 	return v.String()
 }
 
-func (v PathValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v PathValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		nil,
@@ -136,13 +142,18 @@ var NativePathValueToStringFunction = NativeFunction(
 	},
 )
 
-func (v PathValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v PathValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ToStringFunctionType,
 			NativePathValueToStringFunction,
 		)

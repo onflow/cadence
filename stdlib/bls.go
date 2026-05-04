@@ -258,7 +258,12 @@ func NewBLSContract(
 		}
 	}
 
-	blsContractMethodsGetter := func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+	blsContractMethodsGetter := func(
+		name string,
+		_ interpreter.MemberAccessibleContext,
+		_ interpreter.ReferenceValue,
+	) interpreter.FunctionValue {
+		// These are host-functions (not bound functions). OK to ignore the accessed-reference
 		method, ok := methods[name]
 		if !ok {
 			method = computeLazyStoredMethod(name)

@@ -938,10 +938,16 @@ func (v *ArrayValue) Contains(
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *ArrayValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -954,12 +960,18 @@ func (v *ArrayValue) GetMember(context MemberAccessibleContext, name string, mem
 	)
 }
 
-func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *ArrayValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayAppendFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
@@ -970,6 +982,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(context),
 			),
@@ -980,6 +993,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayConcatFunctionType(
 				v.SemaType(context),
 			),
@@ -990,6 +1004,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayInsertFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
@@ -1000,6 +1015,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayRemoveFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
@@ -1010,6 +1026,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayRemoveFirstFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
@@ -1020,6 +1037,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayRemoveLastFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
@@ -1030,6 +1048,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayFirstIndexFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
@@ -1040,6 +1059,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayContainsFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
@@ -1050,6 +1070,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArraySliceFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
@@ -1060,6 +1081,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayReverseFunctionType(
 				v.SemaType(context),
 			),
@@ -1070,6 +1092,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayFilterFunctionType(
 				context,
 				v.SemaType(context).ElementType(false),
@@ -1081,6 +1104,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayMapFunctionType(
 				context,
 				v.SemaType(context),
@@ -1092,6 +1116,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayToVariableSizedFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
@@ -1102,6 +1127,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ArrayToConstantSizedFunctionType(
 				v.SemaType(context).ElementType(false),
 			),

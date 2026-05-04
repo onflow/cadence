@@ -602,7 +602,11 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					return arg.Plus(invocation.InvocationContext, arg)
 				},
 			)
-			bValue.FunctionMemberGetter = func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+			bValue.FunctionMemberGetter = func(
+				name string,
+				_ interpreter.MemberAccessibleContext,
+				_ interpreter.ReferenceValue,
+			) interpreter.FunctionValue {
 				switch name {
 				case "c":
 					return function

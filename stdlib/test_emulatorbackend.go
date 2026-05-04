@@ -450,19 +450,34 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 			}
 
 			// Get transaction code
-			codeValue := transactionValue.GetMember(inter, testTransactionTypeCodeFieldName, common.DeclarationKindField)
+			codeValue := transactionValue.GetMember(
+				inter,
+				testTransactionTypeCodeFieldName,
+				common.DeclarationKindField,
+				nil, // `nil` because a field is requested.
+			)
 			code, ok := codeValue.(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
 			// Get authorizers
-			authorizerValue := transactionValue.GetMember(inter, testTransactionTypeAuthorizersFieldName, common.DeclarationKindField)
+			authorizerValue := transactionValue.GetMember(
+				inter,
+				testTransactionTypeAuthorizersFieldName,
+				common.DeclarationKindField,
+				nil, // `nil` because a field is requested.
+			)
 
 			authorizers := addressArrayValueToSlice(inter, authorizerValue)
 
 			// Get signers
-			signersValue := transactionValue.GetMember(inter, testTransactionTypeSignersFieldName, common.DeclarationKindField)
+			signersValue := transactionValue.GetMember(
+				inter,
+				testTransactionTypeSignersFieldName,
+				common.DeclarationKindField,
+				nil, // `nil` because a field is requested.
+			)
 
 			signerAccounts := accountsArrayValueToSlice(
 				inter,
@@ -470,7 +485,12 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 			)
 
 			// Get arguments
-			argsValue := transactionValue.GetMember(inter, testTransactionTypeArgumentsFieldName, common.DeclarationKindField)
+			argsValue := transactionValue.GetMember(
+				inter,
+				testTransactionTypeArgumentsFieldName,
+				common.DeclarationKindField,
+				nil, // `nil` because a field is requested.
+			)
 			args, err := arrayValueToSlice(inter, argsValue)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
@@ -936,7 +956,11 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		testEmulatorBackendTypeGetAccountFunctionName:             t.newGetAccountFunction(inter, emulatorBackend, blockchain),
 	}
 
-	emulatorBackend.FunctionMemberGetter = func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+	emulatorBackend.FunctionMemberGetter = func(
+		name string,
+		_ interpreter.MemberAccessibleContext,
+		_ interpreter.ReferenceValue,
+	) interpreter.FunctionValue {
 		return functions[name]
 	}
 
