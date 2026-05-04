@@ -552,7 +552,9 @@ func PrepareExternalInvocationArgumentsWithValidation(
 
 	var convertAndBox = ConvertAndBox
 	if validateConvertAndBox {
-		convertAndBox = ConvertAndBoxWithValidation
+		convertAndBox = func(context ValueConversionContext, value Value, targetType sema.Type) Value {
+			return ConvertAndBoxWithValidation(context, value, nil, targetType)
+		}
 	}
 
 	var preparedArguments []Value
@@ -562,7 +564,7 @@ func PrepareExternalInvocationArgumentsWithValidation(
 			parameterType := parameters[i].TypeAnnotation.Type
 
 			// converts the argument into the parameter type declared by the function
-			preparedArguments[i] = convertAndBox(context, argument, nil, parameterType)
+			preparedArguments[i] = convertAndBox(context, argument, parameterType)
 		}
 	}
 
@@ -1666,8 +1668,6 @@ func (interpreter *Interpreter) declareEnumLookupFunction(
 
 	location := interpreter.Location
 
-	intType := sema.IntType
-
 	enumCases := declaration.Members.EnumCases()
 	caseValues := make([]EnumCase, len(enumCases))
 
@@ -1679,7 +1679,6 @@ func (interpreter *Interpreter) declareEnumLookupFunction(
 		rawValue := convert(
 			interpreter,
 			NewIntValueFromInt64(interpreter, int64(i)),
-			intType,
 			compositeType.EnumRawType,
 		).(IntegerValue)
 
@@ -2012,7 +2011,6 @@ func ConvertAndBoxWithValidation(
 	result := ConvertAndBox(
 		context,
 		transferredValue,
-		valueType,
 		targetType,
 	)
 
@@ -2062,10 +2060,9 @@ func TransferIfNotResourceAndConvert(
 func ConvertAndBox(
 	context ValueConversionContext,
 	value Value,
-	valueType sema.Type,
 	targetType sema.Type,
 ) Value {
-	value = convert(context, value, valueType, targetType)
+	value = convert(context, value, targetType)
 	return BoxOptional(context, value, targetType)
 }
 
@@ -2273,12 +2270,9 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 func convert(
 	context ValueCreationContext,
 	value Value,
-	valueType,
 	targetType sema.Type,
 ) Value {
-	if valueType == nil {
-		return value
-	}
+	valueType := MustSemaTypeOfValue(value, context)
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
@@ -2293,7 +2287,6 @@ func convert(
 				innerValue := convert(
 					context,
 					value.value,
-					optionalValueType.Type,
 					unwrappedTargetType,
 				)
 				return NewSomeValueNonCopying(context, innerValue)
@@ -2505,12 +2498,10 @@ func convert(
 					}
 
 					elemValue := MustConvertStoredValue(context, element)
-					actualElementType := MustSemaTypeOfValue(elemValue, context)
 
 					return ConvertAndBox(
 						context,
 						elemValue,
-						actualElementType,
 						targetElementType,
 					)
 				},
@@ -2566,11 +2557,8 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					val := MustConvertStoredValue(context, v)
 
-					keyType := MustSemaTypeOfValue(key, context)
-					valueType := MustSemaTypeOfValue(val, context)
-
-					convertedKey := ConvertAndBox(context, key, keyType, targetKeyType)
-					convertedValue := ConvertAndBox(context, val, valueType, targetValueType)
+					convertedKey := ConvertAndBox(context, key, targetKeyType)
+					convertedValue := ConvertAndBox(context, val, targetValueType)
 					return convertedKey, convertedValue
 				},
 			)
@@ -2636,8 +2624,7 @@ func convert(
 					}
 
 					value := MustConvertStoredValue(context, element)
-					valueType := MustSemaTypeOfValue(value, context)
-					return convert(context, value, valueType, targetElementType)
+					return convert(context, value, targetElementType)
 				},
 			)
 		}
@@ -2681,11 +2668,8 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					value := MustConvertStoredValue(context, v)
 
-					keyType := MustSemaTypeOfValue(key, context)
-					valueType := MustSemaTypeOfValue(value, context)
-
-					convertedKey := convert(context, key, keyType, targetKeyType)
-					convertedValue := convert(context, value, valueType, targetValueType)
+					convertedKey := convert(context, key, targetKeyType)
+					convertedValue := convert(context, value, targetValueType)
 
 					return convertedKey, convertedValue
 				},

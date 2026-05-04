@@ -639,7 +639,6 @@ func checkAndConvertReturnValue(
 	return ConvertAndBox(
 		context,
 		value,
-		actualValueType,
 		expectedValueType,
 	)
 }
@@ -1261,24 +1260,25 @@ func convertAndBoxArguments(
 
 		paramIndex++
 
-		// Argument types may not always be available.
-		// e.g: Invoking the function externally.
-		var argumentType bbq.StaticType
-		if currentArgIndex < len(argumentTypes) {
-			argumentType = argumentTypes[currentArgIndex]
-		} else {
-			argumentType = arg.StaticType(context)
-		}
-
 		convertAndBox := ConvertAndBox
 		if withValidation {
-			convertAndBox = ConvertAndBoxWithValidation
+			// Argument types may not always be available.
+			// e.g: Invoking the function externally.
+			var argumentType bbq.StaticType
+			if currentArgIndex < len(argumentTypes) {
+				argumentType = argumentTypes[currentArgIndex]
+			} else {
+				argumentType = arg.StaticType(context)
+			}
+
+			convertAndBox = func(context *Context, value Value, targetType bbq.StaticType) Value {
+				return ConvertAndBoxWithValidation(context, value, argumentType, targetType)
+			}
 		}
 
 		arguments[currentArgIndex] = convertAndBox(
 			context,
 			arg,
-			argumentType,
 			paramType,
 		)
 	}
