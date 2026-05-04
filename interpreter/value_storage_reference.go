@@ -175,7 +175,6 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 		referenced = ConvertAndBox(
 			context,
 			referenced,
-			valueType,
 			v.BorrowedType,
 		)
 	}

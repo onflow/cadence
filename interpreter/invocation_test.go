@@ -213,10 +213,11 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	// Intentionally passing wrong type of value
 	_, err := inter.InvokeUncheckedForTestingOnly("test", value) //nolint:staticcheck
-	RequireError(t, err)
 
-	var memberAccessTypeError *interpreter.MemberAccessTypeError
-	require.ErrorAs(t, err, &memberAccessTypeError)
+	// Arguments are converted based on the runtime-type (UInt), not the statically known type (Int?).
+	// Therefore, the argument must get converted.
+	// There are no errors at the argument passing, because we intentionally skipped the argument validation above.
+	require.NoError(t, err)
 }
 
 func TestInterpretInvocationReturnTypeValidation(t *testing.T) {
