@@ -300,11 +300,11 @@ func (c *Context) GetResourceDestructionContextForLocation(location common.Locat
 	return c
 }
 
-func AttachmentBaseAndSelfValues(
+func functionAccess(
 	c *Context,
 	v *interpreter.CompositeValue,
 	method FunctionValue,
-) (base *interpreter.EphemeralReferenceValue, self *interpreter.EphemeralReferenceValue) {
+) sema.Access {
 	// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to self
 	var unqualifiedName string
 	switch functionValue := method.(type) {
@@ -333,7 +333,8 @@ func AttachmentBaseAndSelfValues(
 	if fnAccess.IsPrimitiveAccess() {
 		fnAccess = sema.UnauthorizedAccess
 	}
-	return interpreter.AttachmentBaseAndSelfValues(c, fnAccess, v)
+
+	return fnAccess
 }
 
 func (c *Context) GetMethod(
@@ -369,9 +370,10 @@ func (c *Context) GetMethod(
 	}
 
 	var base *interpreter.EphemeralReferenceValue
+
 	// If the value is an attachment, then we must create an authorized reference
 	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
-		base, accessedReference = AttachmentBaseAndSelfValues(c, v, method)
+		base = attachmentBaseForMethod(c, v, method, accessedReference)
 	}
 
 	return NewBoundFunctionValue(
@@ -381,6 +383,35 @@ func (c *Context) GetMethod(
 		method,
 		base,
 	)
+}
+
+func attachmentBaseForMethod(
+	c *Context,
+	attachment *interpreter.CompositeValue,
+	method FunctionValue,
+	accessedReference interpreter.ReferenceValue,
+) *interpreter.EphemeralReferenceValue {
+	fnAccess := functionAccess(c, attachment, method)
+	authorizationNeededForFunction := interpreter.ConvertSemaAccessToStaticAuthorization(c, fnAccess)
+
+	// The only scenario where the `accessedReference` can be `nil` is
+	// when getting the `ResourceDestroyedEventsFunction`.
+	// Because that method is called internally by the vm, on the concrete attachment,
+	// rather than on a reference.
+	if accessedReference != nil {
+		accessedReferenceAuthorization := accessedReference.GetAuthorization()
+
+		// The authorization present on the actual attachment reference (i.e: `accessedReferenceAuthorization`)
+		// must be a subset of the authorization needed by the function/method.
+		if !interpreter.PermitsAccess(c, authorizationNeededForFunction, accessedReferenceAuthorization) {
+			panic(&interpreter.AuthorizationMismatchError{
+				ExpectedAuthorization: authorizationNeededForFunction,
+				ActualAuthorization:   accessedReferenceAuthorization,
+			})
+		}
+	}
+
+	return attachment.GetBaseValue(c, authorizationNeededForFunction)
 }
 
 func typeLocation(semaType sema.Type) common.Location {

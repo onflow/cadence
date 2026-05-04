@@ -1046,9 +1046,11 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	)
 
 	var base *interpreter.EphemeralReferenceValue
-	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
-		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
-			base, receiver = AttachmentBaseAndSelfValues(context, refValue, method)
+
+	if reference, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if compositeValue, ok := reference.Value.(*interpreter.CompositeValue); ok &&
+			compositeValue.Kind == common.CompositeKindAttachment {
+			base = attachmentBaseForMethod(context, compositeValue, method, reference)
 		}
 	}
 

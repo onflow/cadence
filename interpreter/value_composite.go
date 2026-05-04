@@ -664,6 +664,11 @@ func (v *CompositeValue) GetMethod(
 	var self Value = v
 
 	if v.Kind == common.CompositeKindAttachment {
+		// Attachments must always be accessed via/as a reference.
+		if accessedReference == nil {
+			panic(errors.NewUnreachableError())
+		}
+
 		functionAccess := GetAccessOfMember(context, v, name)
 
 		// with respect to entitlements, any access inside an attachment that is not an entitlement access
@@ -684,7 +689,20 @@ func (v *CompositeValue) GetMethod(
 		if functionAccess.IsPrimitiveAccess() {
 			functionAccess = sema.UnauthorizedAccess
 		}
-		base, accessedReference = AttachmentBaseAndSelfValues(context, functionAccess, v)
+
+		authorizationNeededForFunction := ConvertSemaAccessToStaticAuthorization(context, functionAccess)
+		base = v.GetBaseValue(context, authorizationNeededForFunction)
+
+		accessedReferenceAuthorization := accessedReference.GetAuthorization()
+
+		// The authorization present on the actual attachment reference (i.e: `accessedReferenceAuthorization`)
+		// must be a subset of the authorization needed by the function/method.
+		if !PermitsAccess(context, authorizationNeededForFunction, accessedReferenceAuthorization) {
+			panic(&AuthorizationMismatchError{
+				ExpectedAuthorization: authorizationNeededForFunction,
+				ActualAuthorization:   accessedReferenceAuthorization,
+			})
+		}
 	}
 
 	// If the function is already a bound function, then do not re-wrap.
@@ -1136,7 +1154,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	}
 
 	if compositeType.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue(context, UnauthorizedAccess).Value
+		base := v.GetBaseValue(context, UnauthorizedAccess).Value
 		if base == nil || !base.ConformsToStaticType(context, results) {
 			return false
 		}
@@ -1875,7 +1893,7 @@ func NewEnumCaseValue(
 	return v
 }
 
-func (v *CompositeValue) getBaseValue(
+func (v *CompositeValue) GetBaseValue(
 	context StaticTypeAndReferenceContext,
 	functionAuthorization Authorization,
 ) *EphemeralReferenceValue {
@@ -2020,6 +2038,13 @@ func (v *CompositeValue) ForEachAttachment(
 	v.forEachAttachment(context, fn)
 }
 
+// Note: This method must only be used for getting the `self` value
+// for resource-default destroy event constructor.
+// This is because, resource-default destroy event constructor is called internally,
+// onl the concrete attachment value, rather than on a reference.
+// So we create a implicit-reference for `self` manually, based on the access modifier of the event.
+// For other use-cases, this method must **NOT** be used, and the `self` reference
+// must be passed-down from the call-site.
 func AttachmentBaseAndSelfValues(
 	context StaticTypeAndReferenceContext,
 	fnAccess sema.Access,
@@ -2027,7 +2052,7 @@ func AttachmentBaseAndSelfValues(
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(context, fnAccess)
 
-	base = v.getBaseValue(context, attachmentReferenceAuth)
+	base = v.GetBaseValue(context, attachmentReferenceAuth)
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(
 		context,
