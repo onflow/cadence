@@ -149,23 +149,34 @@ func (v *SomeValue) MeteredString(
 	return v.value.MeteredString(context, seenReferences)
 }
 
-func (v *SomeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *SomeValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		nil,
 	)
 }
 
-func (v *SomeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *SomeValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := v.InnerValueType(context)
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.OptionalTypeMapFunctionType(
 				innerValueType,
 			),

@@ -300,11 +300,11 @@ func (c *Context) GetResourceDestructionContextForLocation(location common.Locat
 	return c
 }
 
-func AttachmentBaseAndSelfValues(
-	context interpreter.StaticTypeAndReferenceContext,
+func functionAccess(
+	c *Context,
 	v *interpreter.CompositeValue,
 	method FunctionValue,
-) (base *interpreter.EphemeralReferenceValue, self *interpreter.EphemeralReferenceValue) {
+) sema.Access {
 	// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to self
 	var unqualifiedName string
 	switch functionValue := method.(type) {
@@ -314,7 +314,7 @@ func AttachmentBaseAndSelfValues(
 		unqualifiedName = functionValue.Name
 	}
 
-	fnAccess := interpreter.GetAccessOfMember(context, v, unqualifiedName)
+	fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)
 	// with respect to entitlements, any access inside an attachment that is not an entitlement access
 	// does not provide any entitlements to base and self
 	// E.g. consider:
@@ -333,12 +333,14 @@ func AttachmentBaseAndSelfValues(
 	if fnAccess.IsPrimitiveAccess() {
 		fnAccess = sema.UnauthorizedAccess
 	}
-	return interpreter.AttachmentBaseAndSelfValues(context, fnAccess, v)
+
+	return fnAccess
 }
 
 func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
+	accessedReference interpreter.ReferenceValue,
 ) interpreter.FunctionValue {
 
 	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
@@ -368,17 +370,48 @@ func (c *Context) GetMethod(
 	}
 
 	var base *interpreter.EphemeralReferenceValue
+
 	// If the value is an attachment, then we must create an authorized reference
 	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
-		base, value = AttachmentBaseAndSelfValues(c, v, method)
+		base = attachmentBaseForMethod(c, v, method, accessedReference)
 	}
 
 	return NewBoundFunctionValue(
 		c,
 		value,
+		accessedReference,
 		method,
 		base,
 	)
+}
+
+func attachmentBaseForMethod(
+	c *Context,
+	attachment *interpreter.CompositeValue,
+	method FunctionValue,
+	accessedReference interpreter.ReferenceValue,
+) *interpreter.EphemeralReferenceValue {
+	fnAccess := functionAccess(c, attachment, method)
+	authorizationNeededForFunction := interpreter.ConvertSemaAccessToStaticAuthorization(c, fnAccess)
+
+	// The only scenario where the `accessedReference` can be `nil` is
+	// when getting the `ResourceDestroyedEventsFunction`.
+	// Because that method is called internally by the vm, on the concrete attachment,
+	// rather than on a reference.
+	if accessedReference != nil {
+		accessedReferenceAuthorization := accessedReference.GetAuthorization()
+
+		// The authorization present on the actual attachment reference (i.e: `accessedReferenceAuthorization`)
+		// must be a subset of the authorization needed by the function/method.
+		if !interpreter.PermitsAccess(c, authorizationNeededForFunction, accessedReferenceAuthorization) {
+			panic(&interpreter.AuthorizationMismatchError{
+				ExpectedAuthorization: authorizationNeededForFunction,
+				ActualAuthorization:   accessedReferenceAuthorization,
+			})
+		}
+	}
+
+	return attachment.GetBaseValue(c, authorizationNeededForFunction)
 }
 
 func typeLocation(semaType sema.Type) common.Location {
@@ -400,7 +433,11 @@ func (c *Context) GetFunction(
 }
 
 func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue) []*interpreter.CompositeValue {
-	method := c.GetMethod(resourceValue, commons.ResourceDestroyedEventsFunctionName)
+	// This is an internally used function by the VM.
+	// Safe to assume the receiver is not a reference.
+	var accessedReference interpreter.ReferenceValue = nil
+
+	method := c.GetMethod(resourceValue, commons.ResourceDestroyedEventsFunctionName, accessedReference)
 
 	if method == nil {
 		return nil
@@ -473,22 +510,6 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
 	c.ensureProgramInitialized(contractLocation)
 	return c.ContractValueHandler(c, contractLocation)
-}
-
-func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
-	storageReference *interpreter.StorageReferenceValue,
-	referencedValue Value,
-	member Value,
-) Value {
-	if boundFunction, isBoundFunction := member.(*BoundFunctionValue); isBoundFunction {
-		boundFunction.ReceiverReference = interpreter.StorageReference(
-			c,
-			storageReference,
-			referencedValue,
-		)
-	}
-
-	return member
 }
 
 func (c *Context) ensureProgramInitialized(location common.Location) {
@@ -626,15 +647,17 @@ func (c *Context) GetReferenceValueMember(
 	memberKind common.DeclarationKind,
 ) interpreter.Value {
 
+	accessedReference := v
+
 	// NOTE: Must call the `GetMethod` of the reference, not of the referenced-value.
-	member := c.GetMethod(v, name)
+	member := c.GetMethod(v, name, accessedReference)
 	if member != nil {
 		return member
 	}
 
 	// If not found, look up the member on the referenced value
 	if memberAccessibleValue, ok := referencedValue.(interpreter.MemberAccessibleValue); ok {
-		return memberAccessibleValue.GetMember(c, name, memberKind)
+		return memberAccessibleValue.GetMember(c, name, memberKind, accessedReference)
 	}
 
 	return nil

@@ -43,35 +43,21 @@ func NewAccountAccountCapabilitiesValue(
 
 	var accountCapabilities *SimpleCompositeValue
 
-	methods := map[string]FunctionValue{}
-
-	computeLazyStoredMethod := func(name string) FunctionValue {
+	computeMethod := func(name string, _ MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
 		switch name {
 		case sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:
-			return getControllerFunction(accountCapabilities)
+			return getControllerFunction(accountCapabilities, accessedReference)
 		case sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:
-			return getControllersFunction(accountCapabilities)
+			return getControllersFunction(accountCapabilities, accessedReference)
 		case sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName:
-			return forEachControllerFunction(accountCapabilities)
+			return forEachControllerFunction(accountCapabilities, accessedReference)
 		case sema.Account_AccountCapabilitiesTypeIssueFunctionName:
-			return issueFunction(accountCapabilities)
+			return issueFunction(accountCapabilities, accessedReference)
 		case sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName:
-			return issueWithTypeFunction(accountCapabilities)
+			return issueWithTypeFunction(accountCapabilities, accessedReference)
 		}
 
 		return nil
-	}
-
-	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
-		method, ok := methods[name]
-		if !ok {
-			method = computeLazyStoredMethod(name)
-			if method != nil {
-				methods[name] = method
-			}
-		}
-
-		return method
 	}
 
 	var str string
@@ -92,7 +78,7 @@ func NewAccountAccountCapabilitiesValue(
 		// No fields, only methods.
 		nil,
 		nil,
-		methodGetter,
+		computeMethod,
 		nil,
 		stringer,
 	).WithPrivateField(AccountTypePrivateAddressFieldName, address)

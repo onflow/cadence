@@ -261,7 +261,12 @@ func accountFromValue(
 ) *Account {
 
 	// Get address
-	addressValue := accountValue.GetMember(context, accountAddressFieldName, common.DeclarationKindField)
+	addressValue := accountValue.GetMember(
+		context,
+		accountAddressFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
 	address, ok := addressValue.(interpreter.AddressValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -272,6 +277,7 @@ func accountFromValue(
 		context,
 		sema.AccountKeyPublicKeyFieldName,
 		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
 	).(interpreter.MemberAccessibleValue)
 
 	if !ok {

@@ -147,6 +147,24 @@ contract Test {
         self.backend.moveTime(by: delta)
     }
 
+    /// Freezes the clock of the blockchain so that time stops advancing
+    /// automatically. While frozen, `moveTime` still works and offsets the
+    /// frozen timestamp, but the clock no longer tracks real elapsed time.
+    ///
+    access(all)
+    fun freezeTime() {
+        self.backend.freezeTime()
+    }
+
+    /// Unfreezes the clock of the blockchain, allowing time to advance
+    /// automatically again. The clock does not snap back to real time;
+    /// it continues from wherever the frozen timestamp was left.
+    ///
+    access(all)
+    fun unfreezeTime() {
+        self.backend.unfreezeTime()
+    }
+
     /// Creates a snapshot of the blockchain, at the
     /// current ledger state, with the given name.
     ///
@@ -402,6 +420,20 @@ contract Test {
         ///
         access(all)
         fun moveTime(by delta: Fix64)
+
+        /// Freezes the clock of the blockchain so that time stops advancing
+        /// automatically. While frozen, `moveTime` still works and offsets the
+        /// frozen timestamp, but the clock no longer tracks real elapsed time.
+        ///
+        access(all)
+        fun freezeTime()
+
+        /// Unfreezes the clock of the blockchain, allowing time to advance
+        /// automatically again. The clock does not snap back to real time;
+        /// it continues counting from wherever the frozen timestamp was left.
+        ///
+        access(all)
+        fun unfreezeTime()
 
         /// Creates a snapshot of the blockchain, at the
         /// current ledger state, with the given name.

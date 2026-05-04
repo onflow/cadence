@@ -93,5 +93,5 @@ func getReferenceValueMethod(
 	if method != nil {
 		return method
 	}
-	return getBuiltinFunctionMember(context, referencedValue, name)
+	return getBuiltinFunctionMember(context, referencedValue, name, v)
 }

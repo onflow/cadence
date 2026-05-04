@@ -101,6 +101,11 @@ func TestFunctionStaticType(t *testing.T) {
 			inter,
 			hostFunctionValue,
 			&compositeValue,
+
+			// Manually constructing the bound function on the composite directly, not a reference.
+			// Hence, "accessedReference" argument is nil.
+			nil,
+
 			nil,
 		)
 

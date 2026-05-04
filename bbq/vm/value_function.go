@@ -322,10 +322,12 @@ func (v *NativeFunctionValue) GetMember(
 	context interpreter.MemberAccessibleContext,
 	name string,
 	memberKind common.DeclarationKind,
+	accessedReference interpreter.ReferenceValue,
 ) interpreter.Value {
 	return interpreter.GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() interpreter.Value {
@@ -342,7 +344,11 @@ func (*NativeFunctionValue) SetMember(_ interpreter.ValueTransferContext, _ stri
 	panic(errors.NewUnreachableError())
 }
 
-func (v *NativeFunctionValue) GetMethod(_ interpreter.MemberAccessibleContext, _ string) interpreter.FunctionValue {
+func (v *NativeFunctionValue) GetMethod(
+	_ interpreter.MemberAccessibleContext,
+	_ string,
+	_ interpreter.ReferenceValue,
+) interpreter.FunctionValue {
 	// Should never be called, VM should not look up method on value.
 	// See `NativeFunctionValue.GetMember`
 	panic(errors.NewUnreachableError())
@@ -373,6 +379,7 @@ var boundFunctionMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindBo
 func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
 	receiver interpreter.Value,
+	accessedReference interpreter.ReferenceValue,
 	method FunctionValue,
 	base *interpreter.EphemeralReferenceValue,
 ) *BoundFunctionValue {
@@ -383,7 +390,7 @@ func NewBoundFunctionValue(
 	// This reference is later used to check the validity of the referenced value/resource.
 	// For attachments, 'self' is already a reference. So no need to create a reference again.
 
-	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver)
+	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver, accessedReference)
 
 	return &BoundFunctionValue{
 		Method:              method,
@@ -502,7 +509,7 @@ func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueSta
 	// or needs to be computed (e.g: `[Int8].append()`).
 	if method.HasComputedFunctionType() {
 		v.functionType = method.ComputeFunctionType(
-			v.maybeDereferencedReceiver(context),
+			v.MaybeDereferencedReceiver(context),
 			context,
 		)
 	} else {
@@ -519,9 +526,7 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 	)
 }
 
-func (v *BoundFunctionValue) maybeDereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
-
-	interpreter.CheckInvalidatedResourceOrResourceReference(v.ReceiverReference, context)
+func (v *BoundFunctionValue) MaybeDereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
 
 	var receiver Value = v.ReceiverReference
 
@@ -533,7 +538,7 @@ func (v *BoundFunctionValue) maybeDereferencedReceiver(context interpreter.Value
 	shouldDereference := v.DereferenceReceiver() || !v.ReceiverIsReference
 
 	if shouldDereference {
-		receiver = maybeDereferenceReceiver(
+		receiver = interpreter.MaybeDereferenceReceiver(
 			context,
 			v.ReceiverReference,
 			v.IsNative(),
@@ -551,6 +556,6 @@ func (v *BoundFunctionValue) IsNative() bool {
 }
 
 func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) ImplicitReferenceValue {
-	receiverValue := v.maybeDereferencedReceiver(context)
+	receiverValue := v.MaybeDereferencedReceiver(context)
 	return NewImplicitReferenceValue(context, receiverValue)
 }

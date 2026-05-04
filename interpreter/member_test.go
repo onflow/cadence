@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -732,13 +733,17 @@ func TestInterpretMemberAccessType(t *testing.T) {
 			// Intentionally passing wrong type of value
 			_, err = inter.InvokeUncheckedForTestingOnly("get", storageRef) //nolint:staticcheck
 			RequireError(t, err)
-			var memberAccessTypeError *interpreter.MemberAccessTypeError
-			require.ErrorAs(t, err, &memberAccessTypeError)
+			var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
+			require.Equal(t, common.TypeID("S.test.S"), dereferenceError.ExpectedType.ID())
+			require.Equal(t, common.TypeID("S.test.S2"), dereferenceError.ActualType.ID())
 
 			// Intentionally passing wrong type of value
 			_, err = inter.InvokeUncheckedForTestingOnly("set", storageRef) //nolint:staticcheck
 			RequireError(t, err)
-			require.ErrorAs(t, err, &memberAccessTypeError)
+			require.ErrorAs(t, err, &dereferenceError)
+			require.Equal(t, common.TypeID("S.test.S"), dereferenceError.ExpectedType.ID())
+			require.Equal(t, common.TypeID("S.test.S2"), dereferenceError.ActualType.ID())
 		})
 	})
 }

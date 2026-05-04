@@ -571,18 +571,34 @@ func (v Int16Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewInt16Value(context, valueGetter)
 }
 
-func (v Int16Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v Int16Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		nil,
 	)
 }
 
-func (v Int16Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Int16Type)
+func (v Int16Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.Int16Type,
+	)
 }
 
 func (Int16Value) RemoveMember(_ ValueTransferContext, _ string) Value {

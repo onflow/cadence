@@ -47,22 +47,20 @@ func NewAccountContractsValue(
 
 	var accountContracts *SimpleCompositeValue
 
-	methods := map[string]FunctionValue{}
-
-	computeLazyStoredMethod := func(name string) FunctionValue {
+	computeMethod := func(name string, _ MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
 		switch name {
 		case sema.Account_ContractsTypeAddFunctionName:
-			return addFunction(accountContracts)
+			return addFunction(accountContracts, accessedReference)
 		case sema.Account_ContractsTypeGetFunctionName:
-			return getFunction(accountContracts)
+			return getFunction(accountContracts, accessedReference)
 		case sema.Account_ContractsTypeBorrowFunctionName:
-			return borrowFunction(accountContracts)
+			return borrowFunction(accountContracts, accessedReference)
 		case sema.Account_ContractsTypeRemoveFunctionName:
-			return removeFunction(accountContracts)
+			return removeFunction(accountContracts, accessedReference)
 		case sema.Account_ContractsTypeUpdateFunctionName:
-			return updateFunction(accountContracts)
+			return updateFunction(accountContracts, accessedReference)
 		case sema.Account_ContractsTypeTryUpdateFunctionName:
-			return tryUpdateFunction(accountContracts)
+			return tryUpdateFunction(accountContracts, accessedReference)
 		}
 
 		return nil
@@ -75,18 +73,6 @@ func NewAccountContractsValue(
 		}
 
 		return nil
-	}
-
-	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
-		method, ok := methods[name]
-		if !ok {
-			method = computeLazyStoredMethod(name)
-			if method != nil {
-				methods[name] = method
-			}
-		}
-
-		return method
 	}
 
 	var str string
@@ -107,7 +93,7 @@ func NewAccountContractsValue(
 		// No fields, only computed fields, and methods.
 		nil,
 		computeField,
-		methodGetter,
+		computeMethod,
 		nil,
 		stringer,
 	).WithPrivateField(AccountTypePrivateAddressFieldName, address)

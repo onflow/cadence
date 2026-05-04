@@ -219,6 +219,7 @@ var _ GetReferenceContext = &Interpreter{}
 
 type IterableValueForeachContext interface {
 	ValueTransferContext
+	MemberAccessibleContext
 }
 
 var _ IterableValueForeachContext = &Interpreter{}
@@ -241,12 +242,7 @@ type MemberAccessibleContext interface {
 	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
-	GetMethod(value MemberAccessibleValue, name string) FunctionValue
-	MaybeUpdateStorageReferenceMemberReceiver(
-		storageReference *StorageReferenceValue,
-		referencedValue Value,
-		member Value,
-	) Value
+	GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue
 	GetReferenceValueMember(
 		v ReferenceValue,
 		referencedValue Value,

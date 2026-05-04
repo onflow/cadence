@@ -1107,7 +1107,7 @@ func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 
 		for name, field := range fieldsMappedByName {
 
-			value := composite.GetMember(inter, name, common.DeclarationKindField)
+			value := composite.GetMember(inter, name, common.DeclarationKindField, nil)
 
 			fieldValue := importValue(t, inter, field)
 			AssertValuesEqual(t, inter, fieldValue, value)
@@ -3364,7 +3364,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			inter,
 			func(name string, element interpreter.Value) (resume bool) {
 
-				expectedElement := expectedComposite.GetMember(inter, name, common.DeclarationKindField)
+				expectedElement := expectedComposite.GetMember(inter, name, common.DeclarationKindField, nil)
 				AssertValuesEqual(t, inter, expectedElement, element)
 
 				iterations += 1
@@ -3445,7 +3445,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			for {
 				name = r.randomUTF8String()
 
-				if actualNestedComposite.GetMember(inter, name, common.DeclarationKindField) != nil {
+				if actualNestedComposite.GetMember(inter, name, common.DeclarationKindField, nil) != nil {
 					continue
 				}
 
@@ -3919,7 +3919,7 @@ func getNestedValue(
 			)
 			composite := value.(*interpreter.CompositeValue)
 
-			value = composite.GetMember(inter, element.name, common.DeclarationKindField)
+			value = composite.GetMember(inter, element.name, common.DeclarationKindField, nil)
 
 			require.NotNil(t,
 				value,
@@ -6057,7 +6057,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			require.Equal(t, count, childComposite.FieldCount())
 
 			for i := 0; i < count; i++ {
-				value := childComposite.GetMember(inter, strconv.Itoa(i), common.DeclarationKindField)
+				value := childComposite.GetMember(inter, strconv.Itoa(i), common.DeclarationKindField, nil)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
 			}
@@ -6233,7 +6233,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			require.Equal(t, count, childComposite.FieldCount())
 
 			for i := 0; i < count; i++ {
-				value := childComposite.GetMember(inter, strconv.Itoa(i), common.DeclarationKindField)
+				value := childComposite.GetMember(inter, strconv.Itoa(i), common.DeclarationKindField, nil)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
 			}

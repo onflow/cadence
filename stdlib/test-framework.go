@@ -77,6 +77,10 @@ type Blockchain interface {
 
 	MoveTime(int64)
 
+	FreezeTime()
+
+	UnfreezeTime()
+
 	CreateSnapshot(string) error
 
 	LoadSnapshot(string) error

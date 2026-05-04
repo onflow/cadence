@@ -372,7 +372,16 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
+	// External invocation happen on non-references.
+	var accessedReference interpreter.ReferenceValue = nil
+
+	boundFunction := NewBoundFunctionValue(
+		context,
+		receiver,
+		accessedReference,
+		functionValue,
+		nil,
+	)
 
 	return vm.prepareAndInvokeExternally(boundFunction, arguments)
 }
@@ -546,6 +555,9 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeValue, signers []Value) error {
 	context := vm.context
 
+	// Transaction invocation happens on the concrete value.
+	var accessedReference interpreter.ReferenceValue = nil
+
 	prepareVariable := vm.globals.Find(commons.TransactionPrepareFunctionName)
 	if prepareVariable == nil {
 		if len(signers) > 0 {
@@ -563,6 +575,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 	boundPrepareFunction := NewBoundFunctionValue(
 		context,
 		transaction,
+		accessedReference,
 		prepareFunction,
 		nil,
 	)
@@ -585,9 +598,14 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 
 	executeValue := executeVariable.GetValue(context)
 	executeFunction := executeValue.(FunctionValue)
+
+	// Transaction invocation happens on the concrete value.
+	var accessedReference interpreter.ReferenceValue = nil
+
 	boundExecuteFunction := NewBoundFunctionValue(
 		context,
 		transaction,
+		accessedReference,
 		executeFunction,
 		nil,
 	)
@@ -639,7 +657,6 @@ func checkAndConvertReturnValue(
 	return ConvertAndBox(
 		context,
 		value,
-		actualValueType,
 		expectedValueType,
 	)
 }
@@ -1029,16 +1046,26 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 		receiver,
 	)
 
-	base, receiver := baseAndReceiver(vm.context, receiver, method)
+	var base *interpreter.EphemeralReferenceValue
+
+	if reference, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if compositeValue, ok := reference.Value.(*interpreter.CompositeValue); ok &&
+			compositeValue.Kind == common.CompositeKindAttachment {
+			base = attachmentBaseForMethod(context, compositeValue, method, reference)
+		}
+	}
+
+	// Ignore casting failures. Only interested in the receiver as a reference.
+	// If the receiver is not a reference, then `accessedReference` must be `nil`.
+	accessedReference, _ := receiver.(interpreter.ReferenceValue)
 
 	boundFunction := NewBoundFunctionValue(
 		context,
 		receiver,
+		accessedReference,
 		method,
 		base,
 	)
-
-	maybeUpdateStorageReferenceBoundFunctionReceiver(context, receiver, boundFunction)
 
 	vm.push(boundFunction)
 }
@@ -1056,7 +1083,11 @@ func opGetMethodDynamic(vm *VM, ins opcode.InstructionGetMethodDynamic) {
 		receiver,
 	)
 
-	method, ok := context.GetMethod(receiver, fieldName).(*BoundFunctionValue)
+	// Ignore casting failures. Only interested in the receiver as a reference.
+	// If the receiver is not a reference, then `accessedReference` must be `nil`.
+	accessedReference, _ := receiver.(interpreter.ReferenceValue)
+
+	method, ok := context.GetMethod(receiver, fieldName, accessedReference).(*BoundFunctionValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -1067,44 +1098,10 @@ func opGetMethodDynamic(vm *VM, ins opcode.InstructionGetMethodDynamic) {
 		})
 	}
 
-	maybeUpdateStorageReferenceBoundFunctionReceiver(context, receiver, method)
-
 	vm.push(method)
 }
 
-func maybeUpdateStorageReferenceBoundFunctionReceiver(
-	context *Context,
-	receiver Value,
-	boundFunction *BoundFunctionValue,
-) {
-	if storageReference, ok := receiver.(*interpreter.StorageReferenceValue); ok {
-		referencedValue := storageReference.MustReferencedValue(context)
-
-		// Ignore the "updated" return value, since the bound function is a pointer.
-		_ = context.MaybeUpdateStorageReferenceMemberReceiver(
-			storageReference,
-			referencedValue,
-			boundFunction,
-		)
-	}
-}
-
 var emptyTypeParametersMap = &sema.TypeParameterTypeOrderedMap{}
-
-func baseAndReceiver(
-	context interpreter.StaticTypeAndReferenceContext,
-	receiver Value,
-	method FunctionValue,
-) (base *interpreter.EphemeralReferenceValue, self Value) {
-
-	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
-		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
-			base, receiver = AttachmentBaseAndSelfValues(context, refValue, method)
-		}
-	}
-
-	return base, receiver
-}
 
 func invokeFunction(
 	vm *VM,
@@ -1166,7 +1163,7 @@ func invokeFunction(
 	case *NativeFunctionValue:
 		if isBoundFunction {
 			// For built-in functions, pass the dereferenced receiver.
-			receiver = boundFunction.maybeDereferencedReceiver(context)
+			receiver = boundFunction.MaybeDereferencedReceiver(context)
 		}
 
 		if interpreter.TracingEnabled {
@@ -1273,24 +1270,25 @@ func convertAndBoxArguments(
 
 		paramIndex++
 
-		// Argument types may not always be available.
-		// e.g: Invoking the function externally.
-		var argumentType bbq.StaticType
-		if currentArgIndex < len(argumentTypes) {
-			argumentType = argumentTypes[currentArgIndex]
-		} else {
-			argumentType = arg.StaticType(context)
-		}
-
 		convertAndBox := ConvertAndBox
 		if withValidation {
-			convertAndBox = ConvertAndBoxWithValidation
+			// Argument types may not always be available.
+			// e.g: Invoking the function externally.
+			var argumentType bbq.StaticType
+			if currentArgIndex < len(argumentTypes) {
+				argumentType = argumentTypes[currentArgIndex]
+			} else {
+				argumentType = arg.StaticType(context)
+			}
+
+			convertAndBox = func(context *Context, value Value, targetType bbq.StaticType) Value {
+				return ConvertAndBoxWithValidation(context, value, argumentType, targetType)
+			}
 		}
 
 		arguments[currentArgIndex] = convertAndBox(
 			context,
 			arg,
-			argumentType,
 			paramType,
 		)
 	}
@@ -1338,34 +1336,6 @@ func loadTypes(vm *VM, typeIndices []uint16) []bbq.StaticType {
 		}
 	}
 	return types
-}
-
-func maybeDereferenceReceiver(
-	context interpreter.ValueStaticTypeContext,
-	receiverReference interpreter.ReferenceValue,
-	isNative bool,
-) Value {
-
-	referencedValue := receiverReference.ReferencedValue(context, true)
-
-	// `storageRef.ReferencedValue()` above already checks for the type validity, if it's not nil.
-	// If nil, that means the value has been moved out of storage.
-	// Note: `referencedValue` could be nil only for storage references.
-	if referencedValue == nil {
-		panic(&interpreter.ReferencedValueChangedError{})
-	}
-
-	dereferencedReceiver := *referencedValue
-
-	// Do not dereference attachments, so that the receiver is a reference as expected.
-	// Exception: Native function receiver needs to be dereferenced to match interpreter.
-	if innerValue, ok := dereferencedReceiver.(*interpreter.CompositeValue); ok && !isNative {
-		if innerValue.Kind == common.CompositeKindAttachment {
-			return receiverReference
-		}
-	}
-
-	return dereferencedReceiver
 }
 
 func opDrop(vm *VM) {
@@ -1482,7 +1452,13 @@ func getField(
 	// VM assumes the field name is always a string.
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
-	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName, common.DeclarationKindField)
+	fieldValue := memberAccessibleValue.GetMember(
+		vm.context,
+		fieldName,
+		common.DeclarationKindField,
+		nil, // accessedReference is not needed for getting fields; only needed for getting methods.
+	)
+
 	if fieldValue == nil {
 		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,

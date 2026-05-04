@@ -2328,7 +2328,7 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
     `)
 
 	actual := inter.GetGlobal("test").(*interpreter.CompositeValue).
-		GetMember(inter, "foo", common.DeclarationKindField)
+		GetMember(inter, "foo", common.DeclarationKindField, nil)
 	AssertValuesEqual(
 		t,
 		inter,
@@ -9010,7 +9010,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 	require.NoError(t, err)
 
 	i := inter.GetGlobal("C").(interpreter.MemberAccessibleValue).
-		GetMember(inter, "i", common.DeclarationKindField)
+		GetMember(inter, "i", common.DeclarationKindField, nil)
 
 	require.IsType(t,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
