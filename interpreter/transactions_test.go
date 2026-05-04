@@ -522,11 +522,21 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
 		},
 	)
 
+	// auth(Storage)
+	semaEntitlements := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{
+			sema.StorageType,
+		},
+		sema.Conjunction,
+	)
+	staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(nil, semaEntitlements)
+
+	// auth(Storage) &Account
 	signer1 := stdlib.NewAccountReferenceValue(
 		inter,
 		nil,
 		interpreter.AddressValue{1},
-		interpreter.FullyEntitledAccountAccess,
+		staticAuthorization,
 	)
 
 	err := inter.InvokeTransaction(nil, signer1)
