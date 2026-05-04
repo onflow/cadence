@@ -165,6 +165,9 @@ type MemberAccessibleValue interface {
 	// GetMember return member of any kind (fields, methods, etc.), of this value.
 	// If the member was accessed via a reference, then it must be passed in as the `accessedReference`.
 	// Otherwise (member was accessed via the concrete value), then `accessedReference` must be `nil`.
+	// The `accessedReference` is used as the receiver if the member is a function
+	// (i.e: bound-function implicit capture of the receiver).
+	// It is not used for retrieving fields (even if the field is a function-typed).
 	GetMember(
 		context MemberAccessibleContext,
 		name string,

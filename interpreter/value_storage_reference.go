@@ -218,14 +218,19 @@ func (v *StorageReferenceValue) GetMember(
 	context MemberAccessibleContext,
 	name string,
 	memberKind common.DeclarationKind,
-	_ ReferenceValue,
+	accessedReference ReferenceValue,
 ) Value {
 	referencedValue := v.MustReferencedValue(context)
 
 	var member Value
 
 	// For storage references, "accessedReference" is the value itself.
-	accessedReference := v
+	if accessedReference != nil {
+		// Parameter must be always `nil`, since the root of the `GetMember` call
+		// starts with a nil "accessedReference".
+		panic(errors.NewUnreachableError())
+	}
+	accessedReference = v
 
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
 		member = memberAccessibleValue.GetMember(context, name, memberKind, accessedReference)
@@ -246,11 +251,15 @@ func (v *StorageReferenceValue) GetMember(
 	return member
 }
 
-func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string, _ ReferenceValue) FunctionValue {
+func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
 	referencedValue := v.MustReferencedValue(context)
 
-	// For storage references, "accessedReference" is the value itself.
-	accessedReference := v
+	// For storage references, "accessedReference" must be the value itself.
+	// We only reach here via `GetMember` method, and in that method,
+	// the `accessedReference` should be correctly passed in (and not `nil`).
+	if accessedReference != v {
+		panic(errors.NewUnreachableError())
+	}
 
 	return getBuiltinFunctionMember(context, referencedValue, name, accessedReference)
 }
