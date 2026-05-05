@@ -1091,30 +1091,50 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
+		var accessedType sema.Type
+		if accessedReference != nil {
+			accessedType = MustSemaTypeOfValue(accessedReference, context)
+		} else {
+			accessedType = arrayType
+		}
+
 		return NewBoundHostFunctionValue(
 			context,
 			v,
 			accessedReference,
 			sema.ArrayFilterFunctionType(
 				context,
-				arrayType,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayFilterFunction,
-		)
+		).
+			// Filter function's parameter-type depends on whether
+			// the receiver is a reference or a concrete array.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeMapFunctionName:
+		var accessedType sema.Type
+		if accessedReference != nil {
+			accessedType = MustSemaTypeOfValue(accessedReference, context)
+		} else {
+			accessedType = arrayType
+		}
+
 		return NewBoundHostFunctionValue(
 			context,
 			v,
 			accessedReference,
 			sema.ArrayMapFunctionType(
 				context,
-				arrayType,
+				accessedType,
 				arrayType,
 			),
 			NativeArrayMapFunction,
-		)
+		).
+			// Map function's parameter-type depends on whether
+			// the receiver is a reference or a concrete array.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
 		return NewBoundHostFunctionValue(

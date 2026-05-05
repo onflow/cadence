@@ -195,7 +195,8 @@ func (v *EphemeralReferenceValue) GetMethod(
 	if accessedReference != v {
 		panic(errors.NewUnreachableError())
 	}
-	return getReferenceValueMethod(context, accessedReference, v.Value, name)
+
+	return getBuiltinFunctionMember(context, v, name, accessedReference)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {

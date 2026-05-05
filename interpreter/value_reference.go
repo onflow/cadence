@@ -82,16 +82,3 @@ func DereferenceValue(
 		return transferredDereferencedValue
 	}
 }
-
-func getReferenceValueMethod(
-	context MemberAccessibleContext,
-	v ReferenceValue,
-	referencedValue Value,
-	name string,
-) FunctionValue {
-	method := getReferenceValueHigherOrderFunction(context, v, referencedValue, name)
-	if method != nil {
-		return method
-	}
-	return getBuiltinFunctionMember(context, referencedValue, name, v)
-}

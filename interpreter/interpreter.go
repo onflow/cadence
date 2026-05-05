@@ -7044,18 +7044,9 @@ func (interpreter *Interpreter) GetReferenceValueMember(
 	memberKind common.DeclarationKind,
 ) Value {
 
-	// First, *before* looking up the member on the referenced value,
-	// check whether the member is available via special handling
-	// for reference values (e.g. array higher-order functions)
-	value := getReferenceValueHigherOrderFunction(interpreter, v, referencedValue, name)
-	if value != nil {
-		return value
-	}
-
 	var member Value
 
-	// Next, look up the member on the referenced value
-
+	// Look up the member on the referenced value
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
 		member = memberAccessibleValue.GetMember(interpreter, name, memberKind, v)
 	}
@@ -7073,56 +7064,6 @@ func (interpreter *Interpreter) GetReferenceValueMember(
 	}
 
 	return member
-}
-
-func getReferenceValueHigherOrderFunction(
-	context MemberAccessibleContext,
-	v ReferenceValue,
-	referencedValue Value,
-	name string,
-) FunctionValue {
-	switch referencedValue := referencedValue.(type) {
-	case *ArrayValue:
-		refType := MustSemaTypeOfValue(v, context)
-
-		arrayType := referencedValue.SemaType(context)
-
-		switch name {
-		case sema.ArrayTypeFilterFunctionName:
-			return NewBoundHostFunctionValue(
-				context,
-				v,
-				v,
-				sema.ArrayFilterFunctionType(
-					context,
-					refType,
-					arrayType.ElementType(false),
-				),
-				NativeArrayFilterFunction,
-			).
-				// Filter function's parameter-type depends on whether
-				// the receiver is a reference or a concrete array.
-				WithDereferenceReceiver(false)
-
-		case sema.ArrayTypeMapFunctionName:
-			return NewBoundHostFunctionValue(
-				context,
-				v,
-				v,
-				sema.ArrayMapFunctionType(
-					context,
-					refType,
-					arrayType,
-				),
-				NativeArrayMapFunction,
-			).
-				// Map function's parameter-type depends on whether
-				// the receiver is a reference or a concrete array.
-				WithDereferenceReceiver(false)
-		}
-	}
-
-	return nil
 }
 
 func storageReferenceWithNarrowedType(
