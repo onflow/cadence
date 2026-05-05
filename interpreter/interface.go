@@ -243,12 +243,6 @@ type MemberAccessibleContext interface {
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
 	GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue
-	GetReferenceValueMember(
-		v ReferenceValue,
-		referencedValue Value,
-		name string,
-		memberKind common.DeclarationKind,
-	) Value
 }
 
 var _ MemberAccessibleContext = &Interpreter{}

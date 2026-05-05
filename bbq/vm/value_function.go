@@ -65,7 +65,7 @@ func (*CompiledFunctionValue) IsValue() {}
 
 func (*CompiledFunctionValue) IsFunctionValue() {}
 
-func (v *CompiledFunctionValue) HasComputedFunctionType() bool {
+func (*CompiledFunctionValue) HasComputedFunctionType() bool {
 	return false
 }
 

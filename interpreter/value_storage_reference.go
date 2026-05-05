@@ -219,9 +219,17 @@ func (v *StorageReferenceValue) GetMember(
 	memberKind common.DeclarationKind,
 	accessedReference ReferenceValue,
 ) Value {
+	// For storage references, "accessedReference" is the value itself.
+	if accessedReference != nil {
+		// Parameter must be always `nil`, since the root of the `GetMember` call
+		// starts with a nil "accessedReference".
+		panic(errors.NewUnreachableError())
+	}
+
 	referencedValue := v.MustReferencedValue(context)
 
-	member := context.GetReferenceValueMember(
+	member := GetReferenceValueMember(
+		context,
 		v,
 		referencedValue,
 		name,

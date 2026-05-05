@@ -639,26 +639,3 @@ func (c *Context) NewFunctionWithType(
 		panic(errors.NewUnreachableError())
 	}
 }
-
-func (c *Context) GetReferenceValueMember(
-	v interpreter.ReferenceValue,
-	referencedValue interpreter.Value,
-	name string,
-	memberKind common.DeclarationKind,
-) interpreter.Value {
-
-	accessedReference := v
-
-	// NOTE: Must call the `GetMethod` of the reference, not of the referenced-value.
-	member := c.GetMethod(v, name, accessedReference)
-	if member != nil {
-		return member
-	}
-
-	// If not found, look up the member on the referenced value
-	if memberAccessibleValue, ok := referencedValue.(interpreter.MemberAccessibleValue); ok {
-		return memberAccessibleValue.GetMember(c, name, memberKind, accessedReference)
-	}
-
-	return nil
-}

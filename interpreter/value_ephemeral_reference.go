@@ -176,7 +176,15 @@ func (v *EphemeralReferenceValue) GetMember(
 	memberKind common.DeclarationKind,
 	accessedReference ReferenceValue,
 ) Value {
-	return context.GetReferenceValueMember(
+	// For ephemeral references, "accessedReference" is the value itself.
+	if accessedReference != nil {
+		// Parameter must be always `nil`, since the root of the `GetMember` call
+		// starts with a nil "accessedReference".
+		panic(errors.NewUnreachableError())
+	}
+
+	return GetReferenceValueMember(
+		context,
 		v,
 		v.Value,
 		name,
