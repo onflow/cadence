@@ -7083,7 +7083,7 @@ func getReferenceValueHigherOrderFunction(
 ) FunctionValue {
 	switch referencedValue := referencedValue.(type) {
 	case *ArrayValue:
-		refType := context.SemaTypeFromStaticType(v.StaticType(context))
+		refType := MustSemaTypeOfValue(v, context)
 
 		arrayType := referencedValue.SemaType(context)
 
@@ -7099,7 +7099,10 @@ func getReferenceValueHigherOrderFunction(
 					arrayType.ElementType(false),
 				),
 				NativeArrayFilterFunction,
-			)
+			).
+				// Filter function's parameter-type depends on whether
+				// the receiver is a reference or a concrete array.
+				WithDereferenceReceiver(false)
 
 		case sema.ArrayTypeMapFunctionName:
 			return NewBoundHostFunctionValue(
@@ -7112,7 +7115,10 @@ func getReferenceValueHigherOrderFunction(
 					arrayType,
 				),
 				NativeArrayMapFunction,
-			)
+			).
+				// Map function's parameter-type depends on whether
+				// the receiver is a reference or a concrete array.
+				WithDereferenceReceiver(false)
 		}
 	}
 

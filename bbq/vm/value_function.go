@@ -48,8 +48,6 @@ type FunctionValue interface {
 	// Use `HasComputedFunctionType` to determine whether this method should be called or not.
 	ComputeFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
 
-	DereferenceReceiver() bool
-
 	IsNative() bool
 }
 
@@ -527,26 +525,13 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 }
 
 func (v *BoundFunctionValue) MaybeDereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
-
-	var receiver Value = v.ReceiverReference
-
-	// Receiver needs to be dereferenced, if:
-	//  - The function always required the receiver to be dereferenced (e.g: compiled functions).
-	//    Then it must be dereferenced, even if the method was invoked on a reference-value.
-	//  - Or, the receiver is an implicitly created reference (for invalidation purpose only),
-	//    and wasn't a reference to begin with.
-	shouldDereference := v.DereferenceReceiver() || !v.ReceiverIsReference
-
-	if shouldDereference {
-		receiver = interpreter.MaybeDereferenceReceiver(
-			context,
-			v.ReceiverReference,
-			v.IsNative(),
-		)
-
-	}
-
-	return receiver
+	return interpreter.MaybeDereferenceReceiver(
+		context,
+		v.ReceiverReference,
+		v.DereferenceReceiver(),
+		v.ReceiverIsReference,
+		v.IsNative(),
+	)
 }
 
 func (v *BoundFunctionValue) IsNative() bool {
