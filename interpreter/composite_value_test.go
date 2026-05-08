@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
@@ -224,5 +225,78 @@ func TestInterpretContractTransfer(t *testing.T) {
 
 	t.Run("nested", func(t *testing.T) {
 		test(t, "[C as AnyStruct]")
+	})
+}
+
+func TestInterpretFunctionTypedField(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("user function pointer", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
+            resource R {
+                let f: (fun(AnyStruct): Void)
+
+                init() {
+                    self.f = print  // User function (non-bound).
+                }
+            }
+
+            fun print(_ msg: AnyStruct) {
+                log(msg)
+            }
+
+            fun test() {
+                let r <- create R()
+
+                let f = r.f   // This must return a non-bound function.
+
+                destroy r
+
+                f("hello")  // function pointer should be still valid.
+            }
+        `)
+
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		logs := getLogs()
+		assert.Equal(t, []string{`"hello"`}, logs)
+	})
+
+	t.Run("host function pointer", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
+            resource R {
+                let f: (fun(AnyStruct): Void)
+
+                init() {
+                    self.f = log   // host function (non-bound).
+                }
+            }
+
+            fun test() {
+                let r <- create R()
+
+                let f = r.f   // This must return a non-bound function.
+
+                destroy r
+
+                f("hello")  // function pointer should be still valid.
+            }
+        `)
+
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		logs := getLogs()
+		assert.Equal(t, []string{`"hello"`}, logs)
 	})
 }

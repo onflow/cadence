@@ -532,7 +532,7 @@ func (v *CompositeValue) GetMember(
 	}
 
 	if builtin := v.getBuiltinMember(context, name, accessedReference); builtin != nil {
-		return compositeMember(context, v, accessedReference, builtin)
+		return builtin
 	}
 
 	context = context.GetMemberAccessContextForLocation(v.Location)
@@ -555,7 +555,7 @@ func (v *CompositeValue) GetMember(
 				}
 
 				if field := v.GetField(context, name); field != nil {
-					return compositeMember(context, v, accessedReference, field)
+					return field
 				}
 
 				// Dynamically link in the computed fields and injected fields.
@@ -581,26 +581,6 @@ func (v *CompositeValue) GetMember(
 			return nil
 		},
 	)
-}
-
-func compositeMember(
-	context FunctionCreationContext,
-	compositeValue Value,
-	accessedReference ReferenceValue,
-	memberValue Value,
-) Value {
-	hostFunc, isHostFunc := memberValue.(*HostFunctionValue)
-	if isHostFunc {
-		return NewBoundFunctionValue(
-			context,
-			hostFunc,
-			&compositeValue,
-			accessedReference,
-			nil,
-		)
-	}
-
-	return memberValue
 }
 
 func (v *CompositeValue) isInvalidatedResource(_ ValueStaticTypeContext) bool {
