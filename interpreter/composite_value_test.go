@@ -255,7 +255,7 @@ func TestInterpretFunctionTypedField(t *testing.T) {
 
                 destroy r
 
-                f("hello")  // function point should be still valid.
+                f("hello")  // function pointer should be still valid.
             }
         `)
 
@@ -287,7 +287,7 @@ func TestInterpretFunctionTypedField(t *testing.T) {
 
                 destroy r
 
-                f("hello")  // function point should be still valid.
+                f("hello")  // function pointer should be still valid.
             }
         `)
 
