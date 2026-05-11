@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/common"
 	. "github.com/onflow/cadence/interpreter"
@@ -269,6 +270,28 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 			),
 		)
 	})
+}
+
+// TestInterpreterOptionalBoxingArrayScript reproduces the type-confusion vulnerability:
+// elements yielded by a for-in loop over a [Int?] backed by [Int] are not boxed by the
+// lazy fix (which only covers index expressions), so accessing .map crashes at runtime.
+func TestInterpreterOptionalBoxingArrayScript(t *testing.T) {
+	t.Parallel()
+
+	invokable := parseCheckAndPrepare(t, `
+        fun test(): Int? {
+            let arr: [Int] = [123]
+            let castArr: [Int?] = arr
+            for x in castArr {
+                return x.map(fun(_ v: Int): Int { return v + 1 })
+            }
+            return nil
+        }
+    `)
+
+	result, err := invokable.Invoke("test")
+	require.NoError(t, err)
+	AssertValuesEqual(t, invokable, NewUnmeteredSomeValueNonCopying(NewUnmeteredIntValueFromInt64(124)), result)
 }
 
 func TestInterpreterBoxing(t *testing.T) {
