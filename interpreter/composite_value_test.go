@@ -300,3 +300,104 @@ func TestInterpretFunctionTypedField(t *testing.T) {
 		assert.Equal(t, []string{`"hello"`}, logs)
 	})
 }
+
+func TestInterpretSimpleCompositeTypeFunctionMember(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("unwrapped function", func(t *testing.T) {
+		t.Parallel()
+
+		resourceType := &sema.CompositeType{
+			Location:   TestLocation,
+			Identifier: "S",
+			Kind:       common.CompositeKindStructure,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+		baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+			Name: resourceType.Identifier,
+			Type: resourceType,
+			Kind: common.DeclarationKindStructure,
+		})
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address,
+			true,
+			nil,
+			`
+            struct interface SI {
+                fun foo(): String
+            }
+
+            fun test(s: {SI}) {
+                account.storage.save(s, to: /storage/s)
+
+                var rRef = account.storage.borrow<&{SI}>(from: /storage/s)!
+
+                let f = rRef.foo   // This must return a bound function.
+
+                // Replace the value
+                account.storage.load<S>(from: /storage/s)!
+                account.storage.save("new value", to: /storage/s)
+
+                f()  // function pointer should NOT be valid.
+            }
+        `,
+			sema.Config{
+				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseTypeActivation
+				},
+				CheckHandler: func(checker *sema.Checker, check func()) {
+					if checker.Location == TestLocation {
+						checker.Elaboration.SetCompositeType(
+							resourceType.ID(),
+							resourceType,
+						)
+					}
+					check()
+				},
+			},
+		)
+
+		interfaceType, err := inter.GetInterfaceType(TestLocation, "SI", "S.test.SI")
+		require.NoError(t, err)
+
+		foo, found := interfaceType.Members.Get("foo")
+		require.True(t, found)
+
+		funcType := foo.TypeAnnotation.Type.(*sema.FunctionType)
+
+		resourceType.ExplicitInterfaceConformances = []*sema.InterfaceType{
+			interfaceType,
+		}
+
+		resourceValue := interpreter.NewSimpleCompositeValue(nil,
+			resourceType.ID(),
+			interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, resourceType),
+			nil,
+			nil,
+			nil,
+			func(_ string, context interpreter.MemberAccessibleContext, _ interpreter.ReferenceValue) interpreter.FunctionValue {
+				// IMPORTANT: Return an unwrapped function.
+				return interpreter.NewStaticHostFunctionValue(
+					context,
+					funcType,
+					func(invocation interpreter.Invocation) interpreter.Value {
+						return interpreter.NewUnmeteredStringValue("hello from R")
+					},
+				)
+			},
+			nil,
+			nil,
+		)
+
+		_, err = inter.Invoke("test", resourceValue)
+		RequireError(t, err)
+
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
+	})
+}

@@ -184,7 +184,22 @@ func (v *SimpleCompositeValue) GetMethod(
 		return nil
 	}
 
-	return v.FunctionMemberGetter(name, context, accessedReference)
+	method := v.FunctionMemberGetter(name, context, accessedReference)
+
+	var self Value = v
+
+	hostFunc, isHostFunc := method.(*HostFunctionValue)
+	if isHostFunc {
+		return NewBoundFunctionValue(
+			context,
+			hostFunc,
+			&self,
+			accessedReference,
+			nil,
+		)
+	}
+
+	return method
 }
 
 func (v *SimpleCompositeValue) RemoveMember(_ ValueTransferContext, name string) Value {
