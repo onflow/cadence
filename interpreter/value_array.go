@@ -1761,6 +1761,9 @@ func (v *ArrayValue) Filter(
 
 	return NewArrayValueWithIterator(
 		context,
+		// NOTE: result is NOT v.Type, which could be a constant-sized array type.
+		// Instead, result is always a variable-sized array type,
+		// because filtering can change the number of elements in the array.
 		NewVariableSizedStaticType(context, v.Type.ElementType()),
 		common.ZeroAddress,
 		uint64(v.Count()), // worst case estimation.

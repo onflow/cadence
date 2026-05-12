@@ -272,9 +272,9 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 }
 
-// TestInterpreterOptionalBoxingArrayScript reproduces the type-confusion vulnerability:
-// elements yielded by a for-in loop over a [Int?] backed by [Int] are not boxed by the
-// lazy fix (which only covers index expressions), so accessing .map crashes at runtime.
+// TestInterpreterOptionalBoxingArrayScript verifies that iterating a `[Int?]` backed by `[Int]`
+// yields properly-boxed `Int?` values.
+// The loop-variable type is `Int?` (not `Int`).
 func TestInterpreterOptionalBoxingArrayScript(t *testing.T) {
 	t.Parallel()
 
@@ -283,7 +283,9 @@ func TestInterpreterOptionalBoxingArrayScript(t *testing.T) {
             let arr: [Int] = [123]
             let castArr: [Int?] = arr
             for x in castArr {
-                return x.map(fun(_ v: Int): Int { return v + 1 })
+                return x.map(fun(_ v: Int): Int {
+                    return v + 1
+                })
             }
             return nil
         }
@@ -291,7 +293,110 @@ func TestInterpreterOptionalBoxingArrayScript(t *testing.T) {
 
 	result, err := invokable.Invoke("test")
 	require.NoError(t, err)
-	AssertValuesEqual(t, invokable, NewUnmeteredSomeValueNonCopying(NewUnmeteredIntValueFromInt64(124)), result)
+
+	assert.Equal(t,
+		NewUnmeteredSomeValueNonCopying(NewUnmeteredIntValueFromInt64(124)),
+		result,
+	)
+}
+
+// TestInterpreterOptionalBoxingArrayRefScript verifies that iterating a reference to a `[Int?]` backed by `[Int]`
+// yields properly-boxed `Int?` values.
+// The loop-variable type is `Int?` (not `&Int?`), because the element type is a primitive value type.
+func TestInterpreterOptionalBoxingArrayRefScript(t *testing.T) {
+	t.Parallel()
+
+	invokable := parseCheckAndPrepare(t, `
+        fun test(): Int? {
+            let arr: [Int] = [123]
+            let ref = &arr as &[Int?]
+            for x in ref {
+                return x.map(fun(_ v: Int): Int {
+                    return v + 1
+                })
+            }
+            return nil
+        }
+    `)
+
+	result, err := invokable.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		NewUnmeteredSomeValueNonCopying(NewUnmeteredIntValueFromInt64(124)),
+		result,
+	)
+}
+
+// TestInterpreterOptionalBoxingArrayMap verifies the callback of `Array.map` receives
+// properly-boxed `Int?` elements when invoked on a `[Int?]` whose underlying storage is `[Int]`.
+func TestInterpreterOptionalBoxingArrayMap(t *testing.T) {
+	t.Parallel()
+
+	invokable := parseCheckAndPrepare(t, `
+        fun test(): [Int?] {
+            let arr: [Int] = [10, 20, 30]
+            let castArr: [Int?] = arr
+            return castArr.map(fun(_ x: Int?): Int? {
+                if x == nil {
+                    return -1
+                }
+                return x! + 1
+            })
+        }
+    `)
+
+	result, err := invokable.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(t,
+		invokable,
+		NewArrayValue(
+			invokable,
+			// NOTE: result has type [Int?], because the callback's return type is Int?
+			NewVariableSizedStaticType(
+				nil,
+				NewOptionalStaticType(nil, PrimitiveStaticTypeInt),
+			),
+			common.ZeroAddress,
+			NewUnmeteredSomeValueNonCopying(NewUnmeteredIntValueFromInt64(11)),
+			NewUnmeteredSomeValueNonCopying(NewUnmeteredIntValueFromInt64(21)),
+			NewUnmeteredSomeValueNonCopying(NewUnmeteredIntValueFromInt64(31)),
+		),
+		result,
+	)
+}
+
+// TestInterpreterOptionalBoxingArrayFilter verifies the callback of `Array.filter` receives
+// properly-boxed `Int?` elements when invoked on a `[Int?]` whose underlying storage is `[Int]`.
+func TestInterpreterOptionalBoxingArrayFilter(t *testing.T) {
+	t.Parallel()
+
+	invokable := parseCheckAndPrepare(t, `
+        fun test(): [Int?] {
+            let arr: [Int] = [10, 20, 30]
+            let castArr: [Int?] = arr
+            return castArr.filter(view fun(_ x: Int?): Bool {
+                return x != nil && x! > 15
+            })
+        }
+    `)
+
+	result, err := invokable.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(t,
+		invokable,
+		NewArrayValue(
+			invokable,
+			// NOTE: result has type [Int], because input also has type [Int]
+			NewVariableSizedStaticType(nil, PrimitiveStaticTypeInt),
+			common.ZeroAddress,
+			NewUnmeteredIntValueFromInt64(20),
+			NewUnmeteredIntValueFromInt64(30),
+		),
+		result,
+	)
 }
 
 func TestInterpreterBoxing(t *testing.T) {
