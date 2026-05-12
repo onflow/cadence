@@ -176,33 +176,20 @@ func (v *EphemeralReferenceValue) GetMember(
 	memberKind common.DeclarationKind,
 	accessedReference ReferenceValue,
 ) Value {
-	var result Value
-
 	// For ephemeral references, "accessedReference" is the value itself.
 	if accessedReference != nil {
 		// Parameter must be always `nil`, since the root of the `GetMember` call
 		// starts with a nil "accessedReference".
 		panic(errors.NewUnreachableError())
 	}
-	accessedReference = v
 
-	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, name, memberKind, accessedReference)
-	}
-
-	if result == nil {
-		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
-		return GetMember(
-			context,
-			v,
-			accessedReference,
-			name,
-			memberKind,
-			nil,
-		)
-	}
-
-	return result
+	return GetReferenceValueMember(
+		context,
+		v,
+		v.Value,
+		name,
+		memberKind,
+	)
 }
 
 func (v *EphemeralReferenceValue) GetMethod(
@@ -216,7 +203,8 @@ func (v *EphemeralReferenceValue) GetMethod(
 	if accessedReference != v {
 		panic(errors.NewUnreachableError())
 	}
-	return getBuiltinFunctionMember(context, v.Value, name, accessedReference)
+
+	return getBuiltinFunctionMember(context, v, name, accessedReference)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {

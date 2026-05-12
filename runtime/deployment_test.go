@@ -400,7 +400,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				Value: interpreter.TrueValue,
 			},
 			check: expectFailure(
-				"invalid transfer of value: expected `Int`, got `Bool`",
+				"invalid argument type: expected `Int`, got `Bool`",
 				1,
 				1,
 			),

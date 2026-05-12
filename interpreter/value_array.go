@@ -966,6 +966,8 @@ func (v *ArrayValue) GetMethod(
 	accessedReference ReferenceValue,
 ) FunctionValue {
 
+	arrayType := v.SemaType(context)
+
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
 		return NewBoundHostFunctionValue(
@@ -973,7 +975,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayAppendFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArrayAppendFunction,
 		)
@@ -984,7 +986,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayAppendAllFunctionType(
-				v.SemaType(context),
+				arrayType,
 			),
 			NativeArrayAppendAllFunction,
 		)
@@ -995,7 +997,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayConcatFunctionType(
-				v.SemaType(context),
+				arrayType,
 			),
 			NativeArrayConcatFunction,
 		)
@@ -1006,7 +1008,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayInsertFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArrayInsertFunction,
 		)
@@ -1017,7 +1019,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayRemoveFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveFunction,
 		)
@@ -1028,7 +1030,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayRemoveFirstFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveFirstFunction,
 		)
@@ -1039,7 +1041,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayRemoveLastFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveLastFunction,
 		)
@@ -1050,7 +1052,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayFirstIndexFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArrayFirstIndexFunction,
 		)
@@ -1061,7 +1063,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayContainsFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArrayContainsFunction,
 		)
@@ -1072,7 +1074,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArraySliceFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArraySliceFunction,
 		)
@@ -1083,34 +1085,56 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayReverseFunctionType(
-				v.SemaType(context),
+				arrayType,
 			),
 			NativeArrayReverseFunction,
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
+		var accessedType sema.Type
+		if accessedReference != nil {
+			accessedType = MustSemaTypeOfValue(accessedReference, context)
+		} else {
+			accessedType = arrayType
+		}
+
 		return NewBoundHostFunctionValue(
 			context,
 			v,
 			accessedReference,
 			sema.ArrayFilterFunctionType(
 				context,
-				v.SemaType(context).ElementType(false),
+				accessedType,
+				arrayType.ElementType(false),
 			),
 			NativeArrayFilterFunction,
-		)
+		).
+			// Filter function's parameter-type depends on whether
+			// the receiver is a reference or a concrete array.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeMapFunctionName:
+		var accessedType sema.Type
+		if accessedReference != nil {
+			accessedType = MustSemaTypeOfValue(accessedReference, context)
+		} else {
+			accessedType = arrayType
+		}
+
 		return NewBoundHostFunctionValue(
 			context,
 			v,
 			accessedReference,
 			sema.ArrayMapFunctionType(
 				context,
-				v.SemaType(context),
+				accessedType,
+				arrayType,
 			),
 			NativeArrayMapFunction,
-		)
+		).
+			// Map function's parameter-type depends on whether
+			// the receiver is a reference or a concrete array.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1118,7 +1142,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayToVariableSizedFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArrayToVariableSizedFunction,
 		)
@@ -1129,7 +1153,7 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayToConstantSizedFunctionType(
-				v.SemaType(context).ElementType(false),
+				arrayType.ElementType(false),
 			),
 			NativeArrayToConstantSizedFunction,
 		)
@@ -1743,15 +1767,27 @@ func (v *ArrayValue) Reverse(
 func (v *ArrayValue) Filter(
 	context InvocationContext,
 	procedure FunctionValue,
+	accessedType sema.Type,
 ) Value {
 
 	elementType := v.SemaType(context).ElementType(false)
 
-	argumentTypes := []sema.Type{elementType}
+	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
+	if asReference {
+		outerRef, _ := sema.MaybeReferenceType(accessedType)
+		elementType = sema.GetDescendantReferenceType(
+			context,
+			elementType,
+			sema.UnauthorizedAccess,
+			outerRef.Authorization,
+		)
+	}
+
+	argumentType := elementType
+	argumentTypes := []sema.Type{argumentType}
 
 	procedureFunctionType := procedure.FunctionType(context)
 	parameterTypes := procedureFunctionType.ParameterTypes()
-	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 
 	// TODO: Use ReadOnlyIterator here if procedure doesn't change array elements.
 	iterator, err := v.array.Iterator()
@@ -1759,12 +1795,14 @@ func (v *ArrayValue) Filter(
 		panic(errors.NewExternalError(err))
 	}
 
+	resultElementStaticType := ConvertSemaToStaticType(context, argumentType)
+
 	return NewArrayValueWithIterator(
 		context,
 		// NOTE: result is NOT v.Type, which could be a constant-sized array type.
 		// Instead, result is always a variable-sized array type,
 		// because filtering can change the number of elements in the array.
-		NewVariableSizedStaticType(context, v.Type.ElementType()),
+		NewVariableSizedStaticType(context, resultElementStaticType),
 		common.ZeroAddress,
 		uint64(v.Count()), // worst case estimation.
 		func() Value {
@@ -1795,13 +1833,21 @@ func (v *ArrayValue) Filter(
 					return nil
 				}
 
+				if asReference {
+					value = getReferenceValue(
+						context,
+						value,
+						argumentType,
+					)
+				}
+
 				result := invokeFunctionValue(
 					context,
 					procedure,
 					[]Value{value},
 					argumentTypes,
 					parameterTypes,
-					returnType,
+					sema.BoolType,
 					nil,
 				)
 
@@ -1831,12 +1877,25 @@ func (v *ArrayValue) Filter(
 func (v *ArrayValue) Map(
 	context InvocationContext,
 	procedure FunctionValue,
+	accessedType sema.Type,
 ) Value {
 	count := v.Count()
 
 	elementType := v.SemaType(context).ElementType(false)
 
-	argumentTypes := []sema.Type{elementType}
+	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
+	if asReference {
+		outerRef, _ := sema.MaybeReferenceType(accessedType)
+		elementType = sema.GetDescendantReferenceType(
+			context,
+			elementType,
+			sema.UnauthorizedAccess,
+			outerRef.Authorization,
+		)
+	}
+
+	argumentType := elementType
+	argumentTypes := []sema.Type{argumentType}
 
 	procedureFunctionType := procedure.FunctionType(context)
 	parameterTypes := procedureFunctionType.ParameterTypes()
@@ -1894,6 +1953,13 @@ func (v *ArrayValue) Map(
 			}
 
 			value := MustConvertStoredValue(context, atreeValue)
+			if asReference {
+				value = getReferenceValue(
+					context,
+					value,
+					argumentType,
+				)
+			}
 
 			result := invokeFunctionValue(
 				context,
@@ -2308,12 +2374,32 @@ var NativeArrayFilterFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		array := arrayValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
+
 		funcValue := AssertValueOfType[FunctionValue](args[0])
 
-		return thisArray.Filter(context, funcValue)
+		return array.Filter(context, funcValue, accessedType)
 	},
 )
+
+func arrayValueFromReceiver(context ValueStaticTypeContext, receiver Value) *ArrayValue {
+	switch receiver := receiver.(type) {
+	case *ArrayValue:
+		return receiver
+
+	case *StorageReferenceValue:
+		referencedValue := receiver.MustReferencedValue(context)
+		return AssertValueOfType[*ArrayValue](referencedValue)
+
+	case *EphemeralReferenceValue:
+		referencedValue := receiver.Value
+		return AssertValueOfType[*ArrayValue](referencedValue)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
 
 var NativeArrayMapFunction = NativeFunction(
 	func(
@@ -2323,10 +2409,12 @@ var NativeArrayMapFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		array := arrayValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
+
 		funcValue := AssertValueOfType[FunctionValue](args[0])
 
-		return thisArray.Map(context, funcValue)
+		return array.Map(context, funcValue, accessedType)
 	},
 )
 

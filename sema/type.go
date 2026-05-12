@@ -20,6 +20,7 @@ package sema
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"math/big"
 	"slices"
@@ -310,14 +311,16 @@ type TypeIndexableType interface {
 }
 
 type MemberResolver struct {
-	Resolve func(
-		memoryGauge common.MemoryGauge,
-		identifier string,
-		targetRange ast.HasPosition,
-		report func(error),
-	) *Member
-	Kind common.DeclarationKind
+	Resolve ResolveMemberFunc
+	Kind    common.DeclarationKind
 }
+
+type ResolveMemberFunc func(
+	memoryGauge common.MemoryGauge,
+	identifier string,
+	targetRange ast.HasPosition,
+	report func(error),
+) *Member
 
 // supertype of interfaces and composites
 type NominalType interface {
@@ -2479,7 +2482,7 @@ Returns a new array whose elements are produced by applying the mapper function 
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
-		"contains": {
+		ArrayTypeContainsFunctionName: {
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,
@@ -2610,64 +2613,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			},
 		},
 		ArrayTypeFilterFunctionName: {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				targetRange ast.HasPosition,
-				report func(error),
-			) *Member {
-
-				elementType := arrayType.ElementType(false)
-
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArrayFilterFunctionType(memoryGauge, elementType),
-					arrayTypeFilterFunctionDocString,
-				)
-			},
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayFilterFunctionMemberFuncResolver(arrayType, arrayType),
 		},
 		ArrayTypeMapFunctionName: {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				targetRange ast.HasPosition,
-				report func(error),
-			) *Member {
-				elementType := arrayType.ElementType(false)
-
-				// TODO: maybe allow for resource element type as a reference.
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArrayMapFunctionType(memoryGauge, arrayType),
-					arrayTypeMapFunctionDocString,
-				)
-			},
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayMapFunctionMemberFuncResolver(arrayType, arrayType),
 		},
 	}
 
@@ -2946,6 +2897,80 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 	return withBuiltinMembers(arrayType, members)
 }
 
+func ArrayMapFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+		elementType := arrayType.ElementType(false)
+
+		// TODO: maybe allow for resource element type as a reference.
+		if elementType.IsResourceType() {
+			report(
+				&InvalidResourceArrayMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindFunction,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			arrayType,
+			identifier,
+			ArrayMapFunctionType(
+				memoryGauge,
+				accessedType,
+				arrayType,
+			),
+			arrayTypeMapFunctionDocString,
+		)
+	}
+}
+
+func ArrayFilterFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+
+		elementType := arrayType.ElementType(false)
+
+		if elementType.IsResourceType() {
+			report(
+				&InvalidResourceArrayMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindFunction,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			arrayType,
+			identifier,
+			ArrayFilterFunctionType(
+				memoryGauge,
+				accessedType,
+				elementType,
+			),
+			arrayTypeFilterFunctionDocString,
+		)
+	}
+}
+
 func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
@@ -3022,6 +3047,7 @@ func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 		),
 	)
 }
+
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityView,
@@ -3158,9 +3184,25 @@ func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
 	}
 }
 
-func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *FunctionType {
-	// fun filter(_ function: ((T): Bool)): [T]
-	// funcType: elementType -> Bool
+// ArrayFilterFunctionType returns the type for the array function `filter`:
+//
+//	fun (_ function: ((T): Bool)): [T]
+func ArrayFilterFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	elementType Type,
+) *FunctionType {
+
+	if ShouldReturnReference(accessedType, elementType, false) {
+		outerRef, _ := MaybeReferenceType(accessedType)
+		elementType = GetDescendantReferenceType(
+			memoryGauge,
+			elementType,
+			UnauthorizedAccess,
+			outerRef.Authorization,
+		)
+	}
+
 	funcType := &FunctionType{
 		Parameters: []Parameter{
 			{
@@ -3185,11 +3227,19 @@ func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *
 	}
 }
 
-func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *FunctionType {
-	// For [T] or [T; N]
-	// fun map(_ function: ((T): U)): [U]
-	//               or
-	// fun map(_ function: ((T): U)): [U; N]
+// ArrayMapFunctionType returns the type for the array function `map`:
+// For [T]:
+//
+//	fun (_ function: ((T): U)): [U]
+//
+// For [T; N]:
+//
+//	fun (_ function: ((T): U)): [U; N]
+func ArrayMapFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	arrayType ArrayType,
+) *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name: "U",
@@ -3209,12 +3259,23 @@ func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *
 		panic(errors.NewUnreachableError())
 	}
 
-	// transformFuncType: elementType -> U
+	elementType := arrayType.ElementType(false)
+
+	if ShouldReturnReference(accessedType, elementType, false) {
+		outerRef, _ := MaybeReferenceType(accessedType)
+		elementType = GetDescendantReferenceType(
+			memoryGauge,
+			elementType,
+			UnauthorizedAccess,
+			outerRef.Authorization,
+		)
+	}
+
 	transformFuncType := &FunctionType{
 		Parameters: []Parameter{
 			{
 				Identifier:     "element",
-				TypeAnnotation: NewTypeAnnotation(arrayType.ElementType(false)),
+				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(typeU),
@@ -7454,6 +7515,9 @@ type ReferenceType struct {
 	Authorization Access
 
 	typeID atomic.Pointer[TypeID]
+
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ Type = &ReferenceType{}
@@ -7654,7 +7718,16 @@ func (t *ReferenceType) Walk(visit func(ty Type) bool) bool {
 }
 
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
-	return t.Type.GetMembers()
+	t.initializeMembers()
+	return t.memberResolvers
+}
+
+func (t *ReferenceType) initializeMembers() {
+	t.memberResolversOnce.Do(func() {
+		members := maps.Clone(t.Type.GetMembers())
+		t.overloadMembers(members)
+		t.memberResolvers = members
+	})
 }
 
 func (t *ReferenceType) isValueIndexableType() bool {
@@ -7775,6 +7848,26 @@ func (t *ReferenceType) CheckInstantiated(
 		report,
 		seenTypes,
 	)
+}
+
+func (t *ReferenceType) overloadMembers(members map[string]MemberResolver) {
+	switch ty := t.Type.(type) {
+	case ArrayType:
+		t.overloadArrayReferenceMembers(ty, members)
+	}
+}
+
+func (t *ReferenceType) overloadArrayReferenceMembers(arrayType ArrayType, members map[string]MemberResolver) {
+
+	members[ArrayTypeFilterFunctionName] = MemberResolver{
+		Kind:    common.DeclarationKindFunction,
+		Resolve: ArrayFilterFunctionMemberFuncResolver(t, arrayType),
+	}
+
+	members[ArrayTypeMapFunctionName] = MemberResolver{
+		Kind:    common.DeclarationKindFunction,
+		Resolve: ArrayMapFunctionMemberFuncResolver(t, arrayType),
+	}
 }
 
 const AddressTypeName = "Address"

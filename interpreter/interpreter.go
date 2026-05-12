@@ -7037,6 +7037,36 @@ func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authoriza
 	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter) //nolint:staticcheck
 }
 
+func GetReferenceValueMember(
+	context MemberAccessibleContext,
+	v ReferenceValue,
+	referencedValue Value,
+	name string,
+	memberKind common.DeclarationKind,
+) Value {
+
+	var member Value
+
+	// Look up the member on the referenced value
+	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
+		member = memberAccessibleValue.GetMember(context, name, memberKind, v)
+	}
+
+	if member == nil {
+		// NOTE: Must call the `GetMethod` of the reference value, not of the referenced value.
+		return GetMember(
+			context,
+			v,
+			v,
+			name,
+			memberKind,
+			nil,
+		)
+	}
+
+	return member
+}
+
 func storageReferenceWithNarrowedType(
 	context ValueStaticTypeContext,
 	storageReference *StorageReferenceValue,

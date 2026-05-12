@@ -26,7 +26,7 @@ import (
 )
 
 type ReferenceValue interface {
-	Value
+	MemberAccessibleValue
 	AuthorizedValue
 	isReference()
 	ReferencedValue(context ValueStaticTypeContext, errorOnFailedDereference bool) *Value

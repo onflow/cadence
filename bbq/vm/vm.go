@@ -1038,6 +1038,8 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
+	// TODO: Double check this (this is also how the interpreter does it)
+	// Do the target-type check **before** updating the receiver for attachments
 	checkMemberAccessTargetType(
 		vm,
 		ins.ReceiverType,
@@ -1161,7 +1163,7 @@ func invokeFunction(
 	case *NativeFunctionValue:
 		if isBoundFunction {
 			// For built-in functions, pass the dereferenced receiver.
-			receiver = boundFunction.DereferencedReceiver(context)
+			receiver = boundFunction.MaybeDereferencedReceiver(context)
 		}
 
 		if interpreter.TracingEnabled {

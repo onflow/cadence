@@ -32,10 +32,12 @@ type FunctionValue interface {
 	Value
 	IsFunctionValue()
 	FunctionType(context ValueStaticTypeContext) *sema.FunctionType
-	// invoke evaluates the function.
+	// Invoke evaluates the function.
 	// Only used internally by the interpreter.
 	// Use Interpreter.InvokeFunctionValue if you want to invoke the function externally
 	Invoke(Invocation) Value
+
+	DereferenceReceiver() bool
 }
 
 // InterpretedFunctionValue
@@ -168,6 +170,11 @@ func (f *InterpretedFunctionValue) Clone(_ ValueCloneContext) Value {
 
 func (*InterpretedFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
+}
+
+func (*InterpretedFunctionValue) DereferenceReceiver() bool {
+	// Shouldn't reach here
+	panic(errors.NewUnreachableError())
 }
 
 // HostFunctionValue
@@ -339,11 +346,18 @@ func (f *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
 	f.NestedVariables = variables
 }
 
+func (*HostFunctionValue) DereferenceReceiver() bool {
+	// Shouldn't reach here
+	panic(errors.NewUnreachableError())
+}
+
 // BoundFunctionValue
 type BoundFunctionValue struct {
-	Function      FunctionValue
-	Base          *EphemeralReferenceValue
-	SelfReference ReferenceValue
+	Function            FunctionValue
+	Base                *EphemeralReferenceValue
+	SelfReference       ReferenceValue
+	selfIsReference     bool
+	dereferenceReceiver bool
 }
 
 var _ Value = BoundFunctionValue{}
@@ -362,14 +376,16 @@ func NewBoundFunctionValue(
 		return boundFunc
 	}
 
-	selfReference, _ := ReceiverReference(context, *self, accessedReference)
+	selfReference, selfIsReference := ReceiverReference(context, *self, accessedReference)
 
 	common.UseMemory(context, common.BoundFunctionValueMemoryUsage)
 
 	return BoundFunctionValue{
-		Function:      function,
-		SelfReference: selfReference,
-		Base:          base,
+		Function:            function,
+		SelfReference:       selfReference,
+		selfIsReference:     selfIsReference,
+		Base:                base,
+		dereferenceReceiver: true,
 	}
 }
 
@@ -458,18 +474,17 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 
 	inter := invocation.InvocationContext
 
-	// If the `self` is already a reference to begin with (e.g: attachments),
-	// then pass the reference as-is to the invocation.
-	// Otherwise, always dereference, at the time of the invocation.
-
 	// TODO: Maybe check recursively?
 	_, isHostFunction := f.Function.(*HostFunctionValue)
 
 	receiver := MaybeDereferenceReceiver(
 		inter,
 		f.SelfReference,
+		f.DereferenceReceiver(),
+		f.selfIsReference,
 		isHostFunction,
 	)
+
 	invocation.Self = &receiver
 
 	return f.Function.Invoke(invocation)
@@ -478,10 +493,22 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 func MaybeDereferenceReceiver(
 	context ValueStaticTypeContext,
 	receiverReference ReferenceValue,
+	dereferenceReceiver bool,
+	receiverIsReference bool,
 	isNative bool,
 ) Value {
 
 	CheckInvalidatedResourceOrResourceReference(receiverReference, context)
+
+	// Receiver needs to be dereferenced, if:
+	//  - The function always required the receiver to be dereferenced (e.g: interpreted functions).
+	//    Then it must be dereferenced, even if the method was invoked on a reference-value.
+	//  - Or, the receiver is an implicitly created reference (for invalidation purpose only),
+	//    and wasn't a reference to begin with.
+	shouldDereference := dereferenceReceiver || !receiverIsReference
+	if !shouldDereference {
+		return receiverReference
+	}
 
 	switch typedValue := receiverReference.(type) {
 	case *EphemeralReferenceValue:
@@ -551,6 +578,15 @@ func (f BoundFunctionValue) Clone(_ ValueCloneContext) Value {
 
 func (BoundFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
+}
+
+func (f BoundFunctionValue) WithDereferenceReceiver(dereferenceReceiver bool) BoundFunctionValue {
+	f.dereferenceReceiver = dereferenceReceiver
+	return f
+}
+
+func (f BoundFunctionValue) DereferenceReceiver() bool {
+	return f.dereferenceReceiver
 }
 
 // NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.
@@ -690,4 +726,9 @@ func (f WrappedFunctionValue) Clone(_ ValueCloneContext) Value {
 
 func (WrappedFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
+}
+
+func (WrappedFunctionValue) DereferenceReceiver() bool {
+	// Shouldn't reach here
+	panic(errors.NewUnreachableError())
 }

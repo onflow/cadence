@@ -1464,12 +1464,35 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
                 let arr: [AnyStruct] = [&t1 as auth(E) &T, &t2 as auth(E) &T]
                 let arrRef = &arr as &[AnyStruct]
                 let tRef = arrRef[0]
+                let authTRef = tRef as! &T
             }
             
         `)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("array reference, authorized reference typed element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test() {
+                let v1: [Int]? = [1]
+
+                let array: [auth(Mutate) &[Int]?] = [&v1 as auth(Mutate) &[Int]?]
+                let arrayRef = &array as &[auth(Mutate) &[Int]?]
+
+                let x: &[Int]? = arrayRef[0]
+
+                // Down-casting should fail
+                let y: auth(Mutate) &[Int] = x as! auth(Mutate) &[Int]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 }
 
