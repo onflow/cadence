@@ -342,6 +342,14 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 	}
 
 	executeBody := func(value Value) (resume bool) {
+		// When iterating, the underlying container's element type may differ
+		// from the loop variable's type.
+		// For example, when the declared type is `[Int?]`, but the container's
+		// run-time type is `[Int]`, then it stores `Int` elements, but the loop
+		// variable type is `Int?`. Convert and box to match the declared type.
+		// This mirrors the VM's `mustEmitTransferAndConvert(loopVarType, loopVarType)`.
+		value = ConvertAndBox(interpreter, value, forStmtTypes.ValueVariableType)
+
 		statementResult, done := interpreter.visitForStatementBody(statement, index, value)
 		if done {
 			result = statementResult
