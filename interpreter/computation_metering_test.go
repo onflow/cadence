@@ -2298,6 +2298,8 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 
 	t.Parallel()
 
+	rlpTypeID := stdlib.RLPType.ID()
+
 	t.Run("decodeString", func(t *testing.T) {
 		t.Parallel()
 
@@ -2330,6 +2332,13 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 					ComputationGauge: computationGauge,
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
+					},
+					CompositeTypeHandler: func(_ common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+						if typeID == rlpTypeID {
+							return stdlib.RLPType
+						}
+
+						return nil
 					},
 				},
 			},
@@ -2388,6 +2397,13 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
+					CompositeTypeHandler: func(_ common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+						if typeID == rlpTypeID {
+							return stdlib.RLPType
+						}
+
+						return nil
+					},
 				},
 			},
 		)
@@ -2445,6 +2461,13 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 					ComputationGauge: computationGauge,
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
+					},
+					CompositeTypeHandler: func(_ common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+						if typeID == rlpTypeID {
+							return stdlib.RLPType
+						}
+
+						return nil
 					},
 				},
 			},

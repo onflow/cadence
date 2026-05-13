@@ -306,6 +306,13 @@ func TestInterpretSimpleCompositeTypeFunctionMember(t *testing.T) {
 	t.Parallel()
 
 	t.Run("unwrapped function", func(t *testing.T) {
+		// Only test the interpreter for now.
+		// TODO: figure out how to register builtin-functions for
+		// the vm during test setup.
+		if *compile {
+			t.SkipNow()
+		}
+
 		t.Parallel()
 
 		resourceType := &sema.CompositeType{
@@ -314,6 +321,8 @@ func TestInterpretSimpleCompositeTypeFunctionMember(t *testing.T) {
 			Kind:       common.CompositeKindStructure,
 			Members:    &sema.StringMemberOrderedMap{},
 		}
+
+		resourceTypeID := resourceType.ID()
 
 		baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
 		baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
@@ -340,7 +349,7 @@ func TestInterpretSimpleCompositeTypeFunctionMember(t *testing.T) {
                 let f = rRef.foo   // This must return a bound function.
 
                 // Replace the value
-                account.storage.load<S>(from: /storage/s)!
+                account.storage.load<AnyStruct>(from: /storage/s)!
                 account.storage.save("new value", to: /storage/s)
 
                 f()  // function pointer should NOT be valid.
@@ -353,7 +362,7 @@ func TestInterpretSimpleCompositeTypeFunctionMember(t *testing.T) {
 				CheckHandler: func(checker *sema.Checker, check func()) {
 					if checker.Location == TestLocation {
 						checker.Elaboration.SetCompositeType(
-							resourceType.ID(),
+							resourceTypeID,
 							resourceType,
 						)
 					}
@@ -375,7 +384,7 @@ func TestInterpretSimpleCompositeTypeFunctionMember(t *testing.T) {
 		}
 
 		resourceValue := interpreter.NewSimpleCompositeValue(nil,
-			resourceType.ID(),
+			resourceTypeID,
 			interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, resourceType),
 			nil,
 			nil,
