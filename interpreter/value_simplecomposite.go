@@ -186,10 +186,17 @@ func (v *SimpleCompositeValue) GetMethod(
 
 	method := v.FunctionMemberGetter(name, context, accessedReference)
 
-	var self Value = v
-
 	hostFunc, isHostFunc := method.(*HostFunctionValue)
+
+	// All methods of a composite value must be bound-functions.
+	// If it is not, then wrap it with a bound function upon use.
+	// Composite methods may have been declared as static function
+	// (not as bound-function), so that they can be re-used.
+	// This is acceptable for methods who do not make use of the receiver.
+	// However, it must be wrapped upon retrieval for receiver/reference
+	// invalidation to work.
 	if isHostFunc {
+		var self Value = v
 		return NewBoundFunctionValue(
 			context,
 			hostFunc,
