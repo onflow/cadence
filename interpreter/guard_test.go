@@ -24,7 +24,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretGuardStatement(t *testing.T) {
@@ -1038,4 +1040,36 @@ func TestInterpretGuardStatementComplexConditions(t *testing.T) {
 			)
 		})
 	})
+}
+
+func TestInterpretGuardStatementElseFallthrough(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          fun test(): Bool {
+              guard let shadow = nil else {
+                  // NOTE: invalid fallthrough
+              }
+              return true
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				// NOTE: ignore invalid fallthrough in else branch
+
+				errs := RequireCheckerErrors(t, err, 1)
+
+				var guardElseMustExitErr *sema.GuardStatementElseBlockMustExitError
+				require.ErrorAs(t, errs[0], &guardElseMustExitErr)
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+
+	var unreachableInstructionErr *interpreter.UnreachableInstructionError
+	require.ErrorAs(t, err, &unreachableInstructionErr)
 }
