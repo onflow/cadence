@@ -2266,7 +2266,7 @@ func (vm *VM) run() {
 		case opcode.InstructionGetFieldLocal:
 			opGetFieldLocal(vm, ins)
 		case opcode.InstructionUnreachable:
-			panic(errors.NewUnreachableError())
+			panic(&interpreter.UnreachableInstructionError{})
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}

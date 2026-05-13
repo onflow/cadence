@@ -51,6 +51,23 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// UnreachableInstructionError
+
+type UnreachableInstructionError struct {
+	ast.Range
+}
+
+var _ errors.InternalError = &UnreachableInstructionError{}
+
+func (*UnreachableInstructionError) IsInternalError() {}
+
+func (e *UnreachableInstructionError) Error() string {
+	return fmt.Sprintf(
+		"%s instruction should be unreachable, but was reached during execution",
+		errors.InternalErrorMessagePrefix,
+	)
+}
+
 type HasLocationRange interface {
 	SetLocationRange(locationRange LocationRange)
 }
