@@ -323,12 +323,11 @@ func (e *Elaboration) SetCompositeDeclarationType(
 	e.compositeDeclarationTypes[declaration] = compositeType
 }
 
-func (e *Elaboration) CompositeTypeDeclaration(compositeType *CompositeType) (decl ast.CompositeLikeDeclaration, ok bool) {
+func (e *Elaboration) CompositeTypeDeclaration(compositeType *CompositeType) ast.CompositeLikeDeclaration {
 	if e.compositeTypeDeclarations == nil {
-		return
+		return nil
 	}
-	decl, ok = e.compositeTypeDeclarations[compositeType]
-	return
+	return e.compositeTypeDeclarations[compositeType]
 }
 
 func (e *Elaboration) SetCompositeTypeDeclaration(
@@ -417,6 +416,24 @@ func (e *Elaboration) EntitlementMapTypeDeclaration(entitlementMapType *Entitlem
 	}
 	decl, _ := e.entitlementMapTypesAndDeclarationsBiMap.Get(entitlementMapType)
 	return decl
+}
+
+func (e *Elaboration) DeclarationForType(ty Type) ast.Declaration {
+	switch t := ty.(type) {
+	case *CompositeType:
+		return e.CompositeTypeDeclaration(t)
+
+	case *InterfaceType:
+		return e.InterfaceTypeDeclaration(t)
+
+	case *EntitlementType:
+		return e.EntitlementTypeDeclaration(t)
+
+	case *EntitlementMapType:
+		return e.EntitlementMapTypeDeclaration(t)
+	}
+
+	return nil
 }
 
 func (e *Elaboration) ConstructorFunctionType(initializer *ast.SpecialFunctionDeclaration) *FunctionType {

@@ -58,20 +58,7 @@ func (i *PositionInfo) recordNestedTypeReferenceOccurrence(
 		Type: nestedType,
 	}
 
-	var decl ast.Declaration
-
-	switch t := nestedType.(type) {
-	case *CompositeType:
-		decl, _ = elaboration.CompositeTypeDeclaration(t)
-	case *InterfaceType:
-		decl = elaboration.InterfaceTypeDeclaration(t)
-	case *EntitlementType:
-		decl = elaboration.EntitlementTypeDeclaration(t)
-	case *EntitlementMapType:
-		decl = elaboration.EntitlementMapTypeDeclaration(t)
-	}
-
-	if decl != nil {
+	if decl := elaboration.DeclarationForType(nestedType); decl != nil {
 		populateOriginFromDeclaration(memoryGauge, origin, decl)
 	}
 
