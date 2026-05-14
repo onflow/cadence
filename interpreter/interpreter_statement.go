@@ -268,26 +268,22 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 
 		// If the case has no expression it is the default case.
 		// Evaluate it, i.e. all statements
-
 		if switchCase.Expression == nil {
 			return runStatements()
 		}
 
 		// The case has an expression.
 		// Evaluate it and compare it to the test value
-
 		result := interpreter.evalExpression(switchCase.Expression)
-
 		caseValue, ok := result.(EquatableValue)
-
 		if !ok {
 			continue
 		}
 
-		// If the test value and case values are equal,
-		// evaluate the case's statements
-
-		if testValue.Equal(interpreter, caseValue) {
+		// If the test value and case values are equal, evaluate the case's statements.
+		// Use `TestValueEqual` to have the same equality as the `==` operator.
+		// i.e: equality check should do implicit unboxing.
+		if TestValueEqual(interpreter, testValue, caseValue) {
 			return runStatements()
 		}
 
