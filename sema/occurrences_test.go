@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -358,4 +359,86 @@ nextMatcher:
 		assert.NotNil(t, checker.PositionInfo.Occurrences.Find(matcher.StartPos))
 		assert.NotNil(t, checker.PositionInfo.Occurrences.Find(matcher.EndPos))
 	}
+}
+
+func TestCheckNestedTypeOccurrenceSameFile(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheckWithOptions(t, `
+        access(all) contract A {
+            access(all) struct S {}
+            access(all) fun b(_ s: A.S) {}
+        }
+        `,
+		ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				PositionInfoEnabled: true,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	contractA := RequireGlobalType(t, checker.Elaboration, "A").(*sema.CompositeType)
+	sType, _ := contractA.GetNestedTypes().Get("S")
+
+	occurrence := checker.PositionInfo.Occurrences.Find(sema.Position{Line: 4, Column: 37})
+	require.NotNil(t, occurrence)
+
+	assert.Equal(t,
+		&sema.Origin{
+			Type:            sType,
+			StartPos:        &ast.Position{Offset: 65, Line: 3, Column: 31},
+			EndPos:          &ast.Position{Offset: 65, Line: 3, Column: 31},
+			DeclarationKind: common.DeclarationKindStructure,
+			Occurrences: []ast.Range{
+				{
+					StartPos: ast.Position{Offset: 107, Line: 4, Column: 37},
+					EndPos:   ast.Position{Offset: 107, Line: 4, Column: 37},
+				},
+			},
+		},
+		occurrence.Origin,
+	)
+}
+
+func TestCheckNestedInterfaceTypeOccurrence(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheckWithOptions(t, `
+        access(all) contract A {
+            access(all) struct interface SI {}
+            access(all) fun b(_ s: {A.SI}) {}
+        }
+        `,
+		ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				PositionInfoEnabled: true,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	contractA := RequireGlobalType(t, checker.Elaboration, "A").(*sema.CompositeType)
+	siType, _ := contractA.GetNestedTypes().Get("SI")
+
+	occurrence := checker.PositionInfo.Occurrences.Find(sema.Position{Line: 4, Column: 38})
+	require.NotNil(t, occurrence)
+
+	assert.Equal(t,
+		&sema.Origin{
+			Type:            siType,
+			StartPos:        &ast.Position{Offset: 75, Line: 3, Column: 41},
+			EndPos:          &ast.Position{Offset: 76, Line: 3, Column: 42},
+			DeclarationKind: common.DeclarationKindStructureInterface,
+			Occurrences: []ast.Range{
+				{
+					StartPos: ast.Position{Offset: 119, Line: 4, Column: 38},
+					EndPos:   ast.Position{Offset: 120, Line: 4, Column: 39},
+				},
+			},
+		},
+		occurrence.Origin,
+	)
 }

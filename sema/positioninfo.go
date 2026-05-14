@@ -45,6 +45,55 @@ func NewPositionInfo() *PositionInfo {
 	}
 }
 
+func (i *PositionInfo) recordNestedTypeReferenceOccurrence(
+	memoryGauge common.MemoryGauge,
+	elaboration *Elaboration,
+	identifier ast.Identifier,
+	nestedType Type,
+) {
+	startPos := identifier.StartPosition()
+	endPos := identifier.EndPosition(memoryGauge)
+
+	origin := &Origin{
+		Type: nestedType,
+	}
+
+	var decl ast.Declaration
+
+	switch t := nestedType.(type) {
+	case *CompositeType:
+		decl, _ = elaboration.CompositeTypeDeclaration(t)
+	case *InterfaceType:
+		decl = elaboration.InterfaceTypeDeclaration(t)
+	case *EntitlementType:
+		decl = elaboration.EntitlementTypeDeclaration(t)
+	case *EntitlementMapType:
+		decl = elaboration.EntitlementMapTypeDeclaration(t)
+	}
+
+	if decl != nil {
+		populateOriginFromDeclaration(memoryGauge, origin, decl)
+	}
+
+	i.Occurrences.Put(startPos, endPos, origin)
+}
+
+func populateOriginFromDeclaration(
+	memoryGauge common.MemoryGauge,
+	origin *Origin,
+	decl ast.Declaration,
+) {
+	declIdentifier := decl.DeclarationIdentifier()
+	if declIdentifier != nil {
+		startPos := declIdentifier.StartPosition()
+		endPos := declIdentifier.EndPosition(memoryGauge)
+		origin.StartPos = &startPos
+		origin.EndPos = &endPos
+	}
+	origin.DocString = decl.DeclarationDocString()
+	origin.DeclarationKind = decl.DeclarationKind()
+}
+
 func (i *PositionInfo) recordVariableReferenceOccurrence(
 	memoryGauge common.MemoryGauge,
 	startPos ast.Position,
