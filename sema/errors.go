@@ -6117,6 +6117,44 @@ func (e *InvalidMappingAccessError) EndPosition(_ common.MemoryGauge) ast.Positi
 	return e.Pos
 }
 
+// InvalidNonFieldMappingAccessError
+type InvalidNonFieldMappingAccessError struct {
+	DeclarationKind common.DeclarationKind
+	Pos             ast.Position
+}
+
+var _ SemanticError = &InvalidNonFieldMappingAccessError{}
+var _ errors.UserError = &InvalidNonFieldMappingAccessError{}
+var _ errors.SecondaryError = &InvalidNonFieldMappingAccessError{}
+var _ errors.HasDocumentationLink = &InvalidNonFieldMappingAccessError{}
+
+func (*InvalidNonFieldMappingAccessError) isSemanticError() {}
+
+func (*InvalidNonFieldMappingAccessError) IsUserError() {}
+
+func (*InvalidNonFieldMappingAccessError) Error() string {
+	return "`access(mapping ...)` may only be used on fields"
+}
+
+func (e *InvalidNonFieldMappingAccessError) SecondaryError() string {
+	return fmt.Sprintf(
+		"found on %s; entitlement mappings can only project entitlements through fields",
+		e.DeclarationKind.Name(),
+	)
+}
+
+func (*InvalidNonFieldMappingAccessError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlement-mappings"
+}
+
+func (e *InvalidNonFieldMappingAccessError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidNonFieldMappingAccessError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
 // InvalidMappingAccessMemberTypeError
 type InvalidMappingAccessMemberTypeError struct {
 	Pos ast.Position
