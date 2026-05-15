@@ -2686,7 +2686,9 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 	var onlyPotential bool
 	switch {
 	case resource.Member != nil:
-		onlyPotential = returnInfo.MaybeReturned || returnInfo.MaybeJumped()
+		onlyPotential = returnInfo.MaybeReturned ||
+			returnInfo.MaybeJumpedLoop ||
+			returnInfo.MaybeJumpedSwitch
 
 	case resource.Variable != nil &&
 		resource.Variable.DeclarationKind != common.DeclarationKindSelf:

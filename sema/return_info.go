@@ -132,11 +132,6 @@ func NewReturnInfo() *ReturnInfo {
 	}
 }
 
-func (ri *ReturnInfo) MaybeJumped() bool {
-	return ri.JumpOffsets != nil &&
-		!ri.JumpOffsets.IsEmpty()
-}
-
 func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {
 	ri.MaybeReturned = ri.MaybeReturned ||
 		thenReturnInfo.MaybeReturned ||
