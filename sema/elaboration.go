@@ -172,7 +172,7 @@ type Elaboration struct {
 	variableDeclarationTypes          map[*ast.VariableDeclaration]VariableDeclarationTypes
 	// nestedResourceMoveExpressions indicates the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
-	nestedResourceMoveExpressions      map[ast.Expression]struct{}
+	nestedResourceMoveExpressions map[ast.Expression]struct{}
 	// statementsEndingControlFlow contains the statements after which
 	// control flow does not continue normally (return, halt, definite jump).
 	// Used to insert defensive runtime checks that abort execution
