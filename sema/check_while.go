@@ -68,10 +68,12 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ st
 		return
 
 	case ControlKindLoop:
-		functionActivation.ReturnInfo.DefinitelyJumped = true
+		functionActivation.ReturnInfo.DefinitelyJumpedLoop = true
+		functionActivation.ReturnInfo.MaybeJumpedLoop = true
 
 	case ControlKindSwitch:
 		functionActivation.ReturnInfo.DefinitelyJumpedSwitch = true
+		functionActivation.ReturnInfo.MaybeJumpedSwitch = true
 	}
 
 	return
@@ -97,7 +99,8 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 	}
 
 	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
-	functionActivation.ReturnInfo.DefinitelyJumped = true
+	functionActivation.ReturnInfo.DefinitelyJumpedLoop = true
+	functionActivation.ReturnInfo.MaybeJumpedLoop = true
 
 	return
 }

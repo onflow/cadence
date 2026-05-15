@@ -712,3 +712,45 @@ func TestCheckSwitchResourceInvalidation(t *testing.T) {
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 }
+
+func TestCheckFoo(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(cond: Bool): Int {
+          switch 1 {
+          case 1:
+              if cond { break }
+              return 2
+          default:
+              return 0
+          }
+          return 3   // sema (incorrectly) flags this as unreachable
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckSwitchMaybeBreakDoesNotSuppressUnreachableInCase(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(cond: Bool): Int {
+          switch 1 {
+          case 1:
+              if cond { break }
+              return 2
+              let x = 1
+          default:
+              return 0
+          }
+          return 3
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+}

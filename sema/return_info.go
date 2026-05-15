@@ -67,18 +67,47 @@ type ReturnInfo struct {
 	//   // DefinitelyHalted = false
 	//   // DefinitelyExited = true
 	DefinitelyExited bool
-	// DefinitelyJumped indicates that (the branch of) the function
+	// DefinitelyJumpedLoop indicates that (the branch of) the function
 	// contains a definite jump to an enclosing loop
 	// (a `break` targeting a loop, or a `continue`).
-	DefinitelyJumped bool
+	DefinitelyJumpedLoop bool
+	// MaybeJumped indicates that some path within the current loop
+	// reached a jump targeting that loop (a `break` whose target is the
+	// loop, or a `continue`).
+	//
+	// This is the "Maybe" counterpart to `DefinitelyJumpedLoop`, OR-merged
+	// across branches and not cleared by subsequent statements within
+	// the loop. It mirrors `MaybeJumpedSwitch` and is scoped to the loop:
+	// cleared by `WithLoop` on exit, since such jumps are consumed by
+	// the loop and are irrelevant outside it.
+	MaybeJumpedLoop bool
 	// DefinitelyJumpedSwitch indicates that (the branch of) the function
 	// contains a definite `break` whose target is a switch.
 	//
-	// Tracked separately from DefinitelyJumped because a `break` inside a switch
+	// Tracked separately from DefinitelyJumpedLoop because a `break` inside a switch
 	// only exits the switch; it must not leak past the switch boundary as a
 	// jump to an outer loop. The flag is observed for unreachability inside the
 	// switch and is cleared by WithSwitch on exit.
 	DefinitelyJumpedSwitch bool
+	// MaybeJumpedSwitch indicates that some path within the current switch
+	// reached a `break` statement targeting that switch.
+	//
+	// Unlike `DefinitelyJumpedSwitch`, this is OR-merged across branches and
+	// is not cleared by subsequent statements within the switch. It is used
+	// at a case body's terminal state to detect the pattern in which only
+	// some paths reach the case's trailing termination, e.g.
+	//
+	//   case x:
+	//       if cond { break }
+	//       return ...
+	//
+	// Such a case must not be treated as "definitely returns" when merging
+	// case results at the switch level, because the break path means the
+	// switch as a whole can still fall through to the code after it.
+	//
+	// Like `DefinitelyJumpedSwitch`, the flag is scoped to the switch and
+	// cleared by WithSwitch on exit.
+	MaybeJumpedSwitch bool
 }
 
 func NewReturnInfo() *ReturnInfo {
@@ -97,13 +126,21 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 		thenReturnInfo.MaybeReturned ||
 		elseReturnInfo.MaybeReturned
 
+	ri.MaybeJumpedLoop = ri.MaybeJumpedLoop ||
+		thenReturnInfo.MaybeJumpedLoop ||
+		elseReturnInfo.MaybeJumpedLoop
+
+	ri.MaybeJumpedSwitch = ri.MaybeJumpedSwitch ||
+		thenReturnInfo.MaybeJumpedSwitch ||
+		elseReturnInfo.MaybeJumpedSwitch
+
 	ri.DefinitelyReturned = ri.DefinitelyReturned ||
 		(thenReturnInfo.DefinitelyReturned &&
 			elseReturnInfo.DefinitelyReturned)
 
-	ri.DefinitelyJumped = ri.DefinitelyJumped ||
-		(thenReturnInfo.DefinitelyJumped &&
-			elseReturnInfo.DefinitelyJumped)
+	ri.DefinitelyJumpedLoop = ri.DefinitelyJumpedLoop ||
+		(thenReturnInfo.DefinitelyJumpedLoop &&
+			elseReturnInfo.DefinitelyJumpedLoop)
 
 	ri.DefinitelyJumpedSwitch = ri.DefinitelyJumpedSwitch ||
 		(thenReturnInfo.DefinitelyJumpedSwitch &&
@@ -122,6 +159,12 @@ func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInf
 	ri.MaybeReturned = ri.MaybeReturned ||
 		temporaryReturnInfo.MaybeReturned
 
+	ri.MaybeJumpedLoop = ri.MaybeJumpedLoop ||
+		temporaryReturnInfo.MaybeJumpedLoop
+
+	ri.MaybeJumpedSwitch = ri.MaybeJumpedSwitch ||
+		temporaryReturnInfo.MaybeJumpedSwitch
+
 	// NOTE: the definitive return state does not change
 }
 
@@ -135,7 +178,7 @@ func (ri *ReturnInfo) IsUnreachable() bool {
 	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
 	// see DefinitelyExited
 	return ri.DefinitelyExited ||
-		ri.DefinitelyJumped ||
+		ri.DefinitelyJumpedLoop ||
 		ri.DefinitelyJumpedSwitch
 }
 
