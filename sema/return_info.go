@@ -41,31 +41,47 @@ type ReturnInfo struct {
 	// DefinitelyHalted indicates that (the branch of) the function
 	// contains a definite halt (a function call with a Never return type)
 	DefinitelyHalted bool
-	// DefinitelyExited indicates that (the branch of)
-	// the function either contains a definite return statement,
-	// contains a definite halt (a function call with a Never return type),
-	// or both.
+	// DefinitelyExited indicates that (the branch of) the function
+	// definitely terminated control flow on every path — by
+	// - `return`,
+	// - halt (a function call with a `Never` return type),
+	// - `break` (targeting a loop or a switch), or
+	// - `continue`.
 	//
-	// NOTE: this is NOT the same DefinitelyReturned || DefinitelyHalted:
-	// For example, for the following program:
+	// This is the generic "every path terminated" flag
+	// and is the one observed by `IsUnreachable()`.
+	//
+	// NOTEL: It is intentionally NOT just
+	// `DefinitelyReturned || DefinitelyHalted || DefinitelyJumpedLoop || DefinitelyJumpedSwitch`,
+	// because AND-merging each kind-specific flag separately would lose
+	// the case where both branches of an if-else terminate but via
+	// different kinds. For example:
 	//
 	//   if ... {
 	//       return
 	//
 	//       // DefinitelyReturned = true
-	//	     // DefinitelyHalted = false
-	//	     // DefinitelyExited = true
+	//       // DefinitelyHalted = false
+	//       // DefinitelyExited = true
 	//   } else {
 	//       panic(...)
 	//
 	//       // DefinitelyReturned = false
-	//	     // DefinitelyHalted = true
-	//	     // DefinitelyExited = true
+	//       // DefinitelyHalted = true
+	//       // DefinitelyExited = true
 	//   }
-	//
+	//   // (AND-merges of flags in both branches)
 	//   // DefinitelyReturned = false
 	//   // DefinitelyHalted = false
 	//   // DefinitelyExited = true
+	//
+	// The same logic applies to `if break else return`,
+	// `if continue else return`, etc.
+	//
+	// At a case body's terminal state and at a loop body's terminal state,
+	// `DefinitelyExited` is cleared alongside `DefinitelyReturned` and `DefinitelyHalted`
+	// when a corresponding `MaybeJumped*` is true,
+	// because the maybe-jumping path escapes the construct without terminating the function.
 	DefinitelyExited bool
 	// DefinitelyJumpedLoop indicates that (the branch of) the function
 	// contains a definite jump to an enclosing loop
