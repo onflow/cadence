@@ -306,6 +306,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 
 	if checker.PositionInfo != nil {
 		checker.PositionInfo.recordMemberOccurrence(
+			checker.memoryGauge,
 			accessedType,
 			identifier,
 			identifierStartPosition,
