@@ -419,18 +419,28 @@ func (e *Elaboration) EntitlementMapTypeDeclaration(entitlementMapType *Entitlem
 }
 
 func (e *Elaboration) DeclarationForType(ty Type) ast.Declaration {
+	// Each case checks the concrete return value against nil before returning,
+	// rather than `return e.XTypeDeclaration(t)`, to avoid Go's typed nil behavior
 	switch t := ty.(type) {
 	case *CompositeType:
-		return e.CompositeTypeDeclaration(t)
+		if decl := e.CompositeTypeDeclaration(t); decl != nil {
+			return decl
+		}
 
 	case *InterfaceType:
-		return e.InterfaceTypeDeclaration(t)
+		if decl := e.InterfaceTypeDeclaration(t); decl != nil {
+			return decl
+		}
 
 	case *EntitlementType:
-		return e.EntitlementTypeDeclaration(t)
+		if decl := e.EntitlementTypeDeclaration(t); decl != nil {
+			return decl
+		}
 
 	case *EntitlementMapType:
-		return e.EntitlementMapTypeDeclaration(t)
+		if decl := e.EntitlementMapTypeDeclaration(t); decl != nil {
+			return decl
+		}
 	}
 
 	return nil
