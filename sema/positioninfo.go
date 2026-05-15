@@ -55,7 +55,8 @@ func (i *PositionInfo) recordNestedTypeReferenceOccurrence(
 	endPos := identifier.EndPosition(memoryGauge)
 
 	origin := &Origin{
-		Type: nestedType,
+		Type:            nestedType,
+		DeclarationKind: declarationKindForType(nestedType),
 	}
 
 	if decl := elaboration.DeclarationForType(nestedType); decl != nil {
@@ -63,6 +64,24 @@ func (i *PositionInfo) recordNestedTypeReferenceOccurrence(
 	}
 
 	i.Occurrences.Put(startPos, endPos, origin)
+}
+
+// declarationKindForType returns the DeclarationKind for the given type,
+// if it corresponds to a declaration, or Unknown otherwise.
+func declarationKindForType(ty Type) common.DeclarationKind {
+	switch t := ty.(type) {
+	case *CompositeType:
+		const isInterface = false
+		return t.Kind.DeclarationKind(isInterface)
+	case *InterfaceType:
+		const isInterface = true
+		return t.CompositeKind.DeclarationKind(isInterface)
+	case *EntitlementType:
+		return common.DeclarationKindEntitlement
+	case *EntitlementMapType:
+		return common.DeclarationKindEntitlementMapping
+	}
+	return common.DeclarationKindUnknown
 }
 
 func populateOriginFromDeclaration(
