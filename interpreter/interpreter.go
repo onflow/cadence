@@ -2156,27 +2156,26 @@ func applyTargetTypeAuthorization(
 		return NewReferenceStaticType(typeConverter, targetAuth, innerType)
 
 	case *CapabilityStaticType:
-		var targetBorrowType sema.Type
+		// When the target is `AnyStruct`, the capability is preserved as-is.
+		// This matches `semaTypeWithStrippedEntitlements`, which does not recurse into `*sema.CapabilityType`.
+		// Only when the target is itself a `Capability<T>` do we recurse
+		// into the borrow type to apply the target's authorization.
 
-		if targetType == sema.AnyStructType {
-			targetBorrowType = sema.AnyStructType
-		} else if targetCapabilityType, isCapabilityType := targetType.(*sema.CapabilityType); isCapabilityType {
-			targetBorrowType = targetCapabilityType.BorrowType
-		} else {
+		targetCapabilityType, isCapabilityType := targetType.(*sema.CapabilityType)
+		if !isCapabilityType {
 			break
 		}
 
 		borrowType := applyTargetTypeAuthorization(
 			typeConverter,
 			actual.BorrowType,
-			targetBorrowType,
+			targetCapabilityType.BorrowType,
 		)
 
 		return NewCapabilityStaticType(
 			typeConverter,
 			borrowType,
 		)
-
 	case FunctionStaticType:
 		var targetReturnType sema.Type
 
