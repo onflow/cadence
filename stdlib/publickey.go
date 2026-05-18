@@ -160,7 +160,12 @@ func NewPublicKeyFromValue(
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(context, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField)
+	key := publicKey.GetMember(
+		context,
+		sema.PublicKeyTypePublicKeyFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(context, key)
 	if err != nil {
@@ -168,7 +173,13 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(context, sema.PublicKeyTypeSignatureAlgorithmFieldName, common.DeclarationKindField)
+	signAlgoField := publicKey.GetMember(
+		context,
+		sema.PublicKeyTypeSignatureAlgorithmFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
+
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -181,7 +192,13 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetMember(context, sema.EnumRawValueFieldName, common.DeclarationKindField)
+	rawValue := signAlgoValue.GetMember(
+		context,
+		sema.EnumRawValueFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
+
 	if rawValue == nil {
 		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
 	}
@@ -251,10 +268,14 @@ func newInterpreterPublicKeyVerifySignatureFunction(
 	inter *interpreter.Interpreter,
 	publicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
-) interpreter.BoundFunctionValue {
-	return interpreter.NewBoundHostFunctionValue(
+) *interpreter.HostFunctionValue {
+	// `CompositeValue` generally store functions as static-functions (e.g: user-defined functions).
+	// Those get converted to bound functions on retrieval. See `CompositeValue.GetMethod()` function in `value_composite.go`
+	// Do the same for native-functions as well. i.e: create and store a static-host-function.
+	// A bound function cannot be created here, because it is unknown whether the function
+	// is accessed via a reference or directly on the concrete value, at this point.
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		inter,
-		publicKeyValue,
 		sema.PublicKeyTypeVerifyFunctionType,
 		NativePublicKeyVerifySignatureFunction(publicKeyValue, verifier),
 	)
@@ -358,10 +379,14 @@ func newInterpreterPublicKeyVerifyPoPFunction(
 	inter *interpreter.Interpreter,
 	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
-) interpreter.BoundFunctionValue {
-	return interpreter.NewBoundHostFunctionValue(
+) *interpreter.HostFunctionValue {
+	// `CompositeValue` generally store functions as static-functions (e.g: user-defined functions).
+	// Those get converted to bound functions on retrieval. See `CompositeValue.GetMethod()` function in `value_composite.go`
+	// Do the same for native-functions as well. i.e: create and store a static-host-function.
+	// A bound function cannot be created here, because it is unknown whether the function
+	// is accessed via a reference or directly on the concrete value, at this point.
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		inter,
-		publicKeyValue,
 		sema.PublicKeyTypeVerifyPoPFunctionType,
 		NativePublicKeyVerifyPoPFunction(publicKeyValue, verifier),
 	)

@@ -43,35 +43,21 @@ func NewAccountStorageCapabilitiesValue(
 
 	var storageCapabilities *SimpleCompositeValue
 
-	methods := map[string]FunctionValue{}
-
-	computeLazyStoredMethod := func(name string) FunctionValue {
+	computeMethod := func(name string, _ MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
 		switch name {
 		case sema.Account_StorageCapabilitiesTypeGetControllerFunctionName:
-			return getControllerFunction(storageCapabilities)
+			return getControllerFunction(storageCapabilities, accessedReference)
 		case sema.Account_StorageCapabilitiesTypeGetControllersFunctionName:
-			return getControllersFunction(storageCapabilities)
+			return getControllersFunction(storageCapabilities, accessedReference)
 		case sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName:
-			return forEachControllerFunction(storageCapabilities)
+			return forEachControllerFunction(storageCapabilities, accessedReference)
 		case sema.Account_StorageCapabilitiesTypeIssueFunctionName:
-			return issueFunction(storageCapabilities)
+			return issueFunction(storageCapabilities, accessedReference)
 		case sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName:
-			return issueWithTypeFunction(storageCapabilities)
+			return issueWithTypeFunction(storageCapabilities, accessedReference)
 		}
 
 		return nil
-	}
-
-	methodsGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
-		method, ok := methods[name]
-		if !ok {
-			method = computeLazyStoredMethod(name)
-			if method != nil {
-				methods[name] = method
-			}
-		}
-
-		return method
 	}
 
 	var str string
@@ -92,7 +78,7 @@ func NewAccountStorageCapabilitiesValue(
 		// No fields, only methods.
 		nil,
 		nil,
-		methodsGetter,
+		computeMethod,
 		nil,
 		stringer,
 	).WithPrivateField(AccountTypePrivateAddressFieldName, address)

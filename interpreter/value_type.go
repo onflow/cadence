@@ -120,11 +120,17 @@ func (v TypeValue) Equal(_ ValueComparisonContext, other Value) bool {
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v TypeValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -237,12 +243,17 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, name string, membe
 	)
 }
 
-func (v TypeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v TypeValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.MetaTypeIsSubtypeFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.MetaTypeIsSubtypeFunctionType,
 			NativeMetaTypeIsSubtypeFunction,
 		)

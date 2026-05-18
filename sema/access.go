@@ -87,6 +87,37 @@ func NewAccessFromEntitlementOrderedSet(
 	}
 }
 
+// IntersectAccess returns the intersection of two accesses.
+// If either is unauthorized, the result is unauthorized.
+// If both are EntitlementSetAccess, the result contains only entitlements present in both.
+// For all other combinations, the result is unauthorized.
+func IntersectAccess(a, b Access) Access {
+	aSet, ok := a.(EntitlementSetAccess)
+	if !ok {
+		return UnauthorizedAccess
+	}
+
+	bSet, ok := b.(EntitlementSetAccess)
+	if !ok {
+		return UnauthorizedAccess
+	}
+
+	intersection := orderedmap.KeySetIntersection(
+		aSet.Entitlements,
+		bSet.Entitlements,
+	)
+
+	// If either is a disjunction, the result must be a disjunction,
+	// because a disjunction only guarantees one of the entitlements is present.
+	// Only if both are conjunctions can the result be a conjunction.
+	setKind := Conjunction
+	if aSet.SetKind == Disjunction || bSet.SetKind == Disjunction {
+		setKind = Disjunction
+	}
+
+	return NewAccessFromEntitlementOrderedSet(intersection, setKind)
+}
+
 func (EntitlementSetAccess) isAccess() {}
 
 func (EntitlementSetAccess) IsPrimitiveAccess() bool {

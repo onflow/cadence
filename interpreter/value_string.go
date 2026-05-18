@@ -409,10 +409,16 @@ func (*StringValue) RemoveKey(_ ContainerMutationContext, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *StringValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -430,12 +436,17 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, name string, me
 	)
 }
 
-func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *StringValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.StringTypeConcatFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.StringTypeConcatFunctionType,
 			NativeStringConcatFunction,
 		)
@@ -444,6 +455,7 @@ func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.StringTypeSliceFunctionType,
 			NativeStringSliceFunction,
 		)
@@ -452,6 +464,7 @@ func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.StringTypeContainsFunctionType,
 			NativeStringContainsFunction,
 		)
@@ -460,6 +473,7 @@ func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.StringTypeIndexFunctionType,
 			NativeStringIndexFunction,
 		)
@@ -468,6 +482,7 @@ func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.StringTypeIndexFunctionType,
 			NativeStringCountFunction,
 		)
@@ -476,6 +491,7 @@ func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.StringTypeDecodeHexFunctionType,
 			NativeStringDecodeHexFunction,
 		)
@@ -484,6 +500,7 @@ func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.StringTypeToLowerFunctionType,
 			NativeStringToLowerFunction,
 		)
@@ -492,6 +509,7 @@ func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.StringTypeSplitFunctionType,
 			NativeStringSplitFunction,
 		)
@@ -500,6 +518,7 @@ func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.StringTypeReplaceAllFunctionType,
 			NativeStringReplaceAllFunction,
 		)

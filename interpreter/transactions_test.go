@@ -522,17 +522,27 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
 		},
 	)
 
+	// auth(Storage)
+	semaEntitlements := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{
+			sema.StorageType,
+		},
+		sema.Conjunction,
+	)
+	staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(nil, semaEntitlements)
+
+	// auth(Storage) &Account
 	signer1 := stdlib.NewAccountReferenceValue(
 		inter,
 		nil,
 		interpreter.AddressValue{1},
-		interpreter.UnauthorizedAccess,
+		staticAuthorization,
 	)
 
 	err := inter.InvokeTransaction(nil, signer1)
 
-	var transferTypeError *interpreter.ValueTransferTypeError
-	require.ErrorAs(t, err, &transferTypeError)
+	var invalidatedResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceError)
 }
 
 func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {

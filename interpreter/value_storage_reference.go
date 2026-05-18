@@ -79,6 +79,20 @@ func NewStorageReferenceValue(
 	)
 }
 
+func (v *StorageReferenceValue) WithAuthorizationAndBorrowedType(
+	context ReferenceCreationContext,
+	auth Authorization,
+	borrowedType sema.Type,
+) ReferenceValue {
+	return NewStorageReferenceValue(
+		context,
+		auth,
+		v.TargetStorageAddress,
+		v.TargetPath,
+		borrowedType,
+	)
+}
+
 func (*StorageReferenceValue) IsValue() {}
 
 func (v *StorageReferenceValue) Accept(context ValueVisitContext, visitor Visitor) {
@@ -161,7 +175,6 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext) (*Va
 		referenced = ConvertAndBox(
 			context,
 			referenced,
-			valueType,
 			v.BorrowedType,
 		)
 	}
@@ -200,57 +213,43 @@ func (v *StorageReferenceValue) MustReferencedValue(
 	return *referencedValue
 }
 
-func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *StorageReferenceValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	// For storage references, "accessedReference" is the value itself.
+	if accessedReference != nil {
+		// Parameter must be always `nil`, since the root of the `GetMember` call
+		// starts with a nil "accessedReference".
+		panic(errors.NewUnreachableError())
+	}
+
 	referencedValue := v.MustReferencedValue(context)
 
-	var member Value
-
-	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
-		member = memberAccessibleValue.GetMember(context, name, memberKind)
-	}
-
-	if member == nil {
-		// NOTE: Must call the `GetMethod` of the `StorageReferenceValue`, not of the referenced-value.
-		member = GetMember(
-			context,
-			v,
-			name,
-			memberKind,
-			nil,
-		)
-	}
-
-	// If the member is a function, it is always a bound-function.
-	// By default, bound functions create and hold an ephemeral reference
-	// (in `BoundFunctionValue.SelfReference`).
-	// For storage references, replace this default one with a storage reference.
-	//
-	// However, we cannot use the storage reference as-is:
-	// Because we look up the member on the referenced value,
-	// we also must use its type as the borrowed type for the `SelfReference` type,
-	// because during invocation the bound function can only be invoked
-	// if the type of the dereferenced value at that time still matches
-	// the type of the dereferenced value at the time of binding (here).
-	//
-	// For example, imagine storing a value of type T (e.g. `String`),
-	// creating a reference with a supertype (e.g. `AnyStruct`),
-	// and then creating a bound function on it.
-	// Then, if we change the storage location to store a value of unrelated type U instead (e.g. `Int`),
-	// and invoke the bound function, the bound function is potentially invalid.
-	//
-	// It is not possible (or a lot of work), to create the bound function with the storage reference
-	// when it was created originally, because `getMember(referencedValue, ...)` doesn't know
-	// whether the member was accessed directly, or via a reference.
-	return context.MaybeUpdateStorageReferenceMemberReceiver(
+	member := GetReferenceValueMember(
+		context,
 		v,
 		referencedValue,
-		member,
+		name,
+		memberKind,
 	)
+
+	return member
 }
 
-func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue {
 	referencedValue := v.MustReferencedValue(context)
-	return getBuiltinFunctionMember(context, referencedValue, name)
+
+	// For storage references, "accessedReference" must be the value itself.
+	// We only reach here via `GetMember` method, and in that method,
+	// the `accessedReference` should be correctly passed in (and not `nil`).
+	if accessedReference != v {
+		panic(errors.NewUnreachableError())
+	}
+
+	return getBuiltinFunctionMember(context, referencedValue, name, accessedReference)
 }
 
 func (v *StorageReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {

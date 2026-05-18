@@ -413,7 +413,7 @@ func TestNewStruct(t *testing.T) {
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredIntValueFromInt64(12),
-		structValue.GetMember(vmContext, "id", common.DeclarationKindField),
+		structValue.GetMember(vmContext, "id", common.DeclarationKindField, nil),
 	)
 }
 
@@ -1564,7 +1564,7 @@ func TestInitializeContract(t *testing.T) {
 		vmConfig,
 	)
 
-	fieldValue := contractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField)
+	fieldValue := contractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField, nil)
 	assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 }
 
@@ -1608,7 +1608,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 			vmConfig,
 		)
 
-		fieldValue := contractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField)
+		fieldValue := contractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField, nil)
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 
@@ -1648,7 +1648,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 			vmConfig,
 		)
 
-		fieldValue := contractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField)
+		fieldValue := contractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField, nil)
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 }
@@ -1989,7 +1989,7 @@ func TestContractField(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), result)
 
-		fieldValue := importedContractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField)
+		fieldValue := importedContractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField, nil)
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), fieldValue)
 	})
 }
@@ -2179,7 +2179,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, transaction.GetMember(vmContext, "a", common.DeclarationKindField))
+		assert.Nil(t, transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil))
 
 		// Invoke 'prepare'
 		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
@@ -2190,7 +2190,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			transaction.GetMember(vmContext, "a", common.DeclarationKindField),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil),
 		)
 
 		// Invoke 'execute'
@@ -2202,7 +2202,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			transaction.GetMember(vmContext, "a", common.DeclarationKindField),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil),
 		)
 	})
 
@@ -2256,7 +2256,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, transaction.GetMember(vmContext, "a", common.DeclarationKindField))
+		assert.Nil(t, transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil))
 
 		// Invoke 'prepare'
 		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
@@ -2267,7 +2267,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			transaction.GetMember(vmContext, "a", common.DeclarationKindField),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil),
 		)
 
 		// Invoke 'execute'
@@ -2279,7 +2279,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			transaction.GetMember(vmContext, "a", common.DeclarationKindField),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil),
 		)
 	})
 
@@ -3384,7 +3384,7 @@ func TestResource(t *testing.T) {
 		require.Equal(
 			t,
 			interpreter.NewUnmeteredIntValueFromInt64(5),
-			structValue.GetMember(vmContext, "id", common.DeclarationKindField),
+			structValue.GetMember(vmContext, "id", common.DeclarationKindField, nil),
 		)
 	})
 
@@ -8301,6 +8301,30 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("array value, builtin function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := CompileAndInvoke(
+			t,
+			`
+				let innerValueMinusOne =
+				    fun (_ x: Int8): Int8 {
+					    return x - 1
+				    }
+
+                fun test(): [Int8] {
+                    let a: [Int8] = [5]
+                    let ref = &a as &[Int8]
+                    var map = ref.map
+                    return map(innerValueMinusOne)
+                }
+            `,
+			"test",
+		)
+
+		require.NoError(t, err)
 	})
 }
 

@@ -4096,3 +4096,46 @@ func TestCheckInvalidReferenceOfOptionalTypeS(t *testing.T) {
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
+
+func TestCheckReferencesInFunctionTypes(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("assignment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun authRefReturningFunc(): auth(Mutate) &Int {
+                return &1
+            }
+
+            fun test() {
+                // Shouldn't require explicit type annotation
+                let anyStruct = authRefReturningFunc
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("as function argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun authRefReturningFunc(): auth(Mutate) &Int {
+                return &1
+            }
+
+            fun authRefAcceptingFunc(_ f: (fun(): auth(Mutate) &Int)) {}
+
+            fun test() {
+                // Shouldn't require explicit type annotation
+                authRefAcceptingFunc(authRefReturningFunc)
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}

@@ -829,10 +829,6 @@ func (checker *Checker) inLoop() bool {
 	return checker.functionActivations.Current().InLoop()
 }
 
-func (checker *Checker) inSwitch() bool {
-	return checker.functionActivations.Current().InSwitch()
-}
-
 func (checker *Checker) findAndCheckValueVariable(identifierExpression *ast.IdentifierExpression, recordOccurrence bool) *Variable {
 	identifier := identifierExpression.Identifier
 	variable := checker.valueActivations.Find(identifier.Identifier)

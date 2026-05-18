@@ -50,13 +50,6 @@ type StorageCapabilityControllerValue struct {
 	// deleted indicates if the controller got deleted. Not stored
 	deleted bool
 
-	// Lazily initialized function values.
-	// Host functions based on injected functions (see below).
-	deleteFunction   FunctionValue
-	targetFunction   FunctionValue
-	retargetFunction FunctionValue
-	setTagFunction   FunctionValue
-
 	// Injected functions.
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
@@ -235,7 +228,12 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) (result Value) {
+func (v *StorageCapabilityControllerValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -253,6 +251,7 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -278,31 +277,23 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	)
 }
 
-func (v *StorageCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *StorageCapabilityControllerValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
-		if v.setTagFunction == nil {
-			v.setTagFunction = v.newSetTagFunction(context)
-		}
-		return v.setTagFunction
+		return v.newSetTagFunction(context, accessedReference)
 
 	case sema.StorageCapabilityControllerTypeDeleteFunctionName:
-		if v.deleteFunction == nil {
-			v.deleteFunction = v.newDeleteFunction(context)
-		}
-		return v.deleteFunction
+		return v.newDeleteFunction(context, accessedReference)
 
 	case sema.StorageCapabilityControllerTypeTargetFunctionName:
-		if v.targetFunction == nil {
-			v.targetFunction = v.newTargetFunction(context)
-		}
-		return v.targetFunction
+		return v.newTargetFunction(context, accessedReference)
 
 	case sema.StorageCapabilityControllerTypeRetargetFunctionName:
-		if v.retargetFunction == nil {
-			v.retargetFunction = v.newRetargetFunction(context)
-		}
-		return v.retargetFunction
+		return v.newRetargetFunction(context, accessedReference)
 
 		// NOTE: when adding new functions, ensure CheckDeleted is called,
 		// by e.g. using StorageCapabilityControllerValue.newHostFunction
@@ -390,11 +381,13 @@ func (v *StorageCapabilityControllerValue) newNativeHostFunctionValue(
 	context FunctionCreationContext,
 	funcType *sema.FunctionType,
 	f NativeFunction,
+	accessedReference ReferenceValue,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
 		FunctionValue: NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			funcType,
 			NewNativeDeletionCheckedStorageCapabilityControllerFunction(f),
 		),
@@ -419,11 +412,13 @@ var NativeStorageCapabilityControllerDeleteFunction = NativeFunction(
 
 func (v *StorageCapabilityControllerValue) newDeleteFunction(
 	context FunctionCreationContext,
+	accessedReference ReferenceValue,
 ) FunctionValue {
 	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
 		NativeStorageCapabilityControllerDeleteFunction,
+		accessedReference,
 	)
 }
 
@@ -442,11 +437,13 @@ var NativeStorageCapabilityControllerTargetFunction = NativeFunction(
 
 func (v *StorageCapabilityControllerValue) newTargetFunction(
 	context FunctionCreationContext,
+	accessedReference ReferenceValue,
 ) FunctionValue {
 	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeTargetFunctionType,
 		NativeStorageCapabilityControllerTargetFunction,
+		accessedReference,
 	)
 }
 
@@ -474,11 +471,13 @@ var NativeStorageCapabilityControllerRetargetFunction = NativeFunction(
 
 func (v *StorageCapabilityControllerValue) newRetargetFunction(
 	context FunctionCreationContext,
+	accessedReference ReferenceValue,
 ) FunctionValue {
 	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeRetargetFunctionType,
 		NativeStorageCapabilityControllerRetargetFunction,
+		accessedReference,
 	)
 }
 
@@ -502,11 +501,13 @@ var NativeStorageCapabilityControllerSetTagFunction = NativeFunction(
 
 func (v *StorageCapabilityControllerValue) newSetTagFunction(
 	context FunctionCreationContext,
+	accessedReference ReferenceValue,
 ) FunctionValue {
 	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeSetTagFunctionType,
 		NativeStorageCapabilityControllerSetTagFunction,
+		accessedReference,
 	)
 }
 

@@ -128,10 +128,12 @@ func (v *PathCapabilityValue) MeteredString(
 func (v *PathCapabilityValue) newBorrowFunction(
 	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
+	accessedReference ReferenceValue,
 ) BoundFunctionValue {
 	return NewBoundHostFunctionValue(
 		context,
 		v,
+		accessedReference,
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
 		func(
 			_ NativeFunctionContext,
@@ -149,10 +151,12 @@ func (v *PathCapabilityValue) newBorrowFunction(
 func (v *PathCapabilityValue) newCheckFunction(
 	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
+	accessedReference ReferenceValue,
 ) BoundFunctionValue {
 	return NewBoundHostFunctionValue(
 		context,
 		v,
+		accessedReference,
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(
 			_ NativeFunctionContext,
@@ -167,11 +171,17 @@ func (v *PathCapabilityValue) newCheckFunction(
 	)
 }
 
-func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *PathCapabilityValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -188,7 +198,11 @@ func (v *PathCapabilityValue) GetMember(context MemberAccessibleContext, name st
 	)
 }
 
-func (v *PathCapabilityValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *PathCapabilityValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		var borrowType *sema.ReferenceType
@@ -196,7 +210,7 @@ func (v *PathCapabilityValue) GetMethod(context MemberAccessibleContext, name st
 			// this function will panic already if this conversion fails
 			borrowType, _ = context.SemaTypeFromStaticType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return v.newBorrowFunction(context, borrowType)
+		return v.newBorrowFunction(context, borrowType, accessedReference)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		var borrowType *sema.ReferenceType
@@ -204,7 +218,7 @@ func (v *PathCapabilityValue) GetMethod(context MemberAccessibleContext, name st
 			// this function will panic already if this conversion fails
 			borrowType, _ = context.SemaTypeFromStaticType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return v.newCheckFunction(context, borrowType)
+		return v.newCheckFunction(context, borrowType, accessedReference)
 	}
 	return nil
 }

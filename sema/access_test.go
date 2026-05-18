@@ -611,6 +611,149 @@ func TestEntitlementSetAccess_QualifiedString(t *testing.T) {
 	})
 }
 
+func TestIntersectAccess(t *testing.T) {
+
+	t.Parallel()
+
+	conjunctionAccess := func(entitlements ...*EntitlementType) Access {
+		return NewEntitlementSetAccess(entitlements, Conjunction)
+	}
+
+	disjunctionAccess := func(entitlements ...*EntitlementType) Access {
+		return NewEntitlementSetAccess(entitlements, Disjunction)
+	}
+
+	t.Run("both unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(UnauthorizedAccess, UnauthorizedAccess)
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("left unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(UnauthorizedAccess, conjunctionAccess(MutateType))
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("right unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(conjunctionAccess(MutateType), UnauthorizedAccess)
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("conjunction, identical", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			conjunctionAccess(MutateType, InsertType),
+			conjunctionAccess(MutateType, InsertType),
+		)
+		assert.Equal(t, conjunctionAccess(MutateType, InsertType), result)
+	})
+
+	t.Run("conjunction, partial overlap", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			conjunctionAccess(MutateType, InsertType),
+			conjunctionAccess(InsertType, RemoveType),
+		)
+		assert.Equal(t, conjunctionAccess(InsertType), result)
+	})
+
+	t.Run("conjunction, disjoint", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			conjunctionAccess(MutateType),
+			conjunctionAccess(InsertType),
+		)
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("disjunction, identical", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			disjunctionAccess(MutateType, InsertType),
+			disjunctionAccess(MutateType, InsertType),
+		)
+		assert.Equal(t, disjunctionAccess(MutateType, InsertType), result)
+	})
+
+	t.Run("disjunction, partial overlap", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			disjunctionAccess(MutateType, InsertType),
+			disjunctionAccess(InsertType, RemoveType),
+		)
+		assert.Equal(t, disjunctionAccess(InsertType), result)
+	})
+
+	t.Run("disjunction, disjoint", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			disjunctionAccess(MutateType),
+			disjunctionAccess(InsertType),
+		)
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("mixed, conjunction left, disjunction right", func(t *testing.T) {
+		t.Parallel()
+
+		// Conjunction has all of {Mutate, Insert}.
+		// Disjunction has one of {Insert, Remove}.
+		// Intersection: {Insert}. Result must be disjunction
+		// because the disjunction side only guarantees one.
+		result := IntersectAccess(
+			conjunctionAccess(MutateType, InsertType),
+			disjunctionAccess(InsertType, RemoveType),
+		)
+		assert.Equal(t, disjunctionAccess(InsertType), result)
+	})
+
+	t.Run("mixed, disjunction left, conjunction right", func(t *testing.T) {
+		t.Parallel()
+
+		// Disjunction has one of {Mutate, Insert}.
+		// Conjunction has all of {Insert, Remove}.
+		// Intersection: {Insert}. Result must be disjunction.
+		result := IntersectAccess(
+			disjunctionAccess(MutateType, InsertType),
+			conjunctionAccess(InsertType, RemoveType),
+		)
+		assert.Equal(t, disjunctionAccess(InsertType), result)
+	})
+
+	t.Run("mixed, full overlap, disjunction constrains result", func(t *testing.T) {
+		t.Parallel()
+
+		// Disjunction has one of {Mutate, Insert}.
+		// Conjunction has all of {Mutate, Insert}.
+		// Intersection: {Mutate, Insert}. Still disjunction —
+		// can't upgrade to conjunction just because the sets match.
+		result := IntersectAccess(
+			disjunctionAccess(MutateType, InsertType),
+			conjunctionAccess(MutateType, InsertType),
+		)
+		assert.Equal(t, disjunctionAccess(MutateType, InsertType), result)
+	})
+
+	t.Run("entitlement map access", func(t *testing.T) {
+		t.Parallel()
+
+		mapAccess := NewEntitlementMapAccess(IdentityType)
+		result := IntersectAccess(mapAccess, conjunctionAccess(MutateType))
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+}
+
 func TestEntitlementMapAccess_QualifiedKeyword(t *testing.T) {
 
 	t.Parallel()

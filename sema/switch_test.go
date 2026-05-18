@@ -403,6 +403,108 @@ func TestCheckSwitchStatementWithUnreachableReturn(t *testing.T) {
 	assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
 }
 
+func TestCheckSwitchBreakDoesNotEscapeOuterLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("default only", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(xs: [Int]) {
+              for x in xs {
+                  switch x {
+                  default:
+                      break
+                  }
+                  let y = 1
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all cases break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(xs: [Int]) {
+              for x in xs {
+                  switch x {
+                  case 1:
+                      break
+                  default:
+                      break
+                  }
+                  let y = 1
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("nested switch inner break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(a: Int, b: Int) {
+              switch a {
+              default:
+                  switch b {
+                  default:
+                      break
+                  }
+                  let x = 1
+              }
+              let y = 1
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("continue still propagates as unreachable", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(xs: [Int]) {
+              for x in xs {
+                  switch x {
+                  default:
+                      continue
+                  }
+                  let y = 1
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("mixed break and continue does not propagate", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(xs: [Int]) {
+              for x in xs {
+                  switch x {
+                  case 1:
+                      break
+                  default:
+                      continue
+                  }
+                  let y = 1
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
 func TestCheckCaseExpressionTypeInference(t *testing.T) {
 
 	t.Parallel()

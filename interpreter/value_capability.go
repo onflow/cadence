@@ -145,10 +145,16 @@ func (v *IDCapabilityValue) MeteredString(
 	)
 }
 
-func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *IDCapabilityValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -164,17 +170,35 @@ func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, name stri
 	)
 }
 
-func (v *IDCapabilityValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *IDCapabilityValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
 		borrowType, _ := context.SemaTypeFromStaticType(v.BorrowType).(*sema.ReferenceType)
-		return capabilityBorrowFunction(context, v, v.address, v.ID, borrowType)
+		return capabilityBorrowFunction(
+			context,
+			v,
+			accessedReference,
+			v.address,
+			v.ID,
+			borrowType,
+		)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
 		borrowType, _ := context.SemaTypeFromStaticType(v.BorrowType).(*sema.ReferenceType)
-		return capabilityCheckFunction(context, v, v.address, v.ID, borrowType)
+		return capabilityCheckFunction(
+			context,
+			v,
+			accessedReference,
+			v.address,
+			v.ID,
+			borrowType,
+		)
 	}
 
 	return nil
