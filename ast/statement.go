@@ -853,7 +853,7 @@ func (s *SwitchStatement) Walk(walkChild func(Element)) {
 		if expression != nil {
 			walkChild(expression)
 		}
-		walkStatements(walkChild, switchCase.Statements)
+		walkElements(walkChild, switchCase.Statements)
 	}
 }
 

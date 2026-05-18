@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use Cadence in your work, please cite it as below."
+title: "Cadence — Flow's Resource-Oriented Smart Contract Language"
+abstract: "Cadence is the native smart contract programming language of the Flow network. It is resource-oriented, capability-based, and type-safe, designed to prevent entire vulnerability classes at the compiler level."
+type: software
+authors:
+  - name: "Flow Foundation"
+    website: "https://flow.com"
+repository-code: "https://github.com/onflow/cadence"
+url: "https://cadence-lang.org"
+license: Apache-2.0
+version: "1.10.2"
+keywords:
+  - cadence
+  - cadence-language
+  - flow
+  - flow-network
+  - programming-language
+  - smart-contracts
+  - resource-oriented-programming
+  - capability-based-security
+  - type-safety
+  - blockchain
+  - web3
