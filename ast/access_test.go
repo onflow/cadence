@@ -87,6 +87,29 @@ func TestMappedAccess_Walk(t *testing.T) {
 	assert.Equal(t, []Element{mapType}, visited)
 }
 
+func TestEntitlementAccess_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	e := &NominalType{
+		Identifier: Identifier{Identifier: "E"},
+	}
+	f := &NominalType{
+		Identifier: Identifier{Identifier: "F"},
+	}
+
+	access := NewEntitlementAccess(
+		NewConjunctiveEntitlementSet([]*NominalType{e, f}),
+	)
+
+	var visited []Element
+	access.Walk(func(element Element) {
+		visited = append(visited, element)
+	})
+
+	assert.Equal(t, []Element{e, f}, visited)
+}
+
 func TestConjunctiveEntitlementSet_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

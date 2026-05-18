@@ -419,40 +419,78 @@ func TestVariableDeclaration_Walk(t *testing.T) {
 
 	t.Parallel()
 
-	typeAnnotation := &TypeAnnotation{
-		Type: &NominalType{
-			Identifier: Identifier{Identifier: "Int"},
-		},
-	}
+	t.Run("without access", func(t *testing.T) {
+		t.Parallel()
 
-	value := &IntegerExpression{
-		PositiveLiteral: []byte("1"),
-		Base:            10,
-	}
+		typeAnnotation := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Int"},
+			},
+		}
 
-	secondValue := &IntegerExpression{
-		PositiveLiteral: []byte("2"),
-		Base:            10,
-	}
+		value := &IntegerExpression{
+			PositiveLiteral: []byte("1"),
+			Base:            10,
+		}
 
-	decl := &VariableDeclaration{
-		Identifier:     Identifier{Identifier: "x"},
-		TypeAnnotation: typeAnnotation,
-		Value:          value,
-		SecondValue:    secondValue,
-	}
+		secondValue := &IntegerExpression{
+			PositiveLiteral: []byte("2"),
+			Base:            10,
+		}
 
-	var visited []Element
-	decl.Walk(func(element Element) {
-		visited = append(visited, element)
+		decl := &VariableDeclaration{
+			Identifier:     Identifier{Identifier: "x"},
+			TypeAnnotation: typeAnnotation,
+			Value:          value,
+			SecondValue:    secondValue,
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				typeAnnotation,
+				value,
+				secondValue,
+			},
+			visited,
+		)
 	})
 
-	assert.Equal(t,
-		[]Element{
-			typeAnnotation,
-			value,
-			secondValue,
-		},
-		visited,
-	)
+	t.Run("with entitlement access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "E"},
+		}
+
+		value := &IntegerExpression{
+			PositiveLiteral: []byte("1"),
+			Base:            10,
+		}
+
+		decl := &VariableDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			Identifier: Identifier{Identifier: "x"},
+			Value:      value,
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+				value,
+			},
+			visited,
+		)
+	})
 }

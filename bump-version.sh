@@ -1,6 +1,13 @@
 #!/bin/bash
 
-# Read the version to be replaced from the `version.go` file.
+set -euo pipefail
+
+if [ $# -lt 1 ] || [ -z "$1" ]; then
+  echo "Usage: $0 <major|minor|patch|version>"
+  exit 1
+fi
+
+# Read the current version from version.go (only used for major/minor/patch increments).
 v=$(sed -En 's/const Version = "v(.*)"/\1/p' version.go)
 
 case "$1" in
@@ -9,7 +16,7 @@ case "$1" in
     ;;
 
   minor)
-    v2=$(echo "$v" | awk -F. '{print $1 "." $2 + 1  ".0"}')
+    v2=$(echo "$v" | awk -F. '{print $1 "." $2 + 1 ".0"}')
     ;;
 
   patch)
@@ -17,7 +24,6 @@ case "$1" in
     ;;
 
   *)
-
     # Trim off preceding `v` if any.
     # This is to support both input version formats: `0.1.0` and `v0.1.0`.
     v2=$(echo "$1" | sed -Ee 's/^v//')
@@ -26,19 +32,25 @@ esac
 
 echo "$v => $v2"
 
-for f in $VERSIONED_FILES; do \
-  # Replace the version.
-  echo "- $f"; \
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s/$v/$v2/g" "$f"; \
-  else
-    sed -i "s/$v/$v2/g" "$f"; \
-  fi
+# Pick the correct in-place flag for sed on macOS vs. Linux.
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  SED_INPLACE=(sed -i '' -E)
+else
+  SED_INPLACE=(sed -i -E)
+fi
 
-  # Check if the version has being properly replaced.
-  git diff --exit-code -s "$f"
-  if [[ $? -ne 1 ]]; then
-    echo "failed to update version in '$f'"
-    exit 1
-  fi
-done
+# version.go: replace `const Version = "..."` regardless of the original content.
+echo "- version.go"
+"${SED_INPLACE[@]}" "s/const Version = \"[^\"]*\"/const Version = \"v${v2}\"/" version.go
+if ! grep -q "const Version = \"v${v2}\"" version.go; then
+  echo "failed to update version in version.go"
+  exit 1
+fi
+
+# npm-packages/cadence-parser/package.json: replace `"version": "..."` regardless of the original content.
+echo "- npm-packages/cadence-parser/package.json"
+"${SED_INPLACE[@]}" "s/\"version\": \"[^\"]*\"/\"version\": \"${v2}\"/" npm-packages/cadence-parser/package.json
+if ! grep -q "\"version\": \"${v2}\"" npm-packages/cadence-parser/package.json; then
+  echo "failed to update version in npm-packages/cadence-parser/package.json"
+  exit 1
+fi
