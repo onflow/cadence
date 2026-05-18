@@ -21,10 +21,9 @@ package sema_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCheckInvalidWhileTest(t *testing.T) {
@@ -164,4 +163,63 @@ func TestCheckInvalidContinueStatement(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
+}
+
+func TestCheckResourceInvalidationInWhileLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    break
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("continue", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    continue
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("return", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    return
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
 }
