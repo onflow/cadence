@@ -422,6 +422,10 @@ func (e *DesugaredElaboration) IsNestedResourceMoveExpression(expression ast.Exp
 	return e.elaboration.IsNestedResourceMoveExpression(expression)
 }
 
+func (e *DesugaredElaboration) IsStatementEndingControlFlow(statement ast.Statement) bool {
+	return e.elaboration.IsStatementEndingControlFlow(statement)
+}
+
 func (e *DesugaredElaboration) EnumLookupFunctionType(enumType *sema.CompositeType) *sema.FunctionType {
 	return e.elaboration.EnumLookupFunctionType(enumType)
 }

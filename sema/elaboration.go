@@ -172,7 +172,12 @@ type Elaboration struct {
 	variableDeclarationTypes          map[*ast.VariableDeclaration]VariableDeclarationTypes
 	// nestedResourceMoveExpressions indicates the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
-	nestedResourceMoveExpressions      map[ast.Expression]struct{}
+	nestedResourceMoveExpressions map[ast.Expression]struct{}
+	// statementsEndingControlFlow contains the statements after which
+	// control flow does not continue normally (return, halt, definite jump).
+	// Used to insert defensive runtime checks that abort execution
+	// if control nevertheless falls through.
+	statementsEndingControlFlow        map[ast.Statement]struct{}
 	compositeNestedDeclarations        map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
 	interfaceNestedDeclarations        map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	defaultDestroyDeclarations         map[ast.Declaration]*ast.CompositeDeclaration
@@ -554,6 +559,21 @@ func (e *Elaboration) SetIsNestedResourceMoveExpression(expression ast.Expressio
 		e.nestedResourceMoveExpressions = map[ast.Expression]struct{}{}
 	}
 	e.nestedResourceMoveExpressions[expression] = struct{}{}
+}
+
+func (e *Elaboration) IsStatementEndingControlFlow(statement ast.Statement) bool {
+	if e.statementsEndingControlFlow == nil {
+		return false
+	}
+	_, ok := e.statementsEndingControlFlow[statement]
+	return ok
+}
+
+func (e *Elaboration) SetStatementEndsControlFlow(statement ast.Statement) {
+	if e.statementsEndingControlFlow == nil {
+		e.statementsEndingControlFlow = map[ast.Statement]struct{}{}
+	}
+	e.statementsEndingControlFlow[statement] = struct{}{}
 }
 
 func (e *Elaboration) GetGlobalType(name string) (*Variable, bool) {

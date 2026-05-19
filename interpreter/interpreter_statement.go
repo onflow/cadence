@@ -57,10 +57,21 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 
 func (interpreter *Interpreter) visitStatements(statements []ast.Statement) StatementResult {
 
+	elaboration := interpreter.Program.Elaboration
+
 	for _, statement := range statements {
 		result := interpreter.evalStatement(statement)
 		if result, ok := result.(controlResult); ok {
 			return result
+		}
+
+		// Defensive: the type checker may have determined that control flow
+		// does not continue past this statement. If execution nevertheless
+		// reaches this point, panic instead of silently continuing.
+		if elaboration.IsStatementEndingControlFlow(statement) {
+			panic(&UnreachableInstructionError{
+				Range: ast.NewRangeFromPositioned(interpreter, statement),
+			})
 		}
 	}
 
