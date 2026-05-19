@@ -21,9 +21,10 @@ package sema_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCheckInvalidWhileTest(t *testing.T) {
