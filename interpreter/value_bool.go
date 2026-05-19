@@ -34,6 +34,7 @@ type BoolValue values.BoolValue
 var _ Value = BoolValue(false)
 var _ EquatableValue = BoolValue(false)
 var _ HashableValue = BoolValue(false)
+var _ MemberAccessibleValue = BoolValue(false)
 
 const TrueValue = BoolValue(true)
 const FalseValue = BoolValue(false)
@@ -190,4 +191,56 @@ func (v BoolValue) Clone(_ ValueCloneContext) Value {
 
 func (BoolValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
+}
+
+func (v BoolValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+	return GetMember(
+		context,
+		v,
+		name,
+		memberKind,
+		nil,
+	)
+}
+
+func (v BoolValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+	switch name {
+	case sema.ToStringFunctionName:
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			sema.ToStringFunctionType,
+			NativeBoolValueToStringFunction,
+		)
+	}
+
+	return nil
+}
+
+var TrueStringValue = NewUnmeteredStringValue("true")
+var FalseStringValue = NewUnmeteredStringValue("false")
+
+var NativeBoolValueToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		receiver Value,
+		_ []Value,
+	) Value {
+		if AssertValueOfType[BoolValue](receiver) {
+			return TrueStringValue
+		}
+		return FalseStringValue
+	},
+)
+
+func (BoolValue) RemoveMember(_ ValueTransferContext, _ string) Value {
+	// Bool has no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (BoolValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
+	// Bool has no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
 }

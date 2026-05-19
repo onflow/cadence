@@ -28,17 +28,14 @@ import (
 
 func init() {
 
-	for _, pathType := range sema.AllPathTypes {
-		typeName := commons.TypeQualifier(pathType)
+	typeName := commons.TypeQualifier(sema.BoolType)
 
-		registerBuiltinTypeBoundFunction(
-			typeName,
-			NewNativeFunctionValue(
-				sema.ToStringFunctionName,
-				sema.ToStringFunctionType,
-				interpreter.NativePathValueToStringFunction,
-			),
-		)
-
-	}
+	registerBuiltinTypeBoundFunction(
+		typeName,
+		NewNativeFunctionValue(
+			sema.ToStringFunctionName,
+			sema.ToStringFunctionType,
+			interpreter.NativeBoolValueToStringFunction,
+		),
+	)
 }
