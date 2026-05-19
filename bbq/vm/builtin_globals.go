@@ -447,7 +447,7 @@ func registerBuiltinFixedPointPowFunctions() {
 }
 
 func registerBuiltinFixedPointMultiplyDivideFunctions() {
-	for baseType, funcType := range sema.FixedPointMultiplyDivideFunctionTypes {
+	for baseType, funcType := range sema.FixedPointMultiplyDivideFunctionTypes { //nolint:maprange
 		registerBuiltinTypeBoundFunction(
 			commons.TypeQualifier(baseType),
 			NewNativeFunctionValue(
