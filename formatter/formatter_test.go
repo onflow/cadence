@@ -13,11 +13,14 @@ import (
 	"github.com/onflow/cadence/formatter/verify"
 )
 
+const testdataRoot = "testdata"
+
 var update = flag.Bool("update", false, "update golden files")
 
 func TestSnapshot(t *testing.T) {
 	t.Parallel()
-	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
+
+	testdataDir := filepath.Join(testdataRoot, "format")
 
 	entries, err := os.ReadDir(testdataDir)
 	if err != nil {
@@ -31,6 +34,7 @@ func TestSnapshot(t *testing.T) {
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			dir := filepath.Join(testdataDir, name)
 			inputPath := filepath.Join(dir, "input.cdc")
 			goldenPath := filepath.Join(dir, "golden.cdc")
@@ -67,7 +71,8 @@ func TestSnapshot(t *testing.T) {
 
 func TestIdempotence(t *testing.T) {
 	t.Parallel()
-	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
+
+	testdataDir := filepath.Join(testdataRoot, "format")
 
 	entries, err := os.ReadDir(testdataDir)
 	if err != nil {
@@ -81,6 +86,7 @@ func TestIdempotence(t *testing.T) {
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			dir := filepath.Join(testdataDir, name)
 			inputPath := filepath.Join(dir, "input.cdc")
 
@@ -109,7 +115,8 @@ func TestIdempotence(t *testing.T) {
 
 func TestRoundTrip(t *testing.T) {
 	t.Parallel()
-	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
+
+	testdataDir := filepath.Join(testdataRoot, "format")
 
 	entries, err := os.ReadDir(testdataDir)
 	if err != nil {
@@ -145,7 +152,8 @@ func TestRoundTrip(t *testing.T) {
 
 func TestCommentPreservation(t *testing.T) {
 	t.Parallel()
-	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
+
+	testdataDir := filepath.Join(testdataRoot, "format")
 
 	entries, err := os.ReadDir(testdataDir)
 	if err != nil {
@@ -532,7 +540,8 @@ func commentTexts(src []byte) []string {
 
 func TestNoTrailingWhitespace(t *testing.T) {
 	t.Parallel()
-	testdataDir := filepath.Join(findRepoRoot(t), "testdata", "format")
+
+	testdataDir := filepath.Join(testdataRoot, "format")
 	entries, err := os.ReadDir(testdataDir)
 	if err != nil {
 		t.Fatalf("reading testdata dir: %v", err)
