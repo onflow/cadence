@@ -4512,6 +4512,11 @@ func TestInterpretDynamicCastingEntitledCapability(t *testing.T) {
 		test(t, "AnyStruct", noError)
 	})
 
+	t.Run("to AnyStruct?", func(t *testing.T) {
+		t.Parallel()
+		test(t, "AnyStruct?", noError)
+	})
+
 	t.Run("nested in Array", func(t *testing.T) {
 		t.Parallel()
 
@@ -4565,5 +4570,47 @@ func TestInterpretDynamicCastingEntitledCapability(t *testing.T) {
 
 		assert.Equal(t, common.TypeID("[Capability<auth(S.test.E1,S.test.E2)&Int>]"), forceCastTypeMismatchError.ExpectedType.ID())
 		assert.Equal(t, common.TypeID("[Capability<&Int>]"), forceCastTypeMismatchError.ActualType.ID())
+	})
+
+	t.Run("nested in [[AnyStruct]]", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun test(cap: Capability<auth(E1, E2) &Int>) {
+                let capArray: [[Capability<auth(E1, E2) &Int>]] = [[cap]]
+                let upcastedCapArray: [[AnyStruct]] = capArray
+                let downcastedCapArray = upcastedCapArray as! [[Capability<auth(E1, E2) &Int>]]
+            }
+        `
+
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+		borrowType := typeValue.Type
+
+		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+
+		_, err = inter.Invoke("test", capabilityValue)
+
+		// Similar to how assigning to `AnyStruct` doesn't strip entitlements,
+		// assigning to an array `[AnyStruct]` (or any nested `AnyStruct`)
+		// shouldn't also strip entitlements.
+		// This is mostly for consistency.
+		require.NoError(t, err)
 	})
 }

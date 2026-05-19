@@ -141,6 +141,9 @@ func (d *FunctionDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 }
 
 func (d *FunctionDeclaration) Walk(walkChild func(Element)) {
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
 	if d.TypeParameterList != nil {
 		d.TypeParameterList.Walk(walkChild)
 	}

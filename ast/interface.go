@@ -70,7 +70,11 @@ func (*InterfaceDeclaration) ElementType() ElementType {
 }
 
 func (d *InterfaceDeclaration) Walk(walkChild func(Element)) {
-	walkDeclarations(walkChild, d.Members.declarations)
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
+	walkElements(walkChild, d.Conformances)
+	walkElements(walkChild, d.Members.declarations)
 }
 
 func (*InterfaceDeclaration) isDeclaration() {}
