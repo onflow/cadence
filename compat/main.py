@@ -11,11 +11,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Collection, Dict
 
+import concurrent.futures
+import tempfile
+
 import click as click
 import coloredlogs
 import yaml
 from dacite import from_dict
 
+logger = logging.getLogger(__name__)
+
+SEPARATOR = "=" * 60
 SUITE_PATH = Path("suite").resolve()
 CLI_PATH = SUITE_PATH / "flow-cli" / "cmd" / "flow"
 
@@ -281,6 +287,12 @@ class Git:
     default=None,
     help="version of flow-emulator for Go tests"
 )
+@click.option(
+    "--parallel/--no-parallel",
+    is_flag=True,
+    default=True,
+    help="Run suites in parallel"
+)
 @click.argument(
     "names",
     nargs=-1,
@@ -292,6 +304,7 @@ def main(
     cadence_version: str,
     flowgo_version: str,
     flowemulator_version: str,
+    parallel: bool,
     names: Collection[str]
 ):
 
@@ -314,6 +327,7 @@ def main(
     # Run for the current checkout
 
     current_success = run(
+        parallel=parallel,
         prepare=prepare,
         go_test=go_test,
         cadence_test=cadence_test,
@@ -327,26 +341,20 @@ def main(
         exit(1)
 
 
-def run(
-    prepare: bool,
-    go_test: bool,
-    cadence_test: bool,
-    cadence_version: str,
-    flowgo_version: str,
-    flowemulator_version: str,
-    names: Collection[str]
-) -> (bool):
+def _run_single_suite(name, prepare, go_test, cadence_test,
+                      cadence_version, flowgo_version, flowemulator_version):
+    """Run a single suite in a worker process, capturing all output."""
+    stdout_file = tempfile.TemporaryFile()
+    stderr_file = tempfile.TemporaryFile()
+    old_stdout_fd = os.dup(1)
+    old_stderr_fd = os.dup(2)
+    os.dup2(stdout_file.fileno(), 1)
+    os.dup2(stderr_file.fileno(), 2)
 
-    all_succeeded = True
-
-    if not names:
-        names = [f.stem for f in SUITE_PATH.glob("*.yaml")]
-
-    for name in names:
-
+    try:
+        coloredlogs.install(level="INFO", fmt="%(asctime)s,%(msecs)03d %(levelname)s %(message)s")
         description = Description.load(name)
-
-        run_succeeded = description.run(
+        succeeded = description.run(
             name,
             prepare=prepare,
             go_test=go_test,
@@ -355,16 +363,100 @@ def run(
             flowgo_version=flowgo_version,
             flowemulator_version=flowemulator_version
         )
+    except Exception:
+        succeeded = False
+    finally:
+        os.dup2(old_stdout_fd, 1)
+        os.dup2(old_stderr_fd, 2)
+        os.close(old_stdout_fd)
+        os.close(old_stderr_fd)
 
-        if not run_succeeded:
-            all_succeeded = False
+    stdout_file.seek(0)
+    stderr_file.seek(0)
+    output = stdout_file.read().decode("utf-8", errors="replace") \
+           + stderr_file.read().decode("utf-8", errors="replace")
+    stdout_file.close()
+    stderr_file.close()
 
-    return all_succeeded
+    return name, succeeded, output
+
+
+def run(
+    parallel: bool,
+    prepare: bool,
+    go_test: bool,
+    cadence_test: bool,
+    cadence_version: str,
+    flowgo_version: str,
+    flowemulator_version: str,
+    names: Collection[str]
+) -> bool:
+
+    if not names:
+        names = [f.stem for f in SUITE_PATH.glob("*.yaml")]
+
+    results = {}
+
+    if parallel:
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            futures = {}
+            for name in names:
+                logger.info(f"Starting suite: {name}")
+                futures[executor.submit(
+                    _run_single_suite,
+                    name, prepare, go_test, cadence_test,
+                    cadence_version, flowgo_version, flowemulator_version
+                )] = name
+            for future in concurrent.futures.as_completed(futures):
+                name = futures[future]
+                try:
+                    name, succeeded, output = future.result()
+                    results[name] = (succeeded, output)
+                except Exception as e:
+                    results[name] = (False, str(e))
+                succeeded, _ = results[name]
+                logger.info(f"Finished suite: {name} — {'PASS' if succeeded else 'FAIL'}")
+    else:
+        for name in names:
+            description = Description.load(name)
+            succeeded = description.run(
+                name,
+                prepare=prepare,
+                go_test=go_test,
+                cadence_test=cadence_test,
+                cadence_version=cadence_version,
+                flowgo_version=flowgo_version,
+                flowemulator_version=flowemulator_version
+            )
+            results[name] = (succeeded, "")
+
+    # Report
+    passed = sum(1 for s, _ in results.values() if s)
+    total = len(results)
+    print("\n" + SEPARATOR)
+    print("RESULTS")
+    print(SEPARATOR)
+    for name in names:
+        succeeded, _ = results.get(name, (False, ""))
+        status = "PASS" if succeeded else "FAIL"
+        print(f"  {name:40s} {status}")
+    print(SEPARATOR)
+    print(f"Overall: {'PASS' if passed == total else 'FAIL'} ({passed}/{total} passed)")
+    print(SEPARATOR)
+
+    # Dump output for failed suites
+    for name in names:
+        succeeded, output = results.get(name, (False, ""))
+        if not succeeded and output:
+            print(f"\n{SEPARATOR}")
+            print(f"OUTPUT: {name}")
+            print(SEPARATOR)
+            print(output)
+
+    return all(s for s, _ in results.values())
 
 
 if __name__ == "__main__":
-    logger = logging.getLogger(__name__)
-
     coloredlogs.install(
         level="INFO",
         fmt="%(asctime)s,%(msecs)03d %(levelname)s %(message)s"

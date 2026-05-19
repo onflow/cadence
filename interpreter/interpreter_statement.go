@@ -193,7 +193,7 @@ func (interpreter *Interpreter) visitGuardStatementWithTestExpression(
 	}
 
 	if !value {
-		return interpreter.visitBlock(elseBlock)
+		return interpreter.visitGuardElseBlock(elseBlock)
 	}
 
 	return nil
@@ -219,11 +219,24 @@ func (interpreter *Interpreter) visitGuardStatementWithVariableDeclaration(
 		return nil
 
 	case NilValue:
-		return interpreter.visitBlock(elseBlock)
+		return interpreter.visitGuardElseBlock(elseBlock)
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+// visitGuardElseBlock evaluates a guard statement's else block.
+// The else block must exit (return, break, or continue),  so the checker rejects fall-through.
+// As a defensive measure against a checker bug, panic if the block falls through at run-time.
+func (interpreter *Interpreter) visitGuardElseBlock(elseBlock *ast.Block) StatementResult {
+	result := interpreter.visitBlock(elseBlock)
+	if _, ok := result.(controlResult); !ok {
+		panic(&UnreachableInstructionError{
+			Range: elseBlock.Range,
+		})
+	}
+	return result
 }
 
 func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) StatementResult {
@@ -342,6 +355,14 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 	}
 
 	executeBody := func(value Value) (resume bool) {
+		// When iterating, the underlying container's element type may differ
+		// from the loop variable's type.
+		// For example, when the declared type is `[Int?]`, but the container's
+		// run-time type is `[Int]`, then it stores `Int` elements, but the loop
+		// variable type is `Int?`. Convert and box to match the declared type.
+		// This mirrors the VM's `mustEmitTransferAndConvert(loopVarType, loopVarType)`.
+		value = ConvertAndBox(interpreter, value, forStmtTypes.ValueVariableType)
+
 		statementResult, done := interpreter.visitForStatementBody(statement, index, value)
 		if done {
 			result = statementResult

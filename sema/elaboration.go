@@ -323,12 +323,11 @@ func (e *Elaboration) SetCompositeDeclarationType(
 	e.compositeDeclarationTypes[declaration] = compositeType
 }
 
-func (e *Elaboration) CompositeTypeDeclaration(compositeType *CompositeType) (decl ast.CompositeLikeDeclaration, ok bool) {
+func (e *Elaboration) CompositeTypeDeclaration(compositeType *CompositeType) ast.CompositeLikeDeclaration {
 	if e.compositeTypeDeclarations == nil {
-		return
+		return nil
 	}
-	decl, ok = e.compositeTypeDeclarations[compositeType]
-	return
+	return e.compositeTypeDeclarations[compositeType]
 }
 
 func (e *Elaboration) SetCompositeTypeDeclaration(
@@ -417,6 +416,34 @@ func (e *Elaboration) EntitlementMapTypeDeclaration(entitlementMapType *Entitlem
 	}
 	decl, _ := e.entitlementMapTypesAndDeclarationsBiMap.Get(entitlementMapType)
 	return decl
+}
+
+func (e *Elaboration) DeclarationForType(ty Type) ast.Declaration {
+	// Each case checks the concrete return value against nil before returning,
+	// rather than `return e.XTypeDeclaration(t)`, to avoid Go's typed nil behavior
+	switch t := ty.(type) {
+	case *CompositeType:
+		if decl := e.CompositeTypeDeclaration(t); decl != nil {
+			return decl
+		}
+
+	case *InterfaceType:
+		if decl := e.InterfaceTypeDeclaration(t); decl != nil {
+			return decl
+		}
+
+	case *EntitlementType:
+		if decl := e.EntitlementTypeDeclaration(t); decl != nil {
+			return decl
+		}
+
+	case *EntitlementMapType:
+		if decl := e.EntitlementMapTypeDeclaration(t); decl != nil {
+			return decl
+		}
+	}
+
+	return nil
 }
 
 func (e *Elaboration) ConstructorFunctionType(initializer *ast.SpecialFunctionDeclaration) *FunctionType {

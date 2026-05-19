@@ -39,8 +39,8 @@ type AccountCapabilityControllerValue struct {
 
 	// Lazily initialized function values.
 	// Host functions based on injected functions (see below).
-	deleteFunction FunctionValue
-	setTagFunction FunctionValue
+	deleteFunction NativeFunction
+	setTagFunction NativeFunction
 
 	// Injected functions.
 	// Tags are not stored directly inside the controller
@@ -226,7 +226,9 @@ func (v *AccountCapabilityControllerValue) GetMember(
 	context MemberAccessibleContext,
 	name string,
 	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
 ) (result Value) {
+
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -244,6 +246,7 @@ func (v *AccountCapabilityControllerValue) GetMember(
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -266,22 +269,21 @@ func (v *AccountCapabilityControllerValue) GetMember(
 	)
 }
 
-func (v *AccountCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *AccountCapabilityControllerValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+
 	// NOTE: check if controller is already deleted
 	v.CheckDeleted()
 
 	switch name {
 	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
-		if v.setTagFunction == nil {
-			v.setTagFunction = v.newSetTagFunction(context)
-		}
-		return v.setTagFunction
+		return v.getSetTagFunction(context, accessedReference)
 
 	case sema.AccountCapabilityControllerTypeDeleteFunctionName:
-		if v.deleteFunction == nil {
-			v.deleteFunction = v.newDeleteFunction(context)
-		}
-		return v.deleteFunction
+		return v.getDeleteFunction(context, accessedReference)
 
 		// NOTE: when adding new functions, ensure CheckDeleted is called,
 		// by e.g. using AccountCapabilityControllerValue.newHostFunction
@@ -353,16 +355,24 @@ func (v *AccountCapabilityControllerValue) CheckDeleted() {
 }
 
 func (v *AccountCapabilityControllerValue) newNativeHostFunctionValue(
+	f NativeFunction,
+) NativeFunction {
+	return NewNativeDeletionCheckedAccountCapabilityControllerFunction(f)
+}
+
+func (v *AccountCapabilityControllerValue) newBoundFunctionValue(
 	context FunctionCreationContext,
 	funcType *sema.FunctionType,
 	f NativeFunction,
+	accessedReference ReferenceValue,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
 		FunctionValue: NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			funcType,
-			NewNativeDeletionCheckedAccountCapabilityControllerFunction(f),
+			f,
 		),
 	}
 }
@@ -406,13 +416,21 @@ var NativeAccountCapabilityControllerDeleteFunction = NativeFunction(
 	},
 )
 
-func (v *AccountCapabilityControllerValue) newDeleteFunction(
-	context FunctionCreationContext,
-) FunctionValue {
-	return v.newNativeHostFunctionValue(
+func (v *AccountCapabilityControllerValue) getDeleteFunction(context MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
+	// Only the native function can be stored/reused,
+	// since the receiver of bound functions can be different.
+	// (e.g: accessing the same function of the same value, but via different references)
+	if v.deleteFunction == nil {
+		v.deleteFunction = v.newNativeHostFunctionValue(
+			NativeAccountCapabilityControllerDeleteFunction,
+		)
+	}
+
+	return v.newBoundFunctionValue(
 		context,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
-		NativeAccountCapabilityControllerDeleteFunction,
+		v.deleteFunction,
+		accessedReference,
 	)
 }
 
@@ -431,12 +449,20 @@ var NativeAccountCapabilityControllerSetTagFunction = NativeFunction(
 	},
 )
 
-func (v *AccountCapabilityControllerValue) newSetTagFunction(
-	context FunctionCreationContext,
-) FunctionValue {
-	return v.newNativeHostFunctionValue(
+func (v *AccountCapabilityControllerValue) getSetTagFunction(context MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
+	// Only the native function can be stored/reused,
+	// since the receiver of bound functions can be different.
+	// (e.g: accessing the same function of the same value, but via different references)
+	if v.setTagFunction == nil {
+		v.setTagFunction = v.newNativeHostFunctionValue(
+			NativeAccountCapabilityControllerSetTagFunction,
+		)
+	}
+
+	return v.newBoundFunctionValue(
 		context,
 		sema.AccountCapabilityControllerTypeSetTagFunctionType,
-		NativeAccountCapabilityControllerSetTagFunction,
+		v.setTagFunction,
+		accessedReference,
 	)
 }

@@ -18,34 +18,66 @@
 
 package sema
 
+import "slices"
+
+// ControlKind identifies the kind of a control-flow construct
+// that `break` or `continue` can target.
+type ControlKind uint8
+
+const (
+	ControlKindNone ControlKind = iota
+	ControlKindLoop
+	ControlKindSwitch
+)
+
 type FunctionActivation struct {
 	ReturnType           Type
 	ReturnInfo           *ReturnInfo
 	InitializationInfo   *InitializationInfo
-	Loops                int
-	Switches             int
+	ControlStack         []ControlKind
 	ValueActivationDepth int
 }
 
-func (a FunctionActivation) InLoop() bool {
-	return a.Loops > 0
+func (a *FunctionActivation) InLoop() bool {
+	return slices.Contains(a.ControlStack, ControlKindLoop)
 }
 
-func (a FunctionActivation) InSwitch() bool {
-	return a.Switches > 0
+// InnermostControl returns the kind of the innermost enclosing
+// control-flow construct (loop or switch), if any.
+// This is the target of a `break` statement.
+func (a *FunctionActivation) InnermostControl() ControlKind {
+	if len(a.ControlStack) == 0 {
+		return ControlKindNone
+	}
+	return a.ControlStack[len(a.ControlStack)-1]
+}
+
+func (a *FunctionActivation) pushControl(kind ControlKind) {
+	a.ControlStack = append(a.ControlStack, kind)
+}
+
+func (a *FunctionActivation) popControl() {
+	lastIndex := len(a.ControlStack) - 1
+	a.ControlStack = a.ControlStack[:lastIndex]
 }
 
 func (a *FunctionActivation) WithLoop(f func()) {
-	a.Loops++
+	a.pushControl(ControlKindLoop)
 	a.ReturnInfo.WithNewJumpTarget(f)
-	a.Loops--
+	a.popControl()
 }
 
 func (a *FunctionActivation) WithSwitch(f func()) {
 	// NOTE: new jump-offsets child-set for each case instead of whole switch
-	a.Switches++
+	a.pushControl(ControlKindSwitch)
+	// A `break` inside a switch only targets the switch, not any enclosing loop.
+	// DefinitelyJumpedSwitch is scoped to the switch: save on entry, restore on exit.
+	// `continue` always targets the enclosing loop, so it sets DefinitelyJumped
+	// (not DefinitelyJumpedSwitch) and therefore propagates past the switch.
+	savedDefinitelyJumpedSwitch := a.ReturnInfo.DefinitelyJumpedSwitch
 	f()
-	a.Switches--
+	a.ReturnInfo.DefinitelyJumpedSwitch = savedDefinitelyJumpedSwitch
+	a.popControl()
 }
 
 type FunctionActivations struct {

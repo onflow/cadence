@@ -609,18 +609,34 @@ func (v UInt128Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	)
 }
 
-func (v UInt128Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v UInt128Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		nil,
 	)
 }
 
-func (v UInt128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.UInt128Type)
+func (v UInt128Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.UInt128Type,
+	)
 }
 
 func (UInt128Value) RemoveMember(_ ValueTransferContext, _ string) Value {

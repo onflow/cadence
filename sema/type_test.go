@@ -3253,9 +3253,22 @@ func TestType_IsOrContainsReference(t *testing.T) {
 			},
 		},
 		{
-			name:     "Function",
-			ty:       &FunctionType{},
+			name: "Function with void return",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: VoidTypeAnnotation,
+			},
 			expected: false,
+		},
+		{
+			name: "Function with a reference return",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: NewTypeAnnotation(
+					&ReferenceType{
+						Type: someNonReferenceType,
+					},
+				),
+			},
+			expected: true,
 		},
 		{
 			name:     "Interface",
@@ -3278,26 +3291,35 @@ func TestType_IsOrContainsReference(t *testing.T) {
 	}
 
 	test := func(test testCase) {
-		t.Run(test.name, func(t *testing.T) {
+
+		name := test.name
+		genTy := test.genTy
+		ty := test.ty
+		expected := test.expected
+
+		t.Run(name, func(t *testing.T) {
 
 			t.Parallel()
 
-			if test.genTy != nil {
+			if genTy != nil {
 
-				itself := test.genTy(someNonReferenceType)
-
+				// Case-I: Check with a non-reference type as the inner type.
+				// `IsOrContainsReferenceType` should be `true` only if
+				// the outer value itself is a reference.
+				itself := genTy(someNonReferenceType)
 				_, ok := itself.(*ReferenceType)
 				assert.Equal(t, ok, itself.IsOrContainsReferenceType())
 
-				assert.True(t,
-					test.genTy(&ReferenceType{
-						Type: someNonReferenceType,
-					}).IsOrContainsReferenceType(),
-				)
+				// Case-II: Check with a reference type as the inner type.
+				// `IsOrContainsReferenceType` should be `true` for everyone with a type-generating function.
+				referenceType := &ReferenceType{
+					Type: someNonReferenceType,
+				}
+				assert.True(t, genTy(referenceType).IsOrContainsReferenceType())
 			} else {
 				assert.Equal(t,
-					test.expected,
-					test.ty.IsOrContainsReferenceType(),
+					expected,
+					ty.IsOrContainsReferenceType(),
 				)
 			}
 		})

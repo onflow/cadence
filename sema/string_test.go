@@ -727,6 +727,18 @@ func TestCheckStringTemplate(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("valid, bool", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let a = true
+			let x: String = "The value of a is: \(a)"
+		`)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("invalid, struct", func(t *testing.T) {
 
 		t.Parallel()
@@ -785,10 +797,9 @@ func TestCheckStringTemplate(t *testing.T) {
 			let x: String = "\(a)" 
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[1])
 	})
 
 	t.Run("invalid, resource", func(t *testing.T) {

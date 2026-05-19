@@ -21,6 +21,7 @@ package runtime_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -1556,4 +1557,197 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 
 	require.NoError(t, err)
 	require.False(t, failed)
+}
+
+func TestRuntimeCapabilityEntitlementStrippingOnStorageRead(t *testing.T) {
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	t.Run("storage.load", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewTestRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{testAddress}, nil
+			},
+		}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		exploitScript := []byte(`
+            access(all) fun main() {
+                let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
+
+                // Create and save an entitled capability in storage.
+                account.storage.save(42, to: /storage/val)
+                let cap: Capability<auth(Mutate) &Int> = account.capabilities.storage.issue<auth(Mutate) &Int>(/storage/val)
+                let capPath = /storage/cap
+                account.storage.save(cap, to: capPath)
+
+                // Load with a less-entitled type.
+                let loaded: Capability<&Int> = account.storage.load<Capability<&Int>>(from: capPath)!
+
+                // Try to down-cast it to gain entitlements.
+                loaded as! Capability<auth(Mutate) &Int>
+            }
+        `)
+
+		_, err := rt.ExecuteScript(
+			Script{Source: exploitScript},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
+			},
+		)
+
+		require.Error(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<auth(Mutate)&Int>"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<&Int>"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("storage.copy", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewTestRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{testAddress}, nil
+			},
+		}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		exploitScript := []byte(`
+            access(all) fun main() {
+                let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
+
+                // Create and save an entitled capability in storage.
+                account.storage.save(42, to: /storage/val)
+                let cap: Capability<auth(Mutate) &Int> = account.capabilities.storage.issue<auth(Mutate) &Int>(/storage/val)
+                let capPath = /storage/cap
+                account.storage.save(cap, to: capPath)
+
+                // Load with a less-entitled type.
+                let copied: Capability<&Int> = account.storage.copy<Capability<&Int>>(from: capPath)!
+
+                // Try to down-cast it to gain entitlements.
+                copied as! Capability<auth(Mutate) &Int>
+            }
+        `)
+
+		_, err := rt.ExecuteScript(
+			Script{Source: exploitScript},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
+			},
+		)
+
+		require.Error(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<auth(Mutate)&Int>"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<&Int>"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("inbox.claim", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewTestRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{testAddress}, nil
+			},
+		}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		exploitScript := []byte(`
+            access(all) fun main() {
+                let account1 = getAuthAccount<auth(Storage, Capabilities, Inbox) &Account>(0x1)
+                let account2 = getAuthAccount<auth(Storage, Capabilities, Inbox) &Account>(0x2)
+
+                // Create and save an entitled capability in storage.
+                account1.storage.save(42, to: /storage/val)
+                let cap: Capability<auth(Mutate) &Int> = account1.capabilities.storage.issue<auth(Mutate) &Int>(/storage/val)
+                account1.inbox.publish(cap, name: "foo", recipient: 0x2)
+
+                // Load with a less-entitled type.
+                let claimed: Capability<&Int> = account2.inbox.claim<&Int>("foo", provider: 0x1)!
+
+                // Try to down-cast it to gain entitlements.
+                claimed as! Capability<auth(Mutate) &Int>
+            }
+        `)
+
+		_, err := rt.ExecuteScript(
+			Script{Source: exploitScript},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
+			},
+		)
+
+		require.Error(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<auth(Mutate)&Int>"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<&Int>"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+	})
+
 }

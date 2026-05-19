@@ -178,9 +178,14 @@ func createInclusiveRange(
 
 	rangeValue.Functions.Set(
 		sema.InclusiveRangeTypeContainsFunctionName,
-		NewBoundHostFunctionValue(
+
+		// `CompositeValue` generally store functions as static-functions (e.g: user-defined functions).
+		// Those get converted to bound functions on retrieval. See `compositeMember()` function in `value_composite.go`
+		// Do the same for host-functions as well. i.e: create and store a static-host-function.
+		// A bound function cannot be created here, because it is unknown whether the function
+		// is accessed via a reference or directly on the concrete value, at this point.
+		NewStaticHostFunctionValueFromNativeFunction(
 			context,
-			rangeValue,
 			sema.InclusiveRangeContainsFunctionType(
 				rangeSemaType.MemberType,
 			),

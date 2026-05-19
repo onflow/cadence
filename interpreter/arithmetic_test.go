@@ -28,11 +28,13 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	"github.com/onflow/cadence/values"
 )
 
 var integerTestValues = map[string]interpreter.NumberValue{
@@ -982,5 +984,51 @@ func TestInterpretArithmeticOperatorsOverflowAndUnderflow(t *testing.T) {
 		test(ty, ast.OperationMinus, testCase.subtract)
 		test(ty, ast.OperationMul, testCase.multiply)
 		test(ty, ast.OperationDiv, testCase.divide)
+	}
+}
+
+func TestInterpretDivisionByZero(t *testing.T) {
+	t.Parallel()
+
+	numericTypes := common.Concat(
+		sema.AllUnsignedIntegerTypes,
+		sema.AllSignedIntegerTypes,
+		sema.AllUnsignedFixedPointTypes,
+		sema.AllSignedFixedPointTypes,
+	)
+
+	for _, typ := range numericTypes {
+		typ := typ
+		typeName := typ.String()
+
+		t.Run(typeName, func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepare(t,
+				fmt.Sprintf(
+					`
+                          fun test(): %[1]s {
+                              return %[1]s(4) / %[1]s(0)
+                          }
+                        `,
+					typeName,
+				),
+			)
+
+			_, err := inter.Invoke("test")
+			RequireError(t, err)
+
+			require.True(t, errors.IsUserError(err))
+
+			switch typ {
+			case sema.IntType, sema.UFix64Type:
+				// These two types are implemented in the values package.
+				divisionByZero := values.DivisionByZeroError{}
+				require.ErrorAs(t, err, &divisionByZero)
+			default:
+				divisionByZero := &interpreter.DivisionByZeroError{}
+				require.ErrorAs(t, err, &divisionByZero)
+			}
+		})
 	}
 }

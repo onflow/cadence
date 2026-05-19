@@ -427,6 +427,123 @@ func TestCheckReferencesInForLoop(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("array with unauthorized reference ", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let array: [&[Int]] = [
+                    &[1] as &[Int],
+                    &[2] as &[Int]
+                ]
+
+                let arrayRef = &array as &[&[Int]]
+
+                for element in arrayRef {
+                    let e: &[Int] = element
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array with authorized reference ", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let array: [auth(Mutate) &[Int]] = [
+                    &[1] as auth(Mutate) &[Int],
+                    &[2] as auth(Mutate) &[Int]
+                ]
+
+                let arrayRef = &array as &[auth(Mutate) &[Int]]
+
+                for element in arrayRef {
+                    // OK
+                    let e1: &[Int] = element
+
+                    // Error: element type should be unauthorized
+                    let e2: auth(Mutate) &[Int] = element
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 15, typeMismatchError.StartPos.Line)
+	})
+
+	t.Run("authorized reference to array with authorized reference ", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let array: [auth(Mutate) &[Int]] = [
+                    &[1] as auth(Mutate) &[Int],
+                    &[2] as auth(Mutate) &[Int]
+                ]
+
+                let arrayRef = &array as auth(Mutate) &[auth(Mutate) &[Int]]
+
+                for element in arrayRef {
+                    // OK
+                    let e1: &[Int] = element
+
+                    // OK
+                    let e2: auth(Mutate) &[Int] = element
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("authorized reference to array with authorized reference, intrersection ", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+            entitlement E3
+
+            fun main() {
+                let array: [auth(E1, E2) &[Int]] = [
+                    &[1] as auth(E1, E2) &[Int],
+                    &[2] as auth(E1, E2) &[Int]
+                ]
+
+                let arrayRef = &array as auth(E2, E3) &[auth(E1, E2) &[Int]]
+
+                for element in arrayRef {
+                    // OK
+                    let e1: &[Int] = element
+
+                    // OK
+                    let e2: auth(E2) &[Int] = element
+
+                    // Error: element type should only have the intersection (E2)
+                    let e3: auth(E1, E2) &[Int] = element
+
+                    // Error: element type should only have the intersection (E2)
+                    let e4: auth(E2, E3) &[Int] = element
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 22, typeMismatchError.StartPos.Line)
+
+		require.ErrorAs(t, errs[1], &typeMismatchError)
+		assert.Equal(t, 25, typeMismatchError.StartPos.Line)
+	})
+
 	t.Run("Dictionary", func(t *testing.T) {
 		t.Parallel()
 

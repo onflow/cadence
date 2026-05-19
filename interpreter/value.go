@@ -164,13 +164,24 @@ type TypeIndexableValue interface {
 
 type MemberAccessibleValue interface {
 	Value
-	GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value
+	// GetMember return member of any kind (fields, methods, etc.), of this value.
+	// If the member was accessed via a reference, then it must be passed in as the `accessedReference`.
+	// Otherwise (member was accessed via the concrete value), then `accessedReference` must be `nil`.
+	// The `accessedReference` is used as the receiver if the member is a function
+	// (i.e: bound-function implicit capture of the receiver).
+	// It is not used for retrieving fields (even if the field is a function-typed).
+	GetMember(
+		context MemberAccessibleContext,
+		name string,
+		memberKind common.DeclarationKind,
+		accessedReference ReferenceValue,
+	) Value
 	RemoveMember(context ValueTransferContext, name string) Value
 	// SetMember returns whether a value previously existed with this name.
 	SetMember(context ValueTransferContext, name string, value Value) bool
 	// GetMethod returns member functions of this value.
 	// IMPORTANT: This method is for internal use only. Always use `GetMember` to retrieve a member of any kind.
-	GetMethod(context MemberAccessibleContext, name string) FunctionValue
+	GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue
 }
 
 type ValueComparisonContext interface {

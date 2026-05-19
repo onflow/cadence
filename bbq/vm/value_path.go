@@ -28,13 +28,7 @@ import (
 
 func init() {
 
-	for _, pathType := range []sema.Type{
-		sema.PathType,
-		sema.StoragePathType,
-		sema.CapabilityPathType,
-		sema.PublicPathType,
-		sema.PrivatePathType,
-	} {
+	for _, pathType := range sema.AllPathTypes {
 		typeName := commons.TypeQualifier(pathType)
 
 		registerBuiltinTypeBoundFunction(

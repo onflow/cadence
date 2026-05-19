@@ -37,8 +37,11 @@ func TestCheckToString(t *testing.T) {
 
 	for _, numberOrAddressType := range common.Concat(
 		sema.AllNumberTypes,
+		sema.AllPathTypes,
 		[]sema.Type{
 			sema.TheAddressType,
+			sema.BoolType,
+			sema.CharacterType,
 		},
 	) {
 

@@ -829,10 +829,6 @@ func (checker *Checker) inLoop() bool {
 	return checker.functionActivations.Current().InLoop()
 }
 
-func (checker *Checker) inSwitch() bool {
-	return checker.functionActivations.Current().InSwitch()
-}
-
 func (checker *Checker) findAndCheckValueVariable(identifierExpression *ast.IdentifierExpression, recordOccurrence bool) *Variable {
 	identifier := identifierExpression.Identifier
 	variable := checker.valueActivations.Find(identifier.Identifier)
@@ -1272,6 +1268,10 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 			)
 			return InvalidType
 		}
+
+		if checker.PositionInfo != nil && identifier.Identifier != "" {
+			checker.recordNestedTypeReferenceOccurrence(identifier, ty)
+		}
 	}
 
 	return ty
@@ -1425,6 +1425,15 @@ func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.P
 		startPos,
 		endPos,
 		variable,
+	)
+}
+
+func (checker *Checker) recordNestedTypeReferenceOccurrence(identifier ast.Identifier, nestedType Type) {
+	checker.PositionInfo.recordNestedTypeReferenceOccurrence(
+		checker.memoryGauge,
+		checker.Elaboration,
+		identifier,
+		nestedType,
 	)
 }
 

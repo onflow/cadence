@@ -1115,7 +1115,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		)
 	})
 
-	t.Run("default function with conditions", func(t *testing.T) {
+	t.Run("default function with conditions, conditions fail", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1149,12 +1149,72 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		assertConditionError(
+			t,
+			err,
+			ast.ConditionKindPre,
+		)
+
+		require.Equal(
+			t,
+			[]string{
+				`"interface pre-condition 1"`,
+			},
+			getLogs(),
+		)
+	})
+
+	t.Run("default function with conditions, conditions succeed", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
+          resource interface I {
+              fun foo() {
+                  pre {
+                      conditionLog("interface pre-condition 1")
+                      true
+                      conditionLog("interface pre-condition 2")
+                  }
+                  post {
+					  conditionLog("interface post-condition 1")
+					  true
+					  conditionLog("interface post-condition 2")
+                  }
+                  conditionLog("interface body")
+              }
+          }
+
+          resource R: I {
+              fun foo() {
+                  conditionLog("implementation body")
+              }
+
+              init() {
+                  self.foo()
+              }
+          }
+
+          fun main() {
+              let r <- create R()
+              destroy r
+          }
+        `)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
 		require.Equal(
 			t,
 			[]string{
+				`"interface pre-condition 1"`,
+				`"interface pre-condition 2"`,
+				// NOTE: The interface body is NOT executed
 				`"implementation body"`,
+				`"interface post-condition 1"`,
+				`"interface post-condition 2"`,
 			},
 			getLogs(),
 		)

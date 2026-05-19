@@ -46,11 +46,13 @@ func (checker *Checker) VisitStringTemplateExpression(stringTemplateExpression *
 		for _, element := range stringTemplateExpression.Expressions {
 			valueType := checker.VisitExpression(element, stringTemplateExpression, elementType)
 
-			if !isValidStringTemplateValue(valueType) {
+			if !valueType.IsInvalidType() &&
+				!isValidStringTemplateValue(valueType) {
+
 				checker.report(
 					&TypeMismatchWithDescriptionError{
 						ActualType:              valueType,
-						ExpectedTypeDescription: "a type with built-in toString() or bool",
+						ExpectedTypeDescription: "a built-in type with toString()",
 						Range:                   ast.NewRangeFromPositioned(checker.memoryGauge, element),
 					},
 				)

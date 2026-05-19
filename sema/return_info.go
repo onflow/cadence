@@ -68,8 +68,17 @@ type ReturnInfo struct {
 	//   // DefinitelyExited = true
 	DefinitelyExited bool
 	// DefinitelyJumped indicates that (the branch of) the function
-	// contains a definite break or continue statement
+	// contains a definite jump to an enclosing loop
+	// (a `break` targeting a loop, or a `continue`).
 	DefinitelyJumped bool
+	// DefinitelyJumpedSwitch indicates that (the branch of) the function
+	// contains a definite `break` whose target is a switch.
+	//
+	// Tracked separately from DefinitelyJumped because a `break` inside a switch
+	// only exits the switch; it must not leak past the switch boundary as a
+	// jump to an outer loop. The flag is observed for unreachability inside the
+	// switch and is cleared by WithSwitch on exit.
+	DefinitelyJumpedSwitch bool
 }
 
 func NewReturnInfo() *ReturnInfo {
@@ -95,6 +104,10 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 	ri.DefinitelyJumped = ri.DefinitelyJumped ||
 		(thenReturnInfo.DefinitelyJumped &&
 			elseReturnInfo.DefinitelyJumped)
+
+	ri.DefinitelyJumpedSwitch = ri.DefinitelyJumpedSwitch ||
+		(thenReturnInfo.DefinitelyJumpedSwitch &&
+			elseReturnInfo.DefinitelyJumpedSwitch)
 
 	ri.DefinitelyHalted = ri.DefinitelyHalted ||
 		(thenReturnInfo.DefinitelyHalted &&
@@ -122,7 +135,8 @@ func (ri *ReturnInfo) IsUnreachable() bool {
 	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
 	// see DefinitelyExited
 	return ri.DefinitelyExited ||
-		ri.DefinitelyJumped
+		ri.DefinitelyJumped ||
+		ri.DefinitelyJumpedSwitch
 }
 
 func (ri *ReturnInfo) AddJumpOffset(offset int) {

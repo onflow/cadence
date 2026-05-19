@@ -388,18 +388,34 @@ func (v Word16Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v Word16Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		nil,
 	)
 }
 
-func (v Word16Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Word16Type)
+func (v Word16Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.Word16Type,
+	)
 }
 
 func (Word16Value) RemoveMember(_ ValueTransferContext, _ string) Value {
