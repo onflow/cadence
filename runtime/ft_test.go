@@ -586,6 +586,10 @@ access(all) fun main(account: Address): UFix64 {
 `
 
 func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
+	// Only run with the vm if the `compile` flag is enabled for all tests.
+	if useVM && !*compile {
+		tb.SkipNow()
+	}
 
 	runtime := NewTestRuntime()
 

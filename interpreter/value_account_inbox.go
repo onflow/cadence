@@ -42,31 +42,17 @@ func NewAccountInboxValue(
 
 	var accountInbox *SimpleCompositeValue
 
-	methods := map[string]FunctionValue{}
-
-	computeLazyStoredMethod := func(name string) FunctionValue {
+	computeMethod := func(name string, _ MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
 		switch name {
 		case sema.Account_InboxTypePublishFunctionName:
-			return publishFunction(accountInbox)
+			return publishFunction(accountInbox, accessedReference)
 		case sema.Account_InboxTypeUnpublishFunctionName:
-			return unpublishFunction(accountInbox)
+			return unpublishFunction(accountInbox, accessedReference)
 		case sema.Account_InboxTypeClaimFunctionName:
-			return claimFunction(accountInbox)
+			return claimFunction(accountInbox, accessedReference)
 		}
 
 		return nil
-	}
-
-	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
-		method, ok := methods[name]
-		if !ok {
-			method = computeLazyStoredMethod(name)
-			if method != nil {
-				methods[name] = method
-			}
-		}
-
-		return method
 	}
 
 	var str string
@@ -87,7 +73,7 @@ func NewAccountInboxValue(
 		// No fields, only methods.
 		nil,
 		nil,
-		methodGetter,
+		computeMethod,
 		nil,
 		stringer,
 	).WithPrivateField(AccountTypePrivateAddressFieldName, addressValue)

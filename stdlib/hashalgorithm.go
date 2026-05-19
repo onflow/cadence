@@ -76,7 +76,13 @@ func NewHashAlgorithmCase(
 	// Therefore, include them as functions in the value as well.
 	functions := map[string]interpreter.FunctionValue{}
 
-	value.FunctionMemberGetter = func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+	value.FunctionMemberGetter = func(
+		name string,
+		_ interpreter.MemberAccessibleContext,
+		_ interpreter.ReferenceValue,
+	) interpreter.FunctionValue {
+
+		// These are host-functions (not bound functions). OK to ignore the accessed-reference.
 		function, ok := functions[name]
 		if !ok {
 			switch name {

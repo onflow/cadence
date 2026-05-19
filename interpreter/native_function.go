@@ -225,6 +225,7 @@ func NewStaticHostFunctionValueFromNativeFunction(
 func NewBoundHostFunctionValue(
 	context FunctionCreationContext,
 	self Value,
+	accessedReference ReferenceValue,
 	funcType *sema.FunctionType,
 	function NativeFunction,
 ) BoundFunctionValue {
@@ -239,6 +240,7 @@ func NewBoundHostFunctionValue(
 		context,
 		hostFunc,
 		&self,
+		accessedReference,
 		nil,
 	)
 }

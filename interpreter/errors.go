@@ -51,6 +51,23 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// UnreachableInstructionError
+
+type UnreachableInstructionError struct {
+	ast.Range
+}
+
+var _ errors.InternalError = &UnreachableInstructionError{}
+
+func (*UnreachableInstructionError) IsInternalError() {}
+
+func (e *UnreachableInstructionError) Error() string {
+	return fmt.Sprintf(
+		"%s instruction should be unreachable, but was reached during execution",
+		errors.InternalErrorMessagePrefix,
+	)
+}
+
 type HasLocationRange interface {
 	SetLocationRange(locationRange LocationRange)
 }
@@ -1683,7 +1700,7 @@ func (e *InvalidArgumentTypeError) Error() string {
 	)
 
 	return fmt.Sprintf(
-		"%s invalid transfer of value: expected `%s`, got `%s`",
+		"%s invalid argument type: expected `%s`, got `%s`",
 		errors.InternalErrorMessagePrefix,
 		expected,
 		actual,
@@ -1691,5 +1708,30 @@ func (e *InvalidArgumentTypeError) Error() string {
 }
 
 func (e *InvalidArgumentTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// AuthorizationMismatchError
+type AuthorizationMismatchError struct {
+	ExpectedAuthorization Authorization
+	ActualAuthorization   Authorization
+	LocationRange
+}
+
+var _ errors.InternalError = &AuthorizationMismatchError{}
+var _ HasLocationRange = &AuthorizationMismatchError{}
+
+func (*AuthorizationMismatchError) IsInternalError() {}
+
+func (e *AuthorizationMismatchError) Error() string {
+	return fmt.Sprintf(
+		"%s unexpected authorization: expect `%s`, found `%s`",
+		errors.InternalErrorMessagePrefix,
+		e.ExpectedAuthorization,
+		e.ActualAuthorization,
+	)
+}
+
+func (e *AuthorizationMismatchError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }

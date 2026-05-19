@@ -229,7 +229,8 @@ var rlpContractValue = interpreter.NewSimpleCompositeValue(
 	nil,
 	nil,
 	nil,
-	func(name string, context interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+	func(name string, context interpreter.MemberAccessibleContext, _ interpreter.ReferenceValue) interpreter.FunctionValue {
+		// These are host-functions (not bound functions). OK to ignore the accessed-reference.
 		return rlpContractMethods[name]
 	},
 	nil,

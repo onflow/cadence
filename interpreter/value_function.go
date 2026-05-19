@@ -32,10 +32,12 @@ type FunctionValue interface {
 	Value
 	IsFunctionValue()
 	FunctionType(context ValueStaticTypeContext) *sema.FunctionType
-	// invoke evaluates the function.
+	// Invoke evaluates the function.
 	// Only used internally by the interpreter.
 	// Use Interpreter.InvokeFunctionValue if you want to invoke the function externally
 	Invoke(Invocation) Value
+
+	DereferenceReceiver() bool
 }
 
 // InterpretedFunctionValue
@@ -170,6 +172,11 @@ func (*InterpretedFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
+func (*InterpretedFunctionValue) DereferenceReceiver() bool {
+	// Shouldn't reach here
+	panic(errors.NewUnreachableError())
+}
+
 // HostFunctionValue
 type HostFunction func(invocation Invocation) Value
 
@@ -214,6 +221,7 @@ func NewUnmeteredStaticHostFunctionValue(
 
 // NewStaticHostFunctionValue constructs a host function that is not bounded to any value.
 // For constructing a function bound to a value (e.g: a member function), the output of this method
+// must be wrapped with a BoundFunctionValue
 func NewStaticHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,
@@ -262,7 +270,12 @@ func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (f *HostFunctionValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	_ common.DeclarationKind,
+	_ ReferenceValue,
+) Value {
 	// Host Functions have variables with both fields and functions.
 	// So validating / or returning one or the other isn't possible at the moment.
 	if f.NestedVariables != nil {
@@ -273,7 +286,7 @@ func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name stri
 	return nil
 }
 
-func (f *HostFunctionValue) GetMethod(_ MemberAccessibleContext, _ string) FunctionValue {
+func (f *HostFunctionValue) GetMethod(_ MemberAccessibleContext, _ string, _ ReferenceValue) FunctionValue {
 	return nil
 }
 
@@ -333,12 +346,18 @@ func (f *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
 	f.NestedVariables = variables
 }
 
+func (*HostFunctionValue) DereferenceReceiver() bool {
+	// Shouldn't reach here
+	panic(errors.NewUnreachableError())
+}
+
 // BoundFunctionValue
 type BoundFunctionValue struct {
-	Function        FunctionValue
-	Base            *EphemeralReferenceValue
-	SelfReference   ReferenceValue
-	selfIsReference bool
+	Function            FunctionValue
+	Base                *EphemeralReferenceValue
+	SelfReference       ReferenceValue
+	selfIsReference     bool
+	dereferenceReceiver bool
 }
 
 var _ Value = BoundFunctionValue{}
@@ -348,45 +367,7 @@ func NewBoundFunctionValue(
 	context FunctionCreationContext,
 	function FunctionValue,
 	self *Value,
-	base *EphemeralReferenceValue,
-) BoundFunctionValue {
-
-	selfRef, selfIsRef := ReceiverReference(context, *self)
-
-	return NewBoundFunctionValueFromSelfReference(
-		context,
-		function,
-		selfRef,
-		selfIsRef,
-		base,
-	)
-}
-
-func ReceiverReference(context ReferenceCreationContext, receiver Value) (ReferenceValue, bool) {
-	// Since 'self' work as an implicit reference, create an explicit one and hold it.
-	// This reference is later used to check the validity of the referenced value/resource.
-	// For attachments, 'self' is already a reference. So no need to create a reference again.
-
-	selfRef, selfIsRef := receiver.(ReferenceValue)
-	if !selfIsRef {
-		semaType := MustSemaTypeOfValue(receiver, context)
-		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
-		// it is not directly exposed to the users
-		selfRef = NewEphemeralReferenceValue(
-			context,
-			UnauthorizedAccess,
-			receiver,
-			semaType,
-		)
-	}
-	return selfRef, selfIsRef
-}
-
-func NewBoundFunctionValueFromSelfReference(
-	gauge common.MemoryGauge,
-	function FunctionValue,
-	selfReference ReferenceValue,
-	selfIsReference bool,
+	accessedReference ReferenceValue,
 	base *EphemeralReferenceValue,
 ) BoundFunctionValue {
 
@@ -395,14 +376,57 @@ func NewBoundFunctionValueFromSelfReference(
 		return boundFunc
 	}
 
-	common.UseMemory(gauge, common.BoundFunctionValueMemoryUsage)
+	selfReference, selfIsReference := ReceiverReference(context, *self, accessedReference)
+
+	common.UseMemory(context, common.BoundFunctionValueMemoryUsage)
 
 	return BoundFunctionValue{
-		Function:        function,
-		SelfReference:   selfReference,
-		selfIsReference: selfIsReference,
-		Base:            base,
+		Function:            function,
+		SelfReference:       selfReference,
+		selfIsReference:     selfIsReference,
+		Base:                base,
+		dereferenceReceiver: true,
 	}
+}
+
+func ReceiverReference(
+	context ReferenceCreationContext,
+	receiver Value,
+	accessedReference ReferenceValue,
+) (
+	selfRef ReferenceValue,
+	selfIsRef bool,
+) {
+	// Since 'self' work as an implicit reference, create an explicit one and hold it.
+	// This reference is later used to check the validity of the referenced value/resource.
+	// If the 'self' is already a reference (accessed via a reference), then no need to create a reference again.
+
+	if accessedReference != nil {
+		if storageRef, isStorageReference := accessedReference.(*StorageReferenceValue); isStorageReference {
+			// If this is accessed via a storage reference, then narrow the borrow-type to match
+			// the type of the actual stored value.
+			// Because, for example, imagine storing a value of type `T` (e.g. `String`),
+			// creating a reference with a supertype (e.g. `AnyStruct`), and then creating a bound function on it.
+			// Then, if we change the storage location to store a value of unrelated type `U` instead (e.g. `Int`),
+			// and invoke the bound function, the bound function is potentially invalid.
+			accessedReference = storageReferenceWithNarrowedType(context, storageRef)
+		}
+
+		return accessedReference, true
+	}
+
+	semaType := MustSemaTypeOfValue(receiver, context)
+
+	// Create an unauthorized reference.
+	// The purpose of it is only to track and invalidate resource moves, it is not directly exposed to the users.
+	selfRef = NewEphemeralReferenceValue(
+		context,
+		UnauthorizedAccess,
+		receiver,
+		semaType,
+	)
+
+	return selfRef, false
 }
 
 func (BoundFunctionValue) IsValue() {}
@@ -450,45 +474,65 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 
 	inter := invocation.InvocationContext
 
-	// If the `self` is already a reference to begin with (e.g: attachments),
-	// then pass the reference as-is to the invocation.
-	// Otherwise, always dereference, at the time of the invocation.
+	// TODO: Maybe check recursively?
+	_, isHostFunction := f.Function.(*HostFunctionValue)
 
-	receiver := getReceiver(
-		f.SelfReference,
-		f.selfIsReference,
+	receiver := MaybeDereferenceReceiver(
 		inter,
+		f.SelfReference,
+		f.DereferenceReceiver(),
+		f.selfIsReference,
+		isHostFunction,
 	)
-	invocation.Self = receiver
+
+	invocation.Self = &receiver
 
 	return f.Function.Invoke(invocation)
 }
 
-func getReceiver(
-	receiverReference ReferenceValue,
-	receiverIsReference bool,
+func MaybeDereferenceReceiver(
 	context ValueStaticTypeContext,
-) *Value {
-	var receiver *Value
+	receiverReference ReferenceValue,
+	dereferenceReceiver bool,
+	receiverIsReference bool,
+	isNative bool,
+) Value {
 
-	if receiverIsReference {
-		var receiverValue Value = receiverReference
-		receiver = &receiverValue
-	} else {
-		receiver = receiverReference.ReferencedValue(context, true)
+	CheckInvalidatedResourceOrResourceReference(receiverReference, context)
+
+	// Receiver needs to be dereferenced, if:
+	//  - The function always required the receiver to be dereferenced (e.g: interpreted functions).
+	//    Then it must be dereferenced, even if the method was invoked on a reference-value.
+	//  - Or, the receiver is an implicitly created reference (for invalidation purpose only),
+	//    and wasn't a reference to begin with.
+	shouldDereference := dereferenceReceiver || !receiverIsReference
+	if !shouldDereference {
+		return receiverReference
 	}
 
-	if _, isStorageRef := receiverReference.(*StorageReferenceValue); isStorageRef {
-		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
+	switch typedValue := receiverReference.(type) {
+	case *EphemeralReferenceValue:
+		// Do not dereference attachments, so that the receiver is a reference as expected.
+		// Exception: Native function receiver needs to be dereferenced to match interpreter.
+		innerValue := typedValue.Value
+		if innerValue, ok := innerValue.(*CompositeValue); ok && !isNative {
+			if innerValue.Kind == common.CompositeKindAttachment {
+				return receiverReference
+			}
+		}
+		return innerValue
+	case *StorageReferenceValue:
+		referencedValue := receiverReference.ReferencedValue(context, true)
+		// `storageRef.ReferencedValue()` above already checks for the type validity, if it's not nil.
 		// If nil, that means the value has been moved out of storage.
-		if receiver == nil {
+		if referencedValue == nil {
 			panic(&ReferencedValueChangedError{})
 		}
-	} else {
-		CheckInvalidatedResourceOrResourceReference(receiverReference, context)
-	}
 
-	return receiver
+		return *referencedValue
+	default:
+		return receiverReference
+	}
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(
@@ -536,6 +580,15 @@ func (BoundFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
+func (f BoundFunctionValue) WithDereferenceReceiver(dereferenceReceiver bool) BoundFunctionValue {
+	f.dereferenceReceiver = dereferenceReceiver
+	return f
+}
+
+func (f BoundFunctionValue) DereferenceReceiver() bool {
+	return f.dereferenceReceiver
+}
+
 // NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.
 func NewUnmeteredBoundHostFunctionValue(
 	context FunctionCreationContext,
@@ -546,15 +599,23 @@ func NewUnmeteredBoundHostFunctionValue(
 
 	hostFunc := NewUnmeteredStaticHostFunctionValue(funcType, function)
 
+	// This method is only used by the test-framework at the moment.
+	// And they are all unentitled references (imported `Test` contract, and it's fields).
+	// So keeping this `nil` for now is OK, as it will create an implicit reference internally.
+	// TODO: Maybe pass in the actual reference. Might need to refactor the test-framework
+	//  function registration.
+	var accessedReference ReferenceValue = nil
+
 	return NewBoundFunctionValue(
 		context,
 		hostFunc,
 		&self,
+		accessedReference,
 		nil,
 	)
 }
 
-type BoundFunctionGenerator func(MemberAccessibleValue) BoundFunctionValue
+type BoundFunctionGenerator func(MemberAccessibleValue, ReferenceValue) BoundFunctionValue
 
 // WrappedFunctionValue
 type WrappedFunctionValue struct {
@@ -665,4 +726,9 @@ func (f WrappedFunctionValue) Clone(_ ValueCloneContext) Value {
 
 func (WrappedFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
+}
+
+func (WrappedFunctionValue) DereferenceReceiver() bool {
+	// Shouldn't reach here
+	panic(errors.NewUnreachableError())
 }

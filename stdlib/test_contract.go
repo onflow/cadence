@@ -322,7 +322,12 @@ func invokeMatcherTest(
 	matcher interpreter.MemberAccessibleValue,
 	value interpreter.Value,
 ) bool {
-	testFunc := matcher.GetMember(context, matcherTestFieldName, common.DeclarationKindField)
+	testFunc := matcher.GetMember(
+		context,
+		matcherTestFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
 
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
 	if !ok {

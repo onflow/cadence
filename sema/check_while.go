@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 )
 
 func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
@@ -45,9 +46,19 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) (_ st
 
 func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ struct{}) {
 
-	// Ensure that the `break` statement is inside a loop or switch statement
+	// `break` targets the innermost enclosing loop or switch.
 
-	if !(checker.inLoop() || checker.inSwitch()) {
+	functionActivation := checker.functionActivations.Current()
+	if functionActivation == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	innermost := functionActivation.InnermostControl()
+
+	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
+
+	switch innermost {
+	case ControlKindNone:
 		checker.report(
 			&ControlStatementError{
 				ControlStatement: common.ControlStatementBreak,
@@ -55,18 +66,25 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ st
 			},
 		)
 		return
-	}
 
-	functionActivation := checker.functionActivations.Current()
-	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
-	functionActivation.ReturnInfo.DefinitelyJumped = true
+	case ControlKindLoop:
+		functionActivation.ReturnInfo.DefinitelyJumped = true
+
+	case ControlKindSwitch:
+		functionActivation.ReturnInfo.DefinitelyJumpedSwitch = true
+	}
 
 	return
 }
 
 func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement) (_ struct{}) {
 
-	// Ensure that the `continue` statement is inside a loop statement
+	// `continue` always targets the enclosing loop, even when nested inside switches.
+
+	functionActivation := checker.functionActivations.Current()
+	if functionActivation == nil {
+		panic(errors.NewUnreachableError())
+	}
 
 	if !checker.inLoop() {
 		checker.report(
@@ -78,7 +96,6 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 		return
 	}
 
-	functionActivation := checker.functionActivations.Current()
 	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
 	functionActivation.ReturnInfo.DefinitelyJumped = true
 

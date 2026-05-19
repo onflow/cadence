@@ -126,6 +126,7 @@ type ValueTransferContext interface {
 	ReferenceTracker
 	common.ComputationGauge
 	Tracer
+	ValueConvertContext
 
 	OnResourceOwnerChange(
 		resource *CompositeValue,
@@ -150,6 +151,13 @@ var _ ValueTransferContext = &Interpreter{}
 type ValueCreationContext interface {
 	ArrayCreationContext
 	DictionaryCreationContext
+	ValueConvertContext
+}
+
+var _ ValueCreationContext = &Interpreter{}
+
+type ValueConvertContext interface {
+	NewFunctionWithType(value FunctionValue, staticType FunctionStaticType) FunctionValue
 }
 
 var _ ValueCreationContext = &Interpreter{}
@@ -211,6 +219,7 @@ var _ GetReferenceContext = &Interpreter{}
 
 type IterableValueForeachContext interface {
 	ValueTransferContext
+	MemberAccessibleContext
 }
 
 var _ IterableValueForeachContext = &Interpreter{}
@@ -233,12 +242,7 @@ type MemberAccessibleContext interface {
 	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
-	GetMethod(value MemberAccessibleValue, name string) FunctionValue
-	MaybeUpdateStorageReferenceMemberReceiver(
-		storageReference *StorageReferenceValue,
-		referencedValue Value,
-		member Value,
-	) Value
+	GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue
 }
 
 var _ MemberAccessibleContext = &Interpreter{}
@@ -654,5 +658,9 @@ func (NoOpStringContext) SemaTypeFromStaticType(_ StaticType) sema.Type {
 }
 
 func (NoOpStringContext) SemaAccessFromStaticAuthorization(Authorization) (sema.Access, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpStringContext) NewFunctionWithType(_ FunctionValue, _ FunctionStaticType) FunctionValue {
 	panic(errors.NewUnreachableError())
 }

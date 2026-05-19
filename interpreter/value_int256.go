@@ -667,18 +667,34 @@ func (v Int256Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewInt256ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int256Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v Int256Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		nil,
 	)
 }
 
-func (v Int256Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Int256Type)
+func (v Int256Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.Int256Type,
+	)
 }
 
 func (Int256Value) RemoveMember(_ ValueTransferContext, _ string) Value {

@@ -1136,29 +1136,154 @@ func TestCheckArrayFilter(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-		fun test() {
-			let x = [1, 2, 3]
-			let onlyEven =
-				view fun (_ x: Int): Bool {
-					return x % 2 == 0
-				}
+	t.Run("owned", func(t *testing.T) {
+		t.Parallel()
 
-			let y = x.filter(onlyEven)
-		}
+		_, err := ParseAndCheck(t, `
+            fun testVariableSized() {
+                let x = [1, 2, 3]
+                let onlyEven =
+                    view fun (_ x: Int): Bool {
+                        return x % 2 == 0
+                    }
 
-		fun testFixedSize() {
-			let x : [Int; 5] = [1, 2, 3, 21, 30]
-			let onlyEvenInt =
-				view fun (_ x: Int): Bool {
-					return x % 2 == 0
-				}
+                let y = x.filter(onlyEven)
+            }
 
-			let y = x.filter(onlyEvenInt)
-		}
-    `)
+            fun testFixedSize() {
+                let x : [Int; 5] = [1, 2, 3, 21, 30]
+                let onlyEvenInt =
+                    view fun (_ x: Int): Bool {
+                        return x % 2 == 0
+                    }
 
-	require.NoError(t, err)
+                let y = x.filter(onlyEvenInt)
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                let id: Int
+
+                init() {
+                    self.id = 42
+                }
+            }
+
+            fun testVariableSized() {
+                let x: &[S] = &[S()]
+                let y: [&S] = x.filter(view fun (ref: &S): Bool {
+                    return ref.id == 42
+                })
+            }
+
+            fun testFixedSized() {
+                let x: &[S; 2] = &[S(), S()]
+                let y: [&S] = x.filter(view fun (ref: &S): Bool {
+                    return ref.id == 42
+                })
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1) parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test(): [auth(E1) &Int8] {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                return ref.filter(view fun(v: auth(E1) &Int8): Bool {
+                    return true
+                })
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1, E2) return", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test() {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                // Result of the filter function must have the intersection for entitlements.
+                let result: [auth(E1, E2) &Int8] =  ref.filter(
+                    view fun(v: auth(E1) &Int8): Bool {
+                        return true
+                    }
+                )
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 10, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("[auth(S.test.E1,S.test.E2)&Int8]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("[auth(S.test.E1)&Int8]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1, E2) parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test(): AnyStruct {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                return ref.filter(view fun(v: auth(E1, E2) &Int8): Bool {
+                    return true
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 9, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("view fun(auth(S.test.E1)&Int8):Bool"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("view fun(auth(S.test.E1,S.test.E2)&Int8):Bool"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
 }
 
 func TestCheckArrayFilterInvalidArgs(t *testing.T) {
@@ -1175,28 +1300,30 @@ func TestCheckArrayFilterInvalidArgs(t *testing.T) {
 		}
 	}
 
-	testInvalidArgs(`
-		fun test() {
-			let x = [1, 2, 3]
-			let y = x.filter(100)
-		}
-	`,
+	testInvalidArgs(
+		`
+            fun test() {
+                let x = [1, 2, 3]
+                let y = x.filter(100)
+            }
+        `,
 		[]sema.SemanticError{
 			&sema.TypeMismatchError{},
 		},
 	)
 
-	testInvalidArgs(`
-		fun test() {
-			let x = [1, 2, 3]
-			let onlyEvenInt16 =
-				view fun (_ x: Int16): Bool {
-					return x % 2 == 0
-				}
+	testInvalidArgs(
+		`
+            fun test() {
+                let x = [1, 2, 3]
+                let onlyEvenInt16 =
+                    view fun (_ x: Int16): Bool {
+                        return x % 2 == 0
+                    }
 
-			let y = x.filter(onlyEvenInt16)
-		}
-	`,
+                let y = x.filter(onlyEvenInt16)
+            }
+        `,
 		[]sema.SemanticError{
 			&sema.TypeMismatchError{},
 		},
@@ -1208,20 +1335,20 @@ func TestCheckResourceArrayFilterInvalid(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		resource X {}
+        resource X {}
 
-		fun test(): @[X] {
-			let xs <- [<-create X()]
-			let allResources =
-				fun (_ x: @X): Bool {
-					destroy x
-					return true
-				}
+        fun test(): @[X] {
+            let xs <- [<-create X()]
+            let allResources =
+                fun (_ x: @X): Bool {
+                    destroy x
+                    return true
+                }
 
-			let filteredXs <-xs.filter(allResources)
-			destroy xs
-			return <- filteredXs
-		}
+            let filteredXs <-xs.filter(allResources)
+            destroy xs
+            return <- filteredXs
+        }
     `)
 
 	errs := RequireCheckerErrors(t, err, 2)
@@ -1234,29 +1361,180 @@ func TestCheckArrayMap(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-		fun test() {
-			let x = [1, 2, 3]
-			let trueForEven =
-				fun (_ x: Int): Bool {
-					return x % 2 == 0
-				}
+	t.Run("owned", func(t *testing.T) {
+		t.Parallel()
 
-			let y: [Bool] = x.map(trueForEven)
-		}
+		_, err := ParseAndCheck(t, `
+            fun testVariableSized() {
+                let x = [1, 2, 3]
+                let trueForEven =
+                    fun (_ x: Int): Bool {
+                        return x % 2 == 0
+                    }
 
-		fun testFixedSize() {
-			let x : [Int; 5] = [1, 2, 3, 21, 30]
-			let trueForEvenInt =
-				fun (_ x: Int): Bool {
-					return x % 2 == 0
-				}
+                let y: [Bool] = x.map(trueForEven)
+            }
 
-			let y: [Bool; 5] = x.map(trueForEvenInt)
-		}
-	`)
+            fun testFixedSize() {
+                let x : [Int; 5] = [1, 2, 3, 21, 30]
+                let trueForEvenInt =
+                    fun (_ x: Int): Bool {
+                        return x % 2 == 0
+                    }
 
-	require.NoError(t, err)
+                let y: [Bool; 5] = x.map(trueForEvenInt)
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                let id: Int
+
+                init() {
+                    self.id = 42
+                }
+            }
+
+            fun testVariableSized() {
+                let x: &[S] = &[S()]
+                let y: [Int] = x.map(fun (ref: &S): Int {
+                    return ref.id
+                })
+            }
+
+            fun testFixedSized() {
+                let x: &[S; 2] = &[S(), S()]
+                let y: [Int; 2] = x.map(fun (ref: &S): Int {
+                    return ref.id
+                })
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("reference, auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(): [String] {
+                let array: [auth(Mutate) &Int8] = [&5 as auth(Mutate) &Int8]
+                let ref: &[auth(Mutate) &Int8] = &array
+
+                return ref.map(fun(v: auth(Mutate) &Int8): String {
+                    return v.toString()
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 6, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun(&Int8):String"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun(auth(Mutate)&Int8):String"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("reference, optional auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(): [String] {
+                let v: Int8? = 5
+                let array: [auth(Mutate) &Int8?] = [&v as auth(Mutate) &Int8?]
+                let ref: &[auth(Mutate) &Int8?] = &array
+
+                return ref.map(fun(v: auth(Mutate) &Int8?): String {
+                    return v!.toString()
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 7, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun((&Int8)?):String"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun((auth(Mutate)&Int8)?):String"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1) parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test(): [String] {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                return ref.map(fun(v: auth(E1) &Int8): String {
+                    return v.toString()
+                })
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array, auth(E1, E2) parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+
+            fun test(): [String] {
+                let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+                let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+                return ref.map(fun(v: auth(E1, E2) &Int8): String {
+                    return v.toString()
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 9, typeMismatchError.StartPos.Line)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun(auth(S.test.E1)&Int8):String"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun(auth(S.test.E1,S.test.E2)&Int8):String"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
 }
 
 func TestCheckArrayMapInvalidArgs(t *testing.T) {
@@ -1273,12 +1551,13 @@ func TestCheckArrayMapInvalidArgs(t *testing.T) {
 		}
 	}
 
-	testInvalidArgs(`
-		fun test() {
-			let x = [1, 2, 3]
-			let y = x.map(100)
-		}
-	`,
+	testInvalidArgs(
+		`
+            fun test() {
+                let x = [1, 2, 3]
+                let y = x.map(100)
+            }
+        `,
 		[]sema.SemanticError{
 			&sema.TypeMismatchError{},
 			&sema.InvocationTypeInferenceError{},    // since we're not passing a function.
@@ -1286,17 +1565,18 @@ func TestCheckArrayMapInvalidArgs(t *testing.T) {
 		},
 	)
 
-	testInvalidArgs(`
-		fun test() {
-			let x = [1, 2, 3]
-			let trueForEvenInt16 =
-				fun (_ x: Int16): Bool {
-					return x % 2 == 0
-				}
+	testInvalidArgs(
+		`
+            fun test() {
+                let x = [1, 2, 3]
+                let trueForEvenInt16 =
+                    fun (_ x: Int16): Bool {
+                        return x % 2 == 0
+                    }
 
-			let y: [Bool] = x.map(trueForEvenInt16)
-		}
-	`,
+                let y: [Bool] = x.map(trueForEvenInt16)
+            }
+        `,
 		[]sema.SemanticError{
 			&sema.TypeMismatchError{},
 		},
@@ -1308,21 +1588,21 @@ func TestCheckResourceArrayMapInvalid(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		resource X {}
+        resource X {}
 
-		fun test(): [Bool] {
-			let xs <- [<-create X()]
-			let allResources =
-				fun (_ x: @X): Bool {
-					destroy x
-					return true
-				}
+        fun test(): [Bool] {
+            let xs <- [<-create X()]
+            let allResources =
+                fun (_ x: @X): Bool {
+                    destroy x
+                    return true
+                }
 
-			let mappedXs: [Bool] = xs.map(allResources)
-			destroy xs
-			return mappedXs
-		}
-	`)
+            let mappedXs: [Bool] = xs.map(allResources)
+            destroy xs
+            return mappedXs
+        }
+    `)
 
 	errs := RequireCheckerErrors(t, err, 1)
 

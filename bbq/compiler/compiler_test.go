@@ -13950,3 +13950,136 @@ func TestConstructorAsFunction(t *testing.T) {
 	assert.Empty(t, program.Constants)
 
 }
+
+func TestCompileReferenceMethod(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(arrayRef: &[Int]): [Int] {
+            return arrayRef.map(fun (element: Int): Int {
+                return element * 2
+            })
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 2)
+
+	const (
+		// arrayIndex is the index of the parameter `array`, which is the first parameter
+		arrayIndex = iota
+	)
+
+	intArrayType := &interpreter.VariableSizedStaticType{
+		Type: interpreter.PrimitiveStaticTypeInt,
+	}
+
+	intArrayReferenceType := &interpreter.ReferenceStaticType{
+		Authorization:  interpreter.Unauthorized{},
+		ReferencedType: intArrayType,
+	}
+
+	// Ideally we would assert a concrete function type here,
+	// but that would require a custom assertion function,
+	// as function types are not directly comparable.
+	functionPointerType := program.Types[3]
+
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// return array.map(...)
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: arrayIndex},
+			opcode.PrettyInstructionGetMethod{
+				ReceiverType: intArrayReferenceType,
+				Method:       1,
+			},
+			opcode.PrettyInstructionNewClosure{Function: 1},
+			opcode.PrettyInstructionTransfer{},
+			opcode.PrettyInstructionInvoke{
+				ArgTypes: []interpreter.StaticType{
+					functionPointerType,
+				},
+				TypeArgs: []interpreter.StaticType{
+					interpreter.PrimitiveStaticTypeInt,
+				},
+				ParamTypes: []interpreter.StaticType{
+					functionPointerType,
+				},
+				ReturnType: intArrayType,
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  intArrayType,
+				TargetType: intArrayType,
+			},
+			opcode.PrettyInstructionReturnValue{},
+		},
+		prettyInstructions(functions[0].Code, program),
+	)
+
+	const (
+		// elementIndex is the index of the parameter `element`, which is the first parameter
+		elementIndex = iota
+	)
+
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// return element * 2
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: elementIndex},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionMultiply{},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
+		},
+		prettyInstructions(functions[1].Code, program),
+	)
+
+	assert.Equal(t,
+		[]constant.DecodedConstant{
+			{
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
+
+	assert.Equal(t,
+		[]bbq.Global{
+			&bbq.FunctionGlobal[opcode.Instruction]{
+				GlobalInfo: bbq.GlobalInfo{
+					Index:         0,
+					Location:      nil,
+					Name:          "test",
+					QualifiedName: "test",
+				},
+				Function: &functions[0],
+			},
+			&bbq.ImportedGlobal{
+				GlobalInfo: bbq.GlobalInfo{
+					Index:         1,
+					Location:      nil,
+					Name:          "$ArrayVariableSized.map",
+					QualifiedName: "$ArrayVariableSized.map",
+				},
+			},
+		},
+		program.Globals,
+	)
+}

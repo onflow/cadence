@@ -69,35 +69,21 @@ func NewAccountCapabilitiesValue(
 		return field
 	}
 
-	methods := map[string]FunctionValue{}
-
-	computeLazyStoredMethod := func(name string) FunctionValue {
+	computeMethod := func(name string, _ MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
 		switch name {
 		case sema.Account_CapabilitiesTypeGetFunctionName:
-			return getFunction(capabilities)
+			return getFunction(capabilities, accessedReference)
 		case sema.Account_CapabilitiesTypeBorrowFunctionName:
-			return borrowFunction(capabilities)
+			return borrowFunction(capabilities, accessedReference)
 		case sema.Account_CapabilitiesTypeExistsFunctionName:
-			return existsFunction(capabilities)
+			return existsFunction(capabilities, accessedReference)
 		case sema.Account_CapabilitiesTypePublishFunctionName:
-			return publishFunction(capabilities)
+			return publishFunction(capabilities, accessedReference)
 		case sema.Account_CapabilitiesTypeUnpublishFunctionName:
-			return unpublishFunction(capabilities)
+			return unpublishFunction(capabilities, accessedReference)
 		}
 
 		return nil
-	}
-
-	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
-		method, ok := methods[name]
-		if !ok {
-			method = computeLazyStoredMethod(name)
-			if method != nil {
-				methods[name] = method
-			}
-		}
-
-		return method
 	}
 
 	var str string
@@ -117,7 +103,7 @@ func NewAccountCapabilitiesValue(
 		account_CapabilitiesFieldNames,
 		fields,
 		computeField,
-		methodGetter,
+		computeMethod,
 		nil,
 		stringer,
 	).WithPrivateField(AccountTypePrivateAddressFieldName, address)

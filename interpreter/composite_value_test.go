@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
@@ -224,5 +225,188 @@ func TestInterpretContractTransfer(t *testing.T) {
 
 	t.Run("nested", func(t *testing.T) {
 		test(t, "[C as AnyStruct]")
+	})
+}
+
+func TestInterpretFunctionTypedField(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("user function pointer", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
+            resource R {
+                let f: (fun(AnyStruct): Void)
+
+                init() {
+                    self.f = print  // User function (non-bound).
+                }
+            }
+
+            fun print(_ msg: AnyStruct) {
+                log(msg)
+            }
+
+            fun test() {
+                let r <- create R()
+
+                let f = r.f   // This must return a non-bound function.
+
+                destroy r
+
+                f("hello")  // function pointer should be still valid.
+            }
+        `)
+
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		logs := getLogs()
+		assert.Equal(t, []string{`"hello"`}, logs)
+	})
+
+	t.Run("host function pointer", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
+            resource R {
+                let f: (fun(AnyStruct): Void)
+
+                init() {
+                    self.f = log   // host function (non-bound).
+                }
+            }
+
+            fun test() {
+                let r <- create R()
+
+                let f = r.f   // This must return a non-bound function.
+
+                destroy r
+
+                f("hello")  // function pointer should be still valid.
+            }
+        `)
+
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		logs := getLogs()
+		assert.Equal(t, []string{`"hello"`}, logs)
+	})
+}
+
+func TestInterpretSimpleCompositeTypeFunctionMember(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("unwrapped function", func(t *testing.T) {
+		// Only test the interpreter for now.
+		// TODO: figure out how to register builtin-functions for
+		// the vm during test setup.
+		if *compile {
+			t.SkipNow()
+		}
+
+		t.Parallel()
+
+		resourceType := &sema.CompositeType{
+			Location:   TestLocation,
+			Identifier: "S",
+			Kind:       common.CompositeKindStructure,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		resourceTypeID := resourceType.ID()
+
+		baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+		baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+			Name: resourceType.Identifier,
+			Type: resourceType,
+			Kind: common.DeclarationKindStructure,
+		})
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _, _ := testAccount(t, address,
+			true,
+			nil,
+			`
+            struct interface SI {
+                fun foo(): String
+            }
+
+            fun test(s: {SI}) {
+                account.storage.save(s, to: /storage/s)
+
+                var rRef = account.storage.borrow<&{SI}>(from: /storage/s)!
+
+                let f = rRef.foo   // This must return a bound function.
+
+                // Replace the value
+                account.storage.load<AnyStruct>(from: /storage/s)!
+                account.storage.save("new value", to: /storage/s)
+
+                f()  // function pointer should NOT be valid.
+            }
+        `,
+			sema.Config{
+				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseTypeActivation
+				},
+				CheckHandler: func(checker *sema.Checker, check func()) {
+					if checker.Location == TestLocation {
+						checker.Elaboration.SetCompositeType(
+							resourceTypeID,
+							resourceType,
+						)
+					}
+					check()
+				},
+			},
+		)
+
+		interfaceType, err := inter.GetInterfaceType(TestLocation, "SI", "S.test.SI")
+		require.NoError(t, err)
+
+		foo, found := interfaceType.Members.Get("foo")
+		require.True(t, found)
+
+		funcType := foo.TypeAnnotation.Type.(*sema.FunctionType)
+
+		resourceType.ExplicitInterfaceConformances = []*sema.InterfaceType{
+			interfaceType,
+		}
+
+		resourceValue := interpreter.NewSimpleCompositeValue(nil,
+			resourceTypeID,
+			interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, resourceType),
+			nil,
+			nil,
+			nil,
+			func(_ string, context interpreter.MemberAccessibleContext, _ interpreter.ReferenceValue) interpreter.FunctionValue {
+				// IMPORTANT: Return an unwrapped function.
+				return interpreter.NewStaticHostFunctionValue(
+					context,
+					funcType,
+					func(invocation interpreter.Invocation) interpreter.Value {
+						return interpreter.NewUnmeteredStringValue("hello from R")
+					},
+				)
+			},
+			nil,
+			nil,
+		)
+
+		_, err = inter.Invoke("test", resourceValue)
+		RequireError(t, err)
+
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 }

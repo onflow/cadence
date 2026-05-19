@@ -32,7 +32,7 @@ type SimpleCompositeValue struct {
 	staticType           StaticType
 	Fields               map[string]Value
 	ComputeField         func(name string, context MemberAccessibleContext) Value
-	FunctionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue
+	FunctionMemberGetter FunctionMemberGetterFunc
 	fieldFormatters      map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
@@ -51,6 +51,12 @@ type SimpleCompositeValue struct {
 	privateFields map[string]any
 }
 
+type FunctionMemberGetterFunc func(
+	name string,
+	context MemberAccessibleContext,
+	accessedReference ReferenceValue,
+) FunctionValue
+
 var _ Value = &SimpleCompositeValue{}
 var _ MemberAccessibleValue = &SimpleCompositeValue{}
 
@@ -61,7 +67,7 @@ func NewSimpleCompositeValue(
 	fieldNames []string,
 	fields map[string]Value,
 	computeField func(name string, context MemberAccessibleContext) Value,
-	functionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue,
+	functionMemberGetter FunctionMemberGetterFunc,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
 	stringer func(ValueStringContext, SeenReferences) string,
 ) *SimpleCompositeValue {
@@ -139,10 +145,16 @@ func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool
 	return importable
 }
 
-func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v *SimpleCompositeValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		func() Value {
@@ -163,12 +175,38 @@ func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name s
 	)
 }
 
-func (v *SimpleCompositeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *SimpleCompositeValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	if v.FunctionMemberGetter == nil {
 		return nil
 	}
 
-	return v.FunctionMemberGetter(name, context)
+	method := v.FunctionMemberGetter(name, context, accessedReference)
+
+	hostFunc, isHostFunc := method.(*HostFunctionValue)
+
+	// All methods of a composite value must be bound-functions.
+	// If it is not, then wrap it with a bound function upon use.
+	// Composite methods may have been declared as static function
+	// (not as bound-function), so that they can be re-used.
+	// This is acceptable for methods who do not make use of the receiver.
+	// However, it must be wrapped upon retrieval for receiver/reference
+	// invalidation to work.
+	if isHostFunc {
+		var self Value = v
+		return NewBoundFunctionValue(
+			context,
+			hostFunc,
+			&self,
+			accessedReference,
+			nil,
+		)
+	}
+
+	return method
 }
 
 func (v *SimpleCompositeValue) RemoveMember(_ ValueTransferContext, name string) Value {

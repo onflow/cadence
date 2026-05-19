@@ -598,7 +598,22 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("auth(S.test.X)&Int"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+
+		assert.Equal(
+			t,
+			common.TypeID("&Int"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
 	})
 
 	t.Run("cast up to anystruct, then through reference, retains entitlement", func(t *testing.T) {

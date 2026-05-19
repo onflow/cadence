@@ -309,6 +309,10 @@ func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue)
 		})
 	}
 
+	if o == 0 {
+		panic(&DivisionByZeroError{})
+	}
+
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
 
@@ -336,6 +340,10 @@ func (v Fix64Value) SaturatingDiv(context NumberValueArithmeticContext, other Nu
 			LeftType:     v.StaticType(context),
 			RightType:    other.StaticType(context),
 		})
+	}
+
+	if o == 0 {
+		panic(&DivisionByZeroError{})
 	}
 
 	a := new(big.Int).SetInt64(int64(v))
@@ -550,18 +558,34 @@ func ConvertFix64WithRounding(memoryGauge common.MemoryGauge, value Value, round
 	}
 }
 
-func (v Fix64Value) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v Fix64Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		nil,
 	)
 }
 
-func (v Fix64Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Fix64Type)
+func (v Fix64Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.Fix64Type,
+	)
 }
 
 func (Fix64Value) RemoveMember(_ ValueTransferContext, _ string) Value {
