@@ -178,16 +178,16 @@ func TestRuntimeFix64ConversionWithRoundingRuleArgument(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestRuntime()
-	runtimeInterface := &TestRuntimeInterface{
-		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return json.Decode(nil, b)
-		},
-	}
-	nextScriptLocation := NewScriptLocationGenerator()
-
 	t.Run("Fix128 to Fix64 with rounding", func(t *testing.T) {
 		t.Parallel()
+
+		runtime := NewTestRuntime()
+		runtimeInterface := &TestRuntimeInterface{
+			OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+				return json.Decode(nil, b)
+			},
+		}
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all) fun main(rule: RoundingRule): Fix64 {
@@ -215,6 +215,14 @@ func TestRuntimeFix64ConversionWithRoundingRuleArgument(t *testing.T) {
 
 	t.Run("UFix128 to UFix64 with rounding", func(t *testing.T) {
 		t.Parallel()
+
+		runtime := NewTestRuntime()
+		runtimeInterface := &TestRuntimeInterface{
+			OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+				return json.Decode(nil, b)
+			},
+		}
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all) fun main(rule: RoundingRule): UFix64 {
