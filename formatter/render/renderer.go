@@ -1,8 +1,8 @@
 package render
 
 import (
-	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/formatter/trivia"
 )
 
 // renderer holds state shared across rendering of a single program: the

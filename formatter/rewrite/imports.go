@@ -3,9 +3,9 @@ package rewrite
 import (
 	"sort"
 
-	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/formatter/trivia"
 )
 
 type importsSorter struct{}
@@ -103,4 +103,3 @@ func importName(imp *ast.ImportDeclaration) string {
 	}
 	return ""
 }
-

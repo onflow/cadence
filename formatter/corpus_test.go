@@ -1,4 +1,4 @@
-package format_test
+package formatter_test
 
 import (
 	"os"
@@ -7,18 +7,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/janezpodhostnik/cadencefmt/internal/format"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/verify"
+	"github.com/onflow/cadence/formatter"
+	"github.com/onflow/cadence/formatter/verify"
 )
 
 // corpusSkip lists corpus files that don't parse with the current Cadence
 // parser (pre-1.0 syntax, comment-preservation edge cases, etc.).
 var corpusSkip = map[string]bool{
-	"flow-core-contracts/transactions/stakingProxy/get_node_info.cdc":          true, // pre-Cadence 1.0 restricted types
-	"flow-core-contracts/transactions/flowToken/create_forwarder.cdc":          true, // pre-Cadence 1.0 restricted types
-	"flow-ft/transactions/switchboard/setup_royalty_account_by_paths.cdc":      true, // pre-Cadence 1.0 restricted types
-	"flow-ft/transactions/switchboard/setup_royalty_account.cdc":               true, // pre-Cadence 1.0 restricted types
-	"flow-nft/tests/scripts/get_nft_metadata.cdc":                             true, // pre-Cadence 1.0 restricted types
+	"flow-core-contracts/transactions/stakingProxy/get_node_info.cdc":     true, // pre-Cadence 1.0 restricted types
+	"flow-core-contracts/transactions/flowToken/create_forwarder.cdc":     true, // pre-Cadence 1.0 restricted types
+	"flow-ft/transactions/switchboard/setup_royalty_account_by_paths.cdc": true, // pre-Cadence 1.0 restricted types
+	"flow-ft/transactions/switchboard/setup_royalty_account.cdc":          true, // pre-Cadence 1.0 restricted types
+	"flow-nft/tests/scripts/get_nft_metadata.cdc":                         true, // pre-Cadence 1.0 restricted types
 }
 
 func TestCorpus(t *testing.T) {
@@ -65,13 +65,13 @@ func TestCorpus(t *testing.T) {
 			}
 
 			// Format must succeed
-			formatted, err := format.Format(src, rel, format.Default())
+			formatted, err := formatter.Format(src, rel, formatter.Default())
 			if err != nil {
 				t.Fatalf("format error: %v", err)
 			}
 
 			// Idempotence: format twice, compare
-			second, err := format.Format(formatted, rel, format.Default())
+			second, err := formatter.Format(formatted, rel, formatter.Default())
 			if err != nil {
 				t.Fatalf("second format error: %v", err)
 			}

@@ -3,9 +3,10 @@ package render
 import (
 	"strings"
 
-	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
-	"github.com/onflow/cadence/ast"
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/formatter/trivia"
 )
 
 // wrapComments wraps an element's Doc with its leading, same-line, and

@@ -1,11 +1,11 @@
-package format_test
+package formatter_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/janezpodhostnik/cadencefmt/internal/format"
+	"github.com/onflow/cadence/formatter"
 )
 
 // FuzzFormat feeds arbitrary bytes and asserts no panics.
@@ -16,7 +16,7 @@ func FuzzFormat(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Must not panic on any input
-		_, _ = format.Format(data, "fuzz.cdc", format.Default())
+		_, _ = formatter.Format(data, "fuzz.cdc", formatter.Default())
 	})
 }
 
@@ -26,14 +26,14 @@ func FuzzRoundtrip(f *testing.F) {
 	seedFromTestdata(f)
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		first, err := format.Format(data, "fuzz.cdc", format.Default())
+		first, err := formatter.Format(data, "fuzz.cdc", formatter.Default())
 		if err != nil {
 			return // parse errors are fine
 		}
 
-		opts := format.Default()
+		opts := formatter.Default()
 		opts.SkipVerify = true // already verified in first pass
-		second, err := format.Format(first, "fuzz.cdc", opts)
+		second, err := formatter.Format(first, "fuzz.cdc", opts)
 		if err != nil {
 			t.Fatalf("second format failed: %v", err)
 		}
@@ -67,4 +67,3 @@ func seedFromTestdata(f *testing.F) {
 		f.Add(data)
 	}
 }
-

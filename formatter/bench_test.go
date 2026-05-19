@@ -1,4 +1,4 @@
-package format_test
+package formatter_test
 
 import (
 	"bytes"
@@ -7,13 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/janezpodhostnik/cadencefmt/internal/format"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/render"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/rewrite"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/verify"
-	"github.com/onflow/cadence/parser"
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/formatter"
+	"github.com/onflow/cadence/formatter/render"
+	"github.com/onflow/cadence/formatter/rewrite"
+	"github.com/onflow/cadence/formatter/trivia"
+	"github.com/onflow/cadence/formatter/verify"
+	"github.com/onflow/cadence/parser"
 )
 
 type corpusFile struct {
@@ -91,7 +92,7 @@ func largestCorpusFile(b *testing.B) []byte {
 
 func BenchmarkFormat_Snapshot(b *testing.B) {
 	inputs := loadSnapshotInputs(b)
-	opts := format.Default()
+	opts := formatter.Default()
 
 	var totalBytes int64
 	for _, data := range inputs {
@@ -102,7 +103,7 @@ func BenchmarkFormat_Snapshot(b *testing.B) {
 	b.SetBytes(totalBytes)
 	for b.Loop() {
 		for name, data := range inputs {
-			if _, err := format.Format(data, name+".cdc", opts); err != nil {
+			if _, err := formatter.Format(data, name+".cdc", opts); err != nil {
 				b.Fatalf("format %s: %v", name, err)
 			}
 		}
@@ -111,13 +112,13 @@ func BenchmarkFormat_Snapshot(b *testing.B) {
 
 func BenchmarkFormat_PerCase(b *testing.B) {
 	inputs := loadSnapshotInputs(b)
-	opts := format.Default()
+	opts := formatter.Default()
 
 	for name, data := range inputs {
 		b.Run(name, func(b *testing.B) {
 			b.SetBytes(int64(len(data)))
 			for b.Loop() {
-				if _, err := format.Format(data, name+".cdc", opts); err != nil {
+				if _, err := formatter.Format(data, name+".cdc", opts); err != nil {
 					b.Fatalf("format: %v", err)
 				}
 			}
@@ -146,7 +147,7 @@ func benchCorpusBucket(b *testing.B, minSize, maxSize int) {
 		b.Skipf("no corpus files in range [%d, %d)", minSize, maxSize)
 	}
 
-	opts := format.Default()
+	opts := formatter.Default()
 	var totalBytes int64
 	for _, f := range bucket {
 		totalBytes += int64(len(f.data))
@@ -156,7 +157,7 @@ func benchCorpusBucket(b *testing.B, minSize, maxSize int) {
 	b.SetBytes(totalBytes)
 	for b.Loop() {
 		for _, f := range bucket {
-			if _, err := format.Format(f.data, f.name, opts); err != nil {
+			if _, err := formatter.Format(f.data, f.name, opts); err != nil {
 				b.Fatalf("format %s: %v", f.name, err)
 			}
 		}
@@ -165,12 +166,12 @@ func benchCorpusBucket(b *testing.B, minSize, maxSize int) {
 
 func BenchmarkFormat_LargestFile(b *testing.B) {
 	src := largestCorpusFile(b)
-	opts := format.Default()
+	opts := formatter.Default()
 
 	b.ResetTimer()
 	b.SetBytes(int64(len(src)))
 	for b.Loop() {
-		if _, err := format.Format(src, "bench.cdc", opts); err != nil {
+		if _, err := formatter.Format(src, "bench.cdc", opts); err != nil {
 			b.Fatalf("format: %v", err)
 		}
 	}
@@ -256,7 +257,7 @@ func BenchmarkStage_PrettyPrint(b *testing.B) {
 		b.Fatal(err)
 	}
 	doc := render.Program(program, cm, src, nil)
-	opts := format.Default()
+	opts := formatter.Default()
 	indent := strings.Repeat(opts.IndentCharacter, opts.IndentCount)
 
 	var buf bytes.Buffer
@@ -269,7 +270,7 @@ func BenchmarkStage_PrettyPrint(b *testing.B) {
 
 func BenchmarkStage_Verify(b *testing.B) {
 	src := largestCorpusFile(b)
-	formatted, err := format.Format(src, "bench.cdc", format.Default())
+	formatted, err := formatter.Format(src, "bench.cdc", formatter.Default())
 	if err != nil {
 		b.Fatalf("format: %v", err)
 	}

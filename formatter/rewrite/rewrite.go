@@ -1,8 +1,8 @@
 package rewrite
 
 import (
-	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/formatter/trivia"
 )
 
 // Rewriter transforms an AST program in place. Rewriters run in a fixed

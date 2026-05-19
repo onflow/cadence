@@ -1,4 +1,4 @@
-package format_test
+package formatter_test
 
 import (
 	"os"

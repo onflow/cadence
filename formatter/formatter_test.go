@@ -1,4 +1,4 @@
-package format_test
+package formatter_test
 
 import (
 	"flag"
@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/janezpodhostnik/cadencefmt/internal/format"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/verify"
+	"github.com/onflow/cadence/formatter"
+	"github.com/onflow/cadence/formatter/trivia"
+	"github.com/onflow/cadence/formatter/verify"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -40,7 +40,7 @@ func TestSnapshot(t *testing.T) {
 				t.Fatalf("reading input: %v", err)
 			}
 
-			got, err := format.Format(input, inputPath, format.Default())
+			got, err := formatter.Format(input, inputPath, formatter.Default())
 			if err != nil {
 				t.Fatalf("format error: %v", err)
 			}
@@ -89,12 +89,12 @@ func TestIdempotence(t *testing.T) {
 				t.Fatalf("reading input: %v", err)
 			}
 
-			first, err := format.Format(input, inputPath, format.Default())
+			first, err := formatter.Format(input, inputPath, formatter.Default())
 			if err != nil {
 				t.Fatalf("first format: %v", err)
 			}
 
-			second, err := format.Format(first, inputPath, format.Default())
+			second, err := formatter.Format(first, inputPath, formatter.Default())
 			if err != nil {
 				t.Fatalf("second format: %v", err)
 			}
@@ -131,7 +131,7 @@ func TestRoundTrip(t *testing.T) {
 				t.Fatalf("reading input: %v", err)
 			}
 
-			output, err := format.Format(input, inputPath, format.Default())
+			output, err := formatter.Format(input, inputPath, formatter.Default())
 			if err != nil {
 				t.Fatalf("format error: %v", err)
 			}
@@ -167,7 +167,7 @@ func TestCommentPreservation(t *testing.T) {
 				t.Fatalf("reading input: %v", err)
 			}
 
-			output, err := format.Format(input, inputPath, format.Default())
+			output, err := formatter.Format(input, inputPath, formatter.Default())
 			if err != nil {
 				t.Fatalf("format error: %v", err)
 			}
@@ -195,9 +195,9 @@ func TestCommentPreservation(t *testing.T) {
 func TestKeepBlankLines_Zero(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) fun a() {}\n\n\naccess(all) fun b() {}\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.KeepBlankLines = 0
-	got, err := format.Format(src, "test.cdc", opts)
+	got, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -209,9 +209,9 @@ func TestKeepBlankLines_Zero(t *testing.T) {
 func TestKeepBlankLines_Two(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) fun a() {}\n\n\n\n\naccess(all) fun b() {}\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.KeepBlankLines = 2
-	got, err := format.Format(src, "test.cdc", opts)
+	got, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -223,7 +223,7 @@ func TestKeepBlankLines_Two(t *testing.T) {
 func TestKeepBlankLines_Default(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) fun a() {}\n\n\n\n\naccess(all) fun b() {}\n")
-	got, err := format.Format(src, "test.cdc", format.Default())
+	got, err := formatter.Format(src, "test.cdc", formatter.Default())
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -235,11 +235,11 @@ func TestKeepBlankLines_Default(t *testing.T) {
 func TestAccessModifierComment_FuzzCase(t *testing.T) {
 	t.Parallel()
 	src := []byte("contract A{access(A)event00(\nA\n//\n:A)}")
-	first, err := format.Format(src, "test.cdc", format.Default())
+	first, err := formatter.Format(src, "test.cdc", formatter.Default())
 	if err != nil {
 		t.Fatalf("first format: %v", err)
 	}
-	second, err := format.Format(first, "test.cdc", format.Default())
+	second, err := formatter.Format(first, "test.cdc", formatter.Default())
 	if err != nil {
 		t.Fatalf("second format: %v", err)
 	}
@@ -252,11 +252,11 @@ func TestAccessModifierComment_FuzzCase(t *testing.T) {
 func TestAccessModifierComment_ContractBody(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(A)contract A{A(//\n)}")
-	first, err := format.Format(src, "test.cdc", format.Default())
+	first, err := formatter.Format(src, "test.cdc", formatter.Default())
 	if err != nil {
 		t.Fatalf("first format: %v", err)
 	}
-	second, err := format.Format(first, "test.cdc", format.Default())
+	second, err := formatter.Format(first, "test.cdc", formatter.Default())
 	if err != nil {
 		t.Fatalf("second format: %v", err)
 	}
@@ -269,7 +269,7 @@ func TestAccessModifierComment_ContractBody(t *testing.T) {
 func TestStripSemicolons_Default(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) let x: Int = 1;\n")
-	got, err := format.Format(src, "test.cdc", format.Default())
+	got, err := formatter.Format(src, "test.cdc", formatter.Default())
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -281,9 +281,9 @@ func TestStripSemicolons_Default(t *testing.T) {
 func TestStripSemicolons_False(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) let x: Int = 1;\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.StripSemicolons = false
-	got, err := format.Format(src, "test.cdc", opts)
+	got, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -295,13 +295,13 @@ func TestStripSemicolons_False(t *testing.T) {
 func TestStripSemicolons_Idempotent(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) let x: Int = 1;\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.StripSemicolons = false
-	first, err := format.Format(src, "test.cdc", opts)
+	first, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("first format error: %v", err)
 	}
-	second, err := format.Format(first, "test.cdc", opts)
+	second, err := formatter.Format(first, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("second format error: %v", err)
 	}
@@ -313,9 +313,9 @@ func TestStripSemicolons_Idempotent(t *testing.T) {
 
 func TestFormatVersion_Unsupported(t *testing.T) {
 	t.Parallel()
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.FormatVersion = "99"
-	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
 	if err == nil {
 		t.Fatal("expected error for unsupported format version")
 	}
@@ -326,7 +326,7 @@ func TestFormatVersion_Unsupported(t *testing.T) {
 
 func TestFormatVersion_Current(t *testing.T) {
 	t.Parallel()
-	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", format.Default())
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), "test.cdc", formatter.Default())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -337,7 +337,7 @@ func TestFormatVersion_Current(t *testing.T) {
 func TestIndent_Default(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
-	got, err := format.Format(src, "test.cdc", format.Default())
+	got, err := formatter.Format(src, "test.cdc", formatter.Default())
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -349,9 +349,9 @@ func TestIndent_Default(t *testing.T) {
 func TestIndent_TwoSpaces(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.IndentCount = 2
-	got, err := format.Format(src, "test.cdc", opts)
+	got, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -366,9 +366,9 @@ func TestIndent_TwoSpaces(t *testing.T) {
 func TestIndent_ThreeSpaces(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.IndentCount = 3
-	got, err := format.Format(src, "test.cdc", opts)
+	got, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -380,10 +380,10 @@ func TestIndent_ThreeSpaces(t *testing.T) {
 func TestIndent_Tabs(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.IndentCharacter = "\t"
 	opts.IndentCount = 1
-	got, err := format.Format(src, "test.cdc", opts)
+	got, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -395,13 +395,13 @@ func TestIndent_Tabs(t *testing.T) {
 func TestIndent_Idempotent(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.IndentCount = 2
-	first, err := format.Format(src, "test.cdc", opts)
+	first, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("first format: %v", err)
 	}
-	second, err := format.Format(first, "test.cdc", opts)
+	second, err := formatter.Format(first, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("second format: %v", err)
 	}
@@ -412,9 +412,9 @@ func TestIndent_Idempotent(t *testing.T) {
 
 func TestIndentCharacter_Invalid(t *testing.T) {
 	t.Parallel()
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.IndentCharacter = "x"
-	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
 	if err == nil {
 		t.Fatal("expected error for invalid IndentCharacter")
 	}
@@ -425,9 +425,9 @@ func TestIndentCharacter_Invalid(t *testing.T) {
 
 func TestIndentCount_Zero(t *testing.T) {
 	t.Parallel()
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.IndentCount = 0
-	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
 	if err == nil {
 		t.Fatal("expected error for IndentCount=0")
 	}
@@ -442,9 +442,9 @@ func TestLineWidth_Narrow(t *testing.T) {
 	t.Parallel()
 	// This expression fits in 100 cols but not 40
 	src := []byte("access(all) fun main(parameterOne: Int, parameterTwo: String) {}\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.LineWidth = 40
-	got, err := format.Format(src, "test.cdc", opts)
+	got, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -457,9 +457,9 @@ func TestLineWidth_Narrow(t *testing.T) {
 func TestLineWidth_Wide(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) fun main(parameterOne: Int, parameterTwo: String) {}\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.LineWidth = 200
-	got, err := format.Format(src, "test.cdc", opts)
+	got, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -475,7 +475,7 @@ func TestLineWidth_Wide(t *testing.T) {
 func TestSortImports_True(t *testing.T) {
 	t.Parallel()
 	src := []byte("import \"Zebra\"\nimport \"Alpha\"\n\naccess(all) fun main() {}\n")
-	got, err := format.Format(src, "test.cdc", format.Default())
+	got, err := formatter.Format(src, "test.cdc", formatter.Default())
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -489,9 +489,9 @@ func TestSortImports_True(t *testing.T) {
 func TestSortImports_False(t *testing.T) {
 	t.Parallel()
 	src := []byte("import \"Zebra\"\nimport \"Alpha\"\n\naccess(all) fun main() {}\n")
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.SortImports = false
-	got, err := format.Format(src, "test.cdc", opts)
+	got, err := formatter.Format(src, "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("format error: %v", err)
 	}
@@ -506,9 +506,9 @@ func TestSortImports_False(t *testing.T) {
 
 func TestSkipVerify(t *testing.T) {
 	t.Parallel()
-	opts := format.Default()
+	opts := formatter.Default()
 	opts.SkipVerify = true
-	_, err := format.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), "test.cdc", opts)
 	if err != nil {
 		t.Fatalf("unexpected error with SkipVerify=true: %v", err)
 	}
@@ -548,7 +548,7 @@ func TestNoTrailingWhitespace(t *testing.T) {
 			if err != nil {
 				t.Fatalf("reading input: %v", err)
 			}
-			got, err := format.Format(input, "test.cdc", format.Default())
+			got, err := formatter.Format(input, "test.cdc", formatter.Default())
 			if err != nil {
 				t.Fatalf("format error: %v", err)
 			}
@@ -561,4 +561,3 @@ func TestNoTrailingWhitespace(t *testing.T) {
 		})
 	}
 }
-

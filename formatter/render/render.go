@@ -1,10 +1,11 @@
 package render
 
 import (
-	"github.com/janezpodhostnik/cadencefmt/internal/format/rewrite"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
-	"github.com/onflow/cadence/ast"
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/formatter/rewrite"
+	"github.com/onflow/cadence/formatter/trivia"
 )
 
 // Program renders an *ast.Program with interleaved comments from the CommentMap.

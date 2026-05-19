@@ -1,10 +1,11 @@
 package render
 
 import (
-	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
-	"github.com/turbolent/prettier"
+	"github.com/onflow/cadence/formatter/trivia"
 )
 
 // hasBlankLineBetween checks the source bytes between two statements for a

@@ -1,4 +1,4 @@
-package format
+package formatter
 
 import (
 	"bytes"
@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/janezpodhostnik/cadencefmt/internal/format/render"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/rewrite"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/trivia"
-	"github.com/janezpodhostnik/cadencefmt/internal/format/verify"
-	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/parser"
 	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/formatter/render"
+	"github.com/onflow/cadence/formatter/rewrite"
+	"github.com/onflow/cadence/formatter/trivia"
+	"github.com/onflow/cadence/formatter/verify"
+	"github.com/onflow/cadence/parser"
 )
 
 // ErrParse marks errors caused by malformed input source.
