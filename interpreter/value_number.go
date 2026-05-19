@@ -122,6 +122,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			funcType,
 			NativeFixedPointPowFunction,
 		)
@@ -134,6 +135,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			funcType,
 			NativeFixedPointMultiplyDivideFunction,
 		)
