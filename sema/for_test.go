@@ -847,3 +847,166 @@ func TestCheckResourceInvalidationInForLoop(t *testing.T) {
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 }
+
+func TestCheckResourceInvalidationInForLoopWithIfElse(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("if break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if continue", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        continue
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else both break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        break
+                    } else {
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if break, destroy after", func(t *testing.T) {
+		t.Parallel()
+
+		// The `destroy r` only runs on the non-break path,
+		// so `r` leaks if the `break` is taken.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        break
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if break else destroy", func(t *testing.T) {
+		t.Parallel()
+
+		// The `destroy r` only runs on the else path,
+		// so `r` leaks if the `break` is taken.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        break
+                    } else {
+                        destroy r
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if destroy else destroy break", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is destroyed in both branches before the `break`, so no loss.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        destroy r
+                        break
+                    } else {
+                        destroy r
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource outside loop, if break", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is declared outside the loop and destroyed after the loop,
+		// so the `break` does not leak it.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                for i in [2] {
+                    if true {
+                        break
+                    }
+                }
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}

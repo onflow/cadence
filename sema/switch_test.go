@@ -712,3 +712,158 @@ func TestCheckSwitchResourceInvalidation(t *testing.T) {
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 }
+
+func TestCheckResourceInvalidationInSwitch(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("break in case", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                switch true {
+                case true:
+                    let r <- create R()
+                    break
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("break in default case", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                switch true {
+                default:
+                    let r <- create R()
+                    break
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("return in case", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                switch true {
+                case true:
+                    let r <- create R()
+                    return
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("resource outside switch, break in case", func(t *testing.T) {
+		t.Parallel()
+
+		// `break` only exits the switch, not any enclosing scope.
+		// `r` is declared outside and destroyed after the switch,
+		// so no leak.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                switch true {
+                case true:
+                    break
+                }
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("break in nested if, destroy after", func(t *testing.T) {
+		t.Parallel()
+
+		// The `destroy r` only runs on the non-break path,
+		// so `r` leaks if the `break` is taken.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                switch true {
+                case true:
+                    let r <- create R()
+                    if true {
+                        break
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("break in switch inside loop, resource in loop body", func(t *testing.T) {
+		t.Parallel()
+
+		// `break` targets the innermost switch (not the loop),
+		// so the loop's `r` is destroyed at the end of each iteration.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    switch true {
+                    case true:
+                        break
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("break in switch inside loop, resource in case", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    switch true {
+                    case true:
+                        let r <- create R()
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+}
