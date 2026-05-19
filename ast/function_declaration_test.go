@@ -332,7 +332,7 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 	require.Equal(t,
 		prettier.Concat{
 			prettier.Text("access(all)"),
-			prettier.HardLine{},
+			prettier.Line{},
 			prettier.Text("view"),
 			prettier.Space,
 			prettier.Text("static"),
@@ -423,8 +423,7 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			`access(all)
-fun xyz(ok foobar: AB): @CD {}`,
+			"access(all) fun xyz(ok foobar: AB): @CD {}",
 			decl.String(),
 		)
 
@@ -492,8 +491,7 @@ fun xyz(ok foobar: AB): @CD {}`,
 		}
 
 		require.Equal(t,
-			`access(all)
-fun xyz<A, B: C>(ok foobar: AB): @CD {}`,
+			"access(all) fun xyz<A, B: C>(ok foobar: AB): @CD {}",
 			decl.String(),
 		)
 	})

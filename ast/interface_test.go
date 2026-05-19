@@ -163,7 +163,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("resource"),
 				prettier.Space,
 				prettier.Text("interface "),
@@ -207,7 +207,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("resource"),
 				prettier.Space,
 				prettier.Text("interface "),
@@ -256,8 +256,7 @@ func TestInterfaceDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			`access(all)
-resource interface AB {}`,
+			"access(all) resource interface AB {}",
 			decl.String(),
 		)
 
@@ -292,8 +291,7 @@ resource interface AB {}`,
 
 		require.Equal(
 			t,
-			`access(all)
-resource interface AB {
+			`access(all) resource interface AB {
     x: X
 }`,
 			decl.String(),
