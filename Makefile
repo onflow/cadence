@@ -228,9 +228,7 @@ validate-error-doc-links:
 
 .PHONY: release
 release:
-	@(VERSIONED_FILES="version.go \
-	npm-packages/cadence-parser/package.json" \
-	bash ./bump-version.sh $(bump))
+	@bash ./bump-version.sh $(bump)
 
 # Tools
 

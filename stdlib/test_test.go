@@ -2903,6 +2903,68 @@ func TestBlockchainAccount(t *testing.T) {
 	})
 }
 
+func TestReadFile(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun test(): String {
+                return Test.readFile("some/file.cdc")
+            }
+        `
+
+		testFramework := &mockedTestFramework{
+			emulatorBackend: func() Blockchain {
+				return &mockedBlockchain{}
+			},
+			readFile: func(path string) (string, error) {
+				return "file contents", nil
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("file contents"), result)
+	})
+
+	t.Run("file not found", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun test() {
+                Test.readFile("does/not/exist.cdc")
+            }
+        `
+
+		testFramework := &mockedTestFramework{
+			emulatorBackend: func() Blockchain {
+				return &mockedBlockchain{}
+			},
+			readFile: func(path string) (string, error) {
+				return "", fmt.Errorf("open %s: no such file or directory", path)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, `cannot read file "does/not/exist.cdc"`)
+	})
+}
+
 type mockedTestFramework struct {
 	emulatorBackend func() Blockchain
 	readFile        func(s string) (string, error)
