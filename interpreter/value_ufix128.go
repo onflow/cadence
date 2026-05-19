@@ -362,6 +362,16 @@ func (v UFix128Value) Mod(context NumberValueArithmeticContext, other NumberValu
 	return NewUFix128Value(context, valueGetter)
 }
 
+func (v UFix128Value) Pow(context NumberValueArithmeticContext, other Fix128Value) NumberValue {
+	valueGetter := func() fix.UFix128 {
+		result, err := fix.UFix128(v).Pow(fix.Fix128(other))
+		handleFixedpointError(err)
+		return result
+	}
+
+	return NewUFix128Value(context, valueGetter)
+}
+
 func (v UFix128Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UFix128Value)
 	if !ok {

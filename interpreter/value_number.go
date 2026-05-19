@@ -22,6 +22,7 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -109,6 +110,18 @@ func getNumberValueFunctionMember(
 			accessedReference,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			NativeNumberSaturatingDivideFunction,
+		)
+
+	case sema.FixedPointNumericTypePowFunctionName:
+		funcType, ok := sema.FixedPointPowFunctionTypes[typ]
+		if !ok {
+			return nil
+		}
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			funcType,
+			NativeFixedPointPowFunction,
 		)
 	}
 
@@ -219,5 +232,26 @@ var NativeNumberSaturatingDivideFunction = NativeFunction(
 	) Value {
 		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingDiv(context, other)
+	},
+)
+
+var NativeFixedPointPowFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		switch v := receiver.(type) {
+		case UFix64Value:
+			exponent := AssertValueOfType[Fix64Value](args[0])
+			return v.Pow(context, exponent)
+		case UFix128Value:
+			exponent := AssertValueOfType[Fix128Value](args[0])
+			return v.Pow(context, exponent)
+		default:
+			panic(errors.NewUnreachableError())
+		}
 	},
 )

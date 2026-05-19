@@ -301,6 +301,8 @@ func init() {
 	registerBuiltinCommonTypeBoundFunctions()
 
 	registerBuiltinSaturatingArithmeticFunctions()
+
+	registerBuiltinFixedPointPowFunctions()
 }
 
 func registerBuiltinCommonTypeBoundFunctions() {
@@ -424,6 +426,19 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 				sema.NumericTypeSaturatingDivideFunctionName,
 				functionType,
 				interpreter.NativeNumberSaturatingDivideFunction,
+			),
+		)
+	}
+}
+
+func registerBuiltinFixedPointPowFunctions() {
+	for baseType, funcType := range sema.FixedPointPowFunctionTypes { //nolint:maprange
+		registerBuiltinTypeBoundFunction(
+			commons.TypeQualifier(baseType),
+			NewNativeFunctionValue(
+				sema.FixedPointNumericTypePowFunctionName,
+				funcType,
+				interpreter.NativeFixedPointPowFunction,
 			),
 		)
 	}
