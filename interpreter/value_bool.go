@@ -193,22 +193,33 @@ func (BoolValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v BoolValue) GetMember(context MemberAccessibleContext, name string, memberKind common.DeclarationKind) Value {
+func (v BoolValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
 	return GetMember(
 		context,
 		v,
+		accessedReference,
 		name,
 		memberKind,
 		nil,
 	)
 }
 
-func (v BoolValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v BoolValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ToStringFunctionType,
 			NativeBoolValueToStringFunction,
 		)
