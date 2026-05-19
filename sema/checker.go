@@ -1268,6 +1268,10 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 			)
 			return InvalidType
 		}
+
+		if checker.PositionInfo != nil && identifier.Identifier != "" {
+			checker.recordNestedTypeReferenceOccurrence(identifier, ty)
+		}
 	}
 
 	return ty
@@ -1421,6 +1425,15 @@ func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.P
 		startPos,
 		endPos,
 		variable,
+	)
+}
+
+func (checker *Checker) recordNestedTypeReferenceOccurrence(identifier ast.Identifier, nestedType Type) {
+	checker.PositionInfo.recordNestedTypeReferenceOccurrence(
+		checker.memoryGauge,
+		checker.Elaboration,
+		identifier,
+		nestedType,
 	)
 }
 

@@ -45,6 +45,61 @@ func NewPositionInfo() *PositionInfo {
 	}
 }
 
+func (i *PositionInfo) recordNestedTypeReferenceOccurrence(
+	memoryGauge common.MemoryGauge,
+	elaboration *Elaboration,
+	identifier ast.Identifier,
+	nestedType Type,
+) {
+	startPos := identifier.StartPosition()
+	endPos := identifier.EndPosition(memoryGauge)
+
+	origin := &Origin{
+		Type:            nestedType,
+		DeclarationKind: declarationKindForType(nestedType),
+	}
+
+	if decl := elaboration.DeclarationForType(nestedType); decl != nil {
+		populateOriginFromDeclaration(memoryGauge, origin, decl)
+	}
+
+	i.Occurrences.Put(startPos, endPos, origin)
+}
+
+// declarationKindForType returns the DeclarationKind for the given type,
+// if it corresponds to a declaration, or Unknown otherwise.
+func declarationKindForType(ty Type) common.DeclarationKind {
+	switch t := ty.(type) {
+	case *CompositeType:
+		const isInterface = false
+		return t.Kind.DeclarationKind(isInterface)
+	case *InterfaceType:
+		const isInterface = true
+		return t.CompositeKind.DeclarationKind(isInterface)
+	case *EntitlementType:
+		return common.DeclarationKindEntitlement
+	case *EntitlementMapType:
+		return common.DeclarationKindEntitlementMapping
+	}
+	return common.DeclarationKindUnknown
+}
+
+func populateOriginFromDeclaration(
+	memoryGauge common.MemoryGauge,
+	origin *Origin,
+	decl ast.Declaration,
+) {
+	declIdentifier := decl.DeclarationIdentifier()
+	if declIdentifier != nil {
+		startPos := declIdentifier.StartPosition()
+		endPos := declIdentifier.EndPosition(memoryGauge)
+		origin.StartPos = &startPos
+		origin.EndPos = &endPos
+	}
+	origin.DocString = decl.DeclarationDocString()
+	origin.DeclarationKind = decl.DeclarationKind()
+}
+
 func (i *PositionInfo) recordVariableReferenceOccurrence(
 	memoryGauge common.MemoryGauge,
 	startPos ast.Position,
@@ -208,18 +263,49 @@ func (i *PositionInfo) recordMemberAccess(
 }
 
 func (i *PositionInfo) recordMemberOccurrence(
+	memoryGauge common.MemoryGauge,
 	accessedType Type,
 	identifier string,
 	identifierStartPosition ast.Position,
 	identifierEndPosition ast.Position,
 ) {
-	origins := i.MemberOrigins[accessedType]
-	origin := origins[identifier]
+	origin := i.MemberOrigins[accessedType][identifier]
+	// MemberOrigins is populated when the containing type is checked.
+	// For types imported from another file, those origins live
+	// in the foreign checker's PositionInfo, not this one — so the lookup is nil.
+	// The accessed type itself still carries enough info via GetMembers()
+	// to reconstruct an Origin (declaration position, docstring, etc.).
+	if origin == nil {
+		origin = originForMember(memoryGauge, accessedType, identifier)
+	}
 	i.Occurrences.Put(
 		identifierStartPosition,
 		identifierEndPosition,
 		origin,
 	)
+}
+
+// originForMember resolves the named member on the given type and builds an Origin from it.
+func originForMember(memoryGauge common.MemoryGauge, accessedType Type, identifier string) *Origin {
+	resolver, ok := accessedType.GetMembers()[identifier]
+	if !ok {
+		return nil
+	}
+
+	member := resolver.Resolve(memoryGauge, identifier, nil, func(error) {})
+	if member == nil {
+		return nil
+	}
+
+	startPos := member.Identifier.StartPosition()
+	endPos := member.Identifier.EndPosition(memoryGauge)
+	return &Origin{
+		Type:            member.TypeAnnotation.Type,
+		StartPos:        &startPos,
+		EndPos:          &endPos,
+		DocString:       member.DocString,
+		DeclarationKind: member.DeclarationKind,
+	}
 }
 
 func (i *PositionInfo) recordVariableDeclarationRange(
