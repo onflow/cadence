@@ -116,6 +116,25 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 	ri.DefinitelyExited = ri.DefinitelyExited ||
 		(thenReturnInfo.DefinitelyExited &&
 			elseReturnInfo.DefinitelyExited)
+
+	ri.mergeJumpOffsets(thenReturnInfo, elseReturnInfo)
+}
+
+func (ri *ReturnInfo) mergeJumpOffsets(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {
+	// Propagate jump offsets recorded in either branch.
+	// Each branch has its own cloned JumpOffsets set (see Clone),
+	// so jumps in one branch do not contaminate the sibling branch's view.
+	// After the conditional, both branches' jumps are potential
+	// from the perspective of code that follows.
+	addAll := func(other *ReturnInfo) {
+		_ = other.JumpOffsets.ForEach(func(offset int) error {
+			ri.JumpOffsets.Add(offset)
+			return nil
+		})
+	}
+
+	addAll(thenReturnInfo)
+	addAll(elseReturnInfo)
 }
 
 func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInfo) {
@@ -128,6 +147,9 @@ func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInf
 func (ri *ReturnInfo) Clone() *ReturnInfo {
 	result := NewReturnInfo()
 	*result = *ri
+	// Clone JumpOffsets so that jumps recorded in this clone
+	// do not leak into sibling clones (e.g. then vs. else branch).
+	result.JumpOffsets = ri.JumpOffsets.Clone()
 	return result
 }
 
