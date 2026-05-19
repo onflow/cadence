@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-var hashAlgorithmLookupType = cryptoAlgorithmEnumLookupType(
+var hashAlgorithmLookupType = nativeEnumLookupType(
 	sema.HashAlgorithmType,
 	sema.HashAlgorithms,
 )
@@ -243,7 +243,7 @@ func hash(
 // these functions are left as is, since there are differences in the implementations between interpreter and vm
 func NewInterpreterHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 
-	interpreterHashAlgorithmConstructorValue, _ := interpreterCryptoAlgorithmEnumValueAndCaseValues(
+	interpreterHashAlgorithmConstructorValue, _ := interpreterNativeEnumValueAndCaseValues(
 		hashAlgorithmLookupType,
 		sema.HashAlgorithms,
 		func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {

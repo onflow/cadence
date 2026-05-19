@@ -1582,6 +1582,9 @@ func (i valueImporter) importCompositeValue(
 			// (e.g. it has host functions)
 			return i.importSignatureAlgorithm(fields)
 
+		case sema.RoundingRuleType:
+			return i.importRoundingRule(fields)
+
 		default:
 			return nil, errors.NewDefaultUserError(
 				"cannot import value of type %s",
@@ -1765,6 +1768,59 @@ func (valueImporter) importSignatureAlgorithm(
 	if !ok {
 		return nil, errors.NewDefaultUserError(
 			"unknown SignatureAlgorithm with rawValue %d",
+			rawValue,
+		)
+	}
+
+	return caseValue, nil
+}
+
+func (valueImporter) importRoundingRule(
+	fields []interpreter.CompositeField,
+) (
+	interpreter.MemberAccessibleValue,
+	error,
+) {
+
+	var foundRawValue bool
+	var rawValue interpreter.UInt8Value
+
+	ty := sema.RoundingRuleType
+
+	for _, field := range fields {
+		switch field.Name {
+		case sema.EnumRawValueFieldName:
+			rawValue, foundRawValue = field.Value.(interpreter.UInt8Value)
+			if !foundRawValue {
+				return nil, errors.NewDefaultUserError(
+					"cannot import value of type '%s'. invalid value for field '%s': %v",
+					ty,
+					field.Name,
+					field.Value,
+				)
+			}
+
+		default:
+			return nil, errors.NewDefaultUserError(
+				"cannot import value of type '%s'. invalid field '%s'",
+				ty,
+				field.Name,
+			)
+		}
+	}
+
+	if !foundRawValue {
+		return nil, errors.NewDefaultUserError(
+			"cannot import value of type '%s'. missing field '%s'",
+			ty,
+			sema.EnumRawValueFieldName,
+		)
+	}
+
+	caseValue, ok := stdlib.RoundingRuleCaseValues[rawValue]
+	if !ok {
+		return nil, errors.NewDefaultUserError(
+			"unknown RoundingRule with rawValue %d",
 			rawValue,
 		)
 	}

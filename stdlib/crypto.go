@@ -20,69 +20,6 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 )
 
 const CryptoContractLocation = common.IdentifierLocation("Crypto")
-
-func cryptoAlgorithmEnumLookupType[T sema.CryptoAlgorithm](
-	enumType *sema.CompositeType,
-	enumCases []T,
-) *sema.FunctionType {
-
-	functionType := sema.EnumLookupFunctionType(enumType)
-
-	for _, algo := range enumCases {
-		name := algo.Name()
-		functionType.Members.Set(
-			name,
-			sema.NewUnmeteredPublicConstantFieldMember(
-				enumType,
-				name,
-				enumType,
-				algo.DocString(),
-			),
-		)
-	}
-
-	return functionType
-}
-
-type enumCaseConstructor func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue
-
-func interpreterCryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
-	functionType *sema.FunctionType,
-	enumCases []T,
-	caseConstructor enumCaseConstructor,
-) (
-	functionValue interpreter.FunctionValue,
-	cases map[interpreter.UInt8Value]interpreter.MemberAccessibleValue,
-) {
-
-	caseCount := len(enumCases)
-	caseValues := make([]interpreter.EnumCase, caseCount)
-	constructorNestedVariables := make(map[string]interpreter.Variable, caseCount)
-	cases = make(map[interpreter.UInt8Value]interpreter.MemberAccessibleValue, caseCount)
-
-	for i, enumCase := range enumCases {
-		rawValue := interpreter.UInt8Value(enumCase.RawValue())
-		caseValue := caseConstructor(rawValue)
-		cases[rawValue] = caseValue
-		caseValues[i] = interpreter.EnumCase{
-			Value:    caseValue,
-			RawValue: rawValue,
-		}
-		constructorNestedVariables[enumCase.Name()] =
-			interpreter.NewVariableWithValue(nil, caseValue)
-	}
-
-	functionValue = interpreter.EnumLookupFunction(
-		nil,
-		functionType,
-		caseValues,
-		constructorNestedVariables,
-	)
-
-	return
-}

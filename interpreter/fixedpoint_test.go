@@ -28,10 +28,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -1349,4 +1352,545 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 			}
 		}
 	})
+}
+
+func parseCheckAndPrepareWithRoundingRule(t *testing.T, code string) Invokable {
+	t.Helper()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+
+	valueDeclaration := stdlib.InterpreterRoundingRuleConstructor
+	baseValueActivation.DeclareValue(valueDeclaration)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	invokable, err := parseCheckAndPrepareWithOptions(
+		t,
+		code,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	return invokable
+}
+
+func TestInterpretFix64WithRoundingRule(t *testing.T) {
+	t.Parallel()
+
+	// Fix128 has 24 decimal places, Fix64 has 8.
+	// Rounding applies to the 9th+ decimal places when converting Fix128 → Fix64.
+	//
+	// Test values:
+	//   1.000000003... (9th digit < 5): non-halfway, fractional part below midpoint
+	//   1.000000005... (9th digit = 5): exact halfway between 1.00000000 and 1.00000001
+	//   1.000000007... (9th digit > 5): non-halfway, fractional part above midpoint
+	//
+	// Expected results per rounding mode:
+	//   towardZero:     always truncate → 1.00000000 (positive), -1.00000000 (negative)
+	//   awayFromZero:   always round up magnitude → 1.00000001 (positive), -1.00000001 (negative)
+	//   nearestHalfAway: < 5 → 1.00000000, = 5 → 1.00000001 (away), > 5 → 1.00000001
+	//   nearestHalfEven: < 5 → 1.00000000, = 5 → 1.00000000 (even), > 5 → 1.00000001
+
+	type testCase struct {
+		name     string
+		code     string
+		expected interpreter.Fix64Value
+	}
+
+	tests := []testCase{
+		// towardZero: truncates fractional part beyond 8 decimals
+		{
+			name: "towardZero, positive, non-halfway below",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000003000000000000000
+                return Fix64(x, rounding: RoundingRule.towardZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000000), // 1.00000000
+		},
+		{
+			name: "towardZero, positive, exact halfway",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000005000000000000000
+                return Fix64(x, rounding: RoundingRule.towardZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000000), // 1.00000000
+		},
+		{
+			name: "towardZero, positive, non-halfway above",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000007000000000000000
+                return Fix64(x, rounding: RoundingRule.towardZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000000), // 1.00000000
+		},
+		{
+			name: "towardZero, negative, non-halfway below",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = -1.000000003000000000000000
+                return Fix64(x, rounding: RoundingRule.towardZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(-100000000), // -1.00000000
+		},
+		{
+			name: "towardZero, negative, exact halfway",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = -1.000000005000000000000000
+                return Fix64(x, rounding: RoundingRule.towardZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(-100000000), // -1.00000000
+		},
+		{
+			name: "towardZero, negative, non-halfway above",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = -1.000000007000000000000000
+                return Fix64(x, rounding: RoundingRule.towardZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(-100000000), // -1.00000000
+		},
+
+		// awayFromZero: rounds up magnitude for any nonzero fractional part
+		{
+			name: "awayFromZero, positive, non-halfway below",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000003000000000000000
+                return Fix64(x, rounding: RoundingRule.awayFromZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000001), // 1.00000001
+		},
+		{
+			name: "awayFromZero, positive, exact halfway",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000005000000000000000
+                return Fix64(x, rounding: RoundingRule.awayFromZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000001), // 1.00000001
+		},
+		{
+			name: "awayFromZero, positive, non-halfway above",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000007000000000000000
+                return Fix64(x, rounding: RoundingRule.awayFromZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000001), // 1.00000001
+		},
+		{
+			name: "awayFromZero, negative, non-halfway below",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = -1.000000003000000000000000
+                return Fix64(x, rounding: RoundingRule.awayFromZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(-100000001), // -1.00000001
+		},
+		{
+			name: "awayFromZero, negative, exact halfway",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = -1.000000005000000000000000
+                return Fix64(x, rounding: RoundingRule.awayFromZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(-100000001), // -1.00000001
+		},
+		{
+			name: "awayFromZero, negative, non-halfway above",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = -1.000000007000000000000000
+                return Fix64(x, rounding: RoundingRule.awayFromZero)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(-100000001), // -1.00000001
+		},
+
+		// nearestHalfAway: nearest, tie breaks away from zero
+		{
+			name: "nearestHalfAway, positive, non-halfway below",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000003000000000000000
+                return Fix64(x, rounding: RoundingRule.nearestHalfAway)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000000), // 1.00000000
+		},
+		{
+			name: "nearestHalfAway, positive, exact halfway",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000005000000000000000
+                return Fix64(x, rounding: RoundingRule.nearestHalfAway)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000001), // 1.00000001 (tie → away)
+		},
+		{
+			name: "nearestHalfAway, positive, non-halfway above",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000007000000000000000
+                return Fix64(x, rounding: RoundingRule.nearestHalfAway)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000001), // 1.00000001
+		},
+		{
+			name: "nearestHalfAway, negative, exact halfway",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = -1.000000005000000000000000
+                return Fix64(x, rounding: RoundingRule.nearestHalfAway)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(-100000001), // -1.00000001 (tie → away)
+		},
+
+		// nearestHalfEven: nearest, tie breaks to even
+		{
+			name: "nearestHalfEven, positive, non-halfway below",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000003000000000000000
+                return Fix64(x, rounding: RoundingRule.nearestHalfEven)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000000), // 1.00000000
+		},
+		{
+			name: "nearestHalfEven, positive, exact halfway (last digit 0 is even)",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000005000000000000000
+                return Fix64(x, rounding: RoundingRule.nearestHalfEven)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000000), // 1.00000000 (tie → even, 0 is even)
+		},
+		{
+			name: "nearestHalfEven, positive, non-halfway above",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000007000000000000000
+                return Fix64(x, rounding: RoundingRule.nearestHalfEven)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000001), // 1.00000001
+		},
+		{
+			name: "nearestHalfEven, positive, exact halfway (last digit 1 is odd)",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = 1.000000015000000000000000
+                return Fix64(x, rounding: RoundingRule.nearestHalfEven)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(100000002), // 1.00000002 (tie → even, 2 is even)
+		},
+		{
+			name: "nearestHalfEven, negative, exact halfway",
+			code: `fun main(): Fix64 {
+                let x: Fix128 = -1.000000005000000000000000
+                return Fix64(x, rounding: RoundingRule.nearestHalfEven)
+            }`,
+			expected: interpreter.NewUnmeteredFix64Value(-100000000), // -1.00000000 (tie → even)
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			invokable := parseCheckAndPrepareWithRoundingRule(t, tc.code)
+			result, err := invokable.Invoke("main")
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+
+	t.Run("backward compat, no rounding truncates", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun main(): Fix64 {
+                let x: Fix128 = 1.000000005000000000000000
+                return Fix64(x)
+            }
+        `)
+
+		result, err := invokable.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredFix64Value(100000000), result)
+	})
+
+	t.Run("integer conversion ignores rounding", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepareWithRoundingRule(t, `
+            fun main(): Fix64 {
+                return Fix64(42, rounding: RoundingRule.awayFromZero)
+            }
+        `)
+
+		result, err := invokable.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredFix64ValueWithInteger(42), result)
+	})
+}
+
+func TestInterpretUFix64WithRoundingRule(t *testing.T) {
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		code     string
+		expected interpreter.UFix64Value
+	}
+
+	tests := []testCase{
+		// towardZero
+		{
+			name: "towardZero, non-halfway below",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000003000000000000000
+                return UFix64(x, rounding: RoundingRule.towardZero)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000000),
+		},
+		{
+			name: "towardZero, exact halfway",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000005000000000000000
+                return UFix64(x, rounding: RoundingRule.towardZero)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000000),
+		},
+		{
+			name: "towardZero, non-halfway above",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000007000000000000000
+                return UFix64(x, rounding: RoundingRule.towardZero)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000000),
+		},
+
+		// awayFromZero
+		{
+			name: "awayFromZero, non-halfway below",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000003000000000000000
+                return UFix64(x, rounding: RoundingRule.awayFromZero)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000001),
+		},
+		{
+			name: "awayFromZero, exact halfway",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000005000000000000000
+                return UFix64(x, rounding: RoundingRule.awayFromZero)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000001),
+		},
+		{
+			name: "awayFromZero, non-halfway above",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000007000000000000000
+                return UFix64(x, rounding: RoundingRule.awayFromZero)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000001),
+		},
+
+		// nearestHalfAway
+		{
+			name: "nearestHalfAway, non-halfway below",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000003000000000000000
+                return UFix64(x, rounding: RoundingRule.nearestHalfAway)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000000),
+		},
+		{
+			name: "nearestHalfAway, exact halfway",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000005000000000000000
+                return UFix64(x, rounding: RoundingRule.nearestHalfAway)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000001), // tie → away
+		},
+		{
+			name: "nearestHalfAway, non-halfway above",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000007000000000000000
+                return UFix64(x, rounding: RoundingRule.nearestHalfAway)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000001),
+		},
+
+		// nearestHalfEven
+		{
+			name: "nearestHalfEven, non-halfway below",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000003000000000000000
+                return UFix64(x, rounding: RoundingRule.nearestHalfEven)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000000),
+		},
+		{
+			name: "nearestHalfEven, exact halfway (last digit 0 is even)",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000005000000000000000
+                return UFix64(x, rounding: RoundingRule.nearestHalfEven)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000000), // tie → even, 0 is even
+		},
+		{
+			name: "nearestHalfEven, non-halfway above",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000007000000000000000
+                return UFix64(x, rounding: RoundingRule.nearestHalfEven)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000001),
+		},
+		{
+			name: "nearestHalfEven, exact halfway (last digit 1 is odd)",
+			code: `fun main(): UFix64 {
+                let x: UFix128 = 1.000000015000000000000000
+                return UFix64(x, rounding: RoundingRule.nearestHalfEven)
+            }`,
+			expected: interpreter.NewUnmeteredUFix64Value(100000002), // tie → even, 2 is even
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			invokable := parseCheckAndPrepareWithRoundingRule(t, tc.code)
+			result, err := invokable.Invoke("main")
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+
+	t.Run("backward compat, no rounding truncates", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun main(): UFix64 {
+                let x: UFix128 = 1.000000005000000000000000
+                return UFix64(x)
+            }
+        `)
+
+		result, err := invokable.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredUFix64Value(100000000), result)
+	})
+}
+
+func TestInterpretFix64WithRoundingRuleOverflow(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Fix128 overflow", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepareWithRoundingRule(t, `
+            fun main(): Fix64 {
+                // Fix128 max is much larger than Fix64 max
+                let x: Fix128 = Fix128.max
+                return Fix64(x, rounding: RoundingRule.towardZero)
+            }
+        `)
+
+		_, err := invokable.Invoke("main")
+		RequireError(t, err)
+		var expectedError *interpreter.OverflowError
+		require.ErrorAs(t, err, &expectedError)
+	})
+
+	t.Run("Fix128 negative overflow", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepareWithRoundingRule(t, `
+            fun main(): Fix64 {
+                let x: Fix128 = Fix128.min
+                return Fix64(x, rounding: RoundingRule.towardZero)
+            }
+        `)
+
+		_, err := invokable.Invoke("main")
+		RequireError(t, err)
+		var expectedError *interpreter.UnderflowError
+		require.ErrorAs(t, err, &expectedError)
+	})
+
+	t.Run("rounding causes overflow", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepareWithRoundingRule(t, `
+            fun main(): Fix64 {
+                // Fix64.max as Fix128, plus a fraction that would round up
+                let x: Fix128 = 92233720368.547758079999999999999999
+                return Fix64(x, rounding: RoundingRule.awayFromZero)
+            }
+        `)
+
+		_, err := invokable.Invoke("main")
+		RequireError(t, err)
+		var expectedError *interpreter.OverflowError
+		require.ErrorAs(t, err, &expectedError)
+	})
+}
+
+func TestInterpretUFix64WithRoundingRuleOverflow(t *testing.T) {
+	t.Parallel()
+
+	t.Run("UFix128 overflow", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepareWithRoundingRule(t, `
+            fun main(): UFix64 {
+                let x: UFix128 = UFix128.max
+                return UFix64(x, rounding: RoundingRule.towardZero)
+            }
+        `)
+
+		_, err := invokable.Invoke("main")
+		RequireError(t, err)
+		var expectedError *interpreter.OverflowError
+		require.ErrorAs(t, err, &expectedError)
+	})
+
+	t.Run("Fix128 negative to UFix64", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepareWithRoundingRule(t, `
+            fun main(): UFix64 {
+                let x: Fix128 = -1.0
+                return UFix64(x, rounding: RoundingRule.towardZero)
+            }
+        `)
+
+		_, err := invokable.Invoke("main")
+		RequireError(t, err)
+		var expectedError *interpreter.UnderflowError
+		require.ErrorAs(t, err, &expectedError)
+	})
+}
+
+func TestInterpretRoundingRuleEnum(t *testing.T) {
+	t.Parallel()
+
+	invokable := parseCheckAndPrepareWithRoundingRule(t, `
+        fun main(): [UInt8] {
+            return [
+                RoundingRule.towardZero.rawValue,
+                RoundingRule.awayFromZero.rawValue,
+                RoundingRule.nearestHalfAway.rawValue,
+                RoundingRule.nearestHalfEven.rawValue
+            ]
+        }
+    `)
+
+	result, err := invokable.Invoke("main")
+	require.NoError(t, err)
+
+	arrayValue := result.(*interpreter.ArrayValue)
+	require.Equal(t, 4, arrayValue.Count())
+
+	assert.Equal(t, interpreter.UInt8Value(0), arrayValue.Get(nil, 0))
+	assert.Equal(t, interpreter.UInt8Value(1), arrayValue.Get(nil, 1))
+	assert.Equal(t, interpreter.UInt8Value(2), arrayValue.Get(nil, 2))
+	assert.Equal(t, interpreter.UInt8Value(3), arrayValue.Get(nil, 3))
 }

@@ -334,6 +334,13 @@ func (v *NativeFunctionValue) GetMember(
 	)
 }
 
+func (v *NativeFunctionValue) SetField(name string, value interpreter.Value) {
+	if v.fields == nil {
+		v.fields = make(map[string]interpreter.Value)
+	}
+	v.fields[name] = value
+}
+
 func (*NativeFunctionValue) RemoveMember(_ interpreter.ValueTransferContext, _ string) interpreter.Value {
 	panic(errors.NewUnreachableError())
 }
