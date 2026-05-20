@@ -43,7 +43,7 @@ var (
 
 // Format parses Cadence source and returns deterministically formatted output.
 // filename is used for diagnostics only; the file need not exist on disk.
-func Format(src []byte, filename string, opts Options) ([]byte, error) {
+func Format(src []byte, opts Options) ([]byte, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, err
 	}

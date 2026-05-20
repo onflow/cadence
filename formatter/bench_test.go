@@ -63,7 +63,7 @@ func BenchmarkFormat_Snapshot(b *testing.B) {
 	b.SetBytes(totalBytes)
 	for b.Loop() {
 		for name, data := range inputs {
-			if _, err := formatter.Format(data, name+".cdc", opts); err != nil {
+			if _, err := formatter.Format(data, opts); err != nil {
 				b.Fatalf("format %s: %v", name, err)
 			}
 		}
@@ -78,7 +78,7 @@ func BenchmarkFormat_PerCase(b *testing.B) {
 		b.Run(name, func(b *testing.B) {
 			b.SetBytes(int64(len(data)))
 			for b.Loop() {
-				if _, err := formatter.Format(data, name+".cdc", opts); err != nil {
+				if _, err := formatter.Format(data, opts); err != nil {
 					b.Fatalf("format: %v", err)
 				}
 			}
