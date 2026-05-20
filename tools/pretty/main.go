@@ -25,23 +25,19 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"strings"
 
-	"github.com/turbolent/prettier"
-
-	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/parser"
+	"github.com/onflow/cadence/formatter"
 )
 
 func pretty(code string, maxLineWidth int) string {
-	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
+	options := formatter.Default()
+	options.LineWidth = maxLineWidth
+	result, err := formatter.Format([]byte(code), options)
 	if err != nil {
 		return err.Error()
 	}
 
-	var b strings.Builder
-	prettier.Prettier(&b, program.Doc(ast.NopContext{}), maxLineWidth, "    ")
-	return b.String()
+	return string(result)
 }
 
 // language=html
