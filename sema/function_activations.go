@@ -63,23 +63,21 @@ func (a *FunctionActivation) popControl() {
 
 func (a *FunctionActivation) WithLoop(f func()) {
 	a.pushControl(ControlKindLoop)
-	// DefinitelyJumpedLoop and MaybeJumpedLoop are scoped to this loop:
-	// save on entry, restore on exit, so a nested loop's break/continue does not affect an enclosing loop.
-	// `break` and `continue` statements targeting this loop are consumed by the loop
-	// and must not leak to an enclosing scope
-	savedDefinitelyJumpedLoop := a.ReturnInfo.DefinitelyJumpedLoop
+	// MaybeJumpedLoop is scoped to this loop: save on entry, restore on exit,
+	// so a nested loop's break/continue does not affect an enclosing loop.
+	// `break` and `continue` statements targeting this loop
+	// are consumed by the loop and must not leak to an enclosing scope.
 	savedMaybeJumpedLoop := a.ReturnInfo.MaybeJumpedLoop
 	a.ReturnInfo.WithNewJumpTarget(f)
 	// If any path within the loop body jumped (break/continue),
 	// the body did not definitely return/halt/exit on every path:
 	// clear the corresponding flags so subsequent reasoning sees an
-	// accurate per-body result
+	// accurate per-body result.
 	if a.ReturnInfo.MaybeJumpedLoop {
 		a.ReturnInfo.DefinitelyReturned = false
 		a.ReturnInfo.DefinitelyHalted = false
 		a.ReturnInfo.DefinitelyExited = false
 	}
-	a.ReturnInfo.DefinitelyJumpedLoop = savedDefinitelyJumpedLoop
 	a.ReturnInfo.MaybeJumpedLoop = savedMaybeJumpedLoop
 	a.popControl()
 }
@@ -88,14 +86,13 @@ func (a *FunctionActivation) WithSwitch(f func()) {
 	// NOTE: new jump-offsets child-set for each case instead of whole switch
 	a.pushControl(ControlKindSwitch)
 	// `break` statements inside a switch only target the switch, not any enclosing loop.
-	// DefinitelyJumpedSwitch and MaybeJumpedSwitch are scoped to the switch:
-	// save on entry, restore on exit, so a nested switch's break does not affect an enclosing switch.
+	// MaybeJumpedSwitch is scoped to this switch: save on entry, restore on exit,
+	// so a nested switch's break does not affect an enclosing switch.
 	// (`continue` statements always target the enclosing loop,
-	// so it sets *JumpedLoop (not *JumpedSwitch) and therefore propagates past the switch)
-	savedDefinitelyJumpedSwitch := a.ReturnInfo.DefinitelyJumpedSwitch
+	// so it sets MaybeJumpedLoop (not MaybeJumpedSwitch)
+	// and therefore propagates past the switch.)
 	savedMaybeJumpedSwitch := a.ReturnInfo.MaybeJumpedSwitch
 	f()
-	a.ReturnInfo.DefinitelyJumpedSwitch = savedDefinitelyJumpedSwitch
 	a.ReturnInfo.MaybeJumpedSwitch = savedMaybeJumpedSwitch
 	a.popControl()
 }

@@ -51,8 +51,7 @@ type ReturnInfo struct {
 	// This is the generic "every path terminated" flag
 	// and is the one observed by `IsUnreachable()`.
 	//
-	// NOTE: It is intentionally NOT just
-	// `DefinitelyReturned || DefinitelyHalted || DefinitelyJumpedLoop || DefinitelyJumpedSwitch`,
+	// NOTE: It is intentionally NOT just `DefinitelyReturned || DefinitelyHalted`,
 	// because AND-merging each kind-specific flag separately would lose
 	// the case where both branches of an if-else terminate but via different kinds.
 	// For example:
@@ -83,46 +82,35 @@ type ReturnInfo struct {
 	// when a corresponding `MaybeJumped*` is true,
 	// because the maybe-jumping path escapes the construct without terminating the function.
 	DefinitelyExited bool
-	// DefinitelyJumpedLoop indicates that (the branch of) the function
-	// contains a definite jump to an enclosing loop
-	// (a `break` targeting a loop, or a `continue`).
-	DefinitelyJumpedLoop bool
-	// MaybeJumped indicates that some path within the current loop
+	// MaybeJumpedLoop indicates that some path within the current loop
 	// reached a jump targeting that loop (a `break` whose target is the
 	// loop, or a `continue`).
 	//
-	// This is the "Maybe" counterpart to `DefinitelyJumpedLoop`, OR-merged
-	// across branches and not cleared by subsequent statements within
-	// the loop. It mirrors `MaybeJumpedSwitch` and is scoped to the loop:
-	// cleared by `WithLoop` on exit, since such jumps are consumed by
-	// the loop and are irrelevant outside it.
-	MaybeJumpedLoop bool
-	// DefinitelyJumpedSwitch indicates that (the branch of) the function
-	// contains a definite `break` whose target is a switch.
+	// OR-merged across branches and not cleared by subsequent statements
+	// within the loop. Scoped to the loop: cleared by `WithLoop` on exit,
+	// since such jumps are consumed by the loop and are irrelevant
+	// outside it.
 	//
-	// Tracked separately from DefinitelyJumpedLoop because a `break` inside a switch
-	// only exits the switch; it must not leak past the switch boundary as a
-	// jump to an outer loop. The flag is observed for unreachability inside the
-	// switch and is cleared by WithSwitch on exit.
-	DefinitelyJumpedSwitch bool
+	// At a loop body's terminal state, used to clear DR/DH/DE so that the
+	// surrounding scope's "definitely returns/halts/exits" claim is not
+	// over-claimed (the jumping path falls past the loop, not the function).
+	MaybeJumpedLoop bool
 	// MaybeJumpedSwitch indicates that some path within the current switch
 	// reached a `break` statement targeting that switch.
 	//
-	// Unlike `DefinitelyJumpedSwitch`, this is OR-merged across branches and
-	// is not cleared by subsequent statements within the switch. It is used
-	// at a case body's terminal state to detect the pattern in which only
-	// some paths reach the case's trailing termination, e.g.
+	// OR-merged across branches and not cleared by subsequent statements
+	// within the switch. Scoped to the switch: cleared by `WithSwitch` on
+	// exit, since such breaks are consumed by the switch and are irrelevant
+	// outside it.
+	//
+	// At a case body's terminal state, used to clear DR/DH/DE so that the
+	// switch-level merge does not over-claim definite-return — the break
+	// path means the switch as a whole can still fall through to the code
+	// after it. For example:
 	//
 	//   case x:
 	//       if cond { break }
 	//       return ...
-	//
-	// Such a case must not be treated as "definitely returns" when merging
-	// case results at the switch level, because the break path means the
-	// switch as a whole can still fall through to the code after it.
-	//
-	// Like `DefinitelyJumpedSwitch`, the flag is scoped to the switch and
-	// cleared by WithSwitch on exit.
 	MaybeJumpedSwitch bool
 }
 
@@ -148,14 +136,6 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 	ri.DefinitelyReturned = ri.DefinitelyReturned ||
 		(thenReturnInfo.DefinitelyReturned &&
 			elseReturnInfo.DefinitelyReturned)
-
-	ri.DefinitelyJumpedLoop = ri.DefinitelyJumpedLoop ||
-		(thenReturnInfo.DefinitelyJumpedLoop &&
-			elseReturnInfo.DefinitelyJumpedLoop)
-
-	ri.DefinitelyJumpedSwitch = ri.DefinitelyJumpedSwitch ||
-		(thenReturnInfo.DefinitelyJumpedSwitch &&
-			elseReturnInfo.DefinitelyJumpedSwitch)
 
 	ri.DefinitelyHalted = ri.DefinitelyHalted ||
 		(thenReturnInfo.DefinitelyHalted &&
@@ -186,7 +166,7 @@ func (ri *ReturnInfo) Clone() *ReturnInfo {
 }
 
 func (ri *ReturnInfo) IsUnreachable() bool {
-	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted || DefinitelyJumpedLoop || DefinitelyJumpedSwitch,
+	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
 	// see DefinitelyExited
 	return ri.DefinitelyExited
 }

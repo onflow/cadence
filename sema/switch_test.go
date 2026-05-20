@@ -848,8 +848,9 @@ func TestCheckSwitchUnreachableAfterMixedExits(t *testing.T) {
 	// Inside a case body, both branches of an `if-else` exit,
 	// but in different ways: the `then` branch breaks from the switch,
 	// while the `else` branch returns from the function.
-	// Neither DefinitelyReturned nor DefinitelyJumpedSwitch holds for both branches,
-	// but every path has exited, so subsequent statements must be reported as unreachable.
+	// Neither branch alone gives DefinitelyReturned, but every path has
+	// exited (DefinitelyExited holds via AND-merge), so subsequent
+	// statements must be reported as unreachable.
 	_, err := ParseAndCheck(t, `
         fun test() {
             switch 1 {

@@ -68,11 +68,9 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ st
 		return
 
 	case ControlKindLoop:
-		functionActivation.ReturnInfo.DefinitelyJumpedLoop = true
 		functionActivation.ReturnInfo.MaybeJumpedLoop = true
 
 	case ControlKindSwitch:
-		functionActivation.ReturnInfo.DefinitelyJumpedSwitch = true
 		functionActivation.ReturnInfo.MaybeJumpedSwitch = true
 	}
 
@@ -104,7 +102,6 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 	}
 
 	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
-	functionActivation.ReturnInfo.DefinitelyJumpedLoop = true
 	functionActivation.ReturnInfo.MaybeJumpedLoop = true
 	// `continue` is a kind of definite exit (see DefinitelyExited).
 	// Set it so that an if-else where one branch continues

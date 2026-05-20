@@ -1077,8 +1077,9 @@ func TestCheckNestedForLoopMaybeJumpedDoesNotEscape(t *testing.T) {
 
 	t.Parallel()
 
-	// A `MaybeJumpedLoop` set inside an inner for-loop body must not leak into the outer loop's body state.
-	// WithLoop save/restores both `DefinitelyJumpedLoop` and `MaybeJumpedLoop`.
+	// A `MaybeJumpedLoop` set inside an inner for-loop body must not leak
+	// into the outer loop's body state — `WithLoop` save/restores
+	// `MaybeJumpedLoop`.
 	_, err := ParseAndCheck(t, `
         fun test(): Int {
             for i in [1] {
