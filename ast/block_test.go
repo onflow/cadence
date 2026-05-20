@@ -683,7 +683,6 @@ func TestFunctionBlock_Doc(t *testing.T) {
 								prettier.Text("}"),
 							},
 						},
-						prettier.Concat(nil),
 					},
 				},
 				prettier.HardLine{},

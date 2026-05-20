@@ -59,18 +59,46 @@ var blockEndDoc prettier.Doc = prettier.Text("}")
 var blockEmptyDoc prettier.Doc = prettier.Text("{}")
 
 func (b *Block) Doc(ctx PrettyContext) prettier.Doc {
-	if b == nil || b.IsEmpty() {
-		return ctx.Wrap(b, blockEmptyDoc)
+	if b == nil {
+		return blockEmptyDoc
 	}
 
-	return ctx.Wrap(b, prettier.Concat{
+	// For a block, "leading" comments mean "at the start of the body inside
+	// the braces" and "trailing" means "at the end of the body". Take them
+	// here so we can position them between the braces rather than around the
+	// whole block. Same-line on a block has no natural position; drop it.
+	leading, _, trailing := ctx.Take(b)
+	hasComments := leading != nil || trailing != nil
+
+	if b.IsEmpty() && !hasComments {
+		return blockEmptyDoc
+	}
+
+	body := prettier.Concat{}
+	if leading != nil {
+		body = append(body, prettier.HardLine{}, leading)
+	}
+	if !b.IsEmpty() {
+		// Inline the StatementsDoc loop so we append items directly to body
+		// instead of nesting another Concat.
+		for i, statement := range b.Statements {
+			body = append(body, prettier.HardLine{})
+			if i > 0 && ctx.BlankLineBetween(b.Statements[i-1], statement) {
+				body = append(body, prettier.HardLine{})
+			}
+			body = append(body, docOrEmpty(statement, ctx))
+		}
+	}
+	if trailing != nil {
+		body = append(body, prettier.HardLine{}, trailing)
+	}
+
+	return prettier.Concat{
 		blockStartDoc,
-		prettier.Indent{
-			Doc: StatementsDoc(ctx, b.Statements),
-		},
+		prettier.Indent{Doc: body},
 		prettier.HardLine{},
 		blockEndDoc,
-	})
+	}
 }
 
 func StatementsDoc(ctx PrettyContext, statements []Statement) prettier.Doc {
@@ -168,8 +196,14 @@ var preConditionsKeywordDoc = prettier.Text("pre")
 var postConditionsKeywordDoc = prettier.Text("post")
 
 func (b *FunctionBlock) Doc(ctx PrettyContext) prettier.Doc {
-	if b.IsEmpty() {
-		return ctx.Wrap(b, blockEmptyDoc)
+	hasPre := b.PreConditions != nil && !b.PreConditions.IsEmpty()
+	hasPost := b.PostConditions != nil && !b.PostConditions.IsEmpty()
+
+	// Without pre/post conditions, delegate to Block.Doc which handles
+	// empty-with-comments correctly (e.g., `{ // note }` keeps the comment
+	// inside the braces).
+	if !hasPre && !hasPost {
+		return ctx.Wrap(b, b.Block.Doc(ctx))
 	}
 
 	var conditionDocs []prettier.Doc
@@ -190,19 +224,19 @@ func (b *FunctionBlock) Doc(ctx PrettyContext) prettier.Doc {
 		)
 	}
 
-	var bodyDoc prettier.Doc
+	// Take inner Block's own comments so they render inside the function-block
+	// braces (alongside conditions/statements) instead of being orphaned.
+	blockLeading, _, blockTrailing := ctx.Take(b.Block)
 
-	statementsDoc := StatementsDoc(ctx, b.Block.Statements)
-
-	if len(conditionDocs) > 0 {
-		bodyConcatDoc := prettier.Concat(conditionDocs)
-		bodyConcatDoc = append(
-			bodyConcatDoc,
-			statementsDoc,
-		)
-		bodyDoc = bodyConcatDoc
-	} else {
-		bodyDoc = statementsDoc
+	bodyDoc := prettier.Concat(conditionDocs)
+	if blockLeading != nil {
+		bodyDoc = append(bodyDoc, prettier.HardLine{}, blockLeading)
+	}
+	if !b.Block.IsEmpty() {
+		bodyDoc = append(bodyDoc, StatementsDoc(ctx, b.Block.Statements))
+	}
+	if blockTrailing != nil {
+		bodyDoc = append(bodyDoc, prettier.HardLine{}, blockTrailing)
 	}
 
 	return ctx.Wrap(b, prettier.Concat{

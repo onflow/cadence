@@ -292,6 +292,56 @@ func TestAccessModifierComment_ContractBody(t *testing.T) {
 	}
 }
 
+// TestCommentInEmptyBlock guards against orphaned comments when a comment
+// is the only thing inside a block (no statements). The block's IsEmpty()
+// check used to shortcut to `{}` without consuming the inner comment,
+// causing an orphan-comments error.
+func TestCommentInEmptyBlock(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]struct {
+		src  string
+		want string
+	}{
+		"function body": {
+			src: "fun foo() {\n  // test\n}\n",
+			want: `fun foo() {
+    // test
+}
+`,
+		},
+		"nested if body": {
+			src: "fun foo() {\n  if true {\n    // test\n  }\n}\n",
+			want: `fun foo() {
+    if true {
+        // test
+    }
+}
+`,
+		},
+		"block comment in empty body": {
+			src: "fun foo() {\n  /* test */\n}\n",
+			want: `fun foo() {
+    /* test */
+}
+`,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got, err := formatter.Format([]byte(tc.src), formatter.Default())
+			if err != nil {
+				t.Fatalf("format: %v", err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestStripSemicolons_Default(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) let x: Int = 1;\n")
