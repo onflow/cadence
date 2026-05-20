@@ -72,20 +72,12 @@ func (s *ReturnStatement) Doc(ctx PrettyContext) prettier.Doc {
 		return ctx.Wrap(s, returnStatementKeywordDoc)
 	}
 
-	exprDoc := s.Expression.Doc(ctx)
-
-	// Indent the expression only for binary expressions so `??` chains
-	// break cleanly under `return`. Non-binary expressions render inline.
-	if _, isBinary := s.Expression.(*BinaryExpression); isBinary {
-		return ctx.Wrap(s, prettier.Concat{
-			returnStatementKeywordSpaceDoc,
-			prettier.Indent{Doc: exprDoc},
-		})
-	}
-
+	// BinaryExpression.Doc already provides its own Group+Indent for
+	// continuation-line indentation; render inline without an extra Indent
+	// wrapper to avoid double-indenting the continuation.
 	return ctx.Wrap(s, prettier.Concat{
 		returnStatementKeywordSpaceDoc,
-		exprDoc,
+		s.Expression.Doc(ctx),
 	})
 }
 
@@ -285,15 +277,12 @@ func (s *IfStatement) Doc(ctx PrettyContext) prettier.Doc {
 		doc = append(
 			doc,
 			ifStatementSpaceElseKeywordSpaceDoc,
-			prettier.Group{
-				Doc: elseDoc,
-			},
+			elseDoc,
 		)
 	}
 
-	return ctx.Wrap(s, prettier.Group{
-		Doc: doc,
-	})
+	// No outer Group: see WhileStatement.Doc for the rationale.
+	return ctx.Wrap(s, doc)
 }
 
 func (s *IfStatement) String() string {
@@ -361,13 +350,12 @@ const guardStatementGuardKeywordSpaceDoc = prettier.Text("guard ")
 const guardStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
 
 func (s *GuardStatement) Doc(ctx PrettyContext) prettier.Doc {
-	return ctx.Wrap(s, prettier.Group{
-		Doc: prettier.Concat{
-			guardStatementGuardKeywordSpaceDoc,
-			docOrEmpty(s.Test, ctx),
-			guardStatementSpaceElseKeywordSpaceDoc,
-			s.Else.Doc(ctx),
-		},
+	// No outer Group: see WhileStatement.Doc for the rationale.
+	return ctx.Wrap(s, prettier.Concat{
+		guardStatementGuardKeywordSpaceDoc,
+		docOrEmpty(s.Test, ctx),
+		guardStatementSpaceElseKeywordSpaceDoc,
+		s.Else.Doc(ctx),
 	})
 }
 
@@ -435,13 +423,15 @@ func (s *WhileStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
 const whileStatementKeywordSpaceDoc = prettier.Text("while ")
 
 func (s *WhileStatement) Doc(ctx PrettyContext) prettier.Doc {
-	return ctx.Wrap(s, prettier.Group{
-		Doc: prettier.Concat{
-			whileStatementKeywordSpaceDoc,
-			docOrEmpty(s.Test, ctx),
-			prettier.Space,
-			s.Block.Doc(ctx),
-		},
+	// No outer Group: wrapping a block-containing statement in a Group causes
+	// the Group's "fits" check to succeed at the opening `{` (followed by a
+	// HardLine), force-flattening the whole body and suppressing any nested
+	// Group's break decisions (e.g., long binary expressions inside).
+	return ctx.Wrap(s, prettier.Concat{
+		whileStatementKeywordSpaceDoc,
+		docOrEmpty(s.Test, ctx),
+		prettier.Space,
+		s.Block.Doc(ctx),
 	})
 }
 
@@ -538,9 +528,8 @@ func (s *ForStatement) Doc(ctx PrettyContext) prettier.Doc {
 		s.Block.Doc(ctx),
 	)
 
-	return ctx.Wrap(s, prettier.Group{
-		Doc: doc,
-	})
+	// No outer Group: see WhileStatement.Doc for the rationale.
+	return ctx.Wrap(s, doc)
 }
 
 func (s *ForStatement) String() string {
@@ -672,27 +661,20 @@ func (s *AssignmentStatement) Walk(walkChild func(Element)) {
 }
 
 func (s *AssignmentStatement) Doc(ctx PrettyContext) prettier.Doc {
+	// BinaryExpression.Doc already provides its own Group+Indent for
+	// continuation-line indentation, so we render the value inline here
+	// without adding another Indent layer (which would double-indent).
 	valueDoc := docOrEmpty(s.Value, ctx)
 
-	// Indent the value only for binary expressions (so `??` chains break
-	// cleanly). Non-binary values render inline so their own Indent doesn't
-	// compound with this one.
-	if _, isBinary := s.Value.(*BinaryExpression); isBinary {
-		valueDoc = prettier.Group{
-			Doc: prettier.Indent{
-				Doc: valueDoc,
-			},
-		}
-	}
-
-	return ctx.Wrap(s, prettier.Group{
-		Doc: prettier.Concat{
-			docOrEmpty(s.Target, ctx),
-			prettier.Space,
-			docOrEmpty(s.Transfer, ctx),
-			prettier.Space,
-			valueDoc,
-		},
+	// No outer Group: a value containing HardLines (e.g., a function
+	// expression body) would make the Group's "fits" check trivially succeed
+	// and force-flatten nested expressions inside.
+	return ctx.Wrap(s, prettier.Concat{
+		docOrEmpty(s.Target, ctx),
+		prettier.Space,
+		docOrEmpty(s.Transfer, ctx),
+		prettier.Space,
+		valueDoc,
 	})
 }
 
@@ -753,12 +735,11 @@ func (s *SwapStatement) Walk(walkChild func(Element)) {
 const swapStatementSpaceSymbolSpaceDoc = prettier.Text(" <-> ")
 
 func (s *SwapStatement) Doc(ctx PrettyContext) prettier.Doc {
-	return ctx.Wrap(s, prettier.Group{
-		Doc: prettier.Concat{
-			docOrEmpty(s.Left, ctx),
-			swapStatementSpaceSymbolSpaceDoc,
-			docOrEmpty(s.Right, ctx),
-		},
+	// No outer Group: see AssignmentStatement.Doc for the rationale.
+	return ctx.Wrap(s, prettier.Concat{
+		docOrEmpty(s.Left, ctx),
+		swapStatementSpaceSymbolSpaceDoc,
+		docOrEmpty(s.Right, ctx),
 	})
 }
 

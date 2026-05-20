@@ -328,7 +328,12 @@ func (c TestCondition) Doc(ctx PrettyContext) prettier.Doc {
 	if c.Message != nil {
 		messageDoc := c.Message.Doc(ctx)
 
-		doc = prettier.Concat{
+		// No outer Group around `test : message`: the Indent{HardLine, message}
+		// would make the Group's "fits" check trivially succeed at the HardLine
+		// and force-flatten nested expressions in `test` (e.g., long binary
+		// expressions). The test's own Doc (e.g., BinaryExpression.Doc) handles
+		// its own break decisions.
+		return ctx.Wrap(c, prettier.Concat{
 			doc,
 			prettier.Text(":"),
 			prettier.Indent{
@@ -337,12 +342,10 @@ func (c TestCondition) Doc(ctx PrettyContext) prettier.Doc {
 					messageDoc,
 				},
 			},
-		}
+		})
 	}
 
-	return ctx.Wrap(c, prettier.Group{
-		Doc: doc,
-	})
+	return ctx.Wrap(c, doc)
 }
 
 // EmitCondition
@@ -416,17 +419,18 @@ func (c *Conditions) Doc(ctx PrettyContext, keywordDoc prettier.Doc) prettier.Do
 		)
 	}
 
-	return prettier.Group{
-		Doc: prettier.Concat{
-			keywordDoc,
-			prettier.Space,
-			blockStartDoc,
-			prettier.Indent{
-				Doc: doc,
-			},
-			prettier.HardLine{},
-			blockEndDoc,
+	// No outer Group: the block body contains HardLines, which would make
+	// the Group's "fits" check trivially succeed at the opening `{` and
+	// force-flatten nested expressions inside conditions.
+	return prettier.Concat{
+		keywordDoc,
+		prettier.Space,
+		blockStartDoc,
+		prettier.Indent{
+			Doc: doc,
 		},
+		prettier.HardLine{},
+		blockEndDoc,
 	}
 }
 

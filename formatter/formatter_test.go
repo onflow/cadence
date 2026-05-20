@@ -342,6 +342,121 @@ func TestCommentInEmptyBlock(t *testing.T) {
 	}
 }
 
+// TestBinaryExpressionBreak guards against double-indenting (or no break at
+// all) when a binary-expression value is too long for one line. The expected
+// layout: left operand stays on the same line as the assignment operator,
+// and the binary operator + right operand wrap onto the next line at
+// 4-space continuation indent.
+func TestBinaryExpressionBreak(t *testing.T) {
+	t.Parallel()
+
+	src := []byte("fun foo() {\n  effectiveDebtTotalNamed = effectiveDebtTotalNamed + snapShot.effectiveDebt(debitBalance: trueBalance)\n}\n")
+	want := `fun foo() {
+    effectiveDebtTotalNamed = effectiveDebtTotalNamed
+        + snapShot.effectiveDebt(debitBalance: trueBalance)
+}
+`
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestConformanceBodyWrapping guards against the conformance Group wrapping
+// the body too — which caused the Group's "fits" check to trivially pass at
+// the opening `{`+HardLine, force-flattening all nested expressions inside
+// the body and preventing any wrapping no matter how long the lines.
+func TestConformanceBodyWrapping(t *testing.T) {
+	t.Parallel()
+
+	src := []byte(`resource R: Y {
+    fun f() {
+        callWithVeryVeryLongFunctionName(argumentOne: 1, argumentTwo: 2, argumentThree: 3, argumentFour: 4)
+    }
+}
+`)
+	want := `resource R: Y {
+    fun f() {
+        callWithVeryVeryLongFunctionName(
+            argumentOne: 1,
+            argumentTwo: 2,
+            argumentThree: 3,
+            argumentFour: 4
+        )
+    }
+}
+`
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestCommentInsideConformanceBody guards against a comment positionally
+// inside the body of a composite-with-conformances getting misattached as
+// trailing of the last conformance type, which would render before the
+// opening `{` and break syntax.
+func TestCommentInsideConformanceBody(t *testing.T) {
+	t.Parallel()
+
+	src := []byte("resource X: Y {\n        /// foo\n        var x: Y\n}\n")
+	want := `resource X: Y {
+    /// foo
+    var x: Y
+}
+`
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestBinaryExpressionBreakInNestedBlock guards against a prettier "fits"
+// bug where the outer Group around a block-containing statement (for/while/
+// if/guard) would trivially fit at the opening `{`+HardLine, force-flattening
+// any nested binary expressions deep inside and suppressing their own break
+// decisions.
+func TestBinaryExpressionBreakInNestedBlock(t *testing.T) {
+	t.Parallel()
+
+	src := []byte(`fun bar() {
+    for a in b {
+        switch x {
+            case y:
+               z = 11111111111111111 + 11111111111111111 + 11111111111111111 + 11111111111111111 + 11 + 22
+        }
+    }
+}
+`)
+	want := `fun bar() {
+    for a in b {
+        switch x {
+            case y:
+                z = 11111111111111111 + 11111111111111111 + 11111111111111111 + 11111111111111111
+                    + 11
+                    + 22
+        }
+    }
+}
+`
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
 func TestStripSemicolons_Default(t *testing.T) {
 	t.Parallel()
 	src := []byte("access(all) let x: Int = 1;\n")

@@ -5956,58 +5956,50 @@ func TestFunctionExpression_Doc(t *testing.T) {
 				prettier.Indent{
 					Doc: prettier.Concat{
 						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("pre"),
-								prettier.Space,
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Group{
+						prettier.Concat{
+							prettier.Text("pre"),
+							prettier.Space,
+							prettier.Text("{"),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Concat{
+										prettier.Text("true"),
+										prettier.Text(":"),
+										prettier.Indent{
 											Doc: prettier.Concat{
-												prettier.Text("true"),
-												prettier.Text(":"),
-												prettier.Indent{
-													Doc: prettier.Concat{
-														prettier.HardLine{},
-														prettier.Text("\"pre\""),
-													},
-												},
+												prettier.HardLine{},
+												prettier.Text("\"pre\""),
 											},
 										},
 									},
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
 							},
+							prettier.HardLine{},
+							prettier.Text("}"),
 						},
 						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("post"),
-								prettier.Space,
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Group{
+						prettier.Concat{
+							prettier.Text("post"),
+							prettier.Space,
+							prettier.Text("{"),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Concat{
+										prettier.Text("false"),
+										prettier.Text(":"),
+										prettier.Indent{
 											Doc: prettier.Concat{
-												prettier.Text("false"),
-												prettier.Text(":"),
-												prettier.Indent{
-													Doc: prettier.Concat{
-														prettier.HardLine{},
-														prettier.Text("\"post\""),
-													},
-												},
+												prettier.HardLine{},
+												prettier.Text("\"post\""),
 											},
 										},
 									},
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
 							},
+							prettier.HardLine{},
+							prettier.Text("}"),
 						},
 						prettier.Concat{
 							prettier.HardLine{},

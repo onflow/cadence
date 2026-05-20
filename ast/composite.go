@@ -259,7 +259,10 @@ func CompositeDocument(
 	membersDoc := members.Doc(ctx)
 
 	if len(conformances) > 0 {
-
+		// Build a Group containing only the `: A, B, C` conformance list.
+		// The body stays outside the Group — otherwise the body's HardLines
+		// would cause the Group to trivially "fit" at the opening `{`,
+		// force-flattening nested expressions in the body (prettier semantic).
 		conformancesDoc := prettier.Concat{
 			prettier.Line{},
 		}
@@ -278,16 +281,6 @@ func CompositeDocument(
 			)
 		}
 
-		conformancesDoc = append(
-			conformancesDoc,
-			prettier.Dedent{
-				Doc: prettier.Concat{
-					prettier.Line{},
-					membersDoc,
-				},
-			},
-		)
-
 		doc = append(
 			doc,
 			compositeConformancesSeparatorDoc,
@@ -296,6 +289,8 @@ func CompositeDocument(
 					Doc: conformancesDoc,
 				},
 			},
+			prettier.Space,
+			membersDoc,
 		)
 
 	} else {

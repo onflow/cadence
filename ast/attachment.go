@@ -164,16 +164,9 @@ func (d *AttachmentDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 			)
 		}
 
-		conformancesDoc = append(
-			conformancesDoc,
-			prettier.Dedent{
-				Doc: prettier.Concat{
-					prettier.Line{},
-					membersDoc,
-				},
-			},
-		)
-
+		// The body must live outside the Group — otherwise the body's HardLines
+		// would let the Group's "fits" check trivially succeed at `{` and
+		// force-flatten everything inside.
 		doc = append(
 			doc,
 			compositeConformancesSeparatorDoc,
@@ -182,6 +175,8 @@ func (d *AttachmentDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 					Doc: conformancesDoc,
 				},
 			},
+			prettier.Space,
+			membersDoc,
 		)
 
 	} else {

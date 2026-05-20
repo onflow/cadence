@@ -138,7 +138,83 @@ func Attach(program *ast.Program, groups []*CommentGroup, source []byte) *Commen
 	// to be trailing of the last entitlement, so they render inline rather
 	// than getting attached to the next AST element (e.g., TypeAnnotation).
 	hoistAccessInlineComments(cm, program, source)
+
+	// Post-process: hoist comments positionally after the opening `{` of a
+	// composite/interface body that got attached as trailing of the last
+	// conformance type. These comments are inside the body and should render
+	// as leading of the first member.
+	hoistConformanceBodyComments(cm, program, source)
 	return cm
+}
+
+// hoistConformanceBodyComments walks each composite/interface declaration
+// with conformances and a non-empty body. If the last conformance has a
+// trailing comment whose position is past the opening `{` of the body, that
+// comment is actually inside the body — move it to leading of the first
+// member.
+func hoistConformanceBodyComments(cm *CommentMap, program *ast.Program, source []byte) {
+	if len(source) == 0 {
+		return
+	}
+	ast.Inspect(program, func(node ast.Element) bool {
+		var conformances []*ast.NominalType
+		var members *ast.Members
+		switch d := node.(type) {
+		case *ast.CompositeDeclaration:
+			conformances = d.Conformances
+			members = d.Members
+		case *ast.InterfaceDeclaration:
+			conformances = d.Conformances
+			members = d.Members
+		default:
+			return true
+		}
+		if len(conformances) == 0 || members == nil {
+			return true
+		}
+		decls := members.Declarations()
+		if len(decls) == 0 {
+			return true
+		}
+		lastConf := conformances[len(conformances)-1]
+		trailing := cm.Trailing[lastConf]
+		if len(trailing) == 0 {
+			return true
+		}
+		// Find the opening `{` byte after the last conformance.
+		startScan := lastConf.EndPosition(nil).Offset + 1
+		braceOffset := -1
+		for i := startScan; i < len(source); i++ {
+			if source[i] == '{' {
+				braceOffset = i
+				break
+			}
+		}
+		if braceOffset < 0 {
+			return true
+		}
+		// Partition trailing comments: those past `{` go to leading of first member.
+		keep := trailing[:0]
+		var hoisted []*CommentGroup
+		for _, g := range trailing {
+			if g.StartPos().Offset > braceOffset {
+				hoisted = append(hoisted, g)
+			} else {
+				keep = append(keep, g)
+			}
+		}
+		if len(hoisted) == 0 {
+			return true
+		}
+		if len(keep) == 0 {
+			delete(cm.Trailing, lastConf)
+		} else {
+			cm.Trailing[lastConf] = keep
+		}
+		firstMember := decls[0]
+		cm.Leading[firstMember] = append(hoisted, cm.Leading[firstMember]...)
+		return true
+	})
 }
 
 // hoistAccessInlineComments walks each declaration with an access modifier,

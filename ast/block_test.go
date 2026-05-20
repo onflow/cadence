@@ -558,57 +558,49 @@ func TestFunctionBlock_Doc(t *testing.T) {
 				prettier.Indent{
 					Doc: prettier.Concat{
 						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("pre"),
-								prettier.Space,
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Group{
+						prettier.Concat{
+							prettier.Text("pre"),
+							prettier.Space,
+							prettier.Text("{"),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Concat{
+										prettier.Text("false"),
+										prettier.Text(":"),
+										prettier.Indent{
 											Doc: prettier.Concat{
-												prettier.Text("false"),
-												prettier.Text(":"),
-												prettier.Indent{
-													Doc: prettier.Concat{
-														prettier.HardLine{},
-														prettier.Text("\"Pre failed\""),
-													},
-												},
-											},
-										},
-										prettier.HardLine{},
-										prettier.Concat{
-											prettier.Text("emit "),
-											prettier.Concat{
-												prettier.Text("Foo"),
-												prettier.Text("()"),
+												prettier.HardLine{},
+												prettier.Text("\"Pre failed\""),
 											},
 										},
 									},
+									prettier.HardLine{},
+									prettier.Concat{
+										prettier.Text("emit "),
+										prettier.Concat{
+											prettier.Text("Foo"),
+											prettier.Text("()"),
+										},
+									},
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
 							},
+							prettier.HardLine{},
+							prettier.Text("}"),
 						},
 						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("post"),
-								prettier.Space,
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Group{
-											Doc: prettier.Text("true"),
-										},
-									},
+						prettier.Concat{
+							prettier.Text("post"),
+							prettier.Space,
+							prettier.Text("{"),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Text("true"),
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
 							},
+							prettier.HardLine{},
+							prettier.Text("}"),
 						},
 						prettier.Concat{
 							prettier.HardLine{},
@@ -652,36 +644,32 @@ func TestFunctionBlock_Doc(t *testing.T) {
 				prettier.Indent{
 					Doc: prettier.Concat{
 						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("pre"),
-								prettier.Space,
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Text(""),
-									},
+						prettier.Concat{
+							prettier.Text("pre"),
+							prettier.Space,
+							prettier.Text("{"),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Text(""),
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
 							},
+							prettier.HardLine{},
+							prettier.Text("}"),
 						},
 						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("post"),
-								prettier.Space,
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Text(""),
-									},
+						prettier.Concat{
+							prettier.Text("post"),
+							prettier.Space,
+							prettier.Text("{"),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Text(""),
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
 							},
+							prettier.HardLine{},
+							prettier.Text("}"),
 						},
 					},
 				},
@@ -887,15 +875,13 @@ func TestCondition_Doc(t *testing.T) {
 
 		require.Equal(
 			t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("true"),
-					prettier.Text(":"),
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.HardLine{},
-							prettier.Text(`"Test condition"`),
-						},
+			prettier.Concat{
+				prettier.Text("true"),
+				prettier.Text(":"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Text(`"Test condition"`),
 					},
 				},
 			},
@@ -918,9 +904,7 @@ func TestCondition_Doc(t *testing.T) {
 		}
 
 		require.Equal(t,
-			prettier.Group{
-				Doc: prettier.Text("true"),
-			},
+			prettier.Text("true"),
 			condition.Doc(NopContext{}),
 		)
 	})
@@ -940,15 +924,13 @@ func TestCondition_Doc(t *testing.T) {
 		}
 
 		require.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text(""),
-					prettier.Text(":"),
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.HardLine{},
-							prettier.Text(`"Test condition"`),
-						},
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Text(":"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Text(`"Test condition"`),
 					},
 				},
 			},
@@ -963,9 +945,7 @@ func TestCondition_Doc(t *testing.T) {
 		condition := TestCondition{}
 
 		require.Equal(t,
-			prettier.Group{
-				Doc: prettier.Text(""),
-			},
+			prettier.Text(""),
 			condition.Doc(NopContext{}),
 		)
 	})

@@ -178,43 +178,25 @@ func (d *VariableDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 	var valuesDoc prettier.Doc
 
 	if d.SecondValue == nil {
-		// Indent the value continuation only for binary expressions
-		// (so `??` chains break under the `let`).
-		// Non-binary values render inline to avoid compounding with the value's own Indent (e.g., call args).
-
-		_, isBinary := d.Value.(*BinaryExpression)
+		// BinaryExpression.Doc already provides its own Group+Indent for
+		// continuation-line indentation (so `??` and similar chains break
+		// under the `let`). Other values render inline. Either way, we
+		// don't wrap the value in an extra Indent here — that would
+		// double-indent the continuation.
 
 		separator := prettier.Doc(prettier.Space)
 		if valueHasLeading {
 			separator = prettier.HardLine{}
 		}
 
-		if isBinary {
-			valuesDoc = prettier.Concat{
-				prettier.Group{
-					Doc: identifierTypeDoc,
-				},
-				prettier.Space,
-				transferDoc,
-				prettier.Group{
-					Doc: prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.Line{},
-							valueDoc,
-						},
-					},
-				},
-			}
-		} else {
-			valuesDoc = prettier.Concat{
-				prettier.Group{
-					Doc: identifierTypeDoc,
-				},
-				prettier.Space,
-				transferDoc,
-				separator,
-				valueDoc,
-			}
+		valuesDoc = prettier.Concat{
+			prettier.Group{
+				Doc: identifierTypeDoc,
+			},
+			prettier.Space,
+			transferDoc,
+			separator,
+			valueDoc,
 		}
 	} else {
 		secondTransferDoc := docOrEmpty(d.SecondTransfer, ctx)
@@ -244,27 +226,26 @@ func (d *VariableDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 		}
 	}
 
-	var doc prettier.Concat
+	// Wrap only the header (access + keyword) in a Group so the access
+	// modifier's soft-break (Line{}) decision is independent of the value.
+	// Otherwise, a value that contains a HardLine (e.g., a function
+	// expression with a body) would make any wrapping Group's "fits" check
+	// trivially succeed, force-flattening all nested expressions inside.
+	var headerDoc prettier.Concat
 
 	if d.Access != AccessNotSpecified {
-		doc = append(
-			doc,
+		headerDoc = append(
+			headerDoc,
 			docOrEmpty(d.Access, ctx),
 			prettier.Line{},
 		)
 	}
 
-	doc = append(
-		doc,
-		keywordDoc,
-		prettier.Space,
-		prettier.Group{
-			Doc: valuesDoc,
-		},
-	)
+	headerDoc = append(headerDoc, keywordDoc, prettier.Space)
 
-	return ctx.Wrap(d, prettier.Group{
-		Doc: doc,
+	return ctx.Wrap(d, prettier.Concat{
+		prettier.Group{Doc: headerDoc},
+		valuesDoc,
 	})
 }
 

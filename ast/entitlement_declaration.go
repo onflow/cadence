@@ -293,15 +293,27 @@ var mappingStartDoc prettier.Doc = prettier.Text("{")
 var mappingEndDoc prettier.Doc = prettier.Text("}")
 
 func (d *EntitlementMappingDeclaration) Doc(ctx PrettyContext) prettier.Doc {
-	var doc prettier.Concat
+	// Wrap only the header (access + entitlement + mapping + name) in a Group
+	// so the access modifier's soft-break decision is independent of the body.
+	// The body block has HardLines which would make any wrapping Group's
+	// "fits" check trivially succeed at `{`, force-flattening everything
+	// inside.
+	var headerDoc prettier.Concat
 
 	if d.Access != AccessNotSpecified {
-		doc = append(
-			doc,
+		headerDoc = append(
+			headerDoc,
 			docOrEmpty(d.Access, ctx),
 			prettier.Line{},
 		)
 	}
+
+	headerDoc = append(
+		headerDoc,
+		entitlementKeywordSpaceDoc,
+		mappingKeywordSpaceDoc,
+		prettier.Text(d.Identifier.Identifier),
+	)
 
 	var elementsDocs prettier.Concat
 
@@ -326,11 +338,8 @@ func (d *EntitlementMappingDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 		)
 	}
 
-	doc = append(
-		doc,
-		entitlementKeywordSpaceDoc,
-		mappingKeywordSpaceDoc,
-		prettier.Text(d.Identifier.Identifier),
+	return ctx.Wrap(d, prettier.Concat{
+		prettier.Group{Doc: headerDoc},
 		prettier.Space,
 		mappingStartDoc,
 		prettier.Indent{
@@ -344,10 +353,6 @@ func (d *EntitlementMappingDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 		},
 		prettier.HardLine{},
 		mappingEndDoc,
-	)
-
-	return ctx.Wrap(d, prettier.Group{
-		Doc: doc,
 	})
 }
 

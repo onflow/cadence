@@ -488,13 +488,11 @@ func TestIfStatement_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("if "),
-					prettier.Text("false"),
-					prettier.Space,
-					prettier.Text("{}"),
-				},
+			prettier.Concat{
+				prettier.Text("if "),
+				prettier.Text("false"),
+				prettier.Space,
+				prettier.Text("{}"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -526,23 +524,17 @@ func TestIfStatement_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
+			prettier.Concat{
+				prettier.Text("if "),
+				prettier.Text("false"),
+				prettier.Space,
+				prettier.Text("{}"),
+				prettier.Text(" else "),
+				prettier.Concat{
 					prettier.Text("if "),
-					prettier.Text("false"),
+					prettier.Text("true"),
 					prettier.Space,
 					prettier.Text("{}"),
-					prettier.Text(" else "),
-					prettier.Group{
-						Doc: prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("if "),
-								prettier.Text("true"),
-								prettier.Space,
-								prettier.Text("{}"),
-							},
-						},
-					},
 				},
 			},
 			stmt.Doc(NopContext{}),
@@ -556,13 +548,11 @@ func TestIfStatement_Doc(t *testing.T) {
 		stmt := &IfStatement{}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("if "),
-					prettier.Text(""),
-					prettier.Space,
-					prettier.Text("{}"),
-				},
+			prettier.Concat{
+				prettier.Text("if "),
+				prettier.Text(""),
+				prettier.Space,
+				prettier.Text("{}"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -765,13 +755,11 @@ func TestGuardStatement_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("guard "),
-					prettier.Text("true"),
-					prettier.Text(" else "),
-					prettier.Text("{}"),
-				},
+			prettier.Concat{
+				prettier.Text("guard "),
+				prettier.Text("true"),
+				prettier.Text(" else "),
+				prettier.Text("{}"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -784,13 +772,11 @@ func TestGuardStatement_Doc(t *testing.T) {
 		stmt := &GuardStatement{}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("guard "),
-					prettier.Text(""),
-					prettier.Text(" else "),
-					prettier.Text("{}"),
-				},
+			prettier.Concat{
+				prettier.Text("guard "),
+				prettier.Text(""),
+				prettier.Text(" else "),
+				prettier.Text("{}"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -926,13 +912,11 @@ func TestWhileStatement_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("while "),
-					prettier.Text("false"),
-					prettier.Space,
-					prettier.Text("{}"),
-				},
+			prettier.Concat{
+				prettier.Text("while "),
+				prettier.Text("false"),
+				prettier.Space,
+				prettier.Text("{}"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -944,13 +928,11 @@ func TestWhileStatement_Doc(t *testing.T) {
 		stmt := &WhileStatement{}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("while "),
-					prettier.Text(""),
-					prettier.Space,
-					prettier.Text("{}"),
-				},
+			prettier.Concat{
+				prettier.Text("while "),
+				prettier.Text(""),
+				prettier.Space,
+				prettier.Text("{}"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -1173,15 +1155,13 @@ func TestForStatement_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("for "),
-					prettier.Text("foobar"),
-					prettier.Text(" in "),
-					prettier.Text("false"),
-					prettier.Space,
-					prettier.Text("{}"),
-				},
+			prettier.Concat{
+				prettier.Text("for "),
+				prettier.Text("foobar"),
+				prettier.Text(" in "),
+				prettier.Text("false"),
+				prettier.Space,
+				prettier.Text("{}"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -1207,17 +1187,15 @@ func TestForStatement_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("for "),
-					prettier.Text("i"),
-					prettier.Text(", "),
-					prettier.Text("foobar"),
-					prettier.Text(" in "),
-					prettier.Text("false"),
-					prettier.Space,
-					prettier.Text("{}"),
-				},
+			prettier.Concat{
+				prettier.Text("for "),
+				prettier.Text("i"),
+				prettier.Text(", "),
+				prettier.Text("foobar"),
+				prettier.Text(" in "),
+				prettier.Text("false"),
+				prettier.Space,
+				prettier.Text("{}"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -1230,15 +1208,13 @@ func TestForStatement_Doc(t *testing.T) {
 		stmt := &ForStatement{}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("for "),
-					prettier.Text(""),
-					prettier.Text(" in "),
-					prettier.Text(""),
-					prettier.Space,
-					prettier.Text("{}"),
-				},
+			prettier.Concat{
+				prettier.Text("for "),
+				prettier.Text(""),
+				prettier.Text(" in "),
+				prettier.Text(""),
+				prettier.Space,
+				prettier.Text("{}"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -1421,14 +1397,12 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 		}
 
 		require.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("foobar"),
-					prettier.Space,
-					prettier.Text("="),
-					prettier.Space,
-					prettier.Text("false"),
-				},
+			prettier.Concat{
+				prettier.Text("foobar"),
+				prettier.Space,
+				prettier.Text("="),
+				prettier.Space,
+				prettier.Text("false"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -1440,14 +1414,12 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 		stmt := &AssignmentStatement{}
 
 		require.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text(""),
-					prettier.Space,
-					prettier.Text(""),
-					prettier.Space,
-					prettier.Text(""),
-				},
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Space,
+				prettier.Text(""),
+				prettier.Space,
+				prettier.Text(""),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -1596,12 +1568,10 @@ func TestSwapStatement_Doc(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("foobar"),
-					prettier.Text(" <-> "),
-					prettier.Text("false"),
-				},
+			prettier.Concat{
+				prettier.Text("foobar"),
+				prettier.Text(" <-> "),
+				prettier.Text("false"),
 			},
 			stmt.Doc(NopContext{}),
 		)
@@ -1613,12 +1583,10 @@ func TestSwapStatement_Doc(t *testing.T) {
 		stmt := &SwapStatement{}
 
 		assert.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text(""),
-					prettier.Text(" <-> "),
-					prettier.Text(""),
-				},
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Text(" <-> "),
+				prettier.Text(""),
 			},
 			stmt.Doc(NopContext{}),
 		)
