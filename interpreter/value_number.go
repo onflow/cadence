@@ -21,6 +21,8 @@ package interpreter
 import (
 	"math/big"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
@@ -120,8 +122,22 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			funcType,
 			NativeFixedPointPowFunction,
+		)
+
+	case sema.FixedPointNumericTypeMultiplyDivideFunctionName:
+		funcType, ok := sema.FixedPointMultiplyDivideFunctionTypes[typ]
+		if !ok {
+			return nil
+		}
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			accessedReference,
+			funcType,
+			NativeFixedPointMultiplyDivideFunction,
 		)
 	}
 
@@ -232,6 +248,26 @@ var NativeNumberSaturatingDivideFunction = NativeFunction(
 	) Value {
 		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingDiv(context, other)
+	},
+)
+
+var NativeFixedPointMultiplyDivideFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		factor := AssertValueOfType[FixedPointValue](args[0])
+		divisor := AssertValueOfType[FixedPointValue](args[1])
+		var rounding fix.RoundingMode
+		if len(args) > 2 {
+			rounding = extractRoundingRule(args[2])
+		} else {
+			rounding = fix.RoundTruncate
+		}
+		return receiver.(FixedPointValue).MultiplyDivide(context, factor, divisor, rounding)
 	},
 )
 
