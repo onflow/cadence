@@ -48,8 +48,9 @@ type ReturnInfo struct {
 	// - `break` (targeting a loop or a switch), or
 	// - `continue`.
 	//
-	// This is the generic "every path terminated" flag
-	// and is the one observed by `IsUnreachable()`.
+	// This is the generic "every path terminated" flag and is the one
+	// observed by `IsUnreachable()` to decide whether subsequent
+	// statements are reachable.
 	//
 	// NOTE: It is intentionally NOT just `DefinitelyReturned || DefinitelyHalted`,
 	// because AND-merging each kind-specific flag separately would lose
@@ -76,6 +77,14 @@ type ReturnInfo struct {
 	//
 	// The same logic applies to `if break else return`,
 	// `if continue else return`, etc.
+	//
+	// Because `DefinitelyExited` is broadened to also include break and
+	// continue, it can be true even when the function itself has not
+	// exited (the break/continue exits only the enclosing loop/switch).
+	// Sites that care specifically about "did the function exit" (notably
+	// `checkResourceLoss`) recover that by checking
+	// `DefinitelyExited && !MaybeJumpedLoop && !MaybeJumpedSwitch` —
+	// see `checkResourceLoss` for the rationale.
 	//
 	// At a case body's terminal state and at a loop body's terminal state,
 	// `DefinitelyExited` is cleared alongside `DefinitelyReturned` and `DefinitelyHalted`
@@ -148,12 +157,15 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 	ri.mergeJumpOffsets(thenReturnInfo, elseReturnInfo)
 }
 
+// mergeJumpOffsets propagates the jump offsets recorded in either branch
+// up into the merged ReturnInfo. Each branch's `ReturnInfo.Clone()` makes
+// its own child JumpOffsets set, so jumps in one branch do not pollute
+// the sibling branch's view (which would incorrectly downgrade
+// invalidations there, since `maybeAddResourceInvalidation` uses jump
+// offsets to detect "a jump occurred between declaration and use").
+// After the conditional, both branches' jumps are potential from the
+// perspective of subsequent code, so we OR them into the parent.
 func (ri *ReturnInfo) mergeJumpOffsets(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {
-	// Propagate jump offsets recorded in either branch.
-	// Each branch has its own cloned JumpOffsets set (see Clone),
-	// so jumps in one branch do not contaminate the sibling branch's view.
-	// After the conditional, both branches' jumps are potential
-	// from the perspective of code that follows.
 	addAll := func(other *ReturnInfo) {
 		_ = other.JumpOffsets.ForEach(func(offset int) error {
 			ri.JumpOffsets.Add(offset)

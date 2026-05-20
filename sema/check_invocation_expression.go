@@ -209,7 +209,15 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 	checker.checkMemberInvocationResourceInvalidation(invokedExpression)
 
-	// Update the return info for invocations that do not return (i.e. have a `Never` return type)
+	// Update the return info for invocations that do not return
+	// (i.e. have a `Never` return type — a "halt", e.g. `panic(...)`).
+	//
+	// NOTE: unlike `VisitReturnStatement`, no explicit
+	// `checkResourceLoss` call here. A halting function intentionally
+	// does NOT lead to a resource-loss error: the program aborts, so
+	// the "leak" never materializes. The scope-leave skip in
+	// `checkResourceLoss` observes `DefinitelyExited` (with no
+	// `MaybeJumped*` set) and skips, preserving that.
 
 	if returnType == NeverType {
 		returnInfo := checker.functionActivations.Current().ReturnInfo

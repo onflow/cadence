@@ -24,13 +24,37 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 	functionActivation := checker.functionActivations.Current()
 
 	defer func() {
-		// NOTE: check for resource loss before declaring the function
-		// as having definitely returned.
+		// Check for resource loss at the return site, BEFORE marking
+		// the function as having definitely exited.
 		//
-		// Check all variables declared *inside* of the function.
-		// The function activation's value activation depth is where the *function* is declared ("parent scope"),
-		// and two value activation scopes are defined for the function itself: for the parameters and the body.
-
+		// This is the only termination kind that calls `checkResourceLoss`
+		// explicitly. The reason is twofold:
+		//
+		// 1. Reporting at the return statement (rather than at the
+		//    end-of-function scope-leave) makes the error point at the
+		//    return — the source location the programmer expects.
+		//
+		// 2. Return is a single-site termination: the value scopes
+		//    being abandoned are unambiguous, and there are no sibling
+		//    branches that might each try to report the same leak.
+		//    By contrast, break/continue can occur in multiple sibling
+		//    branches (e.g. `if cond { break } else { break }`) whose
+		//    resource scopes are cloned independently — having them
+		//    report at their site would double-report. Halt
+		//    intentionally suppresses leak reports (see the skip in
+		//    `checkResourceLoss`).
+		//
+		// `checkResourceLoss` checks all variables declared inside the
+		// function. The function activation's `ValueActivationDepth` is
+		// where the *function* is declared (its parent scope); two
+		// value-activation scopes are defined for the function itself
+		// (parameters, then body), so `+ 1` covers both.
+		//
+		// The check runs BEFORE `DefinitelyExited` is set, so the
+		// scope-leave skip in `checkResourceLoss` does not yet
+		// suppress it. After this point, `DefinitelyExited = true`
+		// causes subsequent scope-leaves to skip and avoid
+		// double-reporting.
 		checker.checkResourceLoss(functionActivation.ValueActivationDepth + 1)
 		functionActivation.ReturnInfo.MaybeReturned = true
 		functionActivation.ReturnInfo.DefinitelyReturned = true
