@@ -1477,7 +1477,8 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 //
 // Called from two places:
 //   - explicitly by `VisitReturnStatement` at the return site, so the
-//     reported leak points at the `return`;
+//     reported leak points at the `return` and the per-branch resource
+//     state is still available (see the comment there);
 //   - implicitly by `leaveValueScope` whenever a block scope ends.
 //
 // The skip condition below resolves the interaction between those two

@@ -28,20 +28,29 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 		// the function as having definitely exited.
 		//
 		// This is the only termination kind that calls `checkResourceLoss`
-		// explicitly. The reason is twofold:
+		// explicitly. Three reasons:
 		//
-		// 1. Reporting at the return statement (rather than at the
+		// 1. Resource state at return time. After the branches of an
+		//    `if-else` where both sides return, `mergeResourceInfos`
+		//    NO-OPs (neither invalidation is effective past the merge
+		//    because neither branch falls through). The outer scope
+		//    therefore loses the per-branch move/destroy information.
+		//    Running `checkResourceLoss` HERE — while
+		//    `checker.resources` is still the branch's cloned resource
+		//    state — catches leaks that would be missed if we relied
+		//    only on the surrounding scope-leave.
+		//
+		// 2. Reporting at the return statement (rather than at the
 		//    end-of-function scope-leave) makes the error point at the
 		//    return — the source location the programmer expects.
 		//
-		// 2. Return is a single-site termination: the value scopes
-		//    being abandoned are unambiguous, and there are no sibling
-		//    branches that might each try to report the same leak.
-		//    By contrast, break/continue can occur in multiple sibling
-		//    branches (e.g. `if cond { break } else { break }`) whose
-		//    resource scopes are cloned independently — having them
-		//    report at their site would double-report. Halt
-		//    intentionally suppresses leak reports (see the skip in
+		// 3. Return is a single-site termination: no sibling branches
+		//    could each try to report the same leak. By contrast,
+		//    break/continue can occur in multiple sibling branches
+		//    (e.g. `if cond { break } else { break }`) whose resource
+		//    scopes are cloned independently — having them report at
+		//    their site would double-report. Halt intentionally
+		//    suppresses leak reports (see the skip in
 		//    `checkResourceLoss`).
 		//
 		// `checkResourceLoss` checks all variables declared inside the
@@ -53,8 +62,8 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 		// The check runs BEFORE `DefinitelyExited` is set, so the
 		// scope-leave skip in `checkResourceLoss` does not yet
 		// suppress it. After this point, `DefinitelyExited = true`
-		// causes subsequent scope-leaves to skip and avoid
-		// double-reporting.
+		// causes the surrounding scope-leave to skip (via the
+		// `DE && !MJL && !MJS` condition) and avoid double-reporting.
 		checker.checkResourceLoss(functionActivation.ValueActivationDepth + 1)
 		functionActivation.ReturnInfo.MaybeReturned = true
 		functionActivation.ReturnInfo.DefinitelyReturned = true
