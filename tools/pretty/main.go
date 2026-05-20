@@ -29,6 +29,7 @@ import (
 
 	"github.com/turbolent/prettier"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/parser"
 )
 
@@ -39,7 +40,7 @@ func pretty(code string, maxLineWidth int) string {
 	}
 
 	var b strings.Builder
-	prettier.Prettier(&b, program.Doc(), maxLineWidth, "    ")
+	prettier.Prettier(&b, program.Doc(ast.NopContext{}), maxLineWidth, "    ")
 	return b.String()
 }
 

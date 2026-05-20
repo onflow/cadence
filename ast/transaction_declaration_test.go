@@ -231,23 +231,21 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			prettier.Text("{"),
 			prettier.Indent{
 				Doc: prettier.Concat{
-					prettier.Concat{
-						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("access(all)"),
-								prettier.Line{},
-								prettier.Concat{
-									prettier.Text("let"),
-									prettier.Space,
-									prettier.Group{
-										Doc: prettier.Concat{
-											prettier.Text("f"),
-											prettier.Text(": "),
-											prettier.Concat{
-												prettier.Text("@"),
-												prettier.Text("F"),
-											},
+					prettier.HardLine{},
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("access(all)"),
+							prettier.Line{},
+							prettier.Concat{
+								prettier.Text("let"),
+								prettier.Space,
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Text("f"),
+										prettier.Text(": "),
+										prettier.Concat{
+											prettier.Text("@"),
+											prettier.Text("F"),
 										},
 									},
 								},
@@ -256,111 +254,107 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 					},
 					prettier.HardLine{},
 					prettier.Concat{
-						prettier.HardLine{},
-						prettier.Concat{
-							prettier.Text("prepare"),
-							prettier.Group{
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("prepare"),
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("("),
+												prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.SoftLine{},
+														prettier.Concat{
+															prettier.Text("signer"),
+															prettier.Text(": "),
+															prettier.Text("AuthAccount"),
+														},
+													},
+												},
+												prettier.SoftLine{},
+												prettier.Text(")"),
+											},
+										},
+									},
+								},
+							},
+						},
+						prettier.Space,
+						prettier.Text("{}"),
+					},
+					prettier.HardLine{},
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("pre"),
+							prettier.Space,
+							prettier.Text("{"),
+							prettier.Indent{
 								Doc: prettier.Concat{
+									prettier.HardLine{},
 									prettier.Group{
 										Doc: prettier.Concat{
-											prettier.Text("("),
+											prettier.Text("true"),
+											prettier.Text(":"),
 											prettier.Indent{
 												Doc: prettier.Concat{
-													prettier.SoftLine{},
-													prettier.Concat{
-														prettier.Text("signer"),
-														prettier.Text(": "),
-														prettier.Text("AuthAccount"),
-													},
+													prettier.HardLine{},
+													prettier.Text("\"pre\""),
 												},
 											},
-											prettier.SoftLine{},
-											prettier.Text(")"),
 										},
 									},
 								},
 							},
-							prettier.Space,
-							prettier.Text("{}"),
+							prettier.HardLine{},
+							prettier.Text("}"),
 						},
 					},
 					prettier.HardLine{},
 					prettier.Concat{
-						prettier.HardLine{},
 						prettier.Group{
 							Doc: prettier.Concat{
-								prettier.Text("pre"),
-								prettier.Space,
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Group{
-											Doc: prettier.Concat{
-												prettier.Text("true"),
-												prettier.Text(":"),
-												prettier.Indent{
-													Doc: prettier.Concat{
-														prettier.HardLine{},
-														prettier.Text("\"pre\""),
-													},
-												},
-											},
-										},
-									},
-								},
-								prettier.HardLine{},
-								prettier.Text("}"),
+								prettier.Text("execute"),
 							},
 						},
-					},
-					prettier.HardLine{},
-					prettier.Concat{
-						prettier.HardLine{},
+						prettier.Space,
 						prettier.Concat{
-							prettier.Text("execute"),
-							prettier.Space,
-							prettier.Concat{
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Text("\"xyz\""),
-									},
+							prettier.Text("{"),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Text("\"xyz\""),
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
 							},
+							prettier.HardLine{},
+							prettier.Text("}"),
 						},
 					},
 					prettier.HardLine{},
-					prettier.Concat{
-						prettier.HardLine{},
-						prettier.Group{
-							Doc: prettier.Concat{
-								prettier.Text("post"),
-								prettier.Space,
-								prettier.Text("{"),
-								prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.HardLine{},
-										prettier.Group{
-											Doc: prettier.Concat{
-												prettier.Text("false"),
-												prettier.Text(":"),
-												prettier.Indent{
-													Doc: prettier.Concat{
-														prettier.HardLine{},
-														prettier.Text("\"post\""),
-													},
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("post"),
+							prettier.Space,
+							prettier.Text("{"),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Group{
+										Doc: prettier.Concat{
+											prettier.Text("false"),
+											prettier.Text(":"),
+											prettier.Indent{
+												Doc: prettier.Concat{
+													prettier.HardLine{},
+													prettier.Text("\"post\""),
 												},
 											},
 										},
 									},
 								},
-								prettier.HardLine{},
-								prettier.Text("}"),
 							},
+							prettier.HardLine{},
+							prettier.Text("}"),
 						},
 					},
 				},
@@ -368,7 +362,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			prettier.HardLine{},
 			prettier.Text("}"),
 		},
-		decl.Doc(),
+		decl.Doc(NopContext{}),
 	)
 }
 
@@ -484,7 +478,21 @@ func TestTransactionDeclaration_String(t *testing.T) {
 
 	require.Equal(
 		t,
-		"transaction(x: X) {\n    access(all) let f: @F\n    \n    prepare(signer: &Account) {}\n    \n    pre {\n        true:\n            \"pre\"\n    }\n    \n    execute {\n        \"xyz\"\n    }\n    \n    post {\n        false:\n            \"post\"\n    }\n}",
+		`transaction(x: X) {
+    access(all) let f: @F
+    prepare(signer: &Account) {}
+    pre {
+        true:
+            "pre"
+    }
+    execute {
+        "xyz"
+    }
+    post {
+        false:
+            "post"
+    }
+}`,
 		decl.String(),
 	)
 }

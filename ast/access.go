@@ -38,7 +38,7 @@ type Access interface {
 	Description() string
 	String() string
 	MarshalJSON() ([]byte, error)
-	Doc() prettier.Doc
+	Doc(ctx PrettyContext) prettier.Doc
 }
 
 type Separator uint8
@@ -205,8 +205,18 @@ func (e EntitlementAccess) Keyword() string {
 	return sb.String()
 }
 
-func (e EntitlementAccess) Doc() prettier.Doc {
-	return prettier.Text(e.Keyword())
+func (e EntitlementAccess) Doc(ctx PrettyContext) prettier.Doc {
+	// Render each entitlement via its own Doc(ctx) so any attached comments
+	// (e.g., `access(A /* note */, B)`) are preserved inline by ctx.Wrap.
+	parts := prettier.Concat{prettier.Text("access(")}
+	separator := prettier.Text(e.EntitlementSet.Separator().String())
+	for i, entitlement := range e.EntitlementSet.Entitlements() {
+		if i > 0 {
+			parts = append(parts, separator)
+		}
+		parts = append(parts, entitlement.Doc(ctx))
+	}
+	return append(parts, prettier.Text(")"))
 }
 
 func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
@@ -260,8 +270,14 @@ func (a *MappedAccess) Keyword() string {
 	return str.String()
 }
 
-func (a *MappedAccess) Doc() prettier.Doc {
-	return prettier.Text(a.Keyword())
+func (a *MappedAccess) Doc(ctx PrettyContext) prettier.Doc {
+	// Render the entitlement map via its own Doc(ctx) so any attached comments
+	// are preserved inline by ctx.Wrap.
+	return prettier.Concat{
+		prettier.Text("access(mapping "),
+		a.EntitlementMap.Doc(ctx),
+		prettier.Text(")"),
+	}
 }
 
 func (a *MappedAccess) MarshalJSON() ([]byte, error) {
@@ -371,6 +387,6 @@ func (a PrimitiveAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
 }
 
-func (a PrimitiveAccess) Doc() prettier.Doc {
+func (a PrimitiveAccess) Doc(_ PrettyContext) prettier.Doc {
 	return prettier.Text(a.Keyword())
 }

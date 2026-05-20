@@ -43,6 +43,6 @@ func TestStringTemplate_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Text("\"abc\""),
-		stmt.Doc(),
+		stmt.Doc(NopContext{}),
 	)
 }

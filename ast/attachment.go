@@ -120,13 +120,13 @@ func (d *AttachmentDeclaration) ConformanceList() []*NominalType {
 const attachmentStatementDoc = prettier.Text("attachment")
 const attachmentStatementForDoc = prettier.Text("for")
 
-func (d *AttachmentDeclaration) Doc() prettier.Doc {
+func (d *AttachmentDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 	var doc prettier.Concat
 
 	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			docOrEmpty(d.Access),
+			docOrEmpty(d.Access, ctx),
 			prettier.Line{},
 		)
 	}
@@ -139,10 +139,10 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 		prettier.Space,
 		attachmentStatementForDoc,
 		prettier.Space,
-		docOrEmpty(d.BaseType),
+		docOrEmpty(d.BaseType, ctx),
 	)
 
-	membersDoc := d.Members.Doc()
+	membersDoc := d.Members.Doc(ctx)
 
 	if len(d.Conformances) > 0 {
 
@@ -160,7 +160,7 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 
 			conformancesDoc = append(
 				conformancesDoc,
-				docOrEmpty(conformance),
+				docOrEmpty(conformance, ctx),
 			)
 		}
 
@@ -192,7 +192,7 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 		)
 	}
 
-	return doc
+	return ctx.Wrap(d, doc)
 }
 
 func (d *AttachmentDeclaration) MarshalJSON() ([]byte, error) {
@@ -255,16 +255,16 @@ func (e *AttachExpression) String() string {
 const attachExpressionDoc = prettier.Text("attach")
 const attachExpressionToDoc = prettier.Text("to")
 
-func (e *AttachExpression) Doc() prettier.Doc {
-	return prettier.Concat{
+func (e *AttachExpression) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(e, prettier.Concat{
 		attachExpressionDoc,
 		prettier.Space,
-		docOrEmpty(e.Attachment),
+		docOrEmpty(e.Attachment, ctx),
 		prettier.Space,
 		attachExpressionToDoc,
 		prettier.Space,
-		docOrEmpty(e.Base),
-	}
+		docOrEmpty(e.Base, ctx),
+	})
 }
 
 func (e *AttachExpression) StartPosition() Position {
@@ -339,16 +339,16 @@ func (s *RemoveStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
 const removeStatementRemoveKeywordDoc = prettier.Text("remove")
 const removeStatementFromKeywordDoc = prettier.Text("from")
 
-func (s *RemoveStatement) Doc() prettier.Doc {
-	return prettier.Concat{
+func (s *RemoveStatement) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(s, prettier.Concat{
 		removeStatementRemoveKeywordDoc,
 		prettier.Space,
-		docOrEmpty(s.Attachment),
+		docOrEmpty(s.Attachment, ctx),
 		prettier.Space,
 		removeStatementFromKeywordDoc,
 		prettier.Space,
-		docOrEmpty(s.Value),
-	}
+		docOrEmpty(s.Value, ctx),
+	})
 }
 
 func (s *RemoveStatement) String() string {

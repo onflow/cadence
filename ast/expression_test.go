@@ -63,12 +63,12 @@ func TestBoolExpression_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Text("true"),
-		(&BoolExpression{Value: true}).Doc(),
+		(&BoolExpression{Value: true}).Doc(NopContext{}),
 	)
 
 	assert.Equal(t,
 		prettier.Text("false"),
-		(&BoolExpression{Value: false}).Doc(),
+		(&BoolExpression{Value: false}).Doc(NopContext{}),
 	)
 }
 
@@ -117,7 +117,7 @@ func TestNilExpression_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Text("nil"),
-		(&NilExpression{}).Doc(),
+		(&NilExpression{}).Doc(NopContext{}),
 	)
 }
 
@@ -166,7 +166,7 @@ func TestStringExpression_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Text(`"test"`),
-		(&StringExpression{Value: "test"}).Doc(),
+		(&StringExpression{Value: "test"}).Doc(NopContext{}),
 	)
 }
 
@@ -229,7 +229,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(`4_2`),
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -245,7 +245,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(`-4_2`),
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -261,7 +261,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(`0b10_10_10`),
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -277,7 +277,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(`0o5_2`),
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -293,7 +293,7 @@ func TestIntegerExpression_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(`0x2_A`),
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -436,7 +436,7 @@ func TestFixedPointExpression_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(`1_2.3_4`),
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -453,7 +453,7 @@ func TestFixedPointExpression_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(`-1_2.3_4`),
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -558,7 +558,7 @@ func TestArrayExpression_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text("[]"),
-			(&ArrayExpression{}).Doc(),
+			(&ArrayExpression{}).Doc(NopContext{}),
 		)
 	})
 
@@ -600,7 +600,7 @@ func TestArrayExpression_Doc(t *testing.T) {
 					prettier.Text("]"),
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -627,7 +627,7 @@ func TestArrayExpression_Doc(t *testing.T) {
 					prettier.Text("]"),
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -779,7 +779,7 @@ func TestDictionaryExpression_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text("{}"),
-			(&DictionaryExpression{}).Doc(),
+			(&DictionaryExpression{}).Doc(NopContext{}),
 		)
 	})
 
@@ -839,7 +839,7 @@ func TestDictionaryExpression_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -879,7 +879,7 @@ func TestDictionaryExpression_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1029,7 +1029,7 @@ func TestIdentifierExpression_Doc(t *testing.T) {
 			Identifier: Identifier{
 				Identifier: "test",
 			},
-		}).Doc(),
+		}).Doc(NopContext{}),
 	)
 }
 
@@ -1109,7 +1109,7 @@ func TestPathExpression_Doc(t *testing.T) {
 			prettier.Text("/"),
 			prettier.Text("test"),
 		},
-		expr.Doc(),
+		expr.Doc(NopContext{}),
 	)
 }
 
@@ -1213,7 +1213,7 @@ func TestMemberExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1246,7 +1246,7 @@ func TestMemberExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1294,7 +1294,7 @@ func TestMemberExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1362,7 +1362,7 @@ func TestMemberExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1389,7 +1389,7 @@ func TestMemberExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1426,7 +1426,7 @@ func TestMemberExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1754,7 +1754,7 @@ func TestIndexExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1814,7 +1814,7 @@ func TestIndexExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1888,7 +1888,7 @@ func TestIndexExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -1915,7 +1915,7 @@ func TestIndexExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -2144,7 +2144,7 @@ func TestUnaryExpression_Doc(t *testing.T) {
 				prettier.Text("-"),
 				prettier.Text("foo"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -2172,7 +2172,7 @@ func TestUnaryExpression_Doc(t *testing.T) {
 					prettier.Text("foo"),
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -2230,7 +2230,7 @@ func TestUnaryExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -2247,7 +2247,7 @@ func TestUnaryExpression_Doc(t *testing.T) {
 				prettier.Text("-"),
 				prettier.Text(""),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -2466,7 +2466,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -2530,7 +2530,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -2606,7 +2606,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -2670,7 +2670,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -2746,7 +2746,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -2776,7 +2776,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -3047,7 +3047,7 @@ func TestDestroyExpression_Doc(t *testing.T) {
 				prettier.Text("destroy "),
 				prettier.Text("foo"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3074,7 +3074,7 @@ func TestDestroyExpression_Doc(t *testing.T) {
 					prettier.Text("foo"),
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3131,7 +3131,7 @@ func TestDestroyExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3146,7 +3146,7 @@ func TestDestroyExpression_Doc(t *testing.T) {
 				prettier.Text("destroy "),
 				prettier.Text(""),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3320,7 +3320,7 @@ func TestForceExpression_Doc(t *testing.T) {
 				prettier.Text("foo"),
 				prettier.Text("!"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3346,7 +3346,7 @@ func TestForceExpression_Doc(t *testing.T) {
 				},
 				prettier.Text("!"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3385,7 +3385,7 @@ func TestForceExpression_Doc(t *testing.T) {
 				},
 				prettier.Text("!"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3400,7 +3400,7 @@ func TestForceExpression_Doc(t *testing.T) {
 				prettier.Text(""),
 				prettier.Text("!"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -3624,7 +3624,7 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 
 	})
@@ -3719,7 +3719,7 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3811,7 +3811,7 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3891,7 +3891,7 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -3925,7 +3925,7 @@ func TestConditionalExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -4242,7 +4242,7 @@ func TestInvocationExpression_Doc(t *testing.T) {
 				prettier.Text("foobar"),
 				prettier.Text("()"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -4299,7 +4299,7 @@ func TestInvocationExpression_Doc(t *testing.T) {
 				},
 				prettier.Text("()"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -4369,7 +4369,7 @@ func TestInvocationExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -4383,7 +4383,7 @@ func TestInvocationExpression_Doc(t *testing.T) {
 				prettier.Text(""),
 				prettier.Text("()"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -4418,7 +4418,7 @@ func TestInvocationExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -4454,7 +4454,7 @@ func TestInvocationExpression_Doc(t *testing.T) {
 				},
 				prettier.Text("()"),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -4766,7 +4766,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -4830,7 +4830,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -4905,7 +4905,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -4935,7 +4935,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -5217,7 +5217,7 @@ func TestCreateExpression_Doc(t *testing.T) {
 				prettier.Text("create "),
 				prettier.Text(""),
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -5242,7 +5242,7 @@ func TestCreateExpression_Doc(t *testing.T) {
 					prettier.Text("()"),
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -5374,7 +5374,7 @@ func TestReferenceExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -5408,7 +5408,7 @@ func TestReferenceExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -5469,7 +5469,7 @@ func TestReferenceExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 
@@ -5488,7 +5488,7 @@ func TestReferenceExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			expr.Doc(),
+			expr.Doc(NopContext{}),
 		)
 	})
 }
@@ -5744,17 +5744,21 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("fun"),
 			prettier.Group{
 				Doc: prettier.Concat{
-					prettier.Text("()"),
+					prettier.Text("fun"),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("()"),
+						},
+					},
 				},
 			},
 			prettier.Space,
 			prettier.Text("{}"),
 		}
 
-		assert.Equal(t, expected, expr.Doc())
+		assert.Equal(t, expected, expr.Doc(NopContext{}))
 	})
 
 	t.Run("multiple parameters, return type, statements", func(t *testing.T) {
@@ -5817,43 +5821,47 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("fun"),
 			prettier.Group{
 				Doc: prettier.Concat{
+					prettier.Text("fun"),
 					prettier.Group{
 						Doc: prettier.Concat{
-							prettier.Text("("),
-							prettier.Indent{
+							prettier.Group{
 								Doc: prettier.Concat{
-									prettier.SoftLine{},
-									prettier.Concat{
-										prettier.Concat{
-											prettier.Text("a"),
-											prettier.Space,
-											prettier.Text("b"),
-											prettier.Text(": "),
-											prettier.Text("C"),
-										},
-										prettier.Concat{
-											prettier.Text(","),
-											prettier.Line{},
-										},
-										prettier.Concat{
-											prettier.Text("d"),
-											prettier.Text(": "),
-											prettier.Text("E"),
+									prettier.Text("("),
+									prettier.Indent{
+										Doc: prettier.Concat{
+											prettier.SoftLine{},
+											prettier.Concat{
+												prettier.Concat{
+													prettier.Text("a"),
+													prettier.Space,
+													prettier.Text("b"),
+													prettier.Text(": "),
+													prettier.Text("C"),
+												},
+												prettier.Concat{
+													prettier.Text(","),
+													prettier.Line{},
+												},
+												prettier.Concat{
+													prettier.Text("d"),
+													prettier.Text(": "),
+													prettier.Text("E"),
+												},
+											},
 										},
 									},
+									prettier.SoftLine{},
+									prettier.Text(")"),
 								},
 							},
-							prettier.SoftLine{},
-							prettier.Text(")"),
+							prettier.Text(": "),
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("R"),
+							},
 						},
-					},
-					prettier.Text(": "),
-					prettier.Concat{
-						prettier.Text("@"),
-						prettier.Text("R"),
 					},
 				},
 			},
@@ -5874,7 +5882,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 			},
 		}
 
-		assert.Equal(t, expected, expr.Doc())
+		assert.Equal(t, expected, expr.Doc(NopContext{}))
 	})
 
 	t.Run("pre-conditions and post-conditions", func(t *testing.T) {
@@ -5930,12 +5938,16 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("fun"),
 			prettier.Group{
 				Doc: prettier.Concat{
-					prettier.Text("()"),
-					prettier.Text(": "),
-					prettier.Text("Void"),
+					prettier.Text("fun"),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("()"),
+							prettier.Text(": "),
+							prettier.Text("Void"),
+						},
+					},
 				},
 			},
 			prettier.Space,
@@ -6011,7 +6023,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 			},
 		}
 
-		assert.Equal(t, expected, expr.Doc())
+		assert.Equal(t, expected, expr.Doc(NopContext{}))
 	})
 
 	t.Run("view", func(t *testing.T) {
@@ -6029,19 +6041,23 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("view"),
-			prettier.Space,
-			prettier.Text("fun"),
 			prettier.Group{
 				Doc: prettier.Concat{
-					prettier.Text("()"),
+					prettier.Text("view"),
+					prettier.Space,
+					prettier.Text("fun"),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("()"),
+						},
+					},
 				},
 			},
 			prettier.Space,
 			prettier.Text("{}"),
 		}
 
-		assert.Equal(t, expected, expr.Doc())
+		assert.Equal(t, expected, expr.Doc(NopContext{}))
 	})
 }
 
@@ -6340,7 +6356,7 @@ func TestStringExpressionTemplate_Doc(t *testing.T) {
 			prettier.Text(`!`),
 			prettier.Text(`"`),
 		},
-		expr.Doc(),
+		expr.Doc(NopContext{}),
 	)
 }
 

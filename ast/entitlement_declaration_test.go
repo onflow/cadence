@@ -92,7 +92,7 @@ func TestEntitlementDeclaration_Doc(t *testing.T) {
 					prettier.Text("AB"),
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 
 	})
@@ -255,19 +255,20 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 					prettier.Text("AB"),
 					prettier.Space,
 					prettier.Text("{"),
-					prettier.HardLine{},
 					prettier.Indent{
 						Doc: prettier.Concat{
-							prettier.Text(""),
-							prettier.Text(" -> "),
-							prettier.Text(""),
+							prettier.HardLine{},
+							prettier.Concat{
+								prettier.Space,
+								prettier.Text("->"),
+							},
 						},
 					},
 					prettier.HardLine{},
 					prettier.Text("}"),
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -319,18 +320,22 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 					prettier.Text("AB"),
 					prettier.Space,
 					prettier.Text("{"),
-					prettier.HardLine{},
 					prettier.Indent{
 						Doc: prettier.Concat{
-							prettier.Concat{
-								prettier.Text("include "),
-								prettier.Text("X"),
-							},
 							prettier.HardLine{},
 							prettier.Concat{
-								prettier.Text("X"),
-								prettier.Text(" -> "),
-								prettier.Text("Y"),
+								prettier.Concat{
+									prettier.Text("include "),
+									prettier.Text("X"),
+								},
+								prettier.HardLine{},
+								prettier.Concat{
+									prettier.Text("X"),
+									prettier.Space,
+									prettier.Text("->"),
+									prettier.Space,
+									prettier.Text("Y"),
+								},
 							},
 						},
 					},
@@ -338,7 +343,7 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 }
@@ -371,7 +376,9 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"access(all) entitlement mapping AB {\n -> \n}",
+			`access(all) entitlement mapping AB {
+     ->
+}`,
 			decl.String(),
 		)
 	})
@@ -416,7 +423,7 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 		require.Equal(
 			t,
 			`access(all) entitlement mapping AB {
-include X
+    include X
     X -> Y
 }`,
 			decl.String(),

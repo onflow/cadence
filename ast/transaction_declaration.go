@@ -127,38 +127,28 @@ func (d *TransactionDeclaration) MarshalJSON() ([]byte, error) {
 
 var transactionKeywordDoc = prettier.Text("transaction")
 
-func (d *TransactionDeclaration) Doc() prettier.Doc {
+func (d *TransactionDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 
 	var contents []prettier.Doc
 
-	addContent := func(doc prettier.Doc) {
-		contents = append(
-			contents,
-			prettier.Concat{
-				prettier.HardLine{},
-				doc,
-			},
-		)
-	}
-
 	for _, field := range d.Fields {
-		addContent(field.Doc())
+		contents = append(contents, field.Doc(ctx))
 	}
 
 	if d.Prepare != nil {
-		addContent(d.Prepare.Doc())
+		contents = append(contents, d.Prepare.Doc(ctx))
 	}
 
-	if conditionsDoc := d.PreConditions.Doc(preConditionsKeywordDoc); conditionsDoc != nil {
-		addContent(conditionsDoc)
+	if conditionsDoc := d.PreConditions.Doc(ctx, preConditionsKeywordDoc); conditionsDoc != nil {
+		contents = append(contents, conditionsDoc)
 	}
 
 	if d.Execute != nil {
-		addContent(d.Execute.Doc())
+		contents = append(contents, d.Execute.Doc(ctx))
 	}
 
-	if conditionsDoc := d.PostConditions.Doc(postConditionsKeywordDoc); conditionsDoc != nil {
-		addContent(conditionsDoc)
+	if conditionsDoc := d.PostConditions.Doc(ctx, postConditionsKeywordDoc); conditionsDoc != nil {
+		contents = append(contents, conditionsDoc)
 	}
 
 	doc := prettier.Concat{
@@ -168,23 +158,28 @@ func (d *TransactionDeclaration) Doc() prettier.Doc {
 	if !d.ParameterList.IsEmpty() {
 		doc = append(
 			doc,
-			d.ParameterList.Doc(),
+			d.ParameterList.Doc(ctx),
 		)
 	}
 
-	return append(
+	body := prettier.Concat{prettier.HardLine{}}
+	for i, c := range contents {
+		if i > 0 {
+			body = append(body, prettier.HardLine{})
+		}
+		body = append(body, c)
+	}
+
+	return ctx.Wrap(d, append(
 		doc,
 		prettier.Space,
 		blockStartDoc,
 		prettier.Indent{
-			Doc: prettier.Join(
-				prettier.HardLine{},
-				contents...,
-			),
+			Doc: body,
 		},
 		prettier.HardLine{},
 		blockEndDoc,
-	)
+	))
 }
 
 func (d *TransactionDeclaration) String() string {

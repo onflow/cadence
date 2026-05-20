@@ -35,5 +35,5 @@ type Declaration interface {
 	DeclarationAccess() Access
 	DeclarationMembers() *Members
 	DeclarationDocString() string
-	Doc() prettier.Doc
+	Doc(ctx PrettyContext) prettier.Doc
 }

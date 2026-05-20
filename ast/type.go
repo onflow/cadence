@@ -81,17 +81,17 @@ func (t *TypeAnnotation) EndPosition(memoryGauge common.MemoryGauge) Position {
 
 const typeAnnotationResourceSymbolDoc = prettier.Text("@")
 
-func (t *TypeAnnotation) Doc() prettier.Doc {
-	typeDoc := docOrEmpty(t.Type)
+func (t *TypeAnnotation) Doc(ctx PrettyContext) prettier.Doc {
+	typeDoc := docOrEmpty(t.Type, ctx)
 
 	if !t.IsResource {
-		return typeDoc
+		return ctx.Wrap(t, typeDoc)
 	}
 
-	return prettier.Concat{
+	return ctx.Wrap(t, prettier.Concat{
 		typeAnnotationResourceSymbolDoc,
 		typeDoc,
-	}
+	})
 }
 
 func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
@@ -111,7 +111,7 @@ type Type interface {
 	Element
 	fmt.Stringer
 	isType()
-	Doc() prettier.Doc
+	Doc(ctx PrettyContext) prettier.Doc
 	Precedence() TypePrecedence
 	CheckEqual(other Type, checker TypeEqualityChecker) error
 }
@@ -121,12 +121,12 @@ func IsEmptyType(t Type) bool {
 	return ok && nominalType.Identifier.Identifier == ""
 }
 
-func parenthesizedTypeDoc(t Type, parentPrecedence TypePrecedence) prettier.Doc {
+func parenthesizedTypeDoc(ctx PrettyContext, t Type, parentPrecedence TypePrecedence) prettier.Doc {
 	if t == nil {
 		return prettier.Text("")
 	}
 
-	doc := t.Doc()
+	doc := t.Doc(ctx)
 	subPrecedence := t.Precedence()
 	if parentPrecedence <= subPrecedence &&
 		!typeNeedsParentheses(t, parentPrecedence) {
@@ -207,7 +207,7 @@ func (t *NominalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 
 var nominalTypeSeparatorDoc = prettier.Text(".")
 
-func (t *NominalType) Doc() prettier.Doc {
+func (t *NominalType) Doc(ctx PrettyContext) prettier.Doc {
 	var doc prettier.Doc = prettier.Text(t.Identifier.String())
 	if len(t.NestedIdentifiers) > 0 {
 		concat := prettier.Concat{doc}
@@ -220,7 +220,7 @@ func (t *NominalType) Doc() prettier.Doc {
 		}
 		doc = concat
 	}
-	return doc
+	return ctx.Wrap(t, doc)
 }
 
 func (t *NominalType) MarshalJSON() ([]byte, error) {
@@ -295,12 +295,12 @@ func (t *OptionalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 
 const optionalTypeSymbolDoc = prettier.Text("?")
 
-func (t *OptionalType) Doc() prettier.Doc {
-	typeDoc := parenthesizedTypeDoc(t.Type, t.Precedence())
-	return prettier.Concat{
+func (t *OptionalType) Doc(ctx PrettyContext) prettier.Doc {
+	typeDoc := parenthesizedTypeDoc(ctx, t.Type, t.Precedence())
+	return ctx.Wrap(t, prettier.Concat{
 		typeDoc,
 		optionalTypeSymbolDoc,
-	}
+	})
 }
 
 func (t *OptionalType) MarshalJSON() ([]byte, error) {
@@ -362,20 +362,20 @@ func (t *VariableSizedType) String() string {
 const arrayTypeStartDoc = prettier.Text("[")
 const arrayTypeEndDoc = prettier.Text("]")
 
-func (t *VariableSizedType) Doc() prettier.Doc {
-	return prettier.Group{
+func (t *VariableSizedType) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(t, prettier.Group{
 		Doc: prettier.Concat{
 			arrayTypeStartDoc,
 			prettier.Indent{
 				Doc: prettier.Concat{
 					prettier.SoftLine{},
-					docOrEmpty(t.Type),
+					docOrEmpty(t.Type, ctx),
 				},
 			},
 			prettier.SoftLine{},
 			arrayTypeEndDoc,
 		},
-	}
+	})
 }
 
 func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
@@ -437,22 +437,22 @@ func (t *ConstantSizedType) String() string {
 
 const constantSizedTypeSeparatorSpaceDoc = prettier.Text("; ")
 
-func (t *ConstantSizedType) Doc() prettier.Doc {
-	return prettier.Group{
+func (t *ConstantSizedType) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(t, prettier.Group{
 		Doc: prettier.Concat{
 			arrayTypeStartDoc,
 			prettier.Indent{
 				Doc: prettier.Concat{
 					prettier.SoftLine{},
-					docOrEmpty(t.Type),
+					docOrEmpty(t.Type, ctx),
 					constantSizedTypeSeparatorSpaceDoc,
-					docOrEmpty(t.Size),
+					docOrEmpty(t.Size, ctx),
 				},
 			},
 			prettier.SoftLine{},
 			arrayTypeEndDoc,
 		},
-	}
+	})
 }
 
 func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {
@@ -516,22 +516,22 @@ func (t *DictionaryType) String() string {
 const dictionaryTypeStartDoc = prettier.Text("{")
 const dictionaryTypeEndDoc = prettier.Text("}")
 
-func (t *DictionaryType) Doc() prettier.Doc {
-	return prettier.Group{
+func (t *DictionaryType) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(t, prettier.Group{
 		Doc: prettier.Concat{
 			dictionaryTypeStartDoc,
 			prettier.Indent{
 				Doc: prettier.Concat{
 					prettier.SoftLine{},
-					docOrEmpty(t.KeyType),
+					docOrEmpty(t.KeyType, ctx),
 					typeSeparatorSpaceDoc,
-					docOrEmpty(t.ValueType),
+					docOrEmpty(t.ValueType, ctx),
 				},
 			},
 			prettier.SoftLine{},
 			dictionaryTypeEndDoc,
 		},
-	}
+	})
 }
 
 func (t *DictionaryType) MarshalJSON() ([]byte, error) {
@@ -600,7 +600,7 @@ const openParenthesisDoc = prettier.Text("(")
 const closeParenthesisDoc = prettier.Text(")")
 const functionTypeParameterSeparatorDoc = prettier.Text(",")
 
-func (t *FunctionType) Doc() prettier.Doc {
+func (t *FunctionType) Doc(ctx PrettyContext) prettier.Doc {
 	parametersDoc := prettier.Concat{
 		prettier.SoftLine{},
 	}
@@ -632,7 +632,7 @@ func (t *FunctionType) Doc() prettier.Doc {
 
 		parametersDoc = append(
 			parametersDoc,
-			docOrEmpty(parameterTypeAnnotation),
+			docOrEmpty(parameterTypeAnnotation, ctx),
 		)
 	}
 
@@ -649,10 +649,10 @@ func (t *FunctionType) Doc() prettier.Doc {
 			},
 		},
 		typeSeparatorSpaceDoc,
-		docOrEmpty(t.ReturnTypeAnnotation),
+		docOrEmpty(t.ReturnTypeAnnotation, ctx),
 	)
 
-	return result
+	return ctx.Wrap(t, result)
 }
 
 func (t *FunctionType) MarshalJSON() ([]byte, error) {
@@ -729,7 +729,7 @@ const referenceTypeAuthKeywordDoc = prettier.Text("auth")
 const referenceTypeMappingKeywordDoc = prettier.Text("mapping ")
 const referenceTypeSymbolDoc = prettier.Text("&")
 
-func (t *ReferenceType) Doc() prettier.Doc {
+func (t *ReferenceType) Doc(ctx PrettyContext) prettier.Doc {
 	var doc prettier.Concat
 
 	if t.Authorization != nil {
@@ -743,7 +743,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 
 			entitlements := authorization.Entitlements()
 			if len(entitlements) > 0 {
-				// TODO: add indentation, improve separators. follow e.g. ParameterList.Doc()
+				// TODO: add indentation, improve separators. follow e.g. ParameterList.Doc(ctx)
 
 				separatorDoc := prettier.Text(authorization.Separator().String())
 
@@ -751,14 +751,14 @@ func (t *ReferenceType) Doc() prettier.Doc {
 					if i > 0 {
 						doc = append(doc, separatorDoc)
 					}
-					doc = append(doc, docOrEmpty(entitlement))
+					doc = append(doc, docOrEmpty(entitlement, ctx))
 				}
 			}
 
 		case *MappedAccess:
 			doc = append(doc,
 				referenceTypeMappingKeywordDoc,
-				docOrEmpty(authorization.EntitlementMap),
+				docOrEmpty(authorization.EntitlementMap, ctx),
 			)
 
 		default:
@@ -772,11 +772,11 @@ func (t *ReferenceType) Doc() prettier.Doc {
 		)
 	}
 
-	return append(
+	return ctx.Wrap(t, append(
 		doc,
 		referenceTypeSymbolDoc,
-		parenthesizedTypeDoc(t.Type, t.Precedence()),
-	)
+		parenthesizedTypeDoc(ctx, t.Type, t.Precedence()),
+	))
 }
 
 func (t *ReferenceType) MarshalJSON() ([]byte, error) {
@@ -843,7 +843,7 @@ const intersectionTypeStartDoc = prettier.Text("{")
 const intersectionTypeEndDoc = prettier.Text("}")
 const intersectionTypeSeparatorDoc = prettier.Text(",")
 
-func (t *IntersectionType) Doc() prettier.Doc {
+func (t *IntersectionType) Doc(ctx PrettyContext) prettier.Doc {
 
 	intersectionDoc := prettier.Concat{
 		prettier.SoftLine{},
@@ -860,11 +860,11 @@ func (t *IntersectionType) Doc() prettier.Doc {
 
 		intersectionDoc = append(
 			intersectionDoc,
-			docOrEmpty(typ),
+			docOrEmpty(typ, ctx),
 		)
 	}
 
-	return prettier.Group{
+	return ctx.Wrap(t, prettier.Group{
 		Doc: prettier.Concat{
 			intersectionTypeStartDoc,
 			prettier.Indent{
@@ -873,7 +873,7 @@ func (t *IntersectionType) Doc() prettier.Doc {
 			prettier.SoftLine{},
 			intersectionTypeEndDoc,
 		},
-	}
+	})
 }
 
 func (t *IntersectionType) MarshalJSON() ([]byte, error) {
@@ -950,7 +950,7 @@ const instantiationTypeStartDoc = prettier.Text("<")
 const instantiationTypeEndDoc = prettier.Text(">")
 const instantiationTypeSeparatorDoc = prettier.Text(",")
 
-func (t *InstantiationType) Doc() prettier.Doc {
+func (t *InstantiationType) Doc(ctx PrettyContext) prettier.Doc {
 
 	typeArgumentsDoc := prettier.Concat{
 		prettier.SoftLine{},
@@ -967,12 +967,12 @@ func (t *InstantiationType) Doc() prettier.Doc {
 
 		typeArgumentsDoc = append(
 			typeArgumentsDoc,
-			docOrEmpty(typeArgument),
+			docOrEmpty(typeArgument, ctx),
 		)
 	}
 
-	return prettier.Concat{
-		parenthesizedTypeDoc(t.Type, t.Precedence()),
+	return ctx.Wrap(t, prettier.Concat{
+		parenthesizedTypeDoc(ctx, t.Type, t.Precedence()),
 		prettier.Group{
 			Doc: prettier.Concat{
 				instantiationTypeStartDoc,
@@ -983,7 +983,7 @@ func (t *InstantiationType) Doc() prettier.Doc {
 				instantiationTypeEndDoc,
 			},
 		},
-	}
+	})
 }
 
 func (t *InstantiationType) MarshalJSON() ([]byte, error) {

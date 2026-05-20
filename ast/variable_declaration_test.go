@@ -188,19 +188,13 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 							},
 							prettier.Space,
 							prettier.Text("<-"),
-							prettier.Group{
-								Doc: prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.Line{},
-										prettier.Text("true"),
-									},
-								},
-							},
+							prettier.Space,
+							prettier.Text("true"),
 						},
 					},
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -273,7 +267,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -303,19 +297,13 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 							},
 							prettier.Space,
 							prettier.Text(""),
-							prettier.Group{
-								Doc: prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.Line{},
-										prettier.Text(""),
-									},
-								},
-							},
+							prettier.Space,
+							prettier.Text(""),
 						},
 					},
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 }

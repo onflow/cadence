@@ -90,7 +90,7 @@ func TestBlock_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Text("{}"),
-			block.Doc(),
+			block.Doc(NopContext{}),
 		)
 	})
 
@@ -127,7 +127,7 @@ func TestBlock_Doc(t *testing.T) {
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
-			block.Doc(),
+			block.Doc(NopContext{}),
 		)
 	})
 
@@ -153,7 +153,7 @@ func TestBlock_Doc(t *testing.T) {
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
-			block.Doc(),
+			block.Doc(NopContext{}),
 		)
 	})
 }
@@ -456,7 +456,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Text("{}"),
-			block.Doc(),
+			block.Doc(NopContext{}),
 		)
 	})
 
@@ -496,7 +496,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
-			block.Doc(),
+			block.Doc(NopContext{}),
 		)
 	})
 
@@ -621,7 +621,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
-			block.Doc(),
+			block.Doc(NopContext{}),
 		)
 	})
 
@@ -689,7 +689,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
-			block.Doc(),
+			block.Doc(NopContext{}),
 		)
 	})
 
@@ -900,7 +900,7 @@ func TestCondition_Doc(t *testing.T) {
 					},
 				},
 			},
-			condition.Doc(),
+			condition.Doc(NopContext{}),
 		)
 	})
 
@@ -922,7 +922,7 @@ func TestCondition_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Text("true"),
 			},
-			condition.Doc(),
+			condition.Doc(NopContext{}),
 		)
 	})
 
@@ -953,7 +953,7 @@ func TestCondition_Doc(t *testing.T) {
 					},
 				},
 			},
-			condition.Doc(),
+			condition.Doc(NopContext{}),
 		)
 	})
 
@@ -967,7 +967,7 @@ func TestCondition_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Text(""),
 			},
-			condition.Doc(),
+			condition.Doc(NopContext{}),
 		)
 	})
 }

@@ -145,7 +145,7 @@ func (d *VariableDeclaration) DeclarationDocString() string {
 var varKeywordDoc prettier.Doc = prettier.Text("var")
 var letKeywordDoc prettier.Doc = prettier.Text("let")
 
-func (d *VariableDeclaration) Doc() prettier.Doc {
+func (d *VariableDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 	keywordDoc := varKeywordDoc
 	if d.IsConstant {
 		keywordDoc = letKeywordDoc
@@ -159,39 +159,66 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 		identifierTypeDoc = append(
 			identifierTypeDoc,
 			typeSeparatorSpaceDoc,
-			d.TypeAnnotation.Doc(),
+			d.TypeAnnotation.Doc(ctx),
 		)
 	}
 
 	// Transfer and value might be nil.
 	// For example, a desugared `result` variable is uninitialized at first.
 
-	transferDoc := docOrEmpty(d.Transfer)
-	valueDoc := docOrEmpty(d.Value)
+	// Check for leading comments on the value BEFORE rendering —
+	// Doc consumes them.
+	// A leading comment on a value would otherwise render on the same line
+	// as the `=` and swallow the following code.
+	valueHasLeading := d.Value != nil && ctx.HasLeadingLineComment(d.Value)
+
+	transferDoc := docOrEmpty(d.Transfer, ctx)
+	valueDoc := docOrEmpty(d.Value, ctx)
 
 	var valuesDoc prettier.Doc
 
 	if d.SecondValue == nil {
-		// Put transfer before the break
+		// Indent the value continuation only for binary expressions
+		// (so `??` chains break under the `let`).
+		// Non-binary values render inline to avoid compounding with the value's own Indent (e.g., call args).
 
-		valuesDoc = prettier.Concat{
-			prettier.Group{
-				Doc: identifierTypeDoc,
-			},
-			prettier.Space,
-			transferDoc,
-			prettier.Group{
-				Doc: prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.Line{},
-						valueDoc,
+		_, isBinary := d.Value.(*BinaryExpression)
+
+		separator := prettier.Doc(prettier.Space)
+		if valueHasLeading {
+			separator = prettier.HardLine{}
+		}
+
+		if isBinary {
+			valuesDoc = prettier.Concat{
+				prettier.Group{
+					Doc: identifierTypeDoc,
+				},
+				prettier.Space,
+				transferDoc,
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Line{},
+							valueDoc,
+						},
 					},
 				},
-			},
+			}
+		} else {
+			valuesDoc = prettier.Concat{
+				prettier.Group{
+					Doc: identifierTypeDoc,
+				},
+				prettier.Space,
+				transferDoc,
+				separator,
+				valueDoc,
+			}
 		}
 	} else {
-		secondTransferDoc := docOrEmpty(d.SecondTransfer)
-		secondValueDoc := d.SecondValue.Doc()
+		secondTransferDoc := docOrEmpty(d.SecondTransfer, ctx)
+		secondValueDoc := d.SecondValue.Doc(ctx)
 
 		// Put transfers at start of value lines,
 		// and break both values at once
@@ -222,7 +249,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			docOrEmpty(d.Access),
+			docOrEmpty(d.Access, ctx),
 			prettier.Line{},
 		)
 	}
@@ -236,9 +263,9 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 		},
 	)
 
-	return prettier.Group{
+	return ctx.Wrap(d, prettier.Group{
 		Doc: doc,
-	}
+	})
 }
 
 func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {

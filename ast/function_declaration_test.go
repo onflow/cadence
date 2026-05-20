@@ -331,49 +331,53 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 
 	require.Equal(t,
 		prettier.Concat{
-			prettier.Text("access(all)"),
-			prettier.Line{},
-			prettier.Text("view"),
-			prettier.Space,
-			prettier.Text("static"),
-			prettier.Space,
-			prettier.Text("native"),
-			prettier.Space,
-			prettier.Text("fun"),
-			prettier.Space,
-			prettier.Text("xyz"),
 			prettier.Group{
 				Doc: prettier.Concat{
+					prettier.Text("access(all)"),
+					prettier.Line{},
+					prettier.Text("view"),
+					prettier.Space,
+					prettier.Text("static"),
+					prettier.Space,
+					prettier.Text("native"),
+					prettier.Space,
+					prettier.Text("fun"),
+					prettier.Space,
+					prettier.Text("xyz"),
 					prettier.Group{
 						Doc: prettier.Concat{
-							prettier.Text("("),
-							prettier.Indent{
+							prettier.Group{
 								Doc: prettier.Concat{
-									prettier.SoftLine{},
-									prettier.Concat{
-										prettier.Text("ok"),
-										prettier.Space,
-										prettier.Text("foobar"),
-										prettier.Text(": "),
-										prettier.Text("AB"),
+									prettier.Text("("),
+									prettier.Indent{
+										Doc: prettier.Concat{
+											prettier.SoftLine{},
+											prettier.Concat{
+												prettier.Text("ok"),
+												prettier.Space,
+												prettier.Text("foobar"),
+												prettier.Text(": "),
+												prettier.Text("AB"),
+											},
+										},
 									},
+									prettier.SoftLine{},
+									prettier.Text(")"),
 								},
 							},
-							prettier.SoftLine{},
-							prettier.Text(")"),
+							prettier.Text(": "),
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("CD"),
+							},
 						},
-					},
-					prettier.Text(": "),
-					prettier.Concat{
-						prettier.Text("@"),
-						prettier.Text("CD"),
 					},
 				},
 			},
 			prettier.Space,
 			prettier.Text("{}"),
 		},
-		decl.Doc(),
+		decl.Doc(NopContext{}),
 	)
 }
 
@@ -930,39 +934,43 @@ func TestSpecialFunctionDeclaration_Doc(t *testing.T) {
 
 	require.Equal(t,
 		prettier.Concat{
-			prettier.Text("init"),
 			prettier.Group{
 				Doc: prettier.Concat{
+					prettier.Text("init"),
 					prettier.Group{
 						Doc: prettier.Concat{
-							prettier.Text("("),
-							prettier.Indent{
+							prettier.Group{
 								Doc: prettier.Concat{
-									prettier.SoftLine{},
-									prettier.Concat{
-										prettier.Text("ok"),
-										prettier.Space,
-										prettier.Text("foobar"),
-										prettier.Text(": "),
-										prettier.Text("AB"),
+									prettier.Text("("),
+									prettier.Indent{
+										Doc: prettier.Concat{
+											prettier.SoftLine{},
+											prettier.Concat{
+												prettier.Text("ok"),
+												prettier.Space,
+												prettier.Text("foobar"),
+												prettier.Text(": "),
+												prettier.Text("AB"),
+											},
+										},
 									},
+									prettier.SoftLine{},
+									prettier.Text(")"),
 								},
 							},
-							prettier.SoftLine{},
-							prettier.Text(")"),
+							prettier.Text(": "),
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("CD"),
+							},
 						},
-					},
-					prettier.Text(": "),
-					prettier.Concat{
-						prettier.Text("@"),
-						prettier.Text("CD"),
 					},
 				},
 			},
 			prettier.Space,
 			prettier.Text("{}"),
 		},
-		decl.Doc(),
+		decl.Doc(NopContext{}),
 	)
 }
 

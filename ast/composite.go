@@ -138,49 +138,68 @@ func (d *CompositeDeclaration) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (d *CompositeDeclaration) Doc() prettier.Doc {
+func (d *CompositeDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 
 	if d.CompositeKind == common.CompositeKindEvent {
-		return d.EventDoc()
+		if shorthand := d.EventDoc(ctx); shorthand != nil {
+			return ctx.Wrap(d, shorthand)
+		}
 	}
 
-	return CompositeDocument(
+	return ctx.Wrap(d, CompositeDocument(
+		ctx,
 		d.Access,
 		d.CompositeKind,
 		false,
 		d.Identifier.Identifier,
 		d.Conformances,
 		d.Members,
-	)
+	))
 }
 
-func (d *CompositeDeclaration) EventDoc() prettier.Doc {
-	var doc prettier.Concat
+// EventDoc emits the `event Name(params)` shorthand form.
+// Returns nil if the declaration doesn't fit the shorthand shape
+// (must have exactly one initializer and no other members);
+// callers should fall back to the full composite form.
+func (d *CompositeDeclaration) EventDoc(ctx PrettyContext) prettier.Doc {
+	// Check if the declaration has exactly one initializer and no other members.
+	initializers := d.Members.Initializers()
+	if len(initializers) != 1 {
+		return nil
+	}
+	initializer := initializers[0]
+
+	// Reject if there are any other members beyond the single initializer.
+	if len(d.Members.Declarations()) != 1 {
+		return nil
+	}
+
+	// Build the header (access + event keyword + name) in a Group so the
+	// soft-break after the access modifier fires only when the header
+	// doesn't fit. Multi-line parameters render outside the Group.
+	var header prettier.Concat
 
 	if d.Access != AccessNotSpecified {
-		doc = append(
-			doc,
-			docOrEmpty(d.Access),
+		header = append(
+			header,
+			docOrEmpty(d.Access, ctx),
 			prettier.Line{},
 		)
 	}
 
-	doc = append(
-		doc,
+	header = append(
+		header,
 		prettier.Text(d.CompositeKind.Keyword()),
 		prettier.Space,
 		prettier.Text(d.Identifier.Identifier),
 	)
 
-	initializers := d.Members.Initializers()
-	if len(initializers) != 1 {
-		return nil
+	paramsDoc := initializer.FunctionDeclaration.ParameterList.Doc(ctx)
+
+	return prettier.Concat{
+		prettier.Group{Doc: header},
+		paramsDoc,
 	}
-
-	initializer := initializers[0]
-	paramsDoc := initializer.FunctionDeclaration.ParameterList.Doc()
-
-	return append(doc, paramsDoc)
 }
 
 func (d *CompositeDeclaration) String() string {
@@ -195,6 +214,7 @@ var compositeConformanceSeparatorDoc prettier.Doc = prettier.Concat{
 }
 
 func CompositeDocument(
+	ctx PrettyContext,
 	access Access,
 	kind common.CompositeKind,
 	isInterface bool,
@@ -203,35 +223,40 @@ func CompositeDocument(
 	members *Members,
 ) prettier.Doc {
 
-	var doc prettier.Concat
+	// Build the header (access + kind + identifier) inside a Group so the
+	// soft-break after the access modifier only fires when the header
+	// itself doesn't fit. The members block stays outside this Group.
+	var header prettier.Concat
 
 	if access != AccessNotSpecified {
-		doc = append(
-			doc,
-			docOrEmpty(access),
+		header = append(
+			header,
+			docOrEmpty(access, ctx),
 			prettier.Line{},
 		)
 	}
 
-	doc = append(
-		doc,
+	header = append(
+		header,
 		prettier.Text(kind.Keyword()),
 		prettier.Space,
 	)
 
 	if isInterface {
-		doc = append(
-			doc,
+		header = append(
+			header,
 			interfaceKeywordSpaceDoc,
 		)
 	}
 
-	doc = append(
-		doc,
+	header = append(
+		header,
 		prettier.Text(identifier),
 	)
 
-	membersDoc := members.Doc()
+	doc := prettier.Concat{prettier.Group{Doc: header}}
+
+	membersDoc := members.Doc(ctx)
 
 	if len(conformances) > 0 {
 
@@ -249,7 +274,7 @@ func CompositeDocument(
 
 			conformancesDoc = append(
 				conformancesDoc,
-				docOrEmpty(conformance),
+				docOrEmpty(conformance, ctx),
 			)
 		}
 
@@ -421,7 +446,7 @@ func VariableKindDoc(kind VariableKind) prettier.Doc {
 var staticKeywordDoc prettier.Doc = prettier.Text("static")
 var nativeKeywordDoc prettier.Doc = prettier.Text("native")
 
-func (d *FieldDeclaration) Doc() prettier.Doc {
+func (d *FieldDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 	identifierTypeDoc := prettier.Concat{
 		prettier.Text(d.Identifier.Identifier),
 	}
@@ -430,7 +455,7 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 		identifierTypeDoc = append(
 			identifierTypeDoc,
 			typeSeparatorSpaceDoc,
-			d.TypeAnnotation.Doc(),
+			d.TypeAnnotation.Doc(ctx),
 		)
 	}
 
@@ -476,15 +501,15 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 
 	if d.Access != AccessNotSpecified {
 		doc = prettier.Concat{
-			docOrEmpty(d.Access),
+			docOrEmpty(d.Access, ctx),
 			prettier.Line{},
 			doc,
 		}
 	}
 
-	return prettier.Group{
+	return ctx.Wrap(d, prettier.Group{
 		Doc: doc,
-	}
+	})
 }
 
 func (d *FieldDeclaration) String() string {
@@ -583,22 +608,22 @@ func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {
 
 const enumCaseKeywordSpaceDoc = prettier.Text("case ")
 
-func (d *EnumCaseDeclaration) Doc() prettier.Doc {
+func (d *EnumCaseDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 	var doc prettier.Concat
 
 	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			docOrEmpty(d.Access),
+			docOrEmpty(d.Access, ctx),
 			prettier.Line{},
 		)
 	}
 
-	return append(
+	return ctx.Wrap(d, append(
 		doc,
 		enumCaseKeywordSpaceDoc,
 		prettier.Text(d.Identifier.Identifier),
-	)
+	))
 }
 
 func (d *EnumCaseDeclaration) String() string {

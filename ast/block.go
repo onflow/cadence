@@ -58,30 +58,30 @@ var blockStartDoc prettier.Doc = prettier.Text("{")
 var blockEndDoc prettier.Doc = prettier.Text("}")
 var blockEmptyDoc prettier.Doc = prettier.Text("{}")
 
-func (b *Block) Doc() prettier.Doc {
+func (b *Block) Doc(ctx PrettyContext) prettier.Doc {
 	if b == nil || b.IsEmpty() {
-		return blockEmptyDoc
+		return ctx.Wrap(b, blockEmptyDoc)
 	}
 
-	return prettier.Concat{
+	return ctx.Wrap(b, prettier.Concat{
 		blockStartDoc,
 		prettier.Indent{
-			Doc: StatementsDoc(b.Statements),
+			Doc: StatementsDoc(ctx, b.Statements),
 		},
 		prettier.HardLine{},
 		blockEndDoc,
-	}
+	})
 }
 
-func StatementsDoc(statements []Statement) prettier.Doc {
+func StatementsDoc(ctx PrettyContext, statements []Statement) prettier.Doc {
 	var doc prettier.Concat
 
-	for _, statement := range statements {
-		doc = append(
-			doc,
-			prettier.HardLine{},
-			docOrEmpty(statement),
-		)
+	for i, statement := range statements {
+		doc = append(doc, prettier.HardLine{})
+		if i > 0 && ctx.BlankLineBetween(statements[i-1], statement) {
+			doc = append(doc, prettier.HardLine{})
+		}
+		doc = append(doc, docOrEmpty(statement, ctx))
 	}
 
 	return doc
@@ -167,14 +167,14 @@ func (b *FunctionBlock) EndPosition(common.MemoryGauge) Position {
 var preConditionsKeywordDoc = prettier.Text("pre")
 var postConditionsKeywordDoc = prettier.Text("post")
 
-func (b *FunctionBlock) Doc() prettier.Doc {
+func (b *FunctionBlock) Doc(ctx PrettyContext) prettier.Doc {
 	if b.IsEmpty() {
-		return blockEmptyDoc
+		return ctx.Wrap(b, blockEmptyDoc)
 	}
 
 	var conditionDocs []prettier.Doc
 
-	if conditionsDoc := b.PreConditions.Doc(preConditionsKeywordDoc); conditionsDoc != nil {
+	if conditionsDoc := b.PreConditions.Doc(ctx, preConditionsKeywordDoc); conditionsDoc != nil {
 		conditionDocs = append(
 			conditionDocs,
 			prettier.HardLine{},
@@ -182,7 +182,7 @@ func (b *FunctionBlock) Doc() prettier.Doc {
 		)
 	}
 
-	if conditionsDoc := b.PostConditions.Doc(postConditionsKeywordDoc); conditionsDoc != nil {
+	if conditionsDoc := b.PostConditions.Doc(ctx, postConditionsKeywordDoc); conditionsDoc != nil {
 		conditionDocs = append(
 			conditionDocs,
 			prettier.HardLine{},
@@ -192,7 +192,7 @@ func (b *FunctionBlock) Doc() prettier.Doc {
 
 	var bodyDoc prettier.Doc
 
-	statementsDoc := StatementsDoc(b.Block.Statements)
+	statementsDoc := StatementsDoc(ctx, b.Block.Statements)
 
 	if len(conditionDocs) > 0 {
 		bodyConcatDoc := prettier.Concat(conditionDocs)
@@ -205,14 +205,14 @@ func (b *FunctionBlock) Doc() prettier.Doc {
 		bodyDoc = statementsDoc
 	}
 
-	return prettier.Concat{
+	return ctx.Wrap(b, prettier.Concat{
 		blockStartDoc,
 		prettier.Indent{
 			Doc: bodyDoc,
 		},
 		prettier.HardLine{},
 		blockEndDoc,
-	}
+	})
 }
 
 func (b *FunctionBlock) String() string {
@@ -234,7 +234,7 @@ type Condition interface {
 	Element
 	isCondition()
 	CodeElement() Element
-	Doc() prettier.Doc
+	Doc(ctx PrettyContext) prettier.Doc
 	HasPosition
 }
 
@@ -288,11 +288,11 @@ func (c TestCondition) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (c TestCondition) Doc() prettier.Doc {
-	doc := docOrEmpty(c.Test)
+func (c TestCondition) Doc(ctx PrettyContext) prettier.Doc {
+	doc := docOrEmpty(c.Test, ctx)
 
 	if c.Message != nil {
-		messageDoc := c.Message.Doc()
+		messageDoc := c.Message.Doc(ctx)
 
 		doc = prettier.Concat{
 			doc,
@@ -306,9 +306,9 @@ func (c TestCondition) Doc() prettier.Doc {
 		}
 	}
 
-	return prettier.Group{
+	return ctx.Wrap(c, prettier.Group{
 		Doc: doc,
-	}
+	})
 }
 
 // EmitCondition
@@ -331,8 +331,8 @@ func (c *EmitCondition) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return (*EmitStatement)(c).EndPosition(memoryGauge)
 }
 
-func (c *EmitCondition) Doc() prettier.Doc {
-	return (*EmitStatement)(c).Doc()
+func (c *EmitCondition) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(c, (*EmitStatement)(c).Doc(ctx))
 }
 
 func (c *EmitCondition) MarshalJSON() ([]byte, error) {
@@ -367,7 +367,7 @@ func (c *Conditions) IsEmpty() bool {
 	return c == nil || len(c.Conditions) == 0
 }
 
-func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
+func (c *Conditions) Doc(ctx PrettyContext, keywordDoc prettier.Doc) prettier.Doc {
 	if c.IsEmpty() {
 		return nil
 	}
@@ -378,7 +378,7 @@ func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
 		doc = append(
 			doc,
 			prettier.HardLine{},
-			docOrEmpty(condition),
+			docOrEmpty(condition, ctx),
 		)
 	}
 

@@ -36,7 +36,7 @@ func TestTypeParameterList_Doc(t *testing.T) {
 		params := &TypeParameterList{}
 		require.Equal(t,
 			prettier.Text(""),
-			params.Doc(),
+			params.Doc(NopContext{}),
 		)
 	})
 
@@ -60,7 +60,7 @@ func TestTypeParameterList_Doc(t *testing.T) {
 					prettier.Text(">"),
 				},
 			},
-			params.Doc(),
+			params.Doc(NopContext{}),
 		)
 	})
 
@@ -108,7 +108,7 @@ func TestTypeParameterList_Doc(t *testing.T) {
 					prettier.Text(">"),
 				},
 			},
-			params.Doc(),
+			params.Doc(NopContext{}),
 		)
 	})
 }

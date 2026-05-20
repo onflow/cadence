@@ -58,7 +58,7 @@ func TestMembers_Doc(t *testing.T) {
 
 		require.Equal(t,
 			prettier.Text("{}"),
-			members.Doc(),
+			members.Doc(NopContext{}),
 		)
 	})
 
@@ -98,59 +98,42 @@ func TestMembers_Doc(t *testing.T) {
 				prettier.Text("{"),
 				prettier.Indent{
 					Doc: prettier.Concat{
-						prettier.Concat{
-							prettier.HardLine{},
-							prettier.Group{
-								Doc: prettier.Concat{
-									prettier.Text("var"),
-									prettier.Space,
-									prettier.Group{
-										Doc: prettier.Concat{
-											prettier.Group{
-												Doc: prettier.Concat{
-													prettier.Text("x"),
-												},
-											},
-											prettier.Space,
-											prettier.Text("="),
-											prettier.Group{
-												Doc: prettier.Indent{
-													Doc: prettier.Concat{
-														prettier.Line{},
-														prettier.Text("true"),
-													},
-												},
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("var"),
+								prettier.Space,
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("x"),
 											},
 										},
+										prettier.Space,
+										prettier.Text("="),
+										prettier.Space,
+										prettier.Text("true"),
 									},
 								},
 							},
 						},
 						prettier.HardLine{},
-						prettier.Concat{
-							prettier.HardLine{},
-							prettier.Group{
-								Doc: prettier.Concat{
-									prettier.Text("var"),
-									prettier.Space,
-									prettier.Group{
-										Doc: prettier.Concat{
-											prettier.Group{
-												Doc: prettier.Concat{
-													prettier.Text("y"),
-												},
-											},
-											prettier.Space,
-											prettier.Text("="),
-											prettier.Group{
-												Doc: prettier.Indent{
-													Doc: prettier.Concat{
-														prettier.Line{},
-														prettier.Text("false"),
-													},
-												},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("var"),
+								prettier.Space,
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Group{
+											Doc: prettier.Concat{
+												prettier.Text("y"),
 											},
 										},
+										prettier.Space,
+										prettier.Text("="),
+										prettier.Space,
+										prettier.Text("false"),
 									},
 								},
 							},
@@ -160,7 +143,7 @@ func TestMembers_Doc(t *testing.T) {
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
-			members.Doc(),
+			members.Doc(NopContext{}),
 		)
 	})
 
@@ -177,7 +160,7 @@ func TestMembers_String(t *testing.T) {
 
 		require.Equal(t,
 			prettier.Text("{}"),
-			members.Doc(),
+			members.Doc(NopContext{}),
 		)
 	})
 
@@ -215,7 +198,6 @@ func TestMembers_String(t *testing.T) {
 			t,
 			`{
     var x = true
-    
     var y = false
 }`,
 			members.String(),

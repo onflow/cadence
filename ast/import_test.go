@@ -121,7 +121,7 @@ func TestImportDeclaration_Doc(t *testing.T) {
 				prettier.Space,
 				prettier.Text("\"test\""),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -158,7 +158,7 @@ func TestImportDeclaration_Doc(t *testing.T) {
 				},
 				prettier.Text("0x1"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -203,7 +203,7 @@ func TestImportDeclaration_Doc(t *testing.T) {
 				},
 				prettier.Text("test"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -261,7 +261,7 @@ func TestImportDeclaration_Doc(t *testing.T) {
 				},
 				prettier.Text("test"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 

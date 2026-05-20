@@ -1,6 +1,5 @@
 access(all) struct VerifyResult {
     access(all) let canExecute: Bool
-
     access(all) let requiredBalance: UFix64
 
     init(canExecute: Bool, requiredBalance: UFix64) {

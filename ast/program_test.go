@@ -59,7 +59,7 @@ func TestProgram_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(""),
-			program.Doc(),
+			program.Doc(NopContext{}),
 		)
 	})
 
@@ -71,8 +71,8 @@ func TestProgram_Doc(t *testing.T) {
 		})
 
 		assert.Equal(t,
-			prettier.Text(""),
-			program.Doc(),
+			prettier.Concat{prettier.Text("")},
+			program.Doc(NopContext{}),
 		)
 	})
 
@@ -94,16 +94,14 @@ func TestProgram_Doc(t *testing.T) {
 					prettier.Text("#"),
 					prettier.Text("true"),
 				},
-				prettier.Concat{
-					prettier.HardLine{},
-					prettier.HardLine{},
-				},
+				prettier.HardLine{},
+				prettier.HardLine{},
 				prettier.Concat{
 					prettier.Text("#"),
 					prettier.Text("false"),
 				},
 			},
-			program.Doc(),
+			program.Doc(NopContext{}),
 		)
 	})
 }

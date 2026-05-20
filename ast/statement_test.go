@@ -78,7 +78,7 @@ func TestExpressionStatement_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text("false"),
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -91,7 +91,7 @@ func TestExpressionStatement_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(""),
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 }
@@ -216,7 +216,7 @@ func TestReturnStatement_Doc(t *testing.T) {
 				prettier.Text("return "),
 				prettier.Text("false"),
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -228,7 +228,7 @@ func TestReturnStatement_Doc(t *testing.T) {
 
 		require.Equal(t,
 			prettier.Text("return"),
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 }
@@ -343,7 +343,7 @@ func TestBreakStatement_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Text("break"),
-		(&BreakStatement{}).Doc(),
+		(&BreakStatement{}).Doc(NopContext{}),
 	)
 }
 
@@ -390,7 +390,7 @@ func TestContinueStatement_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Text("continue"),
-		(&ContinueStatement{}).Doc(),
+		(&ContinueStatement{}).Doc(NopContext{}),
 	)
 }
 
@@ -496,7 +496,7 @@ func TestIfStatement_Doc(t *testing.T) {
 					prettier.Text("{}"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -545,7 +545,7 @@ func TestIfStatement_Doc(t *testing.T) {
 					},
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -564,7 +564,7 @@ func TestIfStatement_Doc(t *testing.T) {
 					prettier.Text("{}"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 }
@@ -773,7 +773,7 @@ func TestGuardStatement_Doc(t *testing.T) {
 					prettier.Text("{}"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -792,7 +792,7 @@ func TestGuardStatement_Doc(t *testing.T) {
 					prettier.Text("{}"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 }
@@ -934,7 +934,7 @@ func TestWhileStatement_Doc(t *testing.T) {
 					prettier.Text("{}"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -952,7 +952,7 @@ func TestWhileStatement_Doc(t *testing.T) {
 					prettier.Text("{}"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 }
@@ -1183,7 +1183,7 @@ func TestForStatement_Doc(t *testing.T) {
 					prettier.Text("{}"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -1219,7 +1219,7 @@ func TestForStatement_Doc(t *testing.T) {
 					prettier.Text("{}"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -1240,7 +1240,7 @@ func TestForStatement_Doc(t *testing.T) {
 					prettier.Text("{}"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 }
@@ -1427,14 +1427,10 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 					prettier.Space,
 					prettier.Text("="),
 					prettier.Space,
-					prettier.Group{
-						Doc: prettier.Indent{
-							Doc: prettier.Text("false"),
-						},
-					},
+					prettier.Text("false"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -1450,14 +1446,10 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 					prettier.Space,
 					prettier.Text(""),
 					prettier.Space,
-					prettier.Group{
-						Doc: prettier.Indent{
-							Doc: prettier.Text(""),
-						},
-					},
+					prettier.Text(""),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 }
@@ -1611,7 +1603,7 @@ func TestSwapStatement_Doc(t *testing.T) {
 					prettier.Text("false"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -1628,7 +1620,7 @@ func TestSwapStatement_Doc(t *testing.T) {
 					prettier.Text(""),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 }
@@ -1834,7 +1826,7 @@ func TestEmitStatement_Doc(t *testing.T) {
 					prettier.Text("()"),
 				},
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -1848,7 +1840,7 @@ func TestEmitStatement_Doc(t *testing.T) {
 				prettier.Text("emit "),
 				prettier.Text(""),
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -2138,7 +2130,7 @@ func TestSwitchStatement_Doc(t *testing.T) {
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 
@@ -2195,7 +2187,7 @@ func TestSwitchStatement_Doc(t *testing.T) {
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
-			stmt.Doc(),
+			stmt.Doc(NopContext{}),
 		)
 	})
 }
