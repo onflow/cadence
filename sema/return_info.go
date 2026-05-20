@@ -83,8 +83,8 @@ type ReturnInfo struct {
 	// exited (the break/continue exits only the enclosing loop/switch).
 	// Sites that care specifically about "did the function exit" (notably
 	// `checkResourceLoss`) recover that by checking
-	// `DefinitelyExited && !MaybeJumpedLoop && !MaybeJumpedSwitch` —
-	// see `checkResourceLoss` for the rationale.
+	// `DefinitelyExited && !MaybeJumped()` — see `checkResourceLoss`
+	// for the rationale.
 	//
 	// At a case body's terminal state and at a loop body's terminal state,
 	// `DefinitelyExited` is cleared alongside `DefinitelyReturned` and `DefinitelyHalted`
@@ -203,6 +203,19 @@ func (ri *ReturnInfo) IsUnreachable() bool {
 	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
 	// see DefinitelyExited
 	return ri.DefinitelyExited
+}
+
+// MaybeJumped reports whether some path within the current loop or
+// switch reached a `break` or `continue`. It is the union of
+// `MaybeJumpedLoop` and `MaybeJumpedSwitch`.
+//
+// Used to distinguish "function exited via return/halt" (no maybe-jump)
+// from "construct exited via break/continue" (maybe-jump set), notably
+// in `checkResourceLoss` (to decide whether to skip) and in
+// `maybeAddResourceInvalidation` (to decide whether a member resource
+// invalidation is only potential).
+func (ri *ReturnInfo) MaybeJumped() bool {
+	return ri.MaybeJumpedLoop || ri.MaybeJumpedSwitch
 }
 
 func (ri *ReturnInfo) AddJumpOffset(offset int) {

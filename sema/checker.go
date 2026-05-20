@@ -1516,9 +1516,7 @@ func (checker *Checker) checkResourceLoss(depth int) {
 	//     case body that are not destroyed before the jump are real
 	//     leaks that this scope-leave must report — so when a
 	//     `MaybeJumped*` is set, do not skip.
-	if returnInfo.DefinitelyExited &&
-		!returnInfo.MaybeJumpedLoop &&
-		!returnInfo.MaybeJumpedSwitch {
+	if returnInfo.DefinitelyExited && !returnInfo.MaybeJumped() {
 		return
 	}
 
@@ -2728,8 +2726,7 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 	switch {
 	case resource.Member != nil:
 		onlyPotential = returnInfo.MaybeReturned ||
-			returnInfo.MaybeJumpedLoop ||
-			returnInfo.MaybeJumpedSwitch
+			returnInfo.MaybeJumped()
 
 	case resource.Variable != nil &&
 		resource.Variable.DeclarationKind != common.DeclarationKindSelf:
