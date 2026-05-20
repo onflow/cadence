@@ -362,6 +362,43 @@ func (v UFix128Value) Mod(context NumberValueArithmeticContext, other NumberValu
 	return NewUFix128Value(context, valueGetter)
 }
 
+func (v UFix128Value) MultiplyDivide(
+	context NumberValueArithmeticContext,
+	factor FixedPointValue,
+	divisor FixedPointValue,
+	rounding fix.RoundingMode,
+) NumberValue {
+	f, ok := factor.(UFix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    factor.StaticType(context),
+		})
+	}
+
+	d, ok := divisor.(UFix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    divisor.StaticType(context),
+		})
+	}
+
+	valueGetter := func() fix.UFix128 {
+		result, err := fix.UFix128(v).FMD(
+			fix.UFix128(f),
+			fix.UFix128(d),
+			rounding,
+		)
+		handleFixedpointError(err)
+		return result
+	}
+
+	return NewUFix128Value(context, valueGetter)
+}
+
 func (v UFix128Value) Pow(context NumberValueArithmeticContext, other Fix128Value) NumberValue {
 	valueGetter := func() fix.UFix128 {
 		result, err := fix.UFix128(v).Pow(fix.Fix128(other))
