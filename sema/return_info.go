@@ -51,11 +51,11 @@ type ReturnInfo struct {
 	// This is the generic "every path terminated" flag
 	// and is the one observed by `IsUnreachable()`.
 	//
-	// NOTEL: It is intentionally NOT just
+	// NOTE: It is intentionally NOT just
 	// `DefinitelyReturned || DefinitelyHalted || DefinitelyJumpedLoop || DefinitelyJumpedSwitch`,
 	// because AND-merging each kind-specific flag separately would lose
-	// the case where both branches of an if-else terminate but via
-	// different kinds. For example:
+	// the case where both branches of an if-else terminate but via different kinds.
+	// For example:
 	//
 	//   if ... {
 	//       return
@@ -186,11 +186,9 @@ func (ri *ReturnInfo) Clone() *ReturnInfo {
 }
 
 func (ri *ReturnInfo) IsUnreachable() bool {
-	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
+	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted || DefinitelyJumpedLoop || DefinitelyJumpedSwitch,
 	// see DefinitelyExited
-	return ri.DefinitelyExited ||
-		ri.DefinitelyJumpedLoop ||
-		ri.DefinitelyJumpedSwitch
+	return ri.DefinitelyExited
 }
 
 func (ri *ReturnInfo) AddJumpOffset(offset int) {
