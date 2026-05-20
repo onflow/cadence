@@ -130,8 +130,8 @@ func (r *renderer) invocationExpression(e *ast.InvocationExpression) prettier.Do
 		argLeading, argSameLine, argTrailing := r.cm.Take(arg)
 		exprLeading, exprSameLine, exprTrailing := r.cm.Take(arg.Expression)
 
-		a.leading = append(argLeading, exprLeading...)
-		a.trailing = append(argTrailing, exprTrailing...)
+		a.leading = append(argLeading, exprLeading...)    //nolint:gocritic
+		a.trailing = append(argTrailing, exprTrailing...) //nolint:gocritic
 		// Same-line: prefer argument-level (closer to the text)
 		a.sameLine = argSameLine
 		if a.sameLine == nil {

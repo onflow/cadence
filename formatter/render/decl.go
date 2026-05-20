@@ -624,7 +624,7 @@ func (r *renderer) parameterList(paramList *ast.ParameterList) (prettier.Doc, []
 		p := paramInfo{doc: param.Doc()}
 		if param.TypeAnnotation != nil {
 			leading, sameLine, trailing := r.cm.Take(param.TypeAnnotation)
-			p.leading = append(pendingTrailing, leading...)
+			p.leading = append(pendingTrailing, leading...) //nolint:gocritic
 			p.sameLine = sameLine
 			p.trailing = trailing
 			if len(p.leading) > 0 || p.sameLine != nil {

@@ -345,7 +345,7 @@ func TestTrueEndPosition(t *testing.T) {
 		},
 		{
 			name:       "trailing space same line",
-			source:    "abc  ",
+			source:     "abc  ",
 			reportedAt: 4,
 			reportedLn: 1,
 			wantOffset: 2, // 'c'

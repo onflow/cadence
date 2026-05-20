@@ -145,4 +145,3 @@ func collectChildren(elem ast.Element) []ast.Element {
 	})
 	return children
 }
-

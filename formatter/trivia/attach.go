@@ -83,17 +83,17 @@ func (cm *CommentMap) IsEmpty() bool {
 // OrphanDetails returns a human-readable summary of remaining comments in the map.
 func (cm *CommentMap) OrphanDetails() string {
 	var details string
-	for k, v := range cm.Leading {
+	for k, v := range cm.Leading { //nolint:maprange
 		for _, g := range v {
 			details += fmt.Sprintf("  Leading on %T at %s: %q\n", k, k.StartPosition(), g.Comments[0].Text)
 		}
 	}
-	for k, v := range cm.Trailing {
+	for k, v := range cm.Trailing { //nolint:maprange
 		for _, g := range v {
 			details += fmt.Sprintf("  Trailing on %T at %s: %q\n", k, k.StartPosition(), g.Comments[0].Text)
 		}
 	}
-	for k, v := range cm.SameLine {
+	for k, v := range cm.SameLine { //nolint:maprange
 		details += fmt.Sprintf("  SameLine on %T at %s: %q\n", k, k.StartPosition(), v.Comments[0].Text)
 	}
 	return details
