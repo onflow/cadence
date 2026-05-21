@@ -677,21 +677,24 @@ func TestIntersectAccess(t *testing.T) {
 	t.Run("disjunction, identical", func(t *testing.T) {
 		t.Parallel()
 
+		// Two disjunctions: neither guarantees any specific entitlement,
+		// so nothing can be statically guaranteed in common.
 		result := IntersectAccess(
 			disjunctionAccess(MutateType, InsertType),
 			disjunctionAccess(MutateType, InsertType),
 		)
-		assert.Equal(t, disjunctionAccess(MutateType, InsertType), result)
+		assert.Equal(t, UnauthorizedAccess, result)
 	})
 
 	t.Run("disjunction, partial overlap", func(t *testing.T) {
 		t.Parallel()
 
+		// Both sides are disjunctions, so nothing is guaranteed in common.
 		result := IntersectAccess(
 			disjunctionAccess(MutateType, InsertType),
 			disjunctionAccess(InsertType, RemoveType),
 		)
-		assert.Equal(t, disjunctionAccess(InsertType), result)
+		assert.Equal(t, UnauthorizedAccess, result)
 	})
 
 	t.Run("disjunction, disjoint", func(t *testing.T) {
@@ -704,45 +707,93 @@ func TestIntersectAccess(t *testing.T) {
 		assert.Equal(t, UnauthorizedAccess, result)
 	})
 
-	t.Run("mixed, conjunction left, disjunction right", func(t *testing.T) {
+	t.Run("mixed, conjunction left, disjunction right, conjunction not superset", func(t *testing.T) {
 		t.Parallel()
 
-		// Conjunction has all of {Mutate, Insert}.
-		// Disjunction has one of {Insert, Remove}.
-		// Intersection: {Insert}. Result must be disjunction
-		// because the disjunction side only guarantees one.
+		// Conjunction guarantees Mutate and Insert.
+		// Disjunction guarantees one of Insert or Remove (but might be Remove,
+		// which the conjunction does not guarantee).
+		// Therefore the disjunction cannot be preserved.
 		result := IntersectAccess(
 			conjunctionAccess(MutateType, InsertType),
 			disjunctionAccess(InsertType, RemoveType),
 		)
-		assert.Equal(t, disjunctionAccess(InsertType), result)
+		assert.Equal(t, UnauthorizedAccess, result)
 	})
 
-	t.Run("mixed, disjunction left, conjunction right", func(t *testing.T) {
+	t.Run("mixed, disjunction left, conjunction right, conjunction not superset", func(t *testing.T) {
 		t.Parallel()
 
-		// Disjunction has one of {Mutate, Insert}.
-		// Conjunction has all of {Insert, Remove}.
-		// Intersection: {Insert}. Result must be disjunction.
+		// Symmetric: conjunction does not contain every option of the
+		// disjunction, so nothing is statically guaranteed in common.
 		result := IntersectAccess(
 			disjunctionAccess(MutateType, InsertType),
 			conjunctionAccess(InsertType, RemoveType),
 		)
-		assert.Equal(t, disjunctionAccess(InsertType), result)
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("mixed, conjunction left, disjunction right, conjunction superset", func(t *testing.T) {
+		t.Parallel()
+
+		// Conjunction guarantees all of {Mutate, Insert, Remove}, which is a
+		// superset of the disjunction's options {Insert, Remove}.
+		// The disjunction is preserved as-is.
+		result := IntersectAccess(
+			conjunctionAccess(MutateType, InsertType, RemoveType),
+			disjunctionAccess(InsertType, RemoveType),
+		)
+		assert.Equal(t, disjunctionAccess(InsertType, RemoveType), result)
+	})
+
+	t.Run("mixed, disjunction left, conjunction right, conjunction superset", func(t *testing.T) {
+		t.Parallel()
+
+		// Symmetric to the previous case.
+		result := IntersectAccess(
+			disjunctionAccess(InsertType, RemoveType),
+			conjunctionAccess(MutateType, InsertType, RemoveType),
+		)
+		assert.Equal(t, disjunctionAccess(InsertType, RemoveType), result)
+	})
+
+	t.Run("mixed, conjunction equals disjunction set", func(t *testing.T) {
+		t.Parallel()
+
+		// Conjunction guarantees all of {Mutate, Insert}, which equals
+		// the disjunction's option set: the conjunction is a superset.
+		// The disjunction is preserved as-is.
+		result := IntersectAccess(
+			conjunctionAccess(MutateType, InsertType),
+			disjunctionAccess(MutateType, InsertType),
+		)
+		assert.Equal(t, disjunctionAccess(MutateType, InsertType), result)
 	})
 
 	t.Run("mixed, full overlap, disjunction constrains result", func(t *testing.T) {
 		t.Parallel()
 
 		// Disjunction has one of {Mutate, Insert}.
-		// Conjunction has all of {Mutate, Insert}.
-		// Intersection: {Mutate, Insert}. Still disjunction —
-		// can't upgrade to conjunction just because the sets match.
+		// Conjunction has all of {Mutate, Insert}: superset of the disjunction,
+		// so the disjunction passes through unchanged. The result cannot be
+		// upgraded to a conjunction.
 		result := IntersectAccess(
 			disjunctionAccess(MutateType, InsertType),
 			conjunctionAccess(MutateType, InsertType),
 		)
 		assert.Equal(t, disjunctionAccess(MutateType, InsertType), result)
+	})
+
+	t.Run("mixed, conjunction subset of disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		// Conjunction guarantees only {Insert}, but the disjunction may hold
+		// Mutate or Remove instead, which the conjunction does not guarantee.
+		result := IntersectAccess(
+			conjunctionAccess(InsertType),
+			disjunctionAccess(MutateType, InsertType, RemoveType),
+		)
+		assert.Equal(t, UnauthorizedAccess, result)
 	})
 
 	t.Run("entitlement map access", func(t *testing.T) {
