@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: ./tools/compatibility-check/go.mod
-          cache: true
+          cache: false
 
       - name: Make output dirs
         run: |

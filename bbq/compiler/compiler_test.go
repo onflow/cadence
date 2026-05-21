@@ -1127,6 +1127,9 @@ func TestCompileIfLet(t *testing.T) {
 			},
 			opcode.PrettyInstructionReturnValue{},
 
+			// Defensive unreachable after the exhaustive if-statement
+			opcode.PrettyInstructionUnreachable{},
+
 			opcode.PrettyInstructionReturn{},
 		},
 		prettyInstructions(functions[0].Code, program),
@@ -14081,5 +14084,124 @@ func TestCompileReferenceMethod(t *testing.T) {
 			},
 		},
 		program.Globals,
+	)
+}
+
+func TestCompileExhaustiveIfNoFollowingStatement(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(): Int {
+          if true { return 1 } else { return 2 }
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// if true
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionTrue{},
+			opcode.PrettyInstructionJumpIfFalse{Target: 8},
+
+			// return 1 (then branch)
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
+
+			opcode.PrettyInstructionJump{Target: 12},
+
+			// return 2 (else branch)
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
+
+			// Defensive unreachable after the exhaustive if-statement.
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionReturn{},
+		},
+		prettyInstructions(functions[0].Code, program),
+	)
+}
+
+func TestCompileUnreachableStatementAfterExhaustiveIf(t *testing.T) {
+
+	t.Parallel()
+
+	// The checker reports an UnreachableStatementError for the trailing `return`,
+	// but the compiler still walks and emits bytecode for it. The defensive
+	// InstructionUnreachable emitted after the exhaustive if-statement guarantees
+	// that the unreachable return is never reached at runtime.
+	checker, err := ParseAndCheck(t, `
+      fun test() {
+          if true { return } else { return }
+          return
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+	require.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// if true
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionTrue{},
+			opcode.PrettyInstructionJumpIfFalse{Target: 6},
+
+			// return (then branch)
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionReturn{},
+
+			opcode.PrettyInstructionJump{Target: 8},
+
+			// return (else branch)
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionReturn{},
+
+			// Defensive unreachable after the exhaustive if-statement.
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionReturn{},
+		},
+		prettyInstructions(functions[0].Code, program),
 	)
 }

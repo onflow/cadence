@@ -1879,7 +1879,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 	case PrimitiveAccess:
 		checker.checkPrimitiveAccess(access, isConstant, declarationKind, startPos)
 	case *EntitlementMapAccess:
-		checker.checkEntitlementMapAccess(declarationType, containerKind, startPos)
+		checker.checkEntitlementMapAccess(declarationType, containerKind, declarationKind, startPos)
 	case EntitlementSetAccess:
 		checker.checkEntitlementSetAccess(containerKind, startPos)
 	}
@@ -1958,6 +1958,7 @@ func (checker *Checker) checkPrimitiveAccess(
 func (checker *Checker) checkEntitlementMapAccess(
 	declarationType Type,
 	containerKind *common.CompositeKind,
+	declarationKind common.DeclarationKind,
 	startPos ast.Position,
 ) {
 	// Mapping access may only be used inside of structs and resources.
@@ -1971,6 +1972,16 @@ func (checker *Checker) checkEntitlementMapAccess(
 			},
 		)
 		return
+	}
+
+	// Mapping access may only be used on fields.
+	if declarationKind != common.DeclarationKindField {
+		checker.report(
+			&InvalidNonFieldMappingAccessError{
+				DeclarationKind: declarationKind,
+				Pos:             startPos,
+			},
+		)
 	}
 
 	if !isValidMappingAccessMemberType(declarationType) {

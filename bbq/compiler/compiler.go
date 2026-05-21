@@ -598,8 +598,29 @@ func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
 		func() {
 			c.emit(opcode.InstructionStatement{})
 			ast.AcceptStatement[struct{}](statement, c)
+			c.emitUnreachableIfStatementEndsControlFlow(statement)
 		},
 	)
+}
+
+// emitUnreachableIfStatementEndsControlFlow emits an InstructionUnreachable
+// after the given statement's bytecode if the type checker determined that
+// control flow does not continue past it (halt, exhaustive if/switch).
+// If execution nevertheless reaches the emitted instruction at runtime,
+// the VM panics with UnreachableInstructionError.
+//
+// Return, break, and continue statements are skipped: they compile to a
+// single terminator opcode (InstructionReturn / InstructionReturnValue /
+// InstructionJump) that always transfers control out, so a defensive
+// marker after them would be dead bytecode.
+func (c *Compiler[_, _]) emitUnreachableIfStatementEndsControlFlow(statement ast.Statement) {
+	switch statement.(type) {
+	case *ast.ReturnStatement, *ast.BreakStatement, *ast.ContinueStatement:
+		return
+	}
+	if c.DesugaredElaboration.IsStatementEndingControlFlow(statement) {
+		c.emit(opcode.InstructionUnreachable{})
+	}
 }
 
 func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
@@ -1574,7 +1595,9 @@ func (c *Compiler[_, _]) VisitGuardStatement(statement *ast.GuardStatement) (_ s
 		nil,
 	)
 
-	// Defensive return: Ensure control flow does not continue after the else block
+	// Defensive: ensure control flow does not fall through past the else block.
+	// The checker requires the else block's final statement to end control flow,
+	// but defensively emit an unreachable here too, in case it does not.
 	c.emit(opcode.InstructionUnreachable{})
 
 	// Patch the endJump to continue after the else block
