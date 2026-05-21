@@ -975,6 +975,13 @@ func (v *ArrayValue) GetMethod(
 
 	arrayType := v.SemaType(context)
 
+	var accessedType sema.Type
+	if accessedReference != nil {
+		accessedType = MustSemaTypeOfValue(accessedReference, context)
+	} else {
+		accessedType = arrayType
+	}
+
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1004,6 +1011,8 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayConcatFunctionType(
+				context,
+				accessedType,
 				arrayType,
 			),
 			NativeArrayConcatFunction,
@@ -1026,6 +1035,8 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayRemoveFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveFunction,
@@ -1037,6 +1048,8 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayRemoveFirstFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveFirstFunction,
@@ -1048,6 +1061,8 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayRemoveLastFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveLastFunction,
@@ -1081,6 +1096,8 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArraySliceFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArraySliceFunction,
@@ -1092,19 +1109,14 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayReverseFunctionType(
+				context,
+				accessedType,
 				arrayType,
 			),
 			NativeArrayReverseFunction,
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
-		var accessedType sema.Type
-		if accessedReference != nil {
-			accessedType = MustSemaTypeOfValue(accessedReference, context)
-		} else {
-			accessedType = arrayType
-		}
-
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -1121,13 +1133,6 @@ func (v *ArrayValue) GetMethod(
 			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeMapFunctionName:
-		var accessedType sema.Type
-		if accessedReference != nil {
-			accessedType = MustSemaTypeOfValue(accessedReference, context)
-		} else {
-			accessedType = arrayType
-		}
-
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -1149,6 +1154,8 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayToVariableSizedFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayToVariableSizedFunction,
@@ -1160,6 +1167,8 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayToConstantSizedFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayToConstantSizedFunction,

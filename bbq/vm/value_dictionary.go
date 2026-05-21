@@ -33,8 +33,9 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeRemoveFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
 				dictionaryType := dictionaryType(receiver, context)
-				return sema.DictionaryRemoveFunctionType(dictionaryType)
+				return sema.DictionaryRemoveFunctionType(context, accessedType, dictionaryType)
 			},
 			interpreter.NativeDictionaryRemoveFunction,
 		),
@@ -45,8 +46,9 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeInsertFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
 				dictionaryType := dictionaryType(receiver, context)
-				return sema.DictionaryInsertFunctionType(dictionaryType)
+				return sema.DictionaryInsertFunctionType(context, accessedType, dictionaryType)
 			},
 			interpreter.NativeDictionaryInsertFunction,
 		),
@@ -69,9 +71,10 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeForEachKeyFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
 				dictionaryValue := receiver.(*interpreter.DictionaryValue)
 				dictionaryType := dictionaryValue.SemaType(context)
-				return sema.DictionaryForEachKeyFunctionType(dictionaryType)
+				return sema.DictionaryForEachKeyFunctionType(context, accessedType, dictionaryType)
 			},
 			interpreter.NativeDictionaryForEachKeyFunction,
 		),

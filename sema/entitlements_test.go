@@ -8689,6 +8689,380 @@ func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
 	})
 }
 
+func TestInvalidCheckEntitlementEscalation(t *testing.T) {
+
+	t.Parallel()
+
+	// Each subtest exercises an array method that returns elements (or a copy
+	// of the array) and verifies that when the method is invoked through an
+	// auth(Insert) reference to a `[auth(Remove) &T; N]` or `[auth(Remove) &T]`,
+	// the inner element references are intersected with the outer auth.
+	// outer auth(Insert) ∩ inner auth(Remove) is empty, so the resulting
+	// element type must be unauthorized: any call to a Remove-entitled member
+	// on those elements must be rejected. Without this intersection, the
+	// receiver's Insert-only outer auth would escalate to Remove on every
+	// element extracted via the copy/return method.
+
+	// `toVariableSized` copies a fixed-size array into a variable-sized array.
+	t.Run("toVariableSized preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Insert) fun requiresInsert() {}
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim; 1]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim; 1] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                insertOnlyArrRef.toVariableSized()[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `slice` returns a sub-range of a variable-sized array.
+	t.Run("slice preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                insertOnlyArrRef.slice(from: 0, upTo: 1)[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `concat` returns the concatenation of two arrays.
+	t.Run("concat preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                let other: [auth(Remove) &InnerVictim] = []
+                insertOnlyArrRef.concat(other)[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `reverse` returns a reversed copy of the array.
+	t.Run("reverse preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                insertOnlyArrRef.reverse()[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `toConstantSized` copies a variable-sized array into a constant-sized
+	// array (the user provides the target type parameter).
+	t.Run("toConstantSized preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                insertOnlyArrRef.toConstantSized<[&InnerVictim; 1]>()![0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `remove` extracts a single element from a variable-sized array.
+	// Note: the receiver must grant the Mutate or Remove entitlement for
+	// `remove` to be callable; here we use auth(Mutate, Insert) so we can
+	// call `remove` while still exercising a partial-overlap intersection
+	// (auth(Mutate, Insert) ∩ auth(Remove) is empty, which strips the
+	// inner reference auth).
+	t.Run("remove preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let mutateOnlyArrRef = ov.getMutateOnlyRef()
+
+                mutateOnlyArrRef.remove(at: 0).requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `removeFirst` extracts the first element of a variable-sized array.
+	t.Run("removeFirst preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let mutateOnlyArrRef = ov.getMutateOnlyRef()
+
+                mutateOnlyArrRef.removeFirst().requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `removeLast` extracts the last element of a variable-sized array.
+	t.Run("removeLast preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let mutateOnlyArrRef = ov.getMutateOnlyRef()
+
+                mutateOnlyArrRef.removeLast().requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// Dictionary `remove` extracts a value from a dictionary by key.
+	t.Run("dictionary remove preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let dict: {String: auth(Remove) &InnerVictim}
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.dict = {"a": &self.iv as auth(Remove) &InnerVictim}
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &{String: auth(Remove) &InnerVictim} {
+                    return &self.dict
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let mutateOnlyRef = ov.getMutateOnlyRef()
+
+                mutateOnlyRef.remove(key: "a")!.requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// Dictionary `insert` returns the previous value at the given key.
+	t.Run("dictionary insert preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let dict: {String: auth(Remove) &InnerVictim}
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.dict = {"a": &self.iv as auth(Remove) &InnerVictim}
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &{String: auth(Remove) &InnerVictim} {
+                    return &self.dict
+                }
+            }
+
+            access(all) fun main(replacement: auth(Remove) &InnerVictim) {
+                let ov = OuterVictim()
+                let mutateOnlyRef = ov.getMutateOnlyRef()
+
+                mutateOnlyRef.insert(key: "a", replacement)!.requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+}
+
 func TestCheckMappingAccessFieldType(t *testing.T) {
 
 	t.Parallel()

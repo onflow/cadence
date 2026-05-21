@@ -929,6 +929,16 @@ func (v *DictionaryValue) GetMethod(
 	name string,
 	accessedReference ReferenceValue,
 ) FunctionValue {
+
+	dictionaryType := v.SemaType(context)
+
+	var accessedType sema.Type
+	if accessedReference != nil {
+		accessedType = MustSemaTypeOfValue(accessedReference, context)
+	} else {
+		accessedType = dictionaryType
+	}
+
 	switch name {
 	case sema.DictionaryTypeRemoveFunctionName:
 		return NewBoundHostFunctionValue(
@@ -936,7 +946,9 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryRemoveFunctionType(
-				v.SemaType(context),
+				context,
+				accessedType,
+				dictionaryType,
 			),
 			NativeDictionaryRemoveFunction,
 		)
@@ -947,7 +959,9 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryInsertFunctionType(
-				v.SemaType(context),
+				context,
+				accessedType,
+				dictionaryType,
 			),
 			NativeDictionaryInsertFunction,
 		)
@@ -958,7 +972,7 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryContainsKeyFunctionType(
-				v.SemaType(context),
+				dictionaryType,
 			),
 			NativeDictionaryContainsKeyFunction,
 		)
@@ -969,7 +983,9 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryForEachKeyFunctionType(
-				v.SemaType(context),
+				context,
+				accessedType,
+				dictionaryType,
 			),
 			NativeDictionaryForEachKeyFunction,
 		)

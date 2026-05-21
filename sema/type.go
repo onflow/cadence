@@ -2583,34 +2583,8 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			},
 		},
 		ArrayTypeReverseFunctionName: {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				targetRange ast.HasPosition,
-				report func(error),
-			) *Member {
-				elementType := arrayType.ElementType(false)
-
-				// It is impossible for a resource to be present in two arrays.
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArrayReverseFunctionType(arrayType),
-					arrayTypeReverseFunctionDocString,
-				)
-			},
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayReverseFunctionMemberFuncResolver(arrayType, arrayType),
 		},
 		ArrayTypeFilterFunctionName: {
 			Kind:    common.DeclarationKindFunction,
@@ -2679,222 +2653,82 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members[ArrayTypeConcatFunctionName] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				targetRange ast.HasPosition,
-				report func(error),
-			) *Member {
-
-				// TODO: maybe allow for resource element type
-
-				elementType := arrayType.ElementType(false)
-
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArrayConcatFunctionType(arrayType),
-					arrayTypeConcatFunctionDocString,
-				)
-			},
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayConcatFunctionMemberFuncResolver(arrayType, arrayType),
 		}
 
-		members["slice"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				targetRange ast.HasPosition,
-				report func(error),
-			) *Member {
-
-				elementType := arrayType.ElementType(false)
-
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArraySliceFunctionType(elementType),
-					arrayTypeSliceFunctionDocString,
-				)
-			},
+		members[ArrayTypeSliceFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArraySliceFunctionMemberFuncResolver(arrayType, arrayType),
 		}
 
-		members["insert"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				_ ast.HasPosition,
-				_ func(error),
-			) *Member {
-
-				elementType := arrayType.ElementType(false)
-
-				return NewFunctionMember(
-					memoryGauge,
-					arrayType,
-					insertMutateEntitledAccess,
-					identifier,
-					ArrayInsertFunctionType(elementType),
-					arrayTypeInsertFunctionDocString,
-				)
-			},
+		members[ArrayTypeInsertFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayInsertFunctionMemberFuncResolver(arrayType),
 		}
 
-		members["remove"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				_ ast.HasPosition,
-				_ func(error),
-			) *Member {
-
-				elementType := arrayType.ElementType(false)
-
-				return NewFunctionMember(
-					memoryGauge,
-					arrayType,
-					removeMutateEntitledAccess,
-					identifier,
-					ArrayRemoveFunctionType(elementType),
-					arrayTypeRemoveFunctionDocString,
-				)
-			},
+		members[ArrayTypeRemoveFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayRemoveFunctionMemberFuncResolver(arrayType, arrayType),
 		}
 
-		members["removeFirst"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				_ ast.HasPosition,
-				_ func(error),
-			) *Member {
-
-				elementType := arrayType.ElementType(false)
-
-				return NewFunctionMember(
-					memoryGauge,
-					arrayType,
-					removeMutateEntitledAccess,
-					identifier,
-					ArrayRemoveFirstFunctionType(elementType),
-					arrayTypeRemoveFirstFunctionDocString,
-				)
-			},
+		members[ArrayTypeRemoveFirstFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayRemoveFirstFunctionMemberFuncResolver(arrayType, arrayType),
 		}
 
-		members["removeLast"] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				_ ast.HasPosition,
-				_ func(error),
-			) *Member {
-
-				elementType := arrayType.ElementType(false)
-
-				return NewFunctionMember(
-					memoryGauge,
-					arrayType,
-					removeMutateEntitledAccess,
-					identifier,
-					ArrayRemoveLastFunctionType(elementType),
-					arrayTypeRemoveLastFunctionDocString,
-				)
-			},
+		members[ArrayTypeRemoveLastFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayRemoveLastFunctionMemberFuncResolver(arrayType, arrayType),
 		}
 
 		members[ArrayTypeToConstantSizedFunctionName] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				targetRange ast.HasPosition,
-				report func(error),
-			) *Member {
-				elementType := arrayType.ElementType(false)
-
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArrayToConstantSizedFunctionType(elementType),
-					arrayTypeToConstantSizedFunctionDocString,
-				)
-			},
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayToConstantSizedFunctionMemberFuncResolver(arrayType, arrayType),
 		}
 	}
 
 	if _, ok := arrayType.(*ConstantSizedType); ok {
 
 		members[ArrayTypeToVariableSizedFunctionName] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				targetRange ast.HasPosition,
-				report func(error),
-			) *Member {
-				elementType := arrayType.ElementType(false)
-
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArrayToVariableSizedFunctionType(elementType),
-					arrayTypeToVariableSizedFunctionDocString,
-				)
-			},
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayToVariableSizedFunctionMemberFuncResolver(arrayType, arrayType),
 		}
 	}
 
 	return withBuiltinMembers(arrayType, members)
+}
+
+func ArrayToVariableSizedFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+		elementType := arrayType.ElementType(false)
+
+		if elementType.IsResourceType() {
+			report(
+				&InvalidResourceArrayMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindFunction,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			arrayType,
+			identifier,
+			ArrayToVariableSizedFunctionType(memoryGauge, accessedType, elementType),
+			arrayTypeToVariableSizedFunctionDocString,
+		)
+	}
 }
 
 func ArrayMapFunctionMemberFuncResolver(
@@ -2971,7 +2805,232 @@ func ArrayFilterFunctionMemberFuncResolver(
 	}
 }
 
-func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
+func ArrayConcatFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+
+		elementType := arrayType.ElementType(false)
+
+		if elementType.IsResourceType() {
+			report(
+				&InvalidResourceArrayMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindFunction,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			arrayType,
+			identifier,
+			ArrayConcatFunctionType(memoryGauge, accessedType, arrayType),
+			arrayTypeConcatFunctionDocString,
+		)
+	}
+}
+
+func ArraySliceFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+
+		elementType := arrayType.ElementType(false)
+
+		if elementType.IsResourceType() {
+			report(
+				&InvalidResourceArrayMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindFunction,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			arrayType,
+			identifier,
+			ArraySliceFunctionType(memoryGauge, accessedType, elementType),
+			arrayTypeSliceFunctionDocString,
+		)
+	}
+}
+
+func ArrayInsertFunctionMemberFuncResolver(arrayType ArrayType) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		_ ast.HasPosition,
+		_ func(error),
+	) *Member {
+
+		elementType := arrayType.ElementType(false)
+
+		return NewFunctionMember(
+			memoryGauge,
+			arrayType,
+			insertMutateEntitledAccess,
+			identifier,
+			ArrayInsertFunctionType(elementType),
+			arrayTypeInsertFunctionDocString,
+		)
+	}
+}
+
+func ArrayReverseFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+
+		elementType := arrayType.ElementType(false)
+
+		// It is impossible for a resource to be present in two arrays.
+		if elementType.IsResourceType() {
+			report(
+				&InvalidResourceArrayMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindFunction,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			arrayType,
+			identifier,
+			ArrayReverseFunctionType(memoryGauge, accessedType, arrayType),
+			arrayTypeReverseFunctionDocString,
+		)
+	}
+}
+
+func ArrayToConstantSizedFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+
+		elementType := arrayType.ElementType(false)
+
+		if elementType.IsResourceType() {
+			report(
+				&InvalidResourceArrayMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindFunction,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			arrayType,
+			identifier,
+			ArrayToConstantSizedFunctionType(memoryGauge, accessedType, elementType),
+			arrayTypeToConstantSizedFunctionDocString,
+		)
+	}
+}
+
+func ArrayRemoveFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		_ ast.HasPosition,
+		_ func(error),
+	) *Member {
+		elementType := arrayType.ElementType(false)
+		return NewFunctionMember(
+			memoryGauge,
+			arrayType,
+			removeMutateEntitledAccess,
+			identifier,
+			ArrayRemoveFunctionType(memoryGauge, accessedType, elementType),
+			arrayTypeRemoveFunctionDocString,
+		)
+	}
+}
+
+func ArrayRemoveFirstFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		_ ast.HasPosition,
+		_ func(error),
+	) *Member {
+		elementType := arrayType.ElementType(false)
+		return NewFunctionMember(
+			memoryGauge,
+			arrayType,
+			removeMutateEntitledAccess,
+			identifier,
+			ArrayRemoveFirstFunctionType(memoryGauge, accessedType, elementType),
+			arrayTypeRemoveFirstFunctionDocString,
+		)
+	}
+}
+
+func ArrayRemoveLastFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		_ ast.HasPosition,
+		_ func(error),
+	) *Member {
+		elementType := arrayType.ElementType(false)
+		return NewFunctionMember(
+			memoryGauge,
+			arrayType,
+			removeMutateEntitledAccess,
+			identifier,
+			ArrayRemoveLastFunctionType(memoryGauge, accessedType, elementType),
+			arrayTypeRemoveLastFunctionDocString,
+		)
+	}
+}
+
+func ArrayRemoveLastFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	elementType Type,
+) *FunctionType {
+	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		nil,
@@ -2979,7 +3038,12 @@ func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
 	)
 }
 
-func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
+func ArrayRemoveFirstFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	elementType Type,
+) *FunctionType {
+	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		nil,
@@ -2987,7 +3051,12 @@ func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
 	)
 }
 
-func ArrayRemoveFunctionType(elementType Type) *FunctionType {
+func ArrayRemoveFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	elementType Type,
+) *FunctionType {
+	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		[]Parameter{
@@ -2997,6 +3066,42 @@ func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 			},
 		},
 		NewTypeAnnotation(elementType),
+	)
+}
+
+// intersectArrayElementReferences returns elementType with any inner reference
+// authorizations intersected with the outer authorization of accessedType (when
+// accessedType is a reference). For non-reference accessedType, or when the
+// element type contains no references, elementType is returned unchanged.
+//
+// This is the same cascading rule applied during indexing: when an array is
+// accessed via a reference, the outer reference's authorization caps any
+// inner-element references extracted (or otherwise read out) from the array.
+// Without it, copy/extract methods would escalate inner-element entitlements
+// beyond what the outer reference grants.
+//
+// Note that unlike GetDescendantReferenceType, this function does NOT wrap
+// non-reference element types in a reference. It only intersects authorizations
+// of references that already exist within the element type. This is appropriate
+// for methods that return element values (or copies of arrays of element
+// values), which must preserve the value/reference distinction of the original
+// element type.
+func intersectArrayElementReferences(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	elementType Type,
+) Type {
+	outerRef, ok := MaybeReferenceType(accessedType)
+	if !ok {
+		return elementType
+	}
+	if !elementType.IsOrContainsReferenceType() {
+		return elementType
+	}
+	return intersectReferenceAuthorizationsInType(
+		memoryGauge,
+		elementType,
+		outerRef.Authorization,
 	)
 }
 
@@ -3018,18 +3123,46 @@ func ArrayInsertFunctionType(elementType Type) *FunctionType {
 	)
 }
 
-func ArrayConcatFunctionType(arrayType Type) *FunctionType {
-	typeAnnotation := NewTypeAnnotation(arrayType)
+func ArrayConcatFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	arrayType ArrayType,
+) *FunctionType {
+
+	// `other` (the input) stays at the array's declared element type, so the
+	// caller can pass arrays of references whose authorizations match the
+	// receiver's declared element type. The return type's element references
+	// are intersected with the outer authorization, because the returned array
+	// contains elements that originated from the receiver — extracting them
+	// through the outer reference must not escalate inner-element entitlements
+	// beyond what the outer reference grants.
+	paramTypeAnnotation := NewTypeAnnotation(arrayType)
+
+	returnElementType := intersectArrayElementReferences(
+		memoryGauge,
+		accessedType,
+		arrayType.ElementType(false),
+	)
+	var returnArrayType Type
+	switch arrayType := arrayType.(type) {
+	case *VariableSizedType:
+		returnArrayType = NewVariableSizedType(memoryGauge, returnElementType)
+	case *ConstantSizedType:
+		returnArrayType = NewConstantSizedType(memoryGauge, returnElementType, arrayType.Size)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
 	return NewSimpleFunctionType(
 		FunctionPurityView,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "other",
-				TypeAnnotation: typeAnnotation,
+				TypeAnnotation: paramTypeAnnotation,
 			},
 		},
-		typeAnnotation,
+		NewTypeAnnotation(returnArrayType),
 	)
 }
 
@@ -3090,7 +3223,12 @@ func ArrayAppendFunctionType(elementType Type) *FunctionType {
 	)
 }
 
-func ArraySliceFunctionType(elementType Type) *FunctionType {
+func ArraySliceFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	elementType Type,
+) *FunctionType {
+	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityView,
 		[]Parameter{
@@ -3109,7 +3247,26 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 	)
 }
 
-func ArrayToVariableSizedFunctionType(elementType Type) *FunctionType {
+func ArrayToVariableSizedFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	elementType Type,
+) *FunctionType {
+
+	// When the array is accessed via a reference, the returned copy's element
+	// references must be intersected with the outer reference's authorization,
+	// the same way indexing does. Otherwise a copy could escalate inner-element
+	// entitlements beyond what the outer reference grants.
+	if ShouldReturnReference(accessedType, elementType, false) {
+		outerRef, _ := MaybeReferenceType(accessedType)
+		elementType = GetDescendantReferenceType(
+			memoryGauge,
+			elementType,
+			UnauthorizedAccess,
+			outerRef.Authorization,
+		)
+	}
+
 	return NewSimpleFunctionType(
 		FunctionPurityView,
 		[]Parameter{},
@@ -3119,7 +3276,13 @@ func ArrayToVariableSizedFunctionType(elementType Type) *FunctionType {
 	)
 }
 
-func ArrayToConstantSizedFunctionType(elementType Type) *FunctionType {
+func ArrayToConstantSizedFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	elementType Type,
+) *FunctionType {
+	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
+
 	// Ideally this should have a typebound of [T; _] but since we don't know
 	// the size of the ConstantSizedArray, we omit specifying the bound.
 	typeParameter := &TypeParameter{
@@ -3156,7 +3319,7 @@ func ArrayToConstantSizedFunctionType(elementType Type) *FunctionType {
 			}
 
 			constArrayType, ok := typeArg.(*ConstantSizedType)
-			if !ok || constArrayType.Type != elementType {
+			if !ok || !constArrayType.Type.Equal(elementType) {
 				errorRange := invocationRange
 				if len(astTypeArguments) > 0 {
 					errorRange = astTypeArguments[0]
@@ -3176,10 +3339,30 @@ func ArrayToConstantSizedFunctionType(elementType Type) *FunctionType {
 	}
 }
 
-func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
+func ArrayReverseFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	arrayType ArrayType,
+) *FunctionType {
+
+	returnElementType := intersectArrayElementReferences(
+		memoryGauge,
+		accessedType,
+		arrayType.ElementType(false),
+	)
+	var returnArrayType Type
+	switch arrayType := arrayType.(type) {
+	case *VariableSizedType:
+		returnArrayType = NewVariableSizedType(memoryGauge, returnElementType)
+	case *ConstantSizedType:
+		returnArrayType = NewConstantSizedType(memoryGauge, returnElementType, arrayType.Size)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
 	return &FunctionType{
 		Parameters:           []Parameter{},
-		ReturnTypeAnnotation: NewTypeAnnotation(arrayType),
+		ReturnTypeAnnotation: NewTypeAnnotation(returnArrayType),
 		Purity:               FunctionPurityView,
 	}
 }
@@ -6896,67 +7079,16 @@ func (t *DictionaryType) GetMembers() map[string]MemberResolver {
 				},
 			},
 			DictionaryTypeInsertFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(
-					memoryGauge common.MemoryGauge,
-					identifier string,
-					_ ast.HasPosition,
-					_ func(error),
-				) *Member {
-					return NewFunctionMember(
-						memoryGauge,
-						t,
-						insertMutateEntitledAccess,
-						identifier,
-						DictionaryInsertFunctionType(t),
-						dictionaryTypeInsertFunctionDocString,
-					)
-				},
+				Kind:    common.DeclarationKindFunction,
+				Resolve: DictionaryInsertFunctionMemberFuncResolver(t, t),
 			},
 			DictionaryTypeRemoveFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(
-					memoryGauge common.MemoryGauge,
-					identifier string,
-					_ ast.HasPosition,
-					_ func(error),
-				) *Member {
-					return NewFunctionMember(
-						memoryGauge,
-						t,
-						removeMutateEntitledAccess,
-						identifier,
-						DictionaryRemoveFunctionType(t),
-						dictionaryTypeRemoveFunctionDocString,
-					)
-				},
+				Kind:    common.DeclarationKindFunction,
+				Resolve: DictionaryRemoveFunctionMemberFuncResolver(t, t),
 			},
 			DictionaryTypeForEachKeyFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(
-					memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.HasPosition,
-					report func(error),
-				) *Member {
-					if t.KeyType.IsResourceType() {
-						report(
-							&InvalidResourceDictionaryMemberError{
-								Name:            identifier,
-								DeclarationKind: common.DeclarationKindField,
-								Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-							},
-						)
-					}
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						DictionaryForEachKeyFunctionType(t),
-						dictionaryTypeForEachKeyFunctionDocString,
-					)
-				},
+				Kind:    common.DeclarationKindFunction,
+				Resolve: DictionaryForEachKeyFunctionMemberFuncResolver(t, t),
 			},
 		},
 	)
@@ -6978,7 +7110,15 @@ func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 	)
 }
 
-func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
+func DictionaryInsertFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	t *DictionaryType,
+) *FunctionType {
+	// The returned previous-value comes from the dictionary, so its inner
+	// references are intersected with the outer authorization. The value
+	// parameter stays at the declared type — the caller provides it.
+	returnValueType := intersectArrayElementReferences(memoryGauge, accessedType, t.ValueType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		[]Parameter{
@@ -6994,13 +7134,18 @@ func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 		},
 		NewTypeAnnotation(
 			&OptionalType{
-				Type: t.ValueType,
+				Type: returnValueType,
 			},
 		),
 	)
 }
 
-func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
+func DictionaryRemoveFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	t *DictionaryType,
+) *FunctionType {
+	returnValueType := intersectArrayElementReferences(memoryGauge, accessedType, t.ValueType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		[]Parameter{
@@ -7011,14 +7156,23 @@ func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 		},
 		NewTypeAnnotation(
 			&OptionalType{
-				Type: t.ValueType,
+				Type: returnValueType,
 			},
 		),
 	)
 }
 
-func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
+func DictionaryForEachKeyFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	t *DictionaryType,
+) *FunctionType {
 	const functionPurity = FunctionPurityImpure
+
+	// Keys are passed into the user's callback, so their inner references are
+	// intersected with the outer authorization (the callback can't be given
+	// references that exceed what the outer reference grants).
+	keyType := intersectArrayElementReferences(memoryGauge, accessedType, t.KeyType)
 
 	// fun(K): Bool
 	funcType := NewSimpleFunctionType(
@@ -7026,7 +7180,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 		[]Parameter{
 			{
 				Identifier:     "key",
-				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+				TypeAnnotation: NewTypeAnnotation(keyType),
 			},
 		},
 		BoolTypeAnnotation,
@@ -7044,6 +7198,78 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 		},
 		VoidTypeAnnotation,
 	)
+}
+
+func DictionaryInsertFunctionMemberFuncResolver(
+	accessedType Type,
+	dictionaryType *DictionaryType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		_ ast.HasPosition,
+		_ func(error),
+	) *Member {
+		return NewFunctionMember(
+			memoryGauge,
+			dictionaryType,
+			insertMutateEntitledAccess,
+			identifier,
+			DictionaryInsertFunctionType(memoryGauge, accessedType, dictionaryType),
+			dictionaryTypeInsertFunctionDocString,
+		)
+	}
+}
+
+func DictionaryRemoveFunctionMemberFuncResolver(
+	accessedType Type,
+	dictionaryType *DictionaryType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		_ ast.HasPosition,
+		_ func(error),
+	) *Member {
+		return NewFunctionMember(
+			memoryGauge,
+			dictionaryType,
+			removeMutateEntitledAccess,
+			identifier,
+			DictionaryRemoveFunctionType(memoryGauge, accessedType, dictionaryType),
+			dictionaryTypeRemoveFunctionDocString,
+		)
+	}
+}
+
+func DictionaryForEachKeyFunctionMemberFuncResolver(
+	accessedType Type,
+	dictionaryType *DictionaryType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+		if dictionaryType.KeyType.IsResourceType() {
+			report(
+				&InvalidResourceDictionaryMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindField,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			dictionaryType,
+			identifier,
+			DictionaryForEachKeyFunctionType(memoryGauge, accessedType, dictionaryType),
+			dictionaryTypeForEachKeyFunctionDocString,
+		)
+	}
 }
 
 func (*DictionaryType) isValueIndexableType() bool {
@@ -7854,6 +8080,8 @@ func (t *ReferenceType) overloadMembers(members map[string]MemberResolver) {
 	switch ty := t.Type.(type) {
 	case ArrayType:
 		t.overloadArrayReferenceMembers(ty, members)
+	case *DictionaryType:
+		t.overloadDictionaryReferenceMembers(ty, members)
 	}
 }
 
@@ -7867,6 +8095,71 @@ func (t *ReferenceType) overloadArrayReferenceMembers(arrayType ArrayType, membe
 	members[ArrayTypeMapFunctionName] = MemberResolver{
 		Kind:    common.DeclarationKindFunction,
 		Resolve: ArrayMapFunctionMemberFuncResolver(t, arrayType),
+	}
+
+	members[ArrayTypeReverseFunctionName] = MemberResolver{
+		Kind:    common.DeclarationKindFunction,
+		Resolve: ArrayReverseFunctionMemberFuncResolver(t, arrayType),
+	}
+
+	if _, ok := arrayType.(*VariableSizedType); ok {
+		members[ArrayTypeConcatFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayConcatFunctionMemberFuncResolver(t, arrayType),
+		}
+
+		members[ArrayTypeSliceFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArraySliceFunctionMemberFuncResolver(t, arrayType),
+		}
+
+		members[ArrayTypeRemoveFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayRemoveFunctionMemberFuncResolver(t, arrayType),
+		}
+
+		members[ArrayTypeRemoveFirstFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayRemoveFirstFunctionMemberFuncResolver(t, arrayType),
+		}
+
+		members[ArrayTypeRemoveLastFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayRemoveLastFunctionMemberFuncResolver(t, arrayType),
+		}
+
+		members[ArrayTypeToConstantSizedFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayToConstantSizedFunctionMemberFuncResolver(t, arrayType),
+		}
+	}
+
+	if _, ok := arrayType.(*ConstantSizedType); ok {
+		members[ArrayTypeToVariableSizedFunctionName] = MemberResolver{
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayToVariableSizedFunctionMemberFuncResolver(t, arrayType),
+		}
+	}
+}
+
+func (t *ReferenceType) overloadDictionaryReferenceMembers(
+	dictionaryType *DictionaryType,
+	members map[string]MemberResolver,
+) {
+
+	members[DictionaryTypeInsertFunctionName] = MemberResolver{
+		Kind:    common.DeclarationKindFunction,
+		Resolve: DictionaryInsertFunctionMemberFuncResolver(t, dictionaryType),
+	}
+
+	members[DictionaryTypeRemoveFunctionName] = MemberResolver{
+		Kind:    common.DeclarationKindFunction,
+		Resolve: DictionaryRemoveFunctionMemberFuncResolver(t, dictionaryType),
+	}
+
+	members[DictionaryTypeForEachKeyFunctionName] = MemberResolver{
+		Kind:    common.DeclarationKindFunction,
+		Resolve: DictionaryForEachKeyFunctionMemberFuncResolver(t, dictionaryType),
 	}
 }
 
