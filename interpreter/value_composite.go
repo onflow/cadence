@@ -1812,6 +1812,17 @@ func (v *CompositeValue) ValueID() atree.ValueID {
 	return v.valueID
 }
 
+// LiveValueID returns the underlying atree map's current value ID.
+// In contrast to ValueID, which returns a stable value ID cached at
+// construction, LiveValueID reflects mutations to the atree map's root,
+// including slab ID reassignments caused by splits triggered through other
+// CompositeValue instances wrapping the same underlying atree map.
+// Intended for testing only; production code must use ValueID for resource
+// tracking and invalidation.
+func (v *CompositeValue) LiveValueID() atree.ValueID {
+	return v.dictionary.ValueID()
+}
+
 func (v *CompositeValue) RemoveField(
 	context ValueRemoveContext,
 	name string,

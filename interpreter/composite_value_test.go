@@ -421,11 +421,50 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
 		return nil
 	}))
 
+	// liveValueID exposes the underlying atree map's current value ID for a
+	// composite resource, used by the Cadence code to assert that the slab
+	// split actually occurred.
+	liveValueIDFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"liveValueID",
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			[]sema.Parameter{
+				{
+					Label:      sema.ArgumentLabelNotRequired,
+					Identifier: "ref",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.ReferenceType{
+							Type:          sema.AnyResourceType,
+							Authorization: sema.UnauthorizedAccess,
+						},
+					),
+				},
+			},
+			sema.StringTypeAnnotation,
+		),
+		"",
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			ref := args[0].(*interpreter.EphemeralReferenceValue)
+			composite := ref.Value.(*interpreter.CompositeValue)
+			return interpreter.NewUnmeteredStringValue(composite.LiveValueID().String())
+		},
+	)
+
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
+	baseValueActivation.DeclareValue(liveValueIDFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
+	interpreter.Declare(baseActivation, liveValueIDFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
 		t,
@@ -522,6 +561,11 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
         let ref  = &arr[0] as auth(Withdraw) &Vault
         let ref2 = &arr[0] as auth(Withdraw) &Vault
 
+        // Both refs initially see the same root slab in the underlying atree map.
+        assert(
+            liveValueID(ref) == liveValueID(ref2),
+            message: "before split: both refs should observe the same live atree value ID"
+        )
 
         // Trigger an atree slab split on the underlying dictionary of Vault
         // by "inflating" those attachments
@@ -539,6 +583,13 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
         // split reassigned slab IDs such that the OLD root (still pointed to by ref2's
         // dictionary) now has a different slab ID, while the NEW root inherits the
         // original slab ID.
+        // Confirm the split actually happened: ref's live value ID is the preserved
+        // original root ID, while ref2's live value ID is the freshly assigned ID of
+        // the now-demoted slab.
+        assert(
+            liveValueID(ref) != liveValueID(ref2),
+            message: "after split: refs should observe diverged live atree value IDs"
+        )
 
         // Do a conversion roundtrip to create an EphemeralReferenceValue from ref2.
         // Without the stable cached valueID on CompositeValue, this reference would be
