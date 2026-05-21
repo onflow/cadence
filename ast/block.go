@@ -51,7 +51,7 @@ func (b *Block) IsEmpty() bool {
 }
 
 func (b *Block) Walk(walkChild func(Element)) {
-	walkStatements(walkChild, b.Statements)
+	walkElements(walkChild, b.Statements)
 }
 
 var blockStartDoc prettier.Doc = prettier.Text("{")

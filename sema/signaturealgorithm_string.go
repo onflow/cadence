@@ -12,11 +12,12 @@ func _() {
 	_ = x[SignatureAlgorithmECDSA_P256-1]
 	_ = x[SignatureAlgorithmECDSA_secp256k1-2]
 	_ = x[SignatureAlgorithmBLS_BLS12_381-3]
+	_ = x[SignatureAlgorithm_Count-4]
 }
 
-const _SignatureAlgorithm_name = "SignatureAlgorithmUnknownSignatureAlgorithmECDSA_P256SignatureAlgorithmECDSA_secp256k1SignatureAlgorithmBLS_BLS12_381"
+const _SignatureAlgorithm_name = "SignatureAlgorithmUnknownSignatureAlgorithmECDSA_P256SignatureAlgorithmECDSA_secp256k1SignatureAlgorithmBLS_BLS12_381SignatureAlgorithm_Count"
 
-var _SignatureAlgorithm_index = [...]uint8{0, 25, 53, 86, 117}
+var _SignatureAlgorithm_index = [...]uint8{0, 25, 53, 86, 117, 141}
 
 func (i SignatureAlgorithm) String() string {
 	if i >= SignatureAlgorithm(len(_SignatureAlgorithm_index)-1) {

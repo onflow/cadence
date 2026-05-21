@@ -57,10 +57,21 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 
 func (interpreter *Interpreter) visitStatements(statements []ast.Statement) StatementResult {
 
+	elaboration := interpreter.Program.Elaboration
+
 	for _, statement := range statements {
 		result := interpreter.evalStatement(statement)
 		if result, ok := result.(controlResult); ok {
 			return result
+		}
+
+		// Defensive: the type checker may have determined that control flow
+		// does not continue past this statement. If execution nevertheless
+		// reaches this point, panic instead of silently continuing.
+		if elaboration.IsStatementEndingControlFlow(statement) {
+			panic(&UnreachableInstructionError{
+				Range: ast.NewRangeFromPositioned(interpreter, statement),
+			})
 		}
 	}
 
@@ -268,26 +279,22 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 
 		// If the case has no expression it is the default case.
 		// Evaluate it, i.e. all statements
-
 		if switchCase.Expression == nil {
 			return runStatements()
 		}
 
 		// The case has an expression.
 		// Evaluate it and compare it to the test value
-
 		result := interpreter.evalExpression(switchCase.Expression)
-
 		caseValue, ok := result.(EquatableValue)
-
 		if !ok {
 			continue
 		}
 
-		// If the test value and case values are equal,
-		// evaluate the case's statements
-
-		if testValue.Equal(interpreter, caseValue) {
+		// If the test value and case values are equal, evaluate the case's statements.
+		// Use `TestValueEqual` to have the same equality as the `==` operator.
+		// i.e: equality check should do implicit unboxing.
+		if TestValueEqual(interpreter, testValue, caseValue) {
 			return runStatements()
 		}
 
