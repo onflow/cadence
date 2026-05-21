@@ -9075,3 +9075,100 @@ func TestCheckEntitlementSetAccessIsNotMapping(t *testing.T) {
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
+
+func TestCheckInvalidDisjunctiveEntitlementsEscalation(t *testing.T) {
+	t.Parallel()
+
+	// An auth(Insert) reference is upcast to the disjunction auth(Insert | Remove),
+	// then wrapped in an auth(Remove) &[auth(Insert | Remove) &[Int]] container.
+	// Indexing must intersect the outer auth(Remove) with the disjunctive inner auth.
+	// The safe intersection of a conjunction with a disjunction is the empty set
+	// (the disjunction guarantees none of its members individually), so the result
+	// must be `&[Int]`, not `auth(Remove) &[Int]`. Otherwise an Insert-only reference
+	// could be escalated to Remove via container indexing.
+	t.Run("disjunction outer of container escalates inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct Victim {
+                access(self) let arr: [Int]
+                init() {
+                    self.arr = [123]
+                }
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[Int]{
+                    return &self.arr as auth(Insert) &[Int]
+                }
+            }
+
+            access(all) fun main() {
+                let v = Victim()
+                let insertOnlyArrRef = v.getInsertOnlyRef()
+
+                let disjunction = insertOnlyArrRef as auth (Insert|Remove) &[Int]
+                let wrapperArr: [auth (Insert|Remove) &[Int]] = [disjunction]
+                let wrapperArrRef = &wrapperArr as auth(Remove) &[auth (Insert|Remove) &[Int]]
+                let removeRef: auth(Remove) &[Int] = wrapperArrRef[0]
+
+                removeRef.remove(at: 0)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(Remove)&[Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// An auth(Insert) reference to a constant-sized array of auth(Remove) refs
+	// is upcast to auth(Insert | Remove). Indexing the disjunctively-authorized
+	// container must intersect the disjunction with the inner auth(Remove);
+	// the safe intersection is empty, so the indexed element is unauthorized
+	// and access to a Remove-entitled member must be rejected.
+	t.Run("disjunction outer escalates fixed-size array element auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Insert) fun requiresInsert(): String {
+                    return "requiresInsert called"
+                }
+
+                access(Remove) fun requiresRemove(): String {
+                    return "requiresRemove called"
+                }
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv : InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim; 1]
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim; 1] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                let disjointRef: auth(Insert|Remove) &[auth(Remove) &InnerVictim; 1] = insertOnlyArrRef
+                disjointRef[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+}
