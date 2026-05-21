@@ -20,7 +20,6 @@ package sema
 
 import (
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/errors"
 )
 
 func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
@@ -188,21 +187,4 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 		),
 	)
 	checker.checkBlock(block)
-
-	// If any path within this case body broke out of the switch,
-	// the case cannot be treated as definitely returning/halting/exiting:
-	// on the break path control falls through past the switch without
-	// reaching a terminating statement.
-	// Clear the corresponding definite flags,
-	// so the switch-level merge sees an accurate per-case result
-	functionActivation := checker.functionActivations.Current()
-	if functionActivation == nil {
-		panic(errors.NewUnreachableError())
-	}
-	returnInfo := functionActivation.ReturnInfo
-	if returnInfo.MaybeJumpedSwitch {
-		returnInfo.DefinitelyReturned = false
-		returnInfo.DefinitelyHalted = false
-		returnInfo.DefinitelyExited = false
-	}
 }

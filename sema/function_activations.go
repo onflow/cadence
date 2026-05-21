@@ -61,38 +61,37 @@ func (a *FunctionActivation) popControl() {
 	a.ControlStack = a.ControlStack[:lastIndex]
 }
 
+// WithLoop runs f within a new loop scope. `MaybeJumpedLoop` is
+// save/restored — break/continue targeting this loop are consumed by it
+// and must not leak. If any path jumped, the body's DR/DH/DE are
+// cleared (they over-claim — the jumping path didn't terminate the
+// function).
 func (a *FunctionActivation) WithLoop(f func()) {
 	a.pushControl(ControlKindLoop)
-	// MaybeJumpedLoop is scoped to this loop: save on entry, restore on exit,
-	// so a nested loop's break/continue does not affect an enclosing loop.
-	// `break` and `continue` statements targeting this loop
-	// are consumed by the loop and must not leak to an enclosing scope.
 	savedMaybeJumpedLoop := a.ReturnInfo.MaybeJumpedLoop
 	a.ReturnInfo.WithNewJumpTarget(f)
-	// If any path within the loop body jumped (break/continue),
-	// the body did not definitely return/halt/exit on every path:
-	// clear the corresponding flags so subsequent reasoning sees an
-	// accurate per-body result.
 	if a.ReturnInfo.MaybeJumpedLoop {
-		a.ReturnInfo.DefinitelyReturned = false
-		a.ReturnInfo.DefinitelyHalted = false
-		a.ReturnInfo.DefinitelyExited = false
+		a.ReturnInfo.clearDefiniteExits()
 	}
 	a.ReturnInfo.MaybeJumpedLoop = savedMaybeJumpedLoop
 	a.popControl()
 }
 
+// WithSwitch runs f within a new switch scope. Mirrors `WithLoop`:
+// `MaybeJumpedSwitch` is save/restored (break targeting this switch is
+// consumed by it; continue targets the enclosing loop and propagates
+// past via `MaybeJumpedLoop`). If any case body broke, clear DR/DH/DE
+// — the break path falls past the switch without terminating the
+// function, so the merged "every case definitely terminated" claim
+// would over-promise.
 func (a *FunctionActivation) WithSwitch(f func()) {
 	// NOTE: new jump-offsets child-set for each case instead of whole switch
 	a.pushControl(ControlKindSwitch)
-	// `break` statements inside a switch only target the switch, not any enclosing loop.
-	// MaybeJumpedSwitch is scoped to this switch: save on entry, restore on exit,
-	// so a nested switch's break does not affect an enclosing switch.
-	// (`continue` statements always target the enclosing loop,
-	// so it sets MaybeJumpedLoop (not MaybeJumpedSwitch)
-	// and therefore propagates past the switch.)
 	savedMaybeJumpedSwitch := a.ReturnInfo.MaybeJumpedSwitch
 	f()
+	if a.ReturnInfo.MaybeJumpedSwitch {
+		a.ReturnInfo.clearDefiniteExits()
+	}
 	a.ReturnInfo.MaybeJumpedSwitch = savedMaybeJumpedSwitch
 	a.popControl()
 }

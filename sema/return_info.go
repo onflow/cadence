@@ -154,27 +154,22 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 		(thenReturnInfo.DefinitelyExited &&
 			elseReturnInfo.DefinitelyExited)
 
-	ri.mergeJumpOffsets(thenReturnInfo, elseReturnInfo)
+	// Propagate jump offsets from both branches. Each branch's
+	// `Clone()` gave it a separate child JumpOffsets set, so jumps in
+	// one branch did not pollute the sibling's view of "did a jump
+	// occur between this resource's declaration and its use?"
+	// (see `maybeAddResourceInvalidation`). Now that both branches
+	// are joining back into the parent, their jumps are potential
+	// from the perspective of subsequent code.
+	ri.addJumpOffsetsFrom(thenReturnInfo)
+	ri.addJumpOffsetsFrom(elseReturnInfo)
 }
 
-// mergeJumpOffsets propagates the jump offsets recorded in either branch
-// up into the merged ReturnInfo. Each branch's `ReturnInfo.Clone()` makes
-// its own child JumpOffsets set, so jumps in one branch do not pollute
-// the sibling branch's view (which would incorrectly downgrade
-// invalidations there, since `maybeAddResourceInvalidation` uses jump
-// offsets to detect "a jump occurred between declaration and use").
-// After the conditional, both branches' jumps are potential from the
-// perspective of subsequent code, so we OR them into the parent.
-func (ri *ReturnInfo) mergeJumpOffsets(thenReturnInfo *ReturnInfo, elseReturnInfo *ReturnInfo) {
-	addAll := func(other *ReturnInfo) {
-		_ = other.JumpOffsets.ForEach(func(offset int) error {
-			ri.JumpOffsets.Add(offset)
-			return nil
-		})
-	}
-
-	addAll(thenReturnInfo)
-	addAll(elseReturnInfo)
+func (ri *ReturnInfo) addJumpOffsetsFrom(other *ReturnInfo) {
+	_ = other.JumpOffsets.ForEach(func(offset int) error {
+		ri.JumpOffsets.Add(offset)
+		return nil
+	})
 }
 
 func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInfo) {
@@ -216,6 +211,17 @@ func (ri *ReturnInfo) IsUnreachable() bool {
 // invalidation is only potential).
 func (ri *ReturnInfo) MaybeJumped() bool {
 	return ri.MaybeJumpedLoop || ri.MaybeJumpedSwitch
+}
+
+// clearDefiniteExits clears the kind-specific "definitely exited"
+// flags. Used by `WithLoop`/`WithSwitch` when a path through the
+// construct took a break/continue — the construct as a whole did NOT
+// terminate the function on every path, so a "definitely returned/
+// halted/exited" claim would over-promise.
+func (ri *ReturnInfo) clearDefiniteExits() {
+	ri.DefinitelyReturned = false
+	ri.DefinitelyHalted = false
+	ri.DefinitelyExited = false
 }
 
 func (ri *ReturnInfo) AddJumpOffset(offset int) {

@@ -63,7 +63,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 		// scope-leave skip in `checkResourceLoss` does not yet
 		// suppress it. After this point, `DefinitelyExited = true`
 		// causes the surrounding scope-leave to skip (via the
-		// `DE && !MJL && !MJS` condition) and avoid double-reporting.
+		// `DE && !MaybeJumped()` condition) and avoid double-reporting.
 		checker.checkResourceLoss(functionActivation.ValueActivationDepth + 1)
 		functionActivation.ReturnInfo.MaybeReturned = true
 		functionActivation.ReturnInfo.DefinitelyReturned = true
