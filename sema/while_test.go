@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -164,4 +165,350 @@ func TestCheckInvalidContinueStatement(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
+}
+
+func TestCheckResourceInvalidationInWhileLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    break
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("continue", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    continue
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("return", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    return
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+}
+
+func TestCheckResourceInvalidationInWhileLoopWithIfElse(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("if break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if continue", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        continue
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else both break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        break
+                    } else {
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if break, destroy after", func(t *testing.T) {
+		t.Parallel()
+
+		// The `destroy r` only runs on the non-break path,
+		// so `r` leaks if the `break` is taken.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        break
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if break else destroy", func(t *testing.T) {
+		t.Parallel()
+
+		// The `destroy r` only runs on the else path,
+		// so `r` leaks if the `break` is taken.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        break
+                    } else {
+                        destroy r
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if destroy else break", func(t *testing.T) {
+		t.Parallel()
+
+		// The `destroy r` only runs on the then path,
+		// so `r` leaks if the `break` is taken.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        destroy r
+                    } else {
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if destroy else destroy break", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is destroyed in both branches before the `break`, so no loss.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        destroy r
+                        break
+                    } else {
+                        destroy r
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("nested if break in inner if", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        if true {
+                            break
+                        }
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("resource outside loop, if break", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is declared outside the loop and destroyed after the loop,
+		// so the `break` does not leak it.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                while true {
+                    if true {
+                        break
+                    }
+                }
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckResourceInvalidationInNestedWhileLoops(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("break in inner loop, destroy in outer", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is declared in the outer loop and destroyed there.
+		// The inner `break` only exits the inner loop, so no leak.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    while true {
+                        break
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource in inner loop, inner break", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is declared in the inner loop body and the `break` exits it
+		// without destroying `r`.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    while true {
+                        let r <- create R()
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("outer break inside inner loop", func(t *testing.T) {
+		t.Parallel()
+
+		// `break` always targets the innermost loop,
+		// so the inner `break` only exits the inner loop.
+		// The outer loop's `r` is destroyed at the end of each outer iteration.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    while true {
+                        if true {
+                            break
+                        }
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
 }
