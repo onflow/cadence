@@ -39,6 +39,12 @@ type ArrayValue struct {
 	isResourceKinded *bool
 	elementSize      uint
 	isDestroyed      bool
+
+	// valueID is the atree value ID captured at construction time.
+	// It is used for reference tracking and invalidation, and must remain
+	// stable even if the array's runtime root slab ID changes.
+	// See the equivalent field on CompositeValue for the underlying scenario.
+	valueID atree.ValueID
 }
 
 func NewArrayValue(
@@ -216,6 +222,7 @@ func newArrayValueFromAtreeArray(
 	return &ArrayValue{
 		Type:        staticType,
 		array:       atreeArray,
+		valueID:     atreeArray.ValueID(),
 		elementSize: elementSize,
 	}
 }
@@ -1618,6 +1625,17 @@ func (v *ArrayValue) StorageAddress() atree.Address {
 }
 
 func (v *ArrayValue) ValueID() atree.ValueID {
+	return v.valueID
+}
+
+// LiveValueID returns the underlying atree array's current value ID.
+// In contrast to ValueID, which returns a stable value ID cached at
+// construction, LiveValueID reflects mutations to the atree array's root,
+// including slab ID reassignments caused by splits triggered through other
+// ArrayValue instances wrapping the same underlying atree array.
+// Intended for testing only; production code must use ValueID for resource
+// tracking and invalidation.
+func (v *ArrayValue) LiveValueID() atree.ValueID {
 	return v.array.ValueID()
 }
 
