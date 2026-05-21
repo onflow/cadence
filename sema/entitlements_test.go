@@ -8687,6 +8687,179 @@ func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
 			typeMismatchError.ActualType.ID(),
 		)
 	})
+
+	// Disjunction intersection: the inner disjunction is preserved only
+	// when the outer conjunction guarantees all of the disjunction's options.
+	// Otherwise the intersection is unauthorized, because nothing about the
+	// disjunction's specific entitlements is statically guaranteed.
+
+	t.Run("array, conjunction outer not superset, disjunction inner, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		// auth(F) ∩ auth(E | F): the conjunction does not contain E, so the
+		// disjunction (which might actually hold E) cannot be preserved.
+		// Result is unauthorized.
+		//
+		// This is the entitlement escalation that motivated the stricter
+		// disjunction intersection rules: an Insert-only reference widened to
+		// auth(Insert | Remove) must not be cast back to auth(Remove) via a
+		// nested container access with auth(Remove) outer.
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          access(all) struct Victim {
+              access(self) let arr: [Int]
+              init() {
+                  self.arr = [123]
+              }
+              access(all) fun getEOnlyRef(): auth(E) &[Int] {
+                  return &self.arr as auth(E) &[Int]
+              }
+          }
+
+          fun test() {
+              let v = Victim()
+              let eOnlyArrRef = v.getEOnlyRef()
+              let disjunction = eOnlyArrRef as auth(E | F) &[Int]
+              let wrapperArr: [auth(E | F) &[Int]] = [disjunction]
+              let wrapperArrRef = &wrapperArr as auth(F) &[auth(E | F) &[Int]]
+
+              // Without the stricter disjunction intersection rule, this would
+              // grant F on an E-only reference.
+              let fRef: auth(F) &[Int] = wrapperArrRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.F)&[Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array, disjunction outer, disjunction inner, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		// auth(E | F) ∩ auth(E | F): both sides are disjunctions, so neither
+		// guarantees any specific entitlement. Result is unauthorized, even
+		// though the option sets are identical.
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let array: [auth(E | F) &Int] = [&1 as auth(E | F) &Int]
+              let arrayRef = &array as auth(E | F) &[auth(E | F) &Int]
+
+              let ref: auth(E | F) &Int = arrayRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E|S.test.F)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array, conjunction outer superset, disjunction inner preserved", func(t *testing.T) {
+		t.Parallel()
+
+		// auth(E, F) ∩ auth(E | F): the conjunction guarantees all of the
+		// disjunction's options, so the disjunction passes through unchanged.
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let array: [auth(E | F) &Int] = [&1 as auth(E | F) &Int]
+              let arrayRef = &array as auth(E, F) &[auth(E | F) &Int]
+
+              let ref: auth(E | F) &Int = arrayRef[0]
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, conjunction outer superset, disjunction inner preserved, no upgrade to conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		// auth(E, F) ∩ auth(E | F) preserves the disjunction. The result
+		// cannot be upgraded to auth(F) (the disjunction might only hold E).
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let array: [auth(E | F) &Int] = [&1 as auth(E | F) &Int]
+              let arrayRef = &array as auth(E, F) &[auth(E | F) &Int]
+
+              let ref: auth(F) &Int = arrayRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.F)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E|S.test.F)&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("array, disjunction outer, conjunction inner subset, escalation prevented", func(t *testing.T) {
+		t.Parallel()
+
+		// auth(E | F) ∩ auth(E): the conjunction does not contain F, so the
+		// disjunction outer cannot be preserved as the result (it might
+		// actually hold F, which the conjunction does not have).
+		// Result is unauthorized.
+		_, err := ParseAndCheck(t, `
+          entitlement E
+          entitlement F
+
+          fun test() {
+              let array: [auth(E) &Int] = [&1 as auth(E) &Int]
+              let arrayRef = &array as auth(E | F) &[auth(E) &Int]
+
+              let ref: auth(E) &Int = arrayRef[0]
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E)&Int"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&Int"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
 }
 
 func TestCheckMappingAccessFieldType(t *testing.T) {
@@ -8901,4 +9074,101 @@ func TestCheckEntitlementSetAccessIsNotMapping(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckInvalidDisjunctiveEntitlementsEscalation(t *testing.T) {
+	t.Parallel()
+
+	// An auth(Insert) reference is upcast to the disjunction auth(Insert | Remove),
+	// then wrapped in an auth(Remove) &[auth(Insert | Remove) &[Int]] container.
+	// Indexing must intersect the outer auth(Remove) with the disjunctive inner auth.
+	// The safe intersection of a conjunction with a disjunction is the empty set
+	// (the disjunction guarantees none of its members individually), so the result
+	// must be `&[Int]`, not `auth(Remove) &[Int]`. Otherwise an Insert-only reference
+	// could be escalated to Remove via container indexing.
+	t.Run("disjunction outer of container escalates inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct Victim {
+                access(self) let arr: [Int]
+                init() {
+                    self.arr = [123]
+                }
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[Int]{
+                    return &self.arr as auth(Insert) &[Int]
+                }
+            }
+
+            access(all) fun main() {
+                let v = Victim()
+                let insertOnlyArrRef = v.getInsertOnlyRef()
+
+                let disjunction = insertOnlyArrRef as auth (Insert|Remove) &[Int]
+                let wrapperArr: [auth (Insert|Remove) &[Int]] = [disjunction]
+                let wrapperArrRef = &wrapperArr as auth(Remove) &[auth (Insert|Remove) &[Int]]
+                let removeRef: auth(Remove) &[Int] = wrapperArrRef[0]
+
+                removeRef.remove(at: 0)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+
+		assert.Equal(t,
+			common.TypeID("auth(Remove)&[Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// An auth(Insert) reference to a constant-sized array of auth(Remove) refs
+	// is upcast to auth(Insert | Remove). Indexing the disjunctively-authorized
+	// container must intersect the disjunction with the inner auth(Remove);
+	// the safe intersection is empty, so the indexed element is unauthorized
+	// and access to a Remove-entitled member must be rejected.
+	t.Run("disjunction outer escalates fixed-size array element auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Insert) fun requiresInsert(): String {
+                    return "requiresInsert called"
+                }
+
+                access(Remove) fun requiresRemove(): String {
+                    return "requiresRemove called"
+                }
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv : InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim; 1]
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim; 1] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                let disjointRef: auth(Insert|Remove) &[auth(Remove) &InnerVictim; 1] = insertOnlyArrRef
+                disjointRef[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
 }
