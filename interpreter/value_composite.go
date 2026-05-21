@@ -53,6 +53,17 @@ type CompositeValue struct {
 	dictionary      *atree.OrderedMap
 	typeID          TypeID
 
+	// valueID is the atree value ID captured at construction time.
+	// It is used for reference tracking and invalidation, and must remain
+	// stable even if the dictionary's runtime root slab ID changes.
+	// Specifically, when multiple CompositeValue instances share the same
+	// underlying atree map (e.g. created by repeated element access via
+	// `arr[i]`), an atree slab split through one instance reassigns the
+	// other instance's root pointer's slab ID. Using the dictionary's live
+	// ValueID in that scenario would let a stale view register a reference
+	// under a different ID, bypassing invalidation.
+	valueID atree.ValueID
+
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
 	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
@@ -250,6 +261,7 @@ func NewCompositeValueFromAtreeMap(
 
 	return &CompositeValue{
 		dictionary:          atreeOrderedMap,
+		valueID:             atreeOrderedMap.ValueID(),
 		Location:            typeInfo.Location,
 		QualifiedIdentifier: typeInfo.QualifiedIdentifier,
 		Kind:                typeInfo.Kind,
@@ -1620,6 +1632,7 @@ func (v *CompositeValue) Clone(context ValueCloneContext) Value {
 
 	return &CompositeValue{
 		dictionary:          dictionary,
+		valueID:             dictionary.ValueID(),
 		Location:            v.Location,
 		QualifiedIdentifier: v.QualifiedIdentifier,
 		Kind:                v.Kind,
@@ -1796,6 +1809,17 @@ func (v *CompositeValue) StorageAddress() atree.Address {
 }
 
 func (v *CompositeValue) ValueID() atree.ValueID {
+	return v.valueID
+}
+
+// LiveValueID returns the underlying atree map's current value ID.
+// In contrast to ValueID, which returns a stable value ID cached at
+// construction, LiveValueID reflects mutations to the atree map's root,
+// including slab ID reassignments caused by splits triggered through other
+// CompositeValue instances wrapping the same underlying atree map.
+// Intended for testing only; production code must use ValueID for resource
+// tracking and invalidation.
+func (v *CompositeValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
 }
 

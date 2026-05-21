@@ -19,9 +19,21 @@
 package interpreter_test
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
@@ -111,4 +123,148 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
+}
+
+// TestInterpretDictionaryValueIDTracking is the DictionaryValue counterpart to
+// TestInterpretCompositeValueIDTracking. It exercises the same atree slab-split
+// stale-view scenario, where two DictionaryValue instances wrap the same
+// underlying atree map (created by accessing the same outer dictionary key
+// twice) and a split through one instance leaves the other with a different
+// live value ID. Without the cached valueID on DictionaryValue, an
+// EphemeralReferenceValue created from the stale view would register under
+// that different ID, bypass invalidation when the inner dictionary is moved,
+// and survive as a dangling ref.
+func TestInterpretDictionaryValueIDTracking(t *testing.T) {
+	t.Parallel()
+
+	logFunction := stdlib.NewInterpreterLogFunction(stdlib.FunctionLogger(func(message string) error {
+		fmt.Fprintln(os.Stderr, message)
+		return nil
+	}))
+
+	// liveValueID exposes the underlying atree map's current value ID so the
+	// Cadence code can confirm the slab split actually occurred.
+	liveValueIDFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"liveValueID",
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			[]sema.Parameter{
+				{
+					Label:      sema.ArgumentLabelNotRequired,
+					Identifier: "ref",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.ReferenceType{
+							Type:          sema.AnyResourceType,
+							Authorization: sema.UnauthorizedAccess,
+						},
+					),
+				},
+			},
+			sema.StringTypeAnnotation,
+		),
+		"",
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			ref := args[0].(*interpreter.EphemeralReferenceValue)
+			dictValue := ref.Value.(*interpreter.DictionaryValue)
+			return interpreter.NewUnmeteredStringValue(dictValue.LiveValueID().String())
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+	baseValueActivation.DeclareValue(liveValueIDFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+	interpreter.Declare(baseActivation, liveValueIDFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
+
+	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+		t,
+		`
+    access(all) resource Vault {
+        access(all) var balance: UFix64
+        init(balance: UFix64) { self.balance = balance }
+    }
+
+    access(all) fun main() {
+        // Outer dictionary mapping to inner resource dictionaries; outer["a"]
+        // is the inner dictionary we will take two references to.
+        let outer: @{String: {String: Vault}} <- {"a": <-{"k0": <-create Vault(balance: 0.0)}}
+
+        // Two EphemeralReferenceValues pointing to two different DictionaryValues
+        // which wrap the same underlying atree map.
+        let ref  = (&outer["a"] as auth(Mutate) &{String: Vault}?)!
+        let ref2 = (&outer["a"] as auth(Mutate) &{String: Vault}?)!
+
+        // Both refs initially see the same root slab in the underlying atree map.
+        assert(
+            liveValueID(ref) == liveValueID(ref2),
+            message: "before split: both refs should observe the same live atree value ID"
+        )
+
+        // Insert enough entries via ref to grow the inner map past one slab
+        // and trigger an atree map slab split.
+        var i: Int = 0
+        while i < 200 {
+            let old <- ref.insert(key: "k".concat(i.toString()), <-create Vault(balance: UFix64(i)))
+            destroy old
+            i = i + 1
+        }
+
+        // After the split, ref's dictionary.root points to the new root slab while
+        // ref2's dictionary.root still points to the old root slab (with a freshly
+        // assigned slab ID), so their live value IDs diverge.
+        assert(
+            liveValueID(ref) != liveValueID(ref2),
+            message: "after split: refs should observe diverged live atree value IDs"
+        )
+
+        // Conversion roundtrip via AnyResource to create an EphemeralReferenceValue
+        // from ref2. Without the stable cached valueID on DictionaryValue, this
+        // reference would be tracked under the (now-different) live ValueID of the
+        // stale view.
+        let immortalRef = (ref2 as auth(Mutate) &AnyResource) as! auth(Mutate) &{String: Vault}
+
+        // Replace the inner dictionary with an empty one. The move invalidates
+        // all tracked references to the old inner dictionary.
+        var empty: @{String: Vault} <- {}
+        var extracted <- outer["a"] <- empty
+        destroy extracted
+
+        // immortalRef must be invalidated; touching it must panic with
+        // InvalidatedResourceReferenceError.
+        log(immortalRef.length.toString())
+
+        destroy outer
+    }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *activations.Activation[interpreter.Variable] {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }

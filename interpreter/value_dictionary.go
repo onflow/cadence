@@ -39,6 +39,12 @@ type DictionaryValue struct {
 	dictionary       *atree.OrderedMap
 	isDestroyed      bool
 	elementSize      uint
+
+	// valueID is the atree value ID captured at construction time.
+	// It is used for reference tracking and invalidation, and must remain
+	// stable even if the dictionary's runtime root slab ID changes.
+	// See the equivalent field on CompositeValue for the underlying scenario.
+	valueID atree.ValueID
 }
 
 func NewDictionaryValue(
@@ -293,6 +299,7 @@ func newDictionaryValueFromAtreeMap(
 	return &DictionaryValue{
 		Type:        staticType,
 		dictionary:  atreeOrderedMap,
+		valueID:     atreeOrderedMap.ValueID(),
 		elementSize: elementSize,
 	}
 }
@@ -1769,6 +1776,17 @@ func (v *DictionaryValue) StorageAddress() atree.Address {
 }
 
 func (v *DictionaryValue) ValueID() atree.ValueID {
+	return v.valueID
+}
+
+// LiveValueID returns the underlying atree map's current value ID.
+// In contrast to ValueID, which returns a stable value ID cached at
+// construction, LiveValueID reflects mutations to the atree map's root,
+// including slab ID reassignments caused by splits triggered through other
+// DictionaryValue instances wrapping the same underlying atree map.
+// Intended for testing only; production code must use ValueID for resource
+// tracking and invalidation.
+func (v *DictionaryValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
 }
 
