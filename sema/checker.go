@@ -1477,21 +1477,7 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 func (checker *Checker) checkResourceLoss(depth int) {
 
 	returnInfo := checker.functionActivations.Current().ReturnInfo
-
-	// Skip the check only if the function has definitely exited
-	// (i.e. via a `return` statement, or via a definite halt such as `panic(...)`):
-	//
-	//   - `return` invokes `checkResourceLoss` itself before marking the function
-	//     as exited, so the variables it would catch have already been reported.
-	//   - A definite halt intentionally does not lead to a resource-loss error,
-	//     because the program would terminate with an error.
-	//
-	// In particular, the check must NOT be skipped after `break` / `continue`
-	// (`DefinitelyJumped` / `DefinitelyJumpedSwitch`): those statements do not
-	// invalidate resources, so resources declared inside the loop body or switch
-	// case but not moved/destroyed before the jump must still be reported when
-	// the enclosing scope is left.
-	if returnInfo.DefinitelyExited {
+	if returnInfo.IsUnreachable() {
 		return
 	}
 
