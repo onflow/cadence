@@ -88,9 +88,28 @@ func NewAccessFromEntitlementOrderedSet(
 }
 
 // IntersectAccess returns the intersection of two accesses.
-// If either is unauthorized, the result is unauthorized.
-// If both are EntitlementSetAccess, the result contains only entitlements present in both.
-// For all other combinations, the result is unauthorized.
+// The result only contains entitlements that are statically guaranteed by both sides.
+//
+// Rules:
+//   - If either side is not an EntitlementSetAccess (e.g. unauthorized, primitive,
+//     or entitlement map access), the result is unauthorized.
+//   - Conjunction ∩ Conjunction: standard set intersection (Conjunction).
+//     Both sides guarantee all of their entitlements, so anything in the
+//     intersection is guaranteed.
+//   - Conjunction ∩ Disjunction (and vice versa):
+//     A conjunction guarantees all of its entitlements, while a disjunction
+//     only guarantees that at least one (unspecified) entitlement from its set
+//     is present. The disjunction can therefore be preserved as the result only
+//     when the conjunction is a superset of the disjunction — in that case the
+//     conjunction guarantees every option of the disjunction. Otherwise the
+//     result is unauthorized, because the entitlement actually held by the
+//     disjunction side might not be guaranteed by the conjunction side.
+//     (E.g. auth(A) ∩ auth(A | B | C) = unauthorized, because the disjunction
+//     side might hold B or C, neither of which is guaranteed by the conjunction
+//     side; but auth(A, B, C) ∩ auth(A | B | C) = auth(A | B | C), because the
+//     conjunction side guarantees all options of the disjunction.)
+//   - Disjunction ∩ Disjunction: unauthorized. Neither side guarantees any
+//     specific entitlement, so nothing can be statically guaranteed in common.
 func IntersectAccess(a, b Access) Access {
 	aSet, ok := a.(EntitlementSetAccess)
 	if !ok {
@@ -102,20 +121,34 @@ func IntersectAccess(a, b Access) Access {
 		return UnauthorizedAccess
 	}
 
-	intersection := orderedmap.KeySetIntersection(
-		aSet.Entitlements,
-		bSet.Entitlements,
-	)
+	switch {
+	case aSet.SetKind == Conjunction && bSet.SetKind == Conjunction:
+		intersection := orderedmap.KeySetIntersection(
+			aSet.Entitlements,
+			bSet.Entitlements,
+		)
+		return NewAccessFromEntitlementOrderedSet(intersection, Conjunction)
 
-	// If either is a disjunction, the result must be a disjunction,
-	// because a disjunction only guarantees one of the entitlements is present.
-	// Only if both are conjunctions can the result be a conjunction.
-	setKind := Conjunction
-	if aSet.SetKind == Disjunction || bSet.SetKind == Disjunction {
-		setKind = Disjunction
+	case aSet.SetKind == Conjunction && bSet.SetKind == Disjunction:
+		// Preserve the disjunction only if the conjunction guarantees all of
+		// its options. Otherwise nothing is statically guaranteed in common.
+		if bSet.Entitlements.ForAllKeys(aSet.Entitlements.Contains) {
+			return bSet
+		}
+		return UnauthorizedAccess
+
+	case aSet.SetKind == Disjunction && bSet.SetKind == Conjunction:
+		// Symmetric to the previous case.
+		if aSet.Entitlements.ForAllKeys(bSet.Entitlements.Contains) {
+			return aSet
+		}
+		return UnauthorizedAccess
+
+	default:
+		// Disjunction ∩ Disjunction: neither side guarantees any specific
+		// entitlement, so the result cannot guarantee any entitlement either.
+		return UnauthorizedAccess
 	}
-
-	return NewAccessFromEntitlementOrderedSet(intersection, setKind)
 }
 
 func (EntitlementSetAccess) isAccess() {}
