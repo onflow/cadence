@@ -3153,11 +3153,22 @@ func ArrayInsertFunctionType(elementType Type) *FunctionType {
 	)
 }
 
+// ArrayConcatFunctionType returns the type for `concat(_:)`.
+//
+// `concat` is only available on variable-sized arrays — there is no sound
+// return type for concatenating two constant-sized arrays without arithmetic
+// on the element count, which the type system does not support. Callers in
+// getArrayMembers / overloadArrayReferenceMembers register this method only
+// when arrayType is *VariableSizedType; passing anything else panics.
 func ArrayConcatFunctionType(
 	memoryGauge common.MemoryGauge,
 	accessedType Type,
 	arrayType ArrayType,
 ) *FunctionType {
+
+	if _, ok := arrayType.(*VariableSizedType); !ok {
+		panic(errors.NewUnreachableError())
+	}
 
 	// `other` (the input) stays at the array's declared element type, so the
 	// caller can pass arrays of references whose authorizations match the
@@ -3183,15 +3194,7 @@ func ArrayConcatFunctionType(
 		false,
 	)
 
-	var returnArrayType Type
-	switch arrayType := arrayType.(type) {
-	case *VariableSizedType:
-		returnArrayType = NewVariableSizedType(memoryGauge, returnElementType)
-	case *ConstantSizedType:
-		returnArrayType = NewConstantSizedType(memoryGauge, returnElementType, arrayType.Size)
-	default:
-		panic(errors.NewUnreachableError())
-	}
+	returnArrayType := NewVariableSizedType(memoryGauge, returnElementType)
 
 	return NewSimpleFunctionType(
 		FunctionPurityView,
