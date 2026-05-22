@@ -146,39 +146,24 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 	//  b) A primitive type, then the loop-var is the concrete type itself.
 
 	if referenceType, ok := valueType.(*ReferenceType); ok {
-		referencedType := referenceType.Type
-		referencedIterableElementType := checker.iterableElementType(referencedType, hasPosition)
+		referencedIterableElementType := checker.iterableElementType(referenceType.Type, hasPosition)
 
 		if referencedIterableElementType.IsInvalidType() {
 			return referencedIterableElementType
 		}
 
-		// Case (a): Element type is a container type.
-		// Then the loop-var must also be a reference type.
-		if referencedIterableElementType.ContainFieldsOrElements() {
-			return GetDescendantReferenceType(
-				checker.memoryGauge,
-				referencedIterableElementType,
-				UnauthorizedAccess,
-				referenceType.Authorization,
-			)
-		}
-
-		// Case (a'): Element type is a reference type.
-		// Intersect the outer (container) reference's authorization
-		// with the inner (element) reference's authorization.
-		if _, isRef := referencedIterableElementType.(*ReferenceType); isRef {
-			return GetDescendantReferenceType(
-				checker.memoryGauge,
-				referencedIterableElementType,
-				UnauthorizedAccess,
-				referenceType.Authorization,
-			)
-		}
-
-		// Case (b): Element type is a primitive type.
-		// Then the loop-var must be the concrete type.
-		return referencedIterableElementType
+		// Element type is exposed via the same cascading rule as indexing /
+		// field access:
+		//   - Container-typed elements (case a): exposed as references.
+		//   - Reference elements (case a'):     outer ref's authorization
+		//                                       intersected with inner.
+		//   - Primitive elements (case b):      exposed as the concrete type.
+		return GetDescendantTypeForAccess(
+			checker.memoryGauge,
+			valueType,
+			referencedIterableElementType,
+			false,
+		)
 	}
 
 	// If it's not a reference, then simply get the element type.

@@ -210,6 +210,35 @@ func MaybeReferenceType(typ Type) (*ReferenceType, bool) {
 	return refType, isReference
 }
 
+// GetDescendantTypeForAccess returns the type that a descendant (member or element)
+// should have when read through `accessedType`.
+// When `accessedType` is a reference, and the descendant warrants becoming a reference per ShouldReturnReference,
+// the descendant is wrapped via GetDescendantReferenceType with an unauthorized wrapping authorization,
+// intersecting any inner reference authorizations with the outer reference's authorization.
+// Otherwise (for owned access, for primitive descendants, or in assignment contexts):
+// `descendantType` is returned unchanged.
+// This encapsulates the cascading rule that applies uniformly when reading element/member data
+// out of a referenced container or composite.
+// Call sites that need a custom wrapping authorization (e.g. mapped field access)
+// keep using GetDescendantReferenceType directly.
+func GetDescendantTypeForAccess(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	descendantType Type,
+	isAssignment bool,
+) Type {
+	if !ShouldReturnReference(accessedType, descendantType, isAssignment) {
+		return descendantType
+	}
+	outerRef, _ := MaybeReferenceType(accessedType)
+	return GetDescendantReferenceType(
+		memoryGauge,
+		descendantType,
+		UnauthorizedAccess,
+		outerRef.Authorization,
+	)
+}
+
 func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignment bool) (
 	accessedType Type,
 	resultingType Type,

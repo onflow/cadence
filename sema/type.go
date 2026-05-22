@@ -3030,6 +3030,16 @@ func ArrayRemoveLastFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
+	// Use intersectContainerElementReferences instead of
+	// GetDescendantTypeForAccess (used by the public copy methods).
+	//
+	// `removeLast` transfers ownership of the extracted element out of the array,
+	// so the return type must stay at the element's value type:
+	// wrapping a non-reference S to &S would break resource transfer
+	// (`let r <- ref.removeLast()` only type-checks when the return is `R`, not `&R`).
+	//
+	// intersectContainerElementReferences still intersects references nested inside the element type
+	// with the outer authorization, so inner-reference escalation remains closed.
 	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
@@ -3043,6 +3053,16 @@ func ArrayRemoveFirstFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
+	// Use intersectContainerElementReferences instead of
+	// GetDescendantTypeForAccess (used by the public copy methods).
+	//
+	// `removeFirst` transfers ownership of the extracted element out of the array,
+	// so the return type must stay at the element's value type:
+	// wrapping a non-reference S to &S would break resource transfer
+	// (`let r <- ref.removeFirst()` only type-checks when the return is `R`, not `&R`).
+	//
+	// intersectContainerElementReferences still intersects references nested inside the element type
+	// with the outer authorization, so inner-reference escalation remains closed.
 	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
@@ -3056,6 +3076,16 @@ func ArrayRemoveFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
+	// Use intersectContainerElementReferences instead of
+	// GetDescendantTypeForAccess (used by the public copy methods).
+	//
+	// `remove` transfers ownership of the extracted element out of the array,
+	// so the return type must stay at the element's value type:
+	// wrapping a non-reference S to &S would break resource transfer
+	// (`let r <- ref.remove(at: 0)` only type-checks when the return is `R`, not `&R`).
+	//
+	// intersectContainerElementReferences still intersects references nested inside the element type
+	// with the outer authorization, so inner-reference escalation remains closed.
 	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
@@ -3138,11 +3168,21 @@ func ArrayConcatFunctionType(
 	// beyond what the outer reference grants.
 	paramTypeAnnotation := NewTypeAnnotation(arrayType)
 
-	returnElementType := intersectContainerElementReferences(
+	// Use GetDescendantTypeForAccess to cascade the outer reference's
+	// authorization into the returned element type. When the array is
+	// accessed via a reference, this exposes the element the same way
+	// indexing and field access do: non-reference fielded types are wrapped
+	// to references, and inner-reference authorizations are intersected
+	// with the outer authorization. Without this cascade, a method-driven
+	// copy could escalate inner-element entitlements beyond what the outer
+	// reference grants.
+	returnElementType := GetDescendantTypeForAccess(
 		memoryGauge,
 		accessedType,
 		arrayType.ElementType(false),
+		false,
 	)
+
 	var returnArrayType Type
 	switch arrayType := arrayType.(type) {
 	case *VariableSizedType:
@@ -3228,7 +3268,21 @@ func ArraySliceFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
-	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
+
+	// Use GetDescendantTypeForAccess to cascade the outer reference's
+	// authorization into the returned element type. When the array is
+	// accessed via a reference, this exposes the element the same way
+	// indexing and field access do: non-reference fielded types are wrapped
+	// to references, and inner-reference authorizations are intersected
+	// with the outer authorization. Without this cascade, a method-driven
+	// copy could escalate inner-element entitlements beyond what the outer
+	// reference grants.
+	elementType = GetDescendantTypeForAccess(
+		memoryGauge,
+		accessedType,
+		elementType,
+		false,
+	)
 	return NewSimpleFunctionType(
 		FunctionPurityView,
 		[]Parameter{
@@ -3253,19 +3307,20 @@ func ArrayToVariableSizedFunctionType(
 	elementType Type,
 ) *FunctionType {
 
-	// When the array is accessed via a reference, the returned copy's element
-	// references must be intersected with the outer reference's authorization,
-	// the same way indexing does. Otherwise a copy could escalate inner-element
-	// entitlements beyond what the outer reference grants.
-	if ShouldReturnReference(accessedType, elementType, false) {
-		outerRef, _ := MaybeReferenceType(accessedType)
-		elementType = GetDescendantReferenceType(
-			memoryGauge,
-			elementType,
-			UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	// Use GetDescendantTypeForAccess to cascade the outer reference's
+	// authorization into the returned element type. When the array is
+	// accessed via a reference, this exposes the element the same way
+	// indexing and field access do: non-reference fielded types are wrapped
+	// to references, and inner-reference authorizations are intersected
+	// with the outer authorization. Without this cascade, a method-driven
+	// copy could escalate inner-element entitlements beyond what the outer
+	// reference grants.
+	elementType = GetDescendantTypeForAccess(
+		memoryGauge,
+		accessedType,
+		elementType,
+		false,
+	)
 
 	return NewSimpleFunctionType(
 		FunctionPurityView,
@@ -3281,7 +3336,21 @@ func ArrayToConstantSizedFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
-	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
+
+	// Use GetDescendantTypeForAccess to cascade the outer reference's
+	// authorization into the returned element type. When the array is
+	// accessed via a reference, this exposes the element the same way
+	// indexing and field access do: non-reference fielded types are wrapped
+	// to references, and inner-reference authorizations are intersected
+	// with the outer authorization. Without this cascade, a method-driven
+	// copy could escalate inner-element entitlements beyond what the outer
+	// reference grants.
+	elementType = GetDescendantTypeForAccess(
+		memoryGauge,
+		accessedType,
+		elementType,
+		false,
+	)
 
 	// Ideally this should have a typebound of [T; _] but since we don't know
 	// the size of the ConstantSizedArray, we omit specifying the bound.
@@ -3345,11 +3414,21 @@ func ArrayReverseFunctionType(
 	arrayType ArrayType,
 ) *FunctionType {
 
-	returnElementType := intersectContainerElementReferences(
+	// Use GetDescendantTypeForAccess to cascade the outer reference's
+	// authorization into the returned element type. When the array is
+	// accessed via a reference, this exposes the element the same way
+	// indexing and field access do: non-reference fielded types are wrapped
+	// to references, and inner-reference authorizations are intersected
+	// with the outer authorization. Without this cascade, a method-driven
+	// copy could escalate inner-element entitlements beyond what the outer
+	// reference grants.
+	returnElementType := GetDescendantTypeForAccess(
 		memoryGauge,
 		accessedType,
 		arrayType.ElementType(false),
+		false,
 	)
+
 	var returnArrayType Type
 	switch arrayType := arrayType.(type) {
 	case *VariableSizedType:
@@ -3376,15 +3455,20 @@ func ArrayFilterFunctionType(
 	elementType Type,
 ) *FunctionType {
 
-	if ShouldReturnReference(accessedType, elementType, false) {
-		outerRef, _ := MaybeReferenceType(accessedType)
-		elementType = GetDescendantReferenceType(
-			memoryGauge,
-			elementType,
-			UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	// Use GetDescendantTypeForAccess to cascade the outer reference's
+	// authorization into the returned element type. When the array is
+	// accessed via a reference, this exposes the element the same way
+	// indexing and field access do: non-reference fielded types are wrapped
+	// to references, and inner-reference authorizations are intersected
+	// with the outer authorization. Without this cascade, a method-driven
+	// copy could escalate inner-element entitlements beyond what the outer
+	// reference grants.
+	elementType = GetDescendantTypeForAccess(
+		memoryGauge,
+		accessedType,
+		elementType,
+		false,
+	)
 
 	funcType := &FunctionType{
 		Parameters: []Parameter{
@@ -3442,17 +3526,20 @@ func ArrayMapFunctionType(
 		panic(errors.NewUnreachableError())
 	}
 
-	elementType := arrayType.ElementType(false)
-
-	if ShouldReturnReference(accessedType, elementType, false) {
-		outerRef, _ := MaybeReferenceType(accessedType)
-		elementType = GetDescendantReferenceType(
-			memoryGauge,
-			elementType,
-			UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	// Use GetDescendantTypeForAccess to cascade the outer reference's
+	// authorization into the returned element type. When the array is
+	// accessed via a reference, this exposes the element the same way
+	// indexing and field access do: non-reference fielded types are wrapped
+	// to references, and inner-reference authorizations are intersected
+	// with the outer authorization. Without this cascade, a method-driven
+	// copy could escalate inner-element entitlements beyond what the outer
+	// reference grants.
+	elementType := GetDescendantTypeForAccess(
+		memoryGauge,
+		accessedType,
+		arrayType.ElementType(false),
+		false,
+	)
 
 	transformFuncType := &FunctionType{
 		Parameters: []Parameter{
@@ -7115,9 +7202,16 @@ func DictionaryInsertFunctionType(
 	accessedType Type,
 	t *DictionaryType,
 ) *FunctionType {
-	// The returned previous-value comes from the dictionary, so its inner
-	// references are intersected with the outer authorization. The value
-	// parameter stays at the declared type — the caller provides it.
+	// Use intersectContainerElementReferences instead of
+	// GetDescendantTypeForAccess (used by the public copy methods).
+	//
+	// `insert` transfers ownership of the previous value at the key back to the caller,
+	// so the return type must stay at the value type:
+	// wrapping a non-reference V to &V would break resource transfer
+	// (`let r <- ref.insert(...)` only type-checks when the return is `V?`, not `(&V)?`).
+	//
+	// intersectContainerElementReferences still intersects references nested inside the value type
+	// with the outer authorization, so inner-reference escalation remains closed.
 	returnValueType := intersectContainerElementReferences(memoryGauge, accessedType, t.ValueType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
@@ -7145,6 +7239,16 @@ func DictionaryRemoveFunctionType(
 	accessedType Type,
 	t *DictionaryType,
 ) *FunctionType {
+	// Use intersectContainerElementReferences instead of
+	// GetDescendantTypeForAccess (used by the public copy methods).
+	//
+	// `remove` transfers ownership of the value at the key back to the caller,
+	// so the return type must stay at the value type:
+	// wrapping a non-reference V to &V would break resource transfer
+	// (`let r <- ref.remove(key: "a")` only type-checks when the return is `V?`, not `(&V)?`).
+	//
+	// intersectContainerElementReferences still intersects references nested inside the value type
+	// with the outer authorization, so inner-reference escalation remains closed.
 	returnValueType := intersectContainerElementReferences(memoryGauge, accessedType, t.ValueType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
@@ -7169,10 +7273,10 @@ func DictionaryForEachKeyFunctionType(
 ) *FunctionType {
 	const functionPurity = FunctionPurityImpure
 
-	// Keys are passed into the user's callback, so their inner references are
-	// intersected with the outer authorization (the callback can't be given
-	// references that exceed what the outer reference grants).
-	keyType := intersectContainerElementReferences(memoryGauge, accessedType, t.KeyType)
+	// Keys are passed into the user's callback. When the dictionary is accessed via a reference,
+	// the callback's key parameter is exposed via the same cascading rule as indexing and field access
+	// (see GetDescendantTypeForAccess).
+	keyType := GetDescendantTypeForAccess(memoryGauge, accessedType, t.KeyType, false)
 
 	// fun(K): Bool
 	funcType := NewSimpleFunctionType(

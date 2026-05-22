@@ -400,21 +400,17 @@ func (checker *Checker) visitIndexExpression(
 		//   2) is container-typed,
 		// then the element type should also be a reference.
 		// Otherwise, if the member is already a reference, then again, a reference must be returned.
-		returnReference := false
-		if ShouldReturnReference(valueIndexedType, elementType, isAssignment) {
+		returnReference := ShouldReturnReference(valueIndexedType, elementType, isAssignment)
+		if returnReference {
 			// For index expressions, non-reference elements are un-authorized.
 			// For reference elements, the authorization is the intersection of
 			// the outer (container) reference's authorization and the inner (element) reference's authorization.
-			outerRef, _ := MaybeReferenceType(valueIndexedType)
-			elementType = GetDescendantReferenceType(
+			elementType = GetDescendantTypeForAccess(
 				checker.memoryGauge,
+				valueIndexedType,
 				elementType,
-				UnauthorizedAccess,
-				outerRef.Authorization,
+				isAssignment,
 			)
-
-			// Store the result in elaboration, so the interpreter can re-use this.
-			returnReference = true
 		}
 
 		checker.Elaboration.SetIndexExpressionTypes(
