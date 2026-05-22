@@ -3030,7 +3030,7 @@ func ArrayRemoveLastFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
-	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
+	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		nil,
@@ -3043,7 +3043,7 @@ func ArrayRemoveFirstFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
-	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
+	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		nil,
@@ -3056,7 +3056,7 @@ func ArrayRemoveFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
-	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
+	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		[]Parameter{
@@ -3069,7 +3069,7 @@ func ArrayRemoveFunctionType(
 	)
 }
 
-// intersectArrayElementReferences returns elementType with any inner reference
+// intersectContainerElementReferences returns elementType with any inner reference
 // authorizations intersected with the outer authorization of accessedType (when
 // accessedType is a reference). For non-reference accessedType, or when the
 // element type contains no references, elementType is returned unchanged.
@@ -3086,7 +3086,7 @@ func ArrayRemoveFunctionType(
 // for methods that return element values (or copies of arrays of element
 // values), which must preserve the value/reference distinction of the original
 // element type.
-func intersectArrayElementReferences(
+func intersectContainerElementReferences(
 	memoryGauge common.MemoryGauge,
 	accessedType Type,
 	elementType Type,
@@ -3138,7 +3138,7 @@ func ArrayConcatFunctionType(
 	// beyond what the outer reference grants.
 	paramTypeAnnotation := NewTypeAnnotation(arrayType)
 
-	returnElementType := intersectArrayElementReferences(
+	returnElementType := intersectContainerElementReferences(
 		memoryGauge,
 		accessedType,
 		arrayType.ElementType(false),
@@ -3228,7 +3228,7 @@ func ArraySliceFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
-	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
+	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
 	return NewSimpleFunctionType(
 		FunctionPurityView,
 		[]Parameter{
@@ -3281,7 +3281,7 @@ func ArrayToConstantSizedFunctionType(
 	accessedType Type,
 	elementType Type,
 ) *FunctionType {
-	elementType = intersectArrayElementReferences(memoryGauge, accessedType, elementType)
+	elementType = intersectContainerElementReferences(memoryGauge, accessedType, elementType)
 
 	// Ideally this should have a typebound of [T; _] but since we don't know
 	// the size of the ConstantSizedArray, we omit specifying the bound.
@@ -3345,7 +3345,7 @@ func ArrayReverseFunctionType(
 	arrayType ArrayType,
 ) *FunctionType {
 
-	returnElementType := intersectArrayElementReferences(
+	returnElementType := intersectContainerElementReferences(
 		memoryGauge,
 		accessedType,
 		arrayType.ElementType(false),
@@ -7118,7 +7118,7 @@ func DictionaryInsertFunctionType(
 	// The returned previous-value comes from the dictionary, so its inner
 	// references are intersected with the outer authorization. The value
 	// parameter stays at the declared type — the caller provides it.
-	returnValueType := intersectArrayElementReferences(memoryGauge, accessedType, t.ValueType)
+	returnValueType := intersectContainerElementReferences(memoryGauge, accessedType, t.ValueType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		[]Parameter{
@@ -7145,7 +7145,7 @@ func DictionaryRemoveFunctionType(
 	accessedType Type,
 	t *DictionaryType,
 ) *FunctionType {
-	returnValueType := intersectArrayElementReferences(memoryGauge, accessedType, t.ValueType)
+	returnValueType := intersectContainerElementReferences(memoryGauge, accessedType, t.ValueType)
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
 		[]Parameter{
@@ -7172,7 +7172,7 @@ func DictionaryForEachKeyFunctionType(
 	// Keys are passed into the user's callback, so their inner references are
 	// intersected with the outer authorization (the callback can't be given
 	// references that exceed what the outer reference grants).
-	keyType := intersectArrayElementReferences(memoryGauge, accessedType, t.KeyType)
+	keyType := intersectContainerElementReferences(memoryGauge, accessedType, t.KeyType)
 
 	// fun(K): Bool
 	funcType := NewSimpleFunctionType(
