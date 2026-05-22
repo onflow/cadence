@@ -1801,7 +1801,10 @@ func (v *ArrayValue) Filter(
 
 	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
 	if asReference {
-		outerRef, _ := sema.MaybeReferenceType(accessedType)
+		outerRef, isRef := sema.MaybeReferenceType(accessedType)
+		if !isRef {
+			panic(errors.NewUnreachableError())
+		}
 		elementType = sema.GetDescendantReferenceType(
 			context,
 			elementType,
@@ -1912,7 +1915,10 @@ func (v *ArrayValue) Map(
 
 	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
 	if asReference {
-		outerRef, _ := sema.MaybeReferenceType(accessedType)
+		outerRef, isRef := sema.MaybeReferenceType(accessedType)
+		if !isRef {
+			panic(errors.NewUnreachableError())
+		}
 		elementType = sema.GetDescendantReferenceType(
 			context,
 			elementType,

@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 )
 
 // NOTE: only called if the member expression is *not* an assignment
@@ -230,7 +231,10 @@ func GetDescendantTypeForAccess(
 	if !ShouldReturnReference(accessedType, descendantType, isAssignment) {
 		return descendantType
 	}
-	outerRef, _ := MaybeReferenceType(accessedType)
+	outerRef, isRef := MaybeReferenceType(accessedType)
+	if !isRef {
+		panic(errors.NewUnreachableError())
+	}
 	return GetDescendantReferenceType(
 		memoryGauge,
 		descendantType,
@@ -491,7 +495,10 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 		// For reference elements, the outer reference's raw authorization is intersected
 		// with the inner reference's authorization (note: mapped access fields cannot have
 		// reference types, so `authorization` and outer auth differ only for non-mapped fields).
-		outerRef, _ := MaybeReferenceType(accessedType)
+		outerRef, isRef := MaybeReferenceType(accessedType)
+		if !isRef {
+			panic(errors.NewUnreachableError())
+		}
 		resultingType = GetDescendantReferenceType(
 			checker.memoryGauge,
 			resultingType,
