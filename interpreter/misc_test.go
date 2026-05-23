@@ -12536,6 +12536,24 @@ func TestInterpretContainerMethodElementCascading(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	// Shared helper used by the auth-recovery sub-tests on both copy and
+	// extract methods. The Cadence source must declare `fun test(): Bool`
+	// returning whether a force-cast back to the original (stronger)
+	// authorization succeeded. The assertion is that it must return false
+	// — otherwise the holder could recover the stripped authorization at
+	// runtime, defeating sema's cascading.
+	assertCannotRecoverAuth := func(t *testing.T, source string) {
+		t.Helper()
+		inter := parseCheckAndPrepare(t, source)
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t,
+			interpreter.BoolValue(false),
+			result,
+			"force-cast back to stronger auth must fail; soundness gap",
+		)
+	}
+
 	t.Run("Public copy methods", func(t *testing.T) {
 
 		t.Parallel()
@@ -12724,6 +12742,139 @@ func TestInterpretContainerMethodElementCascading(t *testing.T) {
                     let d2: {String: Int} = {"a": 1}
                     let ref2 = &d2 as &{String: Int}
                     ref2.forEachKey(view fun (_: String): Bool { return true })
+                }
+            `)
+		})
+
+		// Auth-recovery downcast soundness for the public copy methods.
+		// Each method's runtime implementation calls getReferenceValue per
+		// extracted element (filter, map, slice, concat, reverse,
+		// toVariableSized, toConstantSized), so the values flowing into the
+		// result array — or into the user callback for map — already carry
+		// the cascaded authorization. The downcast back to the original
+		// inner authorization must therefore fail.
+
+		t.Run("array filter auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let result: [&S] = ref.filter(view fun (_: &S): Bool { return true })
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		// `map`'s callback receives the cascaded element type. Verify the
+		// recovery downcast also fails *inside* the callback (not only on
+		// the result), since the user could observe / leak the recovered
+		// authorization there.
+		t.Run("array map auth recovery prevented in callback", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let recovered: [Bool] = ref.map(view fun (elem: &S): Bool {
+                        return elem as? auth(E) &S != nil
+                    })
+                    return recovered[0]
+                }
+            `)
+		})
+
+		t.Run("array slice auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let result: [&S] = ref.slice(from: 0, upTo: 1)
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		t.Run("array concat auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+                    let other: [auth(E) &S] = []
+
+                    let result: [&S] = ref.concat(other)
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		t.Run("array reverse auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let result: [&S] = ref.reverse()
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		t.Run("array toVariableSized auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S; 1] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S; 1]
+
+                    let result: [&S] = ref.toVariableSized()
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		t.Run("array toConstantSized auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let result: [&S; 1] = ref.toConstantSized<[&S; 1]>()!
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
                 }
             `)
 		})
@@ -12940,6 +13091,107 @@ func TestInterpretContainerMethodElementCascading(t *testing.T) {
                     let ref = &a as auth(Mutate) &[auth(E) &S]
 
                     let r: &S = ref.removeLast()
+                }
+            `)
+		})
+
+		// Auth-recovery downcast soundness: the cascaded return type in sema
+		// is only sufficient if the runtime also presents the returned value
+		// with the cascaded authorization — otherwise the holder could
+		// recover the stripped authorization by force-casting the result
+		// back to the original element type.
+		//
+		// For all five mutating/extracting methods that route through
+		// intersectContainerElementReferences at sema, this is enforced at
+		// runtime by ConvertAndBoxWithValidation → applyTargetTypeAuthorization,
+		// which rewrites the result's static-type reference authorization to
+		// the function's declared return-type authorization at the function
+		// return boundary. The downcast against the original inner auth
+		// must therefore fail.
+
+		t.Run("array remove auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.remove(at: 0)
+                    let strong = r as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+
+		t.Run("array removeFirst auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeFirst()
+                    let strong = r as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+
+		t.Run("array removeLast auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeLast()
+                    let strong = r as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+
+		t.Run("dictionary remove auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    let r: &S = ref.remove(key: "a")!
+                    let strong = r as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+
+		t.Run("dictionary insert auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s1 = S()
+                    let s2 = S()
+                    var d: {String: auth(E) &S} = {"a": &s1 as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    // The "previous value" returned by insert is the one being replaced.
+                    let r: &S = ref.insert(key: "a", &s2 as auth(E) &S)!
+                    let strong = r as? auth(E) &S
+                    return strong != nil
                 }
             `)
 		})
