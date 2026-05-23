@@ -9791,6 +9791,38 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 			)
 		})
 
+		t.Run("array removeFirst intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeFirst()
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array removeLast intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeLast()
+                }
+            `)
+			require.NoError(t, err)
+		})
+
 	})
 
 }

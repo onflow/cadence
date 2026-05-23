@@ -1073,7 +1073,13 @@ func (v *ArrayValue) GetMethod(
 				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function and any BBQ VM derivation can read accessedType
+			// from the un-dereferenced receiver and apply the inner-
+			// reference intersection in sema.ArrayRemoveFunctionType's
+			// return.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeRemoveFirstFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1086,7 +1092,13 @@ func (v *ArrayValue) GetMethod(
 				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveFirstFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function and any BBQ VM derivation can read accessedType
+			// from the un-dereferenced receiver and apply the inner-
+			// reference intersection in
+			// sema.ArrayRemoveFirstFunctionType's return.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeRemoveLastFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1099,7 +1111,13 @@ func (v *ArrayValue) GetMethod(
 				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveLastFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function and any BBQ VM derivation can read accessedType
+			// from the un-dereferenced receiver and apply the inner-
+			// reference intersection in
+			// sema.ArrayRemoveLastFunctionType's return.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeFirstIndexFunctionName:
 		return NewBoundHostFunctionValue(
@@ -2507,7 +2525,7 @@ var NativeArrayRemoveFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
 		index := AssertValueOfType[NumberValue](args[0])
 
 		return thisArray.Remove(context, index.ToInt())
@@ -2669,7 +2687,7 @@ var NativeArrayRemoveFirstFunction = NativeFunction(
 		receiver Value,
 		_ []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
 
 		return thisArray.RemoveFirst(context)
 	},
@@ -2683,7 +2701,7 @@ var NativeArrayRemoveLastFunction = NativeFunction(
 		receiver Value,
 		_ []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
 
 		return thisArray.RemoveLast(context)
 	},

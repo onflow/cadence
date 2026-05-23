@@ -177,11 +177,11 @@ func init() {
 			sema.ArrayTypeRemoveFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				elementType := arrayElementTypeFromValue(receiver, context)
+				elementType := arrayTypeFromSemaType(accessedType).ElementType(false)
 				return sema.ArrayRemoveFunctionType(context, accessedType, elementType)
 			},
 			interpreter.NativeArrayRemoveFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	registerBuiltinTypeBoundFunction(
@@ -190,11 +190,11 @@ func init() {
 			sema.ArrayTypeRemoveFirstFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				elementType := arrayElementTypeFromValue(receiver, context)
+				elementType := arrayTypeFromSemaType(accessedType).ElementType(false)
 				return sema.ArrayRemoveFirstFunctionType(context, accessedType, elementType)
 			},
 			interpreter.NativeArrayRemoveFirstFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	registerBuiltinTypeBoundFunction(
@@ -203,11 +203,11 @@ func init() {
 			sema.ArrayTypeRemoveLastFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				elementType := arrayElementTypeFromValue(receiver, context)
+				elementType := arrayTypeFromSemaType(accessedType).ElementType(false)
 				return sema.ArrayRemoveLastFunctionType(context, accessedType, elementType)
 			},
 			interpreter.NativeArrayRemoveLastFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	registerBuiltinTypeBoundFunction(
