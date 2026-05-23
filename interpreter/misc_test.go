@@ -12505,6 +12505,358 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 	})
 }
 
+func TestInterpretContainerMethodElementCascading(t *testing.T) {
+
+	t.Parallel()
+
+	// Runtime counterpart of sema's TestCheckContainerMethodElementCascading.
+	//
+	// Each subtest runs the same Cadence code as its sema counterpart, which
+	// exercises four reference/non-reference combinations:
+	//   case 1: outer non-ref, inner non-ref (S)
+	//   case 2: outer ref,     inner non-ref (S)        — diverges
+	//   case 3: outer non-ref, inner ref (&S)
+	//   case 4: outer ref,     inner ref (&S)           — auth intersected
+	//
+	// Each case binds the method's result to a typed local. If the runtime
+	// produces a value whose dynamic type does not satisfy that declared
+	// type, the interpreter rejects the assignment (or a later operation on
+	// the value) with a value-transfer / static-type mismatch. So the test
+	// passes as long as the function runs to completion.
+	//
+	// Public copy methods (route through sema.GetDescendantTypeForAccess)
+	// must wrap S to &S in case 2 at runtime, just as the sema return type
+	// promises. Entitled mutating/extracting methods (route through
+	// sema.intersectContainerElementReferences) must preserve S in case 2.
+
+	runCases := func(t *testing.T, code string) {
+		t.Helper()
+		inter := parseCheckAndPrepare(t, code)
+		_, err := inter.Invoke("cases")
+		require.NoError(t, err)
+	}
+
+	t.Run("Public copy methods", func(t *testing.T) {
+
+		t.Parallel()
+
+		// case 2 wraps S to &S
+
+		t.Run("array filter", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [S] = a1.filter(view fun (_: S): Bool { return true })
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [&S] = ref2.filter(view fun (_: &S): Bool { return true })
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [&S] = a3.filter(view fun (_: &S): Bool { return true })
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [&S] = ref4.filter(view fun (_: &S): Bool { return true })
+                }
+            `)
+		})
+
+		t.Run("array map", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [Int] = a1.map(view fun (_: S): Int { return 0 })
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [Int] = ref2.map(view fun (_: &S): Int { return 0 })
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [Int] = a3.map(view fun (_: &S): Int { return 0 })
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [Int] = ref4.map(view fun (_: &S): Int { return 0 })
+                }
+            `)
+		})
+
+		t.Run("array slice", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [S] = a1.slice(from: 0, upTo: 1)
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [&S] = ref2.slice(from: 0, upTo: 1)
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [&S] = a3.slice(from: 0, upTo: 1)
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [&S] = ref4.slice(from: 0, upTo: 1)
+                }
+            `)
+		})
+
+		t.Run("array concat", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let other1: [S] = []
+                    let r1: [S] = a1.concat(other1)
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let other2: [S] = []
+                    let r2: [&S] = ref2.concat(other2)
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let other3: [&S] = []
+                    let r3: [&S] = a3.concat(other3)
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let other4: [&S] = []
+                    let r4: [&S] = ref4.concat(other4)
+                }
+            `)
+		})
+
+		t.Run("array reverse", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [S] = a1.reverse()
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [&S] = ref2.reverse()
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [&S] = a3.reverse()
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [&S] = ref4.reverse()
+                }
+            `)
+		})
+
+		t.Run("array toVariableSized", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S; 1] = [S()]
+                    let r1: [S] = a1.toVariableSized()
+
+                    let a2: [S; 1] = [S()]
+                    let ref2 = &a2 as &[S; 1]
+                    let r2: [&S] = ref2.toVariableSized()
+
+                    let s3 = S()
+                    let a3: [&S; 1] = [&s3 as &S]
+                    let r3: [&S] = a3.toVariableSized()
+
+                    let s4 = S()
+                    let a4: [&S; 1] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S; 1]
+                    let r4: [&S] = ref4.toVariableSized()
+                }
+            `)
+		})
+
+		t.Run("array toConstantSized", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [S; 1]? = a1.toConstantSized<[S; 1]>()
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [&S; 1]? = ref2.toConstantSized<[&S; 1]>()
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [&S; 1]? = a3.toConstantSized<[&S; 1]>()
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [&S; 1]? = ref4.toConstantSized<[&S; 1]>()
+                }
+            `)
+		})
+
+		t.Run("dictionary forEachKey", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                fun cases() {
+                    let d1: {String: Int} = {"a": 1}
+                    d1.forEachKey(view fun (_: String): Bool { return true })
+
+                    let d2: {String: Int} = {"a": 1}
+                    let ref2 = &d2 as &{String: Int}
+                    ref2.forEachKey(view fun (_: String): Bool { return true })
+                }
+            `)
+		})
+	})
+
+	t.Run("Entitled mutating/extracting methods", func(t *testing.T) {
+
+		t.Parallel()
+
+		// case 2 keeps S (no wrap)
+
+		t.Run("array remove", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var a1: [S] = [S()]
+                    let r1: S = a1.remove(at: 0)
+
+                    var a2: [S] = [S()]
+                    let ref2 = &a2 as auth(Mutate) &[S]
+                    let r2: S = ref2.remove(at: 0)
+
+                    let s3 = S()
+                    var a3: [&S] = [&s3 as &S]
+                    let r3: &S = a3.remove(at: 0)
+
+                    let s4 = S()
+                    var a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as auth(Mutate) &[&S]
+                    let r4: &S = ref4.remove(at: 0)
+                }
+            `)
+		})
+
+		t.Run("array removeFirst", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var a1: [S] = [S()]
+                    let r1: S = a1.removeFirst()
+
+                    var a2: [S] = [S()]
+                    let ref2 = &a2 as auth(Mutate) &[S]
+                    let r2: S = ref2.removeFirst()
+
+                    let s3 = S()
+                    var a3: [&S] = [&s3 as &S]
+                    let r3: &S = a3.removeFirst()
+
+                    let s4 = S()
+                    var a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as auth(Mutate) &[&S]
+                    let r4: &S = ref4.removeFirst()
+                }
+            `)
+		})
+
+		t.Run("array removeLast", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var a1: [S] = [S()]
+                    let r1: S = a1.removeLast()
+
+                    var a2: [S] = [S()]
+                    let ref2 = &a2 as auth(Mutate) &[S]
+                    let r2: S = ref2.removeLast()
+
+                    let s3 = S()
+                    var a3: [&S] = [&s3 as &S]
+                    let r3: &S = a3.removeLast()
+
+                    let s4 = S()
+                    var a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as auth(Mutate) &[&S]
+                    let r4: &S = ref4.removeLast()
+                }
+            `)
+		})
+
+		t.Run("dictionary remove", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var d1: {String: S} = {"a": S()}
+                    let r1: S? = d1.remove(key: "a")
+
+                    var d2: {String: S} = {"a": S()}
+                    let ref2 = &d2 as auth(Mutate) &{String: S}
+                    let r2: S? = ref2.remove(key: "a")
+
+                    let s3 = S()
+                    var d3: {String: &S} = {"a": &s3 as &S}
+                    let r3: (&S)? = d3.remove(key: "a")
+
+                    let s4 = S()
+                    var d4: {String: &S} = {"a": &s4 as &S}
+                    let ref4 = &d4 as auth(Mutate) &{String: &S}
+                    let r4: (&S)? = ref4.remove(key: "a")
+                }
+            `)
+		})
+
+		t.Run("dictionary insert", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var d1: {String: S} = {}
+                    let r1: S? = d1.insert(key: "a", S())
+
+                    var d2: {String: S} = {}
+                    let ref2 = &d2 as auth(Mutate) &{String: S}
+                    let r2: S? = ref2.insert(key: "a", S())
+
+                    let s3 = S()
+                    var d3: {String: &S} = {}
+                    let r3: (&S)? = d3.insert(key: "a", &s3 as &S)
+
+                    let s4 = S()
+                    var d4: {String: &S} = {}
+                    let ref4 = &d4 as auth(Mutate) &{String: &S}
+                    let r4: (&S)? = ref4.insert(key: "a", &s4 as &S)
+                }
+            `)
+		})
+	})
+}
+
 func TestInterpretCastingBoxing(t *testing.T) {
 
 	t.Parallel()

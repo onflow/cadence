@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -72,12 +73,11 @@ func init() {
 			sema.DictionaryTypeForEachKeyFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				dictionaryValue := receiver.(*interpreter.DictionaryValue)
-				dictionaryType := dictionaryValue.SemaType(context)
+				dictionaryType := dictionaryTypeFromSemaType(accessedType)
 				return sema.DictionaryForEachKeyFunctionType(context, accessedType, dictionaryType)
 			},
 			interpreter.NativeDictionaryForEachKeyFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 }
 
@@ -85,4 +85,15 @@ func dictionaryType(receiver Value, context interpreter.ValueStaticTypeContext) 
 	dictionaryValue := receiver.(*interpreter.DictionaryValue)
 	dictionaryType := dictionaryValue.SemaType(context)
 	return dictionaryType
+}
+
+func dictionaryTypeFromSemaType(accessedType sema.Type) *sema.DictionaryType {
+	switch accessedType := accessedType.(type) {
+	case *sema.DictionaryType:
+		return accessedType
+	case *sema.ReferenceType:
+		return dictionaryTypeFromSemaType(accessedType.Type)
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }

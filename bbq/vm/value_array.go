@@ -70,7 +70,7 @@ func init() {
 					return sema.ArrayReverseFunctionType(context, accessedType, arrayType)
 				},
 				interpreter.NativeArrayReverseFunction,
-			),
+			).WithDereferenceReceiver(false),
 		)
 	}
 
@@ -156,7 +156,7 @@ func init() {
 				return sema.ArrayConcatFunctionType(context, accessedType, arrayType)
 			},
 			interpreter.NativeArrayConcatFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	registerBuiltinTypeBoundFunction(
@@ -220,7 +220,7 @@ func init() {
 				return sema.ArraySliceFunctionType(context, accessedType, elementType)
 			},
 			interpreter.NativeArraySliceFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	registerBuiltinTypeBoundFunction(
@@ -233,7 +233,7 @@ func init() {
 				return sema.ArrayToConstantSizedFunctionType(context, accessedType, elementType)
 			},
 			interpreter.NativeArrayToConstantSizedFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	// Methods available only for constant-sized arrays
@@ -254,7 +254,7 @@ func init() {
 				)
 			},
 			interpreter.NativeArrayToVariableSizedFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 }
 

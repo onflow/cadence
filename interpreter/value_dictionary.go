@@ -590,8 +590,28 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext) {
 func (v *DictionaryValue) ForEachKey(
 	context InvocationContext,
 	procedure FunctionValue,
+	accessedType sema.Type,
 ) {
+	// Cascade outer authorization into the callback's key parameter type,
+	// matching sema's DictionaryForEachKeyFunctionType — see
+	// sema.GetDescendantTypeForAccess. In practice no built-in Hashable type
+	// has ContainFieldsOrElements=true, so the wrap doesn't trigger today,
+	// but the symmetry with filter/map keeps the runtime aligned with sema
+	// if that ever changes.
 	keyType := v.SemaType(context).KeyType
+	asReference := sema.ShouldReturnReference(accessedType, keyType, false)
+	if asReference {
+		outerRef, isRef := sema.MaybeReferenceType(accessedType)
+		if !isRef {
+			panic(errors.NewUnreachableError())
+		}
+		keyType = sema.GetDescendantReferenceType(
+			context,
+			keyType,
+			sema.UnauthorizedAccess,
+			outerRef.Authorization,
+		)
+	}
 
 	argumentTypes := []sema.Type{keyType}
 
@@ -612,6 +632,10 @@ func (v *DictionaryValue) ForEachKey(
 				)
 
 				key := MustConvertStoredValue(context, item)
+
+				if asReference {
+					key = getReferenceValue(context, key, keyType)
+				}
 
 				result := invokeFunctionValue(
 					context,
@@ -988,7 +1012,13 @@ func (v *DictionaryValue) GetMethod(
 				dictionaryType,
 			),
 			NativeDictionaryForEachKeyFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function can read accessedType from it and cascade the
+			// outer reference's authorization into the callback's key
+			// parameter type, matching
+			// sema.DictionaryForEachKeyFunctionType.
+			WithDereferenceReceiver(false)
 	}
 
 	return nil
@@ -1900,11 +1930,30 @@ var NativeDictionaryForEachKeyFunction = NativeFunction(
 		args []Value,
 	) Value {
 		funcArgument := AssertValueOfType[FunctionValue](args[0])
-		dictionary := AssertValueOfType[*DictionaryValue](receiver)
-		dictionary.ForEachKey(context, funcArgument)
+		dictionary := dictionaryValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
+		dictionary.ForEachKey(context, funcArgument, accessedType)
 		return Void
 	},
 )
+
+func dictionaryValueFromReceiver(context ValueStaticTypeContext, receiver Value) *DictionaryValue {
+	switch receiver := receiver.(type) {
+	case *DictionaryValue:
+		return receiver
+
+	case *StorageReferenceValue:
+		referencedValue := receiver.MustReferencedValue(context)
+		return AssertValueOfType[*DictionaryValue](referencedValue)
+
+	case *EphemeralReferenceValue:
+		referencedValue := receiver.Value
+		return AssertValueOfType[*DictionaryValue](referencedValue)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
 
 // DictionaryKeyIterator
 
