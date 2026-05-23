@@ -83,8 +83,7 @@ func init() {
 
 func dictionaryType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.DictionaryType {
 	dictionaryValue := receiver.(*interpreter.DictionaryValue)
-	dictionaryType := dictionaryValue.SemaType(context)
-	return dictionaryType
+	return dictionaryValue.SemaType(context)
 }
 
 func dictionaryTypeFromSemaType(accessedType sema.Type) *sema.DictionaryType {

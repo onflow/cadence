@@ -66,7 +66,7 @@ func init() {
 				sema.ArrayTypeReverseFunctionName,
 				func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 					accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-					arrayType := arrayTypeFromValue(receiver, context)
+					arrayType := arrayTypeFromSemaType(accessedType)
 					return sema.ArrayReverseFunctionType(context, accessedType, arrayType)
 				},
 				interpreter.NativeArrayReverseFunction,
@@ -152,7 +152,7 @@ func init() {
 			sema.ArrayTypeConcatFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				arrayType := arrayTypeFromValue(receiver, context)
+				arrayType := arrayTypeFromSemaType(accessedType)
 				return sema.ArrayConcatFunctionType(context, accessedType, arrayType)
 			},
 			interpreter.NativeArrayConcatFunction,
@@ -216,7 +216,7 @@ func init() {
 			sema.ArrayTypeSliceFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				elementType := arrayElementTypeFromValue(receiver, context)
+				elementType := arrayTypeFromSemaType(accessedType).ElementType(false)
 				return sema.ArraySliceFunctionType(context, accessedType, elementType)
 			},
 			interpreter.NativeArraySliceFunction,
@@ -229,7 +229,7 @@ func init() {
 			sema.ArrayTypeToConstantSizedFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				elementType := arrayElementTypeFromValue(receiver, context)
+				elementType := arrayTypeFromSemaType(accessedType).ElementType(false)
 				return sema.ArrayToConstantSizedFunctionType(context, accessedType, elementType)
 			},
 			interpreter.NativeArrayToConstantSizedFunction,
@@ -246,7 +246,7 @@ func init() {
 			sema.ArrayTypeToVariableSizedFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				elementType := arrayElementTypeFromValue(receiver, context)
+				elementType := arrayTypeFromSemaType(accessedType).ElementType(false)
 				return sema.ArrayToVariableSizedFunctionType(
 					context,
 					accessedType,
