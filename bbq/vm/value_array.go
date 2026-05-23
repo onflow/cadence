@@ -29,8 +29,7 @@ import (
 
 func init() {
 
-	// Methods available for both types of arrays (constant-sized and variable-sized),
-	// and references to them.
+	// Methods available for both types of arrays (constant-sized and variable-sized)
 
 	for _, typeQualifier := range []string{
 		commons.TypeQualifierArrayVariableSized,
@@ -72,14 +71,7 @@ func init() {
 				interpreter.NativeArrayReverseFunction,
 			).WithDereferenceReceiver(false),
 		)
-	}
 
-	// Methods available for both types of arrays (constant-sized and variable-sized).
-
-	for _, typeQualifier := range []string{
-		commons.TypeQualifierArrayVariableSized,
-		commons.TypeQualifierArrayConstantSized,
-	} {
 		registerBuiltinTypeBoundFunction(
 			typeQualifier,
 			NewNativeFunctionValueWithDerivedType(
@@ -118,8 +110,8 @@ func init() {
 		)
 	}
 
-	// Methods available only for variable-sized arrays,
-	// and references to them.
+	// Methods available only for variable-sized arrays
+
 	typeQualifier := commons.TypeQualifierArrayVariableSized
 
 	registerBuiltinTypeBoundFunction(
@@ -237,7 +229,7 @@ func init() {
 	)
 
 	// Methods available only for constant-sized arrays
-	// and references to them.
+
 	typeQualifier = commons.TypeQualifierArrayConstantSized
 
 	registerBuiltinTypeBoundFunction(
