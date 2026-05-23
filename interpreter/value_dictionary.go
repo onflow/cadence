@@ -975,7 +975,13 @@ func (v *DictionaryValue) GetMethod(
 				dictionaryType,
 			),
 			NativeDictionaryRemoveFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function and any BBQ VM derivation can read accessedType
+			// from the un-dereferenced receiver and apply the inner-
+			// reference intersection in sema.DictionaryRemoveFunctionType's
+			// return.
+			WithDereferenceReceiver(false)
 
 	case sema.DictionaryTypeInsertFunctionName:
 		return NewBoundHostFunctionValue(
@@ -988,7 +994,13 @@ func (v *DictionaryValue) GetMethod(
 				dictionaryType,
 			),
 			NativeDictionaryInsertFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function and any BBQ VM derivation can read accessedType
+			// from the un-dereferenced receiver and apply the inner-
+			// reference intersection in sema.DictionaryInsertFunctionType's
+			// return.
+			WithDereferenceReceiver(false)
 
 	case sema.DictionaryTypeContainsKeyFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1887,7 +1899,7 @@ var NativeDictionaryRemoveFunction = NativeFunction(
 		args []Value,
 	) Value {
 		keyValue := args[0]
-		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		dictionary := dictionaryValueFromReceiver(context, receiver)
 		return dictionary.Remove(context, keyValue)
 	},
 )
@@ -1902,7 +1914,7 @@ var NativeDictionaryInsertFunction = NativeFunction(
 	) Value {
 		keyValue := args[0]
 		newValue := args[1]
-		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		dictionary := dictionaryValueFromReceiver(context, receiver)
 		return dictionary.Insert(context, keyValue, newValue)
 	},
 )

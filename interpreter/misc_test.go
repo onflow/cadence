@@ -12854,6 +12854,65 @@ func TestInterpretContainerMethodElementCascading(t *testing.T) {
                 }
             `)
 		})
+
+		// These tests exercise the non-trivial inner-reference intersection
+		// performed by intersectContainerElementReferences when the
+		// value/element type has an authorized inner reference. The case-4
+		// tests above use unauthorized `&S` as the inner type, which makes
+		// the intersection a no-op; here the inner is `auth(E) &S` and the
+		// outer is `auth(Mutate)`, so the intersection actually strips the
+		// auth. Verifies that the runtime return type matches the
+		// sema-cascaded return — without WithDereferenceReceiver(false) on
+		// the bound function, the BBQ VM would derive the function type
+		// against the unwrapped receiver (a bare dict/array) and produce
+		// the wrong (unintersected) return type, which would silently
+		// allow the user to recover the stripped authorization via a force
+		// cast on the returned value.
+
+		t.Run("dictionary remove intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    let r: (&S)? = ref.remove(key: "a")
+                }
+            `)
+		})
+
+		t.Run("dictionary insert intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    let r: (&S)? = ref.insert(key: "a", &s as auth(E) &S)
+                }
+            `)
+		})
+
+		t.Run("array remove intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.remove(at: 0)
+                }
+            `)
+		})
 	})
 }
 

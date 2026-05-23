@@ -9650,6 +9650,147 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		// Exercises the inner-reference intersection performed by
+		// intersectContainerElementReferences when the value type contains
+		// authorized references whose authorization is non-trivially
+		// intersected with the outer reference's authorization. The cases
+		// with `&S` above only cover the trivial unauth ∩ outer = unauth.
+
+		t.Run("dictionary remove intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    // outer auth(Mutate) ∩ inner auth(E) = empty,
+                    // so the returned reference is unauthorized.
+                    let r: (&S)? = ref.remove(key: "a")
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("dictionary remove intersects inner auth, escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    // Sema-cascaded return is (&S)?, not (auth(E) &S)?,
+                    // so trying to bind to (auth(E) &S)? must fail.
+                    let r: (auth(E) &S)? = ref.remove(key: "a")
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("(auth(S.test.E)&S.test.S)?"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("(&S.test.S)?"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("dictionary insert intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    // outer auth(Mutate) ∩ inner auth(E) = empty,
+                    // so the returned previous-value reference is unauthorized.
+                    let r: (&S)? = ref.insert(key: "a", &s as auth(E) &S)
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("dictionary insert intersects inner auth, escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    let r: (auth(E) &S)? = ref.insert(key: "a", &s as auth(E) &S)
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("(auth(S.test.E)&S.test.S)?"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("(&S.test.S)?"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		// Same cases for array remove*: outer auth Mutate intersects with
+		// inner element auth E, stripping to unauthorized.
+
+		t.Run("array remove intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.remove(at: 0)
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array remove intersects inner auth, escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: auth(E) &S = ref.remove(at: 0)
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("auth(S.test.E)&S.test.S"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("&S.test.S"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
 	})
 
 }

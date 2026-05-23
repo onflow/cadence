@@ -35,11 +35,11 @@ func init() {
 			sema.DictionaryTypeRemoveFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				dictionaryType := dictionaryType(receiver, context)
+				dictionaryType := dictionaryTypeFromSemaType(accessedType)
 				return sema.DictionaryRemoveFunctionType(context, accessedType, dictionaryType)
 			},
 			interpreter.NativeDictionaryRemoveFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	registerBuiltinTypeBoundFunction(
@@ -48,11 +48,11 @@ func init() {
 			sema.DictionaryTypeInsertFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
-				dictionaryType := dictionaryType(receiver, context)
+				dictionaryType := dictionaryTypeFromSemaType(accessedType)
 				return sema.DictionaryInsertFunctionType(context, accessedType, dictionaryType)
 			},
 			interpreter.NativeDictionaryInsertFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	registerBuiltinTypeBoundFunction(
