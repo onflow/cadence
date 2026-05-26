@@ -68,11 +68,33 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ st
 		return
 
 	case ControlKindLoop:
-		functionActivation.ReturnInfo.DefinitelyJumped = true
+		functionActivation.ReturnInfo.MaybeJumpedLoop = true
 
 	case ControlKindSwitch:
-		functionActivation.ReturnInfo.DefinitelyJumpedSwitch = true
+		functionActivation.ReturnInfo.MaybeJumpedSwitch = true
 	}
+
+	// `break` is a kind of definite exit (see `DefinitelyExited`).
+	// Setting it means a subsequent statement is correctly reported as
+	// unreachable, and an if-else where one branch breaks and the other
+	// returns/halts/jumps still propagates as "every path terminated".
+	functionActivation.ReturnInfo.DefinitelyExited = true
+
+	// NOTE: unlike `VisitReturnStatement`, no explicit `checkResourceLoss`
+	// call here.
+	//
+	// Break can occur in multiple sibling branches (e.g.
+	// `if cond { break } else { break }`) whose resource scopes are
+	// cloned independently. If each break reported leaks at its site,
+	// the same resource would be reported twice — once per branch — and
+	// the clones share no "already-reported" state to deduplicate.
+	//
+	// Instead, the leak is reported by the surrounding scope's
+	// `leaveValueScope` → `checkResourceLoss`. After the if-else merge,
+	// the merged resource state reflects both branches, and the scope-
+	// leave runs the check exactly once because the
+	// `MaybeJumpedLoop`/`MaybeJumpedSwitch` flag tells the skip
+	// condition NOT to skip (see `checkResourceLoss`).
 
 	return
 }
@@ -97,7 +119,18 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 	}
 
 	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
-	functionActivation.ReturnInfo.DefinitelyJumped = true
+	functionActivation.ReturnInfo.MaybeJumpedLoop = true
+	// `continue` is a kind of definite exit (see `DefinitelyExited`).
+	// Setting it means a subsequent statement is correctly reported as
+	// unreachable, and an if-else where one branch continues and the
+	// other returns/halts/jumps still propagates as "every path
+	// terminated".
+	functionActivation.ReturnInfo.DefinitelyExited = true
+
+	// NOTE: like `break` and unlike `VisitReturnStatement`, no explicit
+	// `checkResourceLoss` here — the surrounding scope's
+	// `leaveValueScope` reports the leak. See the matching note in
+	// `VisitBreakStatement`.
 
 	return
 }

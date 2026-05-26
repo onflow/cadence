@@ -1473,25 +1473,50 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 //    when detecting resource use after invalidation in loops
 
 // checkResourceLoss reports an error if there is a variable in the current scope
-// that has a resource type and which was not moved or destroyed
+// that has a resource type and which was not moved or destroyed.
+//
+// Called from two places:
+//   - explicitly by `VisitReturnStatement` at the return site, so the
+//     reported leak points at the `return` and the per-branch resource
+//     state is still available (see the comment there);
+//   - implicitly by `leaveValueScope` whenever a block scope ends.
+//
+// The skip condition below resolves the interaction between those two
+// sites so each leak is reported exactly once, and matches the
+// historical halt-suppression behavior.
 func (checker *Checker) checkResourceLoss(depth int) {
 
 	returnInfo := checker.functionActivations.Current().ReturnInfo
 
-	// Skip the check only if the function has definitely exited
-	// (i.e. via a `return` statement, or via a definite halt such as `panic(...)`):
+	// Skip only when control flow has definitely exited via return or
+	// halt — that is, `DefinitelyExited` is set, AND no path through
+	// the current scope reached a `break`/`continue`.
 	//
-	//   - `return` invokes `checkResourceLoss` itself before marking the function
-	//     as exited, so the variables it would catch have already been reported.
-	//   - A definite halt intentionally does not lead to a resource-loss error,
-	//     because the program would terminate with an error.
+	// `DefinitelyExited` is set by every termination kind (return, halt,
+	// break, continue) and AND-merged across branches, so by itself it
+	// captures "every path terminated somehow". The skip narrows that
+	// to "via return or halt":
 	//
-	// In particular, the check must NOT be skipped after `break` / `continue`
-	// (`DefinitelyJumped` / `DefinitelyJumpedSwitch`): those statements do not
-	// invalidate resources, so resources declared inside the loop body or switch
-	// case but not moved/destroyed before the jump must still be reported when
-	// the enclosing scope is left.
-	if returnInfo.DefinitelyExited {
+	//   - return: `VisitReturnStatement` already called
+	//     `checkResourceLoss` at the return site. Skipping here
+	//     prevents the surrounding scope-leave from re-reporting the
+	//     same leak.
+	//
+	//   - halt (a call returning `Never`, e.g. `panic(...)`): leak
+	//     reporting is intentionally suppressed — the program aborts,
+	//     so the resource "leak" never materializes. (Historical
+	//     behavior — see e.g. the "panic statement" test in
+	//     `TestCheckResourceInvalidationOfCopy`.)
+	//
+	//   - break / continue: do NOT skip. They set `DefinitelyExited`
+	//     (so subsequent statements are correctly unreachable) and a
+	//     corresponding `MaybeJumped*` flag, but they do NOT report at
+	//     their site (multi-branch double-report problem; see
+	//     `VisitBreakStatement`). Resources declared in the loop/switch
+	//     case body that are not destroyed before the jump are real
+	//     leaks that this scope-leave must report — so when a
+	//     `MaybeJumped*` is set, do not skip.
+	if returnInfo.DefinitelyExited && !returnInfo.MaybeJumped() {
 		return
 	}
 
@@ -2711,7 +2736,8 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 	var onlyPotential bool
 	switch {
 	case resource.Member != nil:
-		onlyPotential = returnInfo.MaybeReturned || returnInfo.MaybeJumped()
+		onlyPotential = returnInfo.MaybeReturned ||
+			returnInfo.MaybeJumped()
 
 	case resource.Variable != nil &&
 		resource.Variable.DeclarationKind != common.DeclarationKindSelf:
