@@ -2857,19 +2857,21 @@ func TestInterpretAttachmentSelfAuth(t *testing.T) {
       }
 
       access(all) attachment A for S {
-          access(X) fun foo(): Bool {
-              return self as? auth(X, Y) &A != nil
+          access(X) fun foo() {
+              self as! auth(X, Y) &A
           }
       }
 
-      fun test(): Bool {
+      fun test() {
           let s = attach A() to S()
           let ref = &s as auth(X, Y) &S
-          return ref[A]!.foo()
+          ref[A]!.foo()
       }
     `)
 
-	res, err := inter.Invoke("test")
-	require.NoError(t, err)
-	assert.Equal(t, interpreter.FalseValue, res)
+	_, err := inter.Invoke("test")
+	RequireError(t, err)
+
+	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
 }

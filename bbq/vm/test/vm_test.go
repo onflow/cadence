@@ -9766,7 +9766,7 @@ func TestAttachments(t *testing.T) {
 		// `auth(<fn access>) &A`. The runtime reference must match — otherwise
 		// a downcast inside the method could recover the stronger
 		// authorization of the accessed reference.
-		value, err := CompileAndInvoke(t, `
+		_, err := CompileAndInvoke(t, `
             entitlement X
             entitlement Y
 
@@ -9775,20 +9775,21 @@ func TestAttachments(t *testing.T) {
             }
 
             access(all) attachment A for S {
-                access(X) fun foo(): Bool {
-                    return self as? auth(X, Y) &A != nil
+                access(X) fun foo() {
+                    self as! auth(X, Y) &A
                 }
             }
 
-            fun test(): Bool {
+            fun test() {
                 let s = attach A() to S()
                 let ref = &s as auth(X, Y) &S
-                return ref[A]!.foo()
+                ref[A]!.foo()
             }
         `, "test")
-		require.NoError(t, err)
+		RequireError(t, err)
 
-		require.Equal(t, interpreter.FalseValue, value)
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
 	})
 }
 
