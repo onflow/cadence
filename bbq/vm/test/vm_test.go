@@ -9758,6 +9758,38 @@ func TestAttachments(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+
+	t.Run("self auth is narrowed to function access", func(t *testing.T) {
+		t.Parallel()
+
+		// Inside an attachment method, sema types `self` as
+		// `auth(<fn access>) &A`. The runtime reference must match — otherwise
+		// a downcast inside the method could recover the stronger
+		// authorization of the accessed reference.
+		value, err := CompileAndInvoke(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X) fun base() {}
+            }
+
+            access(all) attachment A for S {
+                access(X) fun foo(): Bool {
+                    return self as? auth(X, Y) &A != nil
+                }
+            }
+
+            fun test(): Bool {
+                let s = attach A() to S()
+                let ref = &s as auth(X, Y) &S
+                return ref[A]!.foo()
+            }
+        `, "test")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.FalseValue, value)
+	})
 }
 
 func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {

@@ -695,6 +695,17 @@ func (v *CompositeValue) GetMethod(
 				ActualAuthorization:   accessedReferenceAuthorization,
 			})
 		}
+
+		// Narrow `self` to the authorization actually required by the function.
+		// Sema types `self` inside an attachment method as `auth(<fn access>) &A`, so the
+		// runtime reference must not carry the stronger authorization of the accessed
+		// reference — otherwise a downcast inside the method could recover it.
+		accessedReference = NewEphemeralReferenceValue(
+			context,
+			authorizationNeededForFunction,
+			v,
+			MustSemaTypeOfValue(v, context),
+		)
 	}
 
 	// If the function is already a bound function, then do not re-wrap.

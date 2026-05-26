@@ -373,7 +373,11 @@ func (c *Context) GetMethod(
 
 	// If the value is an attachment, then we must create an authorized reference
 	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
-		base = attachmentBaseForMethod(c, v, method, accessedReference)
+		var narrowedSelf interpreter.ReferenceValue
+		base, narrowedSelf = attachmentBaseForMethod(c, v, method, accessedReference)
+		if narrowedSelf != nil {
+			accessedReference = narrowedSelf
+		}
 	}
 
 	return NewBoundFunctionValue(
@@ -390,7 +394,7 @@ func attachmentBaseForMethod(
 	attachment *interpreter.CompositeValue,
 	method FunctionValue,
 	accessedReference interpreter.ReferenceValue,
-) *interpreter.EphemeralReferenceValue {
+) (base *interpreter.EphemeralReferenceValue, narrowedSelf interpreter.ReferenceValue) {
 	fnAccess := functionAccess(c, attachment, method)
 	authorizationNeededForFunction := interpreter.ConvertSemaAccessToStaticAuthorization(c, fnAccess)
 
@@ -409,9 +413,21 @@ func attachmentBaseForMethod(
 				ActualAuthorization:   accessedReferenceAuthorization,
 			})
 		}
+
+		// Narrow `self` to the authorization actually required by the function.
+		// Sema types `self` inside an attachment method as `auth(<fn access>) &A`, so the
+		// runtime reference must not carry the stronger authorization of the accessed
+		// reference — otherwise a downcast inside the method could recover it.
+		narrowedSelf = interpreter.NewEphemeralReferenceValue(
+			c,
+			authorizationNeededForFunction,
+			attachment,
+			interpreter.MustSemaTypeOfValue(attachment, c),
+		)
 	}
 
-	return attachment.GetBaseValue(c, authorizationNeededForFunction)
+	base = attachment.GetBaseValue(c, authorizationNeededForFunction)
+	return
 }
 
 func typeLocation(semaType sema.Type) common.Location {
