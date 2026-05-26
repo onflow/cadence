@@ -212,24 +212,31 @@ func MaybeReferenceType(typ Type) (*ReferenceType, bool) {
 }
 
 // GetDescendantTypeForAccess returns the type that a descendant (member or element)
-// should have when read through `accessedType`.
+// should have when read through `accessedType`, and whether the type was rewritten
+// (equivalent to ShouldReturnReference's result for the same inputs).
 // When `accessedType` is a reference, and the descendant warrants becoming a reference per ShouldReturnReference,
 // the descendant is wrapped via GetDescendantReferenceType with an unauthorized wrapping authorization,
-// intersecting any inner reference authorizations with the outer reference's authorization.
+// intersecting any inner reference authorizations with the outer reference's authorization,
+// and the returned boolean is true.
 // Otherwise (for owned access, for primitive descendants, or in assignment contexts):
-// `descendantType` is returned unchanged.
+// `descendantType` is returned unchanged and the returned boolean is false.
 // This encapsulates the cascading rule that applies uniformly when reading element/member data
 // out of a referenced container or composite.
 // Call sites that need a custom wrapping authorization (e.g. mapped field access)
 // keep using GetDescendantReferenceType directly.
+//
+// The returned boolean is useful for callers (notably the interpreter's container-method
+// implementations) that also need to materialize fresh reference values for each iterated
+// element via getReferenceValue when the cascade wraps. Callers that only need the type
+// can discard the boolean.
 func GetDescendantTypeForAccess(
 	memoryGauge common.MemoryGauge,
 	accessedType Type,
 	descendantType Type,
 	isAssignment bool,
-) Type {
+) (Type, bool) {
 	if !ShouldReturnReference(accessedType, descendantType, isAssignment) {
-		return descendantType
+		return descendantType, false
 	}
 	outerRef, isRef := MaybeReferenceType(accessedType)
 	if !isRef {
@@ -240,7 +247,7 @@ func GetDescendantTypeForAccess(
 		descendantType,
 		UnauthorizedAccess,
 		outerRef.Authorization,
-	)
+	), true
 }
 
 func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignment bool) (

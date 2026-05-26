@@ -158,12 +158,13 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 		//   - Reference elements (case a'):     outer ref's authorization
 		//                                       intersected with inner.
 		//   - Primitive elements (case b):      exposed as the concrete type.
-		return GetDescendantTypeForAccess(
+		loopVarType, _ := GetDescendantTypeForAccess(
 			checker.memoryGauge,
 			valueType,
 			referencedIterableElementType,
 			false,
 		)
+		return loopVarType
 	}
 
 	// If it's not a reference, then simply get the element type.

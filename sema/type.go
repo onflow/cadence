@@ -3187,7 +3187,7 @@ func ArrayConcatFunctionType(
 	// with the outer authorization. Without this cascade, a method-driven
 	// copy could escalate inner-element entitlements beyond what the outer
 	// reference grants.
-	returnElementType := GetDescendantTypeForAccess(
+	returnElementType, _ := GetDescendantTypeForAccess(
 		memoryGauge,
 		accessedType,
 		arrayType.ElementType(false),
@@ -3280,7 +3280,7 @@ func ArraySliceFunctionType(
 	// with the outer authorization. Without this cascade, a method-driven
 	// copy could escalate inner-element entitlements beyond what the outer
 	// reference grants.
-	elementType = GetDescendantTypeForAccess(
+	elementType, _ = GetDescendantTypeForAccess(
 		memoryGauge,
 		accessedType,
 		elementType,
@@ -3318,7 +3318,7 @@ func ArrayToVariableSizedFunctionType(
 	// with the outer authorization. Without this cascade, a method-driven
 	// copy could escalate inner-element entitlements beyond what the outer
 	// reference grants.
-	elementType = GetDescendantTypeForAccess(
+	elementType, _ = GetDescendantTypeForAccess(
 		memoryGauge,
 		accessedType,
 		elementType,
@@ -3348,7 +3348,7 @@ func ArrayToConstantSizedFunctionType(
 	// with the outer authorization. Without this cascade, a method-driven
 	// copy could escalate inner-element entitlements beyond what the outer
 	// reference grants.
-	elementType = GetDescendantTypeForAccess(
+	elementType, _ = GetDescendantTypeForAccess(
 		memoryGauge,
 		accessedType,
 		elementType,
@@ -3425,7 +3425,7 @@ func ArrayReverseFunctionType(
 	// with the outer authorization. Without this cascade, a method-driven
 	// copy could escalate inner-element entitlements beyond what the outer
 	// reference grants.
-	returnElementType := GetDescendantTypeForAccess(
+	returnElementType, _ := GetDescendantTypeForAccess(
 		memoryGauge,
 		accessedType,
 		arrayType.ElementType(false),
@@ -3466,7 +3466,7 @@ func ArrayFilterFunctionType(
 	// with the outer authorization. Without this cascade, a method-driven
 	// copy could escalate inner-element entitlements beyond what the outer
 	// reference grants.
-	elementType = GetDescendantTypeForAccess(
+	elementType, _ = GetDescendantTypeForAccess(
 		memoryGauge,
 		accessedType,
 		elementType,
@@ -3537,7 +3537,7 @@ func ArrayMapFunctionType(
 	// with the outer authorization. Without this cascade, a method-driven
 	// copy could escalate inner-element entitlements beyond what the outer
 	// reference grants.
-	elementType := GetDescendantTypeForAccess(
+	elementType, _ := GetDescendantTypeForAccess(
 		memoryGauge,
 		accessedType,
 		arrayType.ElementType(false),
@@ -7279,7 +7279,7 @@ func DictionaryForEachKeyFunctionType(
 	// Keys are passed into the user's callback. When the dictionary is accessed via a reference,
 	// the callback's key parameter is exposed via the same cascading rule as indexing and field access
 	// (see GetDescendantTypeForAccess).
-	keyType := GetDescendantTypeForAccess(memoryGauge, accessedType, t.KeyType, false)
+	keyType, _ := GetDescendantTypeForAccess(memoryGauge, accessedType, t.KeyType, false)
 
 	// fun(K): Bool
 	funcType := NewSimpleFunctionType(

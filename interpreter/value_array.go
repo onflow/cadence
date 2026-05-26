@@ -453,21 +453,9 @@ func (v *ArrayValue) Concat(
 	otherElementType := v.Type.ElementType()
 
 	// Cascade outer authorization into the result element type, matching
-	// sema's ArrayConcatFunctionType — see sema.GetDescendantTypeForAccess.
+	// sema's ArrayConcatFunctionType.
 	resultElementSemaType := v.SemaType(context).ElementType(false)
-	asReference := sema.ShouldReturnReference(accessedType, resultElementSemaType, false)
-	if asReference {
-		outerRef, isRef := sema.MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		resultElementSemaType = sema.GetDescendantReferenceType(
-			context,
-			resultElementSemaType,
-			sema.UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	resultElementSemaType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, resultElementSemaType, false)
 	resultElementStaticType := ConvertSemaToStaticType(context, resultElementSemaType)
 
 	newCount := v.array.Count() + other.array.Count()
@@ -1801,23 +1789,11 @@ func (v *ArrayValue) Slice(
 
 	// Cascade outer authorization into the result element type, matching
 	// sema's ArraySliceFunctionType: when sliced through a reference,
-	// elements are exposed as references (with auths intersected) — see
-	// sema.GetDescendantTypeForAccess. Without this, the new array's
-	// declared element type would mismatch its actual contents.
+	// elements are exposed as references (with auths intersected). Without
+	// this, the new array's declared element type would mismatch its actual
+	// contents.
 	elementType := v.SemaType(context).ElementType(false)
-	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
-	if asReference {
-		outerRef, isRef := sema.MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		elementType = sema.GetDescendantReferenceType(
-			context,
-			elementType,
-			sema.UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
 
 	return NewArrayValueWithIterator(
@@ -1867,22 +1843,9 @@ func (v *ArrayValue) Reverse(
 	index := count - 1
 
 	// Cascade outer authorization into the result element type, matching
-	// sema's ArrayReverseFunctionType — see sema.GetDescendantTypeForAccess.
-	semaArrayType := v.SemaType(context)
-	elementType := semaArrayType.ElementType(false)
-	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
-	if asReference {
-		outerRef, isRef := sema.MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		elementType = sema.GetDescendantReferenceType(
-			context,
-			elementType,
-			sema.UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	// sema's ArrayReverseFunctionType.
+	elementType := v.SemaType(context).ElementType(false)
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 
 	// reverse() preserves the array shape (variable- or constant-sized),
 	// so reuse v.Type's shape but with the cascaded element type.
@@ -1934,19 +1897,7 @@ func (v *ArrayValue) Filter(
 
 	elementType := v.SemaType(context).ElementType(false)
 
-	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
-	if asReference {
-		outerRef, isRef := sema.MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		elementType = sema.GetDescendantReferenceType(
-			context,
-			elementType,
-			sema.UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 
 	argumentType := elementType
 	argumentTypes := []sema.Type{argumentType}
@@ -2048,19 +1999,7 @@ func (v *ArrayValue) Map(
 
 	elementType := v.SemaType(context).ElementType(false)
 
-	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
-	if asReference {
-		outerRef, isRef := sema.MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		elementType = sema.GetDescendantReferenceType(
-			context,
-			elementType,
-			sema.UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 
 	argumentType := elementType
 	argumentTypes := []sema.Type{argumentType}
@@ -2173,22 +2112,9 @@ func (v *ArrayValue) ToVariableSized(
 	}
 
 	// Cascade outer authorization into the result element type, matching
-	// sema's ArrayToVariableSizedFunctionType — see
-	// sema.GetDescendantTypeForAccess.
+	// sema's ArrayToVariableSizedFunctionType.
 	elementType := v.SemaType(context).ElementType(false)
-	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
-	if asReference {
-		outerRef, isRef := sema.MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		elementType = sema.GetDescendantReferenceType(
-			context,
-			elementType,
-			sema.UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
 	variableSizedType := NewVariableSizedStaticType(context, resultElementStaticType)
 
@@ -2265,22 +2191,9 @@ func (v *ArrayValue) ToConstantSized(
 	}
 
 	// Cascade outer authorization into the result element type, matching
-	// sema's ArrayToConstantSizedFunctionType — see
-	// sema.GetDescendantTypeForAccess.
+	// sema's ArrayToConstantSizedFunctionType.
 	elementType := v.SemaType(context).ElementType(false)
-	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
-	if asReference {
-		outerRef, isRef := sema.MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		elementType = sema.GetDescendantReferenceType(
-			context,
-			elementType,
-			sema.UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
 	constantSizedType := NewConstantSizedStaticType(
 		context,
