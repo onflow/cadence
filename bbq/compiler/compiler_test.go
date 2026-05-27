@@ -5565,6 +5565,10 @@ func TestForLoop(t *testing.T) {
 			elementVarIndex
 		)
 
+		intArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
 		assert.Equal(t,
 			[]opcode.PrettyInstruction{
 				opcode.PrettyInstructionStatement{},
@@ -5572,7 +5576,7 @@ func TestForLoop(t *testing.T) {
 				// Get the iterator and store in local var.
 				// `var <iterator> = array.Iterator`
 				opcode.PrettyInstructionGetLocal{Local: arrayValueIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iteratorVarIndex},
 
 				// Loop condition: Check whether `iterator.hasNext()`
@@ -5634,13 +5638,17 @@ func TestForLoop(t *testing.T) {
 			elementVarIndex
 		)
 
+		intArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
 		assert.Equal(t,
 			[]opcode.PrettyInstruction{
 				// Get the iterator and store in local var.
 				// `var <iterator> = array.Iterator`
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetLocal{Local: arrayValueIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iteratorVarIndex},
 
 				// Initialize index.
@@ -5744,6 +5752,10 @@ func TestForLoop(t *testing.T) {
 			x2Index
 		)
 
+		intArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
 		assert.Equal(t,
 			[]opcode.PrettyInstruction{
 
@@ -5765,7 +5777,7 @@ func TestForLoop(t *testing.T) {
 				// `var <iterator> = array.Iterator`
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetLocal{Local: arrayValueIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iteratorVarIndex},
 
 				// Loop condition: Check whether `iterator.hasNext()`
@@ -5857,6 +5869,10 @@ func TestForLoop(t *testing.T) {
 			yIndex
 		)
 
+		intArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
 		assert.Equal(t,
 			[]opcode.PrettyInstruction{
 
@@ -5864,7 +5880,7 @@ func TestForLoop(t *testing.T) {
 				// `var <iterator> = a.Iterator`
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetLocal{Local: aIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iter1Index},
 
 				// Loop condition: Check whether `iterator.hasNext()`
@@ -5890,7 +5906,7 @@ func TestForLoop(t *testing.T) {
 				// `var <iterator> = b.Iterator`
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetLocal{Local: bIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iter2Index},
 
 				// Loop condition: Check whether `iterator.hasNext()`
@@ -11387,7 +11403,7 @@ func TestForStatementCapturing(t *testing.T) {
 			},
 
 			// get iterator
-			opcode.PrettyInstructionIterator{},
+			opcode.PrettyInstructionIterator{IndexedType: arrayType},
 			opcode.PrettyInstructionSetLocal{Local: iterIndex},
 
 			// set i = -1
@@ -12815,7 +12831,7 @@ func TestNestedLoops(t *testing.T) {
 				Type: arrayType,
 				Size: 2,
 			},
-			opcode.PrettyInstructionIterator{},
+			opcode.PrettyInstructionIterator{IndexedType: arrayType},
 			opcode.PrettyInstructionSetLocal{Local: outerIterIndex},
 			opcode.PrettyInstructionGetLocal{Local: outerIterIndex},
 			opcode.PrettyInstructionIteratorHasNext{},
@@ -12846,7 +12862,7 @@ func TestNestedLoops(t *testing.T) {
 				Type: arrayType,
 				Size: 1,
 			},
-			opcode.PrettyInstructionIterator{},
+			opcode.PrettyInstructionIterator{IndexedType: arrayType},
 			opcode.PrettyInstructionSetLocal{Local: innerIterIndex},
 			opcode.PrettyInstructionGetLocal{Local: innerIterIndex},
 			opcode.PrettyInstructionIteratorHasNext{},

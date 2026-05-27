@@ -2979,6 +2979,7 @@ func (i InstructionBitwiseRightShift) Pretty(program ProgramForInstructions) Pre
 //
 // Pops an iterable value from the stack, get an iterator to it, and push the iterator back onto the stack.
 type InstructionIterator struct {
+	IndexedType uint16
 }
 
 var _ Instruction = InstructionIterator{}
@@ -2988,22 +2989,38 @@ func (InstructionIterator) Opcode() Opcode {
 }
 
 func (i InstructionIterator) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
 }
 
-func (i InstructionIterator) OperandsString(sb *strings.Builder, colorize bool) {}
+func (i InstructionIterator) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "indexedType", i.IndexedType, colorize)
+}
 
 func (i InstructionIterator) ResolvedOperandsString(sb *strings.Builder,
 	program ProgramForInstructions,
 	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "indexedType", program.GetTypes()[i.IndexedType], colorize)
 }
 
 func (i InstructionIterator) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.IndexedType)
+}
+
+func DecodeIterator(ip *uint16, code []byte) (i InstructionIterator) {
+	i.IndexedType = decodeUint16(ip, code)
+	return i
 }
 
 func (i InstructionIterator) Pretty(program ProgramForInstructions) PrettyInstruction {
-	return PrettyInstructionIterator{}
+	return PrettyInstructionIterator{
+		IndexedType: program.GetTypes()[i.IndexedType],
+	}
 }
 
 // InstructionIteratorHasNext
@@ -3704,7 +3721,7 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	case BitwiseRightShift:
 		return InstructionBitwiseRightShift{}
 	case Iterator:
-		return InstructionIterator{}
+		return DecodeIterator(ip, code)
 	case IteratorHasNext:
 		return InstructionIteratorHasNext{}
 	case IteratorNext:

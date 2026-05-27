@@ -345,6 +345,10 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 
 	value := interpreter.evalExpression(statement.Value)
 
+	forStmtTypes := interpreter.Program.Elaboration.ForStatementType(statement)
+
+	interpreter.checkIndexedValue(forStmtTypes.ContainerType, value)
+
 	// Do not transfer the iterable value.
 	// Instead, transfer each iterating element.
 	// This is done in `ForEach` method.
@@ -353,8 +357,6 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-
-	forStmtTypes := interpreter.Program.Elaboration.ForStatementType(statement)
 
 	var index IntValue
 	if statement.Index != nil {
