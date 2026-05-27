@@ -8862,6 +8862,971 @@ func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
 	})
 }
 
+func TestInvalidCheckEntitlementEscalation(t *testing.T) {
+
+	t.Parallel()
+
+	// Each subtest exercises an array method that returns elements (or a copy
+	// of the array) and verifies that when the method is invoked through an
+	// auth(Insert) reference to a `[auth(Remove) &T; N]` or `[auth(Remove) &T]`,
+	// the inner element references are intersected with the outer auth.
+	// outer auth(Insert) ∩ inner auth(Remove) is empty, so the resulting
+	// element type must be unauthorized: any call to a Remove-entitled member
+	// on those elements must be rejected. Without this intersection, the
+	// receiver's Insert-only outer auth would escalate to Remove on every
+	// element extracted via the copy/return method.
+
+	// `toVariableSized` copies a fixed-size array into a variable-sized array.
+	t.Run("toVariableSized preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Insert) fun requiresInsert() {}
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim; 1]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim; 1] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                insertOnlyArrRef.toVariableSized()[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `slice` returns a sub-range of a variable-sized array.
+	t.Run("slice preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                insertOnlyArrRef.slice(from: 0, upTo: 1)[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `concat` returns the concatenation of two arrays.
+	t.Run("concat preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                let other: [auth(Remove) &InnerVictim] = []
+                insertOnlyArrRef.concat(other)[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `reverse` returns a reversed copy of the array.
+	t.Run("reverse preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                insertOnlyArrRef.reverse()[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `toConstantSized` copies a variable-sized array into a constant-sized
+	// array (the user provides the target type parameter).
+	t.Run("toConstantSized preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyArrRef = ov.getInsertOnlyRef()
+
+                insertOnlyArrRef.toConstantSized<[&InnerVictim; 1]>()![0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `remove` extracts a single element from a variable-sized array.
+	// Note: the receiver must grant the Mutate or Remove entitlement for
+	// `remove` to be callable; here we use auth(Mutate, Insert) so we can
+	// call `remove` while still exercising a partial-overlap intersection
+	// (auth(Mutate, Insert) ∩ auth(Remove) is empty, which strips the
+	// inner reference auth).
+	t.Run("remove preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let mutateOnlyArrRef = ov.getMutateOnlyRef()
+
+                mutateOnlyArrRef.remove(at: 0).requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `removeFirst` extracts the first element of a variable-sized array.
+	t.Run("removeFirst preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let mutateOnlyArrRef = ov.getMutateOnlyRef()
+
+                mutateOnlyArrRef.removeFirst().requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// `removeLast` extracts the last element of a variable-sized array.
+	t.Run("removeLast preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let mutateOnlyArrRef = ov.getMutateOnlyRef()
+
+                mutateOnlyArrRef.removeLast().requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// Dictionary `remove` extracts a value from a dictionary by key.
+	t.Run("dictionary remove preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let dict: {String: auth(Remove) &InnerVictim}
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.dict = {"a": &self.iv as auth(Remove) &InnerVictim}
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &{String: auth(Remove) &InnerVictim} {
+                    return &self.dict
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let mutateOnlyRef = ov.getMutateOnlyRef()
+
+                mutateOnlyRef.remove(key: "a")!.requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// Dictionary `insert` returns the previous value at the given key.
+	t.Run("dictionary insert preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let dict: {String: auth(Remove) &InnerVictim}
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.dict = {"a": &self.iv as auth(Remove) &InnerVictim}
+                }
+
+                access(all) fun getMutateOnlyRef(): auth(Mutate) &{String: auth(Remove) &InnerVictim} {
+                    return &self.dict
+                }
+            }
+
+            access(all) fun main(replacement: auth(Remove) &InnerVictim) {
+                let ov = OuterVictim()
+                let mutateOnlyRef = ov.getMutateOnlyRef()
+
+                mutateOnlyRef.insert(key: "a", replacement)!.requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+}
+
+func TestCheckContainerMethodElementCascading(t *testing.T) {
+
+	t.Parallel()
+
+	// Each test exercises the four reference/non-reference combinations:
+	//
+	//   case 1: outer non-ref, inner non-ref (S)
+	//   case 2: outer ref,     inner non-ref (S)        — diverges
+	//   case 3: outer non-ref, inner ref (&S)
+	//   case 4: outer ref,     inner ref (&S)           — auth intersected
+	//
+	// Public copy methods route their return element type through
+	// GetDescendantTypeForAccess: case 2 wraps the non-reference element type
+	// S in a reference (&S), because the receiver doesn't own the elements
+	// when accessed through a reference.
+	//
+	// Entitled mutating/extracting methods (require Insert/Remove/Mutate
+	// access) route their return value/element type through
+	// intersectContainerElementReferences: case 2 preserves S, so resource
+	// values can be transferred out via `<-`.
+	//
+	// S is an empty struct so that ShouldReturnReference's
+	// ContainFieldsOrElements check returns true for it; otherwise case 2
+	// would never wrap.
+
+	t.Run("Public copy methods", func(t *testing.T) {
+
+		t.Parallel()
+
+		// case 2 wraps S to &S
+
+		t.Run("array filter", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                let a1: [S] = [S()]
+                let r1: [S] = a1.filter(view fun (_: S): Bool { return true })
+
+                // case 2: outer ref wraps S to &S
+                let a2: [S] = [S()]
+                let ref2 = &a2 as &[S]
+                let r2: [&S] = ref2.filter(view fun (_: &S): Bool { return true })
+
+                // case 3
+                let s3 = S()
+                let a3: [&S] = [&s3 as &S]
+                let r3: [&S] = a3.filter(view fun (_: &S): Bool { return true })
+
+                // case 4: outer ref, inner ref already, auth intersected
+                let s4 = S()
+                let a4: [&S] = [&s4 as &S]
+                let ref4 = &a4 as &[&S]
+                let r4: [&S] = ref4.filter(view fun (_: &S): Bool { return true })
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array map", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                let a1: [S] = [S()]
+                let r1: [Int] = a1.map(view fun (_: S): Int { return 0 })
+
+                // case 2
+                let a2: [S] = [S()]
+                let ref2 = &a2 as &[S]
+                let r2: [Int] = ref2.map(view fun (_: &S): Int { return 0 })
+
+                // case 3
+                let s3 = S()
+                let a3: [&S] = [&s3 as &S]
+                let r3: [Int] = a3.map(view fun (_: &S): Int { return 0 })
+
+                // case 4
+                let s4 = S()
+                let a4: [&S] = [&s4 as &S]
+                let ref4 = &a4 as &[&S]
+                let r4: [Int] = ref4.map(view fun (_: &S): Int { return 0 })
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array slice", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                let a1: [S] = [S()]
+                let r1: [S] = a1.slice(from: 0, upTo: 1)
+
+                // case 2: S wrapped to &S
+                let a2: [S] = [S()]
+                let ref2 = &a2 as &[S]
+                let r2: [&S] = ref2.slice(from: 0, upTo: 1)
+
+                // case 3
+                let s3 = S()
+                let a3: [&S] = [&s3 as &S]
+                let r3: [&S] = a3.slice(from: 0, upTo: 1)
+
+                // case 4
+                let s4 = S()
+                let a4: [&S] = [&s4 as &S]
+                let ref4 = &a4 as &[&S]
+                let r4: [&S] = ref4.slice(from: 0, upTo: 1)
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array concat", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                let a1: [S] = [S()]
+                let other1: [S] = []
+                let r1: [S] = a1.concat(other1)
+
+                // case 2: return wraps to [&S]; the param stays at the declared type
+                let a2: [S] = [S()]
+                let ref2 = &a2 as &[S]
+                let other2: [S] = []
+                let r2: [&S] = ref2.concat(other2)
+
+                // case 3
+                let s3 = S()
+                let a3: [&S] = [&s3 as &S]
+                let other3: [&S] = []
+                let r3: [&S] = a3.concat(other3)
+
+                // case 4
+                let s4 = S()
+                let a4: [&S] = [&s4 as &S]
+                let ref4 = &a4 as &[&S]
+                let other4: [&S] = []
+                let r4: [&S] = ref4.concat(other4)
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array reverse", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                let a1: [S] = [S()]
+                let r1: [S] = a1.reverse()
+
+                // case 2
+                let a2: [S] = [S()]
+                let ref2 = &a2 as &[S]
+                let r2: [&S] = ref2.reverse()
+
+                // case 3
+                let s3 = S()
+                let a3: [&S] = [&s3 as &S]
+                let r3: [&S] = a3.reverse()
+
+                // case 4
+                let s4 = S()
+                let a4: [&S] = [&s4 as &S]
+                let ref4 = &a4 as &[&S]
+                let r4: [&S] = ref4.reverse()
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array toVariableSized", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                let a1: [S; 1] = [S()]
+                let r1: [S] = a1.toVariableSized()
+
+                // case 2
+                let a2: [S; 1] = [S()]
+                let ref2 = &a2 as &[S; 1]
+                let r2: [&S] = ref2.toVariableSized()
+
+                // case 3
+                let s3 = S()
+                let a3: [&S; 1] = [&s3 as &S]
+                let r3: [&S] = a3.toVariableSized()
+
+                // case 4
+                let s4 = S()
+                let a4: [&S; 1] = [&s4 as &S]
+                let ref4 = &a4 as &[&S; 1]
+                let r4: [&S] = ref4.toVariableSized()
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array toConstantSized", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                let a1: [S] = [S()]
+                let r1: [S; 1]? = a1.toConstantSized<[S; 1]>()
+
+                // case 2: element wrapped to &S; the type argument must match
+                let a2: [S] = [S()]
+                let ref2 = &a2 as &[S]
+                let r2: [&S; 1]? = ref2.toConstantSized<[&S; 1]>()
+
+                // case 3
+                let s3 = S()
+                let a3: [&S] = [&s3 as &S]
+                let r3: [&S; 1]? = a3.toConstantSized<[&S; 1]>()
+
+                // case 4
+                let s4 = S()
+                let a4: [&S] = [&s4 as &S]
+                let ref4 = &a4 as &[&S]
+                let r4: [&S; 1]? = ref4.toConstantSized<[&S; 1]>()
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		// dictionary forEachKey: keys must be Hashable, and none of the built-in
+		// Hashable types have ContainFieldsOrElements=true, so case 2's wrap
+		// branch isn't reachable in practice. Test what is reachable: the
+		// callback's key parameter is the declared key type (no cascading applies
+		// in the wrap sense, but inner-reference intersection inside keys still
+		// would if such keys existed).
+		t.Run("dictionary forEachKey", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            fun cases() {
+                // case 1
+                let d1: {String: Int} = {"a": 1}
+                d1.forEachKey(view fun (_: String): Bool { return true })
+
+                // case 2: primitive key; no wrap because String has no fields/elements
+                let d2: {String: Int} = {"a": 1}
+                let ref2 = &d2 as &{String: Int}
+                ref2.forEachKey(view fun (_: String): Bool { return true })
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+	})
+
+	t.Run("Entitled mutating/extracting methods", func(t *testing.T) {
+
+		t.Parallel()
+
+		// case 2 keeps S (no wrap)
+
+		t.Run("array remove", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                var a1: [S] = [S()]
+                let r1: S = a1.remove(at: 0)
+
+                // case 2: S preserved, not wrapped
+                var a2: [S] = [S()]
+                let ref2 = &a2 as auth(Mutate) &[S]
+                let r2: S = ref2.remove(at: 0)
+
+                // case 3
+                let s3 = S()
+                var a3: [&S] = [&s3 as &S]
+                let r3: &S = a3.remove(at: 0)
+
+                // case 4
+                let s4 = S()
+                var a4: [&S] = [&s4 as &S]
+                let ref4 = &a4 as auth(Mutate) &[&S]
+                let r4: &S = ref4.remove(at: 0)
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array removeFirst", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                var a1: [S] = [S()]
+                let r1: S = a1.removeFirst()
+
+                // case 2
+                var a2: [S] = [S()]
+                let ref2 = &a2 as auth(Mutate) &[S]
+                let r2: S = ref2.removeFirst()
+
+                // case 3
+                let s3 = S()
+                var a3: [&S] = [&s3 as &S]
+                let r3: &S = a3.removeFirst()
+
+                // case 4
+                let s4 = S()
+                var a4: [&S] = [&s4 as &S]
+                let ref4 = &a4 as auth(Mutate) &[&S]
+                let r4: &S = ref4.removeFirst()
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array removeLast", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                var a1: [S] = [S()]
+                let r1: S = a1.removeLast()
+
+                // case 2
+                var a2: [S] = [S()]
+                let ref2 = &a2 as auth(Mutate) &[S]
+                let r2: S = ref2.removeLast()
+
+                // case 3
+                let s3 = S()
+                var a3: [&S] = [&s3 as &S]
+                let r3: &S = a3.removeLast()
+
+                // case 4
+                let s4 = S()
+                var a4: [&S] = [&s4 as &S]
+                let ref4 = &a4 as auth(Mutate) &[&S]
+                let r4: &S = ref4.removeLast()
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("dictionary remove", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                var d1: {String: S} = {"a": S()}
+                let r1: S? = d1.remove(key: "a")
+
+                // case 2: V (S) stays S
+                var d2: {String: S} = {"a": S()}
+                let ref2 = &d2 as auth(Mutate) &{String: S}
+                let r2: S? = ref2.remove(key: "a")
+
+                // case 3
+                let s3 = S()
+                var d3: {String: &S} = {"a": &s3 as &S}
+                let r3: (&S)? = d3.remove(key: "a")
+
+                // case 4
+                let s4 = S()
+                var d4: {String: &S} = {"a": &s4 as &S}
+                let ref4 = &d4 as auth(Mutate) &{String: &S}
+                let r4: (&S)? = ref4.remove(key: "a")
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		t.Run("dictionary insert", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+            access(all) struct S {}
+            fun cases() {
+                // case 1
+                var d1: {String: S} = {}
+                let r1: S? = d1.insert(key: "a", S())
+
+                // case 2: previous value type S stays S
+                var d2: {String: S} = {}
+                let ref2 = &d2 as auth(Mutate) &{String: S}
+                let r2: S? = ref2.insert(key: "a", S())
+
+                // case 3
+                let s3 = S()
+                var d3: {String: &S} = {}
+                let r3: (&S)? = d3.insert(key: "a", &s3 as &S)
+
+                // case 4
+                let s4 = S()
+                var d4: {String: &S} = {}
+                let ref4 = &d4 as auth(Mutate) &{String: &S}
+                let r4: (&S)? = ref4.insert(key: "a", &s4 as &S)
+            }
+        `)
+			require.NoError(t, err)
+		})
+
+		// Exercises the inner-reference intersection performed by
+		// intersectContainerElementReferences when the value type contains
+		// authorized references whose authorization is non-trivially
+		// intersected with the outer reference's authorization. The cases
+		// with `&S` above only cover the trivial unauth ∩ outer = unauth.
+
+		t.Run("dictionary remove intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    // outer auth(Mutate) ∩ inner auth(E) = empty,
+                    // so the returned reference is unauthorized.
+                    let r: (&S)? = ref.remove(key: "a")
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("dictionary remove intersects inner auth, escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    // Sema-cascaded return is (&S)?, not (auth(E) &S)?,
+                    // so trying to bind to (auth(E) &S)? must fail.
+                    let r: (auth(E) &S)? = ref.remove(key: "a")
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("(auth(S.test.E)&S.test.S)?"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("(&S.test.S)?"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("dictionary insert intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    // outer auth(Mutate) ∩ inner auth(E) = empty,
+                    // so the returned previous-value reference is unauthorized.
+                    let r: (&S)? = ref.insert(key: "a", &s as auth(E) &S)
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("dictionary insert intersects inner auth, escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    let r: (auth(E) &S)? = ref.insert(key: "a", &s as auth(E) &S)
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("(auth(S.test.E)&S.test.S)?"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("(&S.test.S)?"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		// Same cases for array remove*: outer auth Mutate intersects with
+		// inner element auth E, stripping to unauthorized.
+
+		t.Run("array remove intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.remove(at: 0)
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array remove intersects inner auth, escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: auth(E) &S = ref.remove(at: 0)
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("auth(S.test.E)&S.test.S"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("&S.test.S"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array removeFirst intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeFirst()
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array removeLast intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeLast()
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+	})
+
+}
+
 func TestCheckMappingAccessFieldType(t *testing.T) {
 
 	t.Parallel()

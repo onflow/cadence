@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -33,11 +34,12 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeRemoveFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				dictionaryType := dictionaryType(receiver, context)
-				return sema.DictionaryRemoveFunctionType(dictionaryType)
+				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
+				dictionaryType := dictionaryTypeFromSemaType(accessedType)
+				return sema.DictionaryRemoveFunctionType(context, accessedType, dictionaryType)
 			},
 			interpreter.NativeDictionaryRemoveFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	registerBuiltinTypeBoundFunction(
@@ -45,11 +47,12 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeInsertFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				dictionaryType := dictionaryType(receiver, context)
-				return sema.DictionaryInsertFunctionType(dictionaryType)
+				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
+				dictionaryType := dictionaryTypeFromSemaType(accessedType)
+				return sema.DictionaryInsertFunctionType(context, accessedType, dictionaryType)
 			},
 			interpreter.NativeDictionaryInsertFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 
 	registerBuiltinTypeBoundFunction(
@@ -69,17 +72,27 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeForEachKeyFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				dictionaryValue := receiver.(*interpreter.DictionaryValue)
-				dictionaryType := dictionaryValue.SemaType(context)
-				return sema.DictionaryForEachKeyFunctionType(dictionaryType)
+				accessedType := context.SemaTypeFromStaticType(receiver.StaticType(context))
+				dictionaryType := dictionaryTypeFromSemaType(accessedType)
+				return sema.DictionaryForEachKeyFunctionType(context, accessedType, dictionaryType)
 			},
 			interpreter.NativeDictionaryForEachKeyFunction,
-		),
+		).WithDereferenceReceiver(false),
 	)
 }
 
 func dictionaryType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.DictionaryType {
 	dictionaryValue := receiver.(*interpreter.DictionaryValue)
-	dictionaryType := dictionaryValue.SemaType(context)
-	return dictionaryType
+	return dictionaryValue.SemaType(context)
+}
+
+func dictionaryTypeFromSemaType(accessedType sema.Type) *sema.DictionaryType {
+	switch accessedType := accessedType.(type) {
+	case *sema.DictionaryType:
+		return accessedType
+	case *sema.ReferenceType:
+		return dictionaryTypeFromSemaType(accessedType.Type)
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }

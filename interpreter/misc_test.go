@@ -12505,6 +12505,699 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 	})
 }
 
+func TestInterpretContainerMethodElementCascading(t *testing.T) {
+
+	t.Parallel()
+
+	// Runtime counterpart of sema's TestCheckContainerMethodElementCascading.
+	//
+	// Each subtest runs the same Cadence code as its sema counterpart, which
+	// exercises four reference/non-reference combinations:
+	//   case 1: outer non-ref, inner non-ref (S)
+	//   case 2: outer ref,     inner non-ref (S)        — diverges
+	//   case 3: outer non-ref, inner ref (&S)
+	//   case 4: outer ref,     inner ref (&S)           — auth intersected
+	//
+	// Each case binds the method's result to a typed local. If the runtime
+	// produces a value whose dynamic type does not satisfy that declared
+	// type, the interpreter rejects the assignment (or a later operation on
+	// the value) with a value-transfer / static-type mismatch. So the test
+	// passes as long as the function runs to completion.
+	//
+	// Public copy methods (route through sema.GetDescendantTypeForAccess)
+	// must wrap S to &S in case 2 at runtime, just as the sema return type
+	// promises. Entitled mutating/extracting methods (route through
+	// sema.intersectContainerElementReferences) must preserve S in case 2.
+
+	runCases := func(t *testing.T, code string) {
+		t.Helper()
+		inter := parseCheckAndPrepare(t, code)
+		_, err := inter.Invoke("cases")
+		require.NoError(t, err)
+	}
+
+	// Shared helper used by the auth-recovery sub-tests on both copy and
+	// extract methods. The Cadence source must declare `fun test(): Bool`
+	// returning whether a force-cast back to the original (stronger)
+	// authorization succeeded. The assertion is that it must return false
+	// — otherwise the holder could recover the stripped authorization at
+	// runtime, defeating sema's cascading.
+	assertCannotRecoverAuth := func(t *testing.T, source string) {
+		t.Helper()
+		inter := parseCheckAndPrepare(t, source)
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t,
+			interpreter.BoolValue(false),
+			result,
+			"force-cast back to stronger auth must fail; soundness gap",
+		)
+	}
+
+	t.Run("Public copy methods", func(t *testing.T) {
+
+		t.Parallel()
+
+		// case 2 wraps S to &S
+
+		t.Run("array filter", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [S] = a1.filter(view fun (_: S): Bool { return true })
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [&S] = ref2.filter(view fun (_: &S): Bool { return true })
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [&S] = a3.filter(view fun (_: &S): Bool { return true })
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [&S] = ref4.filter(view fun (_: &S): Bool { return true })
+                }
+            `)
+		})
+
+		t.Run("array map", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [Int] = a1.map(view fun (_: S): Int { return 0 })
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [Int] = ref2.map(view fun (_: &S): Int { return 0 })
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [Int] = a3.map(view fun (_: &S): Int { return 0 })
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [Int] = ref4.map(view fun (_: &S): Int { return 0 })
+                }
+            `)
+		})
+
+		t.Run("array slice", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [S] = a1.slice(from: 0, upTo: 1)
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [&S] = ref2.slice(from: 0, upTo: 1)
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [&S] = a3.slice(from: 0, upTo: 1)
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [&S] = ref4.slice(from: 0, upTo: 1)
+                }
+            `)
+		})
+
+		t.Run("array concat", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let other1: [S] = []
+                    let r1: [S] = a1.concat(other1)
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let other2: [S] = []
+                    let r2: [&S] = ref2.concat(other2)
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let other3: [&S] = []
+                    let r3: [&S] = a3.concat(other3)
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let other4: [&S] = []
+                    let r4: [&S] = ref4.concat(other4)
+                }
+            `)
+		})
+
+		t.Run("array reverse", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [S] = a1.reverse()
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [&S] = ref2.reverse()
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [&S] = a3.reverse()
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [&S] = ref4.reverse()
+                }
+            `)
+		})
+
+		t.Run("array toVariableSized", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S; 1] = [S()]
+                    let r1: [S] = a1.toVariableSized()
+
+                    let a2: [S; 1] = [S()]
+                    let ref2 = &a2 as &[S; 1]
+                    let r2: [&S] = ref2.toVariableSized()
+
+                    let s3 = S()
+                    let a3: [&S; 1] = [&s3 as &S]
+                    let r3: [&S] = a3.toVariableSized()
+
+                    let s4 = S()
+                    let a4: [&S; 1] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S; 1]
+                    let r4: [&S] = ref4.toVariableSized()
+                }
+            `)
+		})
+
+		t.Run("array toConstantSized", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    let a1: [S] = [S()]
+                    let r1: [S; 1]? = a1.toConstantSized<[S; 1]>()
+
+                    let a2: [S] = [S()]
+                    let ref2 = &a2 as &[S]
+                    let r2: [&S; 1]? = ref2.toConstantSized<[&S; 1]>()
+
+                    let s3 = S()
+                    let a3: [&S] = [&s3 as &S]
+                    let r3: [&S; 1]? = a3.toConstantSized<[&S; 1]>()
+
+                    let s4 = S()
+                    let a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as &[&S]
+                    let r4: [&S; 1]? = ref4.toConstantSized<[&S; 1]>()
+                }
+            `)
+		})
+
+		t.Run("dictionary forEachKey", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                fun cases() {
+                    let d1: {String: Int} = {"a": 1}
+                    d1.forEachKey(view fun (_: String): Bool { return true })
+
+                    let d2: {String: Int} = {"a": 1}
+                    let ref2 = &d2 as &{String: Int}
+                    ref2.forEachKey(view fun (_: String): Bool { return true })
+                }
+            `)
+		})
+
+		// Auth-recovery downcast soundness for the public copy methods.
+		// Each method's runtime implementation calls getReferenceValue per
+		// extracted element (filter, map, slice, concat, reverse,
+		// toVariableSized, toConstantSized), so the values flowing into the
+		// result array — or into the user callback for map — already carry
+		// the cascaded authorization. The downcast back to the original
+		// inner authorization must therefore fail.
+
+		t.Run("array filter auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let result: [&S] = ref.filter(view fun (_: &S): Bool { return true })
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		// `map`'s callback receives the cascaded element type. Verify the
+		// recovery downcast also fails *inside* the callback (not only on
+		// the result), since the user could observe / leak the recovered
+		// authorization there.
+		t.Run("array map auth recovery prevented in callback", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let recovered: [Bool] = ref.map(view fun (elem: &S): Bool {
+                        return elem as? auth(E) &S != nil
+                    })
+                    return recovered[0]
+                }
+            `)
+		})
+
+		t.Run("array slice auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let result: [&S] = ref.slice(from: 0, upTo: 1)
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		t.Run("array concat auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+                    let other: [auth(E) &S] = []
+
+                    let result: [&S] = ref.concat(other)
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		t.Run("array reverse auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let result: [&S] = ref.reverse()
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		t.Run("array toVariableSized auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S; 1] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S; 1]
+
+                    let result: [&S] = ref.toVariableSized()
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+
+		t.Run("array toConstantSized auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    let a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let result: [&S; 1] = ref.toConstantSized<[&S; 1]>()!
+                    let elem: &S = result[0]
+                    return elem as? auth(E) &S != nil
+                }
+            `)
+		})
+	})
+
+	t.Run("Entitled mutating/extracting methods", func(t *testing.T) {
+
+		t.Parallel()
+
+		// case 2 keeps S (no wrap)
+
+		t.Run("array remove", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var a1: [S] = [S()]
+                    let r1: S = a1.remove(at: 0)
+
+                    var a2: [S] = [S()]
+                    let ref2 = &a2 as auth(Mutate) &[S]
+                    let r2: S = ref2.remove(at: 0)
+
+                    let s3 = S()
+                    var a3: [&S] = [&s3 as &S]
+                    let r3: &S = a3.remove(at: 0)
+
+                    let s4 = S()
+                    var a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as auth(Mutate) &[&S]
+                    let r4: &S = ref4.remove(at: 0)
+                }
+            `)
+		})
+
+		t.Run("array removeFirst", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var a1: [S] = [S()]
+                    let r1: S = a1.removeFirst()
+
+                    var a2: [S] = [S()]
+                    let ref2 = &a2 as auth(Mutate) &[S]
+                    let r2: S = ref2.removeFirst()
+
+                    let s3 = S()
+                    var a3: [&S] = [&s3 as &S]
+                    let r3: &S = a3.removeFirst()
+
+                    let s4 = S()
+                    var a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as auth(Mutate) &[&S]
+                    let r4: &S = ref4.removeFirst()
+                }
+            `)
+		})
+
+		t.Run("array removeLast", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var a1: [S] = [S()]
+                    let r1: S = a1.removeLast()
+
+                    var a2: [S] = [S()]
+                    let ref2 = &a2 as auth(Mutate) &[S]
+                    let r2: S = ref2.removeLast()
+
+                    let s3 = S()
+                    var a3: [&S] = [&s3 as &S]
+                    let r3: &S = a3.removeLast()
+
+                    let s4 = S()
+                    var a4: [&S] = [&s4 as &S]
+                    let ref4 = &a4 as auth(Mutate) &[&S]
+                    let r4: &S = ref4.removeLast()
+                }
+            `)
+		})
+
+		t.Run("dictionary remove", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var d1: {String: S} = {"a": S()}
+                    let r1: S? = d1.remove(key: "a")
+
+                    var d2: {String: S} = {"a": S()}
+                    let ref2 = &d2 as auth(Mutate) &{String: S}
+                    let r2: S? = ref2.remove(key: "a")
+
+                    let s3 = S()
+                    var d3: {String: &S} = {"a": &s3 as &S}
+                    let r3: (&S)? = d3.remove(key: "a")
+
+                    let s4 = S()
+                    var d4: {String: &S} = {"a": &s4 as &S}
+                    let ref4 = &d4 as auth(Mutate) &{String: &S}
+                    let r4: (&S)? = ref4.remove(key: "a")
+                }
+            `)
+		})
+
+		t.Run("dictionary insert", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                access(all) struct S {}
+                fun cases() {
+                    var d1: {String: S} = {}
+                    let r1: S? = d1.insert(key: "a", S())
+
+                    var d2: {String: S} = {}
+                    let ref2 = &d2 as auth(Mutate) &{String: S}
+                    let r2: S? = ref2.insert(key: "a", S())
+
+                    let s3 = S()
+                    var d3: {String: &S} = {}
+                    let r3: (&S)? = d3.insert(key: "a", &s3 as &S)
+
+                    let s4 = S()
+                    var d4: {String: &S} = {}
+                    let ref4 = &d4 as auth(Mutate) &{String: &S}
+                    let r4: (&S)? = ref4.insert(key: "a", &s4 as &S)
+                }
+            `)
+		})
+
+		// These tests exercise the non-trivial inner-reference intersection
+		// performed by intersectContainerElementReferences when the
+		// value/element type has an authorized inner reference. The case-4
+		// tests above use unauthorized `&S` as the inner type, which makes
+		// the intersection a no-op; here the inner is `auth(E) &S` and the
+		// outer is `auth(Mutate)`, so the intersection actually strips the
+		// auth. Verifies that the runtime return type matches the
+		// sema-cascaded return — without WithDereferenceReceiver(false) on
+		// the bound function, the BBQ VM would derive the function type
+		// against the unwrapped receiver (a bare dict/array) and produce
+		// the wrong (unintersected) return type, which would silently
+		// allow the user to recover the stripped authorization via a force
+		// cast on the returned value.
+
+		t.Run("dictionary remove intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    let r: (&S)? = ref.remove(key: "a")
+                }
+            `)
+		})
+
+		t.Run("dictionary insert intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    let r: (&S)? = ref.insert(key: "a", &s as auth(E) &S)
+                }
+            `)
+		})
+
+		t.Run("array remove intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.remove(at: 0)
+                }
+            `)
+		})
+
+		t.Run("array removeFirst intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeFirst()
+                }
+            `)
+		})
+
+		t.Run("array removeLast intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			runCases(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases() {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeLast()
+                }
+            `)
+		})
+
+		// Auth-recovery downcast soundness: the cascaded return type in sema
+		// is only sufficient if the runtime also presents the returned value
+		// with the cascaded authorization — otherwise the holder could
+		// recover the stripped authorization by force-casting the result
+		// back to the original element type.
+		//
+		// For all five mutating/extracting methods that route through
+		// intersectContainerElementReferences at sema, this is enforced at
+		// runtime by ConvertAndBoxWithValidation → applyTargetTypeAuthorization,
+		// which rewrites the result's static-type reference authorization to
+		// the function's declared return-type authorization at the function
+		// return boundary. The downcast against the original inner auth
+		// must therefore fail.
+
+		t.Run("array remove auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.remove(at: 0)
+                    let strong = r as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+
+		t.Run("array removeFirst auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeFirst()
+                    let strong = r as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+
+		t.Run("array removeLast auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var a: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &a as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeLast()
+                    let strong = r as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+
+		t.Run("dictionary remove auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    let r: &S = ref.remove(key: "a")!
+                    let strong = r as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+
+		t.Run("dictionary insert auth recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s1 = S()
+                    let s2 = S()
+                    var d: {String: auth(E) &S} = {"a": &s1 as auth(E) &S}
+                    let ref = &d as auth(Mutate) &{String: auth(E) &S}
+
+                    // The "previous value" returned by insert is the one being replaced.
+                    let r: &S = ref.insert(key: "a", &s2 as auth(E) &S)!
+                    let strong = r as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+	})
+}
+
 func TestInterpretCastingBoxing(t *testing.T) {
 
 	t.Parallel()

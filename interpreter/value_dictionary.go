@@ -590,8 +590,15 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext) {
 func (v *DictionaryValue) ForEachKey(
 	context InvocationContext,
 	procedure FunctionValue,
+	accessedType sema.Type,
 ) {
+	// Cascade outer authorization into the callback's key parameter type,
+	// matching sema's DictionaryForEachKeyFunctionType. In practice no
+	// built-in Hashable type has ContainFieldsOrElements=true, so the wrap
+	// doesn't trigger today, but the symmetry with filter/map keeps the
+	// runtime aligned with sema if that ever changes.
 	keyType := v.SemaType(context).KeyType
+	keyType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, keyType, false)
 
 	argumentTypes := []sema.Type{keyType}
 
@@ -612,6 +619,10 @@ func (v *DictionaryValue) ForEachKey(
 				)
 
 				key := MustConvertStoredValue(context, item)
+
+				if asReference {
+					key = getReferenceValue(context, key, keyType)
+				}
 
 				result := invokeFunctionValue(
 					context,
@@ -929,6 +940,16 @@ func (v *DictionaryValue) GetMethod(
 	name string,
 	accessedReference ReferenceValue,
 ) FunctionValue {
+
+	dictionaryType := v.SemaType(context)
+
+	var accessedType sema.Type
+	if accessedReference != nil {
+		accessedType = MustSemaTypeOfValue(accessedReference, context)
+	} else {
+		accessedType = dictionaryType
+	}
+
 	switch name {
 	case sema.DictionaryTypeRemoveFunctionName:
 		return NewBoundHostFunctionValue(
@@ -936,10 +957,18 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryRemoveFunctionType(
-				v.SemaType(context),
+				context,
+				accessedType,
+				dictionaryType,
 			),
 			NativeDictionaryRemoveFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function and any BBQ VM derivation can read accessedType
+			// from the un-dereferenced receiver and apply the inner-
+			// reference intersection in sema.DictionaryRemoveFunctionType's
+			// return.
+			WithDereferenceReceiver(false)
 
 	case sema.DictionaryTypeInsertFunctionName:
 		return NewBoundHostFunctionValue(
@@ -947,10 +976,18 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryInsertFunctionType(
-				v.SemaType(context),
+				context,
+				accessedType,
+				dictionaryType,
 			),
 			NativeDictionaryInsertFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function and any BBQ VM derivation can read accessedType
+			// from the un-dereferenced receiver and apply the inner-
+			// reference intersection in sema.DictionaryInsertFunctionType's
+			// return.
+			WithDereferenceReceiver(false)
 
 	case sema.DictionaryTypeContainsKeyFunctionName:
 		return NewBoundHostFunctionValue(
@@ -958,7 +995,7 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryContainsKeyFunctionType(
-				v.SemaType(context),
+				dictionaryType,
 			),
 			NativeDictionaryContainsKeyFunction,
 		)
@@ -969,10 +1006,18 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryForEachKeyFunctionType(
-				v.SemaType(context),
+				context,
+				accessedType,
+				dictionaryType,
 			),
 			NativeDictionaryForEachKeyFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function can read accessedType from it and cascade the
+			// outer reference's authorization into the callback's key
+			// parameter type, matching
+			// sema.DictionaryForEachKeyFunctionType.
+			WithDereferenceReceiver(false)
 	}
 
 	return nil
@@ -1841,7 +1886,7 @@ var NativeDictionaryRemoveFunction = NativeFunction(
 		args []Value,
 	) Value {
 		keyValue := args[0]
-		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		dictionary := dictionaryValueFromReceiver(context, receiver)
 		return dictionary.Remove(context, keyValue)
 	},
 )
@@ -1856,7 +1901,7 @@ var NativeDictionaryInsertFunction = NativeFunction(
 	) Value {
 		keyValue := args[0]
 		newValue := args[1]
-		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		dictionary := dictionaryValueFromReceiver(context, receiver)
 		return dictionary.Insert(context, keyValue, newValue)
 	},
 )
@@ -1884,11 +1929,30 @@ var NativeDictionaryForEachKeyFunction = NativeFunction(
 		args []Value,
 	) Value {
 		funcArgument := AssertValueOfType[FunctionValue](args[0])
-		dictionary := AssertValueOfType[*DictionaryValue](receiver)
-		dictionary.ForEachKey(context, funcArgument)
+		dictionary := dictionaryValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
+		dictionary.ForEachKey(context, funcArgument, accessedType)
 		return Void
 	},
 )
+
+func dictionaryValueFromReceiver(context ValueStaticTypeContext, receiver Value) *DictionaryValue {
+	switch receiver := receiver.(type) {
+	case *DictionaryValue:
+		return receiver
+
+	case *StorageReferenceValue:
+		referencedValue := receiver.MustReferencedValue(context)
+		return AssertValueOfType[*DictionaryValue](referencedValue)
+
+	case *EphemeralReferenceValue:
+		referencedValue := receiver.Value
+		return AssertValueOfType[*DictionaryValue](referencedValue)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
 
 // DictionaryKeyIterator
 
