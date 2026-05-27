@@ -1048,16 +1048,20 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	var base *interpreter.EphemeralReferenceValue
 
-	if reference, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
-		if compositeValue, ok := reference.Value.(*interpreter.CompositeValue); ok &&
-			compositeValue.Kind == common.CompositeKindAttachment {
-			base = attachmentBaseForMethod(context, compositeValue, method, reference)
-		}
-	}
-
 	// Ignore casting failures. Only interested in the receiver as a reference.
 	// If the receiver is not a reference, then `accessedReference` must be `nil`.
 	accessedReference, _ := receiver.(interpreter.ReferenceValue)
+
+	if reference, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if compositeValue, ok := reference.Value.(*interpreter.CompositeValue); ok &&
+			compositeValue.Kind == common.CompositeKindAttachment {
+			var narrowedSelf interpreter.ReferenceValue
+			base, narrowedSelf = attachmentBaseForMethod(context, compositeValue, method, reference)
+			if narrowedSelf != nil {
+				accessedReference = narrowedSelf
+			}
+		}
+	}
 
 	boundFunction := NewBoundFunctionValue(
 		context,

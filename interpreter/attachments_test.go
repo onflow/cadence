@@ -2844,3 +2844,34 @@ func TestInterpretAttachmentBaseUnauthorizedInInit(t *testing.T) {
 		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
 	})
 }
+
+func TestInterpretAttachmentSelfAuth(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+      entitlement X
+      entitlement Y
+
+      struct S {
+          access(X) fun bar() {}
+      }
+
+      access(all) attachment A for S {
+          access(X) fun foo() {
+              self as! auth(X, Y) &A
+          }
+      }
+
+      fun test() {
+          let s = attach A() to S()
+          let ref = &s as auth(X, Y) &S
+          ref[A]!.foo()
+      }
+    `)
+
+	_, err := inter.Invoke("test")
+	RequireError(t, err)
+
+	var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+}
