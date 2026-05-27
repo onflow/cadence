@@ -1874,8 +1874,15 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 	vm.push(ref)
 }
 
-func opIterator(vm *VM) {
+func opIterator(vm *VM, ins opcode.InstructionIterator) {
 	value := vm.pop()
+
+	checkIndexedType(
+		vm,
+		ins.IndexedType,
+		value,
+	)
+
 	iterable := value.(interpreter.IterableValue)
 	context := vm.context
 	iterator := iterable.Iterator(context)
@@ -2242,7 +2249,7 @@ func (vm *VM) run() {
 		case opcode.InstructionEmitEvent:
 			opEmitEvent(vm, ins)
 		case opcode.InstructionIterator:
-			opIterator(vm)
+			opIterator(vm, ins)
 		case opcode.InstructionIteratorHasNext:
 			opIteratorHasNext(vm)
 		case opcode.InstructionIteratorNext:

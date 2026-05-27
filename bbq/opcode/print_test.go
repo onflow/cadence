@@ -290,10 +290,10 @@ func TestPrintInstruction(t *testing.T) {
 		"BitwiseLeftShift":  {byte(BitwiseLeftShift)},
 		"BitwiseRightShift": {byte(BitwiseRightShift)},
 
-		"Iterator":        {byte(Iterator)},
-		"IteratorHasNext": {byte(IteratorHasNext)},
-		"IteratorNext":    {byte(IteratorNext)},
-		"IteratorEnd":     {byte(IteratorEnd)},
+		"Iterator indexedType:258": {byte(Iterator), 1, 2},
+		"IteratorHasNext":          {byte(IteratorHasNext)},
+		"IteratorNext":             {byte(IteratorNext)},
+		"IteratorEnd":              {byte(IteratorEnd)},
 
 		"EmitEvent type:258 argCount:772": {byte(EmitEvent), 1, 2, 3, 4},
 		"Loop":                            {byte(Loop)},

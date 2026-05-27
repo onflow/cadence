@@ -1260,3 +1260,33 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("foo"), val)
 	})
 }
+
+// VisitForStatement is missing a checkIndexedValue guard on the iterable.
+func TestInterpretForLoopFunctionElementTypeConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+        fun test(arr: [fun(): Void]) {
+            for f in arr {
+                f()
+            }
+        }
+    `)
+
+	// Sema sees [fun(): Void], but the array actually holds an IntValue.
+	confusedArray := interpreter.NewArrayValue(
+		inter,
+		&interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		},
+		common.ZeroAddress,
+		interpreter.NewUnmeteredIntValueFromInt64(42),
+	)
+
+	_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+	RequireError(t, err)
+
+	var indexedTypeError *interpreter.IndexedTypeError
+	require.ErrorAs(t, err, &indexedTypeError)
+}

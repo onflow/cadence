@@ -959,6 +959,9 @@
 - name: "iterator"
   description: |
     Pops an iterable value from the stack, get an iterator to it, and push the iterator back onto the stack.
+  operands:
+    - name: "indexedType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "iterable"

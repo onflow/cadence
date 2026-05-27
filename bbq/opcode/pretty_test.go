@@ -247,7 +247,6 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		{opcode.InstructionBitwiseAnd{}, opcode.PrettyInstructionBitwiseAnd{}},
 		{opcode.InstructionBitwiseLeftShift{}, opcode.PrettyInstructionBitwiseLeftShift{}},
 		{opcode.InstructionBitwiseRightShift{}, opcode.PrettyInstructionBitwiseRightShift{}},
-		{opcode.InstructionIterator{}, opcode.PrettyInstructionIterator{}},
 		{opcode.InstructionIteratorHasNext{}, opcode.PrettyInstructionIteratorHasNext{}},
 		{opcode.InstructionIteratorNext{}, opcode.PrettyInstructionIteratorNext{}},
 		{opcode.InstructionIteratorEnd{}, opcode.PrettyInstructionIteratorEnd{}},
@@ -437,6 +436,12 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		{
 			opcode.InstructionGetIndex{IndexedType: 1},
 			opcode.PrettyInstructionGetIndex{
+				IndexedType: interpreter.PrimitiveStaticTypeString,
+			},
+		},
+		{
+			opcode.InstructionIterator{IndexedType: 1},
+			opcode.PrettyInstructionIterator{
 				IndexedType: interpreter.PrimitiveStaticTypeString,
 			},
 		},

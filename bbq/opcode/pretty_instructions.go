@@ -1474,6 +1474,7 @@ func (i PrettyInstructionBitwiseRightShift) String() string {
 // Pretty form of InstructionIterator with resolved operands.
 // Pops an iterable value from the stack, get an iterator to it, and push the iterator back onto the stack.
 type PrettyInstructionIterator struct {
+	IndexedType interpreter.StaticType
 }
 
 var _ PrettyInstruction = PrettyInstructionIterator{}
@@ -1483,7 +1484,11 @@ func (PrettyInstructionIterator) Opcode() Opcode {
 }
 
 func (i PrettyInstructionIterator) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "indexedType", i.IndexedType, false)
+	return sb.String()
 }
 
 // PrettyInstructionIteratorHasNext

@@ -1641,8 +1641,12 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	// Evaluate the expression
 	c.compileExpression(statement.Value)
 
+	forStmtTypes := c.DesugaredElaboration.ForStatementType(statement)
+
 	// Get an iterator to the resulting value, and store it in a local index.
-	c.emit(opcode.InstructionIterator{})
+	c.emit(opcode.InstructionIterator{
+		IndexedType: c.getOrAddType(forStmtTypes.ContainerType),
+	})
 	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
 	c.emitSetLocal(iteratorLocalIndex)
 
@@ -1713,7 +1717,6 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	c.emitGetLocal(iteratorLocalIndex)
 	c.emit(opcode.InstructionIteratorNext{})
 
-	forStmtTypes := c.DesugaredElaboration.ForStatementType(statement)
 	loopVarType := forStmtTypes.ValueVariableType
 	_, isContainerReference := sema.MaybeReferenceType(forStmtTypes.ContainerType)
 	_, isValueReference := sema.MaybeReferenceType(loopVarType)
