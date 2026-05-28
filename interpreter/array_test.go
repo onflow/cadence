@@ -303,6 +303,6 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
-	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
-	assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	var staleAtreeViewError *interpreter.InvalidatedContainerViewError
+	assert.ErrorAs(t, err, &staleAtreeViewError)
 }

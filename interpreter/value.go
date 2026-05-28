@@ -241,6 +241,34 @@ type ReferenceTrackedResourceKindedValue interface {
 	IsStaleResource(ValueStaticTypeContext) bool
 }
 
+// AtreeBackedValue is implemented by container value wrappers
+// (`ArrayValue`/`DictionaryValue`/`CompositeValue`) that may have been
+// displaced by a structural change (slab split/merge/promotion) performed
+// through a sibling wrapper sharing the same atree slab tree.
+//
+// Two Go-level atree wrappers (`*atree.Array` / `*atree.OrderedMap`) for the
+// same logical container can be constructed when the Cadence interpreter calls
+// `Get` on an outer container twice (e.g. `&outer[i]` taken twice). Both
+// wrappers then share the same root-slab Go pointer. When one wrapper triggers
+// a structural change, atree updates only that wrapper's `root` field; the
+// sibling wrappers retain a pointer to the demoted slab, whose own slab ID has
+// been reassigned. Any subsequent use through such a stale wrapper would
+// either write into a non-root slab (mutation) or read partial/incorrect data
+// (read), leaving the canonical view of the container inconsistent with the
+// live data.
+//
+// The cached `valueID` on each wrapper is captured at construction time and
+// remains stable across structural changes initiated through the same wrapper
+// (because the wrapper's atree `root` field is updated, and the new root
+// inherits the original slab ID). For a wrapper that has been demoted by a
+// sibling, the underlying atree value's live `ValueID()` returns the slab ID
+// of the now-leaf slab, which differs from the cached `valueID` — that is the
+// divergence detected by `isStaleAtreeView()`.
+type AtreeBackedValue interface {
+	isStaleAtreeView() bool
+	ValueID() atree.ValueID
+}
+
 // ContractValue is the value of a contract.
 // Under normal circumstances, a contract value is always a CompositeValue.
 // However, in the test framework, an imported contract is constructed via a constructor function.

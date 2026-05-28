@@ -498,7 +498,12 @@ func MaybeDereferenceReceiver(
 	isNative bool,
 ) Value {
 
-	CheckInvalidatedResourceOrResourceReference(receiverReference, context)
+	// CheckInvalidatedValueOrValueReference also detects atree-backed
+	// container wrappers whose underlying slab tree was restructured by a
+	// sibling wrapper (see `AtreeBackedValue` / `InvalidatedContainerViewError`).
+	// Since every method dispatch on a container reference funnels through
+	// this function, that single check guards all method-dispatch paths.
+	CheckInvalidatedValueOrValueReference(receiverReference, context)
 
 	// Receiver needs to be dereferenced, if:
 	//  - The function always required the receiver to be dereferenced (e.g: interpreted functions).

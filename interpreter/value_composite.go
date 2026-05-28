@@ -1797,7 +1797,7 @@ func (v *CompositeValue) forEachField(
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
 		value := MustConvertStoredValue(context, atreeValue)
-		CheckInvalidatedResourceOrResourceReference(value, context)
+		CheckInvalidatedValueOrValueReference(value, context)
 
 		resume = f(
 			string(key.(StringAtreeValue)),
@@ -1821,6 +1821,16 @@ func (v *CompositeValue) StorageAddress() atree.Address {
 
 func (v *CompositeValue) ValueID() atree.ValueID {
 	return v.valueID
+}
+
+// isStaleAtreeView reports whether this wrapper has been displaced by a
+// structural change (slab split/merge/promotion) that was performed through
+// a sibling wrapper sharing the same underlying slab tree. See the
+// `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full
+// context. Detected uses of a stale wrapper are rejected centrally in
+// `CheckInvalidatedValueOrValueReference`.
+func (v *CompositeValue) isStaleAtreeView() bool {
+	return v.dictionary.ValueID() != v.valueID
 }
 
 // LiveValueID returns the underlying atree map's current value ID.
@@ -2116,7 +2126,7 @@ func forEachAttachment(
 
 	for {
 		// Check that the implicit composite reference was not invalidated during iteration
-		CheckInvalidatedResourceOrResourceReference(compositeReference, context)
+		CheckInvalidatedValueOrValueReference(compositeReference, context)
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))

@@ -93,7 +93,7 @@ func (vm *VM) pop() Value {
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
 
-	interpreter.CheckInvalidatedResourceOrResourceReference(value, vm.context)
+	interpreter.CheckInvalidatedValueOrValueReference(value, vm.context)
 
 	return value
 }
@@ -108,8 +108,8 @@ func (vm *VM) pop2() (Value, Value) {
 	vm.stack = vm.stack[:lastIndex-1]
 
 	context := vm.context
-	interpreter.CheckInvalidatedResourceOrResourceReference(value1, context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(value2, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value1, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value2, context)
 
 	return value1, value2
 }
@@ -124,9 +124,9 @@ func (vm *VM) pop3() (Value, Value, Value) {
 	vm.stack = vm.stack[:lastIndex-2]
 
 	context := vm.context
-	interpreter.CheckInvalidatedResourceOrResourceReference(value1, context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(value2, context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(value3, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value1, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value2, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value3, context)
 
 	return value1, value2, value3
 }
@@ -138,7 +138,7 @@ func (vm *VM) peekN(count int) []Value {
 
 	context := vm.context
 	for _, value := range values {
-		interpreter.CheckInvalidatedResourceOrResourceReference(value, context)
+		interpreter.CheckInvalidatedValueOrValueReference(value, context)
 	}
 
 	return values
@@ -151,7 +151,7 @@ func (vm *VM) popN(count int) []Value {
 
 	context := vm.context
 	for _, value := range values {
-		interpreter.CheckInvalidatedResourceOrResourceReference(value, context)
+		interpreter.CheckInvalidatedValueOrValueReference(value, context)
 	}
 
 	vm.stack = vm.stack[:startIndex]
@@ -162,7 +162,7 @@ func (vm *VM) popN(count int) []Value {
 func (vm *VM) peek() Value {
 	lastIndex := len(vm.stack) - 1
 	value := vm.stack[lastIndex]
-	interpreter.CheckInvalidatedResourceOrResourceReference(value, vm.context)
+	interpreter.CheckInvalidatedValueOrValueReference(value, vm.context)
 	return value
 }
 
@@ -179,8 +179,8 @@ func (vm *VM) peekPop() (Value, Value) {
 	poppedValue := vm.pop()
 
 	context := vm.context
-	interpreter.CheckInvalidatedResourceOrResourceReference(peekedValue, context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(poppedValue, context)
+	interpreter.CheckInvalidatedValueOrValueReference(peekedValue, context)
+	interpreter.CheckInvalidatedValueOrValueReference(poppedValue, context)
 
 	return peekedValue, poppedValue
 }

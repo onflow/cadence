@@ -111,7 +111,7 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 			return value, nil
 		},
 		set: func(_ Value) {
-			CheckInvalidatedResourceOrResourceReference(target, interpreter)
+			CheckInvalidatedValueOrValueReference(target, interpreter)
 			// writing to composites with indexing syntax is not supported
 			panic(errors.NewUnreachableError())
 		},
@@ -363,7 +363,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	target Value,
 ) {
 
-	CheckInvalidatedResourceOrResourceReference(target, interpreter)
+	CheckInvalidatedValueOrValueReference(target, interpreter)
 
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
@@ -448,7 +448,7 @@ func (interpreter *Interpreter) checkIndexedValue(
 	indexedType sema.Type,
 	indexedValue Value,
 ) {
-	CheckInvalidatedResourceOrResourceReference(indexedValue, interpreter)
+	CheckInvalidatedValueOrValueReference(indexedValue, interpreter)
 
 	CheckIndexedType(
 		interpreter,
@@ -489,7 +489,7 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	result := ast.AcceptExpression[Value](expression, interpreter)
 	interpreter.expression = previousExpression
 
-	CheckInvalidatedResourceOrResourceReference(
+	CheckInvalidatedValueOrValueReference(
 		result,
 		interpreter,
 	)
@@ -497,7 +497,11 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	return result
 }
 
-func CheckInvalidatedResourceOrResourceReference(
+// CheckInvalidatedValueOrValueReference checks whether a value is either:
+// - an invalidated resource
+// - a value pointing to a stale atree slab
+// - or a reference to any of the above
+func CheckInvalidatedValueOrValueReference(
 	value Value,
 	context ValueStaticTypeContext,
 ) {
@@ -521,11 +525,43 @@ func CheckInvalidatedResourceOrResourceReference(
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
-			CheckInvalidatedResourceOrResourceReference(
+			// The staleness check below is also transitively triggered for the
+			// referenced value through this recursion.
+			CheckInvalidatedValueOrValueReference(
 				value.Value,
 				context,
 			)
 		}
+	}
+
+	// After the resource/reference invalidation check above, additionally
+	// check for atree-backed container wrappers whose underlying slab tree has
+	// been restructured by a sibling wrapper sharing the same atree slab tree.
+	//
+	// Internally, multiple Go-level wrappers may point to the same logical atree
+	// container — e.g., taking two references to the same inlined inner array
+	// (`&outer[i]` twice) constructs two `*atree.Array` Go objects that both hold
+	// the same root slab pointer. When one wrapper triggers a structural change,
+	// atree updates only that wrapper's `root` field; the sibling wrappers keep a
+	// pointer to the now-demoted slab. Any subsequent mutation through such a
+	// stale wrapper would write directly to a non-root slab, leaving the canonical
+	// view (the slab tree's actual root) out of sync with the live data.
+	//
+	// We detect this by comparing the wrapper's cached `valueID` (captured at
+	// construction time, stable across structural changes initiated through the
+	// same wrapper) with `v.array.ValueID()` (which reflects the slab ID of the
+	// wrapper's current root pointer).
+	// On divergence we reject the operation rather than silently corrupt the tree.
+	//
+	// We do this here, rather than at each individual use site, so that every
+	// code path that already calls this helper transparently gains the check.
+	// See the `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the
+	// mechanism and rationale.
+	if atreeBackedValue, ok := value.(AtreeBackedValue); ok &&
+		atreeBackedValue.isStaleAtreeView() {
+		panic(&InvalidatedContainerViewError{
+			ValueID: atreeBackedValue.ValueID().String(),
+		})
 	}
 }
 
@@ -1576,7 +1612,7 @@ func CreateReferenceValue(
 
 		case ReferenceValue:
 			if isImplicit {
-				CheckInvalidatedResourceOrResourceReference(value, context)
+				CheckInvalidatedValueOrValueReference(value, context)
 
 				// During implicit reference creation (e.g: member/index access on a reference),
 				// if the value is already a reference, we need to create a new reference

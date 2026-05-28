@@ -643,6 +643,6 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
 	// the others, so the second withdraw must fail.
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
-	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
-	assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	var staleAtreeViewError *interpreter.InvalidatedContainerViewError
+	assert.ErrorAs(t, err, &staleAtreeViewError)
 }
