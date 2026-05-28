@@ -304,7 +304,7 @@ func (v *ArrayValue) iterate(
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 			elementValue := MustConvertStoredValue(context, element)
-			CheckInvalidatedResourceOrResourceReference(elementValue, context)
+			CheckInvalidatedValueOrValueReference(elementValue, context)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
@@ -581,8 +581,6 @@ func (v *ArrayValue) SetKey(context ContainerMutationContext, key Value, value V
 
 func (v *ArrayValue) Set(context ContainerMutationContext, index int, element Value) {
 
-	v.checkNotStale()
-
 	context.ValidateContainerMutation(v.ValueID())
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
@@ -676,8 +674,6 @@ func (v *ArrayValue) MeteredString(
 
 func (v *ArrayValue) Append(context ValueTransferContext, element Value) {
 
-	v.checkNotStale()
-
 	context.ValidateContainerMutation(v.ValueID())
 
 	// length increases by 1
@@ -758,8 +754,6 @@ func (v *ArrayValue) InsertWithoutTransfer(
 	index int,
 	element Value,
 ) {
-	v.checkNotStale()
-
 	context.ValidateContainerMutation(v.ValueID())
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
@@ -851,8 +845,6 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 	context ContainerMutationContext,
 	index int,
 ) atree.Storable {
-
-	v.checkNotStale()
 
 	context.ValidateContainerMutation(v.ValueID())
 
@@ -1717,32 +1709,14 @@ func (v *ArrayValue) LiveValueID() atree.ValueID {
 	return v.array.ValueID()
 }
 
-// checkNotStale panics with a StaleAtreeViewError if this wrapper has been
-// displaced by a structural change (slab split/merge/promotion) that was
-// performed through a sibling wrapper sharing the same underlying slab tree.
-//
-// Two `*atree.Array` Go objects can be created that point to the same root
-// slab — e.g., `&outer[i]` taken twice constructs two distinct wrappers via
-// repeated calls to `outer.Get(i)`. When one wrapper triggers a structural
-// change, atree updates only that wrapper's `root` field. The sibling
-// wrappers retain a pointer to the (now demoted) old slab, whose own slab ID
-// has been reassigned. Mutations through such a stale wrapper would write
-// into a non-root slab, leaving the canonical view of the array (the actual
-// root in storage) inconsistent with the live data.
-//
-// The cached `v.valueID` is captured at construction and remains stable
-// across structural changes initiated through this same wrapper (because
-// the wrapper's `*atree.Array.root` is updated and the new root inherits the
-// original slab ID). For a wrapper that has been demoted by a sibling,
-// `v.array.ValueID()` returns the slab ID of the now-leaf slab, which is
-// different from the cached `v.valueID` — that's the divergence we detect.
-func (v *ArrayValue) checkNotStale() {
-	if v.array.ValueID() == v.valueID {
-		return
-	}
-	panic(&StaleAtreeViewError{
-		ValueID: v.valueID.String(),
-	})
+// isStaleAtreeView reports whether this wrapper has been displaced by a
+// structural change (slab split/merge/promotion) that was performed through
+// a sibling wrapper sharing the same underlying slab tree. See the
+// `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full
+// context. Detected uses of a stale wrapper are rejected centrally in
+// `CheckInvalidatedValueOrValueReference`.
+func (v *ArrayValue) isStaleAtreeView() bool {
+	return v.array.ValueID() != v.valueID
 }
 
 func (v *ArrayValue) GetOwner() common.Address {

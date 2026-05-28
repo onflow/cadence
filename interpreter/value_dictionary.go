@@ -458,8 +458,8 @@ func (v *DictionaryValue) iterate(
 			keyValue := MustConvertStoredValue(context, key)
 			valueValue := MustConvertStoredValue(context, value)
 
-			CheckInvalidatedResourceOrResourceReference(keyValue, context)
-			CheckInvalidatedResourceOrResourceReference(valueValue, context)
+			CheckInvalidatedValueOrValueReference(keyValue, context)
+			CheckInvalidatedValueOrValueReference(valueValue, context)
 
 			resume = f(
 				keyValue,
@@ -736,8 +736,6 @@ func (v *DictionaryValue) SetKeyWithMutationCheck(
 	value Value,
 	checkMutation bool,
 ) {
-	v.checkNotStale()
-
 	context.ValidateContainerMutation(v.ValueID())
 
 	if checkMutation {
@@ -1051,8 +1049,6 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 	existingValueStorable atree.Storable,
 ) {
 
-	v.checkNotStale()
-
 	context.ValidateContainerMutation(v.ValueID())
 
 	valueComparator := newValueComparator(context)
@@ -1149,8 +1145,6 @@ func (v *DictionaryValue) InsertWithoutTransfer(
 	context ContainerMutationContext,
 	keyValue, value atree.Value,
 ) (existingValueStorable atree.Storable) {
-
-	v.checkNotStale()
 
 	context.ValidateContainerMutation(v.ValueID())
 
@@ -1841,17 +1835,14 @@ func (v *DictionaryValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
 }
 
-// checkNotStale panics with a StaleAtreeViewError if this wrapper has been
-// displaced by a structural change (slab split/merge/promotion) that was
-// performed through a sibling wrapper sharing the same underlying slab tree.
-// See ArrayValue.checkNotStale for full context.
-func (v *DictionaryValue) checkNotStale() {
-	if v.dictionary.ValueID() == v.valueID {
-		return
-	}
-	panic(&StaleAtreeViewError{
-		ValueID: v.valueID.String(),
-	})
+// isStaleAtreeView reports whether this wrapper has been displaced by a
+// structural change (slab split/merge/promotion) that was performed through
+// a sibling wrapper sharing the same underlying slab tree. See the
+// `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full
+// context. Detected uses of a stale wrapper are rejected centrally in
+// `CheckInvalidatedValueOrValueReference`.
+func (v *DictionaryValue) isStaleAtreeView() bool {
+	return v.dictionary.ValueID() != v.valueID
 }
 
 func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {

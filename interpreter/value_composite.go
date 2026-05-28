@@ -749,8 +749,6 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext) OptionalVal
 
 func (v *CompositeValue) RemoveMember(context ValueTransferContext, name string) Value {
 
-	v.checkNotStale()
-
 	if TracingEnabled {
 		startTime := time.Now()
 
@@ -821,8 +819,6 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	name string,
 	value Value,
 ) bool {
-
-	v.checkNotStale()
 
 	context.EnforceNotResourceDestruction(v.ValueID())
 
@@ -1801,7 +1797,7 @@ func (v *CompositeValue) forEachField(
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
 		value := MustConvertStoredValue(context, atreeValue)
-		CheckInvalidatedResourceOrResourceReference(value, context)
+		CheckInvalidatedValueOrValueReference(value, context)
 
 		resume = f(
 			string(key.(StringAtreeValue)),
@@ -1827,17 +1823,14 @@ func (v *CompositeValue) ValueID() atree.ValueID {
 	return v.valueID
 }
 
-// checkNotStale panics with a StaleAtreeViewError if this wrapper has been
-// displaced by a structural change (slab split/merge/promotion) that was
-// performed through a sibling wrapper sharing the same underlying slab tree.
-// See ArrayValue.checkNotStale for full context.
-func (v *CompositeValue) checkNotStale() {
-	if v.dictionary.ValueID() == v.valueID {
-		return
-	}
-	panic(&StaleAtreeViewError{
-		ValueID: v.valueID.String(),
-	})
+// isStaleAtreeView reports whether this wrapper has been displaced by a
+// structural change (slab split/merge/promotion) that was performed through
+// a sibling wrapper sharing the same underlying slab tree. See the
+// `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full
+// context. Detected uses of a stale wrapper are rejected centrally in
+// `CheckInvalidatedValueOrValueReference`.
+func (v *CompositeValue) isStaleAtreeView() bool {
+	return v.dictionary.ValueID() != v.valueID
 }
 
 // LiveValueID returns the underlying atree map's current value ID.
@@ -1855,8 +1848,6 @@ func (v *CompositeValue) RemoveField(
 	context ValueRemoveContext,
 	name string,
 ) {
-
-	v.checkNotStale()
 
 	common.UseComputation(
 		context,
@@ -2135,7 +2126,7 @@ func forEachAttachment(
 
 	for {
 		// Check that the implicit composite reference was not invalidated during iteration
-		CheckInvalidatedResourceOrResourceReference(compositeReference, context)
+		CheckInvalidatedValueOrValueReference(compositeReference, context)
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))

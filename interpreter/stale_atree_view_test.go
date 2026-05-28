@@ -93,7 +93,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		// array. `ref` appends enough elements to trigger an atree slab split.
 		// `ref2`'s `*atree.Array` still points to the now-demoted old root data
 		// slab. The second mutation through `ref2` must be rejected with
-		// StaleAtreeViewError; otherwise an element ends up parked on the
+		// InvalidatedContainerViewError; otherwise an element ends up parked on the
 		// demoted slab, hidden from iteration but exposed via removeLast.
 		err := runInvoke(t, `
             access(all) resource Vault {
@@ -119,7 +119,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.StaleAtreeViewError
+		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
 	})
 
@@ -149,7 +149,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.StaleAtreeViewError
+		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
 	})
 
@@ -180,7 +180,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.StaleAtreeViewError
+		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
 	})
 
@@ -213,7 +213,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.StaleAtreeViewError
+		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
 	})
 
@@ -313,7 +313,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 destroy arr
             }
         `)
-		var staleViewErr *interpreter.StaleAtreeViewError
+		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
 	})
 
@@ -345,7 +345,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.StaleAtreeViewError
+		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
 	})
 }

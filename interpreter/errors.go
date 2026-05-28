@@ -400,37 +400,22 @@ func (e *InvalidatedResourceError) SetLocationRange(locationRange LocationRange)
 	e.LocationRange = locationRange
 }
 
-// StaleAtreeViewError is reported when a container value wrapper
+// InvalidatedContainerViewError is reported when a container value wrapper
 // (ArrayValue, DictionaryValue, or CompositeValue) is used to mutate the
 // underlying atree container, but the wrapper has been "displaced" by a
 // structural change (e.g., a slab split/merge or root promotion) triggered
 // through a sibling wrapper that shares the same underlying slab tree.
-//
-// Internally, multiple Go-level wrappers may point to the same logical atree
-// container — e.g., taking two references to the same inlined inner array
-// (`&outer[i]` twice) constructs two `*atree.Array` Go objects that both hold
-// the same root slab pointer. When one wrapper triggers a structural change,
-// atree updates only that wrapper's `root` field; the sibling wrappers keep a
-// pointer to the now-demoted slab. Any subsequent mutation through such a
-// stale wrapper would write directly to a non-root slab, leaving the canonical
-// view (the slab tree's actual root) out of sync with the live data.
-//
-// We detect this by comparing the wrapper's cached `valueID` (captured at
-// construction time, stable across structural changes initiated through the
-// same wrapper) with `v.array.ValueID()` (which reflects the slab ID of the
-// wrapper's current root pointer). On divergence we reject the operation
-// rather than silently corrupt the tree.
-type StaleAtreeViewError struct {
+type InvalidatedContainerViewError struct {
 	LocationRange
 	ValueID string
 }
 
-var _ errors.InternalError = &StaleAtreeViewError{}
-var _ HasLocationRange = &StaleAtreeViewError{}
+var _ errors.InternalError = &InvalidatedContainerViewError{}
+var _ HasLocationRange = &InvalidatedContainerViewError{}
 
-func (*StaleAtreeViewError) IsInternalError() {}
+func (*InvalidatedContainerViewError) IsInternalError() {}
 
-func (e *StaleAtreeViewError) Error() string {
+func (e *InvalidatedContainerViewError) Error() string {
 	return fmt.Sprintf(
 		"%s container view %s is stale: the underlying slab tree was restructured "+
 			"by a mutation through a sibling wrapper",
@@ -439,7 +424,7 @@ func (e *StaleAtreeViewError) Error() string {
 	)
 }
 
-func (e *StaleAtreeViewError) SetLocationRange(locationRange LocationRange) {
+func (e *InvalidatedContainerViewError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
 
