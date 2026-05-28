@@ -13,8 +13,6 @@
 package interpreter_test
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,17 +43,11 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		*sema.VariableActivation,
 		*activations.Activation[interpreter.Variable],
 	) {
-		logFunction := stdlib.NewInterpreterLogFunction(stdlib.FunctionLogger(func(message string) error {
-			fmt.Fprintln(os.Stderr, message)
-			return nil
-		}))
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(logFunction)
 		baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, logFunction)
 		interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 		return baseValueActivation, baseActivation
