@@ -462,6 +462,9 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext) {
 
 	InvalidateReferencedResources(context, v)
 
+	if cache, ok := context.(AtreeContainerCache); ok {
+		cache.ClearCanonicalAtreeContainer(v.valueID)
+	}
 	v.dictionary = nil
 }
 
@@ -1006,7 +1009,7 @@ func (v *CompositeValue) GetField(gauge common.Gauge, name string) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(gauge, storedValue)
+	return MustConvertStoredContainerElement(gauge, storedValue)
 }
 
 func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool {
@@ -1555,6 +1558,9 @@ func (v *CompositeValue) Transfer(
 
 		InvalidateReferencedResources(context, v)
 
+		if cache, ok := context.(AtreeContainerCache); ok {
+			cache.ClearCanonicalAtreeContainer(v.valueID)
+		}
 		v.dictionary = nil
 	}
 
@@ -1796,7 +1802,9 @@ func (v *CompositeValue) forEachField(
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
-		value := MustConvertStoredValue(context, atreeValue)
+		// The field value is handed to `f` without transfer, so
+		// canonicalize so aliased references see a shared wrapper.
+		value := MustConvertStoredContainerElement(context, atreeValue)
 		CheckInvalidatedResourceOrResourceReference(value, context)
 
 		resume = f(
@@ -2125,7 +2133,9 @@ func forEachAttachment(
 			break
 		}
 		if strings.HasPrefix(string(key.(StringAtreeValue)), unrepresentableNamePrefix) {
-			attachment, ok := MustConvertStoredValue(context, value).(*CompositeValue)
+			// The attachment is handed to `f` without transfer, so
+			// canonicalize so aliased references see a shared wrapper.
+			attachment, ok := MustConvertStoredContainerElement(context, value).(*CompositeValue)
 			if !ok {
 				panic(errors.NewExternalError(err))
 			}

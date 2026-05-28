@@ -370,9 +370,17 @@ func (v *DictionaryValue) iterateKeys(
 			)
 
 			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
+			// convert to high-level interpreter.Value. When the element
+			// will be passed to `f` without transfer, canonicalize so
+			// aliased references see a shared wrapper; when it will be
+			// Transfer'd, leave it as a transient fresh wrapper.
 
-			keyValue := MustConvertStoredValue(interpreter, key)
+			var keyValue Value
+			if transferElements {
+				keyValue = MustConvertStoredValue(interpreter, key)
+			} else {
+				keyValue = MustConvertStoredContainerElement(interpreter, key)
+			}
 
 			// Handle transfer if requested
 			if transferElements {
@@ -453,10 +461,12 @@ func (v *DictionaryValue) iterate(
 			)
 
 			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
+			// convert to high-level interpreter.Value. The pair is
+			// passed to `f` without transfer, so canonicalize both so
+			// aliased references see a shared wrapper.
 
-			keyValue := MustConvertStoredValue(context, key)
-			valueValue := MustConvertStoredValue(context, value)
+			keyValue := MustConvertStoredContainerElement(context, key)
+			valueValue := MustConvertStoredContainerElement(context, value)
 
 			CheckInvalidatedResourceOrResourceReference(keyValue, context)
 			CheckInvalidatedResourceOrResourceReference(valueValue, context)
@@ -584,6 +594,9 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext) {
 
 	InvalidateReferencedResources(context, v)
 
+	if cache, ok := context.(AtreeContainerCache); ok {
+		cache.ClearCanonicalAtreeContainer(v.valueID)
+	}
 	v.dictionary = nil
 }
 
@@ -707,9 +720,7 @@ func (v *DictionaryValue) Get(
 		panic(errors.NewExternalError(err))
 	}
 
-	result := MustConvertStoredValue(context, storedValue)
-
-	return result, true
+	return MustConvertStoredContainerElement(context, storedValue), true
 }
 
 func (v *DictionaryValue) GetKey(context ContainerReadContext, keyValue Value) Value {
@@ -1688,6 +1699,9 @@ func (v *DictionaryValue) Transfer(
 
 		InvalidateReferencedResources(context, v)
 
+		if cache, ok := context.(AtreeContainerCache); ok {
+			cache.ClearCanonicalAtreeContainer(v.valueID)
+		}
 		v.dictionary = nil
 	}
 
@@ -2039,8 +2053,10 @@ func (i *DictionaryKeyIterator) Next(context ValueIteratorContext) Value {
 	}
 
 	// atree.Map iterator returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(context, atreeKeyValue)
+	// convert to high-level interpreter.Value. The key is handed back to
+	// user code (e.g. loop variable of `for k in dict.keys`), so
+	// canonicalize to keep aliased references consistent.
+	return MustConvertStoredContainerElement(context, atreeKeyValue)
 }
 
 func (i *DictionaryKeyIterator) ValueID() (atree.ValueID, bool) {

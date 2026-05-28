@@ -59,6 +59,109 @@ func MustConvertUnmeteredStoredValue(value atree.Value) Value {
 	return converted
 }
 
+// AtreeContainerCache deduplicates Cadence-level wrappers (ArrayValue,
+// DictionaryValue, CompositeValue) created for atree containers, keyed by
+// their atree value ID. See SharedState.canonicalAtreeContainers for the
+// rationale.
+type AtreeContainerCache interface {
+	CanonicalAtreeContainer(valueID atree.ValueID) Value
+	SetCanonicalAtreeContainer(valueID atree.ValueID, v Value)
+	ClearCanonicalAtreeContainer(valueID atree.ValueID)
+}
+
+// canonicalizeContainerElement returns the canonical cached wrapper for a
+// container element, populating the cache on first sight or adopting the
+// freshly-loaded `*atree.Array`/`*atree.OrderedMap` into the existing
+// cached wrapper. atree's `Array.Get`/`OrderedMap.Get` sets up the
+// parent updater (via setCallbackWithChild) on the
+// `*atree.Array`/`*atree.OrderedMap` instance it just returned, not on
+// the one we may have previously cached, so the freshly-returned
+// instance is the one that will correctly notify the parent on
+// mutation.
+func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value {
+	switch v := fresh.(type) {
+	case *ArrayValue:
+		if v.array == nil || v.isDestroyed {
+			return fresh
+		}
+		if existing, ok := cache.CanonicalAtreeContainer(v.valueID).(*ArrayValue); ok {
+			if existing.array != nil && !existing.isDestroyed {
+				existing.array = v.array
+				return existing
+			}
+			cache.ClearCanonicalAtreeContainer(v.valueID)
+		}
+		cache.SetCanonicalAtreeContainer(v.valueID, v)
+		return v
+	case *DictionaryValue:
+		if v.dictionary == nil || v.isDestroyed {
+			return fresh
+		}
+		if existing, ok := cache.CanonicalAtreeContainer(v.valueID).(*DictionaryValue); ok {
+			if existing.dictionary != nil && !existing.isDestroyed {
+				existing.dictionary = v.dictionary
+				return existing
+			}
+			cache.ClearCanonicalAtreeContainer(v.valueID)
+		}
+		cache.SetCanonicalAtreeContainer(v.valueID, v)
+		return v
+	case *CompositeValue:
+		if v.dictionary == nil || v.isDestroyed {
+			return fresh
+		}
+		if existing, ok := cache.CanonicalAtreeContainer(v.valueID).(*CompositeValue); ok {
+			if existing.dictionary != nil && !existing.isDestroyed {
+				existing.dictionary = v.dictionary
+				return existing
+			}
+			cache.ClearCanonicalAtreeContainer(v.valueID)
+		}
+		cache.SetCanonicalAtreeContainer(v.valueID, v)
+		return v
+	case *SomeValue:
+		// An optional wrapping a container must canonicalize its inner so
+		// that aliased references see a shared wrapper. SomeStorable.
+		// StoredValue produces a fresh SomeValue per load whose inner is
+		// built via the non-canonicalizing StoredValue path (it has no
+		// access to the current context's cache); re-canonicalize the
+		// inner here so the SomeValue we return contains the canonical
+		// wrapper. The recursion also handles nested optionals (T??, ...).
+		if v.value == nil {
+			return fresh
+		}
+		canonicalized := canonicalizeContainerElement(cache, v.value)
+		if canonicalized != v.value {
+			v.value = canonicalized
+		}
+		return v
+	}
+	return fresh
+}
+
+// MustConvertStoredContainerElement wraps an atree value retrieved as a
+// container element (e.g. via `*atree.Array.Get` or
+// `*atree.OrderedMap.Get`) as a Cadence-level `Value`, deduplicating the
+// resulting wrapper via the canonical wrapper cache when supported. Use
+// this instead of `MustConvertStoredValue` whenever a container's
+// element is being returned to user code (e.g. for `&outer[0]`), so that
+// aliased references share state. Internal callers that immediately
+// Transfer (and thereby invalidate) the wrapper must continue to use
+// `MustConvertStoredValue` so their transient wrapper does not poison
+// the cache.
+func MustConvertStoredContainerElement(gauge common.MemoryGauge, value atree.Value) Value {
+	result := MustConvertStoredValue(gauge, value)
+	if cache, ok := gauge.(AtreeContainerCache); ok {
+		return canonicalizeContainerElement(cache, result)
+	}
+	return result
+}
+
+// ConvertStoredValue wraps the given atree value as a Cadence-level
+// `Value` without canonicalization. Callers that return the wrapper to
+// user code as a container element (e.g. `&outer[0]`) should use
+// `MustConvertStoredContainerElement` instead, so aliased references
+// see a shared wrapper.
 func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, error) {
 	switch value := value.(type) {
 	case *atree.Array:

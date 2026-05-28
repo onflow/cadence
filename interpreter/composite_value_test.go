@@ -561,7 +561,9 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
         let ref  = &arr[0] as auth(Withdraw) &Vault
         let ref2 = &arr[0] as auth(Withdraw) &Vault
 
-        // Both refs initially see the same root slab in the underlying atree map.
+        // The shared-state cache (ConvertStoredValue) deduplicates the Cadence
+        // wrappers, so both refs hold the same CompositeValue and observe the
+        // same underlying atree map.
         assert(
             liveValueID(ref) == liveValueID(ref2),
             message: "before split: both refs should observe the same live atree value ID"
@@ -576,29 +578,19 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
         ref[A5]!.inflate()
         ref[A6]!.inflate()
 
-        // At this point, the CompositeValue inside "ref" has been properly updated such
-        // that its dictionary.root points to the newly created root slab. However,
-        // the CompositeValue inside "ref2" did not get updated and its dictionary.root
-        // still points to the old slab which is no longer the root node. The atree slab
-        // split reassigned slab IDs such that the OLD root (still pointed to by ref2's
-        // dictionary) now has a different slab ID, while the NEW root inherits the
-        // original slab ID.
-        // Confirm the split actually happened: ref's live value ID is the preserved
-        // original root ID, while ref2's live value ID is the freshly assigned ID of
-        // the now-demoted slab.
+        // Both refs share the canonical wrapper, so the slab split through ref
+        // is visible to ref2; their live value IDs continue to agree.
         assert(
-            liveValueID(ref) != liveValueID(ref2),
-            message: "after split: refs should observe diverged live atree value IDs"
+            liveValueID(ref) == liveValueID(ref2),
+            message: "after split: refs must still observe the same live atree value ID"
         )
 
-        // Do a conversion roundtrip to create an EphemeralReferenceValue from ref2.
-        // Without the stable cached valueID on CompositeValue, this reference would be
-        // tracked under the (now-different) live ValueID of the stale view, which would
-        // let it bypass invalidation when the vault is moved.
+        // Conversion roundtrip via AnyResource. Because ref and ref2 wrap the
+        // same canonical CompositeValue, immortalRef is registered under the
+        // same value ID as the others.
         let immortalRef = (ref2 as auth(Withdraw) &AnyResource) as! auth(Withdraw) &Vault
-        // Move the vault. Reference invalidation must void "immortalRef" alongside
-        // "ref" and "ref2": the cached valueID ensures all three are tracked under the
-        // same stable ID.
+        // Move the vault. Reference invalidation must void immortalRef alongside
+        // ref and ref2: all three are tracked under the same value ID.
         var extracted <- arr[0] <- empty
 
         stash.deposit(from: <- extracted)
@@ -645,4 +637,355 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
 	RequireError(t, err)
 	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 	assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
+}
+
+// TestInterpretCompositeAliasedMutationConsistency is the CompositeValue
+// counterpart to TestInterpretArrayAliasedMutationConsistency / Dictionary
+// version. It inflates attachments through `ref` to force an atree slab
+// split of the resource's underlying dictionary, then withdraws through
+// `ref2` (which would previously have observed a stale root). The
+// canonical state must reflect both withdrawals; pre-fix, a withdrawal
+// through the stale ref2 either silently wrote into a demoted child slab
+// or read a stale balance, allowing double-spend.
+func TestInterpretCompositeAliasedMutationConsistency(t *testing.T) {
+	t.Parallel()
+
+	logFunction := stdlib.NewInterpreterLogFunction(stdlib.FunctionLogger(func(message string) error {
+		fmt.Fprintln(os.Stderr, message)
+		return nil
+	}))
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
+
+	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+		t,
+		`
+    access(all) entitlement Withdraw
+    access(all) resource Vault {
+        access(all) var balance: UFix64
+
+        init(balance: UFix64) {
+            self.balance = balance
+        }
+
+        access(Withdraw) fun withdraw(amount: UFix64): @Vault {
+            self.balance = self.balance - amount
+            return <- create Vault(balance: amount)
+        }
+
+        access(all) fun deposit(from: @Vault) {
+            self.balance = self.balance + from.balance
+            destroy from
+        }
+    }
+
+    access(all) attachment A1 for Vault {
+        access(all) var a1: String; access(all) var a2: String
+        access(all) var a3: String; access(all) var a4: String
+        init() { self.a1 = ""; self.a2 = ""; self.a3 = ""; self.a4 = "" }
+        access(all) fun inflate() {
+            self.a1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            self.a2 = self.a1; self.a3 = self.a1; self.a4 = self.a1
+        }
+    }
+    access(all) attachment A2 for Vault {
+        access(all) var b1: String; access(all) var b2: String
+        access(all) var b3: String; access(all) var b4: String
+        init() { self.b1 = ""; self.b2 = ""; self.b3 = ""; self.b4 = "" }
+        access(all) fun inflate() {
+            self.b1 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            self.b2 = self.b1; self.b3 = self.b1; self.b4 = self.b1
+        }
+    }
+    access(all) attachment A3 for Vault {
+        access(all) var d1: String; access(all) var d2: String
+        access(all) var d3: String; access(all) var d4: String
+        init() { self.d1 = ""; self.d2 = ""; self.d3 = ""; self.d4 = "" }
+        access(all) fun inflate() {
+            self.d1 = "dddddddddddddddddddddddddddddddddddddd"
+            self.d2 = self.d1; self.d3 = self.d1; self.d4 = self.d1
+        }
+    }
+    access(all) attachment A4 for Vault {
+        access(all) var e1: String; access(all) var e2: String
+        access(all) var e3: String; access(all) var e4: String
+        init() { self.e1 = ""; self.e2 = ""; self.e3 = ""; self.e4 = "" }
+        access(all) fun inflate() {
+            self.e1 = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+            self.e2 = self.e1; self.e3 = self.e1; self.e4 = self.e1
+        }
+    }
+    access(all) attachment A5 for Vault {
+        access(all) var g1: String; access(all) var g2: String
+        access(all) var g3: String; access(all) var g4: String
+        init() { self.g1 = ""; self.g2 = ""; self.g3 = ""; self.g4 = "" }
+        access(all) fun inflate() {
+            self.g1 = "gggggggggggggggggggggggggggggggggggggg"
+            self.g2 = self.g1; self.g3 = self.g1; self.g4 = self.g1
+        }
+    }
+    access(all) attachment A6 for Vault {
+        access(all) var h1: String; access(all) var h2: String
+        access(all) var h3: String; access(all) var h4: String
+        init() { self.h1 = ""; self.h2 = ""; self.h3 = ""; self.h4 = "" }
+        access(all) fun inflate() {
+            self.h1 = "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"
+            self.h2 = self.h1; self.h3 = self.h1; self.h4 = self.h1
+        }
+    }
+
+    access(all) fun main() {
+        // 1000 = 100 (withdraw via ref) + 200 (withdraw via ref2) + 700 (remaining)
+        let v <- create Vault(balance: 1000.0)
+        let r1 <- attach A1() to <-v
+        let r2 <- attach A2() to <-r1
+        let r3 <- attach A3() to <-r2
+        let r4 <- attach A4() to <-r3
+        let r5 <- attach A5() to <-r4
+        let r  <- attach A6() to <-r5
+
+        var arr: @[Vault] <- [<-r]
+        let ref  = &arr[0] as auth(Withdraw) &Vault
+        let ref2 = &arr[0] as auth(Withdraw) &Vault
+
+        // Inflate attachments to force a slab split of the resource's
+        // underlying dictionary. After the split ref2 would, pre-fix, hold
+        // a stale root pointer.
+        ref[A1]!.inflate()
+        ref[A2]!.inflate()
+        ref[A3]!.inflate()
+        ref[A4]!.inflate()
+        ref[A5]!.inflate()
+        ref[A6]!.inflate()
+
+        // Both withdraw paths must observe the same canonical balance, so
+        // their cumulative effect is exactly the sum.
+        let w1 <- ref.withdraw(amount: 100.0)
+        let w2 <- ref2.withdraw(amount: 200.0)
+
+        assert(w1.balance == 100.0, message: "first withdrawal must produce 100")
+        assert(w2.balance == 200.0, message: "second withdrawal must produce 200")
+        assert(ref.balance == 700.0,
+               message: "canonical balance after two withdrawals must be 1000 - 100 - 200 = 700")
+        assert(ref.balance == ref2.balance,
+               message: "both refs must observe the same canonical balance")
+
+        destroy w1
+        destroy w2
+        destroy arr
+    }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *activations.Activation[interpreter.Variable] {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+}
+
+// TestInterpretCompositeFieldAliasedMutationConsistency exercises
+// CompositeValue.GetField's canonicalization: two `&owner.bucket`
+// references must alias the same inner-container wrapper, so a split
+// triggered through one ref is observable through the other. Without
+// canonicalization at the GetField path, the second `&owner.bucket`
+// would build a fresh `*atree.Array` over the same slab and the first
+// ref's appends - which trigger the split - would leave the second
+// ref's root pointer stale.
+func TestInterpretCompositeFieldAliasedMutationConsistency(t *testing.T) {
+	t.Parallel()
+
+	logFunction := stdlib.NewInterpreterLogFunction(stdlib.FunctionLogger(func(message string) error {
+		fmt.Fprintln(os.Stderr, message)
+		return nil
+	}))
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
+
+	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+		t,
+		`
+    access(all) resource Vault {
+        access(all) var balance: UFix64
+        init(balance: UFix64) { self.balance = balance }
+    }
+
+    access(all) resource Wallet {
+        access(all) var bucket: @[Vault]
+        init() {
+            self.bucket <- [<-create Vault(balance: 0.0)]
+        }
+    }
+
+    access(all) fun main() {
+        let w <- create Wallet()
+
+        // Two refs to the same composite field. Both must observe the
+        // same canonical inner container, including after the underlying
+        // atree slab splits.
+        let ref  = &w.bucket as auth(Mutate) &[Vault]
+        let ref2 = &w.bucket as auth(Mutate) &[Vault]
+
+        var i: Int = 0
+        while i < 200 {
+            ref.append(<-create Vault(balance: UFix64(i)))
+            i = i + 1
+        }
+
+        // Append through ref2. Pre-fix this would have written into a
+        // demoted child slab, leaving the canonical root's count stale.
+        ref2.append(<-create Vault(balance: 123.456))
+
+        assert(ref.length == 202,
+               message: "first ref must see the second ref's append")
+        assert(ref2.length == 202,
+               message: "second ref must see all appends through the canonical wrapper")
+
+        // A fresh ref taken via GetField after the splits must still be
+        // aliased with the originals.
+        let postRef = &w.bucket as auth(Mutate) &[Vault]
+        postRef.append(<-create Vault(balance: 999.0))
+        assert(ref.length == 203,
+               message: "post-split GetField must hand back the canonical wrapper")
+
+        destroy w
+    }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *activations.Activation[interpreter.Variable] {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+}
+
+// TestInterpretCompositeForEachAttachmentAliasingConsistency verifies
+// the ForEachAttachment iteration path canonicalizes the attachment
+// wrappers it yields. A mutation through the iteration's callback must
+// be visible to an externally-held reference to the same attachment
+// (and vice versa), since both must wrap the same canonical
+// CompositeValue.
+func TestInterpretCompositeForEachAttachmentAliasingConsistency(t *testing.T) {
+	t.Parallel()
+
+	logFunction := stdlib.NewInterpreterLogFunction(stdlib.FunctionLogger(func(message string) error {
+		fmt.Fprintln(os.Stderr, message)
+		return nil
+	}))
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
+
+	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+		t,
+		`
+    access(all) resource Vault {
+        access(all) var balance: UFix64
+        init(balance: UFix64) { self.balance = balance }
+    }
+
+    access(all) attachment A1 for Vault {
+        access(all) var s: String
+        init() { self.s = "" }
+        access(all) fun inflate() {
+            self.s = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        }
+    }
+    access(all) attachment A2 for Vault {
+        access(all) var s: String
+        init() { self.s = "" }
+        access(all) fun inflate() {
+            self.s = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+        }
+    }
+
+    access(all) fun main() {
+        let v <- create Vault(balance: 1000.0)
+        let v1 <- attach A1() to <-v
+        let v2 <- attach A2() to <-v1
+
+        var arr: @[Vault] <- [<-v2]
+
+        // External reference to attachment A1, taken before iteration.
+        // The forEachAttachment callback must yield the same canonical
+        // A1 wrapper, so a mutation in the callback is observable here.
+        let extA1Ref = arr[0][A1]!
+
+        // Iterate attachments and inflate A1 via the callback's reference.
+        // If the callback's wrapper is not canonical, the mutation lands
+        // in a fresh wrapper and extA1Ref observes the pre-inflation
+        // state.
+        arr[0].forEachAttachment(fun (attRef: &AnyResourceAttachment) {
+            if let a1Ref = attRef as? &A1 {
+                a1Ref.inflate()
+            }
+        })
+
+        assert(extA1Ref.s == "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+               message: "mutation in forEachAttachment must be visible through external ref")
+
+        destroy arr
+    }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *activations.Activation[interpreter.Variable] {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
 }

@@ -45,6 +45,28 @@ type SharedState struct {
 	MutationDuringCapabilityControllerIteration bool
 	containerValueIteration                     map[atree.ValueID]struct{}
 	destroyedResources                          map[atree.ValueID]struct{}
+	// canonicalAtreeContainers deduplicates the Cadence-level wrappers
+	// (ArrayValue, DictionaryValue, CompositeValue) created for atree
+	// containers, keyed by their atree value ID. The first wrapper created
+	// for a given value ID via `ConvertStoredValue` becomes canonical;
+	// subsequent retrievals reuse the same wrapper instance. The wrapper's
+	// `array`/`dictionary` field is updated on each retrieval to the
+	// `*atree.Array`/`*atree.OrderedMap` instance that atree just handed
+	// out (and on which it set up the parent updater), so operations
+	// through the canonical wrapper notify the parent correctly.
+	//
+	// Without this, atree.Array.Get / OrderedMap.Get returns a fresh
+	// `*atree.Array`/`*atree.OrderedMap` per call - two `&outer[0]`
+	// evaluations would hold separate wrappers around separate atree
+	// instances over the same slab. An atree slab split through one
+	// wrapper reassigns root pointers on that instance only; the others go
+	// stale and mutations through them silently corrupt the container.
+	//
+	// Entries are removed when a wrapper is invalidated by Destroy or
+	// Transfer (its `array`/`dictionary` is nilled). Subsequent retrievals
+	// for the same value ID create a fresh wrapper, leaving the held
+	// reference to the invalidated wrapper unaffected.
+	canonicalAtreeContainers map[atree.ValueID]Value
 }
 
 func NewSharedState(config *Config) *SharedState {
@@ -63,6 +85,7 @@ func NewSharedState(config *Config) *SharedState {
 		CapabilityControllerIterations: map[AddressPath]int{},
 		containerValueIteration:        map[atree.ValueID]struct{}{},
 		destroyedResources:             map[atree.ValueID]struct{}{},
+		canonicalAtreeContainers:       map[atree.ValueID]Value{},
 	}
 }
 

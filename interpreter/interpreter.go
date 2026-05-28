@@ -6498,6 +6498,27 @@ func (interpreter *Interpreter) ReferencedResourceKindedValues(valueID atree.Val
 	return interpreter.SharedState.referencedResourceKindedValues[valueID]
 }
 
+// CanonicalAtreeContainer returns the cached canonical Cadence-level
+// wrapper (ArrayValue, DictionaryValue, or CompositeValue) for the given
+// atree value ID, or nil if none has been recorded yet.
+func (interpreter *Interpreter) CanonicalAtreeContainer(valueID atree.ValueID) Value {
+	return interpreter.SharedState.canonicalAtreeContainers[valueID]
+}
+
+// SetCanonicalAtreeContainer records the given wrapper as the canonical
+// Cadence-level wrapper for the given atree value ID.
+func (interpreter *Interpreter) SetCanonicalAtreeContainer(valueID atree.ValueID, v Value) {
+	interpreter.SharedState.canonicalAtreeContainers[valueID] = v
+}
+
+// ClearCanonicalAtreeContainer removes the cache entry for the given atree
+// value ID. Call this when the corresponding wrapper is invalidated
+// (Destroy, Transfer's `array`/`dictionary` nil-out) so the now-invalid
+// wrapper is not handed out to subsequent loads.
+func (interpreter *Interpreter) ClearCanonicalAtreeContainer(valueID atree.ValueID) {
+	delete(interpreter.SharedState.canonicalAtreeContainers, valueID)
+}
+
 // startResourceTracking starts tracking the life-span of a resource.
 // A resource can only be associated with one variable at most, at a given time.
 func (interpreter *Interpreter) startResourceTracking(
