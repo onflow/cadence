@@ -125,15 +125,13 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 	})
 }
 
-// TestInterpretDictionaryValueIDTracking is the DictionaryValue counterpart to
-// TestInterpretCompositeValueIDTracking. It exercises the same atree slab-split
-// stale-view scenario, where two DictionaryValue instances wrap the same
-// underlying atree map (created by accessing the same outer dictionary key
-// twice) and a split through one instance leaves the other with a different
-// live value ID. Without the cached valueID on DictionaryValue, an
-// EphemeralReferenceValue created from the stale view would register under
-// that different ID, bypass invalidation when the inner dictionary is moved,
-// and survive as a dangling ref.
+// TestInterpretDictionaryValueIDTracking is the DictionaryValue counterpart
+// to TestInterpretArrayValueIDTracking: it exercises the same Cadence-level
+// "immortal reference" exploit attempt against an inner inlined dictionary
+// and asserts the runtime rejects it. See TestInterpretArrayValueIDTracking
+// for the full rationale around the two defense layers (staleness check
+// then cached-valueID) and why the rejection currently surfaces at the
+// cast site as InvalidatedContainerViewError.
 func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 	t.Parallel()
 
@@ -142,35 +140,34 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 		return nil
 	}))
 
-	// liveValueID exposes the underlying atree map's current value ID so the
-	// Cadence code can confirm the slab split actually occurred.
-	liveValueIDFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-		"liveValueID",
+	// liveValueIDOf exposes the underlying atree map's current value ID so the
+	// Cadence code can confirm the slab split actually occurred. It takes the
+	// *name* of the reference variable so that resolving the (potentially
+	// stale) reference happens inside Go via GetValueOfVariable, bypassing the
+	// per-expression staleness check that would otherwise fire at this call.
+	liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"liveValueIDOf",
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			[]sema.Parameter{
 				{
-					Label:      sema.ArgumentLabelNotRequired,
-					Identifier: "ref",
-					TypeAnnotation: sema.NewTypeAnnotation(
-						&sema.ReferenceType{
-							Type:          sema.AnyResourceType,
-							Authorization: sema.UnauthorizedAccess,
-						},
-					),
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "name",
+					TypeAnnotation: sema.StringTypeAnnotation,
 				},
 			},
 			sema.StringTypeAnnotation,
 		),
 		"",
 		func(
-			_ interpreter.NativeFunctionContext,
+			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
-			ref := args[0].(*interpreter.EphemeralReferenceValue)
+			name := args[0].(*interpreter.StringValue).Str
+			ref := context.GetValueOfVariable(name).(*interpreter.EphemeralReferenceValue)
 			dictValue := ref.Value.(*interpreter.DictionaryValue)
 			return interpreter.NewUnmeteredStringValue(dictValue.LiveValueID().String())
 		},
@@ -178,12 +175,12 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
-	baseValueActivation.DeclareValue(liveValueIDFunction)
+	baseValueActivation.DeclareValue(liveValueIDOfFunction)
 	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
-	interpreter.Declare(baseActivation, liveValueIDFunction)
+	interpreter.Declare(baseActivation, liveValueIDOfFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
@@ -206,7 +203,7 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 
         // Both refs initially see the same root slab in the underlying atree map.
         assert(
-            liveValueID(ref) == liveValueID(ref2),
+            liveValueIDOf("ref") == liveValueIDOf("ref2"),
             message: "before split: both refs should observe the same live atree value ID"
         )
 
@@ -223,24 +220,25 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
         // ref2's dictionary.root still points to the old root slab (with a freshly
         // assigned slab ID), so their live value IDs diverge.
         assert(
-            liveValueID(ref) != liveValueID(ref2),
+            liveValueIDOf("ref") != liveValueIDOf("ref2"),
             message: "after split: refs should observe diverged live atree value IDs"
         )
 
-        // Conversion roundtrip via AnyResource to create an EphemeralReferenceValue
-        // from ref2. Without the stable cached valueID on DictionaryValue, this
-        // reference would be tracked under the (now-different) live ValueID of the
-        // stale view.
+        // Exploit attempt: conversion roundtrip via AnyResource to obtain an
+        // EphemeralReferenceValue from the stale ref2. If neither the
+        // staleness check nor the cached-valueID mechanism caught this, the
+        // resulting reference would be tracked under the (now-different) live
+        // ValueID of the stale view and survive the subsequent move.
         let immortalRef = (ref2 as auth(Mutate) &AnyResource) as! auth(Mutate) &{String: Vault}
 
-        // Replace the inner dictionary with an empty one. The move invalidates
-        // all tracked references to the old inner dictionary.
+        // Replace the inner dictionary with an empty one. The move would
+        // invalidate a properly-tracked immortalRef.
         var empty: @{String: Vault} <- {}
         var extracted <- outer["a"] <- empty
         destroy extracted
 
-        // immortalRef must be invalidated; touching it must panic with
-        // InvalidatedResourceReferenceError.
+        // The exploit aims for this access to succeed. If the runtime defends
+        // correctly, execution never reaches this line.
         log(immortalRef.length.toString())
 
         destroy outer
@@ -267,4 +265,10 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 	RequireError(t, err)
 	var staleAtreeViewError *interpreter.InvalidatedContainerViewError
 	assert.ErrorAs(t, err, &staleAtreeViewError)
+	// The staleness check (the primary defense) fires at the cast operand
+	// `ref2` during expression evaluation, before the conversion completes.
+	// Pinning the rejection here ensures the test fails loudly if a future
+	// change shifts the rejection somewhere else (e.g. into a sanity
+	// assertion above, or all the way to `immortalRef.length`).
+	assert.Equal(t, 45, staleAtreeViewError.StartPosition().Line)
 }

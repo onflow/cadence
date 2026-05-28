@@ -166,14 +166,23 @@ func TestCheckArrayReferenceTypeInferenceWithDowncasting(t *testing.T) {
 	require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
 
-// TestInterpretArrayValueIDTracking is the ArrayValue counterpart to
-// TestInterpretCompositeValueIDTracking. It exercises the same atree slab-split
-// stale-view scenario, where two ArrayValue instances wrap the same underlying
-// atree array (created by accessing the same outer array element twice) and a
-// split through one instance leaves the other with a different live value ID.
-// Without the cached valueID on ArrayValue, an EphemeralReferenceValue created
-// from the stale view would register under that different ID, bypass
-// invalidation when the inner array is moved, and survive as a dangling ref.
+// TestInterpretArrayValueIDTracking verifies that the Cadence-level
+// "immortal reference" exploit attempt is rejected: an attacker takes two
+// `&outer[i]` references to the same inner inlined array, drives an atree
+// slab split through one ref, and then casts the now-stale sibling ref
+// through `&AnyResource` and back hoping to obtain a reference that survives
+// invalidation when the inner array is moved.
+//
+// The runtime defends this in two layers: (1) the staleness check on any
+// expression that dereferences the stale ref (the primary defense, which
+// fires at the conversion site), and (2) the cached-valueID on ArrayValue
+// that keeps a converted reference registered under the same stable ID as
+// the original so it gets invalidated alongside it (the secondary defense,
+// reachable only if the staleness check is bypassed).
+//
+// This test exercises the full Cadence-level exploit and asserts that the
+// runtime rejects it. With the staleness check in place, the rejection
+// surfaces as InvalidatedContainerViewError at the cast site.
 func TestInterpretArrayValueIDTracking(t *testing.T) {
 	t.Parallel()
 
@@ -182,35 +191,37 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 		return nil
 	}))
 
-	// liveValueID exposes the underlying atree array's current value ID so the
-	// Cadence code can confirm the slab split actually occurred.
-	liveValueIDFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-		"liveValueID",
+	// liveValueIDOf exposes the underlying atree array's current value ID so
+	// the Cadence code can confirm the slab split actually occurred.
+	//
+	// It takes the *name* of the reference variable rather than the reference
+	// itself: passing the stale ref directly would trip the staleness check on
+	// the call-site expression and shadow the real exploit-site error.
+	// Resolving the variable internally via GetValueOfVariable bypasses the
+	// per-expression check.
+	liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"liveValueIDOf",
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			[]sema.Parameter{
 				{
-					Label:      sema.ArgumentLabelNotRequired,
-					Identifier: "ref",
-					TypeAnnotation: sema.NewTypeAnnotation(
-						&sema.ReferenceType{
-							Type:          sema.AnyResourceType,
-							Authorization: sema.UnauthorizedAccess,
-						},
-					),
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "name",
+					TypeAnnotation: sema.StringTypeAnnotation,
 				},
 			},
 			sema.StringTypeAnnotation,
 		),
 		"",
 		func(
-			_ interpreter.NativeFunctionContext,
+			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
-			ref := args[0].(*interpreter.EphemeralReferenceValue)
+			name := args[0].(*interpreter.StringValue).Str
+			ref := context.GetValueOfVariable(name).(*interpreter.EphemeralReferenceValue)
 			arrayValue := ref.Value.(*interpreter.ArrayValue)
 			return interpreter.NewUnmeteredStringValue(arrayValue.LiveValueID().String())
 		},
@@ -218,12 +229,12 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
-	baseValueActivation.DeclareValue(liveValueIDFunction)
+	baseValueActivation.DeclareValue(liveValueIDOfFunction)
 	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
-	interpreter.Declare(baseActivation, liveValueIDFunction)
+	interpreter.Declare(baseActivation, liveValueIDOfFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
@@ -246,7 +257,7 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 
         // Both refs initially see the same root slab in the underlying atree array.
         assert(
-            liveValueID(ref) == liveValueID(ref2),
+            liveValueIDOf("ref") == liveValueIDOf("ref2"),
             message: "before split: both refs should observe the same live atree value ID"
         )
 
@@ -262,23 +273,28 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
         // ref2's array.root still points to the old root slab (with a freshly
         // assigned slab ID), so their live value IDs diverge.
         assert(
-            liveValueID(ref) != liveValueID(ref2),
+            liveValueIDOf("ref") != liveValueIDOf("ref2"),
             message: "after split: refs should observe diverged live atree value IDs"
         )
 
-        // Conversion roundtrip via AnyResource to create an EphemeralReferenceValue
-        // from ref2. Without the stable cached valueID on ArrayValue, this reference
-        // would be tracked under the (now-different) live ValueID of the stale view.
+        // Exploit attempt: conversion roundtrip via AnyResource to obtain an
+        // EphemeralReferenceValue from the stale ref2. If neither the
+        // staleness check nor the cached-valueID mechanism caught this, the
+        // resulting reference would be tracked under the (now-different) live
+        // ValueID of the stale view and could survive the subsequent move as
+        // an "immortal" reference.
         let immortalRef = (ref2 as auth(Mutate) &AnyResource) as! auth(Mutate) &[Vault]
 
-        // Replace the inner array with an empty one. The move invalidates all
-        // tracked references to the old inner array.
+        // Replace the inner array with an empty one. The move would invalidate
+        // a properly-tracked immortalRef.
         var empty: @[Vault] <- []
         var extracted <- outer[0] <- empty
         destroy extracted
 
-        // immortalRef must be invalidated; touching it must panic with
-        // InvalidatedResourceReferenceError.
+        // The exploit aims for this access to succeed and return the length
+        // of the (now moved-out) old inner array — exposing the resources it
+        // held. If the runtime defends correctly, execution never reaches
+        // this line.
         log(immortalRef.length.toString())
 
         destroy outer
@@ -305,4 +321,11 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 	RequireError(t, err)
 	var staleAtreeViewError *interpreter.InvalidatedContainerViewError
 	assert.ErrorAs(t, err, &staleAtreeViewError)
+	// The staleness check (the primary defense) fires at the cast operand
+	// `ref2` during expression evaluation, before the conversion completes.
+	// This pins the rejection to the exploit's cast site; if a future change
+	// shifts the rejection earlier (e.g. into a sanity assertion) or later
+	// (e.g. all the way to `immortalRef.length`), this assertion will fail
+	// and force a re-evaluation of which defense is actually firing.
+	assert.Equal(t, 45, staleAtreeViewError.StartPosition().Line)
 }
