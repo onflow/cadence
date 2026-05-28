@@ -736,6 +736,8 @@ func (v *DictionaryValue) SetKeyWithMutationCheck(
 	value Value,
 	checkMutation bool,
 ) {
+	v.checkNotStale()
+
 	context.ValidateContainerMutation(v.ValueID())
 
 	if checkMutation {
@@ -1049,6 +1051,8 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 	existingValueStorable atree.Storable,
 ) {
 
+	v.checkNotStale()
+
 	context.ValidateContainerMutation(v.ValueID())
 
 	valueComparator := newValueComparator(context)
@@ -1145,6 +1149,8 @@ func (v *DictionaryValue) InsertWithoutTransfer(
 	context ContainerMutationContext,
 	keyValue, value atree.Value,
 ) (existingValueStorable atree.Storable) {
+
+	v.checkNotStale()
 
 	context.ValidateContainerMutation(v.ValueID())
 
@@ -1833,6 +1839,19 @@ func (v *DictionaryValue) ValueID() atree.ValueID {
 // tracking and invalidation.
 func (v *DictionaryValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
+}
+
+// checkNotStale panics with a StaleAtreeViewError if this wrapper has been
+// displaced by a structural change (slab split/merge/promotion) that was
+// performed through a sibling wrapper sharing the same underlying slab tree.
+// See ArrayValue.checkNotStale for full context.
+func (v *DictionaryValue) checkNotStale() {
+	if v.dictionary.ValueID() == v.valueID {
+		return
+	}
+	panic(&StaleAtreeViewError{
+		ValueID: v.valueID.String(),
+	})
 }
 
 func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {

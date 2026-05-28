@@ -749,6 +749,8 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext) OptionalVal
 
 func (v *CompositeValue) RemoveMember(context ValueTransferContext, name string) Value {
 
+	v.checkNotStale()
+
 	if TracingEnabled {
 		startTime := time.Now()
 
@@ -819,6 +821,8 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	name string,
 	value Value,
 ) bool {
+
+	v.checkNotStale()
 
 	context.EnforceNotResourceDestruction(v.ValueID())
 
@@ -1823,6 +1827,19 @@ func (v *CompositeValue) ValueID() atree.ValueID {
 	return v.valueID
 }
 
+// checkNotStale panics with a StaleAtreeViewError if this wrapper has been
+// displaced by a structural change (slab split/merge/promotion) that was
+// performed through a sibling wrapper sharing the same underlying slab tree.
+// See ArrayValue.checkNotStale for full context.
+func (v *CompositeValue) checkNotStale() {
+	if v.dictionary.ValueID() == v.valueID {
+		return
+	}
+	panic(&StaleAtreeViewError{
+		ValueID: v.valueID.String(),
+	})
+}
+
 // LiveValueID returns the underlying atree map's current value ID.
 // In contrast to ValueID, which returns a stable value ID cached at
 // construction, LiveValueID reflects mutations to the atree map's root,
@@ -1838,6 +1855,8 @@ func (v *CompositeValue) RemoveField(
 	context ValueRemoveContext,
 	name string,
 ) {
+
+	v.checkNotStale()
 
 	common.UseComputation(
 		context,
