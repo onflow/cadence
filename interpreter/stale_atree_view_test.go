@@ -44,10 +44,63 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		*activations.Activation[interpreter.Variable],
 	) {
 
+		// liveValueIDOf exposes the underlying atree container's current value ID
+		// so the Cadence code can confirm the slab split actually occurred
+		// before attempting the stale-wrapper mutation.
+		//
+		// It takes the *name* of the reference variable rather than the
+		// reference itself: passing a stale reference as a function argument
+		// would trip the staleness check during expression evaluation (every
+		// expression result goes through CheckInvalidatedValueOrValueReference,
+		// which recursively descends into reference values), so the check would
+		// fire at the call-site rather than the mutation. Resolving the
+		// variable internally via GetValueOfVariable bypasses the per-
+		// expression check.
+		liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"liveValueIDOf",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityImpure,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "name",
+						TypeAnnotation: sema.StringTypeAnnotation,
+					},
+				},
+				sema.StringTypeAnnotation,
+			),
+			"",
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
+				name := args[0].(*interpreter.StringValue).Str
+				value := context.GetValueOfVariable(name)
+				ref := value.(*interpreter.EphemeralReferenceValue)
+				var id string
+				switch v := ref.Value.(type) {
+				case *interpreter.ArrayValue:
+					id = v.LiveValueID().String()
+				case *interpreter.DictionaryValue:
+					id = v.LiveValueID().String()
+				case *interpreter.CompositeValue:
+					id = v.LiveValueID().String()
+				default:
+					t.Fatalf("unexpected value type %T", ref.Value)
+				}
+				return interpreter.NewUnmeteredStringValue(id)
+			},
+		)
+
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(liveValueIDOfFunction)
 		baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, liveValueIDOfFunction)
 		interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 		return baseValueActivation, baseActivation
@@ -99,11 +152,21 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &[Vault]
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 0
                 while i < 200 {
                     ref.append(<-create Vault(balance: UFix64(i)))
                     i = i + 1
                 }
+
+                assert(
+                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 // This mutation goes through the stale wrapper and must be rejected.
                 ref2.append(<- create Vault(balance: 123.456))
@@ -113,6 +176,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
         `)
 		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
+		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
 	})
 
 	t.Run("ArrayValue: insert via stale wrapper after split", func(t *testing.T) {
@@ -130,11 +194,21 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &[Vault]
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 0
                 while i < 200 {
                     ref.append(<-create Vault(balance: UFix64(i)))
                     i = i + 1
                 }
+
+                assert(
+                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 ref2.insert(at: 0, <- create Vault(balance: 123.456))
 
@@ -143,6 +217,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
         `)
 		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
+		assert.Equal(t, 29, staleViewErr.StartPosition().Line)
 	})
 
 	t.Run("ArrayValue: remove via stale wrapper after split", func(t *testing.T) {
@@ -160,11 +235,21 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &[Vault]
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 0
                 while i < 200 {
                     ref.append(<-create Vault(balance: UFix64(i)))
                     i = i + 1
                 }
+
+                assert(
+                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 let extra <- ref2.remove(at: 0)
                 destroy extra
@@ -174,6 +259,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
         `)
 		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
+		assert.Equal(t, 29, staleViewErr.StartPosition().Line)
 	})
 
 	t.Run("DictionaryValue: insert via stale wrapper after split", func(t *testing.T) {
@@ -191,6 +277,11 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &{Int: Vault}
                 let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
 
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 1
                 while i < 300 {
                     let old <- ref.insert(key: i, <-create Vault(balance: UFix64(i)))
@@ -198,6 +289,11 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     destroy old
                     i = i + 1
                 }
+
+                assert(
+                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 let old2 <- ref2.insert(key: 9999, <- create Vault(balance: 123.456))
                 destroy old2
@@ -207,6 +303,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
         `)
 		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
+		assert.Equal(t, 31, staleViewErr.StartPosition().Line)
 	})
 
 	t.Run("CompositeValue: field assignment via stale wrapper after split", func(t *testing.T) {
@@ -292,12 +389,22 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &arr[0] as auth(Mod) &R
                 let ref2 = &arr[0] as auth(Mod) &R
 
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 ref[A1]!.inflate()
                 ref[A2]!.inflate()
                 ref[A3]!.inflate()
                 ref[A4]!.inflate()
                 ref[A5]!.inflate()
                 ref[A6]!.inflate()
+
+                assert(
+                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 // Field assignment through stale wrapper must be rejected.
                 ref2.setBalance(123.456)
@@ -307,6 +414,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
         `)
 		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
+		assert.Equal(t, 95, staleViewErr.StartPosition().Line)
 	})
 
 	t.Run("DictionaryValue: remove via stale wrapper after split", func(t *testing.T) {
@@ -324,12 +432,22 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &{Int: Vault}
                 let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
 
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 1
                 while i < 300 {
                     let old <- ref.insert(key: i, <-create Vault(balance: UFix64(i)))
                     destroy old
                     i = i + 1
                 }
+
+                assert(
+                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 let removed <- ref2.remove(key: 0)
                 destroy removed
@@ -339,5 +457,6 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
         `)
 		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
+		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
 	})
 }
