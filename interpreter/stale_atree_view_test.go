@@ -44,10 +44,57 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		*activations.Activation[interpreter.Variable],
 	) {
 
+		// liveValueID exposes the underlying atree container's current value ID
+		// so the Cadence code can confirm the slab split actually occurred
+		// before attempting the stale-wrapper mutation.
+		liveValueIDFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"liveValueID",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityImpure,
+				[]sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "ref",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.ReferenceType{
+								Type:          sema.AnyResourceType,
+								Authorization: sema.UnauthorizedAccess,
+							},
+						),
+					},
+				},
+				sema.StringTypeAnnotation,
+			),
+			"",
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
+				ref := args[0].(*interpreter.EphemeralReferenceValue)
+				var id string
+				switch v := ref.Value.(type) {
+				case *interpreter.ArrayValue:
+					id = v.LiveValueID().String()
+				case *interpreter.DictionaryValue:
+					id = v.LiveValueID().String()
+				case *interpreter.CompositeValue:
+					id = v.LiveValueID().String()
+				default:
+					t.Fatalf("unexpected value type %T", ref.Value)
+				}
+				return interpreter.NewUnmeteredStringValue(id)
+			},
+		)
+
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(liveValueIDFunction)
 		baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, liveValueIDFunction)
 		interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 		return baseValueActivation, baseActivation
@@ -99,11 +146,21 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &[Vault]
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
+                assert(
+                    liveValueID(ref) == liveValueID(ref2),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 0
                 while i < 200 {
                     ref.append(<-create Vault(balance: UFix64(i)))
                     i = i + 1
                 }
+
+                assert(
+                    liveValueID(ref) != liveValueID(ref2),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 // This mutation goes through the stale wrapper and must be rejected.
                 ref2.append(<- create Vault(balance: 123.456))
@@ -130,11 +187,21 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &[Vault]
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
+                assert(
+                    liveValueID(ref) == liveValueID(ref2),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 0
                 while i < 200 {
                     ref.append(<-create Vault(balance: UFix64(i)))
                     i = i + 1
                 }
+
+                assert(
+                    liveValueID(ref) != liveValueID(ref2),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 ref2.insert(at: 0, <- create Vault(balance: 123.456))
 
@@ -160,11 +227,21 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &[Vault]
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
+                assert(
+                    liveValueID(ref) == liveValueID(ref2),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 0
                 while i < 200 {
                     ref.append(<-create Vault(balance: UFix64(i)))
                     i = i + 1
                 }
+
+                assert(
+                    liveValueID(ref) != liveValueID(ref2),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 let extra <- ref2.remove(at: 0)
                 destroy extra
@@ -191,6 +268,11 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &{Int: Vault}
                 let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
 
+                assert(
+                    liveValueID(ref) == liveValueID(ref2),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 1
                 while i < 300 {
                     let old <- ref.insert(key: i, <-create Vault(balance: UFix64(i)))
@@ -198,6 +280,11 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     destroy old
                     i = i + 1
                 }
+
+                assert(
+                    liveValueID(ref) != liveValueID(ref2),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 let old2 <- ref2.insert(key: 9999, <- create Vault(balance: 123.456))
                 destroy old2
@@ -292,12 +379,22 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &arr[0] as auth(Mod) &R
                 let ref2 = &arr[0] as auth(Mod) &R
 
+                assert(
+                    liveValueID(ref) == liveValueID(ref2),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 ref[A1]!.inflate()
                 ref[A2]!.inflate()
                 ref[A3]!.inflate()
                 ref[A4]!.inflate()
                 ref[A5]!.inflate()
                 ref[A6]!.inflate()
+
+                assert(
+                    liveValueID(ref) != liveValueID(ref2),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 // Field assignment through stale wrapper must be rejected.
                 ref2.setBalance(123.456)
@@ -324,12 +421,22 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref  = &outer[0] as auth(Mutate) &{Int: Vault}
                 let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
 
+                assert(
+                    liveValueID(ref) == liveValueID(ref2),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
                 var i: Int = 1
                 while i < 300 {
                     let old <- ref.insert(key: i, <-create Vault(balance: UFix64(i)))
                     destroy old
                     i = i + 1
                 }
+
+                assert(
+                    liveValueID(ref) != liveValueID(ref2),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
 
                 let removed <- ref2.remove(key: 0)
                 destroy removed
