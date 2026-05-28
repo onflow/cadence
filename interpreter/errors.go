@@ -400,6 +400,34 @@ func (e *InvalidatedResourceError) SetLocationRange(locationRange LocationRange)
 	e.LocationRange = locationRange
 }
 
+// InvalidatedContainerViewError is reported when a container value wrapper
+// (ArrayValue, DictionaryValue, or CompositeValue) is used to mutate the
+// underlying atree container, but the wrapper has been "displaced" by a
+// structural change (e.g., a slab split/merge or root promotion) triggered
+// through a sibling wrapper that shares the same underlying slab tree.
+type InvalidatedContainerViewError struct {
+	LocationRange
+	ValueID string
+}
+
+var _ errors.InternalError = &InvalidatedContainerViewError{}
+var _ HasLocationRange = &InvalidatedContainerViewError{}
+
+func (*InvalidatedContainerViewError) IsInternalError() {}
+
+func (e *InvalidatedContainerViewError) Error() string {
+	return fmt.Sprintf(
+		"%s container view %s is stale: the underlying slab tree was restructured "+
+			"by a mutation through a sibling wrapper",
+		errors.InternalErrorMessagePrefix,
+		e.ValueID,
+	)
+}
+
+func (e *InvalidatedContainerViewError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // DestroyedResourceError is the error which is reported
 // when a user uses a destroyed resource through a reference
 type DestroyedResourceError struct {

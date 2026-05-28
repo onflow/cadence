@@ -304,7 +304,7 @@ func (v *ArrayValue) iterate(
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 			elementValue := MustConvertStoredValue(context, element)
-			CheckInvalidatedResourceOrResourceReference(elementValue, context)
+			CheckInvalidatedValueOrValueReference(elementValue, context)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
@@ -1707,6 +1707,16 @@ func (v *ArrayValue) ValueID() atree.ValueID {
 // tracking and invalidation.
 func (v *ArrayValue) LiveValueID() atree.ValueID {
 	return v.array.ValueID()
+}
+
+// isStaleAtreeView reports whether this wrapper has been displaced by a
+// structural change (slab split/merge/promotion) that was performed through
+// a sibling wrapper sharing the same underlying slab tree. See the
+// `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full
+// context. Detected uses of a stale wrapper are rejected centrally in
+// `CheckInvalidatedValueOrValueReference`.
+func (v *ArrayValue) isStaleAtreeView() bool {
+	return v.array.ValueID() != v.valueID
 }
 
 func (v *ArrayValue) GetOwner() common.Address {
