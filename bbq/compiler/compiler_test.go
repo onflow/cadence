@@ -10835,6 +10835,7 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 				IndexedType: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				SkipValueStalenessCheck: true,
 			},
 
 			// set left index with right value
@@ -10845,6 +10846,7 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 				IndexedType: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				SkipValueStalenessCheck: true,
 			},
 
 			// Return
@@ -11037,7 +11039,8 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
 			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
 			opcode.PrettyInstructionSetIndex{
-				IndexedType: rArrayType,
+				IndexedType:             rArrayType,
+				SkipValueStalenessCheck: true,
 			},
 
 			// jump to the end
@@ -11064,7 +11067,8 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
 			opcode.PrettyInstructionGetLocal{Local: rightValueIndex},
 			opcode.PrettyInstructionSetIndex{
-				IndexedType: rArrayType,
+				IndexedType:             rArrayType,
+				SkipValueStalenessCheck: true,
 			},
 
 			// set right index with left value
@@ -11072,7 +11076,8 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: rightIndexIndex},
 			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
 			opcode.PrettyInstructionSetIndex{
-				IndexedType: rArrayType,
+				IndexedType:             rArrayType,
+				SkipValueStalenessCheck: true,
 			},
 
 			// destroy rs
