@@ -95,12 +95,57 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 			},
 		)
 
+		// liveMutationCountOf exposes the underlying atree container's current
+		// root-slab mutation counter — the second signal isStaleAtreeView
+		// compares against the cached snapshot. Returning UInt64 lets Cadence
+		// test code compare counts directly with == / >.
+		liveMutationCountOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"liveMutationCountOf",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityImpure,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "name",
+						TypeAnnotation: sema.StringTypeAnnotation,
+					},
+				},
+				sema.UInt64TypeAnnotation,
+			),
+			"",
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
+				name := args[0].(*interpreter.StringValue).Str
+				value := context.GetValueOfVariable(name)
+				ref := value.(*interpreter.EphemeralReferenceValue)
+				var count uint64
+				switch v := ref.Value.(type) {
+				case *interpreter.ArrayValue:
+					count = v.LiveMutationCount()
+				case *interpreter.DictionaryValue:
+					count = v.LiveMutationCount()
+				case *interpreter.CompositeValue:
+					count = v.LiveMutationCount()
+				default:
+					t.Fatalf("unexpected value type %T", ref.Value)
+				}
+				return interpreter.NewUnmeteredUInt64Value(count)
+			},
+		)
+
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(liveValueIDOfFunction)
+		baseValueActivation.DeclareValue(liveMutationCountOfFunction)
 		baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, liveValueIDOfFunction)
+		interpreter.Declare(baseActivation, liveMutationCountOfFunction)
 		interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 		return baseValueActivation, baseActivation
@@ -177,6 +222,87 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
 		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
+	})
+
+	t.Run("ArrayValue: silent-corruption reproducer is now blocked", func(t *testing.T) {
+		t.Parallel()
+
+		// Pre-patch silent-corruption demonstration: the stale-wrapper
+		// append parks the new element on the demoted leaf slab. The
+		// canonical view's iteration would not see the parked element,
+		// but removeLast in reverse order would surface it — meaning the
+		// inner array has divergent length depending on which path you
+		// read it through.
+		//
+		// With the staleness check in place, ref2.append now panics with
+		// InvalidatedContainerViewError; execution never reaches the
+		// post-mutation forensics. The forensics are retained here as
+		// documentation of what the attack looked like — they would
+		// surface iteratedCount != removalCount or
+		// elementFoundIterating != elementFoundRemoving on a vulnerable
+		// build.
+		err := runInvoke(t, `
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) { self.balance = balance }
+            }
+
+            access(all) fun main() {
+                let outer: @[[Vault]] <- [<-[<-create Vault(balance: 0.0)]]
+
+                let ref  = &outer[0] as auth(Mutate) &[Vault]
+                let ref2 = &outer[0] as auth(Mutate) &[Vault]
+
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
+                var i: Int = 0
+                while i < 200 {
+                    ref.append(<-create Vault(balance: UFix64(i)))
+                    i = i + 1
+                }
+
+                // Mutation via the now-stale ref2 must be rejected here.
+                ref2.append(<- create Vault(balance: 123.456))
+
+                // Unreachable in a fixed build. On a vulnerable build the
+                // following would observe the divergence between the
+                // canonical view's iterator and a reverse-removeLast walk.
+                var empty: @[Vault] <- []
+                var extracted <- outer[0] <- empty
+                var iteratedCount: Int = 0
+                var removalCount: Int = 0
+                var elementFoundIterating = false
+                var elementFoundRemoving = false
+
+                for element in &extracted as &[Vault] {
+                    iteratedCount = iteratedCount + 1
+                    if element.balance == 123.456 {
+                        elementFoundIterating = true
+                    }
+                }
+                while extracted.length > 0 {
+                    let element <- extracted.removeLast()
+                    if element.balance == 123.456 {
+                        elementFoundRemoving = true
+                    }
+                    destroy element
+                    removalCount = removalCount + 1
+                }
+
+                assert(iteratedCount == removalCount)
+                assert(elementFoundIterating == elementFoundRemoving)
+                destroy extracted
+                destroy outer
+            }
+        `)
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		assert.ErrorAs(t, err, &staleViewErr)
+		// The ref2.append line — the staleness check must fire here, not
+		// at any later point.
+		assert.Equal(t, 25, staleViewErr.StartPosition().Line)
 	})
 
 	t.Run("ArrayValue: insert via stale wrapper after split", func(t *testing.T) {
@@ -459,4 +585,158 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		assert.ErrorAs(t, err, &staleViewErr)
 		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
 	})
+
+	// The remaining subtests cover the gap that motivated the
+	// MutationCount mechanism: atree's promoteChildAsNewRoot leaves the
+	// orphaned old root's SlabID unchanged, so the ValueID-only check
+	// (which works for splitRoot via SetSlabID side effects) cannot see it.
+	//
+	// Setup pattern:
+	//   1. Grow the inner container past one split via `ref` alone — the
+	//      root is now a metaslab.
+	//   2. Create `ref2` AFTER the split — ref2 caches the post-split
+	//      ValueID AND mutationCount, both reflecting the metaslab root.
+	//   3. Through `ref`, remove enough elements to collapse the tree back
+	//      to a single data slab. This triggers promoteChildAsNewRoot,
+	//      which preserves ValueID but bumps the orphaned metaslab's
+	//      mutation counter.
+	//   4. Through `ref2`, attempt a mutation. The valueID check passes,
+	//      but the mutationCount check trips — InvalidatedContainerViewError.
+	//
+	// Note on the intermediate assertions: liveMutationCountOf reads the
+	// live root's counter for the wrapper passed in. After promote, ref's
+	// live root is the freshly-promoted child (counter 0), while ref2's
+	// .root pointer still references the orphaned metaslab (counter > 0).
+	// So the divergence check is between the two wrappers, not pre/post on
+	// a single wrapper. This guards against the false-pass mode
+	// "promote did not fire" cleanly rather than producing a confusing
+	// "did not expect a stale-view error".
+
+	t.Run("ArrayValue: append via stale wrapper after promote", func(t *testing.T) {
+		t.Parallel()
+
+		err := runInvoke(t, `
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) { self.balance = balance }
+            }
+
+            access(all) fun main() {
+                let outer: @[[Vault]] <- [<-[<-create Vault(balance: 0.0)]]
+
+                let ref = &outer[0] as auth(Mutate) &[Vault]
+                var i: Int = 0
+                while i < 200 {
+                    ref.append(<-create Vault(balance: UFix64(i)))
+                    i = i + 1
+                }
+
+                // Construct ref2 AFTER the split — it caches the
+                // multi-level state's valueID and mutationCount.
+                let ref2 = &outer[0] as auth(Mutate) &[Vault]
+
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "after split, before promote: refs share the same live atree value ID"
+                )
+                assert(
+                    liveMutationCountOf("ref") == liveMutationCountOf("ref2"),
+                    message: "after split, before promote: refs share the same live mutation counter"
+                )
+
+                // Collapse: must shrink all the way to one element so the
+                // tree fully collapses and promoteChildAsNewRoot fires.
+                while i > 0 {
+                    let v <- ref.removeLast()
+                    destroy v
+                    i = i - 1
+                }
+
+                // Guard against "promote did not fire". After promote, ref
+                // reads the new (freshly-promoted) root's counter, ref2's
+                // .root pointer still references the orphaned metaslab —
+                // whose counter was bumped pre-swap. So the two diverge.
+                assert(
+                    liveMutationCountOf("ref") != liveMutationCountOf("ref2"),
+                    message: "after promote: ref's live root (new, fresh counter) must diverge from ref2's live root (orphaned, bumped)"
+                )
+                // ValueID alone would NOT diverge (the gap).
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "ValueID is preserved across promote — this is the gap the counter closes"
+                )
+
+                // Mutation through the stale ref2 must be rejected.
+                ref2.append(<- create Vault(balance: 123.456))
+
+                destroy outer
+            }
+        `)
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		assert.ErrorAs(t, err, &staleViewErr)
+		assert.Equal(t, 53, staleViewErr.StartPosition().Line)
+	})
+
+	t.Run("DictionaryValue: insert via stale wrapper after promote", func(t *testing.T) {
+		t.Parallel()
+
+		err := runInvoke(t, `
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) { self.balance = balance }
+            }
+
+            access(all) fun main() {
+                let outer: @[{Int: Vault}] <- [<-{0: <-create Vault(balance: 0.0)}]
+
+                let ref = &outer[0] as auth(Mutate) &{Int: Vault}
+                var i: Int = 1
+                while i < 300 {
+                    let old <- ref.insert(key: i, <-create Vault(balance: UFix64(i)))
+                    assert(old == nil, message: "dict insert should not collide")
+                    destroy old
+                    i = i + 1
+                }
+
+                let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
+
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "after split, before promote: refs share the same live atree value ID"
+                )
+                assert(
+                    liveMutationCountOf("ref") == liveMutationCountOf("ref2"),
+                    message: "after split, before promote: refs share the same live mutation counter"
+                )
+
+                // Collapse via removes (remove ALL keys including the
+                // original 0-key) so promote fires.
+                let original <- ref.remove(key: 0)
+                destroy original
+                while i > 1 {
+                    i = i - 1
+                    let removed <- ref.remove(key: i)
+                    destroy removed
+                }
+
+                assert(
+                    liveMutationCountOf("ref") != liveMutationCountOf("ref2"),
+                    message: "after promote: ref's live root (new, fresh counter) must diverge from ref2's live root (orphaned, bumped)"
+                )
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "ValueID is preserved across promote — this is the gap the counter closes"
+                )
+
+                let old <- ref2.insert(key: 9999, <- create Vault(balance: 123.456))
+                destroy old
+
+                destroy outer
+            }
+        `)
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		assert.ErrorAs(t, err, &staleViewErr)
+		assert.Equal(t, 49, staleViewErr.StartPosition().Line)
+	})
+
 }

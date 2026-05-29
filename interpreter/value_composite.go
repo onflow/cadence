@@ -64,6 +64,11 @@ type CompositeValue struct {
 	// under a different ID, bypassing invalidation.
 	valueID atree.ValueID
 
+	// mutationCount is the atree root-slab mutation counter captured at construction.
+	// Together with valueID it detects sibling-wrapper staleness.
+	// See isStaleAtreeView.
+	mutationCount uint64
+
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
 	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
@@ -262,6 +267,7 @@ func NewCompositeValueFromAtreeMap(
 	return &CompositeValue{
 		dictionary:          atreeOrderedMap,
 		valueID:             atreeOrderedMap.ValueID(),
+		mutationCount:       atreeOrderedMap.MutationCount(),
 		Location:            typeInfo.Location,
 		QualifiedIdentifier: typeInfo.QualifiedIdentifier,
 		Kind:                typeInfo.Kind,
@@ -1644,6 +1650,7 @@ func (v *CompositeValue) Clone(context ValueCloneContext) Value {
 	return &CompositeValue{
 		dictionary:          dictionary,
 		valueID:             dictionary.ValueID(),
+		mutationCount:       dictionary.MutationCount(),
 		Location:            v.Location,
 		QualifiedIdentifier: v.QualifiedIdentifier,
 		Kind:                v.Kind,
@@ -1823,14 +1830,22 @@ func (v *CompositeValue) ValueID() atree.ValueID {
 	return v.valueID
 }
 
-// isStaleAtreeView reports whether this wrapper has been displaced by a
-// structural change (slab split/merge/promotion) that was performed through
-// a sibling wrapper sharing the same underlying slab tree. See the
-// `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full
-// context. Detected uses of a stale wrapper are rejected centrally in
-// `CheckInvalidatedValueOrValueReference`.
+// isStaleAtreeView reports whether this wrapper has been displaced by a structural change
+// (slab split/promotion/PopIterate) that was performed through a sibling wrapper
+// sharing the same underlying slab tree.
+// See the `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full context.
+// Detected uses of a stale wrapper are rejected centrally in `CheckInvalidatedValueOrValueReference`.
+//
+// Two independent signals are compared against the cached snapshot:
+//   - ValueID: detects splitRoot (atree mutates the demoted root's SlabID via SetSlabID;
+//     sibling wrappers reading via the orphaned-pointer see the new SlabID).
+//   - MutationCount: detects promoteChildAsNewRoot and PopIterate
+//     (atree does NOT perturb the orphaned root's SlabID in these cases;
+//     a slab-level counter bumped on the OLD root pre-swap is the sibling-visible signal).
+//     See atree.MapSlab.MutationCount for the contract.
 func (v *CompositeValue) isStaleAtreeView() bool {
-	return v.dictionary.ValueID() != v.valueID
+	return v.dictionary.ValueID() != v.valueID ||
+		v.dictionary.MutationCount() != v.mutationCount
 }
 
 // LiveValueID returns the underlying atree map's current value ID.
@@ -1842,6 +1857,13 @@ func (v *CompositeValue) isStaleAtreeView() bool {
 // tracking and invalidation.
 func (v *CompositeValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
+}
+
+// LiveMutationCount returns the underlying atree map's current root-slab mutation counter.
+// Counterpart to LiveValueID for the second signal that isStaleAtreeView checks.
+// Intended for testing only; production code must use the cached mutationCount captured at wrapper construction.
+func (v *CompositeValue) LiveMutationCount() uint64 {
+	return v.dictionary.MutationCount()
 }
 
 func (v *CompositeValue) RemoveField(

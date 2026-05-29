@@ -45,6 +45,11 @@ type DictionaryValue struct {
 	// stable even if the dictionary's runtime root slab ID changes.
 	// See the equivalent field on CompositeValue for the underlying scenario.
 	valueID atree.ValueID
+
+	// mutationCount is the atree root-slab mutation counter captured at construction.
+	// Together with valueID it detects sibling-wrapper staleness.
+	// See isStaleAtreeView.
+	mutationCount uint64
 }
 
 func NewDictionaryValue(
@@ -297,10 +302,11 @@ func newDictionaryValueFromAtreeMap(
 	common.UseMemory(gauge, common.DictionaryValueBaseMemoryUsage)
 
 	return &DictionaryValue{
-		Type:        staticType,
-		dictionary:  atreeOrderedMap,
-		valueID:     atreeOrderedMap.ValueID(),
-		elementSize: elementSize,
+		Type:          staticType,
+		dictionary:    atreeOrderedMap,
+		valueID:       atreeOrderedMap.ValueID(),
+		mutationCount: atreeOrderedMap.MutationCount(),
+		elementSize:   elementSize,
 	}
 }
 
@@ -1835,14 +1841,29 @@ func (v *DictionaryValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
 }
 
-// isStaleAtreeView reports whether this wrapper has been displaced by a
-// structural change (slab split/merge/promotion) that was performed through
-// a sibling wrapper sharing the same underlying slab tree. See the
-// `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full
-// context. Detected uses of a stale wrapper are rejected centrally in
-// `CheckInvalidatedValueOrValueReference`.
+// LiveMutationCount returns the underlying atree map's current root-slab mutation counter.
+// Counterpart to LiveValueID for the second signal that isStaleAtreeView checks.
+// Intended for testing only; production code must use the cached mutationCount captured at wrapper construction.
+func (v *DictionaryValue) LiveMutationCount() uint64 {
+	return v.dictionary.MutationCount()
+}
+
+// isStaleAtreeView reports whether this wrapper has been displaced by a structural change
+// (slab split/promotion/PopIterate) that was performed through a sibling wrapper
+// sharing the same underlying slab tree.
+// See the `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full context.
+// Detected uses of a stale wrapper are rejected centrally in `CheckInvalidatedValueOrValueReference`.
+//
+// Two independent signals are compared against the cached snapshot:
+//   - ValueID: detects splitRoot (atree mutates the demoted root's SlabID via SetSlabID;
+//     sibling wrappers reading via the orphaned-pointer see the new SlabID).
+//   - MutationCount: detects promoteChildAsNewRoot and PopIterate
+//     (atree does NOT perturb the orphaned root's SlabID in these cases;
+//     a slab-level counter bumped on the OLD root pre-swap is the sibling-visible signal).
+//     See atree.MapSlab.MutationCount for the contract.
 func (v *DictionaryValue) isStaleAtreeView() bool {
-	return v.dictionary.ValueID() != v.valueID
+	return v.dictionary.ValueID() != v.valueID ||
+		v.dictionary.MutationCount() != v.mutationCount
 }
 
 func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {
