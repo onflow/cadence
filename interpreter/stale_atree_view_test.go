@@ -106,7 +106,14 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		return baseValueActivation, baseActivation
 	}
 
-	runInvoke := func(t *testing.T, code string) error {
+	// Some tests need to bypass a specific checker diagnostic (e.g.
+	// Filter's procedure must be `view` per sema, but to exercise the
+	// runtime mutation-prevention barrier we need an impure procedure).
+	runInvokeWithHandleCheckerError := func(
+		t *testing.T,
+		code string,
+		handleCheckerError func(error),
+	) error {
 		baseValueActivation, baseActivation := makeEnv(t)
 		inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
 			t,
@@ -124,11 +131,15 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 						return baseActivation
 					},
 				},
+				HandleCheckerError: handleCheckerError,
 			},
 		)
 		require.NoError(t, err)
 		_, err = inter.Invoke("main")
 		return err
+	}
+	runInvoke := func(t *testing.T, code string) error {
+		return runInvokeWithHandleCheckerError(t, code, nil)
 	}
 
 	t.Run("ArrayValue: append via stale wrapper after split", func(t *testing.T) {
@@ -459,4 +470,137 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		assert.ErrorAs(t, err, &staleViewErr)
 		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
 	})
+
+	t.Run("ArrayValue: map procedure mutates sibling wrapper into split mid-iteration", func(t *testing.T) {
+		t.Parallel()
+
+		// ArrayValue.Map (and similarly Filter / Reverse / Slice / Concat / ToVariableSized)
+		// creates an atree iterator once via v.array.Iterator() and walks it across many
+		// user-callback invocations.
+		// Between callback invocations there is:
+		//   - no WithContainerMutationPrevention(v.ValueID()) (unlike Iterate);
+		//   - no CheckInvalidatedValueOrValueReference(v, ...) between iterator.Next() calls.
+		//
+		// If the user procedure mutates a sibling wrapper of v, the sibling
+		// mutation triggers a slab split. The active atree iterator continues
+		// walking the now-demoted slab, potentially yielding duplicate elements,
+		// skipping elements, or yielding stale state — all silently.
+		//
+		// Safe contract: as soon as v becomes stale, the next iterator.Next()
+		// (or a per-iteration staleness check) must raise InvalidatedContainerViewError.
+		//
+		// Non-resource Int elements are used because Cadence forbids
+		// `map` on resource arrays even when accessed via reference. The
+		// iterator-corruption gap is independent of resource-ness.
+		err := runInvoke(t, `
+            access(all) fun main() {
+                // Two ArrayValue wrappers for the same inner Int array.
+                let outer: [[Int]] = [[0, 1]]
+
+                let ref1  = &outer[0] as auth(Mutate) &[Int]
+                let ref2 = &outer[0] as auth(Mutate) &[Int]
+
+                assert(
+                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
+                // ref.map's atree iterator is created when this expression begins evaluating.
+                // The procedure runs between iterator.Next() calls.
+                // the first invocation mutates ref2 enough to split the slab tree, demoting ref1's view.
+                // The map's iterator should then be rejected.
+                var calls: Int = 0
+                let mapped = ref1.map(fun (v: Int): Int {
+                    if calls == 0 {
+                        // Push ref2 past the slab-split threshold while ref's
+                        // iterator is paused between elements.
+                        var j = 0
+                        while j < 300 {
+                            ref2.append(j + 100)
+                            j = j + 1
+                        }
+                    }
+                    calls = calls + 1
+                    return v
+                })
+
+                // If the check fires correctly, execution never reaches this point.
+                // If the gap is unpatched, ref's wrapper is now stale and mapped
+                // contains corrupt data (wrong length, duplicates, or stale reads).
+                assert(
+                    liveValueIDOf("ref1") != liveValueIDOf("ref2"),
+                    message: "after callback-induced split: refs should observe diverged live atree value IDs"
+                )
+
+                // Without the safety check, this is silent corruption: the canonical
+                // view sees 302 elements (2 original + 300 appended); a stale map
+                // iterator may yield a different count or duplicate the first element.
+                assert(
+                    mapped.length == 302,
+                    message: "mapped length mismatch — stale iterator yielded wrong element count, got "
+                        .concat(mapped.length.toString())
+                )
+            }
+        `)
+		var containerMutationErr *interpreter.ContainerMutatedDuringIterationError
+		assert.ErrorAs(t, err, &containerMutationErr)
+	})
+
+	t.Run("ArrayValue: filter procedure mutates sibling wrapper into split mid-iteration", func(t *testing.T) {
+		t.Parallel()
+
+		// Parallel to the Map test, with one wrinkle: sema requires the
+		// Filter procedure to be `view` (pure), so a Cadence program that
+		// mutates a sibling wrapper inside the procedure fails type-checking.
+		// To exercise the runtime mutation-prevention barrier on Filter, we
+		// pass a HandleCheckerError that swallows the impurity diagnostic.
+		//
+		// This test guards against the "view enforcement has a hole" scenario:
+		// if any future checker change accidentally lets an impure call slip
+		// into a Filter procedure, the runtime barrier must still reject the
+		// resulting sibling mutation.
+		err := runInvokeWithHandleCheckerError(
+			t,
+			`
+                access(all) fun main() {
+                    let outer: [[Int]] = [[0, 1]]
+
+                    let ref1 = &outer[0] as auth(Mutate) &[Int]
+                    let ref2 = &outer[0] as auth(Mutate) &[Int]
+
+                    var calls: Int = 0
+                    let filtered = ref1.filter(view fun (v: Int): Bool {
+                        if calls == 0 {
+                            var j = 0
+                            while j < 300 {
+                                ref2.append(j + 100)
+                                j = j + 1
+                            }
+                        }
+                        calls = calls + 1
+                        return true
+                    })
+
+                    // Unreachable: the ref2.append inside the procedure must
+                    // raise ContainerMutatedDuringIterationError on the very
+                    // first callback invocation.
+                    assert(false, message: "unreachable")
+                }
+            `,
+			func(checkerErr error) {
+				// Swallow the impurity diagnostics that come from running
+				// state-mutating code inside the view-typed filter procedure.
+				// We deliberately exercise an impure procedure to verify the
+				// runtime barrier; the impurity errors are not what this
+				// test is about.
+				errs := RequireCheckerErrors(t, checkerErr, 2)
+				for _, e := range errs {
+					assert.IsType(t, &sema.PurityError{}, e)
+				}
+			},
+		)
+		var containerMutationErr *interpreter.ContainerMutatedDuringIterationError
+		assert.ErrorAs(t, err, &containerMutationErr)
+	})
+
 }
