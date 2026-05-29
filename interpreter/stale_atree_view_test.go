@@ -459,4 +459,79 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		assert.ErrorAs(t, err, &staleViewErr)
 		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
 	})
+
+	t.Run("ArrayValue: map procedure mutates sibling wrapper into split mid-iteration", func(t *testing.T) {
+		t.Parallel()
+
+		// ArrayValue.Map (and similarly Filter / Reverse / Slice / Concat / ToVariableSized)
+		// creates an atree iterator once via v.array.Iterator() and walks it across many
+		// user-callback invocations.
+		// Between callback invocations there is:
+		//   - no WithContainerMutationPrevention(v.ValueID()) (unlike Iterate);
+		//   - no CheckInvalidatedValueOrValueReference(v, ...) between iterator.Next() calls.
+		//
+		// If the user procedure mutates a sibling wrapper of v, the sibling
+		// mutation triggers a slab split. The active atree iterator continues
+		// walking the now-demoted slab, potentially yielding duplicate elements,
+		// skipping elements, or yielding stale state — all silently.
+		//
+		// Safe contract: as soon as v becomes stale, the next iterator.Next()
+		// (or a per-iteration staleness check) must raise InvalidatedContainerViewError.
+		//
+		// Non-resource Int elements are used because Cadence forbids
+		// `map` on resource arrays even when accessed via reference. The
+		// iterator-corruption gap is independent of resource-ness.
+		err := runInvoke(t, `
+            access(all) fun main() {
+                // Two ArrayValue wrappers for the same inner Int array.
+                let outer: [[Int]] = [[0, 1]]
+
+                let ref1  = &outer[0] as auth(Mutate) &[Int]
+                let ref2 = &outer[0] as auth(Mutate) &[Int]
+
+                assert(
+                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
+                // ref.map's atree iterator is created when this expression begins evaluating.
+                // The procedure runs between iterator.Next() calls.
+                // the first invocation mutates ref2 enough to split the slab tree, demoting ref1's view.
+                // The map's iterator should then be rejected.
+                var calls: Int = 0
+                let mapped = ref1.map(fun (v: Int): Int {
+                    if calls == 0 {
+                        // Push ref2 past the slab-split threshold while ref's
+                        // iterator is paused between elements.
+                        var j = 0
+                        while j < 300 {
+                            ref2.append(j + 100)
+                            j = j + 1
+                        }
+                    }
+                    calls = calls + 1
+                    return v
+                })
+
+                // If the check fires correctly, execution never reaches this point.
+                // If the gap is unpatched, ref's wrapper is now stale and mapped
+                // contains corrupt data (wrong length, duplicates, or stale reads).
+                assert(
+                    liveValueIDOf("ref1") != liveValueIDOf("ref2"),
+                    message: "after callback-induced split: refs should observe diverged live atree value IDs"
+                )
+
+                // Without the safety check, this is silent corruption: the canonical
+                // view sees 302 elements (2 original + 300 appended); a stale map
+                // iterator may yield a different count or duplicate the first element.
+                assert(
+                    mapped.length == 302,
+                    message: "mapped length mismatch — stale iterator yielded wrong element count, got "
+                        .concat(mapped.length.toString())
+                )
+            }
+        `)
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		assert.ErrorAs(t, err, &staleViewErr)
+	})
 }
