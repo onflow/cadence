@@ -595,12 +595,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 	// ref2 is evaluated as the index target) or inside the method body when
 	// `base.X` is evaluated.
 	//
-	// Both directions are exercised by the two sub-tests below. They currently
-	// PASS, confirming Gap 3 is fully covered by the centralized check; they
-	// serve as positive regression coverage so a future refactor that removes
-	// either the index-target check or the in-method `base` re-check would be
-	// caught.
-
+	// Both directions are exercised by the two sub-tests below.
 	typeDeclarations := `
         access(all) resource R {
             access(all) var balance: UFix64
@@ -855,13 +850,6 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		// atree uninlines it — physically moving its data to a standalone
 		// slab.
 		//
-		// Important observation: outer-side growth alone (i.e., calling
-		// `outer.append(<-[<-Vault])` many times) does NOT uninline a
-		// specific child; atree just splits outer into more leaf slabs,
-		// each of which can independently hold inlined children. The way
-		// to actually trigger uninlining of `outer[0]` is to grow `outer[0]`
-		// itself past the inline-element budget.
-		//
 		// Atree's ValueID is stable across the inline ↔ standalone-slab
 		// transition, so the cached-vs-live ValueID comparison used by the
 		// staleness check elsewhere in this file cannot detect uninlining.
@@ -905,13 +893,10 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     i = i + 1
                 }
 
-                // Concretely confirm uninlining happened. Without this
-                // assertion the test would be vacuously true if atree
-                // happened to keep inner[0] inlined.
+                // Confirm uninlining happened.
                 assert(
                     !liveInlinedOf("ref1"),
-                    message: "expected inner[0] to be uninlined after growth via ref1; if this fires, "
-                        .concat("the iteration count is too small for atree's current inline budget")
+                    message: "expected inner[0] to be uninlined after growth via ref1"
                 )
 
                 // Append through the sibling. The slab tree restructuring
@@ -987,5 +972,177 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 
 		var staleViewErr *interpreter.InvalidatedContainerViewError
 		assert.ErrorAs(t, err, &staleViewErr)
+	})
+
+	t.Run("ArrayValue: inline to standalone round-trip; sibling wrapper probed", func(t *testing.T) {
+		t.Parallel()
+
+		// Probes the scenario flagged in atree-slab-change-security-analysis.md:
+		// "a single small standalone slab gets re-inlined when its parent shrinks,
+		// or vice-versa — would not be caught by the current check".
+		//
+		// Setup: two sibling refs to outer[0]. Grow inner via `ref` enough to
+		// uninline it. Then shrink via `ref` back down so atree re-inlines.
+		// The shape returns toward the original (inner empty/tiny, inlined),
+		// but `ref2`'s wrapper has been carried across both transitions and
+		// many intermediate slab tree restructurings.
+		//
+		err := runInvoke(t, `
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) { self.balance = balance }
+            }
+
+            access(all) fun main() {
+                let outer: @[[Vault]] <- [<-[<-create Vault(balance: 1.0)]]
+
+                let ref  = &outer[0] as auth(Mutate, Remove) &[Vault]
+                let ref2 = &outer[0] as auth(Mutate, Remove) &[Vault]
+
+                assert(
+                    liveInlinedOf("ref"),
+                    message: "precondition: inner[0] should start inlined"
+                )
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "precondition: siblings should share live ValueID"
+                )
+
+                // Phase 1: grow inner via ref until atree uninlines outer[0].
+                var i: Int = 0
+                while i < 200 {
+                    ref.append(<-create Vault(balance: UFix64(i) + 10.0))
+                    i = i + 1
+                }
+                assert(
+                    !liveInlinedOf("ref"),
+                    message: "phase 1: expected inner[0] to be uninlined after growth"
+                )
+
+                // Phase 2: shrink inner via ref so atree re-inlines outer[0].
+                var j: Int = 0
+                while j < 200 {
+                    let v <- ref.removeLast()
+                    destroy v
+                    j = j + 1
+                }
+                assert(
+                    liveInlinedOf("ref"),
+                    message: "phase 2: expected inner[0] to be re-inlined after shrink"
+                )
+
+                // Probe ref2 after the inline <-> standalone round-trip.
+                // The sibling has not participated in either transition, and
+                // its cached pointers may reference now-freed standalone slabs
+                // or otherwise stale tree state.
+                ref2.append(<-create Vault(balance: 999.0))
+
+                // If the previous line succeeded (no panic from the staleness check),
+                // verify canonical state is consistent. A length other
+                // than 2 or wrong balances would indicate silent corruption.
+                let canonical = &outer[0] as &[Vault]
+                assert(
+                    canonical.length == 2,
+                    message: "canonical inner[0] length mismatch after round-trip: "
+                        .concat(canonical.length.toString())
+                )
+                assert(canonical[0].balance == 1.0, message: "canonical inner[0][0] mismatch")
+                assert(canonical[1].balance == 999.0, message: "canonical inner[0][1] mismatch")
+
+                destroy outer
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ArrayValue: minimal inline to standalone transition; sibling probed", func(t *testing.T) {
+		t.Parallel()
+
+		// Probes the narrowest inline -> standalone transition (no round-trip back).
+		// The earlier "inner-growth uninlining" test drives 200
+		// successive appends to push inner past atree's inline-element budget,
+		// that produces many intermediate slab restructurings beyond the
+		// uninlining itself, each of which independently changes the slab
+		// tree shape and so guarantees a cached-vs-live ValueID mismatch on
+		// the sibling.
+		//
+		// This test instead appends one element at a time and stops the
+		// moment `liveInlinedOf` flips from `true` to `false`. That isolates
+		// the uninline transition as cleanly as the language layer allows:
+		// no extra post-transition restructuring, no round-trip back, and
+		// the loop count `i` records exactly how many small elements were
+		// needed.
+		//
+		// Why this matters: atree's stated contract is that a value's
+		// `ValueID` is stable across the inline <-> standalone transition.
+		// If the minimal uninlining produces no other observable tree change,
+		// the centralized staleness check (which compares cached vs. live
+		// `ValueID`) is structurally blind to it.
+		// The sibling's subsequent mutation succeeds, and the canonical-state
+		// assertions hold — meaning atree's storage indirection transparently
+		// rebinds the sibling's `*atree.Array` across the transition;
+
+		err := runInvoke(t, `
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) { self.balance = balance }
+            }
+
+            access(all) fun main() {
+                let outer: @[[Vault]] <- [<-[]]
+                let ref1 = &outer[0] as auth(Mutate) &[Vault]
+                let ref2 = &outer[0] as auth(Mutate) &[Vault]
+
+                assert(
+                    liveInlinedOf("ref1"),
+                    message: "precondition: inner[0] should start inlined"
+                )
+                assert(
+                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    message: "precondition: siblings should share live ValueID"
+                )
+
+                // Append one element at a time via ref1, stopping the moment
+                // atree uninlines inner[0]. This is the minimal mutation
+                // sequence that drives the inline → standalone transition.
+                var i: Int = 0
+                while liveInlinedOf("ref1") && i < 1000 {
+                    ref1.append(<-create Vault(balance: UFix64(i)))
+                    i = i + 1
+                }
+                assert(
+                    !liveInlinedOf("ref1"),
+                    message: "expected inner[0] to be uninlined within 1000 small appends; "
+                        .concat("loop count: ").concat(i.toString())
+                )
+
+                // Sibling probe immediately at the boundary crossing.
+                ref2.append(<-create Vault(balance: 9999.0))
+
+                // Canonical-state assertions catch silent corruption.
+                let canonical = &outer[0] as &[Vault]
+                let expectedLen = i + 1
+                assert(
+                    canonical.length == expectedLen,
+                    message: "canonical inner[0] length mismatch after minimal uninlining: got "
+                        .concat(canonical.length.toString())
+                        .concat(", want ")
+                        .concat(expectedLen.toString())
+                )
+                assert(
+                    canonical[0].balance == 0.0,
+                    message: "canonical inner[0][0] balance mismatch after minimal uninlining"
+                )
+                assert(
+                    canonical[expectedLen - 1].balance == 9999.0,
+                    message: "canonical inner[0][last] balance mismatch after minimal uninlining"
+                )
+
+                destroy outer
+            }
+        `)
+
+		require.NoError(t, err)
 	})
 }
