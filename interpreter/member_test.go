@@ -1285,6 +1285,17 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("anystruct swap on reference", func(t *testing.T) {
 		t.Parallel()
 
+		// Non-resource through-reference swap currently surfaces a latent
+		// data-corruption hazard: the first atree.Set evicts the slab held
+		// by the second swap operand (which is a reference to the original
+		// inlined value), so the second set would serialize from a drained
+		// slab. Both runtimes now consistently raise
+		// InvalidatedContainerViewError at the second set rather than
+		// silently corrupting the dictionary. Fixing this properly requires
+		// extract-then-write swap semantics for non-resource targets, which
+		// in turn needs sema changes (the swap-statement type for through-
+		// reference access is currently a reference type, incompatible with
+		// the extracted underlying value). Tracked as a follow-up.
 		inter := parseCheckAndPrepare(t, `
             struct Foo {
                 var array: [Int]
@@ -1302,7 +1313,8 @@ func TestInterpretMemberAccess(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		require.ErrorAs(t, err, &staleViewErr)
 	})
 
 	t.Run("entitlement map access on field", func(t *testing.T) {

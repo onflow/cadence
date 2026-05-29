@@ -314,19 +314,8 @@ func (i PrettyInstructionRemoveIndex) String() string {
 // Pretty form of InstructionSetIndex with resolved operands.
 // Pops three values off the stack, the array, the index, and the value,
 // and then sets the value at the given index of the array to the value.
-// If skipValueStalenessCheck is true, the staleness re-check on the value
-// being set is suppressed; the container and index are still validated.
-// Set by the swap-statement compiler, which matches the interpreter's
-// timing by validating both swap operands once before the transfers and
-// then performing the two sets without further per-instruction staleness
-// checks. Without this flag the second SetIndex would re-check the value
-// just before serializing it into the container, and that re-check would
-// fire on values whose source slab was drained as part of the first
-// SetIndex's eviction-cleanup — a pre-existing reference-corruption
-// hazard in the non-resource swap path that is not in scope here.
 type PrettyInstructionSetIndex struct {
-	IndexedType             interpreter.StaticType
-	SkipValueStalenessCheck bool
+	IndexedType interpreter.StaticType
 }
 
 var _ PrettyInstruction = PrettyInstructionSetIndex{}
@@ -340,8 +329,6 @@ func (i PrettyInstructionSetIndex) String() string {
 	sb.WriteString(i.Opcode().String())
 	sb.WriteByte(' ')
 	printfTypeArgument(&sb, "indexedType", i.IndexedType, false)
-	sb.WriteByte(' ')
-	printfArgument(&sb, "skipValueStalenessCheck", i.SkipValueStalenessCheck, false)
 	return sb.String()
 }
 

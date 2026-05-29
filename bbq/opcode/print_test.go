@@ -277,7 +277,7 @@ func TestPrintInstruction(t *testing.T) {
 		"SetTypeIndex indexedType:258 indexingType:258":    {byte(SetTypeIndex), 1, 2, 1, 2},
 		"RemoveTypeIndex indexedType:258 indexingType:258": {byte(RemoveTypeIndex), 1, 2, 1, 2},
 		"SetAttachmentBase":                                {byte(SetAttachmentBase), 1, 2, 3},
-		"SetIndex indexedType:258 skipValueStalenessCheck:true": {byte(SetIndex), 1, 2, 1},
+		"SetIndex indexedType:258":                         {byte(SetIndex), 1, 2},
 		"GetIndex indexedType:258":                         {byte(GetIndex), 1, 2},
 		"RemoveIndex indexedType:258 pushPlaceholder:true": {byte(RemoveIndex), 1, 2, 1},
 		"Drop": {byte(Drop)},

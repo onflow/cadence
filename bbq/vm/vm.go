@@ -131,22 +131,6 @@ func (vm *VM) pop3() (Value, Value, Value) {
 	return value1, value2, value3
 }
 
-// pop3SkipValueStalenessCheck is pop3 with the staleness check on the
-// third (top-of-stack) value suppressed. The container and index are still
-// validated. Used by SetIndex with SkipValueStalenessCheck=true (swap path).
-func (vm *VM) pop3SkipValueStalenessCheck() (Value, Value, Value) {
-	lastIndex := len(vm.stack) - 1
-	value1, value2, value3 := vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex]
-	vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil, nil
-	vm.stack = vm.stack[:lastIndex-2]
-
-	context := vm.context
-	interpreter.CheckInvalidatedValueOrValueReference(value1, context)
-	interpreter.CheckInvalidatedValueOrValueReference(value2, context)
-
-	return value1, value2, value3
-}
-
 func (vm *VM) peekN(count int) []Value {
 	stackHeight := len(vm.stack)
 	startIndex := stackHeight - count
@@ -928,17 +912,7 @@ func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 }
 
 func opSetIndex(vm *VM, ins opcode.InstructionSetIndex) {
-	var container, index, value interpreter.Value
-	if ins.SkipValueStalenessCheck {
-		// Swap-statement emit: the value was already validated when it was
-		// originally read at the start of the swap. Re-checking here would
-		// fire on values whose source slab was drained by the FIRST set's
-		// eviction-cleanup — same timing as the interpreter's swap, which
-		// only checks the operands once before the transfers.
-		container, index, value = vm.pop3SkipValueStalenessCheck()
-	} else {
-		container, index, value = vm.pop3()
-	}
+	container, index, value := vm.pop3()
 	indexableValue := container.(interpreter.ValueIndexableValue)
 
 	checkIndexedType(
