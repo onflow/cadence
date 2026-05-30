@@ -10697,12 +10697,13 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 
 	const (
 		charsIndex = iota
-		tempIndex1
-		tempIndex2
-		tempIndex3
-		tempIndex4
-		tempIndex5
-		tempIndex6
+		leftTargetIndex
+		leftIndexIndex
+		rightTargetIndex
+		rightIndexIndex
+		leftInsertedPlaceholderIndex
+		leftValueIndex
+		rightValueIndex
 	)
 
 	arrayType := &interpreter.VariableSizedStaticType{
@@ -10745,7 +10746,7 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 
 			opcode.PrettyInstructionGetLocal{Local: charsIndex},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex1,
+				Local:     leftTargetIndex,
 				IsTempVar: true,
 			},
 
@@ -10760,13 +10761,13 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 				TargetType: interpreter.PrimitiveStaticTypeInteger,
 			},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex2,
+				Local:     leftIndexIndex,
 				IsTempVar: true,
 			},
 
 			opcode.PrettyInstructionGetLocal{Local: charsIndex},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex3,
+				Local:     rightTargetIndex,
 				IsTempVar: true,
 			},
 
@@ -10781,70 +10782,82 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 				TargetType: interpreter.PrimitiveStaticTypeInteger,
 			},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex4,
+				Local:     rightIndexIndex,
 				IsTempVar: true,
 			},
 
-			// get left value
-			opcode.PrettyInstructionGetLocal{Local: tempIndex1},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex2},
-			opcode.PrettyInstructionGetIndex{
-				IndexedType: &interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
+			// get left value via extract-then-write: RemoveIndex with placeholder.
+			opcode.PrettyInstructionGetLocal{Local: leftTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
+			opcode.PrettyInstructionRemoveIndex{
+				IndexedType:     arrayType,
+				PushPlaceholder: true,
 			},
+			opcode.PrettyInstructionSetLocal{Local: leftInsertedPlaceholderIndex},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex5,
+				Local:     leftValueIndex,
 				IsTempVar: true,
 			},
 
-			// get right value
-			opcode.PrettyInstructionGetLocal{Local: tempIndex3},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex4},
-			opcode.PrettyInstructionGetIndex{
-				IndexedType: &interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
+			// get right value via extract: RemoveIndex (no placeholder needed).
+			opcode.PrettyInstructionGetLocal{Local: rightTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: rightIndexIndex},
+			opcode.PrettyInstructionRemoveIndex{
+				IndexedType:     arrayType,
+				PushPlaceholder: false,
 			},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex6,
+				Local:     rightValueIndex,
 				IsTempVar: true,
 			},
+
+			// compare right value and left inserted placeholder
+			opcode.PrettyInstructionGetLocal{Local: rightValueIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftInsertedPlaceholderIndex},
+			opcode.PrettyInstructionSame{},
+			opcode.PrettyInstructionJumpIfFalse{Target: 37},
+
+			// set left index back with left value (swap-with-itself short-circuit)
+			opcode.PrettyInstructionGetLocal{Local: leftTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: arrayType,
+			},
+
+			// jump to the end
+			opcode.PrettyInstructionJump{Target: 51},
 
 			// convert right value to left type
-			opcode.PrettyInstructionGetLocal{Local: tempIndex6},
+			opcode.PrettyInstructionGetLocal{Local: rightValueIndex},
 			opcode.PrettyInstructionTransferAndConvert{
 				ValueType:  interpreter.PrimitiveStaticTypeString,
 				TargetType: interpreter.PrimitiveStaticTypeString,
 			},
-			opcode.PrettyInstructionSetLocal{Local: tempIndex6},
+			opcode.PrettyInstructionSetLocal{Local: rightValueIndex},
 
 			// convert left value to right type
-			opcode.PrettyInstructionGetLocal{Local: tempIndex5},
+			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
 			opcode.PrettyInstructionTransferAndConvert{
 				ValueType:  interpreter.PrimitiveStaticTypeString,
 				TargetType: interpreter.PrimitiveStaticTypeString,
 			},
-			opcode.PrettyInstructionSetLocal{Local: tempIndex5},
-
-			// set right index with left value
-			opcode.PrettyInstructionGetLocal{Local: tempIndex1},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex2},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex6},
-			opcode.PrettyInstructionSetIndex{
-				IndexedType: &interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
-			},
+			opcode.PrettyInstructionSetLocal{Local: leftValueIndex},
 
 			// set left index with right value
-			opcode.PrettyInstructionGetLocal{Local: tempIndex3},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex4},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex5},
+			opcode.PrettyInstructionGetLocal{Local: leftTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
+			opcode.PrettyInstructionGetLocal{Local: rightValueIndex},
 			opcode.PrettyInstructionSetIndex{
-				IndexedType: &interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
+				IndexedType: arrayType,
+			},
+
+			// set right index with left value
+			opcode.PrettyInstructionGetLocal{Local: rightTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: rightIndexIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: arrayType,
 			},
 
 			// Return

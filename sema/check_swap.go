@@ -31,28 +31,54 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 
 	// Then re-visit the same expressions, this time treat them as the value-expr of the assignment.
 	// The 'expected type' of the two expression would be the types obtained from the previous visit, swapped.
-	leftValueType := checker.VisitExpression(swap.Left, swap, rightTargetType)
-	rightValueType := checker.VisitExpression(swap.Right, swap, leftTargetType)
+	checker.VisitExpression(swap.Left, swap, rightTargetType)
+	checker.VisitExpression(swap.Right, swap, leftTargetType)
 
 	checker.enforceViewAssignment(swap, swap.Left)
 	checker.enforceViewAssignment(swap, swap.Right)
 
+	// Record the target types (rather than the value-expression types) for
+	// runtime use. Swap is semantically a value-exchange operation: the
+	// runtime extracts each operand from its container and writes it to the
+	// other operand's slot. Recording the target types here lets the
+	// runtime apply extract-then-write uniformly — even when the operand
+	// expression's read-context type is a cascaded reference (e.g.,
+	// `dictRef[k]` where dictRef is `&{String: AnyStruct}` reads as
+	// `&AnyStruct?`). The extracted underlying value matches the target
+	// type, so TransferAndConvert's defensive type check passes.
 	checker.Elaboration.SetSwapStatementTypes(
 		swap,
 		SwapStatementTypes{
-			LeftType:  leftValueType,
-			RightType: rightValueType,
+			LeftType:  leftTargetType,
+			RightType: rightTargetType,
 		},
 	)
 
-	// Record as a resource move (when applicable),
-	// because in destructors, nested resource moves are allowed.
+	// Mark IndexExpression swap operands as nested resource moves
+	// unconditionally so the runtime uses extract-then-write semantics
+	// (RemoveIndex + placeholder) for them. This eliminates a corruption
+	// hazard in the non-resource through-reference IndexExpression swap
+	// path: read-via-reference returns a wrapper into the container's
+	// inlined slab, and the second set's atree eviction-cleanup would
+	// drain that slab while the first operand still holds a view of it.
+	//
+	// MemberExpression operands are not affected here: CompositeValue
+	// fields are stored at fixed slab offsets and a SetField does not
+	// trigger an eviction-cleanup that could drain a sibling field's
+	// view. RemoveField for non-resource fields would also be ill-defined
+	// (no nil sentinel for required non-optional fields). Resource-typed
+	// MemberExpression operands are still marked below by the existing
+	// resource-aware path.
 
-	if leftValueType.IsResourceType() {
+	if _, ok := swap.Left.(*ast.IndexExpression); ok {
+		checker.elaborateNestedResourceMoveExpression(swap.Left)
+	} else if leftTargetType.IsResourceType() {
 		checker.elaborateNestedResourceMoveExpression(swap.Left)
 	}
 
-	if rightValueType.IsResourceType() {
+	if _, ok := swap.Right.(*ast.IndexExpression); ok {
+		checker.elaborateNestedResourceMoveExpression(swap.Right)
+	} else if rightTargetType.IsResourceType() {
 		checker.elaborateNestedResourceMoveExpression(swap.Right)
 	}
 
