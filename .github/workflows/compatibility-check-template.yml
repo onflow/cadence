@@ -19,6 +19,7 @@ on:
     secrets:
       FIND_API_AUTH:
         required: true
+      ATREE_DEPLOY_KEY:
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base-branch || github.run_id }}-${{ inputs.chain }}
