@@ -82,8 +82,8 @@ jobs:
       - name: Configure permissions
         if: github.repository != 'onflow/cadence'
         run: |
-          echo "GOPRIVATE=github.com/${{ inputs.repo }}" >> "$GITHUB_ENV"
-          git config --global url."https://${{ github.actor }}:${{ github.token }}@github.com".insteadOf "https://github.com"
+          echo "GOPRIVATE=github.com/${{ inputs.repo }},github.com/onflow/*-internal" >> "$GITHUB_ENV"
+          git config --global url."https://${{ github.actor }}:${{ github.token }}@github.com/${{ inputs.repo }}".insteadOf "https://github.com/${{ inputs.repo }}"
 
       # Check contracts using current branch
 
