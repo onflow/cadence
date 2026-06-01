@@ -961,3 +961,175 @@ func TestInterpretOptionalContainerAliasingViaDictionaryLookup(t *testing.T) {
 	_, err = inter.Invoke("main")
 	require.NoError(t, err)
 }
+
+// TestInterpretArrayPromoteRootAliasingConsistency exercises the dual
+// of the split-induced aliasing scenario: enough removals through one
+// aliased reference to drive atree's `promoteChildAsNewRoot` (which
+// fires when a meta-slab root shrinks to a single child). The
+// previously-identified gap was that a per-Cadence-wrapper slab-ID
+// check (cached `valueID` vs live `array.ValueID()`) does NOT detect
+// promote — promoteChildAsNewRoot keeps the root slab ID stable. With
+// canonicalization, both refs share one Cadence wrapper whose `.array`
+// is kept in sync, so the gap does not manifest at the user-visible
+// level. This test pins that behavior.
+func TestInterpretArrayPromoteRootAliasingConsistency(t *testing.T) {
+	t.Parallel()
+
+	logFunction := stdlib.NewInterpreterLogFunction(stdlib.FunctionLogger(func(message string) error {
+		fmt.Fprintln(os.Stderr, message)
+		return nil
+	}))
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
+
+	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+		t,
+		`
+        access(all) resource Vault {
+            access(all) var balance: UFix64
+            init(balance: UFix64) { self.balance = balance }
+        }
+
+        access(all) fun main() {
+            // Build an inner resource array large enough that the atree
+            // tree has multiple data slabs under a meta-slab root.
+            let outer: @[[Vault]] <- [<-[]]
+
+            let ref  = &outer[0] as auth(Mutate) &[Vault]
+            let ref2 = &outer[0] as auth(Mutate) &[Vault]
+
+            // Fill: triggers splitRoot at some threshold.
+            var i: Int = 0
+            while i < 400 {
+                ref.append(<-create Vault(balance: UFix64(i)))
+                i = i + 1
+            }
+            assert(ref.length == 400, message: "after fill: length must be 400")
+            assert(ref2.length == 400, message: "after fill: ref2 must observe same length")
+
+            // Drain via ref2 until only one element remains: this drives
+            // the meta-slab root to one-child state, triggering
+            // promoteChildAsNewRoot.
+            while ref2.length > 1 {
+                let v <- ref2.removeLast()
+                destroy v
+            }
+            assert(ref.length == 1, message: "after drain: ref must see promoted length")
+            assert(ref2.length == 1, message: "after drain: ref2 must see promoted length")
+
+            // Cross-mutate again: append via ref, observe via ref2.
+            ref.append(<-create Vault(balance: 999.0))
+            assert(ref2.length == 2, message: "post-promote append must be visible to alias")
+
+            destroy outer
+        }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *activations.Activation[interpreter.Variable] {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+}
+
+// TestInterpretArraySplitAndPromoteAliasingConsistency drives both
+// structural transitions through different aliased references in one
+// run: grow via ref1 until splitRoot, shrink via ref2 until
+// promoteChildAsNewRoot, then grow again. At every step both
+// references must observe identical state through the canonical
+// wrapper.
+func TestInterpretArraySplitAndPromoteAliasingConsistency(t *testing.T) {
+	t.Parallel()
+
+	logFunction := stdlib.NewInterpreterLogFunction(stdlib.FunctionLogger(func(message string) error {
+		fmt.Fprintln(os.Stderr, message)
+		return nil
+	}))
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
+
+	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+		t,
+		`
+        access(all) resource Vault {
+            access(all) var balance: UFix64
+            init(balance: UFix64) { self.balance = balance }
+        }
+
+        access(all) fun main() {
+            let outer: @[[Vault]] <- [<-[]]
+
+            let ref  = &outer[0] as auth(Mutate) &[Vault]
+            let ref2 = &outer[0] as auth(Mutate) &[Vault]
+
+            // Phase 1: split via ref1.
+            var i: Int = 0
+            while i < 300 {
+                ref.append(<-create Vault(balance: UFix64(i)))
+                i = i + 1
+            }
+            assert(ref2.length == 300, message: "phase 1: ref2 must see split-grown length")
+
+            // Phase 2: promote via ref2.
+            while ref2.length > 1 {
+                let v <- ref2.removeLast()
+                destroy v
+            }
+            assert(ref.length == 1, message: "phase 2: ref must see promoted length")
+
+            // Phase 3: grow again via ref1, observe via ref2.
+            i = 0
+            while i < 50 {
+                ref.append(<-create Vault(balance: UFix64(i + 1000)))
+                i = i + 1
+            }
+            assert(ref2.length == 51, message: "phase 3: ref2 must see post-promote growth")
+
+            destroy outer
+        }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *activations.Activation[interpreter.Variable] {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+}
