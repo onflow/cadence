@@ -7,7 +7,7 @@ inputs:
   go_private_value:
     description: "The value for GOPRIVATE"
     required: false
-    default: "github.com/onflow/*-internal"
+    default: "github.com/onflow/atree-internal"
 runs:
   using: "composite"
   steps:
