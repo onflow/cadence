@@ -26,6 +26,12 @@ jobs:
         with:
           repository: 'onflow/flow-go'
 
+      - name: Setup private build environment
+        if: ${{ vars.PRIVATE_BUILDS_SUPPORTED == 'true' }}
+        uses: ./actions/private-setup
+        with:
+          atree_deploy_key: ${{ secrets.ATREE_DEPLOY_KEY }}
+
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
@@ -49,6 +55,12 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: 'onflow/flow-emulator'
+
+      - name: Setup private build environment
+        if: ${{ vars.PRIVATE_BUILDS_SUPPORTED == 'true' }}
+        uses: ./actions/private-setup
+        with:
+          atree_deploy_key: ${{ secrets.ATREE_DEPLOY_KEY }}
 
       - name: Setup Go
         uses: actions/setup-go@v6
