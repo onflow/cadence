@@ -33,6 +33,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup private build environment
+        if: ${{ vars.PRIVATE_BUILDS_SUPPORTED == 'true' }}
+        uses: ./actions/private-setup
+        with:
+          atree_deploy_key: ${{ secrets.ATREE_DEPLOY_KEY }}
+
       - uses: actions/setup-go@v6
         with:
           go-version-file: ./tools/compatibility-check/go.mod
