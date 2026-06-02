@@ -315,7 +315,7 @@ func (v *ArrayValue) iterate(
 			} else {
 				elementValue = MustConvertStoredContainerElement(context, element)
 			}
-			CheckInvalidatedResourceOrResourceReference(elementValue, context)
+			CheckInvalidatedValueOrValueReference(elementValue, context)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
@@ -1955,89 +1955,95 @@ func (v *ArrayValue) Filter(
 
 	resultElementStaticType := ConvertSemaToStaticType(context, argumentType)
 
-	return NewArrayValueWithIterator(
-		context,
-		// NOTE: result is NOT v.Type, which could be a constant-sized array type.
-		// Instead, result is always a variable-sized array type,
-		// because filtering can change the number of elements in the array.
-		NewVariableSizedStaticType(context, resultElementStaticType),
-		common.ZeroAddress,
-		uint64(v.Count()), // worst case estimation.
-		func() Value {
+	// Block mutations to v through any sibling wrapper while the lazy
+	// iterator is being consumed by the user procedure. See ArrayValue.Map.
+	var result Value
+	context.WithContainerMutationPrevention(v.ValueID(), func() {
+		result = NewArrayValueWithIterator(
+			context,
+			// NOTE: result is NOT v.Type, which could be a constant-sized array type.
+			// Instead, result is always a variable-sized array type,
+			// because filtering can change the number of elements in the array.
+			NewVariableSizedStaticType(context, resultElementStaticType),
+			common.ZeroAddress,
+			uint64(v.Count()), // worst case estimation.
+			func() Value {
 
-			var value Value
+				var value Value
 
-			for {
-				common.UseComputation(
-					context,
-					common.ComputationUsage{
-						Kind:      common.ComputationKindAtreeArrayReadIteration,
-						Intensity: 1,
-					},
-				)
-
-				atreeValue, err := iterator.Next()
-				if err != nil {
-					panic(errors.NewExternalError(err))
-				}
-
-				// Also handles the end of array case since iterator.Next() returns nil for that.
-				if atreeValue == nil {
-					return nil
-				}
-
-				// When asReference is true, the result array stores references
-				// to source elements; the reference wrappers must be canonical
-				// so that mutations (e.g. an access(all) mutating function)
-				// propagate consistently with sibling references taken elsewhere.
-				if asReference {
-					value = MustConvertStoredContainerElement(context, atreeValue)
-				} else {
-					value = MustConvertStoredValue(context, atreeValue)
-				}
-				if value == nil {
-					return nil
-				}
-
-				if asReference {
-					value = getReferenceValue(
+				for {
+					common.UseComputation(
 						context,
-						value,
-						argumentType,
+						common.ComputationUsage{
+							Kind:      common.ComputationKindAtreeArrayReadIteration,
+							Intensity: 1,
+						},
 					)
+
+					atreeValue, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+
+					// Also handles the end of array case since iterator.Next() returns nil for that.
+					if atreeValue == nil {
+						return nil
+					}
+
+					// When asReference is true, the result array stores references
+					// to source elements; the reference wrappers must be canonical
+					// so that mutations (e.g. an access(all) mutating function)
+					// propagate consistently with sibling references taken elsewhere.
+					if asReference {
+						value = MustConvertStoredContainerElement(context, atreeValue)
+					} else {
+						value = MustConvertStoredValue(context, atreeValue)
+					}
+					if value == nil {
+						return nil
+					}
+
+					if asReference {
+						value = getReferenceValue(
+							context,
+							value,
+							argumentType,
+						)
+					}
+
+					procResult := invokeFunctionValue(
+						context,
+						procedure,
+						[]Value{value},
+						argumentTypes,
+						parameterTypes,
+						sema.BoolType,
+						nil,
+					)
+
+					shouldInclude, ok := procResult.(BoolValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					// We found the next entry of the filtered array.
+					if shouldInclude {
+						break
+					}
 				}
 
-				result := invokeFunctionValue(
+				return value.Transfer(
 					context,
-					procedure,
-					[]Value{value},
-					argumentTypes,
-					parameterTypes,
-					sema.BoolType,
+					atree.Address{},
+					false,
 					nil,
+					nil,
+					false, // value has a parent container because it is from iterator.
 				)
-
-				shouldInclude, ok := result.(BoolValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// We found the next entry of the filtered array.
-				if shouldInclude {
-					break
-				}
-			}
-
-			return value.Transfer(
-				context,
-				atree.Address{},
-				false,
-				nil,
-				nil,
-				false, // value has a parent container because it is from iterator.
-			)
-		},
-	)
+			},
+		)
+	})
+	return result
 }
 
 func (v *ArrayValue) Map(
@@ -2091,62 +2097,70 @@ func (v *ArrayValue) Map(
 		},
 	)
 
-	return NewArrayValueWithIterator(
-		context,
-		returnArrayStaticType,
-		common.ZeroAddress,
-		uint64(count),
-		func() Value {
+	// Block mutations to v through any sibling wrapper while the lazy
+	// iterator is being consumed by the user procedure. Without this,
+	// a callback can mutate a sibling wrapper into a slab split/promote
+	// and the iterator continues walking the orphaned root silently.
+	var result Value
+	context.WithContainerMutationPrevention(v.ValueID(), func() {
+		result = NewArrayValueWithIterator(
+			context,
+			returnArrayStaticType,
+			common.ZeroAddress,
+			uint64(count),
+			func() Value {
 
-			// Computation was already metered above
+				// Computation was already metered above
 
-			atreeValue, err := iterator.Next()
-			if err != nil {
-				panic(errors.NewExternalError(err))
-			}
+				atreeValue, err := iterator.Next()
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
 
-			if atreeValue == nil {
-				return nil
-			}
+				if atreeValue == nil {
+					return nil
+				}
 
-			// When asReference is true, the closure receives a reference to
-			// the source element; the reference target must be canonical so
-			// that mutations through it (e.g. an access(all) mutating function)
-			// propagate consistently with sibling references taken elsewhere.
-			var value Value
-			if asReference {
-				value = MustConvertStoredContainerElement(context, atreeValue)
-			} else {
-				value = MustConvertStoredValue(context, atreeValue)
-			}
-			if asReference {
-				value = getReferenceValue(
+				// When asReference is true, the closure receives a reference to
+				// the source element; the reference target must be canonical so
+				// that mutations through it (e.g. an access(all) mutating function)
+				// propagate consistently with sibling references taken elsewhere.
+				var value Value
+				if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
+				} else {
+					value = MustConvertStoredValue(context, atreeValue)
+				}
+				if asReference {
+					value = getReferenceValue(
+						context,
+						value,
+						argumentType,
+					)
+				}
+
+				mapped := invokeFunctionValue(
 					context,
-					value,
-					argumentType,
+					procedure,
+					[]Value{value},
+					argumentTypes,
+					parameterTypes,
+					returnType,
+					nil,
 				)
-			}
 
-			result := invokeFunctionValue(
-				context,
-				procedure,
-				[]Value{value},
-				argumentTypes,
-				parameterTypes,
-				returnType,
-				nil,
-			)
-
-			return result.Transfer(
-				context,
-				atree.Address{},
-				false,
-				nil,
-				nil,
-				false, // value has a parent container because it is from iterator.
-			)
-		},
-	)
+				return mapped.Transfer(
+					context,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+					false, // value has a parent container because it is from iterator.
+				)
+			},
+		)
+	})
+	return result
 }
 
 func (v *ArrayValue) ForEach(

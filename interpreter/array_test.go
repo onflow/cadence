@@ -181,35 +181,37 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 		return nil
 	}))
 
-	// liveValueID exposes the underlying atree array's current value ID so the
-	// Cadence code can confirm the slab split actually occurred.
-	liveValueIDFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-		"liveValueID",
+	// liveValueIDOf exposes the underlying atree array's current value ID so
+	// the Cadence code can confirm the slab split actually occurred.
+	//
+	// It takes the *name* of the reference variable rather than the reference
+	// itself: passing the stale ref directly would trip the staleness check on
+	// the call-site expression and shadow the real exploit-site error.
+	// Resolving the variable internally via GetValueOfVariable bypasses the
+	// per-expression check.
+	liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"liveValueIDOf",
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			[]sema.Parameter{
 				{
-					Label:      sema.ArgumentLabelNotRequired,
-					Identifier: "ref",
-					TypeAnnotation: sema.NewTypeAnnotation(
-						&sema.ReferenceType{
-							Type:          sema.AnyResourceType,
-							Authorization: sema.UnauthorizedAccess,
-						},
-					),
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "name",
+					TypeAnnotation: sema.StringTypeAnnotation,
 				},
 			},
 			sema.StringTypeAnnotation,
 		),
 		"",
 		func(
-			_ interpreter.NativeFunctionContext,
+			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
-			ref := args[0].(*interpreter.EphemeralReferenceValue)
+			name := args[0].(*interpreter.StringValue).Str
+			ref := context.GetValueOfVariable(name).(*interpreter.EphemeralReferenceValue)
 			arrayValue := ref.Value.(*interpreter.ArrayValue)
 			return interpreter.NewUnmeteredStringValue(arrayValue.ValueID().String())
 		},
@@ -217,12 +219,12 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
-	baseValueActivation.DeclareValue(liveValueIDFunction)
+	baseValueActivation.DeclareValue(liveValueIDOfFunction)
 	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
-	interpreter.Declare(baseActivation, liveValueIDFunction)
+	interpreter.Declare(baseActivation, liveValueIDOfFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
@@ -247,7 +249,7 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 
         // Both refs see the same live atree value ID.
         assert(
-            liveValueID(ref) == liveValueID(ref2),
+            liveValueIDOf("ref") == liveValueIDOf("ref2"),
             message: "before split: both refs should observe the same live atree value ID"
         )
 
@@ -261,7 +263,7 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
         // Both refs share the canonical wrapper, so the slab split through ref
         // is visible to ref2; their live value IDs continue to agree.
         assert(
-            liveValueID(ref) == liveValueID(ref2),
+            liveValueIDOf("ref") == liveValueIDOf("ref2"),
             message: "after split: refs must still observe the same live atree value ID"
         )
 
@@ -276,8 +278,10 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
         var extracted <- outer[0] <- empty
         destroy extracted
 
-        // immortalRef must be invalidated; touching it must panic with
-        // InvalidatedResourceReferenceError.
+        // The exploit aims for this access to succeed and return the length
+        // of the (now moved-out) old inner array — exposing the resources it
+        // held. If the runtime defends correctly, execution never reaches
+        // this line.
         log(immortalRef.length.toString())
 
         destroy outer
@@ -303,7 +307,8 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
 	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
-	assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	assert.Equal(t, 54, invalidatedResourceReferenceError.StartPosition().Line)
 }
 
 // TestInterpretArrayAliasedMutationConsistency verifies that mutations
@@ -581,8 +586,6 @@ func TestInterpretArraySliceDoesNotInvalidateAliases(t *testing.T) {
 	require.NoError(t, err)
 }
 
-
-
 // TestInterpretArrayAsReferenceContainerMethodAliasingConsistency covers
 // the asReference branch of Array.slice / .concat / .filter / .map /
 // .toVariableSized / .toConstantSized: each builds a result whose
@@ -614,11 +617,11 @@ func TestInterpretArrayAsReferenceContainerMethodAliasingConsistency(t *testing.
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 	cases := []struct {
-		name    string
-		setup   string
-		expr    string
-		alias   string
-		mutVia  string
+		name   string
+		setup  string
+		expr   string
+		alias  string
+		mutVia string
 	}{
 		{
 			name:   "slice",

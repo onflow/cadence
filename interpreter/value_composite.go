@@ -1794,7 +1794,7 @@ func (v *CompositeValue) forEachField(
 		// so it is safe to call on any path — wrappers from read-only iterators
 		// (`IterateReadOnlyLoadedValues`) are returned as-is rather than cached.
 		value := MustConvertStoredContainerElement(context, atreeValue)
-		CheckInvalidatedResourceOrResourceReference(value, context)
+		CheckInvalidatedValueOrValueReference(value, context)
 
 		resume = f(
 			string(key.(StringAtreeValue)),
@@ -2102,7 +2102,7 @@ func forEachAttachment(
 
 	for {
 		// Check that the implicit composite reference was not invalidated during iteration
-		CheckInvalidatedResourceOrResourceReference(compositeReference, context)
+		CheckInvalidatedValueOrValueReference(compositeReference, context)
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))

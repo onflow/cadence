@@ -111,7 +111,7 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 			return value, nil
 		},
 		set: func(_ Value) {
-			CheckInvalidatedResourceOrResourceReference(target, interpreter)
+			CheckInvalidatedValueOrValueReference(target, interpreter)
 			// writing to composites with indexing syntax is not supported
 			panic(errors.NewUnreachableError())
 		},
@@ -363,7 +363,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	target Value,
 ) {
 
-	CheckInvalidatedResourceOrResourceReference(target, interpreter)
+	CheckInvalidatedValueOrValueReference(target, interpreter)
 
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
@@ -448,7 +448,7 @@ func (interpreter *Interpreter) checkIndexedValue(
 	indexedType sema.Type,
 	indexedValue Value,
 ) {
-	CheckInvalidatedResourceOrResourceReference(indexedValue, interpreter)
+	CheckInvalidatedValueOrValueReference(indexedValue, interpreter)
 
 	CheckIndexedType(
 		interpreter,
@@ -489,7 +489,7 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	result := ast.AcceptExpression[Value](expression, interpreter)
 	interpreter.expression = previousExpression
 
-	CheckInvalidatedResourceOrResourceReference(
+	CheckInvalidatedValueOrValueReference(
 		result,
 		interpreter,
 	)
@@ -497,7 +497,11 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	return result
 }
 
-func CheckInvalidatedResourceOrResourceReference(
+// CheckInvalidatedValueOrValueReference checks whether a value is either:
+// - an invalidated resource
+// - a value pointing to a stale atree slab
+// - or a reference to any of the above
+func CheckInvalidatedValueOrValueReference(
 	value Value,
 	context ValueStaticTypeContext,
 ) {
@@ -521,7 +525,9 @@ func CheckInvalidatedResourceOrResourceReference(
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
-			CheckInvalidatedResourceOrResourceReference(
+			// The staleness check below is also transitively triggered for the
+			// referenced value through this recursion.
+			CheckInvalidatedValueOrValueReference(
 				value.Value,
 				context,
 			)
@@ -1576,7 +1582,7 @@ func CreateReferenceValue(
 
 		case ReferenceValue:
 			if isImplicit {
-				CheckInvalidatedResourceOrResourceReference(value, context)
+				CheckInvalidatedValueOrValueReference(value, context)
 
 				// During implicit reference creation (e.g: member/index access on a reference),
 				// if the value is already a reference, we need to create a new reference

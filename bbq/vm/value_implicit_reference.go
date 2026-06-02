@@ -69,7 +69,7 @@ func (v ImplicitReferenceValue) IsValue() {}
 func (v ImplicitReferenceValue) ReferencedValue(
 	context interpreter.ValueStaticTypeContext,
 ) interpreter.Value {
-	interpreter.CheckInvalidatedResourceOrResourceReference(v.selfRef, context)
+	interpreter.CheckInvalidatedValueOrValueReference(v.selfRef, context)
 	return v.value
 }
 

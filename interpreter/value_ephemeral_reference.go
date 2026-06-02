@@ -423,7 +423,7 @@ var _ ValueIterator = &ReferenceValueIterator{}
 func (i *ReferenceValueIterator) Next(context ValueIteratorContext) Value {
 	// Iterator implicitly captures the reference.
 	// Therefore, check whether the reference is valid, everytime the iterator is used.
-	CheckInvalidatedResourceOrResourceReference(i.reference, context)
+	CheckInvalidatedValueOrValueReference(i.reference, context)
 	return i.iterator.Next(context)
 }
 

@@ -11,14 +11,23 @@ jobs:
     steps:
     - name: Clone
       uses: actions/checkout@v6
+
+    - name: Setup private build environment
+      if: ${{ vars.PRIVATE_BUILDS_SUPPORTED == 'true' }}
+      uses: ./actions/private-setup
+      with:
+        atree_deploy_key: ${{ secrets.ATREE_DEPLOY_KEY }}
+
     - name: Setup Python
       uses: actions/setup-python@v6
       with:
         python-version: '3.12'
         cache: 'pip'
+
     - name: Install dependencies
       working-directory: compat
       run: pip3 install -r requirements.txt
+
     - name: Run
       working-directory: compat
       run: "python3 main.py"

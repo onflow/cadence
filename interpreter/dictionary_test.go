@@ -140,35 +140,34 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 		return nil
 	}))
 
-	// liveValueID exposes the underlying atree map's current value ID so the
-	// Cadence code can confirm the slab split actually occurred.
-	liveValueIDFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-		"liveValueID",
+	// liveValueIDOf exposes the underlying atree map's current value ID so the
+	// Cadence code can confirm the slab split actually occurred. It takes the
+	// *name* of the reference variable so that resolving the (potentially
+	// stale) reference happens inside Go via GetValueOfVariable, bypassing the
+	// per-expression staleness check that would otherwise fire at this call.
+	liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"liveValueIDOf",
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			[]sema.Parameter{
 				{
-					Label:      sema.ArgumentLabelNotRequired,
-					Identifier: "ref",
-					TypeAnnotation: sema.NewTypeAnnotation(
-						&sema.ReferenceType{
-							Type:          sema.AnyResourceType,
-							Authorization: sema.UnauthorizedAccess,
-						},
-					),
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "name",
+					TypeAnnotation: sema.StringTypeAnnotation,
 				},
 			},
 			sema.StringTypeAnnotation,
 		),
 		"",
 		func(
-			_ interpreter.NativeFunctionContext,
+			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
-			ref := args[0].(*interpreter.EphemeralReferenceValue)
+			name := args[0].(*interpreter.StringValue).Str
+			ref := context.GetValueOfVariable(name).(*interpreter.EphemeralReferenceValue)
 			dictValue := ref.Value.(*interpreter.DictionaryValue)
 			return interpreter.NewUnmeteredStringValue(dictValue.ValueID().String())
 		},
@@ -176,12 +175,12 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
-	baseValueActivation.DeclareValue(liveValueIDFunction)
+	baseValueActivation.DeclareValue(liveValueIDOfFunction)
 	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
-	interpreter.Declare(baseActivation, liveValueIDFunction)
+	interpreter.Declare(baseActivation, liveValueIDOfFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
@@ -206,7 +205,7 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 
         // Both refs see the same live atree value ID.
         assert(
-            liveValueID(ref) == liveValueID(ref2),
+            liveValueIDOf("ref") == liveValueIDOf("ref2"),
             message: "before split: both refs should observe the same live atree value ID"
         )
 
@@ -221,7 +220,7 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
         // Both refs share the canonical wrapper, so the slab split through ref
         // is visible to ref2; their live value IDs continue to agree.
         assert(
-            liveValueID(ref) == liveValueID(ref2),
+            liveValueIDOf("ref") == liveValueIDOf("ref2"),
             message: "after split: refs must still observe the same live atree value ID"
         )
 
@@ -230,14 +229,14 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
         // same value ID as the others.
         let immortalRef = (ref2 as auth(Mutate) &AnyResource) as! auth(Mutate) &{String: Vault}
 
-        // Replace the inner dictionary with an empty one. The move invalidates
-        // all tracked references to the old inner dictionary.
+        // Replace the inner dictionary with an empty one. The move would
+        // invalidate a properly-tracked immortalRef.
         var empty: @{String: Vault} <- {}
         var extracted <- outer["a"] <- empty
         destroy extracted
 
-        // immortalRef must be invalidated; touching it must panic with
-        // InvalidatedResourceReferenceError.
+        // The exploit aims for this access to succeed. If the runtime defends
+        // correctly, execution never reaches this line.
         log(immortalRef.length.toString())
 
         destroy outer

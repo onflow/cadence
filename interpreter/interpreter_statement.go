@@ -711,10 +711,10 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 		// Set right value to left target,
 		// and left value to right target
 
-		CheckInvalidatedResourceOrResourceReference(rightValue, interpreter)
+		CheckInvalidatedValueOrValueReference(rightValue, interpreter)
 		transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType)
 
-		CheckInvalidatedResourceOrResourceReference(leftValue, interpreter)
+		CheckInvalidatedValueOrValueReference(leftValue, interpreter)
 		transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType)
 
 		leftGetterSetter.set(transferredRightValue)

@@ -413,6 +413,15 @@ func TestInterpretSimpleCompositeTypeFunctionMember(t *testing.T) {
 	})
 }
 
+// TestInterpretCompositeValueIDTracking is the CompositeValue counterpart to
+// TestInterpretArrayValueIDTracking: it exercises the same Cadence-level
+// "immortal reference" exploit against a resource whose underlying atree map
+// has been split, and the exploit goes further by attempting to double-spend
+// the resource by withdrawing through both the original ref and the
+// "immortal" one. The runtime must reject the exploit; with the staleness
+// check in place, the rejection surfaces at the cast site as
+// InvalidatedContainerViewError. See TestInterpretArrayValueIDTracking for
+// the full rationale around the two defense layers.
 func TestInterpretCompositeValueIDTracking(t *testing.T) {
 	t.Parallel()
 
@@ -421,23 +430,21 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
 		return nil
 	}))
 
-	// liveValueID exposes the underlying atree map's current value ID for a
-	// composite resource, used by the Cadence code to assert that the slab
-	// split actually occurred.
-	liveValueIDFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-		"liveValueID",
+	// liveValueIDOf exposes the underlying atree map's current value ID for a
+	// composite resource so the Cadence code can confirm the slab split
+	// actually occurred. It takes the *name* of the reference variable so
+	// resolving the (potentially stale) reference happens inside Go via
+	// GetValueOfVariable, bypassing the per-expression staleness check that
+	// would otherwise fire at this call.
+	liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"liveValueIDOf",
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			[]sema.Parameter{
 				{
-					Label:      sema.ArgumentLabelNotRequired,
-					Identifier: "ref",
-					TypeAnnotation: sema.NewTypeAnnotation(
-						&sema.ReferenceType{
-							Type:          sema.AnyResourceType,
-							Authorization: sema.UnauthorizedAccess,
-						},
-					),
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "name",
+					TypeAnnotation: sema.StringTypeAnnotation,
 				},
 			},
 			sema.StringTypeAnnotation,
@@ -450,7 +457,8 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
-			ref := args[0].(*interpreter.EphemeralReferenceValue)
+			name := args[0].(*interpreter.StringValue).Str
+			ref := context.GetValueOfVariable(name).(*interpreter.EphemeralReferenceValue)
 			composite := ref.Value.(*interpreter.CompositeValue)
 			return interpreter.NewUnmeteredStringValue(composite.ValueID().String())
 		},
@@ -458,12 +466,12 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
-	baseValueActivation.DeclareValue(liveValueIDFunction)
+	baseValueActivation.DeclareValue(liveValueIDOfFunction)
 	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
-	interpreter.Declare(baseActivation, liveValueIDFunction)
+	interpreter.Declare(baseActivation, liveValueIDOfFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
@@ -565,7 +573,7 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
         // wrappers, so both refs hold the same CompositeValue and observe the
         // same underlying atree map.
         assert(
-            liveValueID(ref) == liveValueID(ref2),
+            liveValueIDOf("ref") == liveValueIDOf("ref2"),
             message: "before split: both refs should observe the same live atree value ID"
         )
 
@@ -581,7 +589,7 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
         // Both refs share the canonical wrapper, so the slab split through ref
         // is visible to ref2; their live value IDs continue to agree.
         assert(
-            liveValueID(ref) == liveValueID(ref2),
+            liveValueIDOf("ref") == liveValueIDOf("ref2"),
             message: "after split: refs must still observe the same live atree value ID"
         )
 
@@ -594,8 +602,9 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
         var extracted <- arr[0] <- empty
 
         stash.deposit(from: <- extracted)
-        // This second withdraw must panic with InvalidatedResourceReferenceError,
-        // because immortalRef was invalidated when the vault was moved above.
+        // The exploit's payoff: a second withdraw through immortalRef would
+        // double-spend the vault's balance. If the runtime defends correctly,
+        // execution never reaches this line.
         stash.deposit(from: <- immortalRef.withdraw(amount: immortalRef.balance))
 
         destroy arr

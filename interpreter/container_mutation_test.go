@@ -1266,36 +1266,71 @@ func TestInterpretForLoopFunctionElementTypeConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndPrepare(t, `
-        fun test(arr: [fun(): Void]) {
-            for f in arr {
-                f()
+	t.Run("variable-sized array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [fun(): Void]) {
+                for f in arr {
+                    f()
+                }
             }
-        }
-    `)
+        `)
 
-	// Sema sees [fun(): Void], but the array actually holds an IntValue.
-	confusedArray := interpreter.NewArrayValue(
-		inter,
-		&interpreter.VariableSizedStaticType{
-			Type: interpreter.PrimitiveStaticTypeInt,
-		},
-		common.ZeroAddress,
-		interpreter.NewUnmeteredIntValueFromInt64(42),
-	)
+		// Sema sees [fun(): Void], but the array actually holds an IntValue.
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+		)
 
-	_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
-	RequireError(t, err)
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
 
-	var indexedTypeError *interpreter.IndexedTypeError
-	require.ErrorAs(t, err, &indexedTypeError)
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("constant-sized array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [fun(): Void; 1]) {
+                for f in arr {
+                    f()
+                }
+            }
+        `)
+
+		// Sema sees [fun(): Void; 1], but the array actually holds an IntValue.
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+				Size: 1,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
 }
 
 func TestInterpretIndexExpressionFunctionElementTypeConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("array", func(t *testing.T) {
+	t.Run("variable-sized array", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1311,6 +1346,35 @@ func TestInterpretIndexExpressionFunctionElementTypeConfusion(t *testing.T) {
 			inter,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("constant-sized array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [fun(): Void; 1]) {
+                let f = arr[0]
+                f()
+            }
+        `)
+
+		// Sema sees [fun(): Void; 1], but the array actually holds an IntValue.
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+				Size: 1,
 			},
 			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(42),
@@ -1528,6 +1592,53 @@ func TestInterpretContainerFunctionElementTypeConfusion(t *testing.T) {
                 }
             `,
 		},
+
+		// Constant-sized array — read methods.
+		{
+			name:  "constant-sized array reverse",
+			shape: constantSizedArray,
+			code: `
+                fun test(arr: [String; 1]): [String; 1] {
+                    return arr.reverse()
+                }
+            `,
+		},
+		{
+			name:  "constant-sized array filter",
+			shape: constantSizedArray,
+			code: `
+                fun test(arr: [String; 1]): [String] {
+                    return arr.filter(view fun (_: String): Bool { return true })
+                }
+            `,
+		},
+		{
+			name:  "constant-sized array map",
+			shape: constantSizedArray,
+			code: `
+                fun test(arr: [String; 1]): [Int; 1] {
+                    return arr.map(view fun (_: String): Int { return 0 })
+                }
+            `,
+		},
+		{
+			name:  "constant-sized array firstIndex",
+			shape: constantSizedArray,
+			code: `
+                fun test(arr: [String; 1]): Int? {
+                    return arr.firstIndex(of: "hello")
+                }
+            `,
+		},
+		{
+			name:  "constant-sized array contains",
+			shape: constantSizedArray,
+			code: `
+                fun test(arr: [String; 1]): Bool {
+                    return arr.contains("hello")
+                }
+            `,
+		},
 		{
 			name:  "array toConstantSized",
 			shape: variableSizedArray,
@@ -1611,4 +1722,207 @@ func TestInterpretContainerFunctionElementTypeConfusion(t *testing.T) {
 			require.ErrorAs(t, err, &memberAccessTypeError)
 		})
 	}
+}
+
+// Element-type confusion is one axis of array shape mismatch. The other axes
+// — variable-vs-constant kind mismatch and constant-array size mismatch —
+// also must be caught by the defensive subtyping checks, since the runtime
+// value's static type would otherwise lie about the array's capacity and
+// shape.
+func TestInterpretConstantSizedArrayShapeConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("for-loop: variable-sized expected, constant-sized actual", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [String]) {
+                for s in arr { }
+            }
+        `)
+
+		// Sema sees [String], but the array is actually a constant-sized [String; 1].
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+				Size: 1,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("hello"),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("for-loop: constant-sized expected, variable-sized actual", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [String; 1]) {
+                for s in arr { }
+            }
+        `)
+
+		// Sema sees [String; 1], but the array is actually a variable-sized [String].
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("hello"),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("for-loop: constant-sized size mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [String; 2]) {
+                for s in arr { }
+            }
+        `)
+
+		// Sema sees [String; 2], but the array is actually a [String; 1].
+		// Even though the element type matches, the size differs, so iteration
+		// would loop fewer times than the declared shape implies.
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+				Size: 1,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("hello"),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("indexing: variable-sized expected, constant-sized actual", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [String]): String {
+                return arr[0]
+            }
+        `)
+
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+				Size: 1,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("hello"),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("indexing: constant-sized expected, variable-sized actual", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [String; 1]): String {
+                return arr[0]
+            }
+        `)
+
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("hello"),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("indexing: constant-sized size mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [String; 2]): String {
+                return arr[1]
+            }
+        `)
+
+		// Out-of-bounds at runtime if the smaller array escaped the check.
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+				Size: 1,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("hello"),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("member: constant-sized size mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: [String; 2]): [String; 2] {
+                return arr.reverse()
+            }
+        `)
+
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+				Size: 1,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("hello"),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var memberAccessTypeError *interpreter.MemberAccessTypeError
+		require.ErrorAs(t, err, &memberAccessTypeError)
+	})
 }
