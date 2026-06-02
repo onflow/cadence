@@ -413,7 +413,13 @@ func (v *DictionaryValue) IterateReadOnly(
 	iterate := func(fn atree.MapEntryIterationFunc) error {
 		return v.dictionary.IterateReadOnly(fn)
 	}
-	v.iterate(interpreter, iterate, f)
+	// v.dictionary.IterateReadOnly wires a read-only "trap" parentUpdater
+	// on each returned element rather than the real parent-notification callback.
+	// Canonicalizing such wrappers would shadow later proper-Get wrappers
+	// (which DO have a real parentUpdater),
+	// causing mutations through the canonical wrapper to trip the trap.
+	const canonicalizeElements = false
+	v.iterate(interpreter, iterate, f, canonicalizeElements)
 }
 
 func (v *DictionaryValue) Iterate(
@@ -429,7 +435,11 @@ func (v *DictionaryValue) Iterate(
 			fn,
 		)
 	}
-	v.iterate(context, iterate, f)
+	// v.dictionary.Iterate is the mutable iterator path:
+	// it wires setCallbackWithChild on each returned element,
+	// so canonicalizing is safe (the wrapper's *atree.Array has a real parentUpdater).
+	const canonicalizeElements = true
+	v.iterate(context, iterate, f, canonicalizeElements)
 }
 
 // IterateReadOnlyLoaded iterates over all LOADED key-value pairs of the array.
@@ -438,10 +448,17 @@ func (v *DictionaryValue) IterateReadOnlyLoaded(
 	context ContainerMutationContext,
 	f func(key, value Value) (resume bool),
 ) {
+	// v.dictionary.IterateReadOnlyLoadedValues does NOT wire any parentUpdater
+	// on the returned elements.
+	// Canonicalizing such wrappers would shadow later proper-Get wrappers.
+	// This iteration is internal-only (callbacks must not expose elements to user code),
+	// so skip canonicalization entirely.
+	const canonicalizeElements = false
 	v.iterate(
 		context,
 		v.dictionary.IterateReadOnlyLoadedValues,
 		f,
+		canonicalizeElements,
 	)
 }
 
@@ -449,6 +466,7 @@ func (v *DictionaryValue) iterate(
 	context ContainerMutationContext,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(key Value, value Value) (resume bool),
+	canonicalizeElements bool,
 ) {
 	iterate := func() {
 		err := atreeIterate(func(key, value atree.Value) (resume bool, err error) {
@@ -461,12 +479,19 @@ func (v *DictionaryValue) iterate(
 			)
 
 			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value. The pair is
-			// passed to `f` without transfer, so canonicalize both so
-			// aliased references see a shared wrapper.
+			// convert to high-level interpreter.Value.
+			// Canonicalize the wrappers only when the iterator wires real parent callbacks;
+			// otherwise the cache would be polluted with wrappers
+			// that have no parentUpdater (or worse, a read-only trap).
 
-			keyValue := MustConvertStoredContainerElement(context, key)
-			valueValue := MustConvertStoredContainerElement(context, value)
+			var keyValue, valueValue Value
+			if canonicalizeElements {
+				keyValue = MustConvertStoredContainerElement(context, key)
+				valueValue = MustConvertStoredContainerElement(context, value)
+			} else {
+				keyValue = MustConvertStoredValue(context, key)
+				valueValue = MustConvertStoredValue(context, value)
+			}
 
 			CheckInvalidatedResourceOrResourceReference(keyValue, context)
 			CheckInvalidatedResourceOrResourceReference(valueValue, context)

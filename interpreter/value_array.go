@@ -260,11 +260,18 @@ func (v *ArrayValue) Iterate(
 	f func(element Value) (resume bool),
 	transferElements bool,
 ) {
+	// v.array.Iterate is the mutable iterator path:
+	// it wires setCallbackWithChild on each returned element,
+	// so canonicalizing the resulting wrapper is safe
+	// (its *atree.Array has a real parentUpdater).
+	const canonicalizeElements = true
+
 	v.iterate(
 		context,
 		v.array.Iterate,
 		f,
 		transferElements,
+		canonicalizeElements,
 	)
 }
 
@@ -276,11 +283,20 @@ func (v *ArrayValue) IterateReadOnlyLoaded(
 ) {
 	const transferElements = false
 
+	// v.array.IterateReadOnlyLoadedValues does NOT wire setCallbackWithChild,
+	// so the *atree.Array wrappers it produces have no parentUpdater.
+	// Caching such wrappers as canonical would shadow later proper-Get
+	// wrappers (which DO have a parentUpdater) until the cache entry is replaced.
+	// This iteration is internal-only (callbacks must not expose elements
+	// to user code), so skip canonicalization entirely.
+	const canonicalizeElements = false
+
 	v.iterate(
 		context,
 		v.array.IterateReadOnlyLoadedValues,
 		f,
 		transferElements,
+		canonicalizeElements,
 	)
 }
 
@@ -289,6 +305,7 @@ func (v *ArrayValue) iterate(
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
 	transferElements bool,
+	canonicalizeElements bool,
 ) {
 	iterate := func() {
 		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
@@ -304,17 +321,17 @@ func (v *ArrayValue) iterate(
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value.
 			//
-			// When the element will be passed to `f` without transfer,
-			// canonicalize it: `f` may stash it or hand it back to user
-			// code, where it could be aliased by an `&...` reference. When
-			// the element will be Transfer'd below, leave it as a
-			// transient fresh wrapper - Transfer's `array`/`dictionary`
-			// nil-out would poison the cache otherwise.
+			// Canonicalize the element wrapper when the iterator path wires parent callbacks
+			// AND the element will not be Transfer'd below:
+			// `f` may stash it or hand it back to user code,
+			// where it could be aliased by an `&...` reference.
+			// When Transfer'd below, Transfer's `array`/`dictionary` nil-out
+			// would poison the cache, so leave the wrapper transient.
 			var elementValue Value
-			if transferElements {
-				elementValue = MustConvertStoredValue(context, element)
-			} else {
+			if !transferElements && canonicalizeElements {
 				elementValue = MustConvertStoredContainerElement(context, element)
+			} else {
+				elementValue = MustConvertStoredValue(context, element)
 			}
 			CheckInvalidatedResourceOrResourceReference(elementValue, context)
 

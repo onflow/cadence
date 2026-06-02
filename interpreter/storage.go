@@ -70,14 +70,17 @@ type AtreeContainerCache interface {
 }
 
 // canonicalizeContainerElement returns the canonical cached wrapper for a
-// container element, populating the cache on first sight or adopting the
-// freshly-loaded `*atree.Array`/`*atree.OrderedMap` into the existing
-// cached wrapper. atree's `Array.Get`/`OrderedMap.Get` sets up the
-// parent updater (via setCallbackWithChild) on the
-// `*atree.Array`/`*atree.OrderedMap` instance it just returned, not on
-// the one we may have previously cached, so the freshly-returned
-// instance is the one that will correctly notify the parent on
-// mutation.
+// container element,
+// populating the cache on first sight and returning the cached wrapper otherwise.
+//
+// Callers must only invoke this with `fresh` produced by an iterator/Get path
+// that wires a real parent-notification callback on the underlying
+// `*atree.Array`/`*atree.OrderedMap`.
+// Wrappers from read-only iterators
+// (`IterateReadOnly`, `IterateReadOnlyLoadedValues`)
+// would have no parentUpdater (or a trap callback),
+// and caching them would shadow later proper-Get wrappers.
+// See `MustConvertStoredContainerElement` for the path that ensures this invariant.
 func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value {
 	switch v := fresh.(type) {
 	case *ArrayValue:
@@ -86,7 +89,6 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 		}
 		if existing, ok := cache.CanonicalAtreeContainer(v.valueID).(*ArrayValue); ok {
 			if existing.array != nil && !existing.isDestroyed {
-				existing.array = v.array
 				return existing
 			}
 			cache.ClearCanonicalAtreeContainer(v.valueID)
@@ -99,7 +101,6 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 		}
 		if existing, ok := cache.CanonicalAtreeContainer(v.valueID).(*DictionaryValue); ok {
 			if existing.dictionary != nil && !existing.isDestroyed {
-				existing.dictionary = v.dictionary
 				return existing
 			}
 			cache.ClearCanonicalAtreeContainer(v.valueID)
@@ -112,7 +113,6 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 		}
 		if existing, ok := cache.CanonicalAtreeContainer(v.valueID).(*CompositeValue); ok {
 			if existing.dictionary != nil && !existing.isDestroyed {
-				existing.dictionary = v.dictionary
 				return existing
 			}
 			cache.ClearCanonicalAtreeContainer(v.valueID)
