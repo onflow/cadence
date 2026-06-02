@@ -27,16 +27,19 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-// TestInterpretStaleWrapperMutationRejected covers the case where two Go-level
-// wrappers (ArrayValue/DictionaryValue/CompositeValue) for the same atree
-// container are created (via repeated `&outer[i]` style access), one wrapper
-// triggers a slab split, and the sibling wrapper subsequently attempts a
-// mutation. Without the staleness check, the mutation writes into the demoted
-// (now-leaf) slab and leaves the canonical view of the container out of sync
-// with the live data, manifesting as an element that is invisible to
-// iteration but visible to consecutive removals — a clear violation of
-// resource semantics.
-func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
+// TestInterpretAliasedWrapperMutationPropagation covers the case where two
+// references (`&outer[i]` taken twice) project two `auth(Mutate) &T` handles
+// onto the same atree container.
+// Because of the canonical-wrapper cache (`SharedState.canonicalAtreeContainers`),
+// both handles resolve to the same Go-level wrapper —
+// even after a structural change like a slab split triggered through one of them.
+// A subsequent mutation through the second handle must therefore land on the
+// live tree and be observable through the first.
+//
+// The mid-iteration subtests (Map/Filter) cover a separate concern:
+// the canonical wrapper is shared, but mutating it while another method has
+// an active atree iterator must still raise `ContainerMutatedDuringIterationError`.
+func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
 	t.Parallel()
 
 	makeEnv := func(t *testing.T) (
@@ -142,15 +145,15 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		return runInvokeWithHandleCheckerError(t, code, nil)
 	}
 
-	t.Run("ArrayValue: append via stale wrapper after split", func(t *testing.T) {
+	t.Run("ArrayValue: append via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
-		// Two ArrayValue wrappers point to the same inner inlined-then-grown array.
+		// Two `auth(Mutate) &[Vault]` references project onto the same inner array.
 		// `ref` appends enough elements to trigger an atree slab split.
-		// `ref2`'s `*atree.Array` still points to the now-demoted old root data slab.
-		// The second mutation through `ref2` must be rejected with InvalidatedContainerViewError;
-		// otherwise an element ends up parked on the demoted slab,
-		// hidden from iteration but exposed via removeLast.
+		// Without the canonical wrapper cache, `ref2`'s wrapper would point at the
+		// now-demoted leaf slab and mutate the wrong slab.
+		// With the cache, both refs resolve to the same wrapper,
+		// so `ref2.append(...)` lands on the live tree and is observable through `ref`.
 		err := runInvoke(t, `
             access(all) resource Vault {
                 access(all) var balance: UFix64
@@ -179,18 +182,27 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     message: "after split: refs must still observe the same live atree value ID"
                 )
 
-                // This mutation goes through the stale wrapper and must be rejected.
+                // Append through ref2: both refs share the canonical wrapper, so
+                // the append lands on the live tree.
                 ref2.append(<- create Vault(balance: 123.456))
+
+                // Both refs observe the same length (1 initial + 200 + 1 = 202).
+                assert(ref.length == 202, message: "ref must observe ref2's append")
+                assert(ref2.length == 202, message: "ref2 must observe its own append")
+
+                // The last element appended via ref2 is visible through ref.
+                assert(
+                    ref[201].balance == 123.456,
+                    message: "ref must read back the value appended via ref2"
+                )
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		require.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("ArrayValue: insert via stale wrapper after split", func(t *testing.T) {
+	t.Run("ArrayValue: insert via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
 		err := runInvoke(t, `
@@ -223,15 +235,19 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 
                 ref2.insert(at: 0, <- create Vault(balance: 123.456))
 
+                assert(ref.length == 202, message: "ref must observe ref2's insert")
+                assert(
+                    ref[0].balance == 123.456,
+                    message: "ref must read back the value inserted via ref2"
+                )
+
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		require.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 29, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("ArrayValue: remove via stale wrapper after split", func(t *testing.T) {
+	t.Run("ArrayValue: remove via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
 		err := runInvoke(t, `
@@ -262,18 +278,22 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     message: "after split: refs must still observe the same live atree value ID"
                 )
 
+                // The element at index 0 has balance 0.0 (the original initial element).
+                // After removal, ref must observe length 200 and the new index 0 must
+                // be the first appended element (balance 0.0 from UFix64(0)).
                 let extra <- ref2.remove(at: 0)
+                assert(extra.balance == 0.0, message: "expected to remove the original initial element")
                 destroy extra
+
+                assert(ref.length == 200, message: "ref must observe ref2's remove")
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		require.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 29, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("DictionaryValue: insert via stale wrapper after split", func(t *testing.T) {
+	t.Run("DictionaryValue: insert via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
 		err := runInvoke(t, `
@@ -307,23 +327,30 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 )
 
                 let old2 <- ref2.insert(key: 9999, <- create Vault(balance: 123.456))
+                assert(old2 == nil, message: "key 9999 should not have collided")
                 destroy old2
+
+                // ref observes ref2's insert: 1 (key 0) + 299 (keys 1..299) + 1 (key 9999) = 301.
+                assert(ref.length == 301, message: "ref must observe ref2's insert")
+                assert(
+                    ref.containsKey(9999),
+                    message: "ref must see the new key inserted via ref2"
+                )
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		require.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 31, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("CompositeValue: field assignment via stale wrapper after split", func(t *testing.T) {
+	t.Run("CompositeValue: field assignment via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
-		// Two CompositeValue wrappers point to the same Vault resource (via two
+		// Two CompositeValue wrappers project onto the same R resource (via two
 		// `&arr[0]` references). `ref` inflates attachments enough to split the
-		// resource's underlying atree map; `ref2` is now a stale view. The
-		// subsequent field assignment through `ref2` must be rejected.
+		// resource's underlying atree map. With the canonical wrapper cache,
+		// `ref2` resolves to the same wrapper as `ref`, so a field assignment
+		// through `ref2` must succeed and be observable through `ref`.
 		err := runInvoke(t, `
             access(all) entitlement Mod
             access(all) resource R {
@@ -417,18 +444,21 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     message: "after split: refs must still observe the same live atree value ID"
                 )
 
-                // Field assignment through stale wrapper must be rejected.
+                // Field assignment through ref2 must land on the live wrapper
+                // and be observable through ref.
                 ref2.setBalance(123.456)
+                assert(
+                    ref.balance == 123.456,
+                    message: "ref must observe the balance set via ref2"
+                )
 
                 destroy arr
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		require.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 95, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("DictionaryValue: remove via stale wrapper after split", func(t *testing.T) {
+	t.Run("DictionaryValue: remove via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
 		err := runInvoke(t, `
@@ -461,37 +491,37 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 )
 
                 let removed <- ref2.remove(key: 0)
+                assert(removed != nil, message: "key 0 should have been present")
                 destroy removed
+
+                // ref observes ref2's remove: 1 (key 0) + 299 (keys 1..299) - 1 = 299.
+                assert(ref.length == 299, message: "ref must observe ref2's remove")
+                assert(
+                    !ref.containsKey(0),
+                    message: "ref must no longer see the removed key"
+                )
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		require.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
 	t.Run("ArrayValue: map procedure mutates sibling wrapper into split mid-iteration", func(t *testing.T) {
 		t.Parallel()
 
-		// ArrayValue.Map (and similarly Filter / Reverse / Slice / Concat / ToVariableSized)
-		// creates an atree iterator once via v.array.Iterator() and walks it across many
-		// user-callback invocations.
-		// Between callback invocations there is:
-		//   - no WithContainerMutationPrevention(v.ValueID()) (unlike Iterate);
-		//   - no CheckInvalidatedValueOrValueReference(v, ...) between iterator.Next() calls.
+		// ArrayValue.Map creates an atree iterator once via v.array.Iterator()
+		// and walks it across many user-callback invocations. If the user
+		// procedure mutates the same container through a sibling reference
+		// (which, with the canonical wrapper cache, is the same wrapper as v),
+		// the iterator may yield duplicate or stale elements.
 		//
-		// If the user procedure mutates a sibling wrapper of v, the sibling
-		// mutation triggers a slab split. The active atree iterator continues
-		// walking the now-demoted slab, potentially yielding duplicate elements,
-		// skipping elements, or yielding stale state — all silently.
-		//
-		// Safe contract: as soon as v becomes stale, the next iterator.Next()
-		// (or a per-iteration staleness check) must raise InvalidatedContainerViewError.
+		// Map wraps the iteration in WithContainerMutationPrevention(v.ValueID()),
+		// so the mutation through the sibling reference must raise
+		// ContainerMutatedDuringIterationError on the very first callback.
 		//
 		// Non-resource Int elements are used because Cadence forbids
-		// `map` on resource arrays even when accessed via reference. The
-		// iterator-corruption gap is independent of resource-ness.
+		// `map` on resource arrays even when accessed via reference.
 		err := runInvoke(t, `
             access(all) fun main() {
                 // Two ArrayValue wrappers for the same inner Int array.

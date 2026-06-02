@@ -497,10 +497,8 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	return result
 }
 
-// CheckInvalidatedValueOrValueReference checks whether a value is either:
-// - an invalidated resource
-// - a value pointing to a stale atree slab
-// - or a reference to any of the above
+// CheckInvalidatedValueOrValueReference checks whether a value is either an
+// invalidated resource or a reference to one.
 func CheckInvalidatedValueOrValueReference(
 	value Value,
 	context ValueStaticTypeContext,
@@ -525,8 +523,6 @@ func CheckInvalidatedValueOrValueReference(
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
-			// The staleness check below is also transitively triggered for the
-			// referenced value through this recursion.
 			CheckInvalidatedValueOrValueReference(
 				value.Value,
 				context,

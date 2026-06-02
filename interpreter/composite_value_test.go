@@ -418,10 +418,9 @@ func TestInterpretSimpleCompositeTypeFunctionMember(t *testing.T) {
 // "immortal reference" exploit against a resource whose underlying atree map
 // has been split, and the exploit goes further by attempting to double-spend
 // the resource by withdrawing through both the original ref and the
-// "immortal" one. The runtime must reject the exploit; with the staleness
-// check in place, the rejection surfaces at the cast site as
-// InvalidatedContainerViewError. See TestInterpretArrayValueIDTracking for
-// the full rationale around the two defense layers.
+// "immortal" one. The runtime must reject the exploit;
+// reference invalidation tracking surfaces it as `InvalidatedResourceReferenceError`
+// at the second use of `immortalRef`.
 func TestInterpretCompositeValueIDTracking(t *testing.T) {
 	t.Parallel()
 
