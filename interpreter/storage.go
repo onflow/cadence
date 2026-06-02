@@ -119,22 +119,6 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 		}
 		cache.SetCanonicalAtreeContainer(v.valueID, v)
 		return v
-	case *SomeValue:
-		// An optional wrapping a container must canonicalize its inner so
-		// that aliased references see a shared wrapper. SomeStorable.
-		// StoredValue produces a fresh SomeValue per load whose inner is
-		// built via the non-canonicalizing StoredValue path (it has no
-		// access to the current context's cache); re-canonicalize the
-		// inner here so the SomeValue we return contains the canonical
-		// wrapper. The recursion also handles nested optionals (T??, ...).
-		if v.value == nil {
-			return fresh
-		}
-		canonicalized := canonicalizeContainerElement(cache, v.value)
-		if canonicalized != v.value {
-			v.value = canonicalized
-		}
-		return v
 	}
 	return fresh
 }
