@@ -63,4 +63,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/onflow/atree => github.com/onflow/atree-internal v0.15.1-0.20260601223522-8f68792aa774
+replace github.com/onflow/atree => github.com/onflow/atree-internal v0.15.1-0.20260602023016-52144d6abebd

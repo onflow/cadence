@@ -174,22 +174,23 @@ func DictionaryEntries[K, V any](
 }
 
 type testValueCreationContext struct {
-	storage interpreter.Storage
 	common_utils.Invokable
 }
 
 var _ interpreter.MemberAccessibleContext = &testValueCreationContext{}
 var _ interpreter.ValueCreationContext = &testValueCreationContext{}
 
+// NewTestValueCreationContext returns a value-creation context that
+// shares storage with the given invokable.
+// Sharing storage matters when test-constructed values
+// are later compared to values produced by the Cadence program:
+// atree's shared-state design assumes a single storage,
+// so SlabIDs are unique within it.
+// Mixing values across multiple storages risks SlabID collisions
+// (each storage has its own monotonic SlabID counter starting from zero)
+// that surface as cross-value aliasing.
 func NewTestValueCreationContext(invokable common_utils.Invokable) *testValueCreationContext {
 	return &testValueCreationContext{
-		// Have a separate storage for creating values inside the test Go-code.
-		// Then it'll not interfere with cadence program's storage.
-		storage:   NewUnmeteredInMemoryStorage(),
 		Invokable: invokable,
 	}
-}
-
-func (c *testValueCreationContext) Storage() interpreter.Storage {
-	return c.storage
 }
