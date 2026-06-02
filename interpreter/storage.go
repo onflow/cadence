@@ -87,37 +87,40 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 		if v.array == nil || v.isDestroyed {
 			return fresh
 		}
-		if existing, ok := cache.CanonicalAtreeContainer(v.valueID).(*ArrayValue); ok {
+		valueID := v.array.ValueID()
+		if existing, ok := cache.CanonicalAtreeContainer(valueID).(*ArrayValue); ok {
 			if existing.array != nil && !existing.isDestroyed {
 				return existing
 			}
-			cache.ClearCanonicalAtreeContainer(v.valueID)
+			cache.ClearCanonicalAtreeContainer(valueID)
 		}
-		cache.SetCanonicalAtreeContainer(v.valueID, v)
+		cache.SetCanonicalAtreeContainer(valueID, v)
 		return v
 	case *DictionaryValue:
 		if v.dictionary == nil || v.isDestroyed {
 			return fresh
 		}
-		if existing, ok := cache.CanonicalAtreeContainer(v.valueID).(*DictionaryValue); ok {
+		valueID := v.dictionary.ValueID()
+		if existing, ok := cache.CanonicalAtreeContainer(valueID).(*DictionaryValue); ok {
 			if existing.dictionary != nil && !existing.isDestroyed {
 				return existing
 			}
-			cache.ClearCanonicalAtreeContainer(v.valueID)
+			cache.ClearCanonicalAtreeContainer(valueID)
 		}
-		cache.SetCanonicalAtreeContainer(v.valueID, v)
+		cache.SetCanonicalAtreeContainer(valueID, v)
 		return v
 	case *CompositeValue:
 		if v.dictionary == nil || v.isDestroyed {
 			return fresh
 		}
-		if existing, ok := cache.CanonicalAtreeContainer(v.valueID).(*CompositeValue); ok {
+		valueID := v.dictionary.ValueID()
+		if existing, ok := cache.CanonicalAtreeContainer(valueID).(*CompositeValue); ok {
 			if existing.dictionary != nil && !existing.isDestroyed {
 				return existing
 			}
-			cache.ClearCanonicalAtreeContainer(v.valueID)
+			cache.ClearCanonicalAtreeContainer(valueID)
 		}
-		cache.SetCanonicalAtreeContainer(v.valueID, v)
+		cache.SetCanonicalAtreeContainer(valueID, v)
 		return v
 	}
 	return fresh

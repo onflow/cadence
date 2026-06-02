@@ -212,7 +212,7 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 		) interpreter.Value {
 			ref := args[0].(*interpreter.EphemeralReferenceValue)
 			arrayValue := ref.Value.(*interpreter.ArrayValue)
-			return interpreter.NewUnmeteredStringValue(arrayValue.LiveValueID().String())
+			return interpreter.NewUnmeteredStringValue(arrayValue.ValueID().String())
 		},
 	)
 
