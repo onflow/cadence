@@ -626,13 +626,15 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// After an atree slab split, a stale view of the resource's dictionary can
-	// produce a different live ValueID than the original. Without the cached
-	// valueID on CompositeValue, an EphemeralReferenceValue created from such
-	// a stale view would register under a different ID, bypassing invalidation
-	// when the resource is moved, and allow the balance to be withdrawn twice.
-	// The cached valueID ensures the stale reference is invalidated alongside
-	// the others, so the second withdraw must fail.
+	// Multiple CompositeValue references to the same resource (e.g. via
+	// repeated `&` accesses) must share a canonical wrapper, so when the
+	// resource is moved/destroyed, all references see it as invalidated.
+	// Without canonicalization, an EphemeralReferenceValue created from a
+	// separate wrapper would survive invalidation through the canonical one,
+	// allowing the balance to be withdrawn twice.
+	// atree's shared per-container state keeps siblings structurally consistent;
+	// the canonical wrapper cache ensures they also share Cadence-level state
+	// like `isDestroyed`.
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
 	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError

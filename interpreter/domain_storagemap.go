@@ -187,7 +187,12 @@ func (s *DomainStorageMap) ReadValue(gauge common.Gauge, key StorageMapKey) Valu
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(gauge, storedValue)
+	// s.orderedMap.Get wires a real parent updater on the returned value.
+	// The wrapper is exposed to user code
+	// (e.g. as the target of `account.storage.borrow<&T>`),
+	// so two reads of the same path must yield the same canonical wrapper
+	// for reference identity and per-wrapper state alignment.
+	return MustConvertStoredContainerElement(gauge, storedValue)
 }
 
 // WriteValue sets or removes a value in the storage map.

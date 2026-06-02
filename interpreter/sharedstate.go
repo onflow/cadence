@@ -47,25 +47,31 @@ type SharedState struct {
 	destroyedResources                          map[atree.ValueID]struct{}
 	// canonicalAtreeContainers deduplicates the Cadence-level wrappers
 	// (ArrayValue, DictionaryValue, CompositeValue) created for atree
-	// containers, keyed by their atree value ID. The first wrapper created
-	// for a given value ID via `ConvertStoredValue` becomes canonical;
-	// subsequent retrievals reuse the same wrapper instance. The wrapper's
-	// `array`/`dictionary` field is updated on each retrieval to the
-	// `*atree.Array`/`*atree.OrderedMap` instance that atree just handed
-	// out (and on which it set up the parent updater), so operations
-	// through the canonical wrapper notify the parent correctly.
+	// containers, keyed by their atree value ID.
+	// The first wrapper created for a given value ID
+	// via a canonicalizing path (see `MustConvertStoredContainerElement`)
+	// becomes canonical;
+	// subsequent retrievals reuse the same wrapper instance.
 	//
-	// Without this, atree.Array.Get / OrderedMap.Get returns a fresh
-	// `*atree.Array`/`*atree.OrderedMap` per call - two `&outer[0]`
-	// evaluations would hold separate wrappers around separate atree
-	// instances over the same slab. An atree slab split through one
-	// wrapper reassigns root pointers on that instance only; the others go
-	// stale and mutations through them silently corrupt the container.
+	// Cadence relies on this in two ways:
 	//
-	// Entries are removed when a wrapper is invalidated by Destroy or
-	// Transfer (its `array`/`dictionary` is nilled). Subsequent retrievals
-	// for the same value ID create a fresh wrapper, leaving the held
-	// reference to the invalidated wrapper unaffected.
+	//   - Reference identity for `EphemeralReferenceValue`:
+	//     two `&outer[0]` accesses must yield references to the same Go-level wrapper
+	//     so that mutations through one are visible to the other.
+	//
+	//   - Per-wrapper Cadence-level state alignment:
+	//     fields like `isDestroyed` live on the wrapper, not on atree's shared state.
+	//     If multiple wrappers existed for one logical container,
+	//     marking one destroyed would leave the others usable.
+	//
+	// Structural consistency between sibling `*atree.Array`/`*atree.OrderedMap` instances
+	// is handled by atree's per-container shared state (the registry on `SlabStorage`),
+	// not by this cache.
+	//
+	// Entries are removed when a wrapper is invalidated by Destroy or Transfer
+	// (its `array`/`dictionary` is nilled).
+	// Subsequent retrievals for the same value ID create a fresh wrapper,
+	// leaving the held reference to the invalidated wrapper unaffected.
 	canonicalAtreeContainers map[atree.ValueID]Value
 }
 

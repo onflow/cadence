@@ -126,14 +126,12 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 }
 
 // TestInterpretDictionaryValueIDTracking is the DictionaryValue counterpart to
-// TestInterpretCompositeValueIDTracking. It exercises the same atree slab-split
-// stale-view scenario, where two DictionaryValue instances wrap the same
-// underlying atree map (created by accessing the same outer dictionary key
-// twice) and a split through one instance leaves the other with a different
-// live value ID. Without the cached valueID on DictionaryValue, an
-// EphemeralReferenceValue created from the stale view would register under
-// that different ID, bypass invalidation when the inner dictionary is moved,
-// and survive as a dangling ref.
+// TestInterpretCompositeValueIDTracking.
+// Two references to the same logical inner dictionary (created by accessing
+// the same outer dictionary key twice) must share a canonical wrapper, so when
+// the inner dictionary is moved/invalidated, all references see it as invalidated.
+// Without canonicalization, an EphemeralReferenceValue created from a separate
+// wrapper would survive invalidation through the canonical one and dangle.
 func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 	t.Parallel()
 

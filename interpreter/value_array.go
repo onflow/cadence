@@ -253,18 +253,11 @@ func (v *ArrayValue) Iterate(
 	f func(element Value) (resume bool),
 	transferElements bool,
 ) {
-	// v.array.Iterate is the mutable iterator path:
-	// it wires setCallbackWithChild on each returned element,
-	// so canonicalizing the resulting wrapper is safe
-	// (its *atree.Array has a real parentUpdater).
-	const canonicalizeElements = true
-
 	v.iterate(
 		context,
 		v.array.Iterate,
 		f,
 		transferElements,
-		canonicalizeElements,
 	)
 }
 
@@ -276,20 +269,11 @@ func (v *ArrayValue) IterateReadOnlyLoaded(
 ) {
 	const transferElements = false
 
-	// v.array.IterateReadOnlyLoadedValues does NOT wire setCallbackWithChild,
-	// so the *atree.Array wrappers it produces have no parentUpdater.
-	// Caching such wrappers as canonical would shadow later proper-Get
-	// wrappers (which DO have a parentUpdater) until the cache entry is replaced.
-	// This iteration is internal-only (callbacks must not expose elements
-	// to user code), so skip canonicalization entirely.
-	const canonicalizeElements = false
-
 	v.iterate(
 		context,
 		v.array.IterateReadOnlyLoadedValues,
 		f,
 		transferElements,
-		canonicalizeElements,
 	)
 }
 
@@ -298,7 +282,6 @@ func (v *ArrayValue) iterate(
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
 	transferElements bool,
-	canonicalizeElements bool,
 ) {
 	iterate := func() {
 		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
@@ -314,17 +297,23 @@ func (v *ArrayValue) iterate(
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value.
 			//
-			// Canonicalize the element wrapper when the iterator path wires parent callbacks
-			// AND the element will not be Transfer'd below:
-			// `f` may stash it or hand it back to user code,
-			// where it could be aliased by an `&...` reference.
-			// When Transfer'd below, Transfer's `array`/`dictionary` nil-out
-			// would poison the cache, so leave the wrapper transient.
+			// When the element will not be Transfer'd,
+			// route through MustConvertStoredContainerElement:
+			// `f` may hand the element to user code, where it could be aliased by an `&...` reference,
+			// so we want to canonicalize when safe.
+			// canonicalizeContainerElement self-filters by inspecting the wrapper's parent-callback state,
+			// so it is safe to call regardless of which atree iterator (`Iterate` vs
+			// `IterateReadOnlyLoadedValues`) produced the element.
+			//
+			// For Transfer'd elements, the wrapper is transient
+			// (Transfer's `array`/`dictionary` nil-out would otherwise leave a stale cache entry
+			// that gets cleaned up lazily on next access),
+			// so skip the cache lookup entirely.
 			var elementValue Value
-			if !transferElements && canonicalizeElements {
-				elementValue = MustConvertStoredContainerElement(context, element)
-			} else {
+			if transferElements {
 				elementValue = MustConvertStoredValue(context, element)
+			} else {
+				elementValue = MustConvertStoredContainerElement(context, element)
 			}
 			CheckInvalidatedResourceOrResourceReference(elementValue, context)
 
@@ -471,14 +460,31 @@ func (v *ArrayValue) Concat(
 	resultElementSemaType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, resultElementSemaType, false)
 	resultElementStaticType := ConvertSemaToStaticType(context, resultElementSemaType)
 
-	// Use ReadOnlyIterator here because new ArrayValue is created with elements copied (not removed) from original value.
-	firstIterator, err := v.array.ReadOnlyIterator()
+	// In the asReference branch each yielded element is wrapped in an
+	// EphemeralReferenceValue that lands in the result array.
+	// Subsequent mutations through such a reference
+	// (e.g. calling an `access(all)` mutating function on a struct element)
+	// must propagate to the original container,
+	// so the iterator must wire a real parent-notification callback —
+	// a read-only iterator's trap callback would panic on mutation.
+	// In the non-asReference branch the element is `Transfer`'d, decoupled from the original,
+	// so a read-only iterator suffices.
+	var firstIterator, secondIterator atree.ArrayIterator
+	var err error
+	if asReference {
+		firstIterator, err = v.array.Iterator()
+	} else {
+		firstIterator, err = v.array.ReadOnlyIterator()
+	}
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	// Use ReadOnlyIterator here because new ArrayValue is created with elements copied (not removed) from original value.
-	secondIterator, err := other.array.ReadOnlyIterator()
+	if asReference {
+		secondIterator, err = other.array.Iterator()
+	} else {
+		secondIterator, err = other.array.ReadOnlyIterator()
+	}
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -512,6 +518,8 @@ func (v *ArrayValue) Concat(
 
 				if atreeValue == nil {
 					first = false
+				} else if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
 				} else {
 					value = MustConvertStoredValue(context, atreeValue)
 				}
@@ -526,7 +534,11 @@ func (v *ArrayValue) Concat(
 				}
 
 				if atreeValue != nil {
-					value = MustConvertStoredValue(context, atreeValue)
+					if asReference {
+						value = MustConvertStoredContainerElement(context, atreeValue)
+					} else {
+						value = MustConvertStoredValue(context, atreeValue)
+					}
 
 					checkContainerMutation(context, otherElementType, value)
 				}
@@ -1777,8 +1789,19 @@ func (v *ArrayValue) Slice(
 	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
 
-	// Use ReadOnlyRangeIterator here because new ArrayValue is created from elements copied (not removed) from original ArrayValue.
-	iterator, err := v.array.ReadOnlyRangeIterator(uint64(fromIndex), uint64(toIndex))
+	// In the asReference branch each yielded element is wrapped in an
+	// EphemeralReferenceValue that lands in the result array.
+	// Subsequent mutations through such a reference
+	// must propagate to the original container,
+	// so the iterator must wire a real parent-notification callback.
+	// In the non-asReference branch the element is `Transfer`'d, decoupled from the original.
+	var iterator atree.ArrayIterator
+	var err error
+	if asReference {
+		iterator, err = v.array.RangeIterator(uint64(fromIndex), uint64(toIndex))
+	} else {
+		iterator, err = v.array.ReadOnlyRangeIterator(uint64(fromIndex), uint64(toIndex))
+	}
 	if err != nil {
 
 		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
@@ -1827,7 +1850,11 @@ func (v *ArrayValue) Slice(
 
 			var value Value
 			if atreeValue != nil {
-				value = MustConvertStoredValue(context, atreeValue)
+				if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
+				} else {
+					value = MustConvertStoredValue(context, atreeValue)
+				}
 			}
 
 			if value == nil {
@@ -1959,7 +1986,15 @@ func (v *ArrayValue) Filter(
 					return nil
 				}
 
-				value = MustConvertStoredValue(context, atreeValue)
+				// When asReference is true, the result array stores references
+				// to source elements; the reference wrappers must be canonical
+				// so that mutations (e.g. an access(all) mutating function)
+				// propagate consistently with sibling references taken elsewhere.
+				if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
+				} else {
+					value = MustConvertStoredValue(context, atreeValue)
+				}
 				if value == nil {
 					return nil
 				}
@@ -2074,7 +2109,16 @@ func (v *ArrayValue) Map(
 				return nil
 			}
 
-			value := MustConvertStoredValue(context, atreeValue)
+			// When asReference is true, the closure receives a reference to
+			// the source element; the reference target must be canonical so
+			// that mutations through it (e.g. an access(all) mutating function)
+			// propagate consistently with sibling references taken elsewhere.
+			var value Value
+			if asReference {
+				value = MustConvertStoredContainerElement(context, atreeValue)
+			} else {
+				value = MustConvertStoredValue(context, atreeValue)
+			}
 			if asReference {
 				value = getReferenceValue(
 					context,
@@ -2135,8 +2179,19 @@ func (v *ArrayValue) ToVariableSized(
 
 	// Convert the array to a variable-sized array.
 
-	// Use ReadOnlyIterator here because ArrayValue elements are copied (not removed) from original ArrayValue.
-	iterator, err := v.array.ReadOnlyIterator()
+	// In the asReference branch each yielded element is wrapped in an
+	// EphemeralReferenceValue that lands in the result array.
+	// Subsequent mutations through such a reference must propagate to the original container,
+	// so the iterator must wire a real parent-notification callback.
+	// In the non-asReference branch the element is `Transfer`'d, decoupled from the original,
+	// so a read-only iterator suffices.
+	var iterator atree.ArrayIterator
+	var err error
+	if asReference {
+		iterator, err = v.array.Iterator()
+	} else {
+		iterator, err = v.array.ReadOnlyIterator()
+	}
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -2167,7 +2222,12 @@ func (v *ArrayValue) ToVariableSized(
 				return nil
 			}
 
-			value := MustConvertStoredValue(context, atreeValue)
+			var value Value
+			if asReference {
+				value = MustConvertStoredContainerElement(context, atreeValue)
+			} else {
+				value = MustConvertStoredValue(context, atreeValue)
+			}
 
 			if asReference {
 				value = getReferenceValue(context, value, elementType)
@@ -2218,8 +2278,19 @@ func (v *ArrayValue) ToConstantSized(
 
 	// Convert the array to a constant-sized array.
 
-	// Use ReadOnlyIterator here because ArrayValue elements are copied (not removed) from original ArrayValue.
-	iterator, err := v.array.ReadOnlyIterator()
+	// In the asReference branch each yielded element is wrapped in an
+	// EphemeralReferenceValue that lands in the result array.
+	// Subsequent mutations through such a reference must propagate to the original container,
+	// so the iterator must wire a real parent-notification callback.
+	// In the non-asReference branch the element is `Transfer`'d, decoupled from the original,
+	// so a read-only iterator suffices.
+	var iterator atree.ArrayIterator
+	var err error
+	if asReference {
+		iterator, err = v.array.Iterator()
+	} else {
+		iterator, err = v.array.ReadOnlyIterator()
+	}
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -2250,7 +2321,12 @@ func (v *ArrayValue) ToConstantSized(
 				return nil
 			}
 
-			value := MustConvertStoredValue(context, atreeValue)
+			var value Value
+			if asReference {
+				value = MustConvertStoredContainerElement(context, atreeValue)
+			} else {
+				value = MustConvertStoredValue(context, atreeValue)
+			}
 
 			if asReference {
 				value = getReferenceValue(context, value, elementType)

@@ -1762,15 +1762,10 @@ func (v *CompositeValue) ForEachField(
 			fn,
 		)
 	}
-	// v.dictionary.Iterate is the mutable iterator path:
-	// it wires setCallbackWithChild on each returned value,
-	// so canonicalizing is safe (the wrapper's *atree.Array has a real parentUpdater).
-	const canonicalizeFieldValues = true
 	v.forEachField(
 		context,
 		iterate,
 		f,
-		canonicalizeFieldValues,
 	)
 }
 
@@ -1781,17 +1776,10 @@ func (v *CompositeValue) ForEachReadOnlyLoadedField(
 	context ContainerMutationContext,
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
-	// v.dictionary.IterateReadOnlyLoadedValues does NOT wire any parentUpdater
-	// on the returned field values.
-	// Canonicalizing such wrappers would shadow later proper-Get wrappers.
-	// This iteration is internal-only (callbacks must not expose field values to user code),
-	// so skip canonicalization entirely.
-	const canonicalizeFieldValues = false
 	v.forEachField(
 		context,
 		v.dictionary.IterateReadOnlyLoadedValues,
 		f,
-		canonicalizeFieldValues,
 	)
 }
 
@@ -1799,19 +1787,13 @@ func (v *CompositeValue) forEachField(
 	context ContainerMutationContext,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(fieldName string, fieldValue Value) (resume bool),
-	canonicalizeFieldValues bool,
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
 		// The field value is handed to `f` without transfer.
-		// Canonicalize only when the iterator wires real parent callbacks;
-		// otherwise the cache would be polluted with wrappers
-		// that have no parentUpdater.
-		var value Value
-		if canonicalizeFieldValues {
-			value = MustConvertStoredContainerElement(context, atreeValue)
-		} else {
-			value = MustConvertStoredValue(context, atreeValue)
-		}
+		// canonicalizeContainerElement self-filters based on the wrapper's parent-callback state,
+		// so it is safe to call on any path — wrappers from read-only iterators
+		// (`IterateReadOnlyLoadedValues`) are returned as-is rather than cached.
+		value := MustConvertStoredContainerElement(context, atreeValue)
 		CheckInvalidatedResourceOrResourceReference(value, context)
 
 		resume = f(

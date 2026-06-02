@@ -167,13 +167,12 @@ func TestCheckArrayReferenceTypeInferenceWithDowncasting(t *testing.T) {
 }
 
 // TestInterpretArrayValueIDTracking is the ArrayValue counterpart to
-// TestInterpretCompositeValueIDTracking. It exercises the same atree slab-split
-// stale-view scenario, where two ArrayValue instances wrap the same underlying
-// atree array (created by accessing the same outer array element twice) and a
-// split through one instance leaves the other with a different live value ID.
-// Without the cached valueID on ArrayValue, an EphemeralReferenceValue created
-// from the stale view would register under that different ID, bypass
-// invalidation when the inner array is moved, and survive as a dangling ref.
+// TestInterpretCompositeValueIDTracking.
+// Two references to the same logical inner array (created by accessing the same
+// outer array element twice) must share a canonical wrapper, so when the inner
+// array is moved/invalidated, all references see it as invalidated.
+// Without canonicalization, an EphemeralReferenceValue created from a separate
+// wrapper would survive invalidation through the canonical one and dangle.
 func TestInterpretArrayValueIDTracking(t *testing.T) {
 	t.Parallel()
 
@@ -721,6 +720,103 @@ func TestInterpretArrayAsReferenceContainerMethodAliasingConsistency(t *testing.
 				"result[0].length must reflect post-split state via canonicalized wrapper")
 		})
 	}
+}
+
+// TestInterpretArrayAsReferenceContainerMethodMutationPropagation verifies
+// that mutations performed through a reference returned by the asReference branch
+// of Array.slice / .concat / .filter / .map / .toVariableSized / .toConstantSized
+// propagate to the original container.
+//
+// `access(all)` mutating functions on a struct (like `S.inc()`) are reachable
+// even on unauthorized references — Cadence's checker does not require an
+// entitlement to call them. The implementations must therefore use the
+// mutable atree iterator on the asReference branch, so that mutations through
+// the result-stored reference fire the real parent-notification callback
+// rather than tripping the trap callback installed by a read-only iterator.
+func TestInterpretArrayAsReferenceContainerMethodMutationPropagation(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "slice",
+			body: `let part = ref.slice(from: 0, upTo: 2); part[0].inc()`,
+		},
+		{
+			name: "concat",
+			body: `let part = ref.concat([]); part[0].inc()`,
+		},
+		{
+			name: "filter",
+			body: `let part = ref.filter(view fun (_: &S): Bool { return true }); part[0].inc()`,
+		},
+		{
+			name: "map",
+			body: `let _ = ref.map(fun (s: &S) { s.inc() })`,
+		},
+		{
+			name: "toConstantSized",
+			body: `let part = ref.toConstantSized<[&S; 3]>()!; part[0].inc()`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`
+                access(all) struct S {
+                    access(all) var x: Int
+                    init() { self.x = 1 }
+                    access(all) fun inc() { self.x = self.x + 1 }
+                }
+
+                access(all) fun main(): Int {
+                    let xs = [S(), S(), S()]
+                    let ref = &xs as &[S]
+                    %s
+                    return xs[0].x
+                }
+            `, tc.body)
+
+			inter := parseCheckAndPrepare(t, code)
+			result, err := inter.Invoke("main")
+			require.NoError(t, err)
+			require.Equal(t,
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				result,
+				"mutation through result reference must propagate to original")
+		})
+	}
+
+	// toVariableSized takes a fixed-sized array, so test it separately.
+	t.Run("toVariableSized", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) struct S {
+                access(all) var x: Int
+                init() { self.x = 1 }
+                access(all) fun inc() { self.x = self.x + 1 }
+            }
+
+            access(all) fun main(): Int {
+                let xs: [S; 3] = [S(), S(), S()]
+                let ref = &xs as &[S; 3]
+                let part = ref.toVariableSized()
+                part[0].inc()
+                return xs[0].x
+            }
+        `)
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		require.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			result,
+			"mutation through toVariableSized result reference must propagate to original")
+	})
 }
 
 // TestInterpretOptionalContainerAliasingConsistency verifies the

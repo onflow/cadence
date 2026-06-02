@@ -73,18 +73,25 @@ type AtreeContainerCache interface {
 // container element,
 // populating the cache on first sight and returning the cached wrapper otherwise.
 //
-// Callers must only invoke this with `fresh` produced by an iterator/Get path
-// that wires a real parent-notification callback on the underlying
-// `*atree.Array`/`*atree.OrderedMap`.
+// The function is self-defensive:
+// it will only cache wrappers whose underlying `*atree.Array`/`*atree.OrderedMap`
+// has a real parent-notification callback installed.
 // Wrappers from read-only iterators
-// (`IterateReadOnly`, `IterateReadOnlyLoadedValues`)
-// would have no parentUpdater (or a trap callback),
-// and caching them would shadow later proper-Get wrappers.
-// See `MustConvertStoredContainerElement` for the path that ensures this invariant.
+// (whose `*atree.Array`/`*atree.OrderedMap` either has no parentUpdater,
+// or has a read-only mutation trap callback)
+// are returned as-is without being cached,
+// because caching them would either silently lose parent notifications
+// or trip the trap on subsequent mutations through the canonical wrapper.
+//
+// This means `MustConvertStoredContainerElement` is safe to call on any path —
+// it acts as canonicalize-or-passthrough based on the wrapper's actual state.
 func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value {
 	switch v := fresh.(type) {
 	case *ArrayValue:
 		if v.array == nil || v.isDestroyed {
+			return fresh
+		}
+		if !v.array.HasParentUpdater() || v.array.HasReadOnlyMutationCallback() {
 			return fresh
 		}
 		valueID := v.array.ValueID()
@@ -100,6 +107,9 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 		if v.dictionary == nil || v.isDestroyed {
 			return fresh
 		}
+		if !v.dictionary.HasParentUpdater() || v.dictionary.HasReadOnlyMutationCallback() {
+			return fresh
+		}
 		valueID := v.dictionary.ValueID()
 		if existing, ok := cache.CanonicalAtreeContainer(valueID).(*DictionaryValue); ok {
 			if existing.dictionary != nil && !existing.isDestroyed {
@@ -111,6 +121,9 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 		return v
 	case *CompositeValue:
 		if v.dictionary == nil || v.isDestroyed {
+			return fresh
+		}
+		if !v.dictionary.HasParentUpdater() || v.dictionary.HasReadOnlyMutationCallback() {
 			return fresh
 		}
 		valueID := v.dictionary.ValueID()
@@ -127,15 +140,18 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 }
 
 // MustConvertStoredContainerElement wraps an atree value retrieved as a
-// container element (e.g. via `*atree.Array.Get` or
-// `*atree.OrderedMap.Get`) as a Cadence-level `Value`, deduplicating the
-// resulting wrapper via the canonical wrapper cache when supported. Use
-// this instead of `MustConvertStoredValue` whenever a container's
-// element is being returned to user code (e.g. for `&outer[0]`), so that
-// aliased references share state. Internal callers that immediately
-// Transfer (and thereby invalidate) the wrapper must continue to use
-// `MustConvertStoredValue` so their transient wrapper does not poison
-// the cache.
+// container element (e.g. via `*atree.Array.Get` or `*atree.OrderedMap.Get`)
+// as a Cadence-level `Value`,
+// deduplicating the resulting wrapper via the canonical wrapper cache when both:
+//   - the gauge is an `AtreeContainerCache`, and
+//   - the wrapper has a real parent-notification callback
+//     (i.e. it came from a `Get` or mutable-iterator path,
+//     not from a read-only iterator).
+//
+// The second condition is enforced inside `canonicalizeContainerElement`,
+// so callers do not need to know which atree path produced `value`:
+// passing in a read-only-iterator wrapper is safe;
+// it just won't be cached.
 func MustConvertStoredContainerElement(gauge common.MemoryGauge, value atree.Value) Value {
 	result := MustConvertStoredValue(gauge, value)
 	if cache, ok := gauge.(AtreeContainerCache); ok {
