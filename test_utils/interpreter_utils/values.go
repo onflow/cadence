@@ -21,6 +21,7 @@ package interpreter_utils
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/kr/pretty"
@@ -174,23 +175,50 @@ func DictionaryEntries[K, V any](
 }
 
 type testValueCreationContext struct {
+	storage interpreter.Storage
 	common_utils.Invokable
 }
 
 var _ interpreter.MemberAccessibleContext = &testValueCreationContext{}
 var _ interpreter.ValueCreationContext = &testValueCreationContext{}
 
-// NewTestValueCreationContext returns a value-creation context that
-// shares storage with the given invokable.
-// Sharing storage matters when test-constructed values
-// are later compared to values produced by the Cadence program:
-// atree's shared-state design assumes a single storage,
-// so SlabIDs are unique within it.
-// Mixing values across multiple storages risks SlabID collisions
-// (each storage has its own monotonic SlabID counter starting from zero)
-// that surface as cross-value aliasing.
+// testValueCreationStorages tracks one shared test-only storage per invokable,
+// so all NewTestValueCreationContext calls within a single test build their values
+// into the SAME storage rather than each into a fresh one.
+//
+// Why a shared storage:
+//   - atree's shared-state design assumes SlabIDs are unique within a storage.
+//   - Each storage's GenerateSlabID counter starts at zero,
+//     so values built across multiple storages can carry colliding SlabIDs.
+//   - When such values are later combined (e.g. NewArrayValue([v1, v2, v3])),
+//     the destination storage's registry can't disambiguate them.
+//
+// Why a SEPARATE storage from the invokable's:
+//   - In VM-vs-interpreter comparison tests,
+//     the invokable's storage is the VM's storage and is compared to the interpreter's storage.
+//     If test-built expected values were placed in the VM's storage,
+//     they would pollute the comparison.
+var testValueCreationStorages sync.Map // common_utils.Invokable -> interpreter.Storage
+
+// NewTestValueCreationContext returns a value-creation context backed by a test-only storage
+// that is shared across all NewTestValueCreationContext calls for the given invokable
+// but is independent of the invokable's own storage.
+// See testValueCreationStorages for why both invariants matter.
 func NewTestValueCreationContext(invokable common_utils.Invokable) *testValueCreationContext {
+	if cached, ok := testValueCreationStorages.Load(invokable); ok {
+		return &testValueCreationContext{
+			storage:   cached.(interpreter.Storage),
+			Invokable: invokable,
+		}
+	}
+	storage := NewUnmeteredInMemoryStorage()
+	actual, _ := testValueCreationStorages.LoadOrStore(invokable, storage)
 	return &testValueCreationContext{
+		storage:   actual.(interpreter.Storage),
 		Invokable: invokable,
 	}
+}
+
+func (c *testValueCreationContext) Storage() interpreter.Storage {
+	return c.storage
 }
