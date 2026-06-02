@@ -6519,6 +6519,15 @@ func (interpreter *Interpreter) ClearCanonicalAtreeContainer(valueID atree.Value
 	delete(interpreter.SharedState.canonicalAtreeContainers, valueID)
 }
 
+// ClearAllCanonicalAtreeContainers drops every entry in the canonical wrapper cache.
+// Call this when the underlying `atree.Storage` is being swapped out
+// (e.g. test harnesses that commit to a ledger and reopen storage):
+// cached wrappers hold `*atree.Array`/`*atree.OrderedMap` pointers into the *old* storage,
+// and would silently mutate the old storage if returned from a post-swap canonicalization.
+func (interpreter *Interpreter) ClearAllCanonicalAtreeContainers() {
+	clear(interpreter.SharedState.canonicalAtreeContainers)
+}
+
 // startResourceTracking starts tracking the life-span of a resource.
 // A resource can only be associated with one variable at most, at a given time.
 func (interpreter *Interpreter) startResourceTracking(
