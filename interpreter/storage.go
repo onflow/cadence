@@ -92,6 +92,21 @@ type canonicalizableContainer interface {
 	canonicalAtreeContainer() atreeContainer
 }
 
+// AtreeBackedValue is implemented by Cadence container wrappers
+// (ArrayValue, DictionaryValue, CompositeValue) that back onto an atree container.
+// `isStaleAtreeView` is a defensive invariant check
+// used by `CheckInvalidatedValueOrValueReference`
+// to detect a wrapper whose underlying atree container has been invalidated
+// (nilled out by Destroy/Transfer) or whose cached value ID has diverged
+// from the live one.
+// With atree's shared-state design and Cadence's canonical wrapper cache
+// neither condition should be observable in practice; the check is a safety net.
+type AtreeBackedValue interface {
+	Value
+	ValueID() atree.ValueID
+	isStaleAtreeView() bool
+}
+
 // atreeContainer captures the subset of `*atree.Array` / `*atree.OrderedMap`
 // methods that the canonical wrapper cache needs.
 type atreeContainer interface {

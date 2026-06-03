@@ -39,6 +39,10 @@ type DictionaryValue struct {
 	dictionary       *atree.OrderedMap
 	isDestroyed      bool
 	elementSize      uint
+
+	// valueID — defensive cache of the atree value ID captured at construction.
+	// See `ArrayValue.valueID` for the full rationale.
+	valueID atree.ValueID
 }
 
 func NewDictionaryValue(
@@ -293,6 +297,7 @@ func newDictionaryValueFromAtreeMap(
 	return &DictionaryValue{
 		Type:        staticType,
 		dictionary:  atreeOrderedMap,
+		valueID:     atreeOrderedMap.ValueID(),
 		elementSize: elementSize,
 	}
 }
@@ -304,13 +309,11 @@ var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
-var _ atreeContainerBackedValue = &DictionaryValue{}
+var _ AtreeBackedValue = &DictionaryValue{}
 var _ IterableValue = &DictionaryValue{}
 var _ canonicalizableContainer = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
-
-func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
 func (v *DictionaryValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitDictionaryValue(context, v)
@@ -1705,7 +1708,7 @@ func (v *DictionaryValue) Transfer(
 		InvalidateReferencedResources(context, v)
 
 		if cache, ok := context.(AtreeContainerCache); ok {
-			cache.ClearCanonicalAtreeContainer(v.dictionary.ValueID())
+			cache.ClearCanonicalAtreeContainer(v.valueID)
 		}
 		v.dictionary = nil
 	}
@@ -1840,7 +1843,15 @@ func (v *DictionaryValue) StorageAddress() atree.Address {
 }
 
 func (v *DictionaryValue) ValueID() atree.ValueID {
-	return v.dictionary.ValueID()
+	return v.valueID
+}
+
+// isStaleAtreeView — defensive invariant check, see `ArrayValue.isStaleAtreeView`.
+func (v *DictionaryValue) isStaleAtreeView() bool {
+	if v.dictionary == nil {
+		return true
+	}
+	return v.dictionary.ValueID() != v.valueID
 }
 
 func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {

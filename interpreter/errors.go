@@ -400,6 +400,40 @@ func (e *InvalidatedResourceError) SetLocationRange(locationRange LocationRange)
 	e.LocationRange = locationRange
 }
 
+// InvalidatedContainerViewError is a defensive runtime invariant violation,
+// reported when a container value wrapper (ArrayValue, DictionaryValue, or
+// CompositeValue) is used after its underlying atree container has been
+// invalidated, or when the wrapper's cached value ID has diverged from the
+// underlying atree container's live value ID.
+//
+// With atree's shared-state design and Cadence's canonical wrapper cache,
+// neither divergence should be observable in practice:
+// all wrappers backing the same logical container share a single Go object,
+// and atree keeps the root slab ID stable across structural changes.
+// This check fires only if those invariants are violated by a bug.
+type InvalidatedContainerViewError struct {
+	LocationRange
+	ValueID string
+}
+
+var _ errors.InternalError = &InvalidatedContainerViewError{}
+var _ HasLocationRange = &InvalidatedContainerViewError{}
+
+func (*InvalidatedContainerViewError) IsInternalError() {}
+
+func (e *InvalidatedContainerViewError) Error() string {
+	return fmt.Sprintf(
+		"%s container view %s is invalidated: "+
+			"the wrapper's underlying atree container is nil or its cached value ID has diverged from the live one",
+		errors.InternalErrorMessagePrefix,
+		e.ValueID,
+	)
+}
+
+func (e *InvalidatedContainerViewError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // DestroyedResourceError is the error which is reported
 // when a user uses a destroyed resource through a reference
 type DestroyedResourceError struct {

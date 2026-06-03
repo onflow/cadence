@@ -39,6 +39,15 @@ type ArrayValue struct {
 	isResourceKinded *bool
 	elementSize      uint
 	isDestroyed      bool
+
+	// valueID is the atree value ID captured at construction time.
+	// With atree's shared-state design + Cadence's canonical wrapper cache,
+	// the value ID returned by `v.array.ValueID()` is stable for the lifetime
+	// of the wrapper, so the cached value matches the live one.
+	// The cache is used by `isStaleAtreeView` as a defensive invariant check
+	// to catch unexpected divergence (and a stable identifier when
+	// `v.array` has been nilled out by Destroy/Transfer).
+	valueID atree.ValueID
 }
 
 func NewArrayValue(
@@ -216,6 +225,7 @@ func newArrayValueFromAtreeArray(
 	return &ArrayValue{
 		Type:        staticType,
 		array:       atreeArray,
+		valueID:     atreeArray.ValueID(),
 		elementSize: elementSize,
 	}
 }
@@ -228,12 +238,10 @@ var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
-var _ atreeContainerBackedValue = &ArrayValue{}
+var _ AtreeBackedValue = &ArrayValue{}
 var _ canonicalizableContainer = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
-
-func (*ArrayValue) isAtreeContainerBackedValue() {}
 
 func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitArrayValue(context, v)
@@ -1628,7 +1636,7 @@ func (v *ArrayValue) Transfer(
 		InvalidateReferencedResources(context, v)
 
 		if cache, ok := context.(AtreeContainerCache); ok {
-			cache.ClearCanonicalAtreeContainer(v.array.ValueID())
+			cache.ClearCanonicalAtreeContainer(v.valueID)
 		}
 		v.array = nil
 	}
@@ -1744,7 +1752,21 @@ func (v *ArrayValue) StorageAddress() atree.Address {
 }
 
 func (v *ArrayValue) ValueID() atree.ValueID {
-	return v.array.ValueID()
+	return v.valueID
+}
+
+// isStaleAtreeView reports whether this wrapper's underlying atree array has
+// been invalidated (nilled out by Destroy/Transfer) or its live value ID has
+// diverged from the cached one captured at construction.
+// With atree's shared-state design and Cadence's canonical wrapper cache,
+// neither condition should be observable in practice;
+// this is a defensive invariant check used by
+// `CheckInvalidatedValueOrValueReference`.
+func (v *ArrayValue) isStaleAtreeView() bool {
+	if v.array == nil {
+		return true
+	}
+	return v.array.ValueID() != v.valueID
 }
 
 func (v *ArrayValue) GetOwner() common.Address {

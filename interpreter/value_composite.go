@@ -62,6 +62,10 @@ type CompositeValue struct {
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
 	isDestroyed         bool
+
+	// valueID — defensive cache of the atree value ID captured at construction.
+	// See `ArrayValue.valueID` for the full rationale.
+	valueID atree.ValueID
 }
 
 type ComputedField func(ValueTransferContext, *CompositeValue) Value
@@ -250,6 +254,7 @@ func NewCompositeValueFromAtreeMap(
 
 	return &CompositeValue{
 		dictionary:          atreeOrderedMap,
+		valueID:             atreeOrderedMap.ValueID(),
 		Location:            typeInfo.Location,
 		QualifiedIdentifier: typeInfo.QualifiedIdentifier,
 		Kind:                typeInfo.Kind,
@@ -264,12 +269,10 @@ var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 var _ ContractValue = &CompositeValue{}
 var _ atree.Value = &CompositeValue{}
 var _ atree.WrapperValue = &CompositeValue{}
-var _ atreeContainerBackedValue = &CompositeValue{}
+var _ AtreeBackedValue = &CompositeValue{}
 var _ canonicalizableContainer = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
-
-func (*CompositeValue) isAtreeContainerBackedValue() {}
 
 func (v *CompositeValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitCompositeValue(context, v)
@@ -1576,7 +1579,7 @@ func (v *CompositeValue) Transfer(
 		InvalidateReferencedResources(context, v)
 
 		if cache, ok := context.(AtreeContainerCache); ok {
-			cache.ClearCanonicalAtreeContainer(v.dictionary.ValueID())
+			cache.ClearCanonicalAtreeContainer(v.valueID)
 		}
 		v.dictionary = nil
 	}
@@ -1846,7 +1849,15 @@ func (v *CompositeValue) StorageAddress() atree.Address {
 }
 
 func (v *CompositeValue) ValueID() atree.ValueID {
-	return v.dictionary.ValueID()
+	return v.valueID
+}
+
+// isStaleAtreeView — defensive invariant check, see `ArrayValue.isStaleAtreeView`.
+func (v *CompositeValue) isStaleAtreeView() bool {
+	if v.dictionary == nil {
+		return true
+	}
+	return v.dictionary.ValueID() != v.valueID
 }
 
 func (v *CompositeValue) RemoveField(

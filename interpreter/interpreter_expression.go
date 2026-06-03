@@ -497,8 +497,12 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	return result
 }
 
-// CheckInvalidatedValueOrValueReference checks whether a value is either an
-// invalidated resource or a reference to one.
+// CheckInvalidatedValueOrValueReference checks whether a value is either:
+//   - an invalidated resource, or a reference to one
+//   - an atree-backed container wrapper whose underlying atree container has
+//     been invalidated, or whose cached value ID has diverged from the live one
+//     (defensive invariant check;
+//     see `AtreeBackedValue` and `InvalidatedContainerViewError`)
 func CheckInvalidatedValueOrValueReference(
 	value Value,
 	context ValueStaticTypeContext,
@@ -523,11 +527,24 @@ func CheckInvalidatedValueOrValueReference(
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
+			// The atree-view staleness check below is also transitively triggered for the
+			// referenced value through this recursion.
 			CheckInvalidatedValueOrValueReference(
 				value.Value,
 				context,
 			)
 		}
+	}
+
+	// Defensive invariant: every code path that already calls this helper
+	// transparently gains the atree-view staleness check.
+	// With atree's shared-state design and Cadence's canonical wrapper cache
+	// this should never fire; if it does, an internal invariant has been violated.
+	if atreeBackedValue, ok := value.(AtreeBackedValue); ok &&
+		atreeBackedValue.isStaleAtreeView() {
+		panic(&InvalidatedContainerViewError{
+			ValueID: atreeBackedValue.ValueID().String(),
+		})
 	}
 }
 
