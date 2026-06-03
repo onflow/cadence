@@ -459,7 +459,7 @@ func TestInterpretCompositeValueIDTracking(t *testing.T) {
 		) interpreter.Value {
 			ref := args[0].(*interpreter.EphemeralReferenceValue)
 			composite := ref.Value.(*interpreter.CompositeValue)
-			return interpreter.NewUnmeteredStringValue(composite.ValueID().String())
+			return interpreter.NewUnmeteredStringValue(composite.LiveValueID().String())
 		},
 	)
 

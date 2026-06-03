@@ -170,7 +170,7 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 		) interpreter.Value {
 			ref := args[0].(*interpreter.EphemeralReferenceValue)
 			dictValue := ref.Value.(*interpreter.DictionaryValue)
-			return interpreter.NewUnmeteredStringValue(dictValue.ValueID().String())
+			return interpreter.NewUnmeteredStringValue(dictValue.LiveValueID().String())
 		},
 	)
 

@@ -76,11 +76,11 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
 				var id string
 				switch v := ref.Value.(type) {
 				case *interpreter.ArrayValue:
-					id = v.ValueID().String()
+					id = v.LiveValueID().String()
 				case *interpreter.DictionaryValue:
-					id = v.ValueID().String()
+					id = v.LiveValueID().String()
 				case *interpreter.CompositeValue:
-					id = v.ValueID().String()
+					id = v.LiveValueID().String()
 				default:
 					t.Fatalf("unexpected value type %T", ref.Value)
 				}
