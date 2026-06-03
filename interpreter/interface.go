@@ -84,6 +84,7 @@ var _ ValueStaticTypeContext = &Interpreter{}
 
 type valueStaticTypeContext interface {
 	common.Gauge
+	AtreeContainerCache
 	StorageReader
 	TypeConverter
 	IsTypeInfoRecovered(location common.Location) bool
@@ -564,6 +565,12 @@ func (NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 func (NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
 	return nil
 }
+
+// Canonical wrapper cache is a no-op for stringification — wrappers
+// constructed during MeteredString are discarded after the string is built.
+func (NoOpStringContext) CanonicalAtreeContainer(_ atree.ValueID) Value          { return nil }
+func (NoOpStringContext) SetCanonicalAtreeContainer(_ atree.ValueID, _ Value)    {}
+func (NoOpStringContext) ClearCanonicalAtreeContainer(_ atree.ValueID)           {}
 
 func (NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f func()) {
 	f()

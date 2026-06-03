@@ -164,10 +164,12 @@ func (s *DomainStorageMap) ValueExists(gauge common.ComputationGauge, key Storag
 
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
-func (s *DomainStorageMap) ReadValue(gauge common.Gauge, key StorageMapKey) Value {
+// `context` is allowed to be nil for low-level inspection paths
+// (in which case canonicalization is skipped).
+func (s *DomainStorageMap) ReadValue(context ContainerElementContext, key StorageMapKey) Value {
 
 	common.UseComputation(
-		gauge,
+		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeMapGet,
 			Intensity: 1,
@@ -192,7 +194,7 @@ func (s *DomainStorageMap) ReadValue(gauge common.Gauge, key StorageMapKey) Valu
 	// (e.g. as the target of `account.storage.borrow<&T>`),
 	// so two reads of the same path must yield the same canonical wrapper
 	// for reference identity and per-wrapper state alignment.
-	return MustConvertStoredContainerElement(gauge, storedValue)
+	return MustConvertStoredContainerElement(context, storedValue)
 }
 
 // WriteValue sets or removes a value in the storage map.

@@ -69,6 +69,18 @@ type AtreeContainerCache interface {
 	ClearCanonicalAtreeContainer(valueID atree.ValueID)
 }
 
+// ContainerElementContext is the typed parameter for reading and
+// canonicalizing an atree container element:
+// memory and computation metering, plus access to the canonical wrapper cache.
+// A nil interface value is accepted by `MustConvertStoredContainerElement`
+// and disables canonicalization
+// (matches the previous untyped-gauge behavior,
+// used by low-level inspection paths and tests).
+type ContainerElementContext interface {
+	common.Gauge
+	AtreeContainerCache
+}
+
 // canonicalizableContainer is implemented by the Cadence wrappers that back
 // onto an atree container (ArrayValue, DictionaryValue, CompositeValue).
 // It exposes just enough state for the canonical wrapper cache:
@@ -135,8 +147,8 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 // MustConvertStoredContainerElement wraps an atree value retrieved as a
 // container element (e.g. via `*atree.Array.Get` or `*atree.OrderedMap.Get`)
 // as a Cadence-level `Value`,
-// deduplicating the resulting wrapper via the canonical wrapper cache when both:
-//   - the gauge is an `AtreeContainerCache`, and
+// deduplicating the resulting wrapper via the canonical wrapper cache when:
+//   - the context is non-nil, and
 //   - the wrapper has a real parent-notification callback
 //     (i.e. it came from a `Get` or mutable-iterator path,
 //     not from a read-only iterator).
@@ -145,12 +157,15 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 // so callers do not need to know which atree path produced `value`:
 // passing in a read-only-iterator wrapper is safe;
 // it just won't be cached.
-func MustConvertStoredContainerElement(gauge common.MemoryGauge, value atree.Value) Value {
-	result := MustConvertStoredValue(gauge, value)
-	if cache, ok := gauge.(AtreeContainerCache); ok {
-		return canonicalizeContainerElement(cache, result)
+//
+// A nil `context` skips canonicalization entirely
+// (used by tests and the low-level decode path).
+func MustConvertStoredContainerElement(context ContainerElementContext, value atree.Value) Value {
+	result := MustConvertStoredValue(context, value)
+	if context == nil {
+		return result
 	}
-	return result
+	return canonicalizeContainerElement(context, result)
 }
 
 // ConvertStoredValue wraps the given atree value as a Cadence-level

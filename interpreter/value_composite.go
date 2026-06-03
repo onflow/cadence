@@ -985,10 +985,10 @@ func formatComposite(
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(gauge common.Gauge, name string) Value {
+func (v *CompositeValue) GetField(context ContainerElementContext, name string) Value {
 
 	common.UseComputation(
-		gauge,
+		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeMapGet,
 			Intensity: 1,
@@ -1008,7 +1008,7 @@ func (v *CompositeValue) GetField(gauge common.Gauge, name string) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredContainerElement(gauge, storedValue)
+	return MustConvertStoredContainerElement(context, storedValue)
 }
 
 func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool {
@@ -1067,7 +1067,25 @@ func (v *CompositeValue) HashInput(gauge common.Gauge, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(gauge, sema.EnumRawValueFieldName)
+		// Read the enum's raw value directly via atree:
+		// `GetField` requires a `ContainerReadContext` (so it can canonicalize
+		// container-element wrappers via `MustConvertStoredContainerElement`),
+		// but enum raw values are primitives,
+		// so canonicalization is a no-op and the wider context is unnecessary.
+		// The `HashableValue.HashInput` contract only requires `common.Gauge`.
+		common.UseComputation(gauge, common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapGet,
+			Intensity: 1,
+		})
+		storedRawValue, err := v.dictionary.Get(
+			StringAtreeValueComparator,
+			StringAtreeValueHashInput,
+			StringAtreeValue(sema.EnumRawValueFieldName),
+		)
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+		rawValue := MustConvertStoredValue(gauge, storedRawValue)
 		rawValueHashInput := rawValue.(HashableValue).
 			HashInput(gauge, scratch)
 

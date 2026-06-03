@@ -50,6 +50,11 @@ type Context struct {
 	containerValueIteration       map[atree.ValueID]int
 	destroyedResources            map[atree.ValueID]struct{}
 
+	// canonicalAtreeContainers deduplicates Cadence-level wrappers
+	// (ArrayValue, DictionaryValue, CompositeValue) keyed by atree value ID.
+	// See interpreter.SharedState.canonicalAtreeContainers for the rationale.
+	canonicalAtreeContainers map[atree.ValueID]interpreter.Value
+
 	// semaTypeCache is a cache-alike for temporary storing sema-types by their ID,
 	// to avoid repeated conversions from static-types to sema-types.
 	// This cache-alike is maintained per execution.
@@ -87,6 +92,21 @@ func (c *Context) newReusing() *Context {
 	newContext.linkedGlobalsCache = c.linkedGlobalsCache
 
 	return newContext
+}
+
+func (c *Context) CanonicalAtreeContainer(valueID atree.ValueID) interpreter.Value {
+	return c.canonicalAtreeContainers[valueID]
+}
+
+func (c *Context) SetCanonicalAtreeContainer(valueID atree.ValueID, v interpreter.Value) {
+	if c.canonicalAtreeContainers == nil {
+		c.canonicalAtreeContainers = map[atree.ValueID]interpreter.Value{}
+	}
+	c.canonicalAtreeContainers[valueID] = v
+}
+
+func (c *Context) ClearCanonicalAtreeContainer(valueID atree.ValueID) {
+	delete(c.canonicalAtreeContainers, valueID)
 }
 
 func (c *Context) RecordStorageMutation() {
