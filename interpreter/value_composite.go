@@ -265,6 +265,7 @@ var _ ContractValue = &CompositeValue{}
 var _ atree.Value = &CompositeValue{}
 var _ atree.WrapperValue = &CompositeValue{}
 var _ atreeContainerBackedValue = &CompositeValue{}
+var _ canonicalizableContainer = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -350,6 +351,16 @@ func (v *CompositeValue) IsImportable(context ValueImportableContext) bool {
 
 func (v *CompositeValue) IsDestroyed() bool {
 	return v.isDestroyed
+}
+
+// canonicalAtreeContainer reports the underlying atree map,
+// or nil if the wrapper is invalidated (destroyed or its backing nilled out).
+// See `canonicalizeContainerElement` for use.
+func (v *CompositeValue) canonicalAtreeContainer() atreeContainer {
+	if v.dictionary == nil || v.isDestroyed {
+		return nil
+	}
+	return v.dictionary
 }
 
 func resourceDefaultDestroyEventName(t sema.ContainerType) string {

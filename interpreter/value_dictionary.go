@@ -306,6 +306,7 @@ var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 var _ atreeContainerBackedValue = &DictionaryValue{}
 var _ IterableValue = &DictionaryValue{}
+var _ canonicalizableContainer = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
 
@@ -531,6 +532,16 @@ func (v *DictionaryValue) IsImportable(context ValueImportableContext) bool {
 
 func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
+}
+
+// canonicalAtreeContainer reports the underlying atree map,
+// or nil if the wrapper is invalidated (destroyed or its backing nilled out).
+// See `canonicalizeContainerElement` for use.
+func (v *DictionaryValue) canonicalAtreeContainer() atreeContainer {
+	if v.dictionary == nil || v.isDestroyed {
+		return nil
+	}
+	return v.dictionary
 }
 
 func (v *DictionaryValue) isInvalidatedResource(context ValueStaticTypeContext) bool {

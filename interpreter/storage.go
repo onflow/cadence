@@ -69,6 +69,28 @@ type AtreeContainerCache interface {
 	ClearCanonicalAtreeContainer(valueID atree.ValueID)
 }
 
+// canonicalizableContainer is implemented by the Cadence wrappers that back
+// onto an atree container (ArrayValue, DictionaryValue, CompositeValue).
+// It exposes just enough state for the canonical wrapper cache:
+// the underlying atree container (or nil if the wrapper is invalidated),
+// so callers can read its `ValueID`, `HasParentUpdater`, and
+// `HasReadOnlyMutationCallback` predicates.
+type canonicalizableContainer interface {
+	Value
+	canonicalAtreeContainer() atreeContainer
+}
+
+// atreeContainer captures the subset of `*atree.Array` / `*atree.OrderedMap`
+// methods that the canonical wrapper cache needs.
+type atreeContainer interface {
+	ValueID() atree.ValueID
+	HasParentUpdater() bool
+	HasReadOnlyMutationCallback() bool
+}
+
+var _ atreeContainer = &atree.Array{}
+var _ atreeContainer = &atree.OrderedMap{}
+
 // canonicalizeContainerElement returns the canonical cached wrapper for a
 // container element,
 // populating the cache on first sight and returning the cached wrapper otherwise.
@@ -86,56 +108,27 @@ type AtreeContainerCache interface {
 // This means `MustConvertStoredContainerElement` is safe to call on any path —
 // it acts as canonicalize-or-passthrough based on the wrapper's actual state.
 func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value {
-	switch v := fresh.(type) {
-	case *ArrayValue:
-		if v.array == nil || v.isDestroyed {
-			return fresh
-		}
-		if !v.array.HasParentUpdater() || v.array.HasReadOnlyMutationCallback() {
-			return fresh
-		}
-		valueID := v.array.ValueID()
-		if existing, ok := cache.CanonicalAtreeContainer(valueID).(*ArrayValue); ok {
-			if existing.array != nil && !existing.isDestroyed {
-				return existing
-			}
-			cache.ClearCanonicalAtreeContainer(valueID)
-		}
-		cache.SetCanonicalAtreeContainer(valueID, v)
-		return v
-	case *DictionaryValue:
-		if v.dictionary == nil || v.isDestroyed {
-			return fresh
-		}
-		if !v.dictionary.HasParentUpdater() || v.dictionary.HasReadOnlyMutationCallback() {
-			return fresh
-		}
-		valueID := v.dictionary.ValueID()
-		if existing, ok := cache.CanonicalAtreeContainer(valueID).(*DictionaryValue); ok {
-			if existing.dictionary != nil && !existing.isDestroyed {
-				return existing
-			}
-			cache.ClearCanonicalAtreeContainer(valueID)
-		}
-		cache.SetCanonicalAtreeContainer(valueID, v)
-		return v
-	case *CompositeValue:
-		if v.dictionary == nil || v.isDestroyed {
-			return fresh
-		}
-		if !v.dictionary.HasParentUpdater() || v.dictionary.HasReadOnlyMutationCallback() {
-			return fresh
-		}
-		valueID := v.dictionary.ValueID()
-		if existing, ok := cache.CanonicalAtreeContainer(valueID).(*CompositeValue); ok {
-			if existing.dictionary != nil && !existing.isDestroyed {
-				return existing
-			}
-			cache.ClearCanonicalAtreeContainer(valueID)
-		}
-		cache.SetCanonicalAtreeContainer(valueID, v)
-		return v
+	freshCacheable, ok := fresh.(canonicalizableContainer)
+	if !ok {
+		return fresh
 	}
+	container := freshCacheable.canonicalAtreeContainer()
+	if container == nil {
+		return fresh
+	}
+	if !container.HasParentUpdater() || container.HasReadOnlyMutationCallback() {
+		return fresh
+	}
+	valueID := container.ValueID()
+	if existing, ok := cache.CanonicalAtreeContainer(valueID).(canonicalizableContainer); ok {
+		// Same concrete type guarded by same ValueID across the cache;
+		// a still-valid existing wrapper wins to preserve reference identity.
+		if existing.canonicalAtreeContainer() != nil {
+			return existing
+		}
+		cache.ClearCanonicalAtreeContainer(valueID)
+	}
+	cache.SetCanonicalAtreeContainer(valueID, fresh)
 	return fresh
 }
 

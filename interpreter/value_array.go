@@ -229,6 +229,7 @@ var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
 var _ atreeContainerBackedValue = &ArrayValue{}
+var _ canonicalizableContainer = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
 
@@ -440,6 +441,16 @@ func (v *ArrayValue) Destroy(context ResourceDestructionContext) {
 
 func (v *ArrayValue) IsDestroyed() bool {
 	return v.isDestroyed
+}
+
+// canonicalAtreeContainer reports the underlying atree array,
+// or nil if the wrapper is invalidated (destroyed or its backing nilled out).
+// See `canonicalizeContainerElement` for use.
+func (v *ArrayValue) canonicalAtreeContainer() atreeContainer {
+	if v.array == nil || v.isDestroyed {
+		return nil
+	}
+	return v.array
 }
 
 func (v *ArrayValue) Concat(
