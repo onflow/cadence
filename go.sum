@@ -251,8 +251,8 @@ github.com/neelance/astrewrite v0.0.0-20160511093645-99348263ae86/go.mod h1:kHJE
 github.com/neelance/sourcemap v0.0.0-20200213170602-2833bce08e4c/go.mod h1:Qr6/a/Q4r9LP1IltGz7tA7iOK1WonHEYhu1HRBA7ZiM=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-github.com/onflow/atree-internal v0.15.1-0.20260409135025-b51f9763b9a1 h1:mXufEy0+qiXbomVTXnvYz0LiPaO0SuHjDDlgc8KD25g=
-github.com/onflow/atree-internal v0.15.1-0.20260409135025-b51f9763b9a1/go.mod h1:hiOT/vKK/Zyw34Ru9OFbfEemC5NnQ7SHFB43bN9/4qI=
+github.com/onflow/atree-internal v0.15.1-0.20260603181140-3c61ff247144 h1:WdpfAE+AWfS8/t5vJejMi7A6I3Bq7/PaPEZDN7tEsFw=
+github.com/onflow/atree-internal v0.15.1-0.20260603181140-3c61ff247144/go.mod h1:hiOT/vKK/Zyw34Ru9OFbfEemC5NnQ7SHFB43bN9/4qI=
 github.com/onflow/crypto v0.25.3 h1:XQ3HtLsw8h1+pBN+NQ1JYM9mS2mVXTyg55OldaAIF7U=
 github.com/onflow/crypto v0.25.3/go.mod h1:+1igaXiK6Tjm9wQOBD1EGwW7bYWMUGKtwKJ/2QL/OWs=
 github.com/onflow/fixed-point v0.1.1 h1:j0jYZVO8VGyk1476alGudEg7XqCkeTVxb5ElRJRKS90=

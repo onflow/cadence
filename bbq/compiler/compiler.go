@@ -2359,8 +2359,12 @@ func (c *Compiler[_, _]) compileSwapSet(
 		}
 		indexedType := c.getOrAddType(indexExpressionTypes.IndexedType)
 
+		// Suppress the staleness re-check on the value being set:
+		// the swap validated both operands once at the start
+		// (matching the interpreter's VisitSwapStatement timing).
 		c.emit(opcode.InstructionSetIndex{
-			IndexedType: indexedType,
+			IndexedType:             indexedType,
+			SkipValueStalenessCheck: true,
 		})
 
 	default:

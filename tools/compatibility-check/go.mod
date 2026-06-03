@@ -89,3 +89,5 @@ require (
 )
 
 replace github.com/onflow/cadence => ../../
+
+replace github.com/onflow/atree => github.com/onflow/atree-internal v0.15.1-0.20260409135025-b51f9763b9a1

@@ -45,6 +45,11 @@ type ArrayValue struct {
 	// stable even if the array's runtime root slab ID changes.
 	// See the equivalent field on CompositeValue for the underlying scenario.
 	valueID atree.ValueID
+
+	// mutationCount is the atree root-slab mutation counter captured at construction.
+	// Together with valueID it detects sibling-wrapper staleness.
+	// See isStaleAtreeView.
+	mutationCount uint64
 }
 
 func NewArrayValue(
@@ -220,10 +225,11 @@ func newArrayValueFromAtreeArray(
 	common.UseMemory(gauge, common.ArrayValueBaseMemoryUsage)
 
 	return &ArrayValue{
-		Type:        staticType,
-		array:       atreeArray,
-		valueID:     atreeArray.ValueID(),
-		elementSize: elementSize,
+		Type:          staticType,
+		array:         atreeArray,
+		valueID:       atreeArray.ValueID(),
+		mutationCount: atreeArray.MutationCount(),
+		elementSize:   elementSize,
 	}
 }
 
@@ -1709,6 +1715,13 @@ func (v *ArrayValue) LiveValueID() atree.ValueID {
 	return v.array.ValueID()
 }
 
+// LiveMutationCount returns the underlying atree array's current root-slab mutation counter.
+// Counterpart to LiveValueID for the second signal that isStaleAtreeView checks.
+// Intended for testing only; production code must use the cached mutationCount captured at wrapper construction.
+func (v *ArrayValue) LiveMutationCount() uint64 {
+	return v.array.MutationCount()
+}
+
 // LiveInlined reports whether the underlying atree array is currently stored
 // inlined inside its parent container's slab, as opposed to as a standalone
 // slab. Atree may transition an array between these representations when its
@@ -1720,14 +1733,22 @@ func (v *ArrayValue) LiveInlined() bool {
 	return v.array.Inlined()
 }
 
-// isStaleAtreeView reports whether this wrapper has been displaced by a
-// structural change (slab split/merge/promotion) that was performed through
-// a sibling wrapper sharing the same underlying slab tree. See the
-// `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full
-// context. Detected uses of a stale wrapper are rejected centrally in
-// `CheckInvalidatedValueOrValueReference`.
+// isStaleAtreeView reports whether this wrapper has been displaced by a structural change
+// (slab split/promotion/PopIterate) that was performed through a sibling wrapper
+// sharing the same underlying slab tree.
+// See the `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full context.
+// Detected uses of a stale wrapper are rejected centrally in `CheckInvalidatedValueOrValueReference`.
+//
+// Two independent signals are compared against the cached snapshot:
+//   - ValueID: detects splitRoot (atree mutates the demoted root's SlabID via SetSlabID;
+//     sibling wrappers reading via the orphaned-pointer see the new SlabID).
+//   - MutationCount: detects promoteChildAsNewRoot and PopIterate
+//     (atree does NOT perturb the orphaned root's SlabID in these cases;
+//     a slab-level counter bumped on the OLD root pre-swap is the sibling-visible signal).
+//     See atree.ArraySlab.MutationCount for the contract.
 func (v *ArrayValue) isStaleAtreeView() bool {
-	return v.array.ValueID() != v.valueID
+	return v.array.ValueID() != v.valueID ||
+		v.array.MutationCount() != v.mutationCount
 }
 
 func (v *ArrayValue) GetOwner() common.Address {
