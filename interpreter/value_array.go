@@ -1769,6 +1769,28 @@ func (v *ArrayValue) isStaleAtreeView() bool {
 	return v.array.ValueID() != v.valueID
 }
 
+// LiveValueID returns the underlying atree array's current value ID.
+// In contrast to ValueID, which returns a stable value ID cached at
+// construction, LiveValueID reflects mutations to the atree array's root,
+// including slab ID reassignments caused by splits triggered through other
+// ArrayValue instances wrapping the same underlying atree array.
+// Intended for testing only; production code must use ValueID for resource
+// tracking and invalidation.
+func (v *ArrayValue) LiveValueID() atree.ValueID {
+	return v.array.ValueID()
+}
+
+// LiveInlined reports whether the underlying atree array is currently stored
+// inlined inside its parent container's slab, as opposed to as a standalone
+// slab. Atree may transition an array between these representations when its
+// parent container grows or shrinks. The transition does not change the
+// array's ValueID (which is stable across structural changes), so it is not
+// observable through LiveValueID.
+// Intended for testing only.
+func (v *ArrayValue) LiveInlined() bool {
+	return v.array.Inlined()
+}
+
 func (v *ArrayValue) GetOwner() common.Address {
 	return common.Address(v.StorageAddress())
 }

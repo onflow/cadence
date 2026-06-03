@@ -1846,12 +1846,37 @@ func (v *DictionaryValue) ValueID() atree.ValueID {
 	return v.valueID
 }
 
-// isStaleAtreeView — defensive invariant check, see `ArrayValue.isStaleAtreeView`.
+// isStaleAtreeView reports whether this wrapper's underlying atree array has
+// been invalidated (nilled out by Destroy/Transfer) or its live value ID has
+// diverged from the cached one captured at construction.
+// With atree's shared-state design and Cadence's canonical wrapper cache,
+// neither condition should be observable in practice;
+// this is a defensive invariant check used by
+// `CheckInvalidatedValueOrValueReference`.
 func (v *DictionaryValue) isStaleAtreeView() bool {
 	if v.dictionary == nil {
 		return true
 	}
 	return v.dictionary.ValueID() != v.valueID
+}
+
+// LiveValueID returns the underlying atree map's current value ID.
+// In contrast to ValueID, which returns a stable value ID cached at
+// construction, LiveValueID reflects mutations to the atree map's root,
+// including slab ID reassignments caused by splits triggered through other
+// DictionaryValue instances wrapping the same underlying atree map.
+// Intended for testing only; production code must use ValueID for resource
+// tracking and invalidation.
+func (v *DictionaryValue) LiveValueID() atree.ValueID {
+	return v.dictionary.ValueID()
+}
+
+// LiveInlined reports whether the underlying atree map is currently stored
+// inlined inside its parent container's slab, as opposed to as a standalone
+// slab. See ArrayValue.LiveInlined for context.
+// Intended for testing only.
+func (v *DictionaryValue) LiveInlined() bool {
+	return v.dictionary.Inlined()
 }
 
 func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {
