@@ -1848,6 +1848,14 @@ func (v *DictionaryValue) LiveMutationCount() uint64 {
 	return v.dictionary.MutationCount()
 }
 
+// LiveInlined reports whether the underlying atree map is currently stored
+// inlined inside its parent container's slab, as opposed to as a standalone
+// slab. See ArrayValue.LiveInlined for context.
+// Intended for testing only.
+func (v *DictionaryValue) LiveInlined() bool {
+	return v.dictionary.Inlined()
+}
+
 // isStaleAtreeView reports whether this wrapper has been displaced by a structural change
 // (slab split/promotion/PopIterate) that was performed through a sibling wrapper
 // sharing the same underlying slab tree.
