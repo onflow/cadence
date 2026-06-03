@@ -875,3 +875,124 @@ func atreeValueIDToSlabID(vid atree.ValueID) atree.SlabID {
 		atree.SlabIndex(vid[8:]),
 	)
 }
+
+// storeArrayValue is a small helper for the cache-eviction tests below:
+// constructs a non-resource `[Int]` and transfers it into the given
+// storage map under `key`, leaving the stored atree slab tree intact.
+func storeArrayValue(
+	t *testing.T,
+	inter *interpreter.Interpreter,
+	domainStorageMap *interpreter.DomainStorageMap,
+	address common.Address,
+	key interpreter.StorageMapKey,
+	elementValue int64,
+) {
+	t.Helper()
+	arr := interpreter.NewArrayValue(
+		inter,
+		&interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		},
+		common.ZeroAddress,
+		interpreter.NewUnmeteredIntValueFromInt64(elementValue),
+	)
+	transferred := arr.Transfer(
+		inter,
+		atree.Address(address),
+		false, // no remove
+		nil,
+		nil,
+		true, // standalone
+	).(*interpreter.ArrayValue)
+	domainStorageMap.SetValue(inter, key, transferred)
+}
+
+// TestDomainStorageMapSetValueEvictsCanonicalCacheForOverwrittenValue pins
+// down the cache eviction added to `DomainStorageMap.SetValue`: when an
+// existing value at a key is overwritten, its slabs are deleted, and any
+// canonical wrapper cached for the old value's atree value ID must be
+// evicted (otherwise the entry leaks for the lifetime of the cache).
+func TestDomainStorageMapSetValueEvictsCanonicalCacheForOverwrittenValue(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	ledger := NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil, nil, runtime.StorageConfig{})
+
+	// AtreeStorageValidationEnabled is off because DomainStorageMap is
+	// constructed directly, not via runtime.Storage; matches the pattern of
+	// the other tests in this file.
+	const atreeValueValidationEnabled = true
+	const atreeStorageValidationEnabled = false
+	inter := NewTestInterpreterWithStorageAndAtreeValidationConfig(
+		t, storage, atreeValueValidationEnabled, atreeStorageValidationEnabled,
+	)
+
+	domainStorageMap := interpreter.NewDomainStorageMap(
+		nil, nil, storage, atree.Address(address),
+	)
+	require.NotNil(t, domainStorageMap)
+
+	key := interpreter.StringStorageMapKey("k")
+
+	storeArrayValue(t, inter, domainStorageMap, address, key, 1)
+
+	// ReadValue canonicalizes the wrapper for the stored array.
+	read := domainStorageMap.ReadValue(inter, key)
+	require.IsType(t, &interpreter.ArrayValue{}, read)
+	originalValueID := read.(*interpreter.ArrayValue).ValueID()
+	require.NotNil(t,
+		inter.CanonicalAtreeContainer(originalValueID),
+		"cache must hold the canonical wrapper after the canonicalizing read",
+	)
+
+	// Overwrite. The old array's slabs are deleted; the cache entry for its
+	// value ID must be evicted.
+	storeArrayValue(t, inter, domainStorageMap, address, key, 2)
+
+	require.Nil(t,
+		inter.CanonicalAtreeContainer(originalValueID),
+		"cache entry must be evicted after the overwrite",
+	)
+}
+
+// TestDomainStorageMapRemoveValueEvictsCanonicalCache — counterpart of
+// TestDomainStorageMapSetValueEvictsCanonicalCacheForOverwrittenValue for
+// the RemoveValue path.
+func TestDomainStorageMapRemoveValueEvictsCanonicalCache(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	ledger := NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil, nil, runtime.StorageConfig{})
+
+	const atreeValueValidationEnabled = true
+	const atreeStorageValidationEnabled = false
+	inter := NewTestInterpreterWithStorageAndAtreeValidationConfig(
+		t, storage, atreeValueValidationEnabled, atreeStorageValidationEnabled,
+	)
+
+	domainStorageMap := interpreter.NewDomainStorageMap(
+		nil, nil, storage, atree.Address(address),
+	)
+	require.NotNil(t, domainStorageMap)
+
+	key := interpreter.StringStorageMapKey("k")
+
+	storeArrayValue(t, inter, domainStorageMap, address, key, 1)
+
+	read := domainStorageMap.ReadValue(inter, key)
+	require.IsType(t, &interpreter.ArrayValue{}, read)
+	originalValueID := read.(*interpreter.ArrayValue).ValueID()
+	require.NotNil(t, inter.CanonicalAtreeContainer(originalValueID))
+
+	existed := domainStorageMap.RemoveValue(inter, key)
+	require.True(t, existed)
+
+	require.Nil(t,
+		inter.CanonicalAtreeContainer(originalValueID),
+		"cache entry must be evicted after the remove",
+	)
+}
