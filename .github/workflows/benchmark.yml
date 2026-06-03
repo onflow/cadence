@@ -27,6 +27,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup private build environment
+        if: ${{ vars.PRIVATE_BUILDS_SUPPORTED == 'true' }}
+        uses: ./actions/private-setup
+        with:
+          atree_deploy_key: ${{ secrets.ATREE_DEPLOY_KEY }}
+
       - name: Detect changed components
         uses: dorny/paths-filter@v3
         id: changes

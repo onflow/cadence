@@ -11050,7 +11050,7 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
 			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
 			opcode.PrettyInstructionSetIndex{
-				IndexedType:             rArrayType,
+				IndexedType: rArrayType,
 			},
 
 			// jump to the end
@@ -11077,7 +11077,7 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
 			opcode.PrettyInstructionGetLocal{Local: rightValueIndex},
 			opcode.PrettyInstructionSetIndex{
-				IndexedType:             rArrayType,
+				IndexedType: rArrayType,
 			},
 
 			// set right index with left value
@@ -11085,7 +11085,7 @@ func TestCompileSwapIndexInResources(t *testing.T) {
 			opcode.PrettyInstructionGetLocal{Local: rightIndexIndex},
 			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
 			opcode.PrettyInstructionSetIndex{
-				IndexedType:             rArrayType,
+				IndexedType: rArrayType,
 			},
 
 			// destroy rs
