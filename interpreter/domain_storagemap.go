@@ -236,15 +236,9 @@ func (s *DomainStorageMap) SetValue(context ValueTransferContext, key StorageMap
 	existed = existingStorable != nil
 	if existed {
 		existingValue := StoredValue(context, existingStorable, context.Storage())
-		// Evict any canonical wrapper for the value being overwritten;
-		// its slabs are about to be deleted by DeepRemove + RemoveReferencedSlab,
-		// so a cached wrapper would back onto gone slabs.
-		// Atree doesn't reuse SlabIDs,
-		// so this can't cause a wrong-wrapper read,
-		// but the entry would otherwise leak for the lifetime of the cache.
-		if atreeBacked, ok := existingValue.(AtreeBackedValue); ok {
-			context.ClearCanonicalAtreeContainer(atreeBacked.ValueID())
-		}
+		// DeepRemove also evicts the cached canonical wrapper (if any) for
+		// `existingValue` and recursively for every nested container,
+		// so we don't need a separate ClearCanonicalAtreeContainer here.
 		existingValue.DeepRemove(context, true) // existingValue is standalone because it was overwritten in parent container.
 		RemoveReferencedSlab(context, existingStorable)
 	}
@@ -297,15 +291,9 @@ func (s *DomainStorageMap) RemoveValue(context ValueRemoveContext, key StorageMa
 	existed = existingValueStorable != nil
 	if existed {
 		existingValue := StoredValue(context, existingValueStorable, context.Storage())
-		// Evict any canonical wrapper for the value being removed;
-		// its slabs are about to be deleted by DeepRemove + RemoveReferencedSlab,
-		// so a cached wrapper would back onto gone slabs.
-		// Atree doesn't reuse SlabIDs,
-		// so this can't cause a wrong-wrapper read,
-		// but the entry would otherwise leak for the lifetime of the cache.
-		if atreeBacked, ok := existingValue.(AtreeBackedValue); ok {
-			context.ClearCanonicalAtreeContainer(atreeBacked.ValueID())
-		}
+		// DeepRemove also evicts the cached canonical wrapper (if any) for
+		// `existingValue` and recursively for every nested container,
+		// so we don't need a separate ClearCanonicalAtreeContainer here.
 		existingValue.DeepRemove(context, true) // existingValue is standalone because it was removed from parent container.
 		RemoveReferencedSlab(context, existingValueStorable)
 	}

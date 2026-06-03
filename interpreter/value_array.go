@@ -1728,6 +1728,11 @@ func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer
 		}()
 	}
 
+	// Evict any canonical wrapper for this value: its slabs are about to be
+	// torn down. Done here (rather than at each call site) so that the
+	// recursive `value.DeepRemove(...)` below also covers nested wrappers.
+	context.ClearCanonicalAtreeContainer(v.valueID)
+
 	// Remove nested values and storables
 
 	storage := v.array.Storage

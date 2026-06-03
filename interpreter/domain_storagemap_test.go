@@ -31,6 +31,7 @@ import (
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -954,6 +955,79 @@ func TestDomainStorageMapSetValueEvictsCanonicalCacheForOverwrittenValue(t *test
 	require.Nil(t,
 		inter.CanonicalAtreeContainer(originalValueID),
 		"cache entry must be evicted after the overwrite",
+	)
+}
+
+// TestDomainStorageMapRemoveValueEvictsCanonicalCacheForNestedContainers
+// pins down the per-element eviction that comes from placing the cache
+// clear inside `DeepRemove`: removing an outer `[[Int]]` evicts the cache
+// entry for the outer array AND for each inner array that had been
+// canonicalized via a prior `&outer[i]` access.
+func TestDomainStorageMapRemoveValueEvictsCanonicalCacheForNestedContainers(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	ledger := NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil, nil, runtime.StorageConfig{})
+
+	const atreeValueValidationEnabled = true
+	const atreeStorageValidationEnabled = false
+	inter := NewTestInterpreterWithStorageAndAtreeValidationConfig(
+		t, storage, atreeValueValidationEnabled, atreeStorageValidationEnabled,
+	)
+
+	domainStorageMap := interpreter.NewDomainStorageMap(
+		nil, nil, storage, atree.Address(address),
+	)
+	require.NotNil(t, domainStorageMap)
+
+	key := interpreter.StringStorageMapKey("k")
+
+	// Store an outer [[Int]] with one inner [Int].
+	inner := interpreter.NewArrayValue(
+		inter,
+		&interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		},
+		common.ZeroAddress,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+	)
+	outer := interpreter.NewArrayValue(
+		inter,
+		&interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		common.ZeroAddress,
+		inner,
+	)
+	transferredOuter := outer.Transfer(
+		inter, atree.Address(address), false, nil, nil, true,
+	).(*interpreter.ArrayValue)
+	domainStorageMap.SetValue(inter, key, transferredOuter)
+
+	// Canonicalize the outer wrapper (ReadValue) and the inner wrapper (Get).
+	readOuter := domainStorageMap.ReadValue(inter, key).(*interpreter.ArrayValue)
+	outerValueID := readOuter.ValueID()
+	readInner := readOuter.Get(inter, 0).(*interpreter.ArrayValue)
+	innerValueID := readInner.ValueID()
+
+	require.NotNil(t, inter.CanonicalAtreeContainer(outerValueID))
+	require.NotNil(t, inter.CanonicalAtreeContainer(innerValueID))
+
+	// RemoveValue tears down the outer; DeepRemove's recursive walk evicts
+	// both the outer's cache entry and the nested inner's.
+	require.True(t, domainStorageMap.RemoveValue(inter, key))
+
+	assert.Nil(t,
+		inter.CanonicalAtreeContainer(outerValueID),
+		"outer cache entry must be evicted",
+	)
+	assert.Nil(t,
+		inter.CanonicalAtreeContainer(innerValueID),
+		"nested inner cache entry must also be evicted via recursive DeepRemove",
 	)
 }
 
