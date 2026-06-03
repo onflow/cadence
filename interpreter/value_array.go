@@ -460,6 +460,32 @@ func (v *ArrayValue) canonicalAtreeContainer() atreeContainer {
 	return v.array
 }
 
+// iterator returns a mutable atree iterator when `asReference` is true —
+// elements yielded will be exposed through `EphemeralReferenceValue`s,
+// so mutations through those references must propagate via the wrapper's
+// real parent-updater.
+// A read-only iterator (whose wrapper has a trap callback, no real parent-updater)
+// suffices when elements are `Transfer`'d out and decoupled from the source.
+func (v *ArrayValue) iterator(asReference bool) (atree.ArrayIterator, error) {
+	if asReference {
+		return v.array.Iterator()
+	}
+	return v.array.ReadOnlyIterator()
+}
+
+// rangeIterator returns a mutable atree iterator when `asReference` is true —
+// elements yielded will be exposed through `EphemeralReferenceValue`s,
+// so mutations through those references must propagate via the wrapper's
+// real parent-updater.
+// A read-only iterator (whose wrapper has a trap callback, no real parent-updater)
+// suffices when elements are `Transfer`'d out and decoupled from the source.
+func (v *ArrayValue) rangeIterator(fromIndex, toIndex uint64, asReference bool) (atree.ArrayIterator, error) {
+	if asReference {
+		return v.array.RangeIterator(fromIndex, toIndex)
+	}
+	return v.array.ReadOnlyRangeIterator(fromIndex, toIndex)
+}
+
 func (v *ArrayValue) Concat(
 	context ValueTransferContext,
 	other *ArrayValue,
@@ -478,31 +504,12 @@ func (v *ArrayValue) Concat(
 	resultElementSemaType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, resultElementSemaType, false)
 	resultElementStaticType := ConvertSemaToStaticType(context, resultElementSemaType)
 
-	// In the asReference branch each yielded element is wrapped in an
-	// EphemeralReferenceValue that lands in the result array.
-	// Subsequent mutations through such a reference
-	// (e.g. calling an `access(all)` mutating function on a struct element)
-	// must propagate to the original container,
-	// so the iterator must wire a real parent-notification callback —
-	// a read-only iterator's trap callback would panic on mutation.
-	// In the non-asReference branch the element is `Transfer`'d, decoupled from the original,
-	// so a read-only iterator suffices.
-	var firstIterator, secondIterator atree.ArrayIterator
-	var err error
-	if asReference {
-		firstIterator, err = v.array.Iterator()
-	} else {
-		firstIterator, err = v.array.ReadOnlyIterator()
-	}
+	firstIterator, err := v.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	if asReference {
-		secondIterator, err = other.array.Iterator()
-	} else {
-		secondIterator, err = other.array.ReadOnlyIterator()
-	}
+	secondIterator, err := other.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -1842,19 +1849,7 @@ func (v *ArrayValue) Slice(
 	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
 
-	// In the asReference branch each yielded element is wrapped in an
-	// EphemeralReferenceValue that lands in the result array.
-	// Subsequent mutations through such a reference
-	// must propagate to the original container,
-	// so the iterator must wire a real parent-notification callback.
-	// In the non-asReference branch the element is `Transfer`'d, decoupled from the original.
-	var iterator atree.ArrayIterator
-	var err error
-	if asReference {
-		iterator, err = v.array.RangeIterator(uint64(fromIndex), uint64(toIndex))
-	} else {
-		iterator, err = v.array.ReadOnlyRangeIterator(uint64(fromIndex), uint64(toIndex))
-	}
+	iterator, err := v.rangeIterator(uint64(fromIndex), uint64(toIndex), asReference)
 	if err != nil {
 
 		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
@@ -2246,19 +2241,7 @@ func (v *ArrayValue) ToVariableSized(
 
 	// Convert the array to a variable-sized array.
 
-	// In the asReference branch each yielded element is wrapped in an
-	// EphemeralReferenceValue that lands in the result array.
-	// Subsequent mutations through such a reference must propagate to the original container,
-	// so the iterator must wire a real parent-notification callback.
-	// In the non-asReference branch the element is `Transfer`'d, decoupled from the original,
-	// so a read-only iterator suffices.
-	var iterator atree.ArrayIterator
-	var err error
-	if asReference {
-		iterator, err = v.array.Iterator()
-	} else {
-		iterator, err = v.array.ReadOnlyIterator()
-	}
+	iterator, err := v.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -2345,19 +2328,7 @@ func (v *ArrayValue) ToConstantSized(
 
 	// Convert the array to a constant-sized array.
 
-	// In the asReference branch each yielded element is wrapped in an
-	// EphemeralReferenceValue that lands in the result array.
-	// Subsequent mutations through such a reference must propagate to the original container,
-	// so the iterator must wire a real parent-notification callback.
-	// In the non-asReference branch the element is `Transfer`'d, decoupled from the original,
-	// so a read-only iterator suffices.
-	var iterator atree.ArrayIterator
-	var err error
-	if asReference {
-		iterator, err = v.array.Iterator()
-	} else {
-		iterator, err = v.array.ReadOnlyIterator()
-	}
+	iterator, err := v.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
