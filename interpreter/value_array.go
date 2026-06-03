@@ -441,9 +441,8 @@ func (v *ArrayValue) Destroy(context ResourceDestructionContext) {
 
 	InvalidateReferencedResources(context, v)
 
-	if cache, ok := context.(AtreeContainerCache); ok {
-		cache.ClearCanonicalAtreeContainer(valueID)
-	}
+	context.ClearCanonicalAtreeContainer(valueID)
+
 	v.array = nil
 }
 
@@ -1635,9 +1634,8 @@ func (v *ArrayValue) Transfer(
 
 		InvalidateReferencedResources(context, v)
 
-		if cache, ok := context.(AtreeContainerCache); ok {
-			cache.ClearCanonicalAtreeContainer(v.valueID)
-		}
+		context.ClearCanonicalAtreeContainer(v.valueID)
+
 		v.array = nil
 	}
 

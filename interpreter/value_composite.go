@@ -464,9 +464,8 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext) {
 
 	InvalidateReferencedResources(context, v)
 
-	if cache, ok := context.(AtreeContainerCache); ok {
-		cache.ClearCanonicalAtreeContainer(valueID)
-	}
+	context.ClearCanonicalAtreeContainer(valueID)
+
 	v.dictionary = nil
 }
 
@@ -1578,9 +1577,8 @@ func (v *CompositeValue) Transfer(
 
 		InvalidateReferencedResources(context, v)
 
-		if cache, ok := context.(AtreeContainerCache); ok {
-			cache.ClearCanonicalAtreeContainer(v.valueID)
-		}
+		context.ClearCanonicalAtreeContainer(v.valueID)
+
 		v.dictionary = nil
 	}
 

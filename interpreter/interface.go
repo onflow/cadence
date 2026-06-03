@@ -568,9 +568,9 @@ func (NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
 
 // Canonical wrapper cache is a no-op for stringification — wrappers
 // constructed during MeteredString are discarded after the string is built.
-func (NoOpStringContext) CanonicalAtreeContainer(_ atree.ValueID) Value          { return nil }
-func (NoOpStringContext) SetCanonicalAtreeContainer(_ atree.ValueID, _ Value)    {}
-func (NoOpStringContext) ClearCanonicalAtreeContainer(_ atree.ValueID)           {}
+func (NoOpStringContext) CanonicalAtreeContainer(_ atree.ValueID) Value       { return nil }
+func (NoOpStringContext) SetCanonicalAtreeContainer(_ atree.ValueID, _ Value) {}
+func (NoOpStringContext) ClearCanonicalAtreeContainer(_ atree.ValueID)        {}
 
 func (NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f func()) {
 	f()
