@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -183,35 +182,35 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 
 	// liveValueIDOf exposes the underlying atree array's current value ID so
 	// the Cadence code can confirm the slab split actually occurred.
-	//
-	// It takes the *name* of the reference variable rather than the reference
-	// itself: passing the stale ref directly would trip the staleness check on
-	// the call-site expression and shadow the real exploit-site error.
-	// Resolving the variable internally via GetValueOfVariable bypasses the
-	// per-expression check.
+	// It takes a reference, generalized through `&AnyResource` so both
+	// `auth(Mutate) &[Vault]` and the post-cast `&AnyResource` form are accepted.
 	liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"liveValueIDOf",
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			[]sema.Parameter{
 				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "name",
-					TypeAnnotation: sema.StringTypeAnnotation,
+					Label:      sema.ArgumentLabelNotRequired,
+					Identifier: "ref",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.ReferenceType{
+							Type:          sema.AnyResourceType,
+							Authorization: sema.UnauthorizedAccess,
+						},
+					),
 				},
 			},
 			sema.StringTypeAnnotation,
 		),
 		"",
 		func(
-			context interpreter.NativeFunctionContext,
+			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
-			name := args[0].(*interpreter.StringValue).Str
-			ref := context.GetValueOfVariable(name).(*interpreter.EphemeralReferenceValue)
+			ref := args[0].(*interpreter.EphemeralReferenceValue)
 			arrayValue := ref.Value.(*interpreter.ArrayValue)
 			return interpreter.NewUnmeteredStringValue(arrayValue.ValueID().String())
 		},
@@ -227,7 +226,7 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 	interpreter.Declare(baseActivation, liveValueIDOfFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) resource Vault {
@@ -249,7 +248,7 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
 
         // Both refs see the same live atree value ID.
         assert(
-            liveValueIDOf("ref") == liveValueIDOf("ref2"),
+            liveValueIDOf(ref) == liveValueIDOf(ref2),
             message: "before split: both refs should observe the same live atree value ID"
         )
 
@@ -263,7 +262,7 @@ func TestInterpretArrayValueIDTracking(t *testing.T) {
         // Both refs share the canonical wrapper, so the slab split through ref
         // is visible to ref2; their live value IDs continue to agree.
         assert(
-            liveValueIDOf("ref") == liveValueIDOf("ref2"),
+            liveValueIDOf(ref) == liveValueIDOf(ref2),
             message: "after split: refs must still observe the same live atree value ID"
         )
 
@@ -340,7 +339,7 @@ func TestInterpretArrayAliasedMutationConsistency(t *testing.T) {
 	interpreter.Declare(baseActivation, logFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) resource Vault {
@@ -440,7 +439,7 @@ func TestInterpretArrayForLoopAliasingConsistency(t *testing.T) {
 	interpreter.Declare(baseActivation, logFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) resource Vault {
@@ -540,7 +539,7 @@ func TestInterpretArraySliceDoesNotInvalidateAliases(t *testing.T) {
 	interpreter.Declare(baseActivation, logFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) fun main() {
@@ -697,7 +696,7 @@ func TestInterpretArrayAsReferenceContainerMethodAliasingConsistency(t *testing.
     }
 `, tc.setup, tc.expr, tc.alias, tc.mutVia)
 
-			inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+			inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 				t,
 				code,
 				ParseCheckAndInterpretOptions{
@@ -847,7 +846,7 @@ func TestInterpretOptionalContainerAliasingConsistency(t *testing.T) {
 	interpreter.Declare(baseActivation, logFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) resource Vault {
@@ -933,7 +932,7 @@ func TestInterpretOptionalContainerAliasingViaArrayIndex(t *testing.T) {
 	interpreter.Declare(baseActivation, logFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) resource Vault {
@@ -1006,7 +1005,7 @@ func TestInterpretOptionalContainerAliasingViaDictionaryLookup(t *testing.T) {
 	interpreter.Declare(baseActivation, logFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) resource Vault {
@@ -1087,7 +1086,7 @@ func TestInterpretArrayPromoteRootAliasingConsistency(t *testing.T) {
 	interpreter.Declare(baseActivation, logFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
         access(all) resource Vault {
@@ -1172,7 +1171,7 @@ func TestInterpretArraySplitAndPromoteAliasingConsistency(t *testing.T) {
 	interpreter.Declare(baseActivation, logFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
         access(all) resource Vault {

@@ -23,7 +23,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -42,47 +41,38 @@ import (
 func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
 	t.Parallel()
 
-	makeEnv := func(t *testing.T) (
-		*sema.VariableActivation,
-		*activations.Activation[interpreter.Variable],
-	) {
-
-		// liveValueIDOf exposes the underlying atree container's current value ID
-		// so the Cadence code can confirm the slab split actually occurred
-		// before attempting the stale-wrapper mutation.
-		//
-		// It takes the *name* of the reference variable rather than the
-		// reference itself: passing a stale reference as a function argument
-		// would trip the staleness check during expression evaluation (every
-		// expression result goes through CheckInvalidatedValueOrValueReference,
-		// which recursively descends into reference values), so the check would
-		// fire at the call-site rather than the mutation. Resolving the
-		// variable internally via GetValueOfVariable bypasses the per-
-		// expression check.
-		liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"liveValueIDOf",
+	// liveValueIDOf{Resource,Struct} expose the underlying atree container's
+	// value ID for any wrapped ArrayValue / DictionaryValue / CompositeValue.
+	// Two functions are needed because Cadence reference subtyping puts resource
+	// and struct references in disjoint hierarchies:
+	// `&AnyResource` won't accept struct refs and vice versa.
+	makeLiveValueIDOfFunction := func(
+		t *testing.T,
+		name string,
+		refType sema.Type,
+	) stdlib.StandardLibraryValue {
+		return stdlib.NewInterpreterStandardLibraryStaticFunction(
+			name,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityImpure,
 				[]sema.Parameter{
 					{
 						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "name",
-						TypeAnnotation: sema.StringTypeAnnotation,
+						Identifier:     "ref",
+						TypeAnnotation: sema.NewTypeAnnotation(refType),
 					},
 				},
 				sema.StringTypeAnnotation,
 			),
 			"",
 			func(
-				context interpreter.NativeFunctionContext,
+				_ interpreter.NativeFunctionContext,
 				_ interpreter.TypeArgumentsIterator,
 				_ interpreter.ArgumentTypesIterator,
 				_ interpreter.Value,
 				args []interpreter.Value,
 			) interpreter.Value {
-				name := args[0].(*interpreter.StringValue).Str
-				value := context.GetValueOfVariable(name)
-				ref := value.(*interpreter.EphemeralReferenceValue)
+				ref := args[0].(*interpreter.EphemeralReferenceValue)
 				var id string
 				switch v := ref.Value.(type) {
 				case *interpreter.ArrayValue:
@@ -97,13 +87,38 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
 				return interpreter.NewUnmeteredStringValue(id)
 			},
 		)
+	}
+
+	makeEnv := func(t *testing.T) (
+		*sema.VariableActivation,
+		*activations.Activation[interpreter.Variable],
+	) {
+
+		liveValueIDOfResourceFunction := makeLiveValueIDOfFunction(
+			t,
+			"liveValueIDOfResource",
+			&sema.ReferenceType{
+				Type:          sema.AnyResourceType,
+				Authorization: sema.UnauthorizedAccess,
+			},
+		)
+		liveValueIDOfStructFunction := makeLiveValueIDOfFunction(
+			t,
+			"liveValueIDOfStruct",
+			&sema.ReferenceType{
+				Type:          sema.AnyStructType,
+				Authorization: sema.UnauthorizedAccess,
+			},
+		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(liveValueIDOfFunction)
+		baseValueActivation.DeclareValue(liveValueIDOfResourceFunction)
+		baseValueActivation.DeclareValue(liveValueIDOfStructFunction)
 		baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, liveValueIDOfFunction)
+		interpreter.Declare(baseActivation, liveValueIDOfResourceFunction)
+		interpreter.Declare(baseActivation, liveValueIDOfStructFunction)
 		interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 		return baseValueActivation, baseActivation
@@ -118,7 +133,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
 		handleCheckerError func(error),
 	) error {
 		baseValueActivation, baseActivation := makeEnv(t)
-		inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+		invokable, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 			t,
 			code,
 			ParseCheckAndInterpretOptions{
@@ -138,7 +153,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		_, err = inter.Invoke("main")
+		_, err = invokable.Invoke("main")
 		return err
 	}
 	runInvoke := func(t *testing.T, code string) error {
@@ -167,7 +182,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -178,7 +193,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "after split: refs must still observe the same live atree value ID"
                 )
 
@@ -218,7 +233,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -229,7 +244,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "after split: refs must still observe the same live atree value ID"
                 )
 
@@ -263,7 +278,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -274,7 +289,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "after split: refs must still observe the same live atree value ID"
                 )
 
@@ -309,7 +324,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -322,7 +337,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "after split: refs must still observe the same live atree value ID"
                 )
 
@@ -428,7 +443,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 let ref2 = &arr[0] as auth(Mod) &R
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -440,7 +455,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 ref[A6]!.inflate()
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "after split: refs must still observe the same live atree value ID"
                 )
 
@@ -474,7 +489,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -486,7 +501,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "after split: refs must still observe the same live atree value ID"
                 )
 
@@ -531,7 +546,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Int]
 
                 assert(
-                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    liveValueIDOfStruct(ref1) == liveValueIDOfStruct(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -558,7 +573,7 @@ func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
                 // If the gap is unpatched, ref's wrapper is now stale and mapped
                 // contains corrupt data (wrong length, duplicates, or stale reads).
                 assert(
-                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    liveValueIDOfStruct(ref1) == liveValueIDOfStruct(ref2),
                     message: "after callback-induced split: refs must still observe the same live atree value ID"
                 )
 

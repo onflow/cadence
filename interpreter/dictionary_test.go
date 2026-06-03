@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -141,33 +140,35 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 	}))
 
 	// liveValueIDOf exposes the underlying atree map's current value ID so the
-	// Cadence code can confirm the slab split actually occurred. It takes the
-	// *name* of the reference variable so that resolving the (potentially
-	// stale) reference happens inside Go via GetValueOfVariable, bypassing the
-	// per-expression staleness check that would otherwise fire at this call.
+	// Cadence code can confirm the slab split actually occurred.
+	// It takes a reference, generalized through `&AnyResource`.
 	liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"liveValueIDOf",
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			[]sema.Parameter{
 				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "name",
-					TypeAnnotation: sema.StringTypeAnnotation,
+					Label:      sema.ArgumentLabelNotRequired,
+					Identifier: "ref",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.ReferenceType{
+							Type:          sema.AnyResourceType,
+							Authorization: sema.UnauthorizedAccess,
+						},
+					),
 				},
 			},
 			sema.StringTypeAnnotation,
 		),
 		"",
 		func(
-			context interpreter.NativeFunctionContext,
+			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
-			name := args[0].(*interpreter.StringValue).Str
-			ref := context.GetValueOfVariable(name).(*interpreter.EphemeralReferenceValue)
+			ref := args[0].(*interpreter.EphemeralReferenceValue)
 			dictValue := ref.Value.(*interpreter.DictionaryValue)
 			return interpreter.NewUnmeteredStringValue(dictValue.ValueID().String())
 		},
@@ -183,7 +184,7 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 	interpreter.Declare(baseActivation, liveValueIDOfFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) resource Vault {
@@ -205,7 +206,7 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 
         // Both refs see the same live atree value ID.
         assert(
-            liveValueIDOf("ref") == liveValueIDOf("ref2"),
+            liveValueIDOf(ref) == liveValueIDOf(ref2),
             message: "before split: both refs should observe the same live atree value ID"
         )
 
@@ -220,7 +221,7 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
         // Both refs share the canonical wrapper, so the slab split through ref
         // is visible to ref2; their live value IDs continue to agree.
         assert(
-            liveValueIDOf("ref") == liveValueIDOf("ref2"),
+            liveValueIDOf(ref) == liveValueIDOf(ref2),
             message: "after split: refs must still observe the same live atree value ID"
         )
 
@@ -262,7 +263,8 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
 	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
-	assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	assert.Equal(t, 53, invalidatedResourceReferenceError.StartPosition().Line)
 }
 
 // TestInterpretDictionaryAliasedMutationConsistency is the DictionaryValue
@@ -288,7 +290,7 @@ func TestInterpretDictionaryAliasedMutationConsistency(t *testing.T) {
 	interpreter.Declare(baseActivation, logFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) resource Vault {
