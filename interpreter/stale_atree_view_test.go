@@ -95,12 +95,61 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 			},
 		)
 
+		// liveInlinedOf exposes whether the underlying atree container of a
+		// reference variable is currently stored inlined inside its parent's
+		// slab. Atree may transition a container between inlined and
+		// standalone-slab storage when its parent grows or shrinks. Such
+		// transitions are NOT observable through LiveValueID (atree assigns
+		// a stable ValueID across inline/uninline transitions), so this
+		// helper is needed to assert that uninlining actually occurred in
+		// tests that probe the safety of the post-uninlining state.
+		liveInlinedOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"liveInlinedOf",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityImpure,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "name",
+						TypeAnnotation: sema.StringTypeAnnotation,
+					},
+				},
+				sema.BoolTypeAnnotation,
+			),
+			"",
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.TypeArgumentsIterator,
+				_ interpreter.ArgumentTypesIterator,
+				_ interpreter.Value,
+				args []interpreter.Value,
+			) interpreter.Value {
+				name := args[0].(*interpreter.StringValue).Str
+				value := context.GetValueOfVariable(name)
+				ref := value.(*interpreter.EphemeralReferenceValue)
+				var inlined bool
+				switch v := ref.Value.(type) {
+				case *interpreter.ArrayValue:
+					inlined = v.LiveInlined()
+				case *interpreter.DictionaryValue:
+					inlined = v.LiveInlined()
+				case *interpreter.CompositeValue:
+					inlined = v.LiveInlined()
+				default:
+					t.Fatalf("unexpected value type %T", ref.Value)
+				}
+				return interpreter.BoolValue(inlined)
+			},
+		)
+
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(liveValueIDOfFunction)
+		baseValueActivation.DeclareValue(liveInlinedOfFunction)
 		baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, liveValueIDOfFunction)
+		interpreter.Declare(baseActivation, liveInlinedOfFunction)
 		interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 		return baseValueActivation, baseActivation
@@ -603,4 +652,565 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		assert.ErrorAs(t, err, &containerMutationErr)
 	})
 
+	// When an attachment method is bound via `composite[B]`, the bound function
+	// captures `base = v.GetBaseValue(...)`, a fresh `EphemeralReferenceValue`
+	// pointing at the parent composite. `MaybeDereferenceReceiver` at invoke
+	// time only validates the *attachment* receiver, not the captured base.
+	//
+	// The safe contract is that any code path that ultimately walks back through
+	// the parent via `base` must re-trigger the staleness check on the parent
+	// wrapper — either at the index expression `ref2[B]` (because the stale
+	// ref2 is evaluated as the index target) or inside the method body when
+	// `base.X` is evaluated.
+	//
+	// Both directions are exercised by the two sub-tests below.
+	typeDeclarations := `
+        access(all) resource R {
+            access(all) var balance: UFix64
+            init(balance: UFix64) { self.balance = balance }
+        }
+
+        access(all) attachment A1 for R {
+            access(all) var a1: String; access(all) var a2: String
+            access(all) var a3: String; access(all) var a4: String
+            init() { self.a1 = ""; self.a2 = ""; self.a3 = ""; self.a4 = "" }
+            access(all) fun inflate() {
+                self.a1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                self.a2 = self.a1; self.a3 = self.a1; self.a4 = self.a1
+            }
+        }
+        access(all) attachment A2 for R {
+            access(all) var b1: String; access(all) var b2: String
+            access(all) var b3: String; access(all) var b4: String
+            init() { self.b1 = ""; self.b2 = ""; self.b3 = ""; self.b4 = "" }
+            access(all) fun inflate() {
+                self.b1 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                self.b2 = self.b1; self.b3 = self.b1; self.b4 = self.b1
+            }
+        }
+        access(all) attachment A3 for R {
+            access(all) var d1: String; access(all) var d2: String
+            access(all) var d3: String; access(all) var d4: String
+            init() { self.d1 = ""; self.d2 = ""; self.d3 = ""; self.d4 = "" }
+            access(all) fun inflate() {
+                self.d1 = "dddddddddddddddddddddddddddddddddddddd"
+                self.d2 = self.d1; self.d3 = self.d1; self.d4 = self.d1
+            }
+        }
+        access(all) attachment A4 for R {
+            access(all) var e1: String; access(all) var e2: String
+            access(all) var e3: String; access(all) var e4: String
+            init() { self.e1 = ""; self.e2 = ""; self.e3 = ""; self.e4 = "" }
+            access(all) fun inflate() {
+                self.e1 = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+                self.e2 = self.e1; self.e3 = self.e1; self.e4 = self.e1
+            }
+        }
+        access(all) attachment A5 for R {
+            access(all) var g1: String; access(all) var g2: String
+            access(all) var g3: String; access(all) var g4: String
+            init() { self.g1 = ""; self.g2 = ""; self.g3 = ""; self.g4 = "" }
+            access(all) fun inflate() {
+                self.g1 = "gggggggggggggggggggggggggggggggggggggg"
+                self.g2 = self.g1; self.g3 = self.g1; self.g4 = self.g1
+            }
+        }
+        access(all) attachment A6 for R {
+            access(all) var h1: String; access(all) var h2: String
+            access(all) var h3: String; access(all) var h4: String
+            init() { self.h1 = ""; self.h2 = ""; self.h3 = ""; self.h4 = "" }
+            access(all) fun inflate() {
+                self.h1 = "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"
+                self.h2 = self.h1; self.h3 = self.h1; self.h4 = self.h1
+            }
+        }
+
+        // Attachment B exposes a method that reads back through base.
+        // A correct invariant requires the staleness check to fire any time
+        // base ultimately walks a stale parent wrapper.
+        access(all) attachment B for R {
+            access(all) fun readBaseBalance(): UFix64 {
+                return base.balance
+            }
+        }
+    `
+
+	t.Run("CompositeValue: attachment method via stale parent wrapper (direct index)", func(t *testing.T) {
+		t.Parallel()
+
+		// Scenario A: invoke an attachment method directly through the stale
+		// parent wrapper. The check should fire when ref2 is evaluated as the
+		// target of the index expression `ref2[B]`.
+		err := runInvoke(t, typeDeclarations+`
+            access(all) fun main() {
+                let r0 <- create R(balance: 42.0)
+                let r1 <- attach A1() to <-r0
+                let r2 <- attach A2() to <-r1
+                let r3 <- attach A3() to <-r2
+                let r4 <- attach A4() to <-r3
+                let r5 <- attach A5() to <-r4
+                let r6 <- attach A6() to <-r5
+                let r  <- attach B()  to <-r6
+
+                let arr: @[R] <- [<-r]
+                let ref1  = &arr[0] as &R
+                let ref2 = &arr[0] as &R
+
+                assert(
+                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
+                ref1[A1]!.inflate()
+                ref1[A2]!.inflate()
+                ref1[A3]!.inflate()
+                ref1[A4]!.inflate()
+                ref1[A5]!.inflate()
+                ref1[A6]!.inflate()
+
+                assert(
+                    liveValueIDOf("ref1") != liveValueIDOf("ref2"),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
+
+                // The stale ref2 is the target of the index expression and is
+                // evaluated first by evalExpression, which runs
+                // CheckInvalidatedValueOrValueReference and fires
+                // InvalidatedContainerViewError before the attachment lookup or
+                // method binding can complete.
+                let stashed = ref2[B]!.readBaseBalance()
+                assert(stashed == 42.0, message: "unreachable if check fires")
+
+                destroy arr
+            }
+        `)
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		assert.ErrorAs(t, err, &staleViewErr)
+	})
+
+	t.Run("CompositeValue: attachment method via stale parent wrapper (captured-before-split)", func(t *testing.T) {
+		t.Parallel()
+
+		// Scenario B: capture the attachment reference BEFORE the split, then
+		// trigger the split through ref, then invoke the attachment method via
+		// the captured reference. ref2 no longer appears in the post-split code
+		// path, so the check must fire elsewhere — inside the method body, when
+		// `base` is evaluated as an identifier and CheckInvalidatedValueOrValueReference
+		// recurses into the captured base reference's stale parent composite.
+		err := runInvoke(t, typeDeclarations+`
+            access(all) fun main() {
+                let r0 <- create R(balance: 42.0)
+                let r1 <- attach A1() to <-r0
+                let r2 <- attach A2() to <-r1
+                let r3 <- attach A3() to <-r2
+                let r4 <- attach A4() to <-r3
+                let r5 <- attach A5() to <-r4
+                let r6 <- attach A6() to <-r5
+                let r  <- attach B()  to <-r6
+
+                let arr: @[R] <- [<-r]
+                let ref1  = &arr[0] as &R
+                let ref2 = &arr[0] as &R
+
+                // Capture the attachment reference BEFORE the split. Internally
+                // this also wires the attachment's v.base to ref2's CompositeValue.
+                let bRef = ref2[B]!
+
+                assert(
+                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
+                ref1[A1]!.inflate()
+                ref1[A2]!.inflate()
+                ref1[A3]!.inflate()
+                ref1[A4]!.inflate()
+                ref1[A5]!.inflate()
+                ref1[A6]!.inflate()
+
+                assert(
+                    liveValueIDOf("ref1") != liveValueIDOf("ref2"),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
+
+                // The receiver bRef refers to the attachment (not stale), so
+                // MaybeDereferenceReceiver does not fire on the attachment ref1.
+                // The check must fire when the method body evaluates base
+                // (which resolves to a reference at the now-stale parent).
+                let stashed = bRef.readBaseBalance()
+                assert(stashed == 42.0, message: "unreachable if check fires")
+
+                destroy arr
+            }
+        `)
+
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		assert.ErrorAs(t, err, &staleViewErr)
+	})
+
+	// Resource-linearity-specific scenarios (Invariant 3) from
+	// atree-slab-change-security-analysis.md. These tests re-frame the
+	// previously-identified gaps through the lens of resource linearity:
+	// a resource must exist in exactly one location at any time, and no
+	// sibling wrapper may be used to read, mutate, or extract a resource
+	// after its slab tree has been restructured.
+
+	t.Run("ArrayValue.removeFirst via stale sibling", func(t *testing.T) {
+		t.Parallel()
+
+		// Scenario from "Destroy + sibling resurrection":
+		// the canonical ref1 removes-and-destroys a resource via removeFirst,
+		// then the sibling ref1's removeFirst attempt must be rejected.
+		// Without the centralized staleness check, the sibling's removeFirst
+		// could read from the demoted slab and yield a phantom resource —
+		// a resource-linearity violation (the resource ref1 already destroyed
+		// would now exist in a second location).
+		err := runInvoke(t, `
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) { self.balance = balance }
+            }
+
+            access(all) fun main() {
+                let outer: @[[Vault]] <- [<-[<-create Vault(balance: 1.0)]]
+
+                let ref1  = &outer[0] as auth(Mutate, Remove) &[Vault]
+                let ref2 = &outer[0] as auth(Mutate, Remove) &[Vault]
+
+                // Pre-grow ref1's array to trigger split, demoting ref2's view.
+                var i: Int = 0
+                while i < 200 {
+                    ref1.append(<-create Vault(balance: UFix64(i) + 10.0))
+                    i = i + 1
+                }
+
+                assert(
+                    liveValueIDOf("ref1") != liveValueIDOf("ref2"),
+                    message: "after split: refs should observe diverged live atree value IDs"
+                )
+
+                // ref1 removes and destroys the original first vault.
+                let v <- ref1.removeFirst()
+                assert(v.balance == 1.0, message: "ref1 removed canonical first vault")
+                destroy v
+
+                // Sibling's attempt to remove must be rejected. Without the
+                // staleness check, it could read the demoted slab and yield
+                // a phantom copy of the already-destroyed resource.
+                let phantom <- ref2.removeFirst()
+                destroy phantom
+
+                destroy outer
+            }
+        `)
+
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		assert.ErrorAs(t, err, &staleViewErr)
+	})
+
+	t.Run("ArrayValue: inner-growth uninlining surfaces via liveInlinedOf; sibling rejected", func(t *testing.T) {
+		t.Parallel()
+
+		// `outer: @[[Vault]]` begins with its single inner array stored
+		// inlined inside outer's slab. Atree inlines a child container
+		// whenever the child's full content fits within its parent's
+		// inline-element budget. When the child grows past that budget,
+		// atree uninlines it — physically moving its data to a standalone
+		// slab.
+		//
+		// Atree's ValueID is stable across the inline ↔ standalone-slab
+		// transition, so the cached-vs-live ValueID comparison used by the
+		// staleness check elsewhere in this file cannot detect uninlining.
+		// To make the transition observable at the Cadence level, this test
+		// uses `liveInlinedOf`, which taps `*atree.Array.Inlined()` (and
+		// the analogous method on `*atree.OrderedMap`).
+		//
+		// Both sibling refs are stale post-uninlining/split, because growth
+		// triggered through `ref1` necessarily restructures the slab tree
+		// they shared at construction. The centralized check is expected
+		// to reject the sibling's subsequent mutation with
+		// `InvalidatedContainerViewError`. The Cadence assertions below
+		// pin down each observable transition.
+		err := runInvoke(t, `
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) { self.balance = balance }
+            }
+
+            access(all) fun main() {
+                let outer: @[[Vault]] <- [<-[<-create Vault(balance: 1.0)]]
+
+                let ref1  = &outer[0] as auth(Mutate) &[Vault]
+                let ref2 = &outer[0] as auth(Mutate) &[Vault]
+
+                assert(
+                    liveInlinedOf("ref1"),
+                    message: "precondition: inner[0] should start inlined inside outer's slab"
+                )
+                assert(
+                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    message: "precondition: siblings should observe the same live atree value ID"
+                )
+
+                // Grow the inner array via ref1. As inner[0]'s content
+                // exceeds atree's inline-element budget, atree uninlines it
+                // into its own standalone slab.
+                var i: Int = 0
+                while i < 200 {
+                    ref1.append(<-create Vault(balance: UFix64(i) + 10.0))
+                    i = i + 1
+                }
+
+                // Confirm uninlining happened.
+                assert(
+                    !liveInlinedOf("ref1"),
+                    message: "expected inner[0] to be uninlined after growth via ref1"
+                )
+
+                // Append through the sibling. The slab tree restructuring
+                // (which includes the uninline transition) is also a split
+                // demotion at the inner array's tree level, so the cached-vs-
+                // live ValueID comparison fires here and the centralized
+                // check rejects the mutation.
+                ref2.append(<-create Vault(balance: 999.0))
+
+                destroy outer
+            }
+        `)
+
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		assert.ErrorAs(t, err, &staleViewErr)
+	})
+
+	t.Run("forEachAttachment + sibling parent mutation in callback", func(t *testing.T) {
+		t.Parallel()
+
+		// `ref1.forEachAttachment(...)` opens an atree iterator on the parent
+		// composite's attachment dictionary. The user callback then mutates
+		// the parent via a sibling reference `ref2`, growing the dictionary
+		// enough to split it. The safe contract is that *some* defense
+		// (per-iteration `CheckInvalidatedValueOrValueReference` at the
+		// loop head, or `WithContainerMutationPrevention(v.ValueID())`
+		// covering the iterator) must fire before any subsequent
+		// `iterator.Next()` reads from a demoted slab.
+		err := runInvoke(t, typeDeclarations+`
+            access(all) fun main() {
+                let r0 <- create R(balance: 42.0)
+                let r1 <- attach A1() to <-r0
+                let r2 <- attach A2() to <-r1
+                let r3 <- attach A3() to <-r2
+                let r4 <- attach A4() to <-r3
+                let r5 <- attach A5() to <-r4
+                let r6 <- attach A6() to <-r5
+                let r  <- attach B()  to <-r6
+
+                let arr: @[R] <- [<-r]
+                let ref1  = &arr[0] as &R
+                let ref2 = &arr[0] as &R
+
+                assert(
+                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    message: "before split: both refs should observe the same live atree value ID"
+                )
+
+                // Inside the forEachAttachment callback, mutate every
+                // attachment via the sibling. Each inflate() writes long
+                // strings into an attachment's atree map; the cumulative
+                // effect restructures the parent's atree dictionary.
+                //
+                // The expected safe outcome is that either:
+                //   (a) the next-iteration head re-check on compositeReference
+                //       fires InvalidatedContainerViewError, or
+                //   (b) atree's mutation-prevention machinery fires
+                //       ContainerMutatedDuringIterationError, because ref1
+                //       and ref2 share the same parent ValueID.
+                // Either outcome preserves invariants.
+                ref1.forEachAttachment(fun (a: &AnyResourceAttachment): Void {
+                    ref2[A1]!.inflate()
+                    ref2[A2]!.inflate()
+                    ref2[A3]!.inflate()
+                    ref2[A4]!.inflate()
+                    ref2[A5]!.inflate()
+                    ref2[A6]!.inflate()
+                })
+
+                destroy arr
+            }
+        `)
+
+		var staleViewErr *interpreter.InvalidatedContainerViewError
+		assert.ErrorAs(t, err, &staleViewErr)
+	})
+
+	t.Run("ArrayValue: inline to standalone round-trip; sibling wrapper probed", func(t *testing.T) {
+		t.Parallel()
+
+		// Probes the scenario flagged in atree-slab-change-security-analysis.md:
+		// "a single small standalone slab gets re-inlined when its parent shrinks,
+		// or vice-versa — would not be caught by the current check".
+		//
+		// Setup: two sibling refs to outer[0]. Grow inner via `ref` enough to
+		// uninline it. Then shrink via `ref` back down so atree re-inlines.
+		// The shape returns toward the original (inner empty/tiny, inlined),
+		// but `ref2`'s wrapper has been carried across both transitions and
+		// many intermediate slab tree restructurings.
+		//
+		err := runInvoke(t, `
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) { self.balance = balance }
+            }
+
+            access(all) fun main() {
+                let outer: @[[Vault]] <- [<-[<-create Vault(balance: 1.0)]]
+
+                let ref  = &outer[0] as auth(Mutate, Remove) &[Vault]
+                let ref2 = &outer[0] as auth(Mutate, Remove) &[Vault]
+
+                assert(
+                    liveInlinedOf("ref"),
+                    message: "precondition: inner[0] should start inlined"
+                )
+                assert(
+                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    message: "precondition: siblings should share live ValueID"
+                )
+
+                // Phase 1: grow inner via ref until atree uninlines outer[0].
+                var i: Int = 0
+                while i < 200 {
+                    ref.append(<-create Vault(balance: UFix64(i) + 10.0))
+                    i = i + 1
+                }
+                assert(
+                    !liveInlinedOf("ref"),
+                    message: "phase 1: expected inner[0] to be uninlined after growth"
+                )
+
+                // Phase 2: shrink inner via ref so atree re-inlines outer[0].
+                var j: Int = 0
+                while j < 200 {
+                    let v <- ref.removeLast()
+                    destroy v
+                    j = j + 1
+                }
+                assert(
+                    liveInlinedOf("ref"),
+                    message: "phase 2: expected inner[0] to be re-inlined after shrink"
+                )
+
+                // Probe ref2 after the inline <-> standalone round-trip.
+                // The sibling has not participated in either transition, and
+                // its cached pointers may reference now-freed standalone slabs
+                // or otherwise stale tree state.
+                ref2.append(<-create Vault(balance: 999.0))
+
+                // If the previous line succeeded (no panic from the staleness check),
+                // verify canonical state is consistent. A length other
+                // than 2 or wrong balances would indicate silent corruption.
+                let canonical = &outer[0] as &[Vault]
+                assert(
+                    canonical.length == 2,
+                    message: "canonical inner[0] length mismatch after round-trip: "
+                        .concat(canonical.length.toString())
+                )
+                assert(canonical[0].balance == 1.0, message: "canonical inner[0][0] mismatch")
+                assert(canonical[1].balance == 999.0, message: "canonical inner[0][1] mismatch")
+
+                destroy outer
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ArrayValue: minimal inline to standalone transition; sibling probed", func(t *testing.T) {
+		t.Parallel()
+
+		// Probes the narrowest inline -> standalone transition (no round-trip back).
+		// The earlier "inner-growth uninlining" test drives 200
+		// successive appends to push inner past atree's inline-element budget,
+		// that produces many intermediate slab restructurings beyond the
+		// uninlining itself, each of which independently changes the slab
+		// tree shape and so guarantees a cached-vs-live ValueID mismatch on
+		// the sibling.
+		//
+		// This test instead appends one element at a time and stops the
+		// moment `liveInlinedOf` flips from `true` to `false`. That isolates
+		// the uninline transition as cleanly as the language layer allows:
+		// no extra post-transition restructuring, no round-trip back, and
+		// the loop count `i` records exactly how many small elements were
+		// needed.
+		//
+		// Why this matters: atree's stated contract is that a value's
+		// `ValueID` is stable across the inline <-> standalone transition.
+		// If the minimal uninlining produces no other observable tree change,
+		// the centralized staleness check (which compares cached vs. live
+		// `ValueID`) is structurally blind to it.
+		// The sibling's subsequent mutation succeeds, and the canonical-state
+		// assertions hold — meaning atree's storage indirection transparently
+		// rebinds the sibling's `*atree.Array` across the transition;
+
+		err := runInvoke(t, `
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) { self.balance = balance }
+            }
+
+            access(all) fun main() {
+                let outer: @[[Vault]] <- [<-[]]
+                let ref1 = &outer[0] as auth(Mutate) &[Vault]
+                let ref2 = &outer[0] as auth(Mutate) &[Vault]
+
+                assert(
+                    liveInlinedOf("ref1"),
+                    message: "precondition: inner[0] should start inlined"
+                )
+                assert(
+                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    message: "precondition: siblings should share live ValueID"
+                )
+
+                // Append one element at a time via ref1, stopping the moment
+                // atree uninlines inner[0]. This is the minimal mutation
+                // sequence that drives the inline → standalone transition.
+                var i: Int = 0
+                while liveInlinedOf("ref1") && i < 1000 {
+                    ref1.append(<-create Vault(balance: UFix64(i)))
+                    i = i + 1
+                }
+                assert(
+                    !liveInlinedOf("ref1"),
+                    message: "expected inner[0] to be uninlined within 1000 small appends; "
+                        .concat("loop count: ").concat(i.toString())
+                )
+
+                // Sibling probe immediately at the boundary crossing.
+                ref2.append(<-create Vault(balance: 9999.0))
+
+                // Canonical-state assertions catch silent corruption.
+                let canonical = &outer[0] as &[Vault]
+                let expectedLen = i + 1
+                assert(
+                    canonical.length == expectedLen,
+                    message: "canonical inner[0] length mismatch after minimal uninlining: got "
+                        .concat(canonical.length.toString())
+                        .concat(", want ")
+                        .concat(expectedLen.toString())
+                )
+                assert(
+                    canonical[0].balance == 0.0,
+                    message: "canonical inner[0][0] balance mismatch after minimal uninlining"
+                )
+                assert(
+                    canonical[expectedLen - 1].balance == 9999.0,
+                    message: "canonical inner[0][last] balance mismatch after minimal uninlining"
+                )
+
+                destroy outer
+            }
+        `)
+
+		require.NoError(t, err)
+	})
 }

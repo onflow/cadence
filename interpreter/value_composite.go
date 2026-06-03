@@ -1844,6 +1844,14 @@ func (v *CompositeValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
 }
 
+// LiveInlined reports whether the underlying atree map is currently stored
+// inlined inside its parent container's slab, as opposed to as a standalone
+// slab. See ArrayValue.LiveInlined for context.
+// Intended for testing only.
+func (v *CompositeValue) LiveInlined() bool {
+	return v.dictionary.Inlined()
+}
+
 func (v *CompositeValue) RemoveField(
 	context ValueRemoveContext,
 	name string,

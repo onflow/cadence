@@ -1709,6 +1709,17 @@ func (v *ArrayValue) LiveValueID() atree.ValueID {
 	return v.array.ValueID()
 }
 
+// LiveInlined reports whether the underlying atree array is currently stored
+// inlined inside its parent container's slab, as opposed to as a standalone
+// slab. Atree may transition an array between these representations when its
+// parent container grows or shrinks. The transition does not change the
+// array's ValueID (which is stable across structural changes), so it is not
+// observable through LiveValueID.
+// Intended for testing only.
+func (v *ArrayValue) LiveInlined() bool {
+	return v.array.Inlined()
+}
+
 // isStaleAtreeView reports whether this wrapper has been displaced by a
 // structural change (slab split/merge/promotion) that was performed through
 // a sibling wrapper sharing the same underlying slab tree. See the

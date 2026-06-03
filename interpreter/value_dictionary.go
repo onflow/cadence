@@ -1835,6 +1835,14 @@ func (v *DictionaryValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
 }
 
+// LiveInlined reports whether the underlying atree map is currently stored
+// inlined inside its parent container's slab, as opposed to as a standalone
+// slab. See ArrayValue.LiveInlined for context.
+// Intended for testing only.
+func (v *DictionaryValue) LiveInlined() bool {
+	return v.dictionary.Inlined()
+}
+
 // isStaleAtreeView reports whether this wrapper has been displaced by a
 // structural change (slab split/merge/promotion) that was performed through
 // a sibling wrapper sharing the same underlying slab tree. See the
