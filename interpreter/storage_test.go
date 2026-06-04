@@ -197,14 +197,22 @@ func TestArrayStorage(t *testing.T) {
 		value.Insert(
 			inter,
 			0,
-			element,
+			// Copy element "onto the stack", insert requires a copy
+			element.Transfer(
+				inter,
+				atree.Address{},
+				false,
+				nil,
+				map[atree.ValueID]struct{}{},
+				true,
+			),
 		)
 
 		require.True(t, bool(value.Contains(inter, element)))
 
 		// array + new copy of composite element
 		// NOTE: original composite value is inlined in parent array.
-		require.Equal(t, 2, storage.BasicSlabStorage.Count())
+		require.Equal(t, 3, storage.BasicSlabStorage.Count())
 
 		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
 		require.NoError(t, err)
@@ -246,7 +254,15 @@ func TestArrayStorage(t *testing.T) {
 				Type: element.StaticType(inter),
 			},
 			common.ZeroAddress,
-			element,
+			// Copy element "onto the stack", append requires a copy
+			element.Transfer(
+				inter,
+				atree.Address{},
+				false,
+				nil,
+				map[atree.ValueID]struct{}{},
+				true,
+			),
 		)
 
 		require.True(t, bool(value.Contains(inter, element)))
@@ -255,7 +271,7 @@ func TestArrayStorage(t *testing.T) {
 
 		// array + new copy of composite element
 		// NOTE: original composite value is inlined in parent array.
-		require.Equal(t, 2, storage.BasicSlabStorage.Count())
+		require.Equal(t, 3, storage.BasicSlabStorage.Count())
 
 		_, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
 		require.NoError(t, err)
@@ -263,7 +279,7 @@ func TestArrayStorage(t *testing.T) {
 
 		value.Remove(inter, 0)
 
-		require.Equal(t, 3, storage.BasicSlabStorage.Count())
+		require.Equal(t, 4, storage.BasicSlabStorage.Count())
 
 		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
 		require.NoError(t, err)

@@ -302,7 +302,15 @@ func TestOwnerArrayRemove(t *testing.T) {
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		owner,
-		value,
+		// Copy value "onto the stack", append requires a copy
+		value.Transfer(
+			inter,
+			atree.Address{},
+			false,
+			nil,
+			map[atree.ValueID]struct{}{},
+			true,
+		),
 	)
 
 	assert.Equal(t, owner, array.GetOwner())
@@ -517,7 +525,16 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
-		keyValue, value1,
+		keyValue,
+		// Copy value "onto the stack", insert requires a copy
+		value1.Transfer(
+			inter,
+			atree.Address{},
+			false,
+			nil,
+			map[atree.ValueID]struct{}{},
+			true,
+		),
 	)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -527,7 +544,15 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	existingValue := dictionary.Insert(
 		inter,
 		keyValue,
-		value2,
+		// Copy value "onto the stack", insert requires a copy
+		value2.Transfer(
+			inter,
+			atree.Address{},
+			false,
+			nil,
+			map[atree.ValueID]struct{}{},
+			true,
+		),
 	)
 	require.IsType(t, &SomeValue{}, existingValue)
 	innerValue := existingValue.(*SomeValue).InnerValue()
@@ -563,7 +588,16 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
-		keyValue, value,
+		keyValue,
+		// Copy value "onto the stack", insert requires a copy
+		value.Transfer(
+			inter,
+			atree.Address{},
+			false,
+			nil,
+			map[atree.ValueID]struct{}{},
+			true,
+		),
 	)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())

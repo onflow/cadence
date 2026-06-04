@@ -1646,14 +1646,17 @@ func (v *ArrayValue) Transfer(
 		v.array = nil
 	} else if remove {
 		// Non-resource Transfer with remove: the source's slabs were just
-		// deleted by the PopIterate above, so any cached canonical wrapper
-		// for `v` now backs onto gone slabs. Atree doesn't reuse SlabIDs,
-		// so this can't cause a wrong-wrapper read, but the entry would
-		// otherwise leak for the lifetime of the cache.
+		// deleted by the PopIterate above. Evict the cached canonical wrapper
+		// (otherwise its entry would leak referencing gone slabs) and nil
+		// `v.array` so any subsequent use of the source wrapper fails cleanly
+		// via `isStaleAtreeView` / `InvalidatedContainerViewError` rather than
+		// crashing inside atree on a missing slab.
 		//
-		// `v.array` is intentionally NOT nilled: existing callers
-		// read metadata off the source wrapper after a non-resource remove.
+		// Callers that need to use the source value after this point must
+		// Transfer it onto the stack (`remove=false`) first to obtain a fresh
+		// wrapper at a new SlabID.
 		context.ClearCanonicalAtreeContainer(v.valueID)
+		v.array = nil
 	}
 
 	res := newArrayValueFromAtreeArray(
