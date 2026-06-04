@@ -736,6 +736,15 @@ func TestArrayValueTransferRemoveInvalidatesSourceAndEvictsCache(t *testing.T) {
 		inter.CanonicalAtreeContainer(valueID),
 		"cache entry must be evicted after non-resource Transfer with remove=true",
 	)
+
+	defer func() {
+		err, ok := recover().(error)
+		require.True(t, ok)
+
+		var invalidatedContainerViewError *InvalidatedContainerViewError
+		require.ErrorAs(t, err, &invalidatedContainerViewError)
+	}()
+	CheckInvalidatedValueOrValueReference(arr, inter)
 }
 
 // TestDictionaryValueTransferRemoveInvalidatesSourceAndEvictsCache pins down
@@ -783,6 +792,15 @@ func TestDictionaryValueTransferRemoveInvalidatesSourceAndEvictsCache(t *testing
 		inter.CanonicalAtreeContainer(valueID),
 		"cache entry must be evicted after non-resource Transfer with remove=true",
 	)
+
+	defer func() {
+		err, ok := recover().(error)
+		require.True(t, ok)
+
+		var invalidatedContainerViewError *InvalidatedContainerViewError
+		require.ErrorAs(t, err, &invalidatedContainerViewError)
+	}()
+	CheckInvalidatedValueOrValueReference(dictionary, inter)
 }
 
 // TestCompositeValueTransferRemoveInvalidatesSourceAndEvictsCache pins down
@@ -823,6 +841,15 @@ func TestCompositeValueTransferRemoveInvalidatesSourceAndEvictsCache(t *testing.
 		inter.CanonicalAtreeContainer(valueID),
 		"cache entry must be evicted after non-resource Transfer with remove=true",
 	)
+
+	defer func() {
+		err, ok := recover().(error)
+		require.True(t, ok)
+
+		var invalidatedContainerViewError *InvalidatedContainerViewError
+		require.ErrorAs(t, err, &invalidatedContainerViewError)
+	}()
+	CheckInvalidatedValueOrValueReference(composite, inter)
 }
 
 // TestArrayValueTransferNoRemoveKeepsCanonicalCache asserts that a non-resource
