@@ -72,10 +72,8 @@ type AtreeContainerCache interface {
 // ContainerElementContext is the typed parameter for reading and
 // canonicalizing an atree container element:
 // memory and computation metering, plus access to the canonical wrapper cache.
-// A nil interface value is accepted by `MustConvertStoredContainerElement`
-// and disables canonicalization
-// (matches the previous untyped-gauge behavior,
-// used by low-level inspection paths and tests).
+// Must be non-nil — canonicalization is load-bearing for correctness, see
+// `MustConvertStoredContainerElement`.
 type ContainerElementContext interface {
 	common.Gauge
 	AtreeContainerCache
@@ -162,24 +160,22 @@ func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value 
 // MustConvertStoredContainerElement wraps an atree value retrieved as a
 // container element (e.g. via `*atree.Array.Get` or `*atree.OrderedMap.Get`)
 // as a Cadence-level `Value`,
-// deduplicating the resulting wrapper via the canonical wrapper cache when:
-//   - the context is non-nil, and
-//   - the wrapper has a real parent-notification callback
-//     (i.e. it came from a `Get` or mutable-iterator path,
-//     not from a read-only iterator).
+// deduplicating the resulting wrapper via the canonical wrapper cache when
+// the wrapper has a real parent-notification callback
+// (i.e. it came from a `Get` or mutable-iterator path,
+// not from a read-only iterator).
 //
-// The second condition is enforced inside `canonicalizeContainerElement`,
+// The condition is enforced inside `canonicalizeContainerElement`,
 // so callers do not need to know which atree path produced `value`:
 // passing in a read-only-iterator wrapper is safe;
 // it just won't be cached.
 //
-// A nil `context` skips canonicalization entirely
-// (used by tests and the low-level decode path).
+// `context` must be non-nil. Canonicalization is load-bearing for correctness
+// — a sibling read that yields a non-canonical wrapper observes a divergent
+// view of the container, which is the bug class this whole machinery exists
+// to prevent.
 func MustConvertStoredContainerElement(context ContainerElementContext, value atree.Value) Value {
 	result := MustConvertStoredValue(context, value)
-	if context == nil {
-		return result
-	}
 	return canonicalizeContainerElement(context, result)
 }
 

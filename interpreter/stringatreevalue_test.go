@@ -60,7 +60,7 @@ func TestLargeStringAtreeValueInSeparateSlab(t *testing.T) {
 	expected := NewUnmeteredUInt8Value(42)
 	storageMap.SetValue(inter, key, expected)
 
-	actual := storageMap.ReadValue(nil, key)
+	actual := storageMap.ReadValue(inter, key)
 
 	require.Equal(t, expected, actual)
 }

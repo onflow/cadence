@@ -164,8 +164,8 @@ func (s *DomainStorageMap) ValueExists(gauge common.ComputationGauge, key Storag
 
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
-// `context` is allowed to be nil for low-level inspection paths
-// (in which case canonicalization is skipped).
+// `context` must be non-nil: every read must canonicalize so two reads of the
+// same path yield the same Cadence-level wrapper.
 func (s *DomainStorageMap) ReadValue(context ContainerElementContext, key StorageMapKey) Value {
 
 	common.UseComputation(

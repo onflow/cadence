@@ -3174,7 +3174,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// Read first
 
-	firstValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("first"))
+	firstValue := storageMap.ReadValue(inter, interpreter.StringStorageMapKey("first"))
 	RequireValuesEqual(
 		t,
 		inter,
@@ -3184,7 +3184,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// Read second
 
-	secondValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("second"))
+	secondValue := storageMap.ReadValue(inter, interpreter.StringStorageMapKey("second"))
 	require.IsType(t, &interpreter.ArrayValue{}, secondValue)
 
 	arrayValue := secondValue.(*interpreter.ArrayValue)
@@ -3199,7 +3199,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	// Read r
 
-	rValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("r"))
+	rValue := storageMap.ReadValue(inter, interpreter.StringStorageMapKey("r"))
 	require.IsType(t, &interpreter.CompositeValue{}, rValue)
 
 	_, err = ExportValue(rValue, inter)
@@ -6837,7 +6837,7 @@ func TestRuntimeStorage2(t *testing.T) {
 				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
 
 				for k, expectedV := range domainValues {
-					v := domainStorageMap.ReadValue(nil, k)
+					v := domainStorageMap.ReadValue(inter, k)
 					ev, ok := v.(interpreter.EquatableValue)
 					require.True(t, ok)
 					require.True(t, ev.Equal(inter, expectedV))
@@ -7121,7 +7121,7 @@ func TestRuntimeStorage2(t *testing.T) {
 				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
 
 				for k, expectedValue := range domainValues {
-					v := domainStorageMap.ReadValue(nil, k)
+					v := domainStorageMap.ReadValue(inter, k)
 					ev := v.(interpreter.EquatableValue)
 					require.True(t, ev.Equal(inter, expectedValue))
 				}
@@ -7952,7 +7952,7 @@ func checkAccountStorageMapData(
 
 		// Check values stored in domain storage map
 		for key, expectedValue := range expectedDomainValues {
-			value := domainStorageMap.ReadValue(nil, key)
+			value := domainStorageMap.ReadValue(inter, key)
 
 			ev, ok := value.(interpreter.EquatableValue)
 			require.True(tb, ok)

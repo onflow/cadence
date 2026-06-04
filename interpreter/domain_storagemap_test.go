@@ -133,6 +133,8 @@ func TestDomainStorageMapReadValue(t *testing.T) {
 			runtime.StorageConfig{},
 		)
 
+		inter := NewTestInterpreterWithStorage(t, storage)
+
 		domainStorageMap := interpreter.NewDomainStorageMap(
 			nil,
 			nil,
@@ -143,7 +145,7 @@ func TestDomainStorageMapReadValue(t *testing.T) {
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
 		key := interpreter.StringAtreeValue("key")
-		v := domainStorageMap.ReadValue(nil, interpreter.StringStorageMapKey(key))
+		v := domainStorageMap.ReadValue(inter, interpreter.StringStorageMapKey(key))
 		require.Nil(t, v)
 
 		valueID := domainStorageMap.ValueID()
@@ -179,7 +181,7 @@ func TestDomainStorageMapReadValue(t *testing.T) {
 		domainStorageMap, domainValues := createDomainStorageMap(storage, inter, address, count, random)
 
 		for key, expectedValue := range domainValues {
-			value := domainStorageMap.ReadValue(nil, key)
+			value := domainStorageMap.ReadValue(inter, key)
 			require.NotNil(t, value)
 
 			checkCadenceValue(t, inter, value, expectedValue)
@@ -193,7 +195,7 @@ func TestDomainStorageMapReadValue(t *testing.T) {
 				continue
 			}
 
-			value := domainStorageMap.ReadValue(nil, key)
+			value := domainStorageMap.ReadValue(inter, key)
 			require.Nil(t, value)
 		}
 
