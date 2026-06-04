@@ -109,6 +109,11 @@ func (c *Context) ClearCanonicalAtreeContainer(valueID atree.ValueID) {
 	delete(c.canonicalAtreeContainers, valueID)
 }
 
+// ClearAllCanonicalAtreeContainers — see Interpreter.ClearAllCanonicalAtreeContainers.
+func (c *Context) ClearAllCanonicalAtreeContainers() {
+	clear(c.canonicalAtreeContainers)
+}
+
 func (c *Context) RecordStorageMutation() {
 	if c.inStorageIteration {
 		c.storageMutatedDuringIteration = true

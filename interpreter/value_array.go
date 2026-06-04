@@ -1650,6 +1650,9 @@ func (v *ArrayValue) Transfer(
 		// for `v` now backs onto gone slabs. Atree doesn't reuse SlabIDs,
 		// so this can't cause a wrong-wrapper read, but the entry would
 		// otherwise leak for the lifetime of the cache.
+		//
+		// `v.array` is intentionally NOT nilled: existing callers
+		// read metadata off the source wrapper after a non-resource remove.
 		context.ClearCanonicalAtreeContainer(v.valueID)
 	}
 

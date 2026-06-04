@@ -6512,9 +6512,15 @@ func (interpreter *Interpreter) SetCanonicalAtreeContainer(valueID atree.ValueID
 }
 
 // ClearCanonicalAtreeContainer removes the cache entry for the given atree
-// value ID. Call this when the corresponding wrapper is invalidated
-// (Destroy, Transfer's `array`/`dictionary` nil-out) so the now-invalid
-// wrapper is not handed out to subsequent loads.
+// value ID. Call this when the corresponding wrapper is invalidated or its
+// underlying slabs are being torn down, so the now-invalid wrapper is not
+// handed out to subsequent loads. Production call sites:
+//   - `ArrayValue` / `DictionaryValue` / `CompositeValue` `Destroy`
+//     and resource `Transfer` (before `v.array` / `v.dictionary = nil`).
+//   - `ArrayValue` / `DictionaryValue` / `CompositeValue` non-resource
+//     `Transfer` with `remove=true` (source slabs deleted by PopIterate).
+//   - `DeepRemove` on the three container types (also evicts nested
+//     wrappers via the recursive walk).
 func (interpreter *Interpreter) ClearCanonicalAtreeContainer(valueID atree.ValueID) {
 	delete(interpreter.SharedState.canonicalAtreeContainers, valueID)
 }
