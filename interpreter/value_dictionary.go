@@ -40,8 +40,13 @@ type DictionaryValue struct {
 	isDestroyed      bool
 	elementSize      uint
 
-	// valueID — defensive cache of the atree value ID captured at construction.
-	// See `ArrayValue.valueID` for the full rationale.
+	// valueID is the atree value ID captured at construction time.
+	// With atree's shared-state design + Cadence's canonical wrapper cache,
+	// the value ID returned by `v.dictionary.ValueID()` is stable for the lifetime
+	// of the wrapper, so the cached value matches the live one.
+	// The cache is used by `isStaleAtreeView` as a defensive invariant check
+	// to catch unexpected divergence (and a stable identifier when
+	// `v.dictionary` has been nilled out by Destroy/Transfer).
 	valueID atree.ValueID
 }
 
@@ -537,9 +542,12 @@ func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-// canonicalAtreeContainer reports the underlying atree map,
-// or nil if the wrapper is invalidated (destroyed or its backing nilled out).
-// See `canonicalizeContainerElement` for use.
+// canonicalAtreeContainer reports the underlying atree map for canonical
+// wrapper-cache bookkeeping, or nil if the wrapper is invalidated (destroyed
+// or its backing nilled out by Transfer). The cache uses the returned
+// container's `ValueID`, `HasParentUpdater`, and `HasReadOnlyMutationCallback`
+// predicates to decide whether to install / replace the wrapper as canonical;
+// a nil return tells the cache to skip canonicalization for this wrapper.
 func (v *DictionaryValue) canonicalAtreeContainer() atreeContainer {
 	if v.dictionary == nil || v.isDestroyed {
 		return nil

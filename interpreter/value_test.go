@@ -691,12 +691,14 @@ func TestOwnerCompositeTransfer(t *testing.T) {
 	assert.Equal(t, common.ZeroAddress, value.GetOwner())
 }
 
-// TestArrayValueTransferRemoveEvictsCanonicalCache pins down the cache
-// eviction in the `else if remove` branch of `ArrayValue.Transfer`:
-// for a non-resource array, Transfer with `remove=true` deletes the source
-// slabs and must evict any cached canonical wrapper for that value ID
-// (otherwise the entry leaks for the lifetime of the cache).
-func TestArrayValueTransferRemoveEvictsCanonicalCache(t *testing.T) {
+// TestArrayValueTransferRemoveInvalidatesSourceAndEvictsCache pins down the
+// `else if remove` branch of `ArrayValue.Transfer` for non-resources:
+//   - the cached canonical wrapper for the source's value ID is evicted, and
+//   - the source wrapper itself is invalidated (`v.array = nil`), so any
+//     subsequent use through `CheckInvalidatedValueOrValueReference`
+//     surfaces as `InvalidatedContainerViewError` rather than a nil-deref or
+//     a use-after-free of deleted atree slabs.
+func TestArrayValueTransferRemoveInvalidatesSourceAndEvictsCache(t *testing.T) {
 
 	t.Parallel()
 
@@ -736,9 +738,14 @@ func TestArrayValueTransferRemoveEvictsCanonicalCache(t *testing.T) {
 	)
 }
 
-// TestDictionaryValueTransferRemoveEvictsCanonicalCache — see
-// TestArrayValueTransferRemoveEvictsCanonicalCache.
-func TestDictionaryValueTransferRemoveEvictsCanonicalCache(t *testing.T) {
+// TestDictionaryValueTransferRemoveInvalidatesSourceAndEvictsCache pins down
+// the `else if remove` branch of `DictionaryValue.Transfer` for non-resources:
+//   - the cached canonical wrapper for the source's value ID is evicted, and
+//   - the source wrapper itself is invalidated (`v.dictionary = nil`), so any
+//     subsequent use through `CheckInvalidatedValueOrValueReference`
+//     surfaces as `InvalidatedContainerViewError` rather than a nil-deref or
+//     a use-after-free of deleted atree slabs.
+func TestDictionaryValueTransferRemoveInvalidatesSourceAndEvictsCache(t *testing.T) {
 
 	t.Parallel()
 
@@ -778,9 +785,14 @@ func TestDictionaryValueTransferRemoveEvictsCanonicalCache(t *testing.T) {
 	)
 }
 
-// TestCompositeValueTransferRemoveEvictsCanonicalCache — see
-// TestArrayValueTransferRemoveEvictsCanonicalCache.
-func TestCompositeValueTransferRemoveEvictsCanonicalCache(t *testing.T) {
+// TestCompositeValueTransferRemoveInvalidatesSourceAndEvictsCache pins down
+// the `else if remove` branch of `CompositeValue.Transfer` for non-resources:
+//   - the cached canonical wrapper for the source's value ID is evicted, and
+//   - the source wrapper itself is invalidated (`v.dictionary = nil`), so any
+//     subsequent use through `CheckInvalidatedValueOrValueReference`
+//     surfaces as `InvalidatedContainerViewError` rather than a nil-deref or
+//     a use-after-free of deleted atree slabs.
+func TestCompositeValueTransferRemoveInvalidatesSourceAndEvictsCache(t *testing.T) {
 
 	t.Parallel()
 
@@ -813,9 +825,11 @@ func TestCompositeValueTransferRemoveEvictsCanonicalCache(t *testing.T) {
 	)
 }
 
-// TestArrayValueTransferNoRemoveKeepsCanonicalCache is the negative
-// counterpart: non-resource Transfer without `remove` leaves the source
-// wrapper valid, so the cache entry must NOT be evicted.
+// TestArrayValueTransferNoRemoveKeepsCanonicalCache asserts that a non-resource
+// Transfer without `remove` leaves the source wrapper valid (`v.array` stays
+// set, slabs untouched), so the cache entry must NOT be evicted. Guards
+// against the `else if remove` cache-clear branch over-firing on plain
+// (non-removing) Transfers.
 func TestArrayValueTransferNoRemoveKeepsCanonicalCache(t *testing.T) {
 
 	t.Parallel()
@@ -891,8 +905,11 @@ func TestArrayValueDestroyEvictsCanonicalCache(t *testing.T) {
 	)
 }
 
-// TestDictionaryValueDestroyEvictsCanonicalCache — see
-// TestArrayValueDestroyEvictsCanonicalCache.
+// TestDictionaryValueDestroyEvictsCanonicalCache pins down the cache eviction
+// in DictionaryValue.Destroy. Constructs an empty resource-kinded dictionary
+// (so the destruction walk has nothing to do), registers it in the cache,
+// calls Destroy, asserts the cache entry is gone and the wrapper is marked
+// destroyed.
 func TestDictionaryValueDestroyEvictsCanonicalCache(t *testing.T) {
 
 	t.Parallel()
@@ -924,9 +941,11 @@ func TestDictionaryValueDestroyEvictsCanonicalCache(t *testing.T) {
 	)
 }
 
-// TestCompositeValueDestroyEvictsCanonicalCache — see
-// TestArrayValueDestroyEvictsCanonicalCache. Uses a resource-kinded composite
-// with no fields and no default-destroy events.
+// TestCompositeValueDestroyEvictsCanonicalCache pins down the cache eviction
+// in CompositeValue.Destroy. Uses a resource-kinded composite with no fields
+// and no default-destroy events (so the destruction walk has nothing to do),
+// registers it in the cache, calls Destroy, asserts the cache entry is gone
+// and the wrapper is marked destroyed.
 func TestCompositeValueDestroyEvictsCanonicalCache(t *testing.T) {
 
 	t.Parallel()
@@ -1012,8 +1031,11 @@ func TestClearAllCanonicalAtreeContainers(t *testing.T) {
 	assert.Nil(t, inter.CanonicalAtreeContainer(composite.ValueID()))
 }
 
-// TestDictionaryValueTransferNoRemoveKeepsCanonicalCache — see
-// TestArrayValueTransferNoRemoveKeepsCanonicalCache.
+// TestDictionaryValueTransferNoRemoveKeepsCanonicalCache asserts that a
+// non-resource Transfer without `remove` leaves the source wrapper valid
+// (`v.dictionary` stays set, slabs untouched), so the cache entry must NOT
+// be evicted. Guards against the `else if remove` cache-clear branch
+// over-firing on plain (non-removing) Transfers.
 func TestDictionaryValueTransferNoRemoveKeepsCanonicalCache(t *testing.T) {
 
 	t.Parallel()
@@ -1054,8 +1076,11 @@ func TestDictionaryValueTransferNoRemoveKeepsCanonicalCache(t *testing.T) {
 	)
 }
 
-// TestCompositeValueTransferNoRemoveKeepsCanonicalCache — see
-// TestArrayValueTransferNoRemoveKeepsCanonicalCache.
+// TestCompositeValueTransferNoRemoveKeepsCanonicalCache asserts that a
+// non-resource Transfer without `remove` leaves the source wrapper valid
+// (`v.dictionary` stays set, slabs untouched), so the cache entry must NOT
+// be evicted. Guards against the `else if remove` cache-clear branch
+// over-firing on plain (non-removing) Transfers.
 func TestCompositeValueTransferNoRemoveKeepsCanonicalCache(t *testing.T) {
 
 	t.Parallel()

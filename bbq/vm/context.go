@@ -109,7 +109,11 @@ func (c *Context) ClearCanonicalAtreeContainer(valueID atree.ValueID) {
 	delete(c.canonicalAtreeContainers, valueID)
 }
 
-// ClearAllCanonicalAtreeContainers — see Interpreter.ClearAllCanonicalAtreeContainers.
+// ClearAllCanonicalAtreeContainers drops every entry in the canonical wrapper cache.
+// Call this when the underlying `atree.Storage` is being swapped out
+// (e.g. test harnesses that commit to a ledger and reopen storage):
+// cached wrappers hold `*atree.Array`/`*atree.OrderedMap` pointers into the *old* storage,
+// and would silently mutate the old storage if returned from a post-swap canonicalization.
 func (c *Context) ClearAllCanonicalAtreeContainers() {
 	clear(c.canonicalAtreeContainers)
 }

@@ -450,9 +450,12 @@ func (v *ArrayValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-// canonicalAtreeContainer reports the underlying atree array,
-// or nil if the wrapper is invalidated (destroyed or its backing nilled out).
-// See `canonicalizeContainerElement` for use.
+// canonicalAtreeContainer reports the underlying atree array for canonical
+// wrapper-cache bookkeeping, or nil if the wrapper is invalidated (destroyed
+// or its backing nilled out by Transfer). The cache uses the returned
+// container's `ValueID`, `HasParentUpdater`, and `HasReadOnlyMutationCallback`
+// predicates to decide whether to install / replace the wrapper as canonical;
+// a nil return tells the cache to skip canonicalization for this wrapper.
 func (v *ArrayValue) canonicalAtreeContainer() atreeContainer {
 	if v.array == nil || v.isDestroyed {
 		return nil

@@ -48,9 +48,10 @@ type SharedState struct {
 	// canonicalAtreeContainers deduplicates the Cadence-level wrappers
 	// (ArrayValue, DictionaryValue, CompositeValue) created for atree
 	// containers, keyed by their atree value ID.
-	// The first wrapper created for a given value ID
-	// via a canonicalizing path (see `MustConvertStoredContainerElement`)
-	// becomes canonical;
+	// The first wrapper created for a given value ID via a canonicalizing
+	// path — `*atree.Array.Get`, `*atree.OrderedMap.Get`, mutable-iterator
+	// `Next`, `DomainStorageMap.ReadValue`, or any other reader that wraps
+	// an atree element it just retrieved — becomes canonical;
 	// subsequent retrievals reuse the same wrapper instance.
 	//
 	// Cadence relies on this in two ways:

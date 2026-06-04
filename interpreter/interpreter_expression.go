@@ -498,11 +498,17 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 }
 
 // CheckInvalidatedValueOrValueReference checks whether a value is either:
-//   - an invalidated resource, or a reference to one
-//   - an atree-backed container wrapper whose underlying atree container has
-//     been invalidated, or whose cached value ID has diverged from the live one
-//     (defensive invariant check;
-//     see `AtreeBackedValue` and `InvalidatedContainerViewError`)
+//   - an invalidated resource, or a reference to one — panics with
+//     `InvalidatedResourceError` or `InvalidatedResourceReferenceError`.
+//   - an atree-backed container wrapper (ArrayValue, DictionaryValue,
+//     CompositeValue) whose underlying atree container has been invalidated
+//     (nilled out by Destroy or Transfer), or whose cached value ID has
+//     diverged from the live one — panics with `InvalidatedContainerViewError`.
+//     This second check is defensive: with atree's shared-state design and
+//     Cadence's canonical wrapper cache, the divergence path should not fire
+//     in practice; the nil-out path fires whenever a wrapper is used after
+//     the resource it backed was destroyed/transferred, or after a non-resource
+//     Transfer with `remove=true` deleted its source slabs.
 func CheckInvalidatedValueOrValueReference(
 	value Value,
 	context ValueStaticTypeContext,
