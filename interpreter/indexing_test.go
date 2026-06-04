@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/atree"
@@ -229,6 +230,86 @@ func TestInterpretIndexingExpressionTransferSwapStatement(t *testing.T) {
 		),
 		slabID,
 	)
+}
+
+// TestInterpretSwapIndexOnDictionaryReference exercises non-resource
+// through-reference IndexExpression swap: `dictRef[k1] <-> dictRef[k2]`
+// where `dictRef` is `auth(Mutate) &{String: AnyStruct}`.
+//
+// Pre-B2 the runtime used GetIndex+NewRef for the swap operands and
+// SetIndex stored a NonStorable-wrapped reference into the dictionary
+// slot. The first set also evicted the slab held by the second
+// operand's view, surfacing as InvalidatedContainerViewError at the
+// second set (caught by the MutationCount detection added on this
+// branch).
+//
+// Post-B2 the runtime uses extract-then-write (RemoveKey + placeholder)
+// for IndexExpression swap operands; sema records target types (not
+// cascaded reference types) in SwapStatementTypes so TransferAndConvert
+// accepts the extracted underlying values. See sema/check_swap.go.
+func TestInterpretSwapIndexOnDictionaryReference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("completes without error", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct Foo {
+                var array: [Int]
+                init() {
+                    self.array = []
+                }
+            }
+
+            fun test() {
+                let dict: {String: AnyStruct} = {"foo": Foo(), "bar": Foo()}
+                let dictRef = &dict as auth(Mutate) &{String: AnyStruct}
+
+                dictRef["foo"] <-> dictRef["bar"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("stores values, not references", func(t *testing.T) {
+		t.Parallel()
+
+		// Reading via the direct (non-reference) dict variable returns
+		// the dict's actual element type (AnyStruct?). The `as! Foo` cast
+		// only succeeds when the slot holds a `Foo`, not a `&Foo`.
+		//
+		// Pre-B2: cast fails with "expected `Foo`, got `&Foo`".
+		// Post-B2: cast succeeds; the swap exchanged actual values.
+		inter := parseCheckAndPrepare(t, `
+            struct Foo {
+                var marker: Int
+                init(_ m: Int) { self.marker = m }
+            }
+
+            fun test(): Int {
+                let dict: {String: AnyStruct} = {"foo": Foo(11), "bar": Foo(22)}
+                let dictRef = &dict as auth(Mutate) &{String: AnyStruct}
+
+                dictRef["foo"] <-> dictRef["bar"]
+
+                // Read via the underlying dict (not through dictRef), which
+                // returns AnyStruct? — castable to Foo iff the slot holds a
+                // real Foo value, not a reference.
+                let f = (dict["foo"]! as! Foo).marker
+                let b = (dict["bar"]! as! Foo).marker
+
+                // Encode the swap result as a single number so the assertion
+                // is order-sensitive: 22 at "foo", 11 at "bar".
+                return f * 100 + b
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2211), result)
+	})
 }
 
 func TestInterpretIndexingTypeConfusedValue(t *testing.T) {
