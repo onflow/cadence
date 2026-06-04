@@ -541,6 +541,7 @@ func (checker *Checker) checkInvocation(
 		invocationExpression,
 		InvocationExpressionTypes{
 			TypeArguments:     typeArguments,
+			TypeParameters:    functionType.TypeParameters,
 			ParameterTypes:    parameterTypes,
 			ReturnType:        returnType,
 			ArgumentTypes:     argumentTypes,

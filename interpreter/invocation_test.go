@@ -720,19 +720,9 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 			methodInvoked = true
 			assert.Len(t, args, 1)
 
-			var expectedArg interpreter.Value
-			if *compile {
-				// Currently, VM does not resolve type-parameters at runtime.
-				// Therefore, it takes the statically known parameter type, which is `Int`.
-				// So the argument does not get boxed.
-				// TODO: Update the assert once the type-parameter resolving is
-				// supported for invocations in the VM.
-				expectedArg = interpreter.NewUnmeteredIntValueFromInt64(4)
-			} else {
-				expectedArg = interpreter.NewUnmeteredSomeValueNonCopying(
-					interpreter.NewUnmeteredIntValueFromInt64(4),
-				)
-			}
+			expectedArg := interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(4),
+			)
 			assert.Equal(t, expectedArg, args[0])
 
 			return interpreter.Void
