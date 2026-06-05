@@ -3336,18 +3336,20 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 		panic(errors.NewUnreachableError())
 	}
 
+	accessedType := memberAccessInfo.AccessedType
+	if memberAccessInfo.IsOptional {
+		accessedType = sema.UnwrapOptionalType(accessedType)
+	}
+
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
+		accessedTypeIndex := c.getOrAddType(accessedType)
 		memberNameConstant := c.addRawStringConst(memberName)
 		c.emit(opcode.InstructionRemoveField{
-			FieldName: memberNameConstant.index,
+			FieldName:    memberNameConstant.index,
+			AccessedType: accessedTypeIndex,
 		})
 	} else {
-		accessedType := memberAccessInfo.AccessedType
-		if memberAccessInfo.IsOptional {
-			accessedType = sema.UnwrapOptionalType(accessedType)
-		}
-
 		memberKind := memberAccessInfo.Member.DeclarationKind
 
 		switch memberKind {
