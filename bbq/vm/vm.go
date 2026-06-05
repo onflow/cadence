@@ -1097,8 +1097,6 @@ func opGetMethodDynamic(vm *VM, ins opcode.InstructionGetMethodDynamic) {
 	vm.push(method)
 }
 
-var emptyTypeParametersMap = &sema.TypeParameterTypeOrderedMap{}
-
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
@@ -1136,6 +1134,7 @@ func invokeFunction(
 			context,
 			originalFunctionValue,
 			arguments,
+			typeArguments,
 			argumentTypes,
 			parameterTypes,
 			withValidation,
@@ -1208,6 +1207,7 @@ func convertAndBoxArguments(
 	context *Context,
 	originalFunctionValue FunctionValue,
 	arguments []Value,
+	typeArguments []bbq.StaticType,
 	argumentTypes []bbq.StaticType,
 	parameterTypes []bbq.StaticType,
 	withValidation bool,
@@ -1238,11 +1238,16 @@ func convertAndBoxArguments(
 		panic(r)
 	}()
 
+	var typeArgumentsMap *sema.TypeParameterTypeOrderedMap
+
 	for currentArgIndex, arg := range arguments {
 		var paramType bbq.StaticType
 		if paramIndex < len(actualParams) {
-			// TODO: Properly resolve the type parameters.
-			paramSemaType := actualParams[paramIndex].TypeAnnotation.Type.Resolve(emptyTypeParametersMap)
+			if typeArgumentsMap == nil {
+				typeArgumentsMap = reconstructTypeArguments(context, actualFuncType, typeArguments)
+			}
+
+			paramSemaType := actualParams[paramIndex].TypeAnnotation.Type.Resolve(typeArgumentsMap)
 			if paramSemaType != nil {
 				paramType = interpreter.ConvertSemaToStaticType(context, paramSemaType)
 			}
@@ -1283,6 +1288,45 @@ func convertAndBoxArguments(
 	}
 
 	return arguments
+}
+
+// reconstructTypeArguments builds a TypeParameterTypeOrderedMap by pairing
+// the function's declared TypeParameters with the concrete type arguments
+// resolved at compile time and passed through the invoke instruction.
+//
+// The pairing is positional: the i-th type argument corresponds to the i-th
+// declared type parameter. The type parameters must either be all bound, or none:
+// `typeArguments` is therefore either empty, or has exactly one entry per declared
+// type parameter (see `loadTypeArguments` in the compiler, which enforces this).
+func reconstructTypeArguments(
+	context *Context,
+	funcType *sema.FunctionType,
+	typeArguments []bbq.StaticType,
+) *sema.TypeParameterTypeOrderedMap {
+	typeParameterMap := &sema.TypeParameterTypeOrderedMap{}
+
+	typeParameters := funcType.TypeParameters
+
+	typeArgumentsLength := len(typeArguments)
+	typeParametersLength := len(typeParameters)
+
+	// The type parameters are either all bound, or none.
+	if typeArgumentsLength != 0 && typeArgumentsLength != typeParametersLength {
+		panic(errors.NewUnexpectedError(
+			"invalid number of type arguments: got %d, expected 0 or %d",
+			typeArgumentsLength,
+			typeParametersLength,
+		))
+	}
+
+	for i, typeArgument := range typeArguments {
+		semaType := context.SemaTypeFromStaticType(typeArgument)
+		if semaType != nil {
+			typeParameterMap.Set(typeParameters[i], semaType)
+		}
+	}
+
+	return typeParameterMap
 }
 
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {

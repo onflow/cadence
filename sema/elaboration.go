@@ -74,6 +74,7 @@ type AssignmentStatementTypes struct {
 type InvocationExpressionTypes struct {
 	ReturnType     Type
 	TypeArguments  *TypeParameterTypeOrderedMap
+	TypeParameters []*TypeParameter
 	ArgumentTypes  []Type
 	ParameterTypes []Type
 

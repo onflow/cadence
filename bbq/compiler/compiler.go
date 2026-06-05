@@ -3178,12 +3178,34 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 
 	var typeArgs []uint16
 	if typeArgsCount > 0 {
+		typeParameters := invocationTypes.TypeParameters
+
+		// A mix of bound and unbound type arguments is not supported (yet), because the VM
+		// reconstructs the TypeParameterTypeOrderedMap by positionally pairing each
+		// emitted type argument with `funcType.TypeParameters[i]`.
+		// See `reconstructTypeArguments` in the VM.
+		//
+		// Therefore, the type parameters must either be all bound, or none.
+		if typeArgsCount != len(typeParameters) {
+			panic(errors.NewUnexpectedError(
+				"unsupported: %d out of %d type parameters are bound; "+
+					"type parameters must either be all bound, or none",
+				typeArgsCount,
+				len(typeParameters),
+			))
+		}
+
 		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(typeArgsCount))
 		typeArgs = make([]uint16, 0, typeArgsCount)
 
-		typeArguments.Foreach(func(key *sema.TypeParameter, typeParam sema.Type) {
-			typeArgs = append(typeArgs, c.getOrAddType(typeParam))
-		})
+		// Type arguments are constructed in the order they were resolved,
+		// rather than the order in which type parameters are declared.
+		// Therefore, emit type arguments in TypeParameters declaration order,
+		// so that the map can be reconstructed at runtime (See `reconstructTypeArguments` in the VM).
+		for _, typeParameter := range typeParameters {
+			resolvedType, _ := typeArguments.Get(typeParameter)
+			typeArgs = append(typeArgs, c.getOrAddType(resolvedType))
+		}
 	}
 
 	return typeArgs
