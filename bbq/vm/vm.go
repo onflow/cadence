@@ -199,10 +199,9 @@ func fill(slice []Value, n int) []Value {
 
 func (vm *VM) pushCallFrame(
 	functionValue *CompiledFunctionValue,
-	receiver Value,
+	receiver, base Value,
 	arguments []Value,
 	returnType bbq.StaticType,
-	hasImplicitArgument bool,
 ) {
 	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
 		panic(&interpreter.CallStackLimitExceededError{
@@ -215,6 +214,10 @@ func (vm *VM) pushCallFrame(
 	passedInLocalsCount := len(arguments)
 	if receiver != nil {
 		vm.locals = append(vm.locals, receiver)
+		passedInLocalsCount++
+	}
+	if base != nil {
+		vm.locals = append(vm.locals, base)
 		passedInLocalsCount++
 	}
 
@@ -237,12 +240,14 @@ func (vm *VM) pushCallFrame(
 	}
 
 	callFrame := callFrame{
-		localsCount:         localsCount,
-		localsOffset:        offset,
-		function:            functionValue,
-		tracingInfo:         tracingInfo,
-		returnType:          returnType,
-		hasImplicitArgument: hasImplicitArgument,
+		localsCount:  localsCount,
+		localsOffset: offset,
+		function:     functionValue,
+		tracingInfo:  tracingInfo,
+		returnType:   returnType,
+
+		// TODO: Can we remove this?
+		hasImplicitArgument: base != nil,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -443,12 +448,12 @@ func (vm *VM) invokeExternally(
 	invokeFunction(
 		vm,
 		functionValue,
+		nil,
 		arguments,
 		nil,
 		nil,
 		nil,
 		staticReturnType,
-		false,
 		skipArgumentConversion,
 		withValidation,
 	)
@@ -995,33 +1000,27 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load arguments
 	arguments := vm.popN(len(ins.ArgTypes))
 
+	// Load base: Only applicable for attachment constructors.
+	var base Value
+	if ins.HasImplicitArgument {
+		base = vm.pop()
+	}
+
 	// Load the invoked value
 	functionValue := vm.pop()
 
 	// Return value type
 	returnType := vm.loadType(ins.ReturnType)
 
-	// Add base to front of arguments if the function is bound and base is defined.
-	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
-		base := boundFunction.Base
-		if base != nil {
-			arguments = append([]Value{base}, arguments...)
-			argumentTypes = append(
-				[]bbq.StaticType{base.StaticType(vm.context)},
-				argumentTypes...,
-			)
-		}
-	}
-
 	invokeFunction(
 		vm,
 		functionValue,
+		base,
 		arguments,
 		typeArguments,
 		argumentTypes,
 		parameterTypes,
 		returnType,
-		ins.HasImplicitArgument,
 		ins.SkipArgumentConversion,
 		true,
 	)
@@ -1106,12 +1105,12 @@ var emptyTypeParametersMap = &sema.TypeParameterTypeOrderedMap{}
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
+	base Value,
 	arguments []Value,
 	typeArguments []bbq.StaticType,
 	argumentTypes []bbq.StaticType,
 	parameterTypes []bbq.StaticType,
 	returnType bbq.StaticType,
-	hasImplicitArgument bool,
 	skipArgumentConversion bool,
 	withValidation bool,
 ) {
@@ -1125,17 +1124,23 @@ func invokeFunction(
 	boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue)
 	if isBoundFunction {
 		functionValue = boundFunction.Method
+
+		// Only override the base if the bound function actually carries one
+		// (i.e. for attachment methods). `BoundFunctionValue.Base` is a concrete
+		// pointer type, so assigning a nil pointer directly to the `base Value`
+		// interface would produce a non-nil (typed-nil) interface value.
+		if boundFunction.Base != nil {
+			base = boundFunction.Base
+		}
 	}
 
 	if !skipArgumentConversion {
 		arguments = convertAndBoxArguments(
 			context,
 			originalFunctionValue,
-			boundFunction,
 			arguments,
 			argumentTypes,
 			parameterTypes,
-			hasImplicitArgument,
 			withValidation,
 		)
 	}
@@ -1155,9 +1160,9 @@ func invokeFunction(
 		vm.pushCallFrame(
 			functionValue,
 			receiver,
+			base,
 			arguments,
 			returnType,
-			hasImplicitArgument,
 		)
 
 	case *NativeFunctionValue:
@@ -1205,11 +1210,9 @@ func invokeFunction(
 func convertAndBoxArguments(
 	context *Context,
 	originalFunctionValue FunctionValue,
-	boundFunctionValue *BoundFunctionValue,
 	arguments []Value,
 	argumentTypes []bbq.StaticType,
 	parameterTypes []bbq.StaticType,
-	hasImplicitArgument bool,
 	withValidation bool,
 ) []Value {
 	// Convert arguments to match the actual function's parameter types.
@@ -1222,7 +1225,6 @@ func convertAndBoxArguments(
 	actualParams := actualFuncType.Parameters
 
 	paramIndex := 0
-	lastArgIndex := len(arguments) - 1
 
 	// Catch and re-panic transfer/conversion errors for arguments as user-errors.
 	defer func() {
@@ -1240,16 +1242,6 @@ func convertAndBoxArguments(
 	}()
 
 	for currentArgIndex, arg := range arguments {
-		// Attachment-base is an implicit argument. Skip it form conversions.
-		if isImplicitArgument(
-			currentArgIndex,
-			lastArgIndex,
-			boundFunctionValue,
-			hasImplicitArgument,
-		) {
-			continue
-		}
-
 		var paramType bbq.StaticType
 		if paramIndex < len(actualParams) {
 			// TODO: Properly resolve the type parameters.
@@ -1298,20 +1290,25 @@ func convertAndBoxArguments(
 
 func isImplicitArgument(
 	currentArgIndex int,
-	lastArgIndex int,
 	boundFunction *BoundFunctionValue,
 	hasImplicitArgument bool,
 ) bool {
 	// TODO: See if we can simplify the passing of `base` to be more explicit.
 
-	// When invoking a bound function of an attachment, base is the very first argument.
-	if currentArgIndex == 0 && boundFunction != nil &&
-		boundFunction.Base != nil {
-		return true
+	// The attachment `base` is an implicit argument and is always placed before the explicit/user arguments.
+	// This is the same for both attachment methods (bound functions) and attachment initializers (`attach A() to T`).
+	// Skip it from conversions.
+
+	if currentArgIndex != 0 {
+		return false
 	}
 
-	// During `attach A() to T`, the base is passed in as the last argument.
-	return hasImplicitArgument && currentArgIndex == lastArgIndex
+	// Attachment constructors relies on the `hasImplicitArgument` flag
+	// to determine whether there is a "base" value at the start of the arguments.
+	// Attachments methods are bound functions, and they rely on the "Base"
+	// variable of the bound function.
+	return hasImplicitArgument ||
+		(boundFunction != nil && boundFunction.Base != nil)
 }
 
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
