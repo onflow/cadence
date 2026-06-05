@@ -9472,6 +9472,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 						Data: "bar",
 						Kind: constant.RawString,
 					},
+					AccessedType: fooType,
 				},
 				opcode.PrettyInstructionTransferAndConvert{
 					ValueType:  barType,
@@ -10586,6 +10587,7 @@ func TestCompileSwapMembers(t *testing.T) {
 					Data: "x",
 					Kind: constant.RawString,
 				},
+				AccessedType: sType,
 			},
 			opcode.PrettyInstructionSetLocal{
 				Local:     tempIndex3,
@@ -10599,6 +10601,7 @@ func TestCompileSwapMembers(t *testing.T) {
 					Data: "y",
 					Kind: constant.RawString,
 				},
+				AccessedType: sType,
 			},
 			opcode.PrettyInstructionSetLocal{
 				Local:     tempIndex4,
