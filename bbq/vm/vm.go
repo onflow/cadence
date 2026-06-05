@@ -1285,29 +1285,6 @@ func convertAndBoxArguments(
 	return arguments
 }
 
-func isImplicitArgument(
-	currentArgIndex int,
-	boundFunction *BoundFunctionValue,
-	hasImplicitArgument bool,
-) bool {
-	// TODO: See if we can simplify the passing of `base` to be more explicit.
-
-	// The attachment `base` is an implicit argument and is always placed before the explicit/user arguments.
-	// This is the same for both attachment methods (bound functions) and attachment initializers (`attach A() to T`).
-	// Skip it from conversions.
-
-	if currentArgIndex != 0 {
-		return false
-	}
-
-	// Attachment constructors relies on the `hasImplicitArgument` flag
-	// to determine whether there is a "base" value at the start of the arguments.
-	// Attachments methods are bound functions, and they rely on the "Base"
-	// variable of the bound function.
-	return hasImplicitArgument ||
-		(boundFunction != nil && boundFunction.Base != nil)
-}
-
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	var typeArguments []bbq.StaticType
 	if len(typeArgs) > 0 {
