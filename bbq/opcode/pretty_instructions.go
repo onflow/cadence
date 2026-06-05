@@ -216,7 +216,8 @@ func (i PrettyInstructionGetField) String() string {
 // Pops a value off the stack, the target.
 // Remove the value of the given field from the target, and pushes it onto the stack.
 type PrettyInstructionRemoveField struct {
-	FieldName constant.DecodedConstant
+	FieldName    constant.DecodedConstant
+	AccessedType interpreter.StaticType
 }
 
 var _ PrettyInstruction = PrettyInstructionRemoveField{}
@@ -230,6 +231,8 @@ func (i PrettyInstructionRemoveField) String() string {
 	sb.WriteString(i.Opcode().String())
 	sb.WriteByte(' ')
 	printfConstantArgument(&sb, "fieldName", i.FieldName, false)
+	sb.WriteByte(' ')
+	printfTypeArgument(&sb, "accessedType", i.AccessedType, false)
 	return sb.String()
 }
 

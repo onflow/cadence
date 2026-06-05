@@ -9472,6 +9472,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 						Data: "bar",
 						Kind: constant.RawString,
 					},
+					AccessedType: fooType,
 				},
 				opcode.PrettyInstructionTransferAndConvert{
 					ValueType:  barType,

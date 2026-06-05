@@ -272,7 +272,7 @@ func TestPrintInstruction(t *testing.T) {
 		"Void":                       {byte(Void)},
 		"GetField fieldName:258 accessedType:258":               {byte(GetField), 1, 2, 1, 2},
 		"SetField fieldName:258 accessedType:258":               {byte(SetField), 1, 2, 1, 2},
-		"RemoveField fieldName:258":                             {byte(RemoveField), 1, 2},
+		"RemoveField fieldName:258 accessedType:258":            {byte(RemoveField), 1, 2, 1, 2},
 		"GetTypeIndex indexedType:258 indexingType:258":         {byte(GetTypeIndex), 1, 2, 1, 2},
 		"SetTypeIndex indexedType:258 indexingType:258":         {byte(SetTypeIndex), 1, 2, 1, 2},
 		"RemoveTypeIndex indexedType:258 indexingType:258":      {byte(RemoveTypeIndex), 1, 2, 1, 2},
