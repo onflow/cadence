@@ -10579,28 +10579,26 @@ func TestCompileSwapMembers(t *testing.T) {
 				IsTempVar: true,
 			},
 
-			// get left (s.x)
+			// get left (s.x) via extract-then-write: RemoveField
 			opcode.PrettyInstructionGetLocal{Local: tempIndex1},
-			opcode.PrettyInstructionGetField{
+			opcode.PrettyInstructionRemoveField{
 				FieldName: constant.DecodedConstant{
 					Data: "x",
 					Kind: constant.RawString,
 				},
-				AccessedType: sType,
 			},
 			opcode.PrettyInstructionSetLocal{
 				Local:     tempIndex3,
 				IsTempVar: true,
 			},
 
-			// get right (s.y)
+			// get right (s.y) via extract-then-write: RemoveField
 			opcode.PrettyInstructionGetLocal{Local: tempIndex2},
-			opcode.PrettyInstructionGetField{
+			opcode.PrettyInstructionRemoveField{
 				FieldName: constant.DecodedConstant{
 					Data: "y",
 					Kind: constant.RawString,
 				},
-				AccessedType: sType,
 			},
 			opcode.PrettyInstructionSetLocal{
 				Local:     tempIndex4,
