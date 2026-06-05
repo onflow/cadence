@@ -245,9 +245,6 @@ func (vm *VM) pushCallFrame(
 		function:     functionValue,
 		tracingInfo:  tracingInfo,
 		returnType:   returnType,
-
-		// TODO: Can we remove this?
-		hasImplicitArgument: base != nil,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -1994,11 +1991,13 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 }
 
 func opSetAttachmentBase(vm *VM) {
-	if !vm.callFrame.hasImplicitArgument {
+	base, attachment := vm.pop2()
+
+	// If the attachment was constructed outside an attach-statement,
+	// then the base variable is nil / not set.
+	if base == nil {
 		panic(&interpreter.InvalidAttachmentConstructorError{})
 	}
-
-	base, attachment := vm.pop2()
 
 	attachmentComposite, ok := attachment.(*interpreter.CompositeValue)
 	if !ok {
