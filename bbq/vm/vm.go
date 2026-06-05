@@ -1528,6 +1528,8 @@ func checkMemberAccessTargetType(
 func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
+	checkMemberAccessTargetType(vm, ins.AccessedType, memberAccessibleValue)
+
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
 	fieldName := getRawStringConstant(vm, fieldNameIndex)

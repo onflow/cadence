@@ -345,12 +345,16 @@ func TestPrettyInstructionMapping(t *testing.T) {
 			},
 		},
 		{
-			opcode.InstructionRemoveField{FieldName: 1},
+			opcode.InstructionRemoveField{
+				FieldName:    1,
+				AccessedType: 1,
+			},
 			opcode.PrettyInstructionRemoveField{
 				FieldName: constant.DecodedConstant{
 					Data: "myOtherField",
 					Kind: constant.String,
 				},
+				AccessedType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
 
