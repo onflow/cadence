@@ -717,7 +717,17 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 		CheckInvalidatedValueOrValueReference(leftValue, interpreter)
 		transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType)
 
+		// Re-check before each set, matching the VM's per-instruction pop3
+		// staleness check. The first set's atree eviction-cleanup can drain
+		// the source slab of a reference-typed swap operand that is still
+		// referenced by the second set's value (a pre-existing reference-
+		// corruption hazard in the non-resource through-reference swap path).
+		// Failing here surfaces the issue in both runtimes; without it the
+		// interpreter would silently corrupt the second slot.
+		CheckInvalidatedValueOrValueReference(transferredRightValue, interpreter)
 		leftGetterSetter.set(transferredRightValue)
+
+		CheckInvalidatedValueOrValueReference(transferredLeftValue, interpreter)
 		rightGetterSetter.set(transferredLeftValue)
 	}
 
