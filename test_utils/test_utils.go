@@ -731,7 +731,12 @@ func ParseCheckAndPrepareWithAtreeValidationsDisabled(
 	tb.Helper()
 
 	if !compile {
-		return ParseCheckAndInterpretWithAtreeValidationsDisabled(tb, code, options)
+		return parseCheckAndInterpretWithOptionsAndAtreeValidations(
+			tb,
+			code,
+			options,
+			false,
+		)
 	}
 
 	interpreterConfig := options.InterpreterConfig
@@ -757,12 +762,6 @@ func ParseCheckAndPrepareWithAtreeValidationsDisabled(
 // Idea is to eventually use the below functions everywhere, and remove them from `misc_test.go`,
 // so that the `misc_test.go` would contain only tests.
 
-func ParseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
-	inter, err := ParseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
-	require.NoError(t, err)
-	return inter
-}
-
 func ParseCheckAndInterpretWithOptions(
 	t testing.TB,
 	code string,
@@ -777,22 +776,6 @@ func ParseCheckAndInterpretWithOptions(
 		(options.InterpreterConfig == nil || options.InterpreterConfig.MemoryGauge == nil)
 
 	return parseCheckAndInterpretWithOptionsAndAtreeValidations(t, code, options, enableAtreeValidations)
-}
-
-func ParseCheckAndInterpretWithAtreeValidationsDisabled(
-	t testing.TB,
-	code string,
-	options ParseCheckAndInterpretOptions,
-) (
-	inter *interpreter.Interpreter,
-	err error,
-) {
-	return parseCheckAndInterpretWithOptionsAndAtreeValidations(
-		t,
-		code,
-		options,
-		false,
-	)
 }
 
 func parseCheckAndInterpretWithOptionsAndAtreeValidations(

@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestSemaCheckPathLiteralForInternalStorageDomains(t *testing.T) {
@@ -61,7 +62,7 @@ func TestCanBorrow(t *testing.T) {
 
 	t.Parallel()
 
-	inter := newInterpreter(t, `
+	checker, err := ParseAndCheck(t, `
         access(all)
         entitlement E
 
@@ -75,14 +76,16 @@ func TestCanBorrow(t *testing.T) {
         resource R: RI {}
     `)
 
+	require.NoError(t, err)
+
 	typeID := func(qualifiedIdentifier string) sema.TypeID {
 		return TestLocation.TypeID(nil, qualifiedIdentifier)
 	}
 
-	entitlementE := inter.Program.Elaboration.EntitlementType(typeID("E"))
+	entitlementE := checker.Elaboration.EntitlementType(typeID("E"))
 	require.NotNil(t, entitlementE)
 
-	entitlementF := inter.Program.Elaboration.EntitlementType(typeID("F"))
+	entitlementF := checker.Elaboration.EntitlementType(typeID("F"))
 	require.NotNil(t, entitlementF)
 
 	test := func(
@@ -90,10 +93,10 @@ func TestCanBorrow(t *testing.T) {
 		instantiate func(a, b sema.Type) (a2, b2 *sema.ReferenceType),
 		expected bool,
 	) {
-		rType := inter.Program.Elaboration.CompositeType(typeID("R"))
+		rType := checker.Elaboration.CompositeType(typeID("R"))
 		require.NotNil(t, rType)
 
-		riType := inter.Program.Elaboration.InterfaceType(typeID("RI"))
+		riType := checker.Elaboration.InterfaceType(typeID("RI"))
 		require.NotNil(t, riType)
 
 		riIntersectionType := sema.NewIntersectionType(
