@@ -31,7 +31,6 @@ type callFrame struct {
 
 	function *CompiledFunctionValue
 
-	localsOffset        uint16
-	localsCount         uint16
-	hasImplicitArgument bool
+	localsOffset uint16
+	localsCount  uint16
 }

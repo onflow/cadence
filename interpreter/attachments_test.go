@@ -60,6 +60,41 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
 
+	t.Run("basic with arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+        struct S {}
+
+        attachment A for S {
+            let i: Int
+
+            init(_ i: Int) {
+                self.i = i
+            }
+
+            fun foo(): Int { return self.i }
+        }
+
+        fun test(): Int {
+            var s = S()
+            s = attach A(3) to s
+            return s[A]?.foo()!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
 	t.Run("duplicate attach", func(t *testing.T) {
 
 		t.Parallel()

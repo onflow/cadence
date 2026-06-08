@@ -2811,7 +2811,6 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	expression *ast.InvocationExpression,
 	implicitArgIndex *uint16,
-	implicitArgType sema.Type,
 ) (_ struct{}) {
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
@@ -2848,7 +2847,6 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				memberExpression,
 				invocationTypes,
 				implicitArgIndex,
-				implicitArgType,
 				returnTypeIndex,
 				hasImplicitArgument,
 			)
@@ -2867,7 +2865,6 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	c.emitInvocation(
 		expression,
 		implicitArgIndex,
-		implicitArgType,
 		invocationTypes,
 		returnTypeIndex,
 		hasImplicitArgument,
@@ -2879,18 +2876,23 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 func (c *Compiler[_, _]) emitInvocation(
 	expression *ast.InvocationExpression,
 	implicitArgIndex *uint16,
-	implicitArgType sema.Type,
 	invocationTypes sema.InvocationExpressionTypes,
 	returnTypeIndex uint16,
 	hasImplicitArgument bool,
 ) {
+	// Load the `base` argument first explicitly rather than including it the arguments.
+	// This keeps the placement of base consistent with attachment methods.
+	if implicitArgIndex != nil {
+		c.emitGetLocal(*implicitArgIndex)
+	}
+
 	// Compile arguments
 	c.compileArguments(expression.Arguments, invocationTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
 
 	argTypes := c.loadTypes(invocationTypes.ArgumentTypes)
-	argTypes = c.addImplicitArgumentTyped(implicitArgIndex, implicitArgType, argTypes)
+
 	paramTypes := c.loadTypes(invocationTypes.ParameterTypes)
 
 	c.emit(opcode.InstructionInvoke{
@@ -2903,31 +2905,8 @@ func (c *Compiler[_, _]) emitInvocation(
 	})
 }
 
-func (c *Compiler[_, _]) addImplicitArgumentTyped(
-	implicitArgIndex *uint16,
-	implicitArgType sema.Type,
-	argTypes []uint16,
-) []uint16 {
-	if implicitArgIndex == nil {
-		return argTypes
-	}
-
-	// Add the implicit argument to the end of the argument list, if it exists.
-	// Used in attachments, the attachment constructor/init expects an implicit argument:
-	// a reference to the base value used to set base.
-	// This hides the base argument away from the user.
-
-	// Load implicit argument from locals
-	// Base is at the back of the argument list, only for attachment initialization.
-	c.emitGetLocal(*implicitArgIndex)
-
-	argTypes = append(argTypes, c.getOrAddType(implicitArgType))
-
-	return argTypes
-}
-
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	c.visitInvocationExpressionWithImplicitArgument(expression, nil, nil)
+	c.visitInvocationExpressionWithImplicitArgument(expression, nil)
 
 	return
 }
@@ -2962,7 +2941,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
 	implicitArgIndex *uint16,
-	implicitArgType sema.Type,
 	returnTypeIndex uint16,
 	hasImplicitArgument bool,
 ) {
@@ -2983,7 +2961,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.emitInvocation(
 			expression,
 			implicitArgIndex,
-			implicitArgType,
 			invocationTypes,
 			returnTypeIndex,
 			hasImplicitArgument,
@@ -3029,7 +3006,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				c.emitInvocation(
 					expression,
 					implicitArgIndex,
-					implicitArgType,
 					invocationTypes,
 					returnTypeIndex,
 					hasImplicitArgument,
@@ -3060,7 +3036,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.emitInvocation(
 			expression,
 			implicitArgIndex,
-			implicitArgType,
 			invocationTypes,
 			returnTypeIndex,
 			hasImplicitArgument,
@@ -3081,7 +3056,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				c.emitInvocation(
 					expression,
 					implicitArgIndex,
-					implicitArgType,
 					invocationTypes,
 					returnTypeIndex,
 					hasImplicitArgument,
@@ -3850,21 +3824,13 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.targetFunction(function)
 	defer c.targetFunction(previousFunction)
 
-	// cannot declare base as parameter because it is at the end of the argument list
-	// this is only true for initialization of attachments.
-	// otherwise, base is declared as the second parameter after self.
-	c.declareParameters(parameterList, false, false)
+	isAttachmentConstructor := kind == common.CompositeKindAttachment
 
+	// Declare parameters.
+	c.declareParameters(parameterList, false, isAttachmentConstructor)
+
+	// Declare a local variable to store `self`.
 	memoryGauge := c.Config.MemoryGauge
-
-	var base *local
-	// must do this before declaring self
-	if kind == common.CompositeKindAttachment {
-		// base is provided as an argument at the end of the argument list implicitly
-		base = c.currentFunction.declareLocal(memoryGauge, sema.BaseIdentifier)
-	}
-
-	// Declare `self`
 	self := c.currentFunction.declareLocal(memoryGauge, sema.SelfIdentifier)
 
 	// Initialize an empty struct and assign to `self`.
@@ -3903,7 +3869,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 			)
 		}
 	} else {
-		addressValue := interpreter.NewAddressValue(c.Config.MemoryGauge, address)
+		addressValue := interpreter.NewAddressValue(memoryGauge, address)
 		addressConstant := c.addConstant(
 			constant.Address,
 			addressValue,
@@ -3922,23 +3888,29 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	// stores the return value of the constructor
 	var returnLocalIndex uint16
+
 	// `self` in attachments is a reference.
-	if kind == common.CompositeKindAttachment {
+	if isAttachmentConstructor {
 		// Store the new composite as the return value.
 		returnLocalIndex = c.currentFunction.generateLocalIndex()
 		c.emitSetLocal(returnLocalIndex)
+
 		attachType := enclosingType.(sema.EntitlementSupportingType)
 		baseAccess := attachType.SupportedEntitlements().Access()
 		refType := &sema.ReferenceType{
 			Type:          attachType,
 			Authorization: baseAccess,
 		}
+
 		// we need to set the attachment's base value
 		// because it may be used in function calls in the initializer.
 		// see `call function in initializer` test.
+		base := c.currentFunction.findLocal(sema.BaseIdentifier)
 		c.emitGetLocal(base.index)
+
 		c.emitGetLocal(returnLocalIndex)
 		c.emit(opcode.InstructionSetAttachmentBase{})
+
 		// Set `self` to be a reference.
 		c.emitGetLocal(returnLocalIndex)
 		c.emit(opcode.InstructionNewRef{
@@ -4522,7 +4494,6 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.visitInvocationExpressionWithImplicitArgument(
 		expression.Attachment,
 		&refLocalIndex,
-		refType,
 	)
 	// attachment on stack
 
