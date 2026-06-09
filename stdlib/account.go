@@ -4396,7 +4396,7 @@ func AccountCapabilitiesUnpublish(
 	return interpreter.NewSomeValueNonCopying(invocationContext, capabilityValue)
 }
 
-func canBorrow(
+func CanBorrow(
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
 ) bool {
@@ -4428,7 +4428,7 @@ func getCheckedCapabilityController(
 ) {
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else if !canBorrow(wantedBorrowType, capabilityBorrowType) {
+	} else if !CanBorrow(wantedBorrowType, capabilityBorrowType) {
 		return nil, nil
 	}
 
@@ -4453,7 +4453,7 @@ func getCheckedCapabilityController(
 		panic(errors.NewUnreachableError())
 	}
 
-	if !canBorrow(wantedBorrowType, controllerBorrowType) {
+	if !CanBorrow(wantedBorrowType, controllerBorrowType) {
 		return nil, nil
 	}
 
