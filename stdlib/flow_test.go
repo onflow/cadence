@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package stdlib
+package stdlib_test
 
 import (
 	"encoding/json"
@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 func TestFlowEventTypeIDs(t *testing.T) {
@@ -36,12 +37,12 @@ func TestFlowEventTypeIDs(t *testing.T) {
 	t.Parallel()
 
 	for _, ty := range []sema.Type{
-		AccountCreatedEventType,
-		AccountKeyAddedFromPublicKeyEventType,
-		AccountKeyRemovedFromPublicKeyIndexEventType,
-		AccountContractAddedEventType,
-		AccountContractUpdatedEventType,
-		AccountContractRemovedEventType,
+		stdlib.AccountCreatedEventType,
+		stdlib.AccountKeyAddedFromPublicKeyEventType,
+		stdlib.AccountKeyRemovedFromPublicKeyIndexEventType,
+		stdlib.AccountContractAddedEventType,
+		stdlib.AccountContractUpdatedEventType,
+		stdlib.AccountContractRemovedEventType,
 	} {
 		assert.True(t, strings.HasPrefix(string(ty.ID()), "flow"))
 	}
@@ -51,7 +52,7 @@ func TestFlowLocation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	loc := FlowLocation{}
+	loc := stdlib.FlowLocation{}
 
 	actual, err := json.Marshal(loc)
 	require.NoError(t, err)
@@ -70,7 +71,7 @@ func TestFlowLocationTypeID(t *testing.T) {
 
 	t.Parallel()
 
-	var location FlowLocation
+	var location stdlib.FlowLocation
 
 	assert.Equal(t,
 		common.TypeID("flow.Bar.Baz"),
@@ -82,7 +83,7 @@ func TestFlowLocationID(t *testing.T) {
 
 	t.Parallel()
 
-	location, _, err := decodeFlowLocationTypeID("flow.Bar.Baz")
+	location, _, err := stdlib.DecodeFlowLocationTypeID("flow.Bar.Baz")
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -99,7 +100,7 @@ func TestDecodeFlowLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeFlowLocationTypeID("")
+		_, _, err := stdlib.DecodeFlowLocationTypeID("")
 		require.EqualError(t, err, "invalid Flow location type ID: missing prefix")
 	})
 
@@ -107,11 +108,11 @@ func TestDecodeFlowLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeFlowLocationTypeID("flow")
+		location, qualifiedIdentifier, err := stdlib.DecodeFlowLocationTypeID("flow")
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			FlowLocation{},
+			stdlib.FlowLocation{},
 			location,
 		)
 		assert.Equal(t, "", qualifiedIdentifier)
@@ -121,11 +122,11 @@ func TestDecodeFlowLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeFlowLocationTypeID("flow.")
+		location, qualifiedIdentifier, err := stdlib.DecodeFlowLocationTypeID("flow.")
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			FlowLocation{},
+			stdlib.FlowLocation{},
 			location,
 		)
 		assert.Equal(t, "", qualifiedIdentifier)
@@ -135,7 +136,7 @@ func TestDecodeFlowLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeFlowLocationTypeID("X.T")
+		_, _, err := stdlib.DecodeFlowLocationTypeID("X.T")
 		require.EqualError(t, err, "invalid Flow location type ID: invalid prefix: expected \"flow\", got \"X\"")
 	})
 
@@ -143,11 +144,11 @@ func TestDecodeFlowLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeFlowLocationTypeID("flow.T")
+		location, qualifiedIdentifier, err := stdlib.DecodeFlowLocationTypeID("flow.T")
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			FlowLocation{},
+			stdlib.FlowLocation{},
 			location,
 		)
 		assert.Equal(t, "T", qualifiedIdentifier)
@@ -157,11 +158,11 @@ func TestDecodeFlowLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeFlowLocationTypeID("flow.T.U")
+		location, qualifiedIdentifier, err := stdlib.DecodeFlowLocationTypeID("flow.T.U")
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			FlowLocation{},
+			stdlib.FlowLocation{},
 			location,
 		)
 		assert.Equal(t, "T.U", qualifiedIdentifier)
