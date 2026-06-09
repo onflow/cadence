@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-package stdlib
+package stdlib_test
 
 import (
+	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,65 +28,50 @@ import (
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
-	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibraryValue) *interpreter.Interpreter {
-	program, err := parser.ParseProgram(
-		nil,
-		[]byte(code),
-		parser.Config{},
-	)
-	require.NoError(t, err)
+var compile = flag.Bool("compile", false, "Run tests using the compiler")
 
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+// newInvokable parses, checks, and prepares the given code with the given
+// standard library values available as built-ins.
+func newInvokable(t *testing.T, code string, valueDeclarations ...stdlib.StandardLibraryValue) Invokable {
+	semaBaseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	interpreterBaseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+
 	for _, valueDeclaration := range valueDeclarations {
-		baseValueActivation.DeclareValue(valueDeclaration)
+		semaBaseValueActivation.DeclareValue(valueDeclaration)
+		interpreter.Declare(interpreterBaseActivation, valueDeclaration)
 	}
 
-	checker, err := sema.NewChecker(
-		program,
-		TestLocation,
-		nil,
-		&sema.Config{
-			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-				return baseValueActivation
+	invokable, err := test_utils.ParseCheckAndPrepareWithOptions(
+		t,
+		code,
+		test_utils.ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return semaBaseValueActivation
+					},
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
 			},
-			AccessCheckMode: sema.AccessCheckModeStrict,
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return interpreterBaseActivation
+				},
+			},
 		},
+		*compile,
+		true,
 	)
 	require.NoError(t, err)
 
-	err = checker.Check()
-	require.NoError(t, err)
-
-	storage := NewUnmeteredInMemoryStorage()
-
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	for _, valueDeclaration := range valueDeclarations {
-		interpreter.Declare(baseActivation, valueDeclaration)
-	}
-
-	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-		&interpreter.Config{
-			Storage: storage,
-			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-				return baseActivation
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	err = inter.Interpret()
-	require.NoError(t, err)
-
-	return inter
+	return invokable
 }
 
 func TestCheckAssert(t *testing.T) {
@@ -93,7 +79,7 @@ func TestCheckAssert(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(InterpreterAssertFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
 		return ParseAndCheckWithOptions(t,
@@ -165,42 +151,27 @@ func TestCheckAssert(t *testing.T) {
 
 func TestInterpretAssert(t *testing.T) {
 
-	inter := newInterpreter(t,
+	inter := newInvokable(t,
 		`access(all) let test = assert`,
-		InterpreterAssertFunction,
+		stdlib.InterpreterAssertFunction,
 	)
 
+	// Failing condition, with message
 	_, err := inter.Invoke(
 		"test",
 		interpreter.FalseValue,
 		interpreter.NewUnmeteredStringValue("oops"),
 	)
-	assert.Equal(t,
-		interpreter.Error{
-			Err: &AssertionError{
-				Message: "oops",
-				LocationRange: interpreter.LocationRange{
-					Location: TestLocation,
-				},
-			},
-			Location: TestLocation,
-		},
-		err,
-	)
+	var assertionErr *stdlib.AssertionError
+	require.ErrorAs(t, err, &assertionErr)
+	assert.Equal(t, "oops", assertionErr.Message)
 
+	// Failing condition, without message
 	_, err = inter.Invoke("test", interpreter.FalseValue)
-	assert.Equal(t,
-		interpreter.Error{
-			Err: &AssertionError{
-				Message: "",
-				LocationRange: interpreter.LocationRange{
-					Location: TestLocation,
-				},
-			},
-			Location: TestLocation,
-		},
-		err)
+	require.ErrorAs(t, err, &assertionErr)
+	assert.Equal(t, "", assertionErr.Message)
 
+	// Passing condition, with message
 	_, err = inter.Invoke(
 		"test",
 		interpreter.TrueValue,
@@ -208,6 +179,7 @@ func TestInterpretAssert(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
+	// Passing condition, without message
 	_, err = inter.Invoke("test", interpreter.TrueValue)
 	assert.NoError(t, err)
 }
@@ -217,7 +189,7 @@ func TestCheckPanic(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(InterpreterPanicFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
 		return ParseAndCheckWithOptions(t,
@@ -269,22 +241,15 @@ func TestInterpretPanic(t *testing.T) {
 
 	t.Parallel()
 
-	inter := newInterpreter(t,
-		`access(all) let test = panic`,
-		InterpreterPanicFunction,
+	inter := newInvokable(t,
+		`access(all) fun test(_ message: String): String {
+            return panic(message)
+        }`,
+		stdlib.InterpreterPanicFunction,
 	)
 
 	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("oops"))
-	assert.Equal(t,
-		interpreter.Error{
-			Err: &PanicError{
-				Message: "oops",
-				LocationRange: interpreter.LocationRange{
-					Location: TestLocation,
-				},
-			},
-			Location: TestLocation,
-		},
-		err,
-	)
+	var panicErr *stdlib.PanicError
+	require.ErrorAs(t, err, &panicErr)
+	assert.Equal(t, "oops", panicErr.Message)
 }

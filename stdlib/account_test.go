@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package stdlib
+package stdlib_test
 
 import (
 	"fmt"
@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -120,7 +121,7 @@ func TestCanBorrow(t *testing.T) {
 				t.Run(fmt.Sprintf("%s / %s", a2, b2), func(t *testing.T) {
 					t.Parallel()
 
-					require.Equal(t, expected, canBorrow(a2, b2))
+					require.Equal(t, expected, stdlib.CanBorrow(a2, b2))
 				})
 			}
 		}

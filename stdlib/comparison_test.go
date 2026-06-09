@@ -19,7 +19,6 @@
 package stdlib_test
 
 import (
-	"flag"
 	"fmt"
 	"testing"
 
@@ -36,8 +35,6 @@ import (
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
-
-var compile = flag.Bool("compile", false, "Run tests using the compiler")
 
 func TestMinFunction(t *testing.T) {
 	t.Parallel()
