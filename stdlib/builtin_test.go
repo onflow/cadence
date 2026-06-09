@@ -179,7 +179,7 @@ func TestInterpretAssert(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	// Passing condition, with message
+	// Passing condition, without message
 	_, err = inter.Invoke("test", interpreter.TrueValue)
 	assert.NoError(t, err)
 }
