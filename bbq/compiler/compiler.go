@@ -605,7 +605,9 @@ func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
 
 // emitUnreachableIfStatementEndsControlFlow emits an InstructionUnreachable
 // after the given statement's bytecode if the type checker determined that
-// control flow does not continue past it (halt, exhaustive if/switch).
+// control flow does not continue past it,
+// e.g. because the statement halts (contains a call of a function returning Never),
+// or is an if- or switch-statement in which all branches end control flow.
 // If execution nevertheless reaches the emitted instruction at runtime,
 // the VM panics with UnreachableInstructionError.
 //
