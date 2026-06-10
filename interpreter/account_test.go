@@ -643,7 +643,7 @@ func testAccountWithErrorHandler(
 	} else {
 
 		// NOTE: test code for VM above
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 			code,
 			ParseCheckAndInterpretOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{

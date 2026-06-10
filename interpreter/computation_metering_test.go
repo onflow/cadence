@@ -3418,7 +3418,9 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		interpreter.Declare(baseActivation, stdlib.RLPContract)
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+
+		// TODO: Also run with compiler
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 			`
              fun test() {
                  // "dog"
@@ -3482,7 +3484,9 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		interpreter.Declare(baseActivation, stdlib.RLPContract)
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+
+		// TODO: Also run with compiler
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 			`
              fun test() {
                  // "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce porta malesuada imperdiet. Sed erat erat, aliquam sed volutpat sed, volutpat ac sapien. Pellentesque sit amet arcu ut magna vehicula finibus non eu felis. Etiam sed tellus congue, sodales ante eget, dictum eros. In at metus sapien fusce."
@@ -3547,7 +3551,9 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		interpreter.Declare(baseActivation, stdlib.RLPContract)
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+
+		// TODO: Also run with compiler
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 			`
              fun test() {
                  // [['a']]
