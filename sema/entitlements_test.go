@@ -9340,6 +9340,85 @@ func TestInvalidCheckEntitlementEscalation(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
+	// The cascading rule must also apply when the method is invoked
+	// via optional chaining on an optional reference:
+	// ShouldReturnReference/MaybeReferenceType unwrap the optional,
+	// so the outer reference's authorization caps the result's
+	// inner element references just like for a non-optional receiver.
+	t.Run("optional chaining preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let optRef: auth(Insert) &[auth(Remove) &InnerVictim]? = ov.getInsertOnlyRef()
+
+                optRef?.slice(from: 0, upTo: 1)![0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// The dictionary `values` field returns a copy of the values,
+	// like the copy methods do for arrays.
+	// The field-access cascading rule in visitMember (not the
+	// container-method resolvers) must intersect the inner element
+	// references with the outer reference's authorization,
+	// closing the same escalation shape through the field path.
+	t.Run("values field preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let dict: {String: auth(Remove) &InnerVictim}
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.dict = {"a": &self.iv as auth(Remove) &InnerVictim}
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &{String: auth(Remove) &InnerVictim} {
+                    return &self.dict
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyRef = ov.getInsertOnlyRef()
+
+                insertOnlyRef.values[0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
 }
 
 func TestCheckContainerMethodElementCascading(t *testing.T) {
