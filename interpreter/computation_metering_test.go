@@ -1265,6 +1265,135 @@ func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
 		)
 	})
 
+	t.Run("while without body", func(t *testing.T) {
+		t.Parallel()
+
+		computationGauge := newTestComputationGauge(
+			common.ComputationKindStatement,
+			common.ComputationKindLoop,
+		)
+
+		storage := NewUnmeteredInMemoryStorage()
+		// The loop body is empty; the loop is driven entirely by the side
+		// effect of evaluating the test expression (the `cond()` call, which
+		// increments the captured `i`). The loop body is entered 5 times.
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              fun test() {
+                  var i = 0
+                  let cond = fun (): Bool {
+                      i = i + 1
+                      return i <= 5
+                  }
+                  while cond() {}
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					Storage:          storage,
+					ComputationGauge: computationGauge,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			// The compiler/VM meters the `while` statement (and therefore the
+			// loop's test expression) only once, regardless of how many times
+			// the loop iterates. It still meters a Loop per iteration.
+			expectedUsages = []common.ComputationUsage{
+				// var i = 0
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				// let cond = fun ...
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				// while statement (metered once)
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+
+				// 1st test evaluation: cond() body
+				{Kind: common.ComputationKindStatement, Intensity: 1}, // i = i + 1
+				{Kind: common.ComputationKindStatement, Intensity: 1}, // return
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				// iterations 2-5: only the cond() body and the loop iteration
+				// are metered; the test re-evaluation is not metered as a statement
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				// final test evaluation returns false: cond() body runs,
+				// but there is no further loop iteration
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+			}
+		} else {
+			// The tree-walking interpreter meters the test expression as a
+			// statement on every evaluation (once for the while statement, and
+			// once more before each subsequent iteration), so it records one
+			// extra statement per iteration compared to the compiler/VM.
+			expectedUsages = []common.ComputationUsage{
+				// var i = 0
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				// let cond = fun ...
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				// while statement (first evaluation of the test expression)
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+
+				// 1st test evaluation: cond() body
+				{Kind: common.ComputationKindStatement, Intensity: 1}, // i = i + 1
+				{Kind: common.ComputationKindStatement, Intensity: 1}, // return
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				// before each subsequent iteration, the interpreter meters the
+				// next evaluation of the test expression as a statement
+				{Kind: common.ComputationKindStatement, Intensity: 1}, // next test
+				{Kind: common.ComputationKindStatement, Intensity: 1}, // cond() body
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+
+				// final test evaluation returns false: the next-test statement
+				// is metered, cond() body runs, but there is no further iteration
+				{Kind: common.ComputationKindStatement, Intensity: 1}, // next test
+				{Kind: common.ComputationKindStatement, Intensity: 1}, // cond() body
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
+			computationGauge.usages,
+		)
+	})
+
 	t.Run("for", func(t *testing.T) {
 		t.Parallel()
 
