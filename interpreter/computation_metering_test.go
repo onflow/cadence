@@ -37,6 +37,44 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
+// The tests in this file run on both execution engines: the tree-walking
+// interpreter and, when `-compile=true` is set, the bytecode compiler + VM
+// (see parseCheckAndPrepareWithOptions and the `compile` flag).
+//
+// The two engines do not always meter computation identically. Rather than
+// changing production metering, these tests treat each engine's current
+// behaviour as correct and, where they differ, assert the compiler/VM's
+// expected usages in a `if *compile { ... }` branch. The known, systematic
+// reasons for the differences are:
+//
+//   - Function invocations: the interpreter does not meter the entry-point
+//     invocation (the `Invoke` call from the test) nor invocations made
+//     internally by built-in functions, while the VM meters every `Invoke`
+//     instruction. The VM therefore reports additional FunctionInvocation
+//     usages, and meters the invocation after evaluating the call's arguments
+//     (the interpreter meters it before), which also changes the ordering.
+//
+//   - Global variable/constant declarations: the interpreter meters the
+//     top-level declaration as a Statement when evaluated, whereas the VM's
+//     global initializers are not metered as statements.
+//
+//   - Loops: the interpreter re-meters the `while`/`for` condition on every
+//     iteration as a Statement; the VM's loop encoding meters this differently.
+//
+//   - Iterators: when iterating an array/dictionary, the VM's explicit
+//     iterator protocol (`HasNext`/`Next`) meters the terminating read that
+//     yields no element, which the interpreter's callback-based iteration
+//     does not.
+//
+//   - Dictionary construction: the number of metered StringComparison
+//     operations depends on hash collisions in the underlying atree map, which
+//     depend on the digest seed derived from the map's slab ID. The two engines
+//     allocate slabs in different orders, so they perform a different (but
+//     individually deterministic) number of key comparisons.
+//
+// RLP tests stay on the interpreter-only path (parseCheckAndInterpretWithOptions)
+// because the RLP built-in is not registered with the compiler.
+
 type testComputationGauge struct {
 	meter   map[common.ComputationKind]uint64
 	kindSet map[common.ComputationKind]struct{}
@@ -85,7 +123,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3]
                 let y = x.reverse()
@@ -101,8 +139,10 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -118,7 +158,29 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+			}
+		}
+
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -128,7 +190,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4]
                 let trueForEven = fun (_ x: Int): Bool {
@@ -147,8 +209,38 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 4},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
@@ -176,7 +268,10 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
-			},
+			}
+		}
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -186,7 +281,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4, 5]
                 let onlyEven = view fun (_ x: Int): Bool {
@@ -205,8 +300,46 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 5},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
@@ -242,7 +375,10 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
-			},
+			}
+		}
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -252,7 +388,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4, 5, 6]
                 let y = x.slice(from: 1, upTo: 4)
@@ -268,8 +404,10 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
@@ -283,7 +421,26 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 6},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 6},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 3},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+			}
+		}
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -293,7 +450,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3]
                 let y = x.concat([4, 5, 6])
@@ -311,8 +468,29 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 
 		// Computation is (arrayLength +1). It's an overestimate.
 		// The last one is for checking the end of array.
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 6},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 6},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 6},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -330,7 +508,10 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 6},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 6},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 6},
-			},
+			}
+		}
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -345,7 +526,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = String.join(["one", "two", "three", "four"], separator: ", ")
             }`,
@@ -360,8 +541,27 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
@@ -376,7 +576,10 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 				{Kind: common.ComputationKindLoop, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindLoop, Intensity: 1},
-			},
+			}
+		}
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -386,7 +589,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = "a b c".concat("1 2 3")
             }`,
@@ -401,12 +604,23 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindLoop, Intensity: 10},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 10},
+			}
+		}
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -416,7 +630,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = "abcadeaf".replaceAll(of: "a", with: "z")
             }`,
@@ -431,8 +645,10 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
@@ -500,7 +716,80 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 4},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 8},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 8},
+				{Kind: common.ComputationKindLoop, Intensity: 7},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 7},
+				{Kind: common.ComputationKindLoop, Intensity: 4},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 4},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 8},
+				{Kind: common.ComputationKindLoop, Intensity: 8},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 8},
+				{Kind: common.ComputationKindLoop, Intensity: 7},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 7},
+				{Kind: common.ComputationKindLoop, Intensity: 4},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 4},
+			}
+		}
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -510,7 +799,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = "ABCdef".toLower()
             }`,
@@ -525,12 +814,23 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStringToLower, Intensity: 6},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStringToLower, Intensity: 6},
+			}
+		}
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -540,7 +840,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = "abc/d/ef//".split(separator: "/")
             }`,
@@ -555,8 +855,10 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
@@ -647,7 +949,103 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 				{Kind: common.ComputationKindLoop, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 5},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 5},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 10},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 10},
+				{Kind: common.ComputationKindLoop, Intensity: 6},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 6},
+				{Kind: common.ComputationKindLoop, Intensity: 4},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 4},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 10},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 3},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 10},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 6},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 6},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 4},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 2},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 4},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 5},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 5},
+			}
+		}
+		assert.Equal(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -665,7 +1063,7 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
 		)
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
               fun a() {
                   true
                   true
@@ -724,7 +1122,7 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
 		)
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
               fun test() {
                   pre { true}
                   post { true }
@@ -759,7 +1157,7 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
 		)
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t, `
+		_, err := parseCheckAndPrepareWithOptions(t, `
               let x = 1 + 2
               let y = 3 * 4
             `,
@@ -772,11 +1170,17 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
 		)
 		require.NoError(t, err)
 
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = nil
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+			}
+		}
 		assert.Equal(t,
-			[]common.ComputationUsage{
-				{Kind: common.ComputationKindStatement, Intensity: 1},
-				{Kind: common.ComputationKindStatement, Intensity: 1},
-			},
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -795,7 +1199,7 @@ func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
 		)
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   var i = 1
@@ -816,8 +1220,20 @@ func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				// statement before loop
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 
@@ -841,7 +1257,10 @@ func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
 
 				// test expression
 				{Kind: common.ComputationKindStatement, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -854,7 +1273,7 @@ func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
 		)
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   for n in [1, 2, 3] {}
@@ -894,7 +1313,7 @@ func TestInterpretComputationMeteringFunctionInvocation(t *testing.T) {
 	)
 
 	storage := NewUnmeteredInMemoryStorage()
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           fun a() {
               true
@@ -936,8 +1355,13 @@ func TestInterpretComputationMeteringFunctionInvocation(t *testing.T) {
 	_, err = inter.Invoke("d")
 	require.NoError(t, err)
 
-	AssertEqualWithDiff(t,
-		[]common.ComputationUsage{
+	var expectedUsages []common.ComputationUsage
+	if *compile {
+		// The compiler/VM meters some operations differently from
+		// the tree-walking interpreter; see the note above
+		// TestInterpretComputationMeteringArrayFunctions for details.
+		expectedUsages = []common.ComputationUsage{
+			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 			// start of d
 			{Kind: common.ComputationKindStatement, Intensity: 1},
 			{Kind: common.ComputationKindStatement, Intensity: 1},
@@ -967,7 +1391,42 @@ func TestInterpretComputationMeteringFunctionInvocation(t *testing.T) {
 			{Kind: common.ComputationKindStatement, Intensity: 1},
 			{Kind: common.ComputationKindStatement, Intensity: 1},
 			{Kind: common.ComputationKindStatement, Intensity: 1},
-		},
+		}
+	} else {
+		expectedUsages = []common.ComputationUsage{
+			// start of d
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// c()
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+			// start of c
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// b()
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+			// start of b
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// a()
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+			// a
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// rest of b
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// rest of c
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			// rest of d
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+			{Kind: common.ComputationKindStatement, Intensity: 1},
+		}
+	}
+	AssertEqualWithDiff(t,
+		expectedUsages,
 		computationGauge.usages,
 	)
 }
@@ -982,7 +1441,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               let x = [1, 2, 3]
             `,
@@ -995,14 +1454,26 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1013,7 +1484,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               resource R {}
 
@@ -1034,8 +1505,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
@@ -1045,7 +1518,22 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindDestroyArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindDestroyArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1056,7 +1544,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
                let x = [1, 2, 3][1]
              `,
@@ -1069,13 +1557,24 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindAtreeArrayGet, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1086,7 +1585,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   let x = [1]
@@ -1105,8 +1604,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
@@ -1115,7 +1616,21 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArraySet, Intensity: 1},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 1},
+
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySet, Intensity: 1},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1126,7 +1641,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               let x = [1, 2, 3].append(4)
             `,
@@ -1139,14 +1654,26 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1157,7 +1684,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               let x = [1, 2, 3].insert(at: 1, 1)
             `,
@@ -1170,14 +1697,26 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayInsert, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayInsert, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1188,7 +1727,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               let x = [1, 2, 3].remove(at: 1)
             `,
@@ -1201,14 +1740,26 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayRemove, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayRemove, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1219,7 +1770,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               let x = [1, 2, 3].contains(4)
             `,
@@ -1232,8 +1783,22 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -1244,7 +1809,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1255,7 +1823,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                fun test() {
                    [1, 2, 3].appendAll([4, 5])
@@ -1273,8 +1841,25 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -1287,7 +1872,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayAppend, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1298,7 +1886,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                fun test() {
                    ["a", "b", "c"].firstIndex(of: "b")
@@ -1316,8 +1904,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -1326,7 +1916,21 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStringComparison, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStringComparison, Intensity: 1},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1337,7 +1941,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                fun test() {
                    ["a", "b", "c"].concat(["d", "e"])
@@ -1355,8 +1959,24 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 5},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -1368,7 +1988,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 5},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1379,7 +2002,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                fun test() {
                    ["a", "b", "c", "d"].slice(from: 1, upTo: 3)
@@ -1397,8 +2020,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
@@ -1406,7 +2031,20 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 2},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 2},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1417,7 +2055,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                fun test() {
                    for n in [1, 2, 3] {}
@@ -1435,8 +2073,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -1446,7 +2086,23 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindLoop, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindLoop, Intensity: 1},
-			},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1457,7 +2113,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                fun test() {
                    let chars: [Character; 3] = ["a", "b", "c"]
@@ -1476,8 +2132,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -1488,7 +2146,23 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 3},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 3},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1499,7 +2173,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                fun test() {
                    let chars: [Character] = ["a", "b", "c"]
@@ -1518,8 +2192,10 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
@@ -1530,7 +2206,23 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 3},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 3},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1547,7 +2239,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               let x = {"a": 1, "b": 2, "c": 3}
             `,
@@ -1560,8 +2252,20 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindTransferDictionaryValue, Intensity: 3},
+				{Kind: common.ComputationKindAtreeMapSingleSlabConstruction, Intensity: 3},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
@@ -1576,7 +2280,10 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
 				{Kind: common.ComputationKindTransferDictionaryValue, Intensity: 3},
 				{Kind: common.ComputationKindAtreeMapSingleSlabConstruction, Intensity: 3},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1587,7 +2294,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               resource R {}
 
@@ -1608,8 +2315,24 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindTransferDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindDestroyDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindStringComparison, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
@@ -1622,7 +2345,10 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1633,7 +2359,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               let x = {"a": 1, "b": 2}["b"]
             `,
@@ -1646,8 +2372,19 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapGet, Intensity: 1},
+				{Kind: common.ComputationKindStringComparison, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
@@ -1658,7 +2395,10 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapGet, Intensity: 1},
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1669,7 +2409,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               let x = {"a": 1, "b": 2}.containsKey("b")
             `,
@@ -1682,8 +2422,20 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapHas, Intensity: 1},
+				{Kind: common.ComputationKindStringComparison, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
@@ -1695,7 +2447,10 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapHas, Intensity: 1},
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1706,7 +2461,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   let x = {"a": 1}
@@ -1725,8 +2480,22 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindTransferDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSingleSlabConstruction, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindStringComparison, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
@@ -1738,7 +2507,10 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1749,7 +2521,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               let x= {"a": 1}.remove(key: "a")
             `,
@@ -1762,8 +2534,19 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapRemove, Intensity: 1},
+				{Kind: common.ComputationKindStringComparison, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
@@ -1772,7 +2555,10 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapRemove, Intensity: 1},
 				{Kind: common.ComputationKindStringComparison, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1783,7 +2569,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   {"a": 1, "b": 2}.keys
@@ -1801,8 +2587,21 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 2},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
@@ -1814,7 +2613,10 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 2},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1825,7 +2627,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   {"a": 1, "b": 2}.values
@@ -1843,8 +2645,21 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 2},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
@@ -1856,7 +2671,10 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 2},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1867,7 +2685,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   {"a": 1, "b": 2}.forEachKey(fun (key: String): Bool {
@@ -1887,8 +2705,25 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateDictionaryValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
@@ -1902,7 +2737,10 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1918,7 +2756,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               struct S {
                   let x: Int
@@ -1939,8 +2777,20 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindTransferCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSingleSlabConstruction, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
@@ -1949,7 +2799,10 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
 				{Kind: common.ComputationKindTransferCompositeValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapSingleSlabConstruction, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -1960,7 +2813,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               resource R {}
 
@@ -1981,8 +2834,10 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
@@ -1991,7 +2846,21 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 				{Kind: common.ComputationKindTransferCompositeValue, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindDestroyCompositeValue, Intensity: 1},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindTransferCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindDestroyCompositeValue, Intensity: 1},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2002,7 +2871,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
               struct S {
                   let x: Int
@@ -2023,8 +2892,19 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapGet, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
@@ -2032,7 +2912,10 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapGet, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2043,7 +2926,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               struct S {
                   let x: Int
@@ -2069,15 +2952,29 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateCompositeValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapConstruction, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindAtreeMapSet, Intensity: 1},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2094,7 +2991,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
              let x = "abc"[2]
            `,
@@ -2107,8 +3004,18 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 3},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				// TODO: optimize
 				// length (bounds check)
@@ -2118,7 +3025,10 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
 				//
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 3},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2129,7 +3039,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
              let x = "abc".length
            `,
@@ -2142,14 +3052,26 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2160,7 +3082,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
              let x = "abc".toLower()
            `,
@@ -2173,12 +3095,22 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStringToLower, Intensity: 3},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStringToLower, Intensity: 3},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2189,7 +3121,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		_, err := parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndPrepareWithOptions(t,
 			`
              let x = "abcd".slice(from: 1, upTo: 3)
            `,
@@ -2202,8 +3134,20 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 3},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
@@ -2212,7 +3156,10 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 3},
-			},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2223,7 +3170,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
              fun test() {
                  "0D15EA5E".decodeHex()
@@ -2241,14 +3188,27 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStringDecodeHex, Intensity: 8},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStringDecodeHex, Intensity: 8},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2259,7 +3219,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
              fun test() {
                  for n in "abc" {}
@@ -2277,8 +3237,10 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				// loop iterations
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
@@ -2288,7 +3250,22 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
 				{Kind: common.ComputationKindLoop, Intensity: 1},
 				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				// loop iterations
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+				{Kind: common.ComputationKindLoop, Intensity: 1},
+				{Kind: common.ComputationKindGraphemesIteration, Intensity: 1},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2506,7 +3483,7 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   Int.fromString("100000")
@@ -2524,12 +3501,23 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindBigIntParse, Intensity: 6},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindBigIntParse, Intensity: 6},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2540,7 +3528,7 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   Int8.fromString("42")
@@ -2558,12 +3546,23 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindIntParse, Intensity: 2},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindIntParse, Intensity: 2},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -2574,7 +3573,7 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 		computationGauge := newTestComputationGauge()
 
 		storage := NewUnmeteredInMemoryStorage()
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   UInt8.fromString("42")
@@ -2592,12 +3591,23 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindUintParse, Intensity: 2},
-			},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindUintParse, Intensity: 2},
+			}
+		}
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
