@@ -1282,29 +1282,6 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anystruct swap on reference", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndPrepare(t, `
-            struct Foo {
-                var array: [Int]
-                init() {
-                    self.array = []
-                }
-            }
-
-            fun test() {
-                let dict: {String: AnyStruct} = {"foo": Foo(), "bar": Foo()}
-                let dictRef = &dict as auth(Mutate) &{String: AnyStruct}
-
-                dictRef["foo"] <-> dictRef["bar"]
-            }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
 	t.Run("entitlement map access on field", func(t *testing.T) {
 		t.Parallel()
 

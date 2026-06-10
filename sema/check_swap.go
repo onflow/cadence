@@ -31,42 +31,51 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 
 	// Then re-visit the same expressions, this time treat them as the value-expr of the assignment.
 	// The 'expected type' of the two expression would be the types obtained from the previous visit, swapped.
-	leftValueType := checker.VisitExpression(swap.Left, swap, rightTargetType)
-	rightValueType := checker.VisitExpression(swap.Right, swap, leftTargetType)
+	checker.VisitExpression(swap.Left, swap, rightTargetType)
+	checker.VisitExpression(swap.Right, swap, leftTargetType)
 
 	checker.enforceViewAssignment(swap, swap.Left)
 	checker.enforceViewAssignment(swap, swap.Right)
 
+	// Record the target types (rather than the value-expression types) for
+	// runtime use. Swap is semantically a value-exchange operation: the
+	// runtime extracts each operand from its container and writes it to the
+	// other operand's slot. Recording the target types here lets the
+	// runtime apply extract-then-write uniformly — even when the operand
+	// expression's read-context type is a cascaded reference (e.g.,
+	// `dictRef[k]` where dictRef is `&{String: AnyStruct}` reads as
+	// `&AnyStruct?`). The extracted underlying value matches the target
+	// type, so TransferAndConvert's defensive type check passes.
 	checker.Elaboration.SetSwapStatementTypes(
 		swap,
 		SwapStatementTypes{
-			LeftType:  leftValueType,
-			RightType: rightValueType,
+			LeftType:  leftTargetType,
+			RightType: rightTargetType,
 		},
 	)
 
-	// Record as a resource move (when applicable),
-	// because in destructors, nested resource moves are allowed.
-
-	if leftValueType.IsResourceType() {
-		checker.elaborateNestedResourceMoveExpression(swap.Left)
-	}
-
-	if rightValueType.IsResourceType() {
-		checker.elaborateNestedResourceMoveExpression(swap.Right)
-	}
-
-	// If the left or right side is an index expression,
-	// and the indexed type (type of the target expression) is a resource type,
-	// then the target expression must be considered as a nested resource move expression.
-	//
-	// This is because the evaluation of the index expression
-	// should not be able to access/move the target resource.
-	//
-	// For example, if a side is `a.b[c()]`, then `a.b` is the target expression.
-	// If `a.b` is a resource, then `c()` should not be able to access/move it.
-
 	for _, side := range []ast.Expression{swap.Left, swap.Right} {
+
+		// Mark IndexExpression and MemberExpression swap operands
+		// as nested resource moves unconditionally, so the runtime uses
+		// extract-then-write semantics (RemoveIndex/RemoveField + placeholder)
+		// instead of get + set.
+
+		switch side.(type) {
+		case *ast.IndexExpression, *ast.MemberExpression:
+			checker.elaborateNestedResourceMoveExpression(side)
+		}
+
+		// If the left or right side is an index expression,
+		// and the indexed type (type of the target expression) is a resource type,
+		// then the target expression must be considered as a nested resource move expression.
+		//
+		// This is because the evaluation of the index expression
+		// should not be able to access/move the target resource.
+		//
+		// For example, if a side is `a.b[c()]`, then `a.b` is the target expression.
+		// If `a.b` is a resource, then `c()` should not be able to access/move it.
+
 		if indexExpression, ok := side.(*ast.IndexExpression); ok {
 			indexExpressionTypes, ok := checker.Elaboration.IndexExpressionTypes(indexExpression)
 

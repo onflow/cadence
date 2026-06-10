@@ -666,19 +666,8 @@ func (i InstructionRemoveIndex) Pretty(program ProgramForInstructions) PrettyIns
 //
 // Pops three values off the stack, the array, the index, and the value,
 // and then sets the value at the given index of the array to the value.
-// If skipValueStalenessCheck is true, the staleness re-check on the value
-// being set is suppressed; the container and index are still validated.
-// Set by the swap-statement compiler, which matches the interpreter's
-// timing by validating both swap operands once before the transfers and
-// then performing the two sets without further per-instruction staleness
-// checks. Without this flag the second SetIndex would re-check the value
-// just before serializing it into the container, and that re-check would
-// fire on values whose source slab was drained as part of the first
-// SetIndex's eviction-cleanup — a pre-existing reference-corruption
-// hazard in the non-resource swap path that is not in scope here.
 type InstructionSetIndex struct {
-	IndexedType             uint16
-	SkipValueStalenessCheck bool
+	IndexedType uint16
 }
 
 var _ Instruction = InstructionSetIndex{}
@@ -697,8 +686,6 @@ func (i InstructionSetIndex) String() string {
 func (i InstructionSetIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "indexedType", i.IndexedType, colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "skipValueStalenessCheck", i.SkipValueStalenessCheck, colorize)
 }
 
 func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder,
@@ -706,26 +693,21 @@ func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder,
 	colorize bool) {
 	sb.WriteByte(' ')
 	printfTypeArgument(sb, "indexedType", program.GetTypes()[i.IndexedType], colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "skipValueStalenessCheck", i.SkipValueStalenessCheck, colorize)
 }
 
 func (i InstructionSetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.IndexedType)
-	emitBool(code, i.SkipValueStalenessCheck)
 }
 
 func DecodeSetIndex(ip *uint16, code []byte) (i InstructionSetIndex) {
 	i.IndexedType = decodeUint16(ip, code)
-	i.SkipValueStalenessCheck = decodeBool(ip, code)
 	return i
 }
 
 func (i InstructionSetIndex) Pretty(program ProgramForInstructions) PrettyInstruction {
 	return PrettyInstructionSetIndex{
-		IndexedType:             program.GetTypes()[i.IndexedType],
-		SkipValueStalenessCheck: i.SkipValueStalenessCheck,
+		IndexedType: program.GetTypes()[i.IndexedType],
 	}
 }
 
