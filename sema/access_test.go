@@ -677,8 +677,11 @@ func TestIntersectAccess(t *testing.T) {
 	t.Run("disjunction, identical", func(t *testing.T) {
 		t.Parallel()
 
-		// Two disjunctions: neither guarantees any specific entitlement,
-		// so nothing can be statically guaranteed in common.
+		// Conservatively unauthorized:
+		// preserving the identical disjunction would be sound
+		// (every possible holder of either side entails it),
+		// but IntersectAccess deliberately rejects
+		// all disjunction ∩ disjunction combinations.
 		result := IntersectAccess(
 			disjunctionAccess(MutateType, InsertType),
 			disjunctionAccess(MutateType, InsertType),
@@ -689,7 +692,9 @@ func TestIntersectAccess(t *testing.T) {
 	t.Run("disjunction, partial overlap", func(t *testing.T) {
 		t.Parallel()
 
-		// Both sides are disjunctions, so nothing is guaranteed in common.
+		// Neither side guarantees Insert,
+		// so the former result, the disjunction of the set intersection,
+		// i.e. auth(Insert), was unsound.
 		result := IntersectAccess(
 			disjunctionAccess(MutateType, InsertType),
 			disjunctionAccess(InsertType, RemoveType),
@@ -789,6 +794,10 @@ func TestIntersectAccess(t *testing.T) {
 
 		// Conjunction guarantees only {Insert}, but the disjunction may hold
 		// Mutate or Remove instead, which the conjunction does not guarantee.
+		// Conservatively unauthorized:
+		// preserving the disjunction would be sound
+		// (a holder of Insert entails auth(Mutate | Insert | Remove)),
+		// but the conjunction is not a superset of the disjunction.
 		result := IntersectAccess(
 			conjunctionAccess(InsertType),
 			disjunctionAccess(MutateType, InsertType, RemoveType),
@@ -801,6 +810,57 @@ func TestIntersectAccess(t *testing.T) {
 
 		mapAccess := NewEntitlementMapAccess(IdentityType)
 		result := IntersectAccess(mapAccess, conjunctionAccess(MutateType))
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("left unauthorized, disjunction right", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			UnauthorizedAccess,
+			disjunctionAccess(MutateType, InsertType),
+		)
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("right unauthorized, disjunction left", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			disjunctionAccess(MutateType, InsertType),
+			UnauthorizedAccess,
+		)
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("entitlement map access, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		mapAccess := NewEntitlementMapAccess(IdentityType)
+		result := IntersectAccess(
+			mapAccess,
+			disjunctionAccess(MutateType, InsertType),
+		)
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("primitive access, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			PrimitiveAccess(ast.AccessAll),
+			conjunctionAccess(MutateType),
+		)
+		assert.Equal(t, UnauthorizedAccess, result)
+	})
+
+	t.Run("primitive access, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		result := IntersectAccess(
+			PrimitiveAccess(ast.AccessAll),
+			disjunctionAccess(MutateType, InsertType),
+		)
 		assert.Equal(t, UnauthorizedAccess, result)
 	})
 }

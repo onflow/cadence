@@ -8786,8 +8786,9 @@ func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
 
 	// Disjunction intersection: the inner disjunction is preserved only
 	// when the outer conjunction guarantees all of the disjunction's options.
-	// Otherwise the intersection is unauthorized, because nothing about the
-	// disjunction's specific entitlements is statically guaranteed.
+	// Otherwise the intersection is conservatively unauthorized,
+	// even in cases where preserving a disjunction would be sound
+	// (see the NOTE on IntersectAccess).
 
 	t.Run("array, conjunction outer not superset, disjunction inner, escalation prevented", func(t *testing.T) {
 		t.Parallel()
@@ -8841,12 +8842,16 @@ func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
 		)
 	})
 
-	t.Run("array, disjunction outer, disjunction inner, escalation prevented", func(t *testing.T) {
+	t.Run("array, disjunction outer, disjunction inner, conservatively rejected", func(t *testing.T) {
 		t.Parallel()
 
-		// auth(E | F) ∩ auth(E | F): both sides are disjunctions, so neither
-		// guarantees any specific entitlement. Result is unauthorized, even
-		// though the option sets are identical.
+		// auth(E | F) ∩ auth(E | F): both sides are disjunctions,
+		// so the result is unauthorized, even though the option sets are identical.
+		// This is conservative, not an escalation fix:
+		// preserving the disjunction would be sound here
+		// (every possible holder of either side entails auth(E | F)),
+		// but IntersectAccess deliberately rejects
+		// all disjunction ∩ disjunction combinations.
 		_, err := ParseAndCheck(t, `
           entitlement E
           entitlement F
@@ -8931,6 +8936,11 @@ func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
 		// disjunction outer cannot be preserved as the result (it might
 		// actually hold F, which the conjunction does not have).
 		// Result is unauthorized.
+		// The previous behavior produced auth(E) here,
+		// which exceeds what the outer auth(E | F) reference grants —
+		// that is the escalation being prevented.
+		// (auth(E | F) would have been a sound result,
+		// but IntersectAccess is deliberately stricter.)
 		_, err := ParseAndCheck(t, `
           entitlement E
           entitlement F
