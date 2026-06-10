@@ -1077,6 +1077,102 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
 	})
 
+	t.Run("invalid struct interface fun", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            struct interface S {
+                access(mapping M) fun foo()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid resource interface fun", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            resource interface R {
+                access(mapping M) fun foo()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid struct init", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            struct S {
+                access(mapping M) init() {}
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid resource init", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            resource R {
+                access(mapping M) init() {}
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid struct interface init", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            struct interface S {
+                access(mapping M) init()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid resource interface init", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            resource interface R {
+                access(mapping M) init()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
 	t.Run("missing entitlement mapping declaration fun", func(t *testing.T) {
 		t.Parallel()
 
