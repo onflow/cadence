@@ -596,9 +596,16 @@ func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
 	c.compileWithPositionInfo(
 		statement,
 		func() {
-			c.emit(opcode.InstructionStatement{})
-			ast.AcceptStatement[struct{}](statement, c)
-			c.emitUnreachableIfStatementEndsControlFlow(statement)
+			// The statement could be inherited,
+			// e.g. an inherited condition or before-statement of a condition.
+			// If so, use the corresponding elaboration,
+			// both for compiling the statement itself,
+			// and for the defensive unreachable check after it.
+			c.compilePotentiallyInheritedCode(statement, func() {
+				c.emit(opcode.InstructionStatement{})
+				ast.AcceptStatement[struct{}](statement, c)
+				c.emitUnreachableIfStatementEndsControlFlow(statement)
+			})
 		},
 	)
 }
@@ -1480,78 +1487,76 @@ func (c *Compiler[_, _]) emitContinue() {
 }
 
 func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
-	// If-statements can be coming from inherited conditions.
-	// If so, use the corresponding elaboration.
-	c.compilePotentiallyInheritedCode(statement, func() {
-		var (
-			elseJump            int
-			additionalThenScope bool
-		)
+	// NOTE: If-statements can be coming from inherited conditions.
+	// If so, the corresponding elaboration is used,
+	// which compileStatement already set up (see compilePotentiallyInheritedCode).
 
-		switch test := statement.Test.(type) {
-		case ast.Expression:
-			c.compileExpression(test)
-			elseJump = c.emitUndefinedJumpIfFalse()
+	var (
+		elseJump            int
+		additionalThenScope bool
+	)
 
-		case *ast.VariableDeclaration:
+	switch test := statement.Test.(type) {
+	case ast.Expression:
+		c.compileExpression(test)
+		elseJump = c.emitUndefinedJumpIfFalse()
 
-			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
-			c.compileVariableDeclaration(test, varDeclTypes, true)
+	case *ast.VariableDeclaration:
 
-			tempIndex := c.currentFunction.generateLocalIndex()
-			c.emitSetTempLocal(tempIndex)
+		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
+		c.compileVariableDeclaration(test, varDeclTypes, true)
 
-			// Test: check if the optional is nil,
-			// and jump to the else branch if it is
-			c.emitGetLocal(tempIndex)
-			elseJump = c.emitUndefinedJumpIfNil()
+		tempIndex := c.currentFunction.generateLocalIndex()
+		c.emitSetTempLocal(tempIndex)
 
-			// Then branch: unwrap the optional and declare the variable
-			c.emitGetLocal(tempIndex)
-			c.emit(opcode.InstructionUnwrap{})
+		// Test: check if the optional is nil,
+		// and jump to the else branch if it is
+		c.emitGetLocal(tempIndex)
+		elseJump = c.emitUndefinedJumpIfNil()
 
-			// Declare the variable *after* unwrapping the optional,
-			// in a *new* scope
-			c.currentFunction.locals.PushNewWithCurrent()
-			additionalThenScope = true
-			name := test.Identifier.Identifier
-			c.emitDeclareLocal(name)
+		// Then branch: unwrap the optional and declare the variable
+		c.emitGetLocal(tempIndex)
+		c.emit(opcode.InstructionUnwrap{})
 
-		default:
-			panic(errors.NewUnreachableError())
-		}
+		// Declare the variable *after* unwrapping the optional,
+		// in a *new* scope
+		c.currentFunction.locals.PushNewWithCurrent()
+		additionalThenScope = true
+		name := test.Identifier.Identifier
+		c.emitDeclareLocal(name)
 
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	c.compileBlock(
+		statement.Then,
+		common.DeclarationKindUnknown,
+		nil,
+	)
+
+	if additionalThenScope {
+		c.currentFunction.locals.Pop()
+	}
+
+	elseBlock := statement.Else
+	if elseBlock != nil {
+		thenJump := c.emitUndefinedJump()
+		c.patchJumpHere(elseJump)
 		c.compileBlock(
-			statement.Then,
+			elseBlock,
 			common.DeclarationKindUnknown,
 			nil,
 		)
+		c.patchJumpHere(thenJump)
+	} else {
+		c.patchJumpHere(elseJump)
+	}
 
-		if additionalThenScope {
-			c.currentFunction.locals.Pop()
-		}
-
-		elseBlock := statement.Else
-		if elseBlock != nil {
-			thenJump := c.emitUndefinedJump()
-			c.patchJumpHere(elseJump)
-			c.compileBlock(
-				elseBlock,
-				common.DeclarationKindUnknown,
-				nil,
-			)
-			c.patchJumpHere(thenJump)
-		} else {
-			c.patchJumpHere(elseJump)
-		}
-	})
 	return
 }
 
 func (c *Compiler[_, _]) VisitGuardStatement(statement *ast.GuardStatement) (_ struct{}) {
-
-	// No need for compilePotentiallyInheritedCode,
-	// as only if-statements are the result of desugaring of conditions.
 
 	var elseJump int
 
@@ -1764,39 +1769,36 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 }
 
 func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ struct{}) {
-	// Emit statements can be coming from inherited conditions.
-	// If so, use the corresponding elaboration.
-	c.compilePotentiallyInheritedCode(
-		statement,
-		func() {
-			invocationExpression := statement.InvocationExpression
-			arguments := invocationExpression.Arguments
-			invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(invocationExpression)
+	// NOTE: Emit statements can be coming from inherited conditions.
+	// If so, the corresponding elaboration is used,
+	// which compileStatement already set up (see compilePotentiallyInheritedCode).
 
-			// Instead of compiling arguments as usual (via compileArguments),
-			// only convert the arguments and don't transfer them.
+	invocationExpression := statement.InvocationExpression
+	arguments := invocationExpression.Arguments
+	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(invocationExpression)
 
-			for index, argument := range arguments {
-				c.compileExpression(argument.Expression)
-				argumentType := invocationTypes.ArgumentTypes[index]
-				parameterType := invocationTypes.ParameterTypes[index]
-				c.emitConvert(argumentType, parameterType)
-			}
+	// Instead of compiling arguments as usual (via compileArguments),
+	// only convert the arguments and don't transfer them.
 
-			argCount := len(arguments)
-			if argCount >= math.MaxUint16 {
-				panic(errors.NewDefaultUserError("invalid argument count"))
-			}
+	for index, argument := range arguments {
+		c.compileExpression(argument.Expression)
+		argumentType := invocationTypes.ArgumentTypes[index]
+		parameterType := invocationTypes.ParameterTypes[index]
+		c.emitConvert(argumentType, parameterType)
+	}
 
-			eventType := c.DesugaredElaboration.EmitStatementEventType(statement)
-			typeIndex := c.getOrAddType(eventType)
+	argCount := len(arguments)
+	if argCount >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid argument count"))
+	}
 
-			c.emit(opcode.InstructionEmitEvent{
-				Type:     typeIndex,
-				ArgCount: uint16(argCount),
-			})
-		},
-	)
+	eventType := c.DesugaredElaboration.EmitStatementEventType(statement)
+	typeIndex := c.getOrAddType(eventType)
+
+	c.emit(opcode.InstructionEmitEvent{
+		Type:     typeIndex,
+		ArgCount: uint16(argCount),
+	})
 
 	return
 }
@@ -1859,25 +1861,24 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 		return
 	}
 
-	// Some variable declarations can be coming from inherited before-statements.
-	// If so, use the corresponding elaboration.
-	c.compilePotentiallyInheritedCode(declaration, func() {
+	// NOTE: Some variable declarations can be coming from inherited before-statements.
+	// If so, the corresponding elaboration is used,
+	// which compileStatement already set up (see compilePotentiallyInheritedCode).
 
-		name := declaration.Identifier.Identifier
+	name := declaration.Identifier.Identifier
 
-		// Value can be nil only for synthetic-result variable.
-		if declaration.Value == nil {
-			c.currentFunction.declareLocal(c.Config.MemoryGauge, name)
-			return
-		}
+	// Value can be nil only for synthetic-result variable.
+	if declaration.Value == nil {
+		c.currentFunction.declareLocal(c.Config.MemoryGauge, name)
+		return
+	}
 
-		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
-		c.compileVariableDeclaration(declaration, varDeclTypes, false)
+	varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
+	c.compileVariableDeclaration(declaration, varDeclTypes, false)
 
-		// Declare the variable *after* compiling both the value expressions.
-		// Assign the first value onto the variable.
-		c.emitDeclareLocal(name)
-	})
+	// Declare the variable *after* compiling both the value expressions.
+	// Assign the first value onto the variable.
+	c.emitDeclareLocal(name)
 
 	return
 }
@@ -4711,6 +4712,12 @@ func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declare
 	}
 }
 
+// compilePotentiallyInheritedCode runs the given compilation function
+// with the elaboration of the program which declared the given statement:
+// if the statement is inherited (e.g. an inherited condition
+// or before-statement of a condition),
+// the inherited code's elaboration is used instead of the current elaboration.
+// Called for every statement, in compileStatement.
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {
 	stmtElaboration, ok := c.DesugaredElaboration.inheritedCodeElaborations[statement]
 	if ok {
