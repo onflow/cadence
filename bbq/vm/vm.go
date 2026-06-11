@@ -293,6 +293,17 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 	return poppedCallFrame
 }
 
+// callerLocation returns the location of the function that invoked the
+// currently executing function, or nil if there is no caller.
+// (i.e. the current function is the top-level invocation)
+func (vm *VM) callerLocation() common.Location {
+	callstackLen := len(vm.callstack)
+	if callstackLen < 2 {
+		return nil
+	}
+	return vm.callstack[callstackLen-2].function.Executable.Location
+}
+
 func (vm *VM) getGlobalFunction(name string) (FunctionValue, error) {
 	functionVariable := vm.globals.Find(name)
 	if functionVariable == nil {
@@ -1421,6 +1432,24 @@ func newCompositeValue(
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
 	context := vm.context
+
+	// Check that the resource is constructed in the same location as it was declared.
+	// This guards against constructing a resource outside of its declaring location,
+	// e.g. by invoking a resource constructor that was obtained as a first-class
+	// function value from another program.
+	if compositeKind == common.CompositeKindResource {
+		callerLocation := vm.callerLocation()
+		if callerLocation != nil &&
+			callerLocation != compositeStaticType.Location {
+
+			compositeType, ok := context.SemaTypeFromStaticType(compositeStaticType).(*sema.CompositeType)
+			if ok {
+				panic(&interpreter.ResourceConstructionError{
+					CompositeType: compositeType,
+				})
+			}
+		}
+	}
 
 	compositeFields := newCompositeValueFields(context, compositeKind)
 
