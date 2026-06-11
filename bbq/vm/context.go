@@ -91,6 +91,16 @@ func (c *Context) newReusing() *Context {
 	newContext.semaTypeCache = c.semaTypeCache
 	newContext.linkedGlobalsCache = c.linkedGlobalsCache
 
+	// canonicalAtreeContainers is deliberately NOT carried over:
+	// carrying it across reuses would grow unboundedly over a VM's lifetime,
+	// and an empty cache is always safe — storage (via the shared Config) is unchanged,
+	// so entries simply re-canonicalize on first access.
+	// Wrappers surviving via linkedGlobalsCache (e.g. contract values)
+	// may therefore differ in identity from post-reset canonical wrappers.
+	// This is benign:
+	// structural consistency comes from atree's shared per-value-ID state,
+	// and field access re-canonicalizes through the new context.
+
 	return newContext
 }
 

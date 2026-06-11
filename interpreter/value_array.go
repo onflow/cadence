@@ -314,10 +314,10 @@ func (v *ArrayValue) iterate(
 			// so it is safe to call regardless of which atree iterator (`Iterate` vs
 			// `IterateReadOnlyLoadedValues`) produced the element.
 			//
-			// For Transfer'd elements, the wrapper is transient
-			// (Transfer's `array`/`dictionary` nil-out would otherwise leave a stale cache entry
-			// that gets cleaned up lazily on next access),
-			// so skip the cache lookup entirely.
+			// For Transfer'd elements, the element passed to `f` is a decoupled copy
+			// (the transfer below uses remove=false),
+			// so the source-element wrapper is transient and caching it has no benefit —
+			// leave it as a transient fresh wrapper and skip the cache lookup entirely.
 			var elementValue Value
 			if transferElements {
 				elementValue = MustConvertStoredValue(context, element)

@@ -646,6 +646,18 @@ func (v *DictionaryValue) ForEachKey(
 					},
 				)
 
+				// Keys are intentionally NOT canonicalized
+				// (the read-only key iterator yields trap-bearing wrappers,
+				// which the canonical wrapper cache rejects anyway):
+				// dictionary keys must be hashable,
+				// and the only container-backed hashable type is enum
+				// (see sema.IsHashableStructType),
+				// which is immutable —
+				// so a non-canonical key wrapper cannot cause mutation divergence.
+				// Canonicalization is also not achievable by switching iterators:
+				// atree installs parent-updaters only on values, never on keys,
+				// even in mutable iterators,
+				// so the cache's safety filter would always reject key wrappers.
 				key := MustConvertStoredValue(context, item)
 
 				if asReference {
@@ -2112,6 +2124,16 @@ func (i *DictionaryKeyIterator) Next(context ValueIteratorContext) Value {
 	// (which wires a trap callback on returned elements),
 	// canonicalizeContainerElement self-filters trap-bearing wrappers
 	// and returns them as-is, so this is safe.
+	// Handing out non-canonical key wrappers here is also harmless:
+	// dictionary keys must be hashable,
+	// and the only container-backed hashable type is enum
+	// (see sema.IsHashableStructType),
+	// which is immutable —
+	// so a non-canonical key wrapper cannot cause mutation divergence.
+	// Canonicalization is also not achievable by switching iterators:
+	// atree installs parent-updaters only on values, never on keys,
+	// even in mutable iterators,
+	// so the cache's safety filter would always reject key wrappers.
 	return MustConvertStoredContainerElement(context, atreeKeyValue)
 }
 
