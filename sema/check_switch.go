@@ -100,8 +100,6 @@ func (checker *Checker) checkSwitchCasesStatements(
 		return
 	}
 
-	currentFunctionActivation := checker.functionActivations.Current()
-
 	// NOTE: always check blocks as if they're only *potentially* evaluated.
 	// However, the default case's block must be checked directly as the "else",
 	// because if a default case exists, the whole switch statement
@@ -124,9 +122,7 @@ func (checker *Checker) checkSwitchCasesStatements(
 			)
 		}
 
-		currentFunctionActivation.ReturnInfo.WithNewJumpTarget(func() {
-			checker.checkSwitchCaseStatements(switchCase)
-		})
+		checker.checkSwitchCaseStatements(switchCase)
 		return
 	}
 
@@ -139,10 +135,7 @@ func (checker *Checker) checkSwitchCasesStatements(
 
 	_, _ = checker.checkConditionalBranches(
 		func() Type {
-
-			currentFunctionActivation.ReturnInfo.WithNewJumpTarget(func() {
-				checker.checkSwitchCaseStatements(switchCase)
-			})
+			checker.checkSwitchCaseStatements(switchCase)
 
 			// ignored
 			return nil

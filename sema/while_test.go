@@ -872,6 +872,86 @@ func TestCheckResourceInvalidationInWhileLoopWithIfElse(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("if return else break", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` leaks on both paths, and each exit reports its own loss:
+		// the `return` reports at the return site,
+		// and the loop-body scope-end check reports again
+		// because of the `break` path.
+		// The over-reporting is intentional — it ensures that
+		// resource loss is detected at all exits.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        return
+                    } else {
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("if break else return", func(t *testing.T) {
+		t.Parallel()
+
+		// Like the previous test: one report from the `return`,
+		// one from the loop-body scope-end check (`break` path).
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        break
+                    } else {
+                        return
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("if return without else", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` leaks on the return path and on the fall-through path
+		// (end of the loop iteration). Each exit reports its own loss.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    if true {
+                        return
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
 }
 
 func TestCheckResourceInvalidationInNestedWhileLoops(t *testing.T) {
