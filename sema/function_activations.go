@@ -69,7 +69,7 @@ func (a *FunctionActivation) popControl() {
 func (a *FunctionActivation) WithLoop(f func()) {
 	a.pushControl(ControlKindLoop)
 	savedMaybeJumpedLoop := a.ReturnInfo.MaybeJumpedLoop
-	a.ReturnInfo.WithNewJumpTarget(f)
+	a.ReturnInfo.WithNewLoopJumpTarget(f)
 	if a.ReturnInfo.MaybeJumpedLoop {
 		a.ReturnInfo.clearDefiniteExits()
 	}
@@ -85,10 +85,16 @@ func (a *FunctionActivation) WithLoop(f func()) {
 // function, so the merged "every case definitely terminated" claim
 // would over-promise.
 func (a *FunctionActivation) WithSwitch(f func()) {
-	// NOTE: new jump-offsets child-set for each case instead of whole switch
+	// The switch jump-offset set is scoped to the whole switch:
+	// breaks targeting the switch are consumed by it.
+	// Isolation between sibling cases is provided by `ReturnInfo.Clone`
+	// in `checkConditionalBranches` (each case is a branch with its own
+	// cloned jump-offset sets). Loop jump offsets (`continue`) are NOT
+	// scoped here — they target the enclosing loop and must survive
+	// past the switch (see `WithNewSwitchJumpTarget`).
 	a.pushControl(ControlKindSwitch)
 	savedMaybeJumpedSwitch := a.ReturnInfo.MaybeJumpedSwitch
-	f()
+	a.ReturnInfo.WithNewSwitchJumpTarget(f)
 	if a.ReturnInfo.MaybeJumpedSwitch {
 		a.ReturnInfo.clearDefiniteExits()
 	}
