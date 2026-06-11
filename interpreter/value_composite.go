@@ -995,10 +995,16 @@ func formatComposite(
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(context ContainerElementContext, name string) Value {
+// getFieldWithoutCanonicalization reads the raw field value via atree,
+// WITHOUT canonicalizing the resulting wrapper.
+// Returns nil if the field does not exist.
+// Callers that hand the field value to user code must canonicalize it
+// (see GetField); only callers that cannot canonicalize for contract reasons
+// and are known to read non-container values (see HashInput) may use the raw result.
+func (v *CompositeValue) getFieldWithoutCanonicalization(gauge common.Gauge, name string) Value {
 
 	common.UseComputation(
-		context,
+		gauge,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeMapGet,
 			Intensity: 1,
@@ -1018,7 +1024,15 @@ func (v *CompositeValue) GetField(context ContainerElementContext, name string) 
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredContainerElement(context, storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
+}
+
+func (v *CompositeValue) GetField(context ContainerElementContext, name string) Value {
+	fieldValue := v.getFieldWithoutCanonicalization(context, name)
+	if fieldValue == nil {
+		return nil
+	}
+	return canonicalizeContainerElement(context, fieldValue)
 }
 
 func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool {
@@ -1077,25 +1091,17 @@ func (v *CompositeValue) HashInput(gauge common.Gauge, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		// Read the enum's raw value directly via atree:
-		// `GetField` requires a `ContainerReadContext` (so it can canonicalize
-		// container-element wrappers via `MustConvertStoredContainerElement`),
+		// Read the enum's raw value WITHOUT canonicalization:
+		// `GetField` requires a `ContainerElementContext`
+		// (so it can canonicalize container-element wrappers),
 		// but enum raw values are primitives,
-		// so canonicalization is a no-op and the wider context is unnecessary.
+		// so canonicalization would be a no-op and the wider context is unnecessary.
 		// The `HashableValue.HashInput` contract only requires `common.Gauge`.
-		common.UseComputation(gauge, common.ComputationUsage{
-			Kind:      common.ComputationKindAtreeMapGet,
-			Intensity: 1,
-		})
-		storedRawValue, err := v.dictionary.Get(
-			StringAtreeValueComparator,
-			StringAtreeValueHashInput,
-			StringAtreeValue(sema.EnumRawValueFieldName),
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
+		rawValue := v.getFieldWithoutCanonicalization(gauge, sema.EnumRawValueFieldName)
+		if rawValue == nil {
+			// Enums always have a raw value field
+			panic(errors.NewUnreachableError())
 		}
-		rawValue := MustConvertStoredValue(gauge, storedRawValue)
 		rawValueHashInput := rawValue.(HashableValue).
 			HashInput(gauge, scratch)
 
