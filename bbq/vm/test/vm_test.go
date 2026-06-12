@@ -9802,6 +9802,70 @@ func TestAttachments(t *testing.T) {
 		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
 		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
 	})
+
+	t.Run("self auth retains function access", func(t *testing.T) {
+		t.Parallel()
+
+		// Narrowing `self` to the function's access must not drop
+		// the function's own entitlements:
+		// inside an `access(X)` function, `self` must still be `auth(X) &A`
+		value, err := CompileAndInvoke(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X) fun base() {}
+            }
+
+            access(all) attachment A for S {
+                access(X) fun foo(): Bool {
+                    return (self as? auth(X) &A) != nil
+                }
+            }
+
+            fun test(): Bool {
+                let s = attach A() to S()
+                let ref = &s as auth(X, Y) &S
+                return ref[A]!.foo()
+            }
+        `, "test")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.TrueValue, value)
+	})
+
+	t.Run("self auth is unauthorized in non-entitled function", func(t *testing.T) {
+		t.Parallel()
+
+		// Inside a function with primitive (non-entitlement) access,
+		// `self` must be fully unauthorized,
+		// even if the attachment was accessed via an entitled reference —
+		// otherwise a downcast inside the function could recover
+		// any entitlement of the accessed reference
+		value, err := CompileAndInvoke(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X) fun base() {}
+            }
+
+            access(all) attachment A for S {
+                access(all) fun foo(): Bool {
+                    return (self as? auth(X) &A) == nil
+                }
+            }
+
+            fun test(): Bool {
+                let s = attach A() to S()
+                let ref = &s as auth(X, Y) &S
+                return ref[A]!.foo()
+            }
+        `, "test")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.TrueValue, value)
+	})
 }
 
 func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {

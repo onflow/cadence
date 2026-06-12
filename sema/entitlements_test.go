@@ -1077,6 +1077,102 @@ func TestCheckInvalidEntitlementMappingAccess(t *testing.T) {
 		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
 	})
 
+	t.Run("invalid struct interface fun", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            struct interface S {
+                access(mapping M) fun foo()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid resource interface fun", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            resource interface R {
+                access(mapping M) fun foo()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid struct init", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            struct S {
+                access(mapping M) init() {}
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid resource init", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            resource R {
+                access(mapping M) init() {}
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid struct interface init", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            struct interface S {
+                access(mapping M) init()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
+	t.Run("invalid resource interface init", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            resource interface R {
+                access(mapping M) init()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonFieldMappingAccessError{}, errs[0])
+	})
+
 	t.Run("missing entitlement mapping declaration fun", func(t *testing.T) {
 		t.Parallel()
 
@@ -8690,8 +8786,9 @@ func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
 
 	// Disjunction intersection: the inner disjunction is preserved only
 	// when the outer conjunction guarantees all of the disjunction's options.
-	// Otherwise the intersection is unauthorized, because nothing about the
-	// disjunction's specific entitlements is statically guaranteed.
+	// Otherwise the intersection is conservatively unauthorized,
+	// even in cases where preserving a disjunction would be sound
+	// (see the NOTE on IntersectAccess).
 
 	t.Run("array, conjunction outer not superset, disjunction inner, escalation prevented", func(t *testing.T) {
 		t.Parallel()
@@ -8745,12 +8842,16 @@ func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
 		)
 	})
 
-	t.Run("array, disjunction outer, disjunction inner, escalation prevented", func(t *testing.T) {
+	t.Run("array, disjunction outer, disjunction inner, conservatively rejected", func(t *testing.T) {
 		t.Parallel()
 
-		// auth(E | F) ∩ auth(E | F): both sides are disjunctions, so neither
-		// guarantees any specific entitlement. Result is unauthorized, even
-		// though the option sets are identical.
+		// auth(E | F) ∩ auth(E | F): both sides are disjunctions,
+		// so the result is unauthorized, even though the option sets are identical.
+		// This is conservative, not an escalation fix:
+		// preserving the disjunction would be sound here
+		// (every possible holder of either side entails auth(E | F)),
+		// but IntersectAccess deliberately rejects
+		// all disjunction ∩ disjunction combinations.
 		_, err := ParseAndCheck(t, `
           entitlement E
           entitlement F
@@ -8835,6 +8936,11 @@ func TestCheckNestedReferenceAuthorizationIntersection(t *testing.T) {
 		// disjunction outer cannot be preserved as the result (it might
 		// actually hold F, which the conjunction does not have).
 		// Result is unauthorized.
+		// The previous behavior produced auth(E) here,
+		// which exceeds what the outer auth(E | F) reference grants —
+		// that is the escalation being prevented.
+		// (auth(E | F) would have been a sound result,
+		// but IntersectAccess is deliberately stricter.)
 		_, err := ParseAndCheck(t, `
           entitlement E
           entitlement F
@@ -9227,6 +9333,85 @@ func TestInvalidCheckEntitlementEscalation(t *testing.T) {
                 let mutateOnlyRef = ov.getMutateOnlyRef()
 
                 mutateOnlyRef.insert(key: "a", replacement)!.requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// The cascading rule must also apply when the method is invoked
+	// via optional chaining on an optional reference:
+	// ShouldReturnReference/MaybeReferenceType unwrap the optional,
+	// so the outer reference's authorization caps the result's
+	// inner element references just like for a non-optional receiver.
+	t.Run("optional chaining preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let arr: [auth(Remove) &InnerVictim]
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.arr = [&self.iv as auth(Remove) &InnerVictim]
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &[auth(Remove) &InnerVictim] {
+                    return &self.arr
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let optRef: auth(Insert) &[auth(Remove) &InnerVictim]? = ov.getInsertOnlyRef()
+
+                optRef?.slice(from: 0, upTo: 1)![0].requiresRemove()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// The dictionary `values` field returns a copy of the values,
+	// like the copy methods do for arrays.
+	// The field-access cascading rule in visitMember (not the
+	// container-method resolvers) must intersect the inner element
+	// references with the outer reference's authorization,
+	// closing the same escalation shape through the field path.
+	t.Run("values field preserves disjoint inner auth", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) struct InnerVictim {
+                access(Remove) fun requiresRemove() {}
+            }
+
+            access(all) struct OuterVictim {
+                access(self) let iv: InnerVictim
+                access(self) let dict: {String: auth(Remove) &InnerVictim}
+
+                init() {
+                    self.iv = InnerVictim()
+                    self.dict = {"a": &self.iv as auth(Remove) &InnerVictim}
+                }
+
+                access(all) fun getInsertOnlyRef(): auth(Insert) &{String: auth(Remove) &InnerVictim} {
+                    return &self.dict
+                }
+            }
+
+            access(all) fun main() {
+                let ov = OuterVictim()
+                let insertOnlyRef = ov.getInsertOnlyRef()
+
+                insertOnlyRef.values[0].requiresRemove()
             }
         `)
 

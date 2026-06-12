@@ -14235,3 +14235,117 @@ func TestCompileUnreachableStatementAfterExhaustiveIf(t *testing.T) {
 		prettyInstructions(functions[0].Code, program),
 	)
 }
+
+// TestCompileInheritedStatementEndingControlFlow tests that the defensive
+// unreachable instruction is also emitted after an *inherited* statement
+// which the checker determined to end control flow.
+// The statement (here: a before-statement of an inherited post-condition)
+// is declared in another program, so the compiler must consult
+// the declaring program's elaboration, not the current elaboration
+// (see compilePotentiallyInheritedCode).
+//
+// An inherited statement which ends control flow cannot currently be produced
+// from source code, so simulate a checker bug by marking the interface's
+// before-statement, which completes normally.
+func TestCompileInheritedStatementEndingControlFlow(t *testing.T) {
+
+	t.Parallel()
+
+	programs := CompiledPrograms{}
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+	aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+	bLocation := common.NewAddressLocation(nil, contractsAddress, "B")
+
+	// Deploy interface contract
+
+	aContract := `
+      contract A {
+          struct interface SI {
+              fun test(x: Int): Int {
+                  post { before(x) < x }
+              }
+          }
+      }
+    `
+
+	// Only need to compile
+	ParseCheckAndCompileCodeWithOptions(
+		t,
+		aContract,
+		aLocation,
+		ParseCheckAndCompileOptions{
+			CheckerHandler: func(checker *sema.Checker) {
+				// Mark the before-statement of the post-condition
+				// (`let $before_0 = x`) as ending control flow
+				contractDeclaration := checker.Program.CompositeDeclarations()[0]
+				interfaceDeclaration := contractDeclaration.Members.Interfaces()[0]
+				functionDeclaration := interfaceDeclaration.Members.Functions()[0]
+				postConditions := functionDeclaration.FunctionBlock.PostConditions
+				rewrite := checker.Elaboration.PostConditionsRewrite(postConditions)
+				beforeStatement := rewrite.BeforeStatements[0]
+				checker.Elaboration.SetStatementEndsControlFlow(beforeStatement)
+			},
+		},
+		programs,
+	)
+
+	// Deploy contract with the implementation,
+	// which inherits the post-condition and its before-statement
+
+	bContract := fmt.Sprintf(
+		`
+          import A from %s
+
+          contract B {
+              struct Test: A.SI {
+                  fun test(x: Int): Int {
+                      return 42
+                  }
+              }
+          }
+        `,
+		contractsAddress.HexWithPrefix(),
+	)
+
+	program := ParseCheckAndCompile(t, bContract, bLocation, programs)
+
+	const testFunctionQualifiedName = "B.Test.test"
+	var testFunction *bbq.Function[opcode.Instruction]
+	for i, function := range program.Functions {
+		if function.QualifiedName == testFunctionQualifiedName {
+			testFunction = &program.Functions[i]
+			break
+		}
+	}
+	require.NotNil(t, testFunction, "missing function %s", testFunctionQualifiedName)
+
+	// local var indexes
+	const (
+		// Since the function is an object-method, receiver becomes the first parameter.
+		xIndex = iota + 1
+		beforeVarIndex
+	)
+
+	instructions := prettyInstructions(testFunction.Code, program)
+	require.GreaterOrEqual(t, len(instructions), 5)
+
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// Inherited before-statement:
+			// var $before_0 = x
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: xIndex},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionSetLocal{Local: beforeVarIndex},
+
+			// Defensive unreachable after the inherited before-statement,
+			// which was (artificially) marked as ending control flow
+			opcode.PrettyInstructionUnreachable{},
+		},
+		instructions[:5],
+	)
+}

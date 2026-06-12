@@ -51,8 +51,12 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
-// UnreachableInstructionError
-
+// UnreachableInstructionError is raised by defensive checks
+// when execution reaches code which the type checker determined to be unreachable:
+// by the VM, when it executes an InstructionUnreachable instruction,
+// and by the interpreter, when execution continues past a statement
+// which the checker determined to end control flow
+// (despite the name, the interpreter does not execute instructions).
 type UnreachableInstructionError struct {
 	ast.Range
 }
@@ -63,7 +67,7 @@ func (*UnreachableInstructionError) IsInternalError() {}
 
 func (e *UnreachableInstructionError) Error() string {
 	return fmt.Sprintf(
-		"%s instruction should be unreachable, but was reached during execution",
+		"%s code should be unreachable, but was reached during execution",
 		errors.InternalErrorMessagePrefix,
 	)
 }

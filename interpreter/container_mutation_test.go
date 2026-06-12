@@ -1261,7 +1261,11 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 	})
 }
 
-// VisitForStatement is missing a checkIndexedValue guard on the iterable.
+// Iterating over a container in a for-in loop defensively checks the container,
+// like explicit container indexing does:
+// the container's actual (static) type must conform to the type expected by sema.
+// A type-confused container is rejected with an IndexedTypeError
+// before iteration begins.
 func TestInterpretForLoopFunctionElementTypeConfusion(t *testing.T) {
 
 	t.Parallel()
@@ -1319,6 +1323,51 @@ func TestInterpretForLoopFunctionElementTypeConfusion(t *testing.T) {
 		)
 
 		_, err := inter.InvokeUncheckedForTestingOnly("test", confusedArray) //nolint:staticcheck
+		RequireError(t, err)
+
+		var indexedTypeError *interpreter.IndexedTypeError
+		require.ErrorAs(t, err, &indexedTypeError)
+	})
+
+	t.Run("reference to array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test(arr: &[fun(): Void]) {
+                for f in arr {
+                    f()
+                }
+            }
+        `)
+
+		// Sema sees &[fun(): Void], but the referenced array actually holds an IntValue.
+		// The static type of a reference is derived from the referenced value,
+		// so the defensive check must reject the reference.
+		confusedArray := interpreter.NewArrayValue(
+			inter,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+		)
+
+		arrayReference := interpreter.NewUnmeteredEphemeralReferenceValue(
+			noopReferenceTracker{},
+			interpreter.UnauthorizedAccess,
+			confusedArray,
+			sema.NewVariableSizedType(
+				nil,
+				sema.NewSimpleFunctionType(
+					sema.FunctionPurityImpure,
+					nil,
+					sema.VoidTypeAnnotation,
+				),
+			),
+		)
+
+		_, err := inter.InvokeUncheckedForTestingOnly("test", arrayReference) //nolint:staticcheck
 		RequireError(t, err)
 
 		var indexedTypeError *interpreter.IndexedTypeError

@@ -605,6 +605,28 @@ func TestCheckGuardElseBreakInWhileLoop(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckGuardElseContinueInWhileLoop(t *testing.T) {
+
+	t.Parallel()
+
+	// A `continue` is a valid definite exit for a guard's else block.
+	// Like `break`, the potential loop-targeting jump must propagate
+	// out of the (potentially-unevaluated) else block,
+	// so code after the loop remains reachable.
+
+	_, err := ParseAndCheck(t, `
+        fun test(): Int {
+            while true {
+                guard let y = (nil as Int?) else { continue }
+                return y
+            }
+            return 3
+        }
+    `)
+
+	require.NoError(t, err)
+}
+
 func TestCheckResourceInvalidationInWhileLoop(t *testing.T) {
 
 	t.Parallel()

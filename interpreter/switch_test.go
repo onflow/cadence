@@ -333,4 +333,51 @@ func TestInterpretSwitchStatementOptionalUnboxing(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("double optional outer nil with nil case", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun test(): String {
+                let x: Int?? = nil
+                switch x {
+                case 1: return "one"
+                case nil: return "nil"
+                default: return "other"
+                }
+            }
+        `)
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			invokable,
+			interpreter.NewUnmeteredStringValue("nil"),
+			result,
+		)
+	})
+
+	t.Run("double optional inner nil with nil case", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun test(): String {
+                let inner: Int? = nil
+                let x: Int?? = inner
+                switch x {
+                case 1: return "one"
+                case nil: return "nil"
+                default: return "other"
+                }
+            }
+        `)
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			invokable,
+			interpreter.NewUnmeteredStringValue("nil"),
+			result,
+		)
+	})
 }

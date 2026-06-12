@@ -13195,6 +13195,48 @@ func TestInterpretContainerMethodElementCascading(t *testing.T) {
                 }
             `)
 		})
+
+		// Nested inner references: the references live one level deeper than
+		// the element/value type itself ([[auth(E) &S]] and
+		// {String: [auth(E) &S]}). This exercises the recursive traversal of
+		// intersectReferenceAuthorizationsInType through container types,
+		// and the runtime conversion of a returned *container*
+		// (convert's array case, which rewrites the element references'
+		// authorizations) rather than of a directly returned reference.
+
+		t.Run("array remove intersects nested inner auth, recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var a: [[auth(E) &S]] = [[&s as auth(E) &S]]
+                    let ref = &a as auth(Mutate) &[[auth(E) &S]]
+
+                    let removed: [&S] = ref.remove(at: 0)
+                    let strong = removed[0] as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
+
+		t.Run("dictionary remove intersects nested inner auth, recovery prevented", func(t *testing.T) {
+			t.Parallel()
+			assertCannotRecoverAuth(t, `
+                entitlement E
+                access(all) struct S {}
+                fun test(): Bool {
+                    let s = S()
+                    var d: {String: [auth(E) &S]} = {"a": [&s as auth(E) &S]}
+                    let ref = &d as auth(Mutate) &{String: [auth(E) &S]}
+
+                    let removed: [&S] = ref.remove(key: "a")!
+                    let strong = removed[0] as? auth(E) &S
+                    return strong != nil
+                }
+            `)
+		})
 	})
 }
 

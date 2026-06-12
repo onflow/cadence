@@ -99,9 +99,10 @@ type ReturnInfo struct {
 	// `DefinitelyExited && !MaybeJumped()` — see `checkResourceLoss`
 	// for the rationale.
 	//
-	// At a case body's terminal state and at a loop body's terminal state,
-	// `DefinitelyExited` is cleared alongside `DefinitelyReturned` and `DefinitelyHalted`
-	// when a corresponding `MaybeJumped*` is true,
+	// When the whole loop/switch has been checked
+	// and a corresponding `MaybeJumped*` is true,
+	// `WithLoop`/`WithSwitch` clear `DefinitelyExited`
+	// alongside `DefinitelyReturned` and `DefinitelyHalted`,
 	// because the maybe-jumping path escapes the construct without terminating the function.
 	DefinitelyExited bool
 	// MaybeJumpedLoop indicates that some path within the current loop
@@ -113,9 +114,10 @@ type ReturnInfo struct {
 	// since such jumps are consumed by the loop and are irrelevant
 	// outside it.
 	//
-	// At a loop body's terminal state, used to clear DR/DH/DE so that the
-	// surrounding scope's "definitely returns/halts/exits" claim is not
-	// over-claimed (the jumping path falls past the loop, not the function).
+	// When the whole loop has been checked, `WithLoop` uses it to clear
+	// `DefinitelyReturned`/`DefinitelyHalted`/`DefinitelyExited`,
+	// so that the surrounding scope's "definitely returns/halts/exits" claim
+	// is not over-claimed (the jumping path falls past the loop, not the function).
 	MaybeJumpedLoop bool
 	// MaybeJumpedSwitch indicates that some path within the current switch
 	// reached a `break` statement targeting that switch.
@@ -125,10 +127,13 @@ type ReturnInfo struct {
 	// exit, since such breaks are consumed by the switch and are irrelevant
 	// outside it.
 	//
-	// At a case body's terminal state, used to clear DR/DH/DE so that the
-	// switch-level merge does not over-claim definite-return — the break
-	// path means the switch as a whole can still fall through to the code
-	// after it. For example:
+	// When the whole switch has been checked
+	// (i.e. after all case bodies were checked and branch-merged),
+	// `WithSwitch` uses it to clear
+	// `DefinitelyReturned`/`DefinitelyHalted`/`DefinitelyExited`,
+	// so that the merged "every case definitely terminated" claim
+	// does not over-promise — a break path means the switch as a whole
+	// can still fall through to the code after it. For example:
 	//
 	//   case x:
 	//       if cond { break }

@@ -48,6 +48,10 @@ type ParseCheckAndInterpretOptions struct {
 	ParseAndCheckOptions *ParseAndCheckOptions
 	InterpreterConfig    *interpreter.Config
 	HandleCheckerError   func(error)
+	// HandleChecker is called with the checker after checking,
+	// before the program is interpreted or compiled.
+	// It can be used to e.g. manipulate the elaboration for tests.
+	HandleChecker func(*sema.Checker)
 }
 
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
@@ -493,6 +497,7 @@ func ParseCheckAndPrepareWithOptions(
 				ParseAndCheckOptions: options.ParseAndCheckOptions,
 				CompilerConfig:       compilerConfig,
 				CheckerErrorHandler:  options.HandleCheckerError,
+				CheckerHandler:       options.HandleChecker,
 			},
 			Programs: programs,
 		},
@@ -792,6 +797,10 @@ func parseCheckAndInterpretWithOptionsAndAtreeValidations(
 		}
 		assert.Fail(t, sb.String())
 		return nil, err
+	}
+
+	if options.HandleChecker != nil {
+		options.HandleChecker(checker)
 	}
 
 	var uuid uint64 = 0
