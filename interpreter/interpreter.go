@@ -940,6 +940,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	body func() StatementResult,
 	postConditions []ast.Condition,
 	returnType sema.Type,
+	isConstructor bool,
 ) Value {
 
 	// block scope: each function block gets an activation record
@@ -960,6 +961,23 @@ func (interpreter *Interpreter) visitFunctionBody(
 		if result, ok := result.(ReturnResult); ok {
 			returnValue = result.Value
 		} else {
+			// Implicit void return:
+			// the function body completed without an explicit return.
+			//
+			// Defensively check the return type allows returning void:
+			// in a correct program, only a function with return type Void
+			// completes without an explicit return.
+			// Initializers are exempt: the constructor function type
+			// has the composite type as the return type,
+			// but the return value is constructed by the caller.
+			//
+			// This mirrors the check in the VM's void return path (see opReturn).
+			if !isConstructor && returnType != sema.VoidType {
+				panic(&ValueTransferTypeError{
+					ExpectedType: returnType,
+					ActualType:   sema.VoidType,
+				})
+			}
 			returnValue = Void
 		}
 	} else {
@@ -3127,6 +3145,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 						body,
 						rewrittenPostConditions,
 						functionType.ReturnTypeAnnotation.Type,
+						functionType.IsConstructor,
 					)
 				},
 			),

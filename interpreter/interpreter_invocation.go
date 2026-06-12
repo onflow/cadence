@@ -317,6 +317,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		},
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,
+		function.Type.IsConstructor,
 	)
 }
 
