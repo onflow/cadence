@@ -88,28 +88,42 @@ func NewAccessFromEntitlementOrderedSet(
 }
 
 // IntersectAccess returns the intersection of two accesses.
-// The result only contains entitlements that are statically guaranteed by both sides.
+// The result is deliberately conservative:
+// a disjunction is only ever preserved when the other side
+// guarantees every one of its options,
+// and the result is unauthorized in all other cases involving disjunctions.
 //
 // Rules:
 //   - If either side is not an EntitlementSetAccess (e.g. unauthorized, primitive,
 //     or entitlement map access), the result is unauthorized.
 //   - Conjunction ∩ Conjunction: standard set intersection (Conjunction).
-//     Both sides guarantee all of their entitlements, so anything in the
-//     intersection is guaranteed.
+//     Both sides guarantee all of their entitlements,
+//     so anything in the intersection is guaranteed.
 //   - Conjunction ∩ Disjunction (and vice versa):
-//     A conjunction guarantees all of its entitlements, while a disjunction
-//     only guarantees that at least one (unspecified) entitlement from its set
-//     is present. The disjunction can therefore be preserved as the result only
-//     when the conjunction is a superset of the disjunction — in that case the
-//     conjunction guarantees every option of the disjunction. Otherwise the
-//     result is unauthorized, because the entitlement actually held by the
-//     disjunction side might not be guaranteed by the conjunction side.
-//     (E.g. auth(A) ∩ auth(A | B | C) = unauthorized, because the disjunction
-//     side might hold B or C, neither of which is guaranteed by the conjunction
-//     side; but auth(A, B, C) ∩ auth(A | B | C) = auth(A | B | C), because the
-//     conjunction side guarantees all options of the disjunction.)
-//   - Disjunction ∩ Disjunction: unauthorized. Neither side guarantees any
-//     specific entitlement, so nothing can be statically guaranteed in common.
+//     A conjunction guarantees all of its entitlements,
+//     while a disjunction only guarantees that at least one (unspecified) entitlement
+//     from its set is present.
+//     The disjunction is preserved as the result only when the conjunction
+//     is a superset of the disjunction —
+//     in that case the conjunction guarantees every option of the disjunction.
+//     Otherwise the result is unauthorized.
+//     (E.g. auth(A) ∩ auth(A | B | C) = unauthorized,
+//     but auth(A, B, C) ∩ auth(A | B | C) = auth(A | B | C).)
+//   - Disjunction ∩ Disjunction: unauthorized,
+//     even when the option sets are identical.
+//
+// NOTE: These rules are intentionally stricter than the entailment join
+// (least upper bound) of the two accesses, which leastCommonAccess computes.
+// For example, for auth(E | F) ∩ auth(E | F),
+// every possible holder of either side entails auth(E | F),
+// so preserving the disjunction would be sound;
+// and for auth(A) ∩ auth(A | B | C),
+// a holder of A entails auth(A | B | C),
+// so auth(A | B | C) would be a sound result.
+// IntersectAccess nevertheless returns unauthorized in these cases:
+// whenever the two sides may hold different actual entitlements,
+// expressiveness is traded for simpler reasoning
+// about authorization escalation through nested references.
 func IntersectAccess(a, b Access) Access {
 	aSet, ok := a.(EntitlementSetAccess)
 	if !ok {
@@ -145,8 +159,10 @@ func IntersectAccess(a, b Access) Access {
 		return UnauthorizedAccess
 
 	default:
-		// Disjunction ∩ Disjunction: neither side guarantees any specific
-		// entitlement, so the result cannot guarantee any entitlement either.
+		// Disjunction ∩ Disjunction: conservatively unauthorized,
+		// even when the option sets are identical
+		// (in which case preserving the disjunction would be sound —
+		// see the NOTE in the function documentation).
 		return UnauthorizedAccess
 	}
 }

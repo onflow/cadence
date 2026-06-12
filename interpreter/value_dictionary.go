@@ -1001,11 +1001,15 @@ func (v *DictionaryValue) GetMethod(
 			),
 			NativeDictionaryRemoveFunction,
 		).
-			// Receiver is kept as-is (not dereferenced) so the native
-			// function and any BBQ VM derivation can read accessedType
-			// from the un-dereferenced receiver and apply the inner-
-			// reference intersection in sema.DictionaryRemoveFunctionType's
-			// return.
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via dictionaryValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.DictionaryRemoveFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
 			WithDereferenceReceiver(false)
 
 	case sema.DictionaryTypeInsertFunctionName:
@@ -1020,11 +1024,15 @@ func (v *DictionaryValue) GetMethod(
 			),
 			NativeDictionaryInsertFunction,
 		).
-			// Receiver is kept as-is (not dereferenced) so the native
-			// function and any BBQ VM derivation can read accessedType
-			// from the un-dereferenced receiver and apply the inner-
-			// reference intersection in sema.DictionaryInsertFunctionType's
-			// return.
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via dictionaryValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.DictionaryInsertFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
 			WithDereferenceReceiver(false)
 
 	case sema.DictionaryTypeContainsKeyFunctionName:

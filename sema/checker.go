@@ -1526,6 +1526,12 @@ func (checker *Checker) checkResourceLoss(depth int) {
 			variable.DeclarationKind != common.DeclarationKindSelf &&
 			!checker.resources.Get(Resource{Variable: variable}).DefinitivelyInvalidated() {
 
+			// NOTE: a variable may be reported as lost more than once,
+			// e.g. both by the return-site check and by a scope-end check.
+			// This over-reporting is intentional: each "exit" of the scope
+			// performs and reports its own loss check,
+			// which ensures that resource loss is detected at all exits.
+
 			checker.report(
 				&ResourceLossError{
 					Range: ast.NewRange(
@@ -2745,14 +2751,21 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 		declarationOffset := resource.Variable.Pos.Offset
 		invalidationOffset := invalidation.StartPos.Offset
 
-		err := returnInfo.JumpOffsets.ForEach(func(jumpOffset int) error {
-			if declarationOffset < jumpOffset && jumpOffset < invalidationOffset {
-				return errFoundJump
-			}
-			return nil
-		})
+		checkJumpOffsets := func(jumpOffsets *persistent.OrderedSet[int]) bool {
+			err := jumpOffsets.ForEach(func(jumpOffset int) error {
+				if declarationOffset < jumpOffset && jumpOffset < invalidationOffset {
+					return errFoundJump
+				}
+				return nil
+			})
+			return err == errFoundJump
+		}
 
-		onlyPotential = err == errFoundJump
+		// Both loop-targeting and switch-targeting jumps make the
+		// invalidation only potential — the jump skips the invalidation.
+		// The sets only differ in lifetime (see `LoopJumpOffsets`).
+		onlyPotential = checkJumpOffsets(returnInfo.LoopJumpOffsets) ||
+			checkJumpOffsets(returnInfo.SwitchJumpOffsets)
 	}
 
 	if onlyPotential {

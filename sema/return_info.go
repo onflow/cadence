@@ -26,12 +26,25 @@ import (
 
 // ReturnInfo tracks control-flow information
 type ReturnInfo struct {
-	// JumpOffsets contains the offsets of all jumps
-	// (break or continue statements), potential or definite.
+	// LoopJumpOffsets contains the offsets of all jumps targeting a loop
+	// (`continue` statements, and `break` statements whose innermost
+	// enclosing control construct is a loop), potential or definite.
 	//
-	// If non-empty, indicates that (the branch of) the function
-	// contains a potential break or continue statement
-	JumpOffsets *persistent.OrderedSet[int]
+	// Kept separate from SwitchJumpOffsets because the two kinds of jumps
+	// have different lifetimes: a loop-targeting jump is consumed by the
+	// loop (`WithLoop` scopes this set), while a switch-targeting `break`
+	// is consumed by the switch (`WithSwitch` scopes SwitchJumpOffsets).
+	// In particular, a `continue` inside a switch case targets the
+	// enclosing loop, so its offset must survive past the switch boundary
+	// up to the loop — it must not be discarded when the switch ends.
+	LoopJumpOffsets *persistent.OrderedSet[int]
+	// SwitchJumpOffsets contains the offsets of all `break` statements
+	// targeting a switch, potential or definite.
+	//
+	// Scoped to the switch by `WithSwitch`: once the switch has been
+	// checked, breaks targeting it are consumed and are irrelevant
+	// to the code that follows.
+	SwitchJumpOffsets *persistent.OrderedSet[int]
 	// MaybeReturned indicates that (the branch of) the function
 	// contains a potentially taken return statement
 	MaybeReturned bool
@@ -86,9 +99,10 @@ type ReturnInfo struct {
 	// `DefinitelyExited && !MaybeJumped()` — see `checkResourceLoss`
 	// for the rationale.
 	//
-	// At a case body's terminal state and at a loop body's terminal state,
-	// `DefinitelyExited` is cleared alongside `DefinitelyReturned` and `DefinitelyHalted`
-	// when a corresponding `MaybeJumped*` is true,
+	// When the whole loop/switch has been checked
+	// and a corresponding `MaybeJumped*` is true,
+	// `WithLoop`/`WithSwitch` clear `DefinitelyExited`
+	// alongside `DefinitelyReturned` and `DefinitelyHalted`,
 	// because the maybe-jumping path escapes the construct without terminating the function.
 	DefinitelyExited bool
 	// MaybeJumpedLoop indicates that some path within the current loop
@@ -100,9 +114,10 @@ type ReturnInfo struct {
 	// since such jumps are consumed by the loop and are irrelevant
 	// outside it.
 	//
-	// At a loop body's terminal state, used to clear DR/DH/DE so that the
-	// surrounding scope's "definitely returns/halts/exits" claim is not
-	// over-claimed (the jumping path falls past the loop, not the function).
+	// When the whole loop has been checked, `WithLoop` uses it to clear
+	// `DefinitelyReturned`/`DefinitelyHalted`/`DefinitelyExited`,
+	// so that the surrounding scope's "definitely returns/halts/exits" claim
+	// is not over-claimed (the jumping path falls past the loop, not the function).
 	MaybeJumpedLoop bool
 	// MaybeJumpedSwitch indicates that some path within the current switch
 	// reached a `break` statement targeting that switch.
@@ -112,10 +127,13 @@ type ReturnInfo struct {
 	// exit, since such breaks are consumed by the switch and are irrelevant
 	// outside it.
 	//
-	// At a case body's terminal state, used to clear DR/DH/DE so that the
-	// switch-level merge does not over-claim definite-return — the break
-	// path means the switch as a whole can still fall through to the code
-	// after it. For example:
+	// When the whole switch has been checked
+	// (i.e. after all case bodies were checked and branch-merged),
+	// `WithSwitch` uses it to clear
+	// `DefinitelyReturned`/`DefinitelyHalted`/`DefinitelyExited`,
+	// so that the merged "every case definitely terminated" claim
+	// does not over-promise — a break path means the switch as a whole
+	// can still fall through to the code after it. For example:
 	//
 	//   case x:
 	//       if cond { break }
@@ -125,7 +143,8 @@ type ReturnInfo struct {
 
 func NewReturnInfo() *ReturnInfo {
 	return &ReturnInfo{
-		JumpOffsets: persistent.NewOrderedSet[int](nil),
+		LoopJumpOffsets:   persistent.NewOrderedSet[int](nil),
+		SwitchJumpOffsets: persistent.NewOrderedSet[int](nil),
 	}
 }
 
@@ -155,7 +174,7 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 			elseReturnInfo.DefinitelyExited)
 
 	// Propagate jump offsets from both branches. Each branch's
-	// `Clone()` gave it a separate child JumpOffsets set, so jumps in
+	// `Clone()` gave it separate child jump-offset sets, so jumps in
 	// one branch did not pollute the sibling's view of "did a jump
 	// occur between this resource's declaration and its use?"
 	// (see `maybeAddResourceInvalidation`). Now that both branches
@@ -166,8 +185,12 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 }
 
 func (ri *ReturnInfo) addJumpOffsetsFrom(other *ReturnInfo) {
-	_ = other.JumpOffsets.ForEach(func(offset int) error {
-		ri.JumpOffsets.Add(offset)
+	_ = other.LoopJumpOffsets.ForEach(func(offset int) error {
+		ri.LoopJumpOffsets.Add(offset)
+		return nil
+	})
+	_ = other.SwitchJumpOffsets.ForEach(func(offset int) error {
+		ri.SwitchJumpOffsets.Add(offset)
 		return nil
 	})
 }
@@ -188,9 +211,10 @@ func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInf
 func (ri *ReturnInfo) Clone() *ReturnInfo {
 	result := NewReturnInfo()
 	*result = *ri
-	// Clone JumpOffsets so that jumps recorded in this clone
+	// Clone the jump-offset sets so that jumps recorded in this clone
 	// do not leak into sibling clones (e.g. then vs. else branch).
-	result.JumpOffsets = ri.JumpOffsets.Clone()
+	result.LoopJumpOffsets = ri.LoopJumpOffsets.Clone()
+	result.SwitchJumpOffsets = ri.SwitchJumpOffsets.Clone()
 	return result
 }
 
@@ -224,12 +248,34 @@ func (ri *ReturnInfo) clearDefiniteExits() {
 	ri.DefinitelyExited = false
 }
 
-func (ri *ReturnInfo) AddJumpOffset(offset int) {
-	ri.JumpOffsets.Add(offset)
+func (ri *ReturnInfo) AddLoopJumpOffset(offset int) {
+	ri.LoopJumpOffsets.Add(offset)
 }
 
-func (ri *ReturnInfo) WithNewJumpTarget(f func()) {
-	ri.JumpOffsets = ri.JumpOffsets.Clone()
+func (ri *ReturnInfo) AddSwitchJumpOffset(offset int) {
+	ri.SwitchJumpOffsets.Add(offset)
+}
+
+// WithNewLoopJumpTarget runs f with a fresh child set of loop jump
+// offsets, and discards the child set afterwards: jumps targeting the
+// loop are consumed by it and are irrelevant to the code that follows.
+// Switch jump offsets are NOT scoped here — a switch-targeting `break`
+// is always consumed by its switch, which lies entirely inside or
+// outside the loop, so its offsets can never escape into the loop's set.
+func (ri *ReturnInfo) WithNewLoopJumpTarget(f func()) {
+	ri.LoopJumpOffsets = ri.LoopJumpOffsets.Clone()
 	f()
-	ri.JumpOffsets = ri.JumpOffsets.Parent
+	ri.LoopJumpOffsets = ri.LoopJumpOffsets.Parent
+}
+
+// WithNewSwitchJumpTarget runs f with a fresh child set of switch jump
+// offsets, and discards the child set afterwards: breaks targeting the
+// switch are consumed by it and are irrelevant to the code that follows.
+// Loop jump offsets are intentionally NOT scoped here — a `continue`
+// inside a switch case targets the enclosing loop, so its offset must
+// survive past the switch boundary up to the loop.
+func (ri *ReturnInfo) WithNewSwitchJumpTarget(f func()) {
+	ri.SwitchJumpOffsets = ri.SwitchJumpOffsets.Clone()
+	f()
+	ri.SwitchJumpOffsets = ri.SwitchJumpOffsets.Parent
 }

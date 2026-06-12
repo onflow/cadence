@@ -55,7 +55,10 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ st
 
 	innermost := functionActivation.InnermostControl()
 
-	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
+	// The jump offset is recorded in the set matching the break's target,
+	// because the two sets have different lifetimes:
+	// the loop set is scoped by `WithLoop`, the switch set by `WithSwitch`
+	// (see `LoopJumpOffsets` and `SwitchJumpOffsets`).
 
 	switch innermost {
 	case ControlKindNone:
@@ -68,9 +71,11 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) (_ st
 		return
 
 	case ControlKindLoop:
+		functionActivation.ReturnInfo.AddLoopJumpOffset(statement.StartPos.Offset)
 		functionActivation.ReturnInfo.MaybeJumpedLoop = true
 
 	case ControlKindSwitch:
+		functionActivation.ReturnInfo.AddSwitchJumpOffset(statement.StartPos.Offset)
 		functionActivation.ReturnInfo.MaybeJumpedSwitch = true
 	}
 
@@ -118,7 +123,7 @@ func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement)
 		return
 	}
 
-	functionActivation.ReturnInfo.AddJumpOffset(statement.StartPos.Offset)
+	functionActivation.ReturnInfo.AddLoopJumpOffset(statement.StartPos.Offset)
 	functionActivation.ReturnInfo.MaybeJumpedLoop = true
 	// `continue` is a kind of definite exit (see `DefinitelyExited`).
 	// Setting it means a subsequent statement is correctly reported as

@@ -1125,11 +1125,15 @@ func (v *ArrayValue) GetMethod(
 			),
 			NativeArrayRemoveFunction,
 		).
-			// Receiver is kept as-is (not dereferenced) so the native
-			// function and any BBQ VM derivation can read accessedType
-			// from the un-dereferenced receiver and apply the inner-
-			// reference intersection in sema.ArrayRemoveFunctionType's
-			// return.
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via arrayValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.ArrayRemoveFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
 			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeRemoveFirstFunctionName:
@@ -1144,11 +1148,15 @@ func (v *ArrayValue) GetMethod(
 			),
 			NativeArrayRemoveFirstFunction,
 		).
-			// Receiver is kept as-is (not dereferenced) so the native
-			// function and any BBQ VM derivation can read accessedType
-			// from the un-dereferenced receiver and apply the inner-
-			// reference intersection in
-			// sema.ArrayRemoveFirstFunctionType's return.
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via arrayValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.ArrayRemoveFirstFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
 			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeRemoveLastFunctionName:
@@ -1163,11 +1171,15 @@ func (v *ArrayValue) GetMethod(
 			),
 			NativeArrayRemoveLastFunction,
 		).
-			// Receiver is kept as-is (not dereferenced) so the native
-			// function and any BBQ VM derivation can read accessedType
-			// from the un-dereferenced receiver and apply the inner-
-			// reference intersection in
-			// sema.ArrayRemoveLastFunctionType's return.
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via arrayValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.ArrayRemoveLastFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
 			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeFirstIndexFunctionName:

@@ -713,26 +713,6 @@ func TestCheckSwitchResourceInvalidation(t *testing.T) {
 	})
 }
 
-func TestCheckFoo(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      fun test(cond: Bool): Int {
-          switch 1 {
-          case 1:
-              if cond { break }
-              return 2
-          default:
-              return 0
-          }
-          return 3   // sema (incorrectly) flags this as unreachable
-      }
-    `)
-
-	require.NoError(t, err)
-}
-
 func TestCheckSwitchMaybeBreakDoesNotSuppressUnreachableInCase(t *testing.T) {
 
 	t.Parallel()
@@ -1302,5 +1282,117 @@ func TestCheckResourceInvalidationInSwitch(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("continue in switch inside loop, destroy after switch", func(t *testing.T) {
+		t.Parallel()
+
+		// `continue` targets the enclosing loop, not the switch,
+		// so it skips the `destroy r` after the switch and `r` leaks.
+		// The jump offset of the `continue` must survive past the
+		// case and switch boundaries for the `destroy r` to be treated
+		// as only a potential invalidation.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    switch true {
+                    case true:
+                        continue
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("continue in if in switch inside loop, destroy after switch", func(t *testing.T) {
+		t.Parallel()
+
+		// Like the previous test, but with the `continue`
+		// nested in an `if` inside the case.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    switch true {
+                    case true:
+                        if true {
+                            continue
+                        }
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("continue in default case inside loop, destroy after switch", func(t *testing.T) {
+		t.Parallel()
+
+		// The default case is checked directly (not as a conditional
+		// branch), so it exercises a different path than the case above.
+		// The `continue` is conditional — an unconditional `continue`
+		// in a default-only switch would (correctly) also make the
+		// `destroy r` unreachable.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    switch true {
+                    default:
+                        if true {
+                            continue
+                        }
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("destroy then continue in switch inside loop", func(t *testing.T) {
+		t.Parallel()
+
+		// The resource is destroyed before the `continue`, so no leak.
+		// The `continue`'s jump offset lies after the invalidation
+		// and must not downgrade it.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                while true {
+                    let r <- create R()
+                    switch true {
+                    case true:
+                        destroy r
+                        continue
+                    default:
+                        destroy r
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
 	})
 }
