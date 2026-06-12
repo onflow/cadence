@@ -2930,6 +2930,22 @@ func (c *Compiler[_, _]) emitInvocation(
 		HasImplicitArgument:    hasImplicitArgument,
 		SkipArgumentConversion: invocationTypes.PassArgumentsWithoutTransferOrConvert,
 	})
+
+	// Defensive: an invocation with return type Never must not return normally.
+	// If it nevertheless does (e.g. due to a mistyped native function,
+	// or a return type which disagrees with the invoked function's actual type),
+	// the VM panics with UnreachableInstructionError,
+	// instead of continuing with an impossible value.
+	//
+	// The VM also validates return values against the invocation's return type
+	// (see checkAndConvertReturnValue), which no value conforms to for Never.
+	// However, that validation is only performed for value returns:
+	// the void return path (InstructionReturn) pushes Void without validation,
+	// in which case this instruction is the check that catches
+	// the impossible normal return.
+	if invocationTypes.ReturnType == sema.NeverType {
+		c.emit(opcode.InstructionUnreachable{})
+	}
 }
 
 func (c *Compiler[_, _]) addImplicitArgumentTyped(
