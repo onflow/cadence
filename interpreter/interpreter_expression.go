@@ -1318,6 +1318,21 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(
 
 	interpreter.reportInvokedFunctionReturn()
 
+	// Defensive: an invocation with return type Never must not return normally.
+	// If it nevertheless does (e.g. due to a mistyped native function,
+	// or a return type which disagrees with the invoked function's actual type),
+	// panic instead of continuing with an impossible value.
+	//
+	// This is a second line of defense:
+	// the return-value validation (see ConvertAndBoxWithValidation,
+	// performed in invokeFunctionValueWithEval) aborts execution first,
+	// as no value conforms to Never.
+	if returnType == sema.NeverType {
+		panic(&UnreachableInstructionError{
+			Range: ast.NewRangeFromPositioned(interpreter, invocationExpression),
+		})
+	}
+
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional
 	if isOptionalChaining {

@@ -236,6 +236,85 @@ func TestInterpretInheritedStatementEndingControlFlowFallthrough(t *testing.T) {
 	require.ErrorAs(t, err, &unreachableInstructionErr)
 }
 
+// TestInterpretNeverInvocation tests the defensive handling of an invocation
+// of a function with return type Never which nevertheless returns at runtime.
+//
+// A Never-returning function which returns cannot be produced from source code:
+// the checker requires the body of a Never-returning function
+// to definitely return or halt.
+// Therefore, simulate such a bug with a mistyped native function,
+// which is declared with return type Never, but returns a value.
+//
+// In both the interpreter and the VM, the return-value validation
+// aborts execution with an internal error when the returned value
+// is validated against the declared return type Never,
+// which no value conforms to
+// (see ConvertAndBoxWithValidation in the interpreter,
+// and checkAndConvertReturnValue in the VM).
+// The defensive Never checks performed after invocations
+// (the check in visitInvocationExpressionWithImplicitArgument in the interpreter,
+// and the unreachable instruction emitted after the invocation in the compiler/VM)
+// are a second line of defense behind those validations.
+func TestInterpretNeverInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	// Simulate a mistyped native function:
+	// declared with return type Never, but returns a value
+	fFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"f",
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.NeverTypeAnnotation,
+		),
+		"",
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
+			_ interpreter.Value,
+			_ []interpreter.Value,
+		) interpreter.Value {
+			return interpreter.NewUnmeteredIntValueFromInt64(42)
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(fFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, fFunction)
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          fun test() {
+              f()
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+
+	var valueTransferTypeErr *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &valueTransferTypeErr)
+}
+
 // TestInterpretVoidReturnWithMismatchedReturnType tests the defensive handling
 // of an invocation whose static return type disagrees with the invoked function,
 // and the invoked function returns void:
