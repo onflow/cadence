@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -125,13 +124,13 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 	})
 }
 
-// TestInterpretDictionaryValueIDTracking is the DictionaryValue counterpart
-// to TestInterpretArrayValueIDTracking: it exercises the same Cadence-level
-// "immortal reference" exploit attempt against an inner inlined dictionary
-// and asserts the runtime rejects it. See TestInterpretArrayValueIDTracking
-// for the full rationale around the two defense layers (staleness check
-// then cached-valueID) and why the rejection currently surfaces at the
-// cast site as InvalidatedContainerViewError.
+// TestInterpretDictionaryValueIDTracking is the DictionaryValue counterpart to
+// TestInterpretCompositeValueIDTracking.
+// Two references to the same logical inner dictionary (created by accessing
+// the same outer dictionary key twice) must share a canonical wrapper, so when
+// the inner dictionary is moved/invalidated, all references see it as invalidated.
+// Without canonicalization, an EphemeralReferenceValue created from a separate
+// wrapper would survive invalidation through the canonical one and dangle.
 func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 	t.Parallel()
 
@@ -141,33 +140,35 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 	}))
 
 	// liveValueIDOf exposes the underlying atree map's current value ID so the
-	// Cadence code can confirm the slab split actually occurred. It takes the
-	// *name* of the reference variable so that resolving the (potentially
-	// stale) reference happens inside Go via GetValueOfVariable, bypassing the
-	// per-expression staleness check that would otherwise fire at this call.
+	// Cadence code can confirm the slab split actually occurred.
+	// It takes a reference, generalized through `&AnyResource`.
 	liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"liveValueIDOf",
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
 			[]sema.Parameter{
 				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "name",
-					TypeAnnotation: sema.StringTypeAnnotation,
+					Label:      sema.ArgumentLabelNotRequired,
+					Identifier: "ref",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.ReferenceType{
+							Type:          sema.AnyResourceType,
+							Authorization: sema.UnauthorizedAccess,
+						},
+					),
 				},
 			},
 			sema.StringTypeAnnotation,
 		),
 		"",
 		func(
-			context interpreter.NativeFunctionContext,
+			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.ArgumentTypesIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
-			name := args[0].(*interpreter.StringValue).Str
-			ref := context.GetValueOfVariable(name).(*interpreter.EphemeralReferenceValue)
+			ref := args[0].(*interpreter.EphemeralReferenceValue)
 			dictValue := ref.Value.(*interpreter.DictionaryValue)
 			return interpreter.NewUnmeteredStringValue(dictValue.LiveValueID().String())
 		},
@@ -183,7 +184,7 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 	interpreter.Declare(baseActivation, liveValueIDOfFunction)
 	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
-	inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 		t,
 		`
     access(all) resource Vault {
@@ -196,19 +197,20 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
         // is the inner dictionary we will take two references to.
         let outer: @{String: {String: Vault}} <- {"a": <-{"k0": <-create Vault(balance: 0.0)}}
 
-        // Two EphemeralReferenceValues pointing to two different DictionaryValues
-        // which wrap the same underlying atree map.
+        // Two EphemeralReferenceValues to the same logical inner dictionary.
+        // The shared-state cache (ConvertStoredValue) deduplicates the
+        // Cadence wrappers, so both refs hold the same DictionaryValue and
+        // observe the same underlying atree map.
         let ref  = (&outer["a"] as auth(Mutate) &{String: Vault}?)!
         let ref2 = (&outer["a"] as auth(Mutate) &{String: Vault}?)!
 
-        // Both refs initially see the same root slab in the underlying atree map.
+        // Both refs see the same live atree value ID.
         assert(
-            liveValueIDOf("ref") == liveValueIDOf("ref2"),
+            liveValueIDOf(ref) == liveValueIDOf(ref2),
             message: "before split: both refs should observe the same live atree value ID"
         )
 
-        // Insert enough entries via ref to grow the inner map past one slab
-        // and trigger an atree map slab split.
+        // Insert enough entries to force the inner map's root to split.
         var i: Int = 0
         while i < 200 {
             let old <- ref.insert(key: "k".concat(i.toString()), <-create Vault(balance: UFix64(i)))
@@ -216,19 +218,16 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
             i = i + 1
         }
 
-        // After the split, ref's dictionary.root points to the new root slab while
-        // ref2's dictionary.root still points to the old root slab (with a freshly
-        // assigned slab ID), so their live value IDs diverge.
+        // Both refs share the canonical wrapper, so the slab split through ref
+        // is visible to ref2; their live value IDs continue to agree.
         assert(
-            liveValueIDOf("ref") != liveValueIDOf("ref2"),
-            message: "after split: refs should observe diverged live atree value IDs"
+            liveValueIDOf(ref) == liveValueIDOf(ref2),
+            message: "after split: refs must still observe the same live atree value ID"
         )
 
-        // Exploit attempt: conversion roundtrip via AnyResource to obtain an
-        // EphemeralReferenceValue from the stale ref2. If neither the
-        // staleness check nor the cached-valueID mechanism caught this, the
-        // resulting reference would be tracked under the (now-different) live
-        // ValueID of the stale view and survive the subsequent move.
+        // Conversion roundtrip via AnyResource. Because ref and ref2 wrap the
+        // same canonical DictionaryValue, immortalRef is registered under the
+        // same value ID as the others.
         let immortalRef = (ref2 as auth(Mutate) &AnyResource) as! auth(Mutate) &{String: Vault}
 
         // Replace the inner dictionary with an empty one. The move would
@@ -263,12 +262,115 @@ func TestInterpretDictionaryValueIDTracking(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
-	var staleAtreeViewError *interpreter.InvalidatedContainerViewError
-	assert.ErrorAs(t, err, &staleAtreeViewError)
-	// The staleness check (the primary defense) fires at the cast operand
-	// `ref2` during expression evaluation, before the conversion completes.
-	// Pinning the rejection here ensures the test fails loudly if a future
-	// change shifts the rejection somewhere else (e.g. into a sanity
-	// assertion above, or all the way to `immortalRef.length`).
-	assert.Equal(t, 45, staleAtreeViewError.StartPosition().Line)
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+	assert.Equal(t, 53, invalidatedResourceReferenceError.StartPosition().Line)
+}
+
+// TestInterpretDictionaryAliasedMutationConsistency is the DictionaryValue
+// counterpart to TestInterpretArrayAliasedMutationConsistency. 200 inserts
+// through ref trigger an atree slab split; an insert through ref2 (which
+// previously would have observed a stale root) must land in the canonical
+// structure. Iteration count and length-driven removal count must agree
+// after extraction, and the ref2-inserted key must be observable from
+// each traversal in the same way.
+func TestInterpretDictionaryAliasedMutationConsistency(t *testing.T) {
+	t.Parallel()
+
+	logFunction := stdlib.NewInterpreterLogFunction(stdlib.FunctionLogger(func(message string) error {
+		fmt.Fprintln(os.Stderr, message)
+		return nil
+	}))
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
+
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
+		t,
+		`
+    access(all) resource Vault {
+        access(all) var balance: UFix64
+        init(balance: UFix64) { self.balance = balance }
+    }
+
+    access(all) fun main() {
+        let outer: @{String: {String: Vault}} <- {"a": <-{"k0": <-create Vault(balance: 0.0)}}
+
+        let ref  = (&outer["a"] as auth(Mutate) &{String: Vault}?)!
+        let ref2 = (&outer["a"] as auth(Mutate) &{String: Vault}?)!
+
+        var i: Int = 0
+        while i < 200 {
+            let old <- ref.insert(key: "k".concat(i.toString()), <-create Vault(balance: UFix64(i)))
+            destroy old
+            i = i + 1
+        }
+
+        // Insert through ref2. Pre-fix this would have written into a
+        // demoted child slab, leaving the canonical root's count stale.
+        let staleOld <- ref2.insert(key: "stale", <-create Vault(balance: 123.456))
+        destroy staleOld
+
+        var empty: @{String: Vault}? <- {}
+        var extractedOpt <- outer["a"] <- empty
+        var extracted <- extractedOpt!
+
+        let expectedLength = extracted.length
+
+        var iteratedCount: Int = 0
+        var keyFoundIterating = false
+        for key in extracted.keys {
+            iteratedCount = iteratedCount + 1
+            if key == "stale" {
+                keyFoundIterating = true
+            }
+        }
+
+        var removalCount: Int = 0
+        var keyFoundRemoving = false
+        let keys = extracted.keys
+        for key in keys {
+            let removed <- extracted.remove(key: key)!
+            if key == "stale" {
+                keyFoundRemoving = true
+            }
+            destroy removed
+            removalCount = removalCount + 1
+        }
+
+        assert(expectedLength == iteratedCount,
+               message: "length must match for-iteration count")
+        assert(iteratedCount == removalCount,
+               message: "iteration count must match key-driven removal count")
+        assert(keyFoundIterating == keyFoundRemoving,
+               message: "stale-insert must be either seen by both traversals or by neither")
+
+        destroy extracted
+        destroy outer
+    }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *activations.Activation[interpreter.Variable] {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
 }

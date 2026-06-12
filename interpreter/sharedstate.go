@@ -45,6 +45,35 @@ type SharedState struct {
 	MutationDuringCapabilityControllerIteration bool
 	containerValueIteration                     map[atree.ValueID]struct{}
 	destroyedResources                          map[atree.ValueID]struct{}
+	// canonicalAtreeContainers deduplicates the Cadence-level wrappers
+	// (ArrayValue, DictionaryValue, CompositeValue) created for atree
+	// containers, keyed by their atree value ID.
+	// The first wrapper created for a given value ID via a canonicalizing
+	// path — `*atree.Array.Get`, `*atree.OrderedMap.Get`, mutable-iterator
+	// `Next`, `DomainStorageMap.ReadValue`, or any other reader that wraps
+	// an atree element it just retrieved — becomes canonical;
+	// subsequent retrievals reuse the same wrapper instance.
+	//
+	// Cadence relies on this in two ways:
+	//
+	//   - Reference identity for `EphemeralReferenceValue`:
+	//     two `&outer[0]` accesses must yield references to the same Go-level wrapper
+	//     so that mutations through one are visible to the other.
+	//
+	//   - Per-wrapper Cadence-level state alignment:
+	//     fields like `isDestroyed` live on the wrapper, not on atree's shared state.
+	//     If multiple wrappers existed for one logical container,
+	//     marking one destroyed would leave the others usable.
+	//
+	// Structural consistency between sibling `*atree.Array`/`*atree.OrderedMap` instances
+	// is handled by atree's per-container shared state (the registry on `SlabStorage`),
+	// not by this cache.
+	//
+	// Entries are removed when a wrapper is invalidated by Destroy or Transfer
+	// (its `array`/`dictionary` is nilled).
+	// Subsequent retrievals for the same value ID create a fresh wrapper,
+	// leaving the held reference to the invalidated wrapper unaffected.
+	canonicalAtreeContainers map[atree.ValueID]Value
 }
 
 func NewSharedState(config *Config) *SharedState {
@@ -63,6 +92,7 @@ func NewSharedState(config *Config) *SharedState {
 		CapabilityControllerIterations: map[AddressPath]int{},
 		containerValueIteration:        map[atree.ValueID]struct{}{},
 		destroyedResources:             map[atree.ValueID]struct{}{},
+		canonicalAtreeContainers:       map[atree.ValueID]Value{},
 	}
 }
 

@@ -53,22 +53,6 @@ type CompositeValue struct {
 	dictionary      *atree.OrderedMap
 	typeID          TypeID
 
-	// valueID is the atree value ID captured at construction time.
-	// It is used for reference tracking and invalidation, and must remain
-	// stable even if the dictionary's runtime root slab ID changes.
-	// Specifically, when multiple CompositeValue instances share the same
-	// underlying atree map (e.g. created by repeated element access via
-	// `arr[i]`), an atree slab split through one instance reassigns the
-	// other instance's root pointer's slab ID. Using the dictionary's live
-	// ValueID in that scenario would let a stale view register a reference
-	// under a different ID, bypassing invalidation.
-	valueID atree.ValueID
-
-	// mutationCount is the atree root-slab mutation counter captured at construction.
-	// Together with valueID it detects sibling-wrapper staleness.
-	// See isStaleAtreeView.
-	mutationCount uint64
-
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
 	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
@@ -78,6 +62,15 @@ type CompositeValue struct {
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
 	isDestroyed         bool
+
+	// valueID is the atree value ID captured at construction time.
+	// With atree's shared-state design + Cadence's canonical wrapper cache,
+	// the value ID returned by `v.dictionary.ValueID()` is stable for the lifetime
+	// of the wrapper, so the cached value matches the live one.
+	// The cache is used by `isStaleAtreeView` as a defensive invariant check
+	// to catch unexpected divergence (and a stable identifier when
+	// `v.dictionary` has been nilled out by Destroy/Transfer).
+	valueID atree.ValueID
 }
 
 type ComputedField func(ValueTransferContext, *CompositeValue) Value
@@ -267,7 +260,6 @@ func NewCompositeValueFromAtreeMap(
 	return &CompositeValue{
 		dictionary:          atreeOrderedMap,
 		valueID:             atreeOrderedMap.ValueID(),
-		mutationCount:       atreeOrderedMap.MutationCount(),
 		Location:            typeInfo.Location,
 		QualifiedIdentifier: typeInfo.QualifiedIdentifier,
 		Kind:                typeInfo.Kind,
@@ -282,11 +274,10 @@ var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 var _ ContractValue = &CompositeValue{}
 var _ atree.Value = &CompositeValue{}
 var _ atree.WrapperValue = &CompositeValue{}
-var _ atreeContainerBackedValue = &CompositeValue{}
+var _ AtreeBackedValue = &CompositeValue{}
+var _ canonicalizableContainer = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
-
-func (*CompositeValue) isAtreeContainerBackedValue() {}
 
 func (v *CompositeValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitCompositeValue(context, v)
@@ -368,6 +359,19 @@ func (v *CompositeValue) IsImportable(context ValueImportableContext) bool {
 
 func (v *CompositeValue) IsDestroyed() bool {
 	return v.isDestroyed
+}
+
+// canonicalAtreeContainer reports the underlying atree map for canonical
+// wrapper-cache bookkeeping, or nil if the wrapper is invalidated (destroyed
+// or its backing nilled out by Transfer). The cache uses the returned
+// container's `ValueID`, `HasParentUpdater`, and `HasReadOnlyMutationCallback`
+// predicates to decide whether to install / replace the wrapper as canonical;
+// a nil return tells the cache to skip canonicalization for this wrapper.
+func (v *CompositeValue) canonicalAtreeContainer() atreeContainer {
+	if v.dictionary == nil || v.isDestroyed {
+		return nil
+	}
+	return v.dictionary
 }
 
 func resourceDefaultDestroyEventName(t sema.ContainerType) string {
@@ -467,6 +471,8 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext) {
 	v.isDestroyed = true
 
 	InvalidateReferencedResources(context, v)
+
+	context.ClearCanonicalAtreeContainer(valueID)
 
 	v.dictionary = nil
 }
@@ -989,7 +995,13 @@ func formatComposite(
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(gauge common.Gauge, name string) Value {
+// getFieldWithoutCanonicalization reads the raw field value via atree,
+// WITHOUT canonicalizing the resulting wrapper.
+// Returns nil if the field does not exist.
+// Callers that hand the field value to user code must canonicalize it
+// (see GetField); only callers that cannot canonicalize for contract reasons
+// and are known to read non-container values (see HashInput) may use the raw result.
+func (v *CompositeValue) getFieldWithoutCanonicalization(gauge common.Gauge, name string) Value {
 
 	common.UseComputation(
 		gauge,
@@ -1013,6 +1025,14 @@ func (v *CompositeValue) GetField(gauge common.Gauge, name string) Value {
 	}
 
 	return MustConvertStoredValue(gauge, storedValue)
+}
+
+func (v *CompositeValue) GetField(context ContainerElementContext, name string) Value {
+	fieldValue := v.getFieldWithoutCanonicalization(context, name)
+	if fieldValue == nil {
+		return nil
+	}
+	return canonicalizeContainerElement(context, fieldValue)
 }
 
 func (v *CompositeValue) Equal(context ValueComparisonContext, other Value) bool {
@@ -1071,7 +1091,17 @@ func (v *CompositeValue) HashInput(gauge common.Gauge, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(gauge, sema.EnumRawValueFieldName)
+		// Read the enum's raw value WITHOUT canonicalization:
+		// `GetField` requires a `ContainerElementContext`
+		// (so it can canonicalize container-element wrappers),
+		// but enum raw values are primitives,
+		// so canonicalization would be a no-op and the wider context is unnecessary.
+		// The `HashableValue.HashInput` contract only requires `common.Gauge`.
+		rawValue := v.getFieldWithoutCanonicalization(gauge, sema.EnumRawValueFieldName)
+		if rawValue == nil {
+			// Enums always have a raw value field
+			panic(errors.NewUnreachableError())
+		}
 		rawValueHashInput := rawValue.(HashableValue).
 			HashInput(gauge, scratch)
 
@@ -1561,6 +1591,21 @@ func (v *CompositeValue) Transfer(
 
 		InvalidateReferencedResources(context, v)
 
+		context.ClearCanonicalAtreeContainer(v.valueID)
+
+		v.dictionary = nil
+	} else if remove {
+		// Non-resource Transfer with remove: the source's slabs were just
+		// deleted by the PopIterate above. Evict the cached canonical wrapper
+		// (otherwise its entry would leak referencing gone slabs) and nil
+		// `v.dictionary` so any subsequent use of the source wrapper fails
+		// cleanly via `isStaleAtreeView` / `InvalidatedContainerViewError`
+		// rather than crashing inside atree on a missing slab.
+		//
+		// Callers that need to use the source value after this point must
+		// Transfer it onto the stack (`remove=false`) first to obtain a fresh
+		// wrapper at a new SlabID.
+		context.ClearCanonicalAtreeContainer(v.valueID)
 		v.dictionary = nil
 	}
 
@@ -1650,7 +1695,6 @@ func (v *CompositeValue) Clone(context ValueCloneContext) Value {
 	return &CompositeValue{
 		dictionary:          dictionary,
 		valueID:             dictionary.ValueID(),
-		mutationCount:       dictionary.MutationCount(),
 		Location:            v.Location,
 		QualifiedIdentifier: v.QualifiedIdentifier,
 		Kind:                v.Kind,
@@ -1683,6 +1727,11 @@ func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentConta
 			)
 		}()
 	}
+
+	// Evict any canonical wrapper for this value: its slabs are about to be
+	// torn down. Done here (rather than at each call site) so that the
+	// recursive `value.DeepRemove(...)` below also covers nested wrappers.
+	context.ClearCanonicalAtreeContainer(v.valueID)
 
 	// Remove nested values and storables
 
@@ -1803,7 +1852,11 @@ func (v *CompositeValue) forEachField(
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
 	err := atreeIterate(func(key atree.Value, atreeValue atree.Value) (resume bool, err error) {
-		value := MustConvertStoredValue(context, atreeValue)
+		// The field value is handed to `f` without transfer.
+		// canonicalizeContainerElement self-filters based on the wrapper's parent-callback state,
+		// so it is safe to call on any path — wrappers from read-only iterators
+		// (`IterateReadOnlyLoadedValues`) are returned as-is rather than cached.
+		value := MustConvertStoredContainerElement(context, atreeValue)
 		CheckInvalidatedValueOrValueReference(value, context)
 
 		resume = f(
@@ -1830,22 +1883,18 @@ func (v *CompositeValue) ValueID() atree.ValueID {
 	return v.valueID
 }
 
-// isStaleAtreeView reports whether this wrapper has been displaced by a structural change
-// (slab split/promotion/PopIterate) that was performed through a sibling wrapper
-// sharing the same underlying slab tree.
-// See the `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full context.
-// Detected uses of a stale wrapper are rejected centrally in `CheckInvalidatedValueOrValueReference`.
-//
-// Two independent signals are compared against the cached snapshot:
-//   - ValueID: detects splitRoot (atree mutates the demoted root's SlabID via SetSlabID;
-//     sibling wrappers reading via the orphaned-pointer see the new SlabID).
-//   - MutationCount: detects promoteChildAsNewRoot and PopIterate
-//     (atree does NOT perturb the orphaned root's SlabID in these cases;
-//     a slab-level counter bumped on the OLD root pre-swap is the sibling-visible signal).
-//     See atree.MapSlab.MutationCount for the contract.
+// isStaleAtreeView reports whether this wrapper's underlying atree array has
+// been invalidated (nilled out by Destroy/Transfer) or its live value ID has
+// diverged from the cached one captured at construction.
+// With atree's shared-state design and Cadence's canonical wrapper cache,
+// neither condition should be observable in practice;
+// this is a defensive invariant check used by
+// `CheckInvalidatedValueOrValueReference`.
 func (v *CompositeValue) isStaleAtreeView() bool {
-	return v.dictionary.ValueID() != v.valueID ||
-		v.dictionary.MutationCount() != v.mutationCount
+	if v.dictionary == nil {
+		return true
+	}
+	return v.dictionary.ValueID() != v.valueID
 }
 
 // LiveValueID returns the underlying atree map's current value ID.
@@ -1857,13 +1906,6 @@ func (v *CompositeValue) isStaleAtreeView() bool {
 // tracking and invalidation.
 func (v *CompositeValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
-}
-
-// LiveMutationCount returns the underlying atree map's current root-slab mutation counter.
-// Counterpart to LiveValueID for the second signal that isStaleAtreeView checks.
-// Intended for testing only; production code must use the cached mutationCount captured at wrapper construction.
-func (v *CompositeValue) LiveMutationCount() uint64 {
-	return v.dictionary.MutationCount()
 }
 
 // LiveInlined reports whether the underlying atree map is currently stored
@@ -2165,7 +2207,9 @@ func forEachAttachment(
 			break
 		}
 		if strings.HasPrefix(string(key.(StringAtreeValue)), unrepresentableNamePrefix) {
-			attachment, ok := MustConvertStoredValue(context, value).(*CompositeValue)
+			// The attachment is handed to `f` without transfer, so
+			// canonicalize so aliased references see a shared wrapper.
+			attachment, ok := MustConvertStoredContainerElement(context, value).(*CompositeValue)
 			if !ok {
 				panic(errors.NewExternalError(err))
 			}

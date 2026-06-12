@@ -23,63 +23,56 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-// TestInterpretStaleWrapperMutationRejected covers the case where two Go-level
-// wrappers (ArrayValue/DictionaryValue/CompositeValue) for the same atree
-// container are created (via repeated `&outer[i]` style access), one wrapper
-// triggers a slab split, and the sibling wrapper subsequently attempts a
-// mutation. Without the staleness check, the mutation writes into the demoted
-// (now-leaf) slab and leaves the canonical view of the container out of sync
-// with the live data, manifesting as an element that is invisible to
-// iteration but visible to consecutive removals — a clear violation of
-// resource semantics.
-func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
+// TestInterpretAliasedWrapperMutationPropagation covers the case where two
+// references (`&outer[i]` taken twice) project two `auth(Mutate) &T` handles
+// onto the same atree container.
+// Because of the canonical-wrapper cache (`SharedState.canonicalAtreeContainers`),
+// both handles resolve to the same Go-level wrapper —
+// even after a structural change like a slab split triggered through one of them.
+// A subsequent mutation through the second handle must therefore land on the
+// live tree and be observable through the first.
+//
+// The mid-iteration subtests (Map/Filter) cover a separate concern:
+// the canonical wrapper is shared, but mutating it while another method has
+// an active atree iterator must still raise `ContainerMutatedDuringIterationError`.
+func TestInterpretAliasedWrapperMutationPropagation(t *testing.T) {
 	t.Parallel()
 
-	makeEnv := func(t *testing.T) (
-		*sema.VariableActivation,
-		*activations.Activation[interpreter.Variable],
-	) {
-
-		// liveValueIDOf exposes the underlying atree container's current value ID
-		// so the Cadence code can confirm the slab split actually occurred
-		// before attempting the stale-wrapper mutation.
-		//
-		// It takes the *name* of the reference variable rather than the
-		// reference itself: passing a stale reference as a function argument
-		// would trip the staleness check during expression evaluation (every
-		// expression result goes through CheckInvalidatedValueOrValueReference,
-		// which recursively descends into reference values), so the check would
-		// fire at the call-site rather than the mutation. Resolving the
-		// variable internally via GetValueOfVariable bypasses the per-
-		// expression check.
-		liveValueIDOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"liveValueIDOf",
+	// liveValueIDOf{Resource,Struct} expose the underlying atree container's
+	// value ID for any wrapped ArrayValue / DictionaryValue / CompositeValue.
+	// Two functions are needed because Cadence reference subtyping puts resource
+	// and struct references in disjoint hierarchies:
+	// `&AnyResource` won't accept struct refs and vice versa.
+	makeLiveValueIDOfFunction := func(
+		t *testing.T,
+		name string,
+		refType sema.Type,
+	) stdlib.StandardLibraryValue {
+		return stdlib.NewInterpreterStandardLibraryStaticFunction(
+			name,
 			sema.NewSimpleFunctionType(
 				sema.FunctionPurityImpure,
 				[]sema.Parameter{
 					{
 						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "name",
-						TypeAnnotation: sema.StringTypeAnnotation,
+						Identifier:     "ref",
+						TypeAnnotation: sema.NewTypeAnnotation(refType),
 					},
 				},
 				sema.StringTypeAnnotation,
 			),
 			"",
 			func(
-				context interpreter.NativeFunctionContext,
+				_ interpreter.NativeFunctionContext,
 				_ interpreter.TypeArgumentsIterator,
 				_ interpreter.ArgumentTypesIterator,
 				_ interpreter.Value,
 				args []interpreter.Value,
 			) interpreter.Value {
-				name := args[0].(*interpreter.StringValue).Str
-				value := context.GetValueOfVariable(name)
-				ref := value.(*interpreter.EphemeralReferenceValue)
+				ref := args[0].(*interpreter.EphemeralReferenceValue)
 				var id string
 				switch v := ref.Value.(type) {
 				case *interpreter.ArrayValue:
@@ -94,108 +87,109 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 				return interpreter.NewUnmeteredStringValue(id)
 			},
 		)
+	}
 
-		// liveMutationCountOf exposes the underlying atree container's current
-		// root-slab mutation counter — the second signal isStaleAtreeView
-		// compares against the cached snapshot. Returning UInt64 lets Cadence
-		// test code compare counts directly with == / >.
-		liveMutationCountOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"liveMutationCountOf",
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityImpure,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "name",
-						TypeAnnotation: sema.StringTypeAnnotation,
-					},
-				},
-				sema.UInt64TypeAnnotation,
-			),
-			"",
-			func(
-				context interpreter.NativeFunctionContext,
-				_ interpreter.TypeArgumentsIterator,
-				_ interpreter.ArgumentTypesIterator,
-				_ interpreter.Value,
-				args []interpreter.Value,
-			) interpreter.Value {
-				name := args[0].(*interpreter.StringValue).Str
-				value := context.GetValueOfVariable(name)
-				ref := value.(*interpreter.EphemeralReferenceValue)
-				var count uint64
-				switch v := ref.Value.(type) {
-				case *interpreter.ArrayValue:
-					count = v.LiveMutationCount()
-				case *interpreter.DictionaryValue:
-					count = v.LiveMutationCount()
-				case *interpreter.CompositeValue:
-					count = v.LiveMutationCount()
-				default:
-					t.Fatalf("unexpected value type %T", ref.Value)
-				}
-				return interpreter.NewUnmeteredUInt64Value(count)
+	makeEnv := func(t *testing.T) (
+		*sema.VariableActivation,
+		*activations.Activation[interpreter.Variable],
+	) {
+
+		liveValueIDOfResourceFunction := makeLiveValueIDOfFunction(
+			t,
+			"liveValueIDOfResource",
+			&sema.ReferenceType{
+				Type:          sema.AnyResourceType,
+				Authorization: sema.UnauthorizedAccess,
+			},
+		)
+		liveValueIDOfStructFunction := makeLiveValueIDOfFunction(
+			t,
+			"liveValueIDOfStruct",
+			&sema.ReferenceType{
+				Type:          sema.AnyStructType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		)
 
-		// liveInlinedOf exposes whether the underlying atree container of a
-		// reference variable is currently stored inlined inside its parent's
-		// slab. Atree may transition a container between inlined and
+		// liveInlinedOf{Resource,Struct} expose whether the underlying atree
+		// container of a reference is currently stored inlined inside its
+		// parent's slab. Atree may transition a container between inlined and
 		// standalone-slab storage when its parent grows or shrinks. Such
 		// transitions are NOT observable through LiveValueID (atree assigns
 		// a stable ValueID across inline/uninline transitions), so this
 		// helper is needed to assert that uninlining actually occurred in
 		// tests that probe the safety of the post-uninlining state.
-		liveInlinedOfFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"liveInlinedOf",
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityImpure,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "name",
-						TypeAnnotation: sema.StringTypeAnnotation,
+		// Two functions are needed for the same reason as the value-ID helpers:
+		// resource and struct references live in disjoint type hierarchies.
+		makeLiveInlinedOfFunction := func(
+			name string,
+			refType sema.Type,
+		) stdlib.StandardLibraryValue {
+			return stdlib.NewInterpreterStandardLibraryStaticFunction(
+				name,
+				sema.NewSimpleFunctionType(
+					sema.FunctionPurityImpure,
+					[]sema.Parameter{
+						{
+							Label:          sema.ArgumentLabelNotRequired,
+							Identifier:     "ref",
+							TypeAnnotation: sema.NewTypeAnnotation(refType),
+						},
 					},
+					sema.BoolTypeAnnotation,
+				),
+				"",
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeArgumentsIterator,
+					_ interpreter.ArgumentTypesIterator,
+					_ interpreter.Value,
+					args []interpreter.Value,
+				) interpreter.Value {
+					ref := args[0].(*interpreter.EphemeralReferenceValue)
+					var inlined bool
+					switch v := ref.Value.(type) {
+					case *interpreter.ArrayValue:
+						inlined = v.LiveInlined()
+					case *interpreter.DictionaryValue:
+						inlined = v.LiveInlined()
+					case *interpreter.CompositeValue:
+						inlined = v.LiveInlined()
+					default:
+						t.Fatalf("unexpected value type %T", ref.Value)
+					}
+					return interpreter.BoolValue(inlined)
 				},
-				sema.BoolTypeAnnotation,
-			),
-			"",
-			func(
-				context interpreter.NativeFunctionContext,
-				_ interpreter.TypeArgumentsIterator,
-				_ interpreter.ArgumentTypesIterator,
-				_ interpreter.Value,
-				args []interpreter.Value,
-			) interpreter.Value {
-				name := args[0].(*interpreter.StringValue).Str
-				value := context.GetValueOfVariable(name)
-				ref := value.(*interpreter.EphemeralReferenceValue)
+			)
+		}
 
-				var inlined bool
-				switch v := ref.Value.(type) {
-				case *interpreter.ArrayValue:
-					inlined = v.LiveInlined()
-				case *interpreter.DictionaryValue:
-					inlined = v.LiveInlined()
-				case *interpreter.CompositeValue:
-					inlined = v.LiveInlined()
-				default:
-					t.Fatalf("unexpected value type %T", ref.Value)
-				}
-				return interpreter.BoolValue(inlined)
+		liveInlinedOfResourceFunction := makeLiveInlinedOfFunction(
+			"liveInlinedOfResource",
+			&sema.ReferenceType{
+				Type:          sema.AnyResourceType,
+				Authorization: sema.UnauthorizedAccess,
+			},
+		)
+		liveInlinedOfStructFunction := makeLiveInlinedOfFunction(
+			"liveInlinedOfStruct",
+			&sema.ReferenceType{
+				Type:          sema.AnyStructType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(liveValueIDOfFunction)
-		baseValueActivation.DeclareValue(liveMutationCountOfFunction)
-		baseValueActivation.DeclareValue(liveInlinedOfFunction)
+		baseValueActivation.DeclareValue(liveValueIDOfResourceFunction)
+		baseValueActivation.DeclareValue(liveValueIDOfStructFunction)
+		baseValueActivation.DeclareValue(liveInlinedOfResourceFunction)
+		baseValueActivation.DeclareValue(liveInlinedOfStructFunction)
 		baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, liveValueIDOfFunction)
-		interpreter.Declare(baseActivation, liveMutationCountOfFunction)
-		interpreter.Declare(baseActivation, liveInlinedOfFunction)
+		interpreter.Declare(baseActivation, liveValueIDOfResourceFunction)
+		interpreter.Declare(baseActivation, liveValueIDOfStructFunction)
+		interpreter.Declare(baseActivation, liveInlinedOfResourceFunction)
+		interpreter.Declare(baseActivation, liveInlinedOfStructFunction)
 		interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
 
 		return baseValueActivation, baseActivation
@@ -210,7 +204,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 		handleCheckerError func(error),
 	) error {
 		baseValueActivation, baseActivation := makeEnv(t)
-		inter, err := test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled(
+		invokable, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
 			t,
 			code,
 			ParseCheckAndInterpretOptions{
@@ -230,22 +224,22 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		_, err = inter.Invoke("main")
+		_, err = invokable.Invoke("main")
 		return err
 	}
 	runInvoke := func(t *testing.T, code string) error {
 		return runInvokeWithHandleCheckerError(t, code, nil)
 	}
 
-	t.Run("ArrayValue: append via stale wrapper after split", func(t *testing.T) {
+	t.Run("ArrayValue: append via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
-		// Two ArrayValue wrappers point to the same inner inlined-then-grown
-		// array. `ref` appends enough elements to trigger an atree slab split.
-		// `ref2`'s `*atree.Array` still points to the now-demoted old root data
-		// slab. The second mutation through `ref2` must be rejected with
-		// InvalidatedContainerViewError; otherwise an element ends up parked on the
-		// demoted slab, hidden from iteration but exposed via removeLast.
+		// Two `auth(Mutate) &[Vault]` references project onto the same inner array.
+		// `ref` appends enough elements to trigger an atree slab split.
+		// Without the canonical wrapper cache, `ref2`'s wrapper would point at the
+		// now-demoted leaf slab and mutate the wrong slab.
+		// With the cache, both refs resolve to the same wrapper,
+		// so `ref2.append(...)` lands on the live tree and is observable through `ref`.
 		err := runInvoke(t, `
             access(all) resource Vault {
                 access(all) var balance: UFix64
@@ -259,7 +253,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -270,38 +264,45 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
-                    message: "after split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
+                    message: "after split: refs must still observe the same live atree value ID"
                 )
 
-                // This mutation goes through the stale wrapper and must be rejected.
+                // Append through ref2: both refs share the canonical wrapper, so
+                // the append lands on the live tree.
                 ref2.append(<- create Vault(balance: 123.456))
+
+                // Both refs observe the same length (1 initial + 200 + 1 = 202).
+                assert(ref.length == 202, message: "ref must observe ref2's append")
+                assert(ref2.length == 202, message: "ref2 must observe its own append")
+
+                // The last element appended via ref2 is visible through ref.
+                assert(
+                    ref[201].balance == 123.456,
+                    message: "ref must read back the value appended via ref2"
+                )
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
 	t.Run("ArrayValue: silent-corruption reproducer is now blocked", func(t *testing.T) {
 		t.Parallel()
 
-		// Pre-patch silent-corruption demonstration: the stale-wrapper
-		// append parks the new element on the demoted leaf slab. The
-		// canonical view's iteration would not see the parked element,
-		// but removeLast in reverse order would surface it — meaning the
-		// inner array has divergent length depending on which path you
-		// read it through.
-		//
-		// With the staleness check in place, ref2.append now panics with
-		// InvalidatedContainerViewError; execution never reaches the
-		// post-mutation forensics. The forensics are retained here as
-		// documentation of what the attack looked like — they would
-		// surface iteratedCount != removalCount or
-		// elementFoundIterating != elementFoundRemoving on a vulnerable
-		// build.
+		// Pre-canonicalization silent-corruption reproducer:
+		// the sibling `ref2.append` would park the new element on the
+		// demoted leaf slab of its stale Go-level *atree.Array.
+		// The canonical view's iteration would not see the parked element,
+		// but `removeLast` in reverse order would surface it — meaning
+		// the inner array had divergent length depending on which path
+		// you read it through.
+		// With canonicalization, `ref` and `ref2` resolve to the same Go
+		// wrapper, so `ref2.append` lands on the live tree and both
+		// traversals see the appended element. The post-append forensics
+		// (iteratedCount/removalCount agreement, element visibility
+		// agreement) now pass.
 		err := runInvoke(t, `
             access(all) resource Vault {
                 access(all) var balance: UFix64
@@ -315,7 +316,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -325,12 +326,14 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     i = i + 1
                 }
 
-                // Mutation via the now-stale ref2 must be rejected here.
+                // Mutation via the sibling ref2 lands on the canonical wrapper.
                 ref2.append(<- create Vault(balance: 123.456))
 
-                // Unreachable in a fixed build. On a vulnerable build the
-                // following would observe the divergence between the
-                // canonical view's iterator and a reverse-removeLast walk.
+                // Forensics: pre-canonicalization, a stale ref2.append would
+                // park the element on a demoted leaf, causing the iterator's
+                // count to diverge from the reverse-removeLast count, and the
+                // appended element to be visible to only one of the two walks.
+                // With canonicalization both walks agree.
                 var empty: @[Vault] <- []
                 var extracted <- outer[0] <- empty
                 var iteratedCount: Int = 0
@@ -353,20 +356,22 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     removalCount = removalCount + 1
                 }
 
-                assert(iteratedCount == removalCount)
-                assert(elementFoundIterating == elementFoundRemoving)
+                assert(iteratedCount == removalCount,
+                       message: "iteration must agree with reverse-removeLast count")
+                assert(elementFoundIterating == elementFoundRemoving,
+                       message: "the appended element must be visible to both walks")
+                assert(iteratedCount == 202,
+                       message: "1 initial + 200 + 1 appended via ref2")
+                assert(elementFoundIterating,
+                       message: "ref2's append must be observable through the canonical wrapper")
                 destroy extracted
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
-		// The ref2.append line — the staleness check must fire here, not
-		// at any later point.
-		assert.Equal(t, 25, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("ArrayValue: insert via stale wrapper after split", func(t *testing.T) {
+	t.Run("ArrayValue: insert via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
 		err := runInvoke(t, `
@@ -382,7 +387,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -393,21 +398,25 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
-                    message: "after split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
+                    message: "after split: refs must still observe the same live atree value ID"
                 )
 
                 ref2.insert(at: 0, <- create Vault(balance: 123.456))
 
+                assert(ref.length == 202, message: "ref must observe ref2's insert")
+                assert(
+                    ref[0].balance == 123.456,
+                    message: "ref must read back the value inserted via ref2"
+                )
+
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 29, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("ArrayValue: remove via stale wrapper after split", func(t *testing.T) {
+	t.Run("ArrayValue: remove via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
 		err := runInvoke(t, `
@@ -423,7 +432,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -434,22 +443,26 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
-                    message: "after split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
+                    message: "after split: refs must still observe the same live atree value ID"
                 )
 
+                // The element at index 0 has balance 0.0 (the original initial element).
+                // After removal, ref must observe length 200 and the new index 0 must
+                // be the first appended element (balance 0.0 from UFix64(0)).
                 let extra <- ref2.remove(at: 0)
+                assert(extra.balance == 0.0, message: "expected to remove the original initial element")
                 destroy extra
+
+                assert(ref.length == 200, message: "ref must observe ref2's remove")
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 29, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("DictionaryValue: insert via stale wrapper after split", func(t *testing.T) {
+	t.Run("DictionaryValue: insert via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
 		err := runInvoke(t, `
@@ -465,7 +478,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -478,28 +491,35 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
-                    message: "after split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
+                    message: "after split: refs must still observe the same live atree value ID"
                 )
 
                 let old2 <- ref2.insert(key: 9999, <- create Vault(balance: 123.456))
+                assert(old2 == nil, message: "key 9999 should not have collided")
                 destroy old2
+
+                // ref observes ref2's insert: 1 (key 0) + 299 (keys 1..299) + 1 (key 9999) = 301.
+                assert(ref.length == 301, message: "ref must observe ref2's insert")
+                assert(
+                    ref.containsKey(9999),
+                    message: "ref must see the new key inserted via ref2"
+                )
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 31, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("CompositeValue: field assignment via stale wrapper after split", func(t *testing.T) {
+	t.Run("CompositeValue: field assignment via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
-		// Two CompositeValue wrappers point to the same Vault resource (via two
+		// Two CompositeValue wrappers project onto the same R resource (via two
 		// `&arr[0]` references). `ref` inflates attachments enough to split the
-		// resource's underlying atree map; `ref2` is now a stale view. The
-		// subsequent field assignment through `ref2` must be rejected.
+		// resource's underlying atree map. With the canonical wrapper cache,
+		// `ref2` resolves to the same wrapper as `ref`, so a field assignment
+		// through `ref2` must succeed and be observable through `ref`.
 		err := runInvoke(t, `
             access(all) entitlement Mod
             access(all) resource R {
@@ -577,7 +597,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &arr[0] as auth(Mod) &R
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -589,22 +609,25 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 ref[A6]!.inflate()
 
                 assert(
-                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
-                    message: "after split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
+                    message: "after split: refs must still observe the same live atree value ID"
                 )
 
-                // Field assignment through stale wrapper must be rejected.
+                // Field assignment through ref2 must land on the live wrapper
+                // and be observable through ref.
                 ref2.setBalance(123.456)
+                assert(
+                    ref.balance == 123.456,
+                    message: "ref must observe the balance set via ref2"
+                )
 
                 destroy arr
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 95, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
-	t.Run("DictionaryValue: remove via stale wrapper after split", func(t *testing.T) {
+	t.Run("DictionaryValue: remove via sibling wrapper after split propagates", func(t *testing.T) {
 		t.Parallel()
 
 		err := runInvoke(t, `
@@ -620,7 +643,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -632,19 +655,25 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref") != liveValueIDOf("ref2"),
-                    message: "after split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
+                    message: "after split: refs must still observe the same live atree value ID"
                 )
 
                 let removed <- ref2.remove(key: 0)
+                assert(removed != nil, message: "key 0 should have been present")
                 destroy removed
+
+                // ref observes ref2's remove: 1 (key 0) + 299 (keys 1..299) - 1 = 299.
+                assert(ref.length == 299, message: "ref must observe ref2's remove")
+                assert(
+                    !ref.containsKey(0),
+                    message: "ref must no longer see the removed key"
+                )
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 30, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
 	// The remaining subtests cover the gap that motivated the
@@ -697,12 +726,8 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "after split, before promote: refs share the same live atree value ID"
-                )
-                assert(
-                    liveMutationCountOf("ref") == liveMutationCountOf("ref2"),
-                    message: "after split, before promote: refs share the same live mutation counter"
                 )
 
                 // Collapse: must shrink all the way to one element so the
@@ -713,29 +738,27 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     i = i - 1
                 }
 
-                // Guard against "promote did not fire". After promote, ref
-                // reads the new (freshly-promoted) root's counter, ref2's
-                // .root pointer still references the orphaned metaslab —
-                // whose counter was bumped pre-swap. So the two diverge.
+                // After promote, ValueID is preserved (atree assigns the new
+                // root the prior root's SlabID), so the canonical wrapper
+                // returns the same ID for both refs.
                 assert(
-                    liveMutationCountOf("ref") != liveMutationCountOf("ref2"),
-                    message: "after promote: ref's live root (new, fresh counter) must diverge from ref2's live root (orphaned, bumped)"
-                )
-                // ValueID alone would NOT diverge (the gap).
-                assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
-                    message: "ValueID is preserved across promote — this is the gap the counter closes"
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
+                    message: "ValueID is preserved across promote"
                 )
 
-                // Mutation through the stale ref2 must be rejected.
+                // Mutation through ref2 lands on the canonical wrapper.
                 ref2.append(<- create Vault(balance: 123.456))
+
+                // After all 200 removeLast + 1 ref2.append: 1 (original) + 1 = 2.
+                assert(ref.length == 2,
+                       message: "ref must observe ref2's post-promote append")
+                assert(ref[1].balance == 123.456,
+                       message: "ref must read back the value appended via ref2")
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 53, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
 	t.Run("DictionaryValue: insert via stale wrapper after promote", func(t *testing.T) {
@@ -762,12 +785,8 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &{Int: Vault}
 
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "after split, before promote: refs share the same live atree value ID"
-                )
-                assert(
-                    liveMutationCountOf("ref") == liveMutationCountOf("ref2"),
-                    message: "after split, before promote: refs share the same live mutation counter"
                 )
 
                 // Collapse via removes (remove ALL keys including the
@@ -781,46 +800,41 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 }
 
                 assert(
-                    liveMutationCountOf("ref") != liveMutationCountOf("ref2"),
-                    message: "after promote: ref's live root (new, fresh counter) must diverge from ref2's live root (orphaned, bumped)"
-                )
-                assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
-                    message: "ValueID is preserved across promote — this is the gap the counter closes"
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
+                    message: "ValueID is preserved across promote"
                 )
 
                 let old <- ref2.insert(key: 9999, <- create Vault(balance: 123.456))
+                assert(old == nil, message: "key 9999 should not have collided")
                 destroy old
+
+                // After 1 (original) + 299 inserts + 300 removals + 1 ref2.insert: 1.
+                assert(ref.length == 1,
+                       message: "ref must observe ref2's post-promote insert")
+                assert(ref.containsKey(9999),
+                       message: "ref must see the key inserted via ref2")
 
                 destroy outer
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
-		assert.Equal(t, 49, staleViewErr.StartPosition().Line)
+		require.NoError(t, err)
 	})
 
 	t.Run("ArrayValue: map procedure mutates sibling wrapper into split mid-iteration", func(t *testing.T) {
 		t.Parallel()
 
-		// ArrayValue.Map (and similarly Filter / Reverse / Slice / Concat / ToVariableSized)
-		// creates an atree iterator once via v.array.Iterator() and walks it across many
-		// user-callback invocations.
-		// Between callback invocations there is:
-		//   - no WithContainerMutationPrevention(v.ValueID()) (unlike Iterate);
-		//   - no CheckInvalidatedValueOrValueReference(v, ...) between iterator.Next() calls.
+		// ArrayValue.Map creates an atree iterator once via v.array.Iterator()
+		// and walks it across many user-callback invocations. If the user
+		// procedure mutates the same container through a sibling reference
+		// (which, with the canonical wrapper cache, is the same wrapper as v),
+		// the iterator may yield duplicate or stale elements.
 		//
-		// If the user procedure mutates a sibling wrapper of v, the sibling
-		// mutation triggers a slab split. The active atree iterator continues
-		// walking the now-demoted slab, potentially yielding duplicate elements,
-		// skipping elements, or yielding stale state — all silently.
-		//
-		// Safe contract: as soon as v becomes stale, the next iterator.Next()
-		// (or a per-iteration staleness check) must raise InvalidatedContainerViewError.
+		// Map wraps the iteration in WithContainerMutationPrevention(v.ValueID()),
+		// so the mutation through the sibling reference must raise
+		// ContainerMutatedDuringIterationError on the very first callback.
 		//
 		// Non-resource Int elements are used because Cadence forbids
-		// `map` on resource arrays even when accessed via reference. The
-		// iterator-corruption gap is independent of resource-ness.
+		// `map` on resource arrays even when accessed via reference.
 		err := runInvoke(t, `
             access(all) fun main() {
                 // Two ArrayValue wrappers for the same inner Int array.
@@ -830,7 +844,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Int]
 
                 assert(
-                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    liveValueIDOfStruct(ref1) == liveValueIDOfStruct(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -857,8 +871,8 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 // If the gap is unpatched, ref's wrapper is now stale and mapped
                 // contains corrupt data (wrong length, duplicates, or stale reads).
                 assert(
-                    liveValueIDOf("ref1") != liveValueIDOf("ref2"),
-                    message: "after callback-induced split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfStruct(ref1) == liveValueIDOfStruct(ref2),
+                    message: "after callback-induced split: refs must still observe the same live atree value ID"
                 )
 
                 // Without the safety check, this is silent corruption: the canonical
@@ -1037,7 +1051,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &arr[0] as &R
 
                 assert(
-                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref1) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -1049,23 +1063,20 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 ref1[A6]!.inflate()
 
                 assert(
-                    liveValueIDOf("ref1") != liveValueIDOf("ref2"),
-                    message: "after split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfResource(ref1) == liveValueIDOfResource(ref2),
+                    message: "after split: ValueID is preserved by atree, and both refs share the canonical wrapper"
                 )
 
-                // The stale ref2 is the target of the index expression and is
-                // evaluated first by evalExpression, which runs
-                // CheckInvalidatedValueOrValueReference and fires
-                // InvalidatedContainerViewError before the attachment lookup or
-                // method binding can complete.
+                // ref2 resolves to the same canonical wrapper as ref1.
+                // The attachment lookup and method call succeed.
                 let stashed = ref2[B]!.readBaseBalance()
-                assert(stashed == 42.0, message: "unreachable if check fires")
+                assert(stashed == 42.0,
+                       message: "method call through sibling wrapper observes live state")
 
                 destroy arr
             }
         `)
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
+		require.NoError(t, err)
 	})
 
 	t.Run("CompositeValue: attachment method via stale parent wrapper (captured-before-split)", func(t *testing.T) {
@@ -1097,7 +1108,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let bRef = ref2[B]!
 
                 assert(
-                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref1) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
@@ -1109,23 +1120,20 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 ref1[A6]!.inflate()
 
                 assert(
-                    liveValueIDOf("ref1") != liveValueIDOf("ref2"),
-                    message: "after split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfResource(ref1) == liveValueIDOfResource(ref2),
+                    message: "after split: ValueID is preserved by atree, and both refs share the canonical wrapper"
                 )
 
-                // The receiver bRef refers to the attachment (not stale), so
-                // MaybeDereferenceReceiver does not fire on the attachment ref1.
-                // The check must fire when the method body evaluates base
-                // (which resolves to a reference at the now-stale parent).
+                // bRef's base resolves to the canonical R wrapper; the method
+                // body reads its live balance.
                 let stashed = bRef.readBaseBalance()
-                assert(stashed == 42.0, message: "unreachable if check fires")
+                assert(stashed == 42.0,
+                       message: "captured attachment ref observes the canonical parent's live state")
 
                 destroy arr
             }
         `)
-
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
+		require.NoError(t, err)
 	})
 
 	// Resource-linearity-specific scenarios (Invariant 3) from
@@ -1165,8 +1173,8 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 }
 
                 assert(
-                    liveValueIDOf("ref1") != liveValueIDOf("ref2"),
-                    message: "after split: refs should observe diverged live atree value IDs"
+                    liveValueIDOfResource(ref1) == liveValueIDOfResource(ref2),
+                    message: "after split: ValueID is preserved by atree, and both refs share the canonical wrapper"
                 )
 
                 // ref1 removes and destroys the original first vault.
@@ -1174,18 +1182,18 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 assert(v.balance == 1.0, message: "ref1 removed canonical first vault")
                 destroy v
 
-                // Sibling's attempt to remove must be rejected. Without the
-                // staleness check, it could read the demoted slab and yield
-                // a phantom copy of the already-destroyed resource.
-                let phantom <- ref2.removeFirst()
-                destroy phantom
+                // Sibling removeFirst lands on the canonical wrapper, so the
+                // next element (the first one ref1 appended, balance 10.0)
+                // is removed cleanly — no phantom of the already-destroyed vault.
+                let next <- ref2.removeFirst()
+                assert(next.balance == 10.0,
+                       message: "ref2 must see ref1's removeFirst, no phantom resurrection")
+                destroy next
 
                 destroy outer
             }
         `)
-
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
+		require.NoError(t, err)
 	})
 
 	t.Run("ArrayValue: inner-growth uninlining surfaces via liveInlinedOf; sibling rejected", func(t *testing.T) {
@@ -1224,11 +1232,11 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveInlinedOf("ref1"),
+                    liveInlinedOfResource(ref1),
                     message: "precondition: inner[0] should start inlined inside outer's slab"
                 )
                 assert(
-                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref1) == liveValueIDOfResource(ref2),
                     message: "precondition: siblings should observe the same live atree value ID"
                 )
 
@@ -1243,36 +1251,42 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
 
                 // Confirm uninlining happened.
                 assert(
-                    !liveInlinedOf("ref1"),
+                    !liveInlinedOfResource(ref1),
                     message: "expected inner[0] to be uninlined after growth via ref1"
                 )
 
-                // Append through the sibling. The slab tree restructuring
-                // (which includes the uninline transition) is also a split
-                // demotion at the inner array's tree level, so the cached-vs-
-                // live ValueID comparison fires here and the centralized
-                // check rejects the mutation.
+                // Append through the sibling. With canonicalization, ref1
+                // and ref2 share the canonical wrapper; the append lands on
+                // the live tree post-uninline.
                 ref2.append(<-create Vault(balance: 999.0))
+
+                // 1 (original) + 200 + 1 = 202.
+                assert(ref1.length == 202,
+                       message: "ref1 must observe ref2's append after uninline")
+                assert(ref1[201].balance == 999.0,
+                       message: "ref1 must read back the value appended via ref2")
 
                 destroy outer
             }
         `)
-
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
+		require.NoError(t, err)
 	})
 
 	t.Run("forEachAttachment + sibling parent mutation in callback", func(t *testing.T) {
 		t.Parallel()
 
 		// `ref1.forEachAttachment(...)` opens an atree iterator on the parent
-		// composite's attachment dictionary. The user callback then mutates
-		// the parent via a sibling reference `ref2`, growing the dictionary
-		// enough to split it. The safe contract is that *some* defense
-		// (per-iteration `CheckInvalidatedValueOrValueReference` at the
-		// loop head, or `WithContainerMutationPrevention(v.ValueID())`
-		// covering the iterator) must fire before any subsequent
-		// `iterator.Next()` reads from a demoted slab.
+		// composite's attachment dictionary. The callback mutates the parent
+		// indirectly through `ref2` by inflating each attachment, which can
+		// uninline an attachment slab and so restructure the parent dictionary.
+		//
+		// With canonicalization, `ref1` and `ref2` resolve to the same
+		// canonical wrapper. forEachAttachment re-checks the composite
+		// reference at the head of every iteration via
+		// CheckInvalidatedValueOrValueReference; with that check intact and
+		// both refs sharing one wrapper, the mutations land on the live tree
+		// and iteration completes safely. The post-iteration probe then
+		// asserts the inflates were observable through the canonical wrapper.
 		err := runInvoke(t, typeDeclarations+`
             access(all) fun main() {
                 let r0 <- create R(balance: 42.0)
@@ -1289,22 +1303,10 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &arr[0] as &R
 
                 assert(
-                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref1) == liveValueIDOfResource(ref2),
                     message: "before split: both refs should observe the same live atree value ID"
                 )
 
-                // Inside the forEachAttachment callback, mutate every
-                // attachment via the sibling. Each inflate() writes long
-                // strings into an attachment's atree map; the cumulative
-                // effect restructures the parent's atree dictionary.
-                //
-                // The expected safe outcome is that either:
-                //   (a) the next-iteration head re-check on compositeReference
-                //       fires InvalidatedContainerViewError, or
-                //   (b) atree's mutation-prevention machinery fires
-                //       ContainerMutatedDuringIterationError, because ref1
-                //       and ref2 share the same parent ValueID.
-                // Either outcome preserves invariants.
                 ref1.forEachAttachment(fun (a: &AnyResourceAttachment): Void {
                     ref2[A1]!.inflate()
                     ref2[A2]!.inflate()
@@ -1314,12 +1316,21 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     ref2[A6]!.inflate()
                 })
 
+                // The inflates landed on the canonical wrapper; ref1 reads
+                // back the post-inflation state through the same wrapper.
+                assert(
+                    ref1[A1]!.a1 == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    message: "ref1 must observe ref2's A1 inflate"
+                )
+                assert(
+                    ref1[A6]!.h1 == "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh",
+                    message: "ref1 must observe ref2's A6 inflate"
+                )
+
                 destroy arr
             }
         `)
-
-		var staleViewErr *interpreter.InvalidatedContainerViewError
-		assert.ErrorAs(t, err, &staleViewErr)
+		require.NoError(t, err)
 	})
 
 	t.Run("ArrayValue: inline to standalone round-trip; sibling wrapper probed", func(t *testing.T) {
@@ -1348,11 +1359,11 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate, Remove) &[Vault]
 
                 assert(
-                    liveInlinedOf("ref"),
+                    liveInlinedOfResource(ref),
                     message: "precondition: inner[0] should start inlined"
                 )
                 assert(
-                    liveValueIDOf("ref") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref) == liveValueIDOfResource(ref2),
                     message: "precondition: siblings should share live ValueID"
                 )
 
@@ -1363,7 +1374,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     i = i + 1
                 }
                 assert(
-                    !liveInlinedOf("ref"),
+                    !liveInlinedOfResource(ref),
                     message: "phase 1: expected inner[0] to be uninlined after growth"
                 )
 
@@ -1375,7 +1386,7 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                     j = j + 1
                 }
                 assert(
-                    liveInlinedOf("ref"),
+                    liveInlinedOfResource(ref),
                     message: "phase 2: expected inner[0] to be re-inlined after shrink"
                 )
 
@@ -1443,11 +1454,11 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 let ref2 = &outer[0] as auth(Mutate) &[Vault]
 
                 assert(
-                    liveInlinedOf("ref1"),
+                    liveInlinedOfResource(ref1),
                     message: "precondition: inner[0] should start inlined"
                 )
                 assert(
-                    liveValueIDOf("ref1") == liveValueIDOf("ref2"),
+                    liveValueIDOfResource(ref1) == liveValueIDOfResource(ref2),
                     message: "precondition: siblings should share live ValueID"
                 )
 
@@ -1455,12 +1466,12 @@ func TestInterpretStaleWrapperMutationRejected(t *testing.T) {
                 // atree uninlines inner[0]. This is the minimal mutation
                 // sequence that drives the inline → standalone transition.
                 var i: Int = 0
-                while liveInlinedOf("ref1") && i < 1000 {
+                while liveInlinedOfResource(ref1) && i < 1000 {
                     ref1.append(<-create Vault(balance: UFix64(i)))
                     i = i + 1
                 }
                 assert(
-                    !liveInlinedOf("ref1"),
+                    !liveInlinedOfResource(ref1),
                     message: "expected inner[0] to be uninlined within 1000 small appends; "
                         .concat("loop count: ").concat(i.toString())
                 )

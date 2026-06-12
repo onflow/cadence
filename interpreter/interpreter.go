@@ -6498,6 +6498,42 @@ func (interpreter *Interpreter) ReferencedResourceKindedValues(valueID atree.Val
 	return interpreter.SharedState.referencedResourceKindedValues[valueID]
 }
 
+// CanonicalAtreeContainer returns the cached canonical Cadence-level
+// wrapper (ArrayValue, DictionaryValue, or CompositeValue) for the given
+// atree value ID, or nil if none has been recorded yet.
+func (interpreter *Interpreter) CanonicalAtreeContainer(valueID atree.ValueID) Value {
+	return interpreter.SharedState.canonicalAtreeContainers[valueID]
+}
+
+// SetCanonicalAtreeContainer records the given wrapper as the canonical
+// Cadence-level wrapper for the given atree value ID.
+func (interpreter *Interpreter) SetCanonicalAtreeContainer(valueID atree.ValueID, v Value) {
+	interpreter.SharedState.canonicalAtreeContainers[valueID] = v
+}
+
+// ClearCanonicalAtreeContainer removes the cache entry for the given atree
+// value ID. Call this when the corresponding wrapper is invalidated or its
+// underlying slabs are being torn down, so the now-invalid wrapper is not
+// handed out to subsequent loads. Production call sites:
+//   - `ArrayValue` / `DictionaryValue` / `CompositeValue` `Destroy`
+//     and resource `Transfer` (before `v.array` / `v.dictionary = nil`).
+//   - `ArrayValue` / `DictionaryValue` / `CompositeValue` non-resource
+//     `Transfer` with `remove=true` (source slabs deleted by PopIterate).
+//   - `DeepRemove` on the three container types (also evicts nested
+//     wrappers via the recursive walk).
+func (interpreter *Interpreter) ClearCanonicalAtreeContainer(valueID atree.ValueID) {
+	delete(interpreter.SharedState.canonicalAtreeContainers, valueID)
+}
+
+// ClearAllCanonicalAtreeContainers drops every entry in the canonical wrapper cache.
+// Call this when the underlying `atree.Storage` is being swapped out
+// (e.g. test harnesses that commit to a ledger and reopen storage):
+// cached wrappers hold `*atree.Array`/`*atree.OrderedMap` pointers into the *old* storage,
+// and would silently mutate the old storage if returned from a post-swap canonicalization.
+func (interpreter *Interpreter) ClearAllCanonicalAtreeContainers() {
+	clear(interpreter.SharedState.canonicalAtreeContainers)
+}
+
 // startResourceTracking starts tracking the life-span of a resource.
 // A resource can only be associated with one variable at most, at a given time.
 func (interpreter *Interpreter) startResourceTracking(

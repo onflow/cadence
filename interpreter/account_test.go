@@ -1701,3 +1701,87 @@ func TestInterpretAccountStorageReadFunctionTypes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, interpreter.FalseValue, areEqual)
 }
+
+// TestInterpretAccountStorageBorrowAliasingConsistency exercises
+// DomainStorageMap.ReadValue's canonicalization:
+// two `account.storage.borrow<&T>(from: /storage/path)` calls
+// to the same path must alias the same canonical wrapper,
+// so structural mutations through one reference
+// are observable through the other.
+//
+// Without canonicalization at the storage read path,
+// each borrow would build a fresh `*atree.Array` over the same slab.
+// Atree's shared state still propagates structural changes,
+// but Cadence-level wrapper state (`isDestroyed` etc.) would diverge,
+// and references would have different Go-level target pointers.
+//
+// The test grows a stored array past atree's inline limit
+// to force an actual slab split, then verifies that a second borrow
+// observes the post-split state.
+func TestInterpretAccountStorageBorrowAliasingConsistency(t *testing.T) {
+	t.Parallel()
+
+	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+	inter, _, _ := testAccount(t, address, true, nil, `
+        access(all) resource Vault {
+            access(all) var balance: UFix64
+            init(balance: UFix64) { self.balance = balance }
+        }
+
+        access(all) fun save() {
+            let vaults: @[Vault] <- [<-create Vault(balance: 0.0)]
+            account.storage.save(<-vaults, to: /storage/vaults)
+        }
+
+        access(all) fun growThroughBorrow1(): Int {
+            // Borrow once, append enough vaults through this reference
+            // to trigger an atree slab split.
+            let ref1 = account.storage.borrow<auth(Mutate) &[Vault]>(from: /storage/vaults)!
+            var i: Int = 0
+            while i < 200 {
+                ref1.append(<-create Vault(balance: UFix64(i)))
+                i = i + 1
+            }
+            return ref1.length
+        }
+
+        access(all) fun observeThroughBorrow2(): Int {
+            // A separate borrow must observe the post-split state.
+            let ref2 = account.storage.borrow<&[Vault]>(from: /storage/vaults)!
+            return ref2.length
+        }
+
+        access(all) fun crossMutate(): Int {
+            // Append through one borrow, observe through another.
+            let ref1 = account.storage.borrow<auth(Mutate) &[Vault]>(from: /storage/vaults)!
+            let ref2 = account.storage.borrow<&[Vault]>(from: /storage/vaults)!
+            ref1.append(<-create Vault(balance: 999.0))
+            return ref2.length
+        }
+    `, sema.Config{})
+
+	_, err := inter.Invoke("save")
+	require.NoError(t, err)
+
+	grew, err := inter.Invoke("growThroughBorrow1")
+	require.NoError(t, err)
+	require.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(201),
+		grew,
+		"borrow1 must report initial element plus 200 appended vaults")
+
+	observed, err := inter.Invoke("observeThroughBorrow2")
+	require.NoError(t, err)
+	require.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(201),
+		observed,
+		"borrow2 must observe the post-split state set up via borrow1")
+
+	postCross, err := inter.Invoke("crossMutate")
+	require.NoError(t, err)
+	require.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(202),
+		postCross,
+		"borrow2 must observe borrow1's append within the same call")
+}

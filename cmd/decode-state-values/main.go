@@ -128,9 +128,19 @@ func slabIDToStorageKey(id atree.SlabID) storageKey {
 
 // slabStorage
 
-type slabStorage struct{}
+type slabStorage struct {
+	// Provides the four state-registry methods atree requires.
+	// This binary is a one-shot decoder, so the in-memory registry
+	// lives for the duration of the process and doesn't need explicit
+	// cleanup.
+	*atree.BaseStateRegistry
+}
 
 var _ atree.SlabStorage = &slabStorage{}
+
+func newSlabStorage() *slabStorage {
+	return &slabStorage{BaseStateRegistry: atree.NewBaseStateRegistry()}
+}
 
 func (s *slabStorage) Retrieve(id atree.SlabID) (atree.Slab, bool, error) {
 	data, ok := storage[slabIDToStorageKey(id)]
@@ -254,7 +264,7 @@ func load() {
 
 	log.Println("Validating slabs ...")
 
-	slabStorage := &slabStorage{}
+	slabStorage := newSlabStorage()
 
 	if *checkSlabsFlag {
 		_, err := atree.CheckStorageHealth(slabStorage, -1)

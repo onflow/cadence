@@ -510,7 +510,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 }
 
 func extractEventFields(
-	gauge common.Gauge,
+	context ContainerElementContext,
 	event *CompositeValue, eventType *sema.CompositeType) []Value {
 
 	count := len(eventType.ConstructorParameters)
@@ -521,7 +521,7 @@ func extractEventFields(
 	eventFields := make([]Value, count)
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(gauge, parameter.Identifier)
+		value := event.GetField(context, parameter.Identifier)
 		eventFields[i] = value
 	}
 

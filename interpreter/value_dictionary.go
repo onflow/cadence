@@ -41,15 +41,13 @@ type DictionaryValue struct {
 	elementSize      uint
 
 	// valueID is the atree value ID captured at construction time.
-	// It is used for reference tracking and invalidation, and must remain
-	// stable even if the dictionary's runtime root slab ID changes.
-	// See the equivalent field on CompositeValue for the underlying scenario.
+	// With atree's shared-state design + Cadence's canonical wrapper cache,
+	// the value ID returned by `v.dictionary.ValueID()` is stable for the lifetime
+	// of the wrapper, so the cached value matches the live one.
+	// The cache is used by `isStaleAtreeView` as a defensive invariant check
+	// to catch unexpected divergence (and a stable identifier when
+	// `v.dictionary` has been nilled out by Destroy/Transfer).
 	valueID atree.ValueID
-
-	// mutationCount is the atree root-slab mutation counter captured at construction.
-	// Together with valueID it detects sibling-wrapper staleness.
-	// See isStaleAtreeView.
-	mutationCount uint64
 }
 
 func NewDictionaryValue(
@@ -302,11 +300,10 @@ func newDictionaryValueFromAtreeMap(
 	common.UseMemory(gauge, common.DictionaryValueBaseMemoryUsage)
 
 	return &DictionaryValue{
-		Type:          staticType,
-		dictionary:    atreeOrderedMap,
-		valueID:       atreeOrderedMap.ValueID(),
-		mutationCount: atreeOrderedMap.MutationCount(),
-		elementSize:   elementSize,
+		Type:        staticType,
+		dictionary:  atreeOrderedMap,
+		valueID:     atreeOrderedMap.ValueID(),
+		elementSize: elementSize,
 	}
 }
 
@@ -317,12 +314,11 @@ var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
-var _ atreeContainerBackedValue = &DictionaryValue{}
+var _ AtreeBackedValue = &DictionaryValue{}
 var _ IterableValue = &DictionaryValue{}
+var _ canonicalizableContainer = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
-
-func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
 func (v *DictionaryValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitDictionaryValue(context, v)
@@ -376,9 +372,17 @@ func (v *DictionaryValue) iterateKeys(
 			)
 
 			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
+			// convert to high-level interpreter.Value. When the element
+			// will be passed to `f` without transfer, canonicalize so
+			// aliased references see a shared wrapper; when it will be
+			// Transfer'd, leave it as a transient fresh wrapper.
 
-			keyValue := MustConvertStoredValue(interpreter, key)
+			var keyValue Value
+			if transferElements {
+				keyValue = MustConvertStoredValue(interpreter, key)
+			} else {
+				keyValue = MustConvertStoredContainerElement(interpreter, key)
+			}
 
 			// Handle transfer if requested
 			if transferElements {
@@ -459,10 +463,13 @@ func (v *DictionaryValue) iterate(
 			)
 
 			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
-
-			keyValue := MustConvertStoredValue(context, key)
-			valueValue := MustConvertStoredValue(context, value)
+			// convert to high-level interpreter.Value.
+			// canonicalizeContainerElement self-filters based on the wrapper's
+			// parent-callback state, so passing wrappers from read-only iterators
+			// (`IterateReadOnly`, `IterateReadOnlyLoadedValues`) through is safe —
+			// they will be returned as-is rather than cached.
+			keyValue := MustConvertStoredContainerElement(context, key)
+			valueValue := MustConvertStoredContainerElement(context, value)
 
 			CheckInvalidatedValueOrValueReference(keyValue, context)
 			CheckInvalidatedValueOrValueReference(valueValue, context)
@@ -535,6 +542,19 @@ func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
+// canonicalAtreeContainer reports the underlying atree map for canonical
+// wrapper-cache bookkeeping, or nil if the wrapper is invalidated (destroyed
+// or its backing nilled out by Transfer). The cache uses the returned
+// container's `ValueID`, `HasParentUpdater`, and `HasReadOnlyMutationCallback`
+// predicates to decide whether to install / replace the wrapper as canonical;
+// a nil return tells the cache to skip canonicalization for this wrapper.
+func (v *DictionaryValue) canonicalAtreeContainer() atreeContainer {
+	if v.dictionary == nil || v.isDestroyed {
+		return nil
+	}
+	return v.dictionary
+}
+
 func (v *DictionaryValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(context))
 }
@@ -590,6 +610,8 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext) {
 
 	InvalidateReferencedResources(context, v)
 
+	context.ClearCanonicalAtreeContainer(valueID)
+
 	v.dictionary = nil
 }
 
@@ -624,6 +646,18 @@ func (v *DictionaryValue) ForEachKey(
 					},
 				)
 
+				// Keys are intentionally NOT canonicalized
+				// (the read-only key iterator yields trap-bearing wrappers,
+				// which the canonical wrapper cache rejects anyway):
+				// dictionary keys must be hashable,
+				// and the only container-backed hashable type is enum
+				// (see sema.IsHashableStructType),
+				// which is immutable —
+				// so a non-canonical key wrapper cannot cause mutation divergence.
+				// Canonicalization is also not achievable by switching iterators:
+				// atree installs parent-updaters only on values, never on keys,
+				// even in mutable iterators,
+				// so the cache's safety filter would always reject key wrappers.
 				key := MustConvertStoredValue(context, item)
 
 				if asReference {
@@ -713,9 +747,7 @@ func (v *DictionaryValue) Get(
 		panic(errors.NewExternalError(err))
 	}
 
-	result := MustConvertStoredValue(context, storedValue)
-
-	return result, true
+	return MustConvertStoredContainerElement(context, storedValue), true
 }
 
 func (v *DictionaryValue) GetKey(context ContainerReadContext, keyValue Value) Value {
@@ -1702,6 +1734,21 @@ func (v *DictionaryValue) Transfer(
 
 		InvalidateReferencedResources(context, v)
 
+		context.ClearCanonicalAtreeContainer(v.valueID)
+
+		v.dictionary = nil
+	} else if remove {
+		// Non-resource Transfer with remove: the source's slabs were just
+		// deleted by the PopIterate above. Evict the cached canonical wrapper
+		// (otherwise its entry would leak referencing gone slabs) and nil
+		// `v.dictionary` so any subsequent use of the source wrapper fails
+		// cleanly via `isStaleAtreeView` / `InvalidatedContainerViewError`
+		// rather than crashing inside atree on a missing slab.
+		//
+		// Callers that need to use the source value after this point must
+		// Transfer it onto the stack (`remove=false`) first to obtain a fresh
+		// wrapper at a new SlabID.
+		context.ClearCanonicalAtreeContainer(v.valueID)
 		v.dictionary = nil
 	}
 
@@ -1790,6 +1837,11 @@ func (v *DictionaryValue) DeepRemove(context ValueRemoveContext, hasNoParentCont
 		}()
 	}
 
+	// Evict any canonical wrapper for this value: its slabs are about to be
+	// torn down. Done here (rather than at each call site) so that the
+	// recursive `value.DeepRemove(...)` below also covers nested wrappers.
+	context.ClearCanonicalAtreeContainer(v.valueID)
+
 	// Remove nested values and storables
 
 	storage := v.dictionary.Storage
@@ -1838,6 +1890,20 @@ func (v *DictionaryValue) ValueID() atree.ValueID {
 	return v.valueID
 }
 
+// isStaleAtreeView reports whether this wrapper's underlying atree array has
+// been invalidated (nilled out by Destroy/Transfer) or its live value ID has
+// diverged from the cached one captured at construction.
+// With atree's shared-state design and Cadence's canonical wrapper cache,
+// neither condition should be observable in practice;
+// this is a defensive invariant check used by
+// `CheckInvalidatedValueOrValueReference`.
+func (v *DictionaryValue) isStaleAtreeView() bool {
+	if v.dictionary == nil {
+		return true
+	}
+	return v.dictionary.ValueID() != v.valueID
+}
+
 // LiveValueID returns the underlying atree map's current value ID.
 // In contrast to ValueID, which returns a stable value ID cached at
 // construction, LiveValueID reflects mutations to the atree map's root,
@@ -1849,37 +1915,12 @@ func (v *DictionaryValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
 }
 
-// LiveMutationCount returns the underlying atree map's current root-slab mutation counter.
-// Counterpart to LiveValueID for the second signal that isStaleAtreeView checks.
-// Intended for testing only; production code must use the cached mutationCount captured at wrapper construction.
-func (v *DictionaryValue) LiveMutationCount() uint64 {
-	return v.dictionary.MutationCount()
-}
-
 // LiveInlined reports whether the underlying atree map is currently stored
 // inlined inside its parent container's slab, as opposed to as a standalone
 // slab. See ArrayValue.LiveInlined for context.
 // Intended for testing only.
 func (v *DictionaryValue) LiveInlined() bool {
 	return v.dictionary.Inlined()
-}
-
-// isStaleAtreeView reports whether this wrapper has been displaced by a structural change
-// (slab split/promotion/PopIterate) that was performed through a sibling wrapper
-// sharing the same underlying slab tree.
-// See the `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full context.
-// Detected uses of a stale wrapper are rejected centrally in `CheckInvalidatedValueOrValueReference`.
-//
-// Two independent signals are compared against the cached snapshot:
-//   - ValueID: detects splitRoot (atree mutates the demoted root's SlabID via SetSlabID;
-//     sibling wrappers reading via the orphaned-pointer see the new SlabID).
-//   - MutationCount: detects promoteChildAsNewRoot and PopIterate
-//     (atree does NOT perturb the orphaned root's SlabID in these cases;
-//     a slab-level counter bumped on the OLD root pre-swap is the sibling-visible signal).
-//     See atree.MapSlab.MutationCount for the contract.
-func (v *DictionaryValue) isStaleAtreeView() bool {
-	return v.dictionary.ValueID() != v.valueID ||
-		v.dictionary.MutationCount() != v.mutationCount
 }
 
 func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {
@@ -2086,8 +2127,22 @@ func (i *DictionaryKeyIterator) Next(context ValueIteratorContext) Value {
 	}
 
 	// atree.Map iterator returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(context, atreeKeyValue)
+	// convert to high-level interpreter.Value.
+	// Although DictionaryKeyIterator is backed by atree's read-only iterator
+	// (which wires a trap callback on returned elements),
+	// canonicalizeContainerElement self-filters trap-bearing wrappers
+	// and returns them as-is, so this is safe.
+	// Handing out non-canonical key wrappers here is also harmless:
+	// dictionary keys must be hashable,
+	// and the only container-backed hashable type is enum
+	// (see sema.IsHashableStructType),
+	// which is immutable —
+	// so a non-canonical key wrapper cannot cause mutation divergence.
+	// Canonicalization is also not achievable by switching iterators:
+	// atree installs parent-updaters only on values, never on keys,
+	// even in mutable iterators,
+	// so the cache's safety filter would always reject key wrappers.
+	return MustConvertStoredContainerElement(context, atreeKeyValue)
 }
 
 func (i *DictionaryKeyIterator) ValueID() (atree.ValueID, bool) {

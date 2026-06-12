@@ -59,6 +59,131 @@ func MustConvertUnmeteredStoredValue(value atree.Value) Value {
 	return converted
 }
 
+// AtreeContainerCache deduplicates Cadence-level wrappers (ArrayValue,
+// DictionaryValue, CompositeValue) created for atree containers, keyed by
+// their atree value ID. See SharedState.canonicalAtreeContainers for the
+// rationale.
+type AtreeContainerCache interface {
+	CanonicalAtreeContainer(valueID atree.ValueID) Value
+	SetCanonicalAtreeContainer(valueID atree.ValueID, v Value)
+	ClearCanonicalAtreeContainer(valueID atree.ValueID)
+}
+
+// ContainerElementContext is the typed parameter for reading and
+// canonicalizing an atree container element:
+// memory and computation metering, plus access to the canonical wrapper cache.
+// Must be non-nil — canonicalization is load-bearing for correctness, see
+// `MustConvertStoredContainerElement`.
+type ContainerElementContext interface {
+	common.Gauge
+	AtreeContainerCache
+}
+
+// canonicalizableContainer is implemented by the Cadence wrappers that back
+// onto an atree container (ArrayValue, DictionaryValue, CompositeValue).
+// It exposes just enough state for the canonical wrapper cache:
+// the underlying atree container (or nil if the wrapper is invalidated),
+// so callers can read its `ValueID`, `HasParentUpdater`, and
+// `HasReadOnlyMutationCallback` predicates.
+type canonicalizableContainer interface {
+	Value
+	canonicalAtreeContainer() atreeContainer
+}
+
+// AtreeBackedValue is implemented by Cadence container wrappers
+// (ArrayValue, DictionaryValue, CompositeValue) that back onto an atree container.
+// `isStaleAtreeView` is a defensive invariant check
+// used by `CheckInvalidatedValueOrValueReference`
+// to detect a wrapper whose underlying atree container has been invalidated
+// (nilled out by Destroy/Transfer) or whose cached value ID has diverged
+// from the live one.
+// With atree's shared-state design and Cadence's canonical wrapper cache
+// neither condition should be observable in practice; the check is a safety net.
+type AtreeBackedValue interface {
+	Value
+	ValueID() atree.ValueID
+	isStaleAtreeView() bool
+}
+
+// atreeContainer captures the subset of `*atree.Array` / `*atree.OrderedMap`
+// methods that the canonical wrapper cache needs.
+type atreeContainer interface {
+	ValueID() atree.ValueID
+	HasParentUpdater() bool
+	HasReadOnlyMutationCallback() bool
+}
+
+var _ atreeContainer = &atree.Array{}
+var _ atreeContainer = &atree.OrderedMap{}
+
+// canonicalizeContainerElement returns the canonical cached wrapper for a
+// container element,
+// populating the cache on first sight and returning the cached wrapper otherwise.
+//
+// The function is self-defensive:
+// it will only cache wrappers whose underlying `*atree.Array`/`*atree.OrderedMap`
+// has a real parent-notification callback installed.
+// Wrappers from read-only iterators
+// (whose `*atree.Array`/`*atree.OrderedMap` either has no parentUpdater,
+// or has a read-only mutation trap callback)
+// are returned as-is without being cached,
+// because caching them would either silently lose parent notifications
+// or trip the trap on subsequent mutations through the canonical wrapper.
+//
+// This means `MustConvertStoredContainerElement` is safe to call on any path —
+// it acts as canonicalize-or-passthrough based on the wrapper's actual state.
+func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value {
+	freshCacheable, ok := fresh.(canonicalizableContainer)
+	if !ok {
+		return fresh
+	}
+	container := freshCacheable.canonicalAtreeContainer()
+	if container == nil {
+		return fresh
+	}
+	if !container.HasParentUpdater() || container.HasReadOnlyMutationCallback() {
+		return fresh
+	}
+	valueID := container.ValueID()
+	if existing, ok := cache.CanonicalAtreeContainer(valueID).(canonicalizableContainer); ok {
+		// Same concrete type guarded by same ValueID across the cache;
+		// a still-valid existing wrapper wins to preserve reference identity.
+		if existing.canonicalAtreeContainer() != nil {
+			return existing
+		}
+		cache.ClearCanonicalAtreeContainer(valueID)
+	}
+	cache.SetCanonicalAtreeContainer(valueID, fresh)
+	return fresh
+}
+
+// MustConvertStoredContainerElement wraps an atree value retrieved as a
+// container element (e.g. via `*atree.Array.Get` or `*atree.OrderedMap.Get`)
+// as a Cadence-level `Value`,
+// deduplicating the resulting wrapper via the canonical wrapper cache when
+// the wrapper has a real parent-notification callback
+// (i.e. it came from a `Get` or mutable-iterator path,
+// not from a read-only iterator).
+//
+// The condition is enforced inside `canonicalizeContainerElement`,
+// so callers do not need to know which atree path produced `value`:
+// passing in a read-only-iterator wrapper is safe;
+// it just won't be cached.
+//
+// `context` must be non-nil. Canonicalization is load-bearing for correctness
+// — a sibling read that yields a non-canonical wrapper observes a divergent
+// view of the container, which is the bug class this whole machinery exists
+// to prevent.
+func MustConvertStoredContainerElement(context ContainerElementContext, value atree.Value) Value {
+	result := MustConvertStoredValue(context, value)
+	return canonicalizeContainerElement(context, result)
+}
+
+// ConvertStoredValue wraps the given atree value as a Cadence-level
+// `Value` without canonicalization. Callers that return the wrapper to
+// user code as a container element (e.g. `&outer[0]`) should use
+// `MustConvertStoredContainerElement` instead, so aliased references
+// see a shared wrapper.
 func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, error) {
 	switch value := value.(type) {
 	case *atree.Array:

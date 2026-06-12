@@ -41,15 +41,13 @@ type ArrayValue struct {
 	isDestroyed      bool
 
 	// valueID is the atree value ID captured at construction time.
-	// It is used for reference tracking and invalidation, and must remain
-	// stable even if the array's runtime root slab ID changes.
-	// See the equivalent field on CompositeValue for the underlying scenario.
+	// With atree's shared-state design + Cadence's canonical wrapper cache,
+	// the value ID returned by `v.array.ValueID()` is stable for the lifetime
+	// of the wrapper, so the cached value matches the live one.
+	// The cache is used by `isStaleAtreeView` as a defensive invariant check
+	// to catch unexpected divergence (and a stable identifier when
+	// `v.array` has been nilled out by Destroy/Transfer).
 	valueID atree.ValueID
-
-	// mutationCount is the atree root-slab mutation counter captured at construction.
-	// Together with valueID it detects sibling-wrapper staleness.
-	// See isStaleAtreeView.
-	mutationCount uint64
 }
 
 func NewArrayValue(
@@ -225,11 +223,10 @@ func newArrayValueFromAtreeArray(
 	common.UseMemory(gauge, common.ArrayValueBaseMemoryUsage)
 
 	return &ArrayValue{
-		Type:          staticType,
-		array:         atreeArray,
-		valueID:       atreeArray.ValueID(),
-		mutationCount: atreeArray.MutationCount(),
-		elementSize:   elementSize,
+		Type:        staticType,
+		array:       atreeArray,
+		valueID:     atreeArray.ValueID(),
+		elementSize: elementSize,
 	}
 }
 
@@ -241,11 +238,10 @@ var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
-var _ atreeContainerBackedValue = &ArrayValue{}
+var _ AtreeBackedValue = &ArrayValue{}
+var _ canonicalizableContainer = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
-
-func (*ArrayValue) isAtreeContainerBackedValue() {}
 
 func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitArrayValue(context, v)
@@ -308,8 +304,26 @@ func (v *ArrayValue) iterate(
 			)
 
 			// atree.Array iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
-			elementValue := MustConvertStoredValue(context, element)
+			// convert to high-level interpreter.Value.
+			//
+			// When the element will not be Transfer'd,
+			// route through MustConvertStoredContainerElement:
+			// `f` may hand the element to user code, where it could be aliased by an `&...` reference,
+			// so we want to canonicalize when safe.
+			// canonicalizeContainerElement self-filters by inspecting the wrapper's parent-callback state,
+			// so it is safe to call regardless of which atree iterator (`Iterate` vs
+			// `IterateReadOnlyLoadedValues`) produced the element.
+			//
+			// For Transfer'd elements, the element passed to `f` is a decoupled copy
+			// (the transfer below uses remove=false),
+			// so the source-element wrapper is transient and caching it has no benefit —
+			// leave it as a transient fresh wrapper and skip the cache lookup entirely.
+			var elementValue Value
+			if transferElements {
+				elementValue = MustConvertStoredValue(context, element)
+			} else {
+				elementValue = MustConvertStoredContainerElement(context, element)
+			}
 			CheckInvalidatedValueOrValueReference(elementValue, context)
 
 			if transferElements {
@@ -427,11 +441,52 @@ func (v *ArrayValue) Destroy(context ResourceDestructionContext) {
 
 	InvalidateReferencedResources(context, v)
 
+	context.ClearCanonicalAtreeContainer(valueID)
+
 	v.array = nil
 }
 
 func (v *ArrayValue) IsDestroyed() bool {
 	return v.isDestroyed
+}
+
+// canonicalAtreeContainer reports the underlying atree array for canonical
+// wrapper-cache bookkeeping, or nil if the wrapper is invalidated (destroyed
+// or its backing nilled out by Transfer). The cache uses the returned
+// container's `ValueID`, `HasParentUpdater`, and `HasReadOnlyMutationCallback`
+// predicates to decide whether to install / replace the wrapper as canonical;
+// a nil return tells the cache to skip canonicalization for this wrapper.
+func (v *ArrayValue) canonicalAtreeContainer() atreeContainer {
+	if v.array == nil || v.isDestroyed {
+		return nil
+	}
+	return v.array
+}
+
+// iterator returns a mutable atree iterator when `asReference` is true —
+// elements yielded will be exposed through `EphemeralReferenceValue`s,
+// so mutations through those references must propagate via the wrapper's
+// real parent-updater.
+// A read-only iterator (whose wrapper has a trap callback, no real parent-updater)
+// suffices when elements are `Transfer`'d out and decoupled from the source.
+func (v *ArrayValue) iterator(asReference bool) (atree.ArrayIterator, error) {
+	if asReference {
+		return v.array.Iterator()
+	}
+	return v.array.ReadOnlyIterator()
+}
+
+// rangeIterator returns a mutable atree iterator when `asReference` is true —
+// elements yielded will be exposed through `EphemeralReferenceValue`s,
+// so mutations through those references must propagate via the wrapper's
+// real parent-updater.
+// A read-only iterator (whose wrapper has a trap callback, no real parent-updater)
+// suffices when elements are `Transfer`'d out and decoupled from the source.
+func (v *ArrayValue) rangeIterator(fromIndex, toIndex uint64, asReference bool) (atree.ArrayIterator, error) {
+	if asReference {
+		return v.array.RangeIterator(fromIndex, toIndex)
+	}
+	return v.array.ReadOnlyRangeIterator(fromIndex, toIndex)
 }
 
 func (v *ArrayValue) Concat(
@@ -442,18 +497,6 @@ func (v *ArrayValue) Concat(
 
 	first := true
 
-	// Use ReadOnlyIterator here because new ArrayValue is created with elements copied (not removed) from original value.
-	firstIterator, err := v.array.ReadOnlyIterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
-	// Use ReadOnlyIterator here because new ArrayValue is created with elements copied (not removed) from original value.
-	secondIterator, err := other.array.ReadOnlyIterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
 	// `other`'s elements are checked against the receiver's declared element
 	// type (param type stayed at the declared type — the caller provided it).
 	otherElementType := v.Type.ElementType()
@@ -463,6 +506,16 @@ func (v *ArrayValue) Concat(
 	resultElementSemaType := v.SemaType(context).ElementType(false)
 	resultElementSemaType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, resultElementSemaType, false)
 	resultElementStaticType := ConvertSemaToStaticType(context, resultElementSemaType)
+
+	firstIterator, err := v.iterator(asReference)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	secondIterator, err := other.iterator(asReference)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
 
 	newCount := v.array.Count() + other.array.Count()
 
@@ -493,6 +546,8 @@ func (v *ArrayValue) Concat(
 
 				if atreeValue == nil {
 					first = false
+				} else if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
 				} else {
 					value = MustConvertStoredValue(context, atreeValue)
 				}
@@ -507,7 +562,11 @@ func (v *ArrayValue) Concat(
 				}
 
 				if atreeValue != nil {
-					value = MustConvertStoredValue(context, atreeValue)
+					if asReference {
+						value = MustConvertStoredContainerElement(context, atreeValue)
+					} else {
+						value = MustConvertStoredValue(context, atreeValue)
+					}
 
 					checkContainerMutation(context, otherElementType, value)
 				}
@@ -575,9 +634,7 @@ func (v *ArrayValue) Get(context ContainerReadContext, index int) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	result := MustConvertStoredValue(context, storedValue)
-
-	return result
+	return MustConvertStoredContainerElement(context, storedValue)
 }
 
 func (v *ArrayValue) SetKey(context ContainerMutationContext, key Value, value Value) {
@@ -1599,6 +1656,21 @@ func (v *ArrayValue) Transfer(
 
 		InvalidateReferencedResources(context, v)
 
+		context.ClearCanonicalAtreeContainer(v.valueID)
+
+		v.array = nil
+	} else if remove {
+		// Non-resource Transfer with remove: the source's slabs were just
+		// deleted by the PopIterate above. Evict the cached canonical wrapper
+		// (otherwise its entry would leak referencing gone slabs) and nil
+		// `v.array` so any subsequent use of the source wrapper fails cleanly
+		// via `isStaleAtreeView` / `InvalidatedContainerViewError` rather than
+		// crashing inside atree on a missing slab.
+		//
+		// Callers that need to use the source value after this point must
+		// Transfer it onto the stack (`remove=false`) first to obtain a fresh
+		// wrapper at a new SlabID.
+		context.ClearCanonicalAtreeContainer(v.valueID)
 		v.array = nil
 	}
 
@@ -1677,6 +1749,11 @@ func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer
 		}()
 	}
 
+	// Evict any canonical wrapper for this value: its slabs are about to be
+	// torn down. Done here (rather than at each call site) so that the
+	// recursive `value.DeepRemove(...)` below also covers nested wrappers.
+	context.ClearCanonicalAtreeContainer(v.valueID)
+
 	// Remove nested values and storables
 
 	storage := v.array.Storage
@@ -1716,6 +1793,20 @@ func (v *ArrayValue) ValueID() atree.ValueID {
 	return v.valueID
 }
 
+// isStaleAtreeView reports whether this wrapper's underlying atree array has
+// been invalidated (nilled out by Destroy/Transfer) or its live value ID has
+// diverged from the cached one captured at construction.
+// With atree's shared-state design and Cadence's canonical wrapper cache,
+// neither condition should be observable in practice;
+// this is a defensive invariant check used by
+// `CheckInvalidatedValueOrValueReference`.
+func (v *ArrayValue) isStaleAtreeView() bool {
+	if v.array == nil {
+		return true
+	}
+	return v.array.ValueID() != v.valueID
+}
+
 // LiveValueID returns the underlying atree array's current value ID.
 // In contrast to ValueID, which returns a stable value ID cached at
 // construction, LiveValueID reflects mutations to the atree array's root,
@@ -1727,13 +1818,6 @@ func (v *ArrayValue) LiveValueID() atree.ValueID {
 	return v.array.ValueID()
 }
 
-// LiveMutationCount returns the underlying atree array's current root-slab mutation counter.
-// Counterpart to LiveValueID for the second signal that isStaleAtreeView checks.
-// Intended for testing only; production code must use the cached mutationCount captured at wrapper construction.
-func (v *ArrayValue) LiveMutationCount() uint64 {
-	return v.array.MutationCount()
-}
-
 // LiveInlined reports whether the underlying atree array is currently stored
 // inlined inside its parent container's slab, as opposed to as a standalone
 // slab. Atree may transition an array between these representations when its
@@ -1743,24 +1827,6 @@ func (v *ArrayValue) LiveMutationCount() uint64 {
 // Intended for testing only.
 func (v *ArrayValue) LiveInlined() bool {
 	return v.array.Inlined()
-}
-
-// isStaleAtreeView reports whether this wrapper has been displaced by a structural change
-// (slab split/promotion/PopIterate) that was performed through a sibling wrapper
-// sharing the same underlying slab tree.
-// See the `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the full context.
-// Detected uses of a stale wrapper are rejected centrally in `CheckInvalidatedValueOrValueReference`.
-//
-// Two independent signals are compared against the cached snapshot:
-//   - ValueID: detects splitRoot (atree mutates the demoted root's SlabID via SetSlabID;
-//     sibling wrappers reading via the orphaned-pointer see the new SlabID).
-//   - MutationCount: detects promoteChildAsNewRoot and PopIterate
-//     (atree does NOT perturb the orphaned root's SlabID in these cases;
-//     a slab-level counter bumped on the OLD root pre-swap is the sibling-visible signal).
-//     See atree.ArraySlab.MutationCount for the contract.
-func (v *ArrayValue) isStaleAtreeView() bool {
-	return v.array.ValueID() != v.valueID ||
-		v.array.MutationCount() != v.mutationCount
 }
 
 func (v *ArrayValue) GetOwner() common.Address {
@@ -1807,8 +1873,16 @@ func (v *ArrayValue) Slice(
 		})
 	}
 
-	// Use ReadOnlyIterator here because new ArrayValue is created from elements copied (not removed) from original ArrayValue.
-	iterator, err := v.array.ReadOnlyRangeIterator(uint64(fromIndex), uint64(toIndex))
+	// Cascade outer authorization into the result element type, matching
+	// sema's ArraySliceFunctionType: when sliced through a reference,
+	// elements are exposed as references (with auths intersected). Without
+	// this, the new array's declared element type would mismatch its actual
+	// contents.
+	elementType := v.SemaType(context).ElementType(false)
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
+	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
+
+	iterator, err := v.rangeIterator(uint64(fromIndex), uint64(toIndex), asReference)
 	if err != nil {
 
 		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
@@ -1841,15 +1915,6 @@ func (v *ArrayValue) Slice(
 		},
 	)
 
-	// Cascade outer authorization into the result element type, matching
-	// sema's ArraySliceFunctionType: when sliced through a reference,
-	// elements are exposed as references (with auths intersected). Without
-	// this, the new array's declared element type would mismatch its actual
-	// contents.
-	elementType := v.SemaType(context).ElementType(false)
-	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
-	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
-
 	return NewArrayValueWithIterator(
 		context,
 		NewVariableSizedStaticType(context, resultElementStaticType),
@@ -1866,7 +1931,11 @@ func (v *ArrayValue) Slice(
 
 			var value Value
 			if atreeValue != nil {
-				value = MustConvertStoredValue(context, atreeValue)
+				if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
+				} else {
+					value = MustConvertStoredValue(context, atreeValue)
+				}
 			}
 
 			if value == nil {
@@ -2002,7 +2071,15 @@ func (v *ArrayValue) Filter(
 						return nil
 					}
 
-					value = MustConvertStoredValue(context, atreeValue)
+					// When asReference is true, the result array stores references
+					// to source elements; the reference wrappers must be canonical
+					// so that mutations (e.g. an access(all) mutating function)
+					// propagate consistently with sibling references taken elsewhere.
+					if asReference {
+						value = MustConvertStoredContainerElement(context, atreeValue)
+					} else {
+						value = MustConvertStoredValue(context, atreeValue)
+					}
 					if value == nil {
 						return nil
 					}
@@ -2125,7 +2202,16 @@ func (v *ArrayValue) Map(
 					return nil
 				}
 
-				value := MustConvertStoredValue(context, atreeValue)
+				// When asReference is true, the closure receives a reference to
+				// the source element; the reference target must be canonical so
+				// that mutations through it (e.g. an access(all) mutating function)
+				// propagate consistently with sibling references taken elsewhere.
+				var value Value
+				if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
+				} else {
+					value = MustConvertStoredValue(context, atreeValue)
+				}
 				if asReference {
 					value = getReferenceValue(
 						context,
@@ -2188,8 +2274,7 @@ func (v *ArrayValue) ToVariableSized(
 
 	// Convert the array to a variable-sized array.
 
-	// Use ReadOnlyIterator here because ArrayValue elements are copied (not removed) from original ArrayValue.
-	iterator, err := v.array.ReadOnlyIterator()
+	iterator, err := v.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -2220,7 +2305,12 @@ func (v *ArrayValue) ToVariableSized(
 				return nil
 			}
 
-			value := MustConvertStoredValue(context, atreeValue)
+			var value Value
+			if asReference {
+				value = MustConvertStoredContainerElement(context, atreeValue)
+			} else {
+				value = MustConvertStoredValue(context, atreeValue)
+			}
 
 			if asReference {
 				value = getReferenceValue(context, value, elementType)
@@ -2271,8 +2361,7 @@ func (v *ArrayValue) ToConstantSized(
 
 	// Convert the array to a constant-sized array.
 
-	// Use ReadOnlyIterator here because ArrayValue elements are copied (not removed) from original ArrayValue.
-	iterator, err := v.array.ReadOnlyIterator()
+	iterator, err := v.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -2303,7 +2392,12 @@ func (v *ArrayValue) ToConstantSized(
 				return nil
 			}
 
-			value := MustConvertStoredValue(context, atreeValue)
+			var value Value
+			if asReference {
+				value = MustConvertStoredContainerElement(context, atreeValue)
+			} else {
+				value = MustConvertStoredValue(context, atreeValue)
+			}
 
 			if asReference {
 				value = getReferenceValue(context, value, elementType)
@@ -2423,9 +2517,10 @@ func (i *ArrayIterator) Next(context ValueIteratorContext) Value {
 	}
 
 	// atree.Array iterator returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	result := MustConvertStoredValue(context, atreeValue)
-	return result
+	// convert to high-level interpreter.Value. The result is handed back
+	// to user code (e.g. as the loop variable of `for x in arr`), so
+	// canonicalize to keep aliased references consistent.
+	return MustConvertStoredContainerElement(context, atreeValue)
 }
 
 func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {

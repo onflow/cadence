@@ -498,9 +498,17 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 }
 
 // CheckInvalidatedValueOrValueReference checks whether a value is either:
-// - an invalidated resource
-// - a value pointing to a stale atree slab
-// - or a reference to any of the above
+//   - an invalidated resource, or a reference to one — panics with
+//     `InvalidatedResourceError` or `InvalidatedResourceReferenceError`.
+//   - an atree-backed container wrapper (ArrayValue, DictionaryValue,
+//     CompositeValue) whose underlying atree container has been invalidated
+//     (nilled out by Destroy or Transfer), or whose cached value ID has
+//     diverged from the live one — panics with `InvalidatedContainerViewError`.
+//     This second check is defensive: with atree's shared-state design and
+//     Cadence's canonical wrapper cache, the divergence path should not fire
+//     in practice; the nil-out path fires whenever a wrapper is used after
+//     the resource it backed was destroyed/transferred, or after a non-resource
+//     Transfer with `remove=true` deleted its source slabs.
 func CheckInvalidatedValueOrValueReference(
 	value Value,
 	context ValueStaticTypeContext,
@@ -525,7 +533,7 @@ func CheckInvalidatedValueOrValueReference(
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
-			// The staleness check below is also transitively triggered for the
+			// The atree-view staleness check below is also transitively triggered for the
 			// referenced value through this recursion.
 			CheckInvalidatedValueOrValueReference(
 				value.Value,
@@ -534,29 +542,10 @@ func CheckInvalidatedValueOrValueReference(
 		}
 	}
 
-	// After the resource/reference invalidation check above, additionally
-	// check for atree-backed container wrappers whose underlying slab tree has
-	// been restructured by a sibling wrapper sharing the same atree slab tree.
-	//
-	// Internally, multiple Go-level wrappers may point to the same logical atree
-	// container — e.g., taking two references to the same inlined inner array
-	// (`&outer[i]` twice) constructs two `*atree.Array` Go objects that both hold
-	// the same root slab pointer. When one wrapper triggers a structural change,
-	// atree updates only that wrapper's `root` field; the sibling wrappers keep a
-	// pointer to the now-demoted slab. Any subsequent mutation through such a
-	// stale wrapper would write directly to a non-root slab, leaving the canonical
-	// view (the slab tree's actual root) out of sync with the live data.
-	//
-	// We detect this by comparing the wrapper's cached `valueID` (captured at
-	// construction time, stable across structural changes initiated through the
-	// same wrapper) with `v.array.ValueID()` (which reflects the slab ID of the
-	// wrapper's current root pointer).
-	// On divergence we reject the operation rather than silently corrupt the tree.
-	//
-	// We do this here, rather than at each individual use site, so that every
-	// code path that already calls this helper transparently gains the check.
-	// See the `AtreeBackedValue` interface and `InvalidatedContainerViewError` for the
-	// mechanism and rationale.
+	// Defensive invariant: every code path that already calls this helper
+	// transparently gains the atree-view staleness check.
+	// With atree's shared-state design and Cadence's canonical wrapper cache
+	// this should never fire; if it does, an internal invariant has been violated.
 	if atreeBackedValue, ok := value.(AtreeBackedValue); ok &&
 		atreeBackedValue.isStaleAtreeView() {
 		panic(&InvalidatedContainerViewError{

@@ -50,6 +50,11 @@ type Context struct {
 	containerValueIteration       map[atree.ValueID]int
 	destroyedResources            map[atree.ValueID]struct{}
 
+	// canonicalAtreeContainers deduplicates Cadence-level wrappers
+	// (ArrayValue, DictionaryValue, CompositeValue) keyed by atree value ID.
+	// See interpreter.SharedState.canonicalAtreeContainers for the rationale.
+	canonicalAtreeContainers map[atree.ValueID]interpreter.Value
+
 	// semaTypeCache is a cache-alike for temporary storing sema-types by their ID,
 	// to avoid repeated conversions from static-types to sema-types.
 	// This cache-alike is maintained per execution.
@@ -86,7 +91,41 @@ func (c *Context) newReusing() *Context {
 	newContext.semaTypeCache = c.semaTypeCache
 	newContext.linkedGlobalsCache = c.linkedGlobalsCache
 
+	// canonicalAtreeContainers is deliberately NOT carried over:
+	// carrying it across reuses would grow unboundedly over a VM's lifetime,
+	// and an empty cache is always safe — storage (via the shared Config) is unchanged,
+	// so entries simply re-canonicalize on first access.
+	// Wrappers surviving via linkedGlobalsCache (e.g. contract values)
+	// may therefore differ in identity from post-reset canonical wrappers.
+	// This is benign:
+	// structural consistency comes from atree's shared per-value-ID state,
+	// and field access re-canonicalizes through the new context.
+
 	return newContext
+}
+
+func (c *Context) CanonicalAtreeContainer(valueID atree.ValueID) interpreter.Value {
+	return c.canonicalAtreeContainers[valueID]
+}
+
+func (c *Context) SetCanonicalAtreeContainer(valueID atree.ValueID, v interpreter.Value) {
+	if c.canonicalAtreeContainers == nil {
+		c.canonicalAtreeContainers = map[atree.ValueID]interpreter.Value{}
+	}
+	c.canonicalAtreeContainers[valueID] = v
+}
+
+func (c *Context) ClearCanonicalAtreeContainer(valueID atree.ValueID) {
+	delete(c.canonicalAtreeContainers, valueID)
+}
+
+// ClearAllCanonicalAtreeContainers drops every entry in the canonical wrapper cache.
+// Call this when the underlying `atree.Storage` is being swapped out
+// (e.g. test harnesses that commit to a ledger and reopen storage):
+// cached wrappers hold `*atree.Array`/`*atree.OrderedMap` pointers into the *old* storage,
+// and would silently mutate the old storage if returned from a post-swap canonicalization.
+func (c *Context) ClearAllCanonicalAtreeContainers() {
+	clear(c.canonicalAtreeContainers)
 }
 
 func (c *Context) RecordStorageMutation() {
