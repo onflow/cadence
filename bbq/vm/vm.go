@@ -662,8 +662,26 @@ func checkAndConvertReturnValue(
 }
 
 func opReturn(vm *VM) {
-	vm.popCallFrame()
-	vm.push(interpreter.Void)
+	poppedCallFrame := vm.popCallFrame()
+
+	value := interpreter.Void
+
+	// Defensively check the expected return type allows returning void.
+	// In a correct program, the void return path is only ever taken
+	// in functions with return type Void.
+	// Without this check, a function with a non-Void return type
+	// which (incorrectly) returns void would push Void
+	// masquerading as a value of the return type –
+	// particularly dangerous for return type Never,
+	// which is assignable to any type.
+	if poppedCallFrame != nil {
+		expectedReturnType := poppedCallFrame.returnType
+		if expectedReturnType != interpreter.PrimitiveStaticTypeVoid {
+			value = checkAndConvertReturnValue(vm.context, value, expectedReturnType)
+		}
+	}
+
+	vm.push(value)
 }
 
 func opJump(vm *VM, ins opcode.InstructionJump) {
