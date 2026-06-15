@@ -1293,7 +1293,7 @@ func newAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRunt
 		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{accountKeyTestAddress}, nil
 		},
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			return accountKeyTestAddress, nil
 		},
 		OnAddAccountKey: func(address Address, publicKey *stdlib.PublicKey, hashAlgo HashAlgorithm, weight int) (*stdlib.AccountKey, error) {

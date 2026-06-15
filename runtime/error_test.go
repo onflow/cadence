@@ -585,7 +585,7 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 			return accountCodes[location], nil
 		},
 		Storage: NewTestLedger(nil, nil),
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
 			nextAccount++
 			return result.ToAddress(), nil
