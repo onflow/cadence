@@ -71,9 +71,6 @@ import (
 //     depend on the digest seed derived from the map's slab ID. The two engines
 //     allocate slabs in different orders, so they perform a different (but
 //     individually deterministic) number of key comparisons.
-//
-// RLP tests stay on the interpreter-only path (parseCheckAndInterpretWithOptions)
-// because the RLP built-in is not registered with the compiler.
 
 type testComputationGauge struct {
 	meter   map[common.ComputationKind]uint64
@@ -3419,8 +3416,7 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 
 		storage := NewUnmeteredInMemoryStorage()
 
-		// TODO: Also run with compiler
-		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
              fun test() {
                  // "dog"
@@ -3456,8 +3452,22 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
@@ -3467,7 +3477,11 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
-			},
+			}
+		}
+
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -3485,8 +3499,7 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 
 		storage := NewUnmeteredInMemoryStorage()
 
-		// TODO: Also run with compiler
-		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
              fun test() {
                  // "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce porta malesuada imperdiet. Sed erat erat, aliquam sed volutpat sed, volutpat ac sapien. Pellentesque sit amet arcu ut magna vehicula finibus non eu felis. Etiam sed tellus congue, sodales ante eget, dictum eros. In at metus sapien fusce."
@@ -3522,8 +3535,23 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 303},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 303},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 303},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 300},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
@@ -3534,7 +3562,11 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 303},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 300},
-			},
+			}
+		}
+
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
@@ -3552,8 +3584,7 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 
 		storage := NewUnmeteredInMemoryStorage()
 
-		// TODO: Also run with compiler
-		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
              fun test() {
                  // [['a']]
@@ -3589,8 +3620,24 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertEqualWithDiff(t,
-			[]common.ComputationUsage{
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeList, Intensity: 2},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
@@ -3602,7 +3649,11 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 1},
-			},
+			}
+		}
+
+		AssertEqualWithDiff(t,
+			expectedUsages,
 			computationGauge.usages,
 		)
 	})
