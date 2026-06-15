@@ -141,6 +141,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				body,
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
+				false,
 			)
 		},
 	}

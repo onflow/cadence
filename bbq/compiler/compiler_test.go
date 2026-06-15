@@ -4426,7 +4426,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4447,6 +4447,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -4547,7 +4551,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 21},
+				opcode.PrettyInstructionJumpIfFalse{Target: 22},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4568,6 +4572,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -4662,7 +4670,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 23},
+				opcode.PrettyInstructionJumpIfFalse{Target: 24},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4683,6 +4691,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -4810,7 +4822,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4831,6 +4843,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -4854,7 +4870,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.PrettyInstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.PrettyInstructionJump{Target: 18},
+				opcode.PrettyInstructionJump{Target: 19},
 
 				// let result $noTransfer $_result
 				opcode.PrettyInstructionStatement{},
@@ -4878,7 +4894,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 33},
+				opcode.PrettyInstructionJumpIfFalse{Target: 35},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4898,6 +4914,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 						interpreter.PrimitiveStaticTypeString,
 					}, ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -5055,7 +5075,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 25},
+				opcode.PrettyInstructionJumpIfFalse{Target: 26},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -5076,6 +5096,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -5294,7 +5318,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 13},
+				opcode.PrettyInstructionJumpIfFalse{Target: 14},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -5315,6 +5339,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -5448,7 +5476,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				},
 				opcode.PrettyInstructionGreater{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 16},
+				opcode.PrettyInstructionJumpIfFalse{Target: 17},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -5468,6 +5496,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 						interpreter.PrimitiveStaticTypeString,
 					}, ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// Function body
@@ -5488,7 +5521,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.PrettyInstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.PrettyInstructionJump{Target: 22},
+				opcode.PrettyInstructionJump{Target: 23},
 
 				// let result $noTransfer $_result
 				opcode.PrettyInstructionStatement{},
@@ -5504,7 +5537,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.PrettyInstructionGetLocal{Local: xIndex},
 				opcode.PrettyInstructionLess{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 37},
+				opcode.PrettyInstructionJumpIfFalse{Target: 39},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -5525,6 +5558,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// return $_result
@@ -6535,7 +6573,7 @@ func TestCompileTransaction(t *testing.T) {
 
 			// if !<condition>
 			opcode.PrettyInstructionNot{},
-			opcode.PrettyInstructionJumpIfFalse{Target: 15},
+			opcode.PrettyInstructionJumpIfFalse{Target: 16},
 
 			// $failPreCondition("pre failed")
 			opcode.PrettyInstructionStatement{},
@@ -6556,6 +6594,10 @@ func TestCompileTransaction(t *testing.T) {
 				},
 				ReturnType: interpreter.PrimitiveStaticTypeNever,
 			},
+
+			// Defensive unreachable after the invocation of $failPreCondition,
+			// which has return type Never
+			opcode.PrettyInstructionUnreachable{},
 
 			// Drop since it's a statement-expression
 			opcode.PrettyInstructionDrop{},
@@ -6606,7 +6648,7 @@ func TestCompileTransaction(t *testing.T) {
 
 			// if !<condition>
 			opcode.PrettyInstructionNot{},
-			opcode.PrettyInstructionJumpIfFalse{Target: 37},
+			opcode.PrettyInstructionJumpIfFalse{Target: 39},
 
 			// $failPostCondition("post failed")
 			opcode.PrettyInstructionStatement{},
@@ -6627,6 +6669,10 @@ func TestCompileTransaction(t *testing.T) {
 				},
 				ReturnType: interpreter.PrimitiveStaticTypeNever,
 			},
+
+			// Defensive unreachable after the invocation of $failPostCondition,
+			// which has return type Never
+			opcode.PrettyInstructionUnreachable{},
 
 			// Drop since it's a statement-expression
 			opcode.PrettyInstructionDrop{},
@@ -6877,7 +6923,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionTrue{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetGlobal{Global: 1},
@@ -6897,6 +6943,11 @@ func TestCompileReturns(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// return
@@ -6973,7 +7024,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionTrue{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 23},
+				opcode.PrettyInstructionJumpIfFalse{Target: 24},
 
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetGlobal{Global: 1},
@@ -6993,6 +7044,11 @@ func TestCompileReturns(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// return $_result
@@ -7045,7 +7101,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionTrue{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 15},
+				opcode.PrettyInstructionJumpIfFalse{Target: 16},
 
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetGlobal{Global: 2},
@@ -7065,6 +7121,11 @@ func TestCompileReturns(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// return $_result
@@ -11615,7 +11676,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -11636,6 +11697,10 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -11765,7 +11830,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 21},
+				opcode.PrettyInstructionJumpIfFalse{Target: 22},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -11786,6 +11851,10 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -11871,7 +11940,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -11892,6 +11961,10 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -12011,7 +12084,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 21},
+				opcode.PrettyInstructionJumpIfFalse{Target: 22},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -12032,6 +12105,10 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -12122,7 +12199,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -12143,6 +12220,10 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -14347,5 +14428,85 @@ func TestCompileInheritedStatementEndingControlFlow(t *testing.T) {
 			opcode.PrettyInstructionUnreachable{},
 		},
 		instructions[:5],
+	)
+}
+
+// TestCompileNeverInvocation tests that a defensive unreachable instruction
+// is emitted directly after the invocation of a function with return type Never,
+// in addition to the unreachable instruction emitted after the statement
+// which the checker determined to end control flow.
+// The invocation-level instruction aborts execution as soon as
+// a supposedly never-returning function returns (e.g. a mistyped native function),
+// before the rest of the enclosing statement is executed.
+func TestCompileNeverInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun f(): Never {
+          return f()
+      }
+
+      fun test() {
+          f()
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 2)
+
+	// fun f(): Never
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// return f()
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetGlobal{Global: 0},
+			opcode.PrettyInstructionInvoke{
+				ReturnType: interpreter.PrimitiveStaticTypeNever,
+			},
+
+			// Defensive unreachable after the invocation of f,
+			// which has return type Never
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeNever,
+				TargetType: interpreter.PrimitiveStaticTypeNever,
+			},
+			opcode.PrettyInstructionReturnValue{},
+		},
+		prettyInstructions(functions[0].Code, program),
+	)
+
+	// fun test()
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// f()
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetGlobal{Global: 0},
+			opcode.PrettyInstructionInvoke{
+				ReturnType: interpreter.PrimitiveStaticTypeNever,
+			},
+
+			// Defensive unreachable after the invocation of f,
+			// which has return type Never
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionDrop{},
+
+			// Defensive unreachable after the expression statement,
+			// which the checker determined to end control flow
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionReturn{},
+		},
+		prettyInstructions(functions[1].Code, program),
 	)
 }

@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/compiler"
@@ -32,6 +33,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -232,4 +234,203 @@ func TestInterpretInheritedStatementEndingControlFlowFallthrough(t *testing.T) {
 
 	var unreachableInstructionErr *interpreter.UnreachableInstructionError
 	require.ErrorAs(t, err, &unreachableInstructionErr)
+}
+
+// TestInterpretNeverInvocation tests the defensive handling of an invocation
+// of a function with return type Never which nevertheless returns at runtime.
+//
+// A Never-returning function which returns cannot be produced from source code:
+// the checker requires the body of a Never-returning function
+// to definitely return or halt.
+// Therefore, simulate such a bug with a mistyped native function,
+// which is declared with return type Never, but returns a value.
+//
+// In both the interpreter and the VM, the return-value validation
+// aborts execution with an internal error when the returned value
+// is validated against the declared return type Never,
+// which no value conforms to
+// (see ConvertAndBoxWithValidation in the interpreter,
+// and checkAndConvertReturnValue in the VM).
+// The defensive Never checks performed after invocations
+// (the check in visitInvocationExpressionWithImplicitArgument in the interpreter,
+// and the unreachable instruction emitted after the invocation in the compiler/VM)
+// are a second line of defense behind those validations.
+func TestInterpretNeverInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	// Simulate a mistyped native function:
+	// declared with return type Never, but returns a value
+	fFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"f",
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.NeverTypeAnnotation,
+		),
+		"",
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
+			_ interpreter.Value,
+			_ []interpreter.Value,
+		) interpreter.Value {
+			return interpreter.NewUnmeteredIntValueFromInt64(42)
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(fFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, fFunction)
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          fun test() {
+              f()
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+
+	var valueTransferTypeErr *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &valueTransferTypeErr)
+}
+
+// TestInterpretVoidReturnWithMismatchedReturnType tests the defensive handling
+// of an invocation whose static return type disagrees with the invoked function,
+// and the invoked function returns void:
+// the invocation must abort with an internal error,
+// instead of continuing with Void masquerading as a value of the return type.
+// This is particularly important for return type Never,
+// which is assignable to any type.
+//
+// Such a disagreement cannot be produced from source code,
+// so simulate a checker bug by overriding the return type
+// of the invocation of a void function in the elaboration.
+//
+// In the VM, the void return path (InstructionReturn) performs
+// a defensive check that the call frame's expected return type allows void
+// (see opReturn).
+// Unlike the value return path (InstructionReturnValue)
+// and native function invocations, which validate the returned value,
+// the void return path would otherwise push Void without any validation.
+//
+// In the interpreter, the return-value validation catches the disagreement,
+// when the invocation's result is validated against the invocation's return type
+// (see ConvertAndBoxWithValidation, performed in invokeFunctionValueWithEval).
+func TestInterpretVoidReturnWithMismatchedReturnType(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          fun f() {}
+
+          fun test() {
+              f()
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleChecker: func(checker *sema.Checker) {
+				// Simulate a checker bug: override the return type
+				// of the invocation `f()` to Never,
+				// even though the invoked function returns void
+				functionDeclaration := checker.Program.FunctionDeclarations()[1]
+				statement := functionDeclaration.FunctionBlock.Block.Statements[0]
+				expressionStatement := statement.(*ast.ExpressionStatement)
+				fInvocation := expressionStatement.Expression.(*ast.InvocationExpression)
+
+				invocationTypes := checker.Elaboration.InvocationExpressionTypes(fInvocation)
+				invocationTypes.ReturnType = sema.NeverType
+				checker.Elaboration.SetInvocationExpressionTypes(fInvocation, invocationTypes)
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+
+	var valueTransferTypeErr *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &valueTransferTypeErr)
+}
+
+// TestInterpretImplicitVoidReturnWithMismatchedReturnType tests
+// the defensive handling of a function which completes
+// without an explicit return (an implicit void return),
+// even though its return type is not Void:
+// the invocation must abort with an internal error,
+// instead of continuing with Void masquerading as a value of the return type.
+//
+// Such a function cannot be produced from source code:
+// the checker requires a function with a return type other than Void
+// to definitely return or halt.
+// Therefore, simulate a checker bug by overriding the function type
+// of a void function in the elaboration.
+//
+// The check is performed in visitFunctionBody, when the body completes
+// without an explicit return (see the call in invokeInterpretedFunctionActivated).
+// It protects all invocation paths, including internal direct invocations
+// which skip the call-site return-value validation
+// (see ConvertAndBoxWithValidation, performed in invokeFunctionValueWithEval).
+//
+// This test is interpreter-only:
+// the equivalent check in the VM is the defensive check
+// in the void return path (see opReturn),
+// which TestInterpretVoidReturnWithMismatchedReturnType covers in compile mode.
+func TestInterpretImplicitVoidReturnWithMismatchedReturnType(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          fun f() {}
+
+          fun test() {
+              f()
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleChecker: func(checker *sema.Checker) {
+				// Simulate a checker bug: override the function type of `f`
+				// to have return type Int,
+				// even though the function declaration has no return type (Void),
+				// so its body completes without an explicit return
+				functionDeclaration := checker.Program.FunctionDeclarations()[0]
+				functionType := sema.NewSimpleFunctionType(
+					sema.FunctionPurityImpure,
+					nil,
+					sema.IntTypeAnnotation,
+				)
+				checker.Elaboration.SetFunctionDeclarationFunctionType(
+					functionDeclaration,
+					functionType,
+				)
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+
+	var valueTransferTypeErr *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &valueTransferTypeErr)
 }
