@@ -46,7 +46,10 @@ type TestRuntimeInterface struct {
 		location runtime.Location,
 		load func() (*runtime.Program, error),
 	) (*runtime.Program, error)
-	OnCreateAccount           func(payer runtime.Address) (address runtime.Address, err error)
+	OnCreateAccount func(
+		payer runtime.Address,
+		context interpreter.InvocationContext,
+	) (address runtime.Address, err error)
 	OnAddEncodedAccountKey    func(address runtime.Address, publicKey []byte) error
 	OnRemoveEncodedAccountKey func(address runtime.Address, index int) (publicKey []byte, err error)
 	OnAddAccountKey           func(
@@ -212,11 +215,11 @@ func (i *TestRuntimeInterface) AllocateSlabIndex(owner []byte) (atree.SlabIndex,
 	return i.Storage.AllocateSlabIndex(owner)
 }
 
-func (i *TestRuntimeInterface) CreateAccount(payer runtime.Address) (address runtime.Address, err error) {
+func (i *TestRuntimeInterface) CreateAccount(payer runtime.Address, context interpreter.InvocationContext) (address runtime.Address, err error) {
 	if i.OnCreateAccount == nil {
 		panic("must specify TestRuntimeInterface.OnCreateAccount")
 	}
-	return i.OnCreateAccount(payer)
+	return i.OnCreateAccount(payer, context)
 }
 
 func (i *TestRuntimeInterface) AddEncodedAccountKey(address runtime.Address, publicKey []byte) error {

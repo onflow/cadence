@@ -220,9 +220,12 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(executor.contractLocation)
 
-	arguments := make([]interpreter.Value, 0, len(executor.arguments))
-
-	arguments, err = executor.appendArguments(inter, arguments)
+	arguments, err := convertArguments(
+		executor.environment,
+		inter,
+		executor.arguments,
+		executor.argumentTypes,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -314,9 +317,12 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	}
 
 	// receiver + arguments
-	arguments := make([]interpreter.Value, 0, len(executor.arguments))
-
-	arguments, err = executor.appendArguments(context, arguments)
+	arguments, err := convertArguments(
+		executor.environment,
+		context,
+		executor.arguments,
+		executor.argumentTypes,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -353,31 +359,59 @@ type ArgumentConversionContext interface {
 	interpreter.AccountCreationContext
 }
 
-func (executor *contractFunctionExecutor) convertArgument(
+// convertArguments converts the given arguments to interpreter values,
+// using `context` for value construction and `environment` for importing values.
+//
+// `environment` may be nil. In that case, only arguments whose conversion
+// does not require an environment are supported; any other argument type returns an error.
+func convertArguments(
+	environment Environment,
+	context ArgumentConversionContext,
+	arguments []cadence.Value,
+	argumentTypes []sema.Type,
+) ([]interpreter.Value, error) {
+	convertedArguments := make([]interpreter.Value, 0, len(arguments))
+
+	for i, argumentType := range argumentTypes {
+		convertedArgument, err := convertArgument(
+			environment,
+			context,
+			arguments[i],
+			argumentType,
+		)
+		if err != nil {
+			return nil, err
+		}
+		convertedArguments = append(convertedArguments, convertedArgument)
+	}
+
+	return convertedArguments, nil
+}
+
+// convertArgument converts a single argument to an interpreter value.
+//
+// `environment` may be nil. In that case, only arguments whose conversion
+// does not require an environment are supported; any other argument type returns an error.
+func convertArgument(
+	environment Environment,
 	context ArgumentConversionContext,
 	argument cadence.Value,
 	argumentType sema.Type,
 ) (interpreter.Value, error) {
-	environment := executor.environment
 
-	// Convert `Address` arguments to account reference values (`&Account`)
-	// if it is the expected argument type,
-	// so there is no need for the caller to construct the value
+	// Convert `Address` arguments to account reference values (`&Account`) if that is the expected argument type,
+	// so there is no need for the caller to construct the value.
+	accountReferenceValue := convertAccountReferenceArgument(context, argument, argumentType)
+	if accountReferenceValue != nil {
+		return accountReferenceValue, nil
+	}
 
-	if address, ok := argument.(cadence.Address); ok {
-
-		if referenceType, ok := argumentType.(*sema.ReferenceType); ok &&
-			referenceType.Type == sema.AccountType {
-
-			accountReferenceValue := newAccountReferenceValueFromAddress(
-				context,
-				common.Address(address),
-				environment,
-				referenceType.Authorization,
-			)
-
-			return accountReferenceValue, nil
-		}
+	// Importing any other argument type requires an environment.
+	if environment == nil {
+		return nil, errors.NewDefaultUserError(
+			"cannot convert argument of type %s without an environment",
+			argumentType.QualifiedString(),
+		)
 	}
 
 	return ImportValue(
@@ -389,24 +423,93 @@ func (executor *contractFunctionExecutor) convertArgument(
 	)
 }
 
-func (executor *contractFunctionExecutor) appendArguments(
+// convertAccountReferenceArgument converts an `Address` argument to an account reference value (`&Account`)
+// when the expected argument type is an `&Account` reference, and returns it.
+//
+// Returns nil if the argument is not an `Address`, or the expected type is not an `&Account` reference,
+// in which case no conversion is performed.
+func convertAccountReferenceArgument(
 	context ArgumentConversionContext,
-	arguments []interpreter.Value,
-) (
-	[]interpreter.Value,
-	error,
-) {
-	for i, argumentType := range executor.argumentTypes {
-		argument, err := executor.convertArgument(
-			context,
-			executor.arguments[i],
-			argumentType,
-		)
-		if err != nil {
-			return nil, err
-		}
-		arguments = append(arguments, argument)
+	argument cadence.Value,
+	argumentType sema.Type,
+) interpreter.Value {
+	address, ok := argument.(cadence.Address)
+	if !ok {
+		return nil
 	}
 
-	return arguments, nil
+	referenceType, ok := argumentType.(*sema.ReferenceType)
+	if !ok || referenceType.Type != sema.AccountType {
+		return nil
+	}
+
+	return newAccountReferenceValueFromAddress(
+		context,
+		common.Address(address),
+		referenceType.Authorization,
+	)
+}
+
+// InvokeContractFunctionOnContext invokes a function of a contract using the supplied,
+// already-executing invocation `context`, so that the call SHARES the same storage as that context.
+//
+// Unlike Runtime.InvokeContractFunction, this helper does NOT create a new Storage
+// and does NOT commit storage: the outer program that owns `context` is responsible for committing.
+// This is what lets a host (e.g. FVM) run a system-contract function as part of account creation
+// against the same atree storage as the transaction that triggered it,
+// so the writes are not lost to a separate, independently-committed storage instance.
+//
+// Arguments are converted using the same conversion as a regular contract-function invocation,
+// but WITHOUT an environment. Therefore, only arguments whose conversion does not require an environment are supported:
+// Any argument that requires an environment for ImportValue results in an error.
+func InvokeContractFunctionOnContext(
+	context interpreter.InvocationContext,
+	contractLocation common.AddressLocation,
+	functionName string,
+	arguments []cadence.Value,
+	argumentTypes []sema.Type,
+) (val cadence.Value, err error) {
+
+	defer context.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	// Reuse the regular argument conversion, without an environment (see the doc comment above for the
+	// resulting limitation on supported argument types).
+	convertedArguments, err := convertArguments(nil, context, arguments, argumentTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	contractValue := context.GetContractValue(contractLocation)
+	if contractValue == nil {
+		return nil, interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         contractLocation.Name,
+		}
+	}
+
+	function := context.GetMethod(contractValue, functionName, nil)
+	if function == nil {
+		return nil, interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindFunction,
+			Name:         functionName,
+		}
+	}
+
+	functionType := function.FunctionType(context)
+
+	result, err := interpreter.InvokeFunctionValue(
+		context,
+		function,
+		convertedArguments,
+		argumentTypes,
+		functionType.ParameterTypes(),
+		functionType.ReturnTypeAnnotation.Type,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return ExportValue(result, context)
 }

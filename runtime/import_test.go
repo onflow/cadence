@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -473,7 +474,7 @@ func TestRuntimeContractImport(t *testing.T) {
 			accountCodes[location] = code
 			return nil
 		},
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			return addressValue, nil
 		},
 		OnEmitEvent: func(event cadence.Event) error {

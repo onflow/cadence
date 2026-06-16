@@ -65,7 +65,14 @@ type Interface interface {
 	// AllocateSlabIndex allocates a new slab index under the given account.
 	AllocateSlabIndex(owner []byte) (atree.SlabIndex, error)
 	// CreateAccount creates a new account.
-	CreateAccount(payer Address) (address Address, err error)
+	//
+	// `context` is the invocation context of the currently-executing program
+	// that triggered the account creation (e.g. the transaction that called the `Account` constructor).
+	//
+	// Implementations of this function may use it to perform follow-up work
+	// (such as invoking a Cadence function) against the SAME storage as the outer program,
+	// so that writes made during account creation are visible to and committed by the outer program.
+	CreateAccount(payer Address, context interpreter.InvocationContext) (address Address, err error)
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.

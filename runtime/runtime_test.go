@@ -2829,7 +2829,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			// Check that pending writes were committed before
 			assert.True(t, performedWrite)
 			return Address{42}, nil
@@ -3394,6 +3394,160 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	})
 }
 
+func TestRuntimeInvokeContractFunctionOnContext(t *testing.T) {
+
+	t.Parallel()
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+	newAccountAddress := common.MustBytesToAddress([]byte{0x2})
+
+	contract := []byte(`
+        access(all) contract Test {
+
+            access(all) fun setup(account: auth(SaveValue) &Account) {
+                account.storage.save(42, to: /storage/setupValue)
+            }
+
+            access(all) fun setup2(_ arg: String) {}
+        }
+    `)
+
+	transaction := []byte(`
+        transaction {
+            prepare(signer: auth(Storage) &Account) {
+                Account(payer: signer)
+            }
+        }
+    `)
+
+	accountReferenceType := sema.NewReferenceType(
+		nil,
+		sema.NewEntitlementSetAccess(
+			[]*sema.EntitlementType{sema.SaveValueType},
+			sema.Conjunction,
+		),
+		sema.AccountType,
+	)
+
+	testLocation := common.AddressLocation{
+		Address: contractAddress,
+		Name:    "Test",
+	}
+
+	runtime := NewTestRuntime()
+
+	var accountCode []byte
+
+	var createAccountCalled bool
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetCode: func(_ Location) ([]byte, error) {
+			return accountCode, nil
+		},
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{contractAddress}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) ([]byte, error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnCreateAccount: func(payer Address, context interpreter.InvocationContext) (Address, error) {
+			createAccountCalled = true
+
+			// Re-entrantly invoke Test.setup on the same context, writing to the new account's storage.
+			// The helper converts the Address argument into an `auth(SaveValue) &Account`.
+			_, setupErr := InvokeContractFunctionOnContext(
+				context,
+				testLocation,
+				"setup",
+				[]cadence.Value{
+					cadence.Address(newAccountAddress),
+				},
+				[]sema.Type{
+					accountReferenceType,
+				},
+			)
+			require.NoError(t, setupErr)
+
+			// An argument whose conversion would require an environment (here, a String)
+			// is unsupported and must be rejected.
+			_, setup2Err := InvokeContractFunctionOnContext(
+				context,
+				testLocation,
+				"setup2",
+				[]cadence.Value{
+					cadence.String("foo"),
+				},
+				[]sema.Type{
+					sema.StringType,
+				},
+			)
+			require.Error(t, setup2Err)
+			assert.ErrorContains(t, setup2Err, "without an environment")
+
+			return newAccountAddress, setupErr
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	// Deploy the Test contract.
+	err := runtime.ExecuteTransaction(
+		Script{Source: DeploymentTransaction("Test", contract)},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Run the transaction that creates an account, triggering the re-entrant invocation.
+	err = runtime.ExecuteTransaction(
+		Script{Source: transaction},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	require.True(t, createAccountCalled)
+
+	// The write performed by Test.setup persisted. The helper does not commit storage itself,
+	// so the value is only visible afterwards because it ran against the outer transaction's storage,
+	// which the transaction committed.
+	// A separate, uncommitted storage would have lost the write.
+	value, err := runtime.ExecuteScript(
+		Script{
+			Source: []byte(`
+                access(all) fun main(): Int {
+                    return getAuthAccount<auth(Storage) &Account>(0x2)
+                        .storage.load<Int>(from: /storage/setupValue)
+                        ?? panic("value was not stored")
+                }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, cadence.NewInt(42), value)
+}
+
 func TestRuntimeContractNestedResource(t *testing.T) {
 
 	t.Parallel()
@@ -3678,7 +3832,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachment(t *testing.T)
 			accountCodes[location] = code
 			return nil
 		},
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			return addressValue, nil
 		},
 		OnEmitEvent: func(event cadence.Event) error {
@@ -3814,7 +3968,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachmentUnloadedContra
 			accountCodes[location] = code
 			return nil
 		},
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			return addressValue, nil
 		},
 		OnEmitEvent: func(event cadence.Event) error {
@@ -3959,7 +4113,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testin
 			accountCodes[location] = code
 			return nil
 		},
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			return addressValue, nil
 		},
 		OnEmitEvent: func(event cadence.Event) error {
@@ -4534,7 +4688,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 			return accountCodes[location], nil
 		},
 		Storage: NewTestLedger(nil, nil),
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			return address2Value, nil
 		},
 		OnGetSigningAccounts: func() ([]Address, error) {
@@ -4691,7 +4845,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			return accountCodes[location], nil
 		},
 		Storage: NewTestLedger(nil, nil),
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
 			nextAccount++
 			return result.ToAddress(), nil
@@ -6709,7 +6863,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 	var signerAddresses []Address
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},
@@ -6849,7 +7003,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	var programHits []string
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},
@@ -7063,7 +7217,7 @@ func TestRuntimeOnGetOrLoadProgramHits(t *testing.T) {
 	var programsHits []Location
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},
@@ -11707,7 +11861,7 @@ func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 			accountCodes[location] = code
 			return nil
 		},
-		OnCreateAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address, _ interpreter.InvocationContext) (address Address, err error) {
 			return addressValue, nil
 		},
 		OnEmitEvent: func(event cadence.Event) error {
