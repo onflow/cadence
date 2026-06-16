@@ -518,6 +518,14 @@ func InvokeExternallyWithValidation(
 		LocationRange{},
 	)
 
+	// Meter the entry-point function invocation.
+	// Invocations through invocation expressions are metered separately,
+	// but the entry point is invoked directly, so it must be metered here.
+	common.UseComputation(
+		context,
+		common.FunctionInvocationComputationUsage,
+	)
+
 	return functionValue.Invoke(invocation), nil
 }
 
