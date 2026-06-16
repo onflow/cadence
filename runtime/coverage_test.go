@@ -1419,6 +1419,7 @@ func TestRuntimeCoverage(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1576,6 +1577,7 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  scriptlocation,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1716,6 +1718,7 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  scriptlocation,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1821,6 +1824,7 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  txLocation,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1833,6 +1837,7 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  scriptLocation,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1956,6 +1961,7 @@ func TestRuntimeCoverageReportLCOVFormat(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  scriptlocation,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2026,6 +2032,7 @@ end_of_record
 			Context{
 				Interface: runtimeInterface,
 				Location:  scriptlocation,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2286,6 +2293,7 @@ func TestCoverageReportConcurrentOnStatementHandler(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{byte(index)},
+					UseVM:     *compile,
 				},
 			)
 			errs[index] = err
