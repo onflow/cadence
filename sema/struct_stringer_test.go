@@ -35,7 +35,7 @@ func TestCheckStringer(t *testing.T) {
 		let a: {StructStringer} = 1
 		let b: {StructStringer} = false
 		let c: {StructStringer} = "hey"
-		access(all) 
+		access(all)
 		struct Foo: StructStringer {
 			view fun toString(): String {
 				return "foo"
@@ -43,6 +43,11 @@ func TestCheckStringer(t *testing.T) {
 		}
 		let d: {StructStringer} = Foo()
 		let e: {StructStringer} = /public/foo
+		let f: {StructStringer} = 1.0 as Fix64
+		let g: {StructStringer} = 1.0 as UFix64
+		let h: {StructStringer} = 1.0 as Fix128
+		let i: {StructStringer} = 1.0 as UFix128
+		let j: {StructStringer} = 0x1 as Address
 	  `)
 
 	assert.NoError(t, err)
